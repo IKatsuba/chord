@@ -151,11 +151,13 @@ export const FORMS = {
   askdimcode: ask(DIMCODE_QUESTIONS),
 
   // codex's questions with a wait of 300 ms, which it withdraws once the
-  // wait runs out, as codex-acp does, and answers for the person.
+  // wait has run out, as codex-acp does, and answers for the person.
   async askcodexwait(turn) {
     const wait = 300;
     const timer = new AbortController();
-    const timeout = setTimeout(() => timer.abort(), wait);
+    // Withdrawn a little after the wait, as the request's way here and the
+    // cancel's may take unlike times, and chord counts from when it got it.
+    const timeout = setTimeout(() => timer.abort(), wait + 50);
     const answer = await turn.client
       .request(
         'elicitation/create',

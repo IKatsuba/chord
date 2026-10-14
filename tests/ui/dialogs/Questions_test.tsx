@@ -137,6 +137,7 @@ test('an answered box leaves a row per question under the turn, saying who asked
       await window.press('\r');
       await window.press('\r');
       await window.shows('⎿  fake asked · Next step  Review existing work');
+
       // Right under the prompt it answers, as a command's outcome is.
       const lines = window.frame().split('\n');
       const prompt = lines.findIndex((line) => line.includes('› askcodex'));

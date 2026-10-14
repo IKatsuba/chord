@@ -1,0 +1,24 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   codex · 6.1 Sol
+ ▄▀▀▀   /tmp/chord-qa.dty8
+ ▀▀     ? for shortcuts · /help
+
+ › /config
+   ⎿  Collaboration mode set to Plan
+
+ › Ask me one multiple-choice question with your question tool, then stop.
+
+ ››› Waiting for your input… (54s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ codex asks for input                                                         │
+│ Codex needs your input to continue.                                          │
+│                                                                              │
+│   ✔ What would y...cus on next?Review existing work                          │
+│                                ❯ ✔ Additional answer or note  tests first    │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ Type to fill in · ↑↓ to move · Esc to cancel                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto review mode on (shift+tab to cycle)          6.1 Sol · medium effort

@@ -1,0 +1,24 @@
+
+ ⏺ Asking(for your input)
+   ⎿  Which language should helper scripts use?
+      How verbose should responses be?
+
+ ››› Waiting for your input… (48s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ claude asks for input                                                        │
+│ Please answer the following questions.                                       │
+│                                                                              │
+│ ❯   Language   ▾                                                             │
+│                ❯ 1. Deno (TypeScript) (Recommended)                          │
+│                  2. Python                                                   │
+│                Which language should helper scripts use?                     │
+│     Other      not set                                                       │
+│     Verbosity  not set                                                       │
+│     Other      not set                                                       │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ ↑↓ · 1–2 or Enter to pick · ← to close · Esc to cancel                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)         Default (recommended) · 4% used

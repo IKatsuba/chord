@@ -1,0 +1,14 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ droid needs your answers to continue                                         │
+│                                                                              │
+│ ← ◉ Storage   ○ Submit →                                                     │
+│                                                                              │
+│ Where should uploads be kept?                                                │
+│                                                                              │
+│   1. Local disk                                                              │
+│   2. S3 bucket                                                               │
+│ ❯ 3. Other answer: a shared NFS mount▏                                       │
+│                                                                              │
+│ Type your answer · Enter for the next · ↑↓ · Esc to cancel                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)           Default (recommended) · 4% used

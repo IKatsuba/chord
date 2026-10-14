@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.O6d2
+ ▀▀     ? for shortcuts · /help
+
+ › form
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (23s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                                                                  │
+│ Set up the deploy target                                                                                             │
+│                                                                                                                      │
+│   * Project name   not set                                                                                           │
+│                        Contact email  not set                                                                        │
+│   ✔ Replicas       2                                                                                                 │
+│     Traffic share  not set                                                                                           │
+│                      ✔ Public         ☐ No                                                                           │
+│ ❯ * Region         ▾                                                                                                 │
+│                    ❯ 1. Europe                                                                                       │
+│                      2. United States                                                                                │
+│                      3. Asia Pacific                                                                                 │
+│     Tags           not set                                                                                           │
+│                                                                                                                      │
+│   Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ ↑↓ to move · 1–3 or Enter to pick · ← to close the list · Esc to cancel                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

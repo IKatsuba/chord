@@ -1,0 +1,17 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ claude asks you 2 questions                                                                                          │
+│                                                                                                                      │
+│ ← ◉ Language   ○ Verbosity   ○ Submit →                                                                              │
+│                                                                                                                      │
+│ Which language should helper scripts use?                                                                            │
+│                                                                                                                      │
+│ ❯ 1. Deno (TypeScript) (Recommended)                                                                                 │
+│      Runs from source with inline npm: and jsr: imports, no package manager                                          │
+│   2. Python                                                                                                          │
+│      Only where a library has no JS or TS equivalent                                                                 │
+│                                                                                                                      │
+│   Note  type your own answer, or add to the one picked (optional)                                                    │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                           Default (recommended) · medium effort · 4% context used

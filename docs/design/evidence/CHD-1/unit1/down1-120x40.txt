@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.EEsA
+ ▀▀     ? for shortcuts · /help
+
+ › form
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                                                                  │
+│ Set up the deploy target                                                                                             │
+│                                                                                                                      │
+│   * Project name   not set                                                                                           │
+│ ❯   Contact email                                                                                                    │
+│   ✔ Replicas       2                                                                                                 │
+│     Traffic share  not set                                                                                           │
+│   ✔ Public         ☐ No                                                                                              │
+│   * Region         not set                                                                                           │
+│     Tags           not set                                                                                           │
+│                                                                                                                      │
+│   Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ Type to fill in · ↑↓ to move · Enter for the next · Esc to cancel                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

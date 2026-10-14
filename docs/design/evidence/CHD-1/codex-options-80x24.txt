@@ -1,0 +1,24 @@
+ › /config
+   ⎿  Collaboration mode set to Plan
+
+ › Ask me one multiple-choice question with your question tool, then stop.
+
+ ››› Waiting for your input… (46s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ codex asks for input                                                         │
+│ Codex needs your input to continue.                                          │
+│                                                                              │
+│ ❯ * What would y...cus on next?▾                                             │
+│                                ❯ 1. Plan a change (Recommended)              │
+│                                  2. Review existing work                     │
+│                                  3. Explain a topic                          │
+│                                  4. None of the above                        │
+│                                Next step                                     │
+│     Additional answer or note  not set                                       │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ ↑↓ · 1–4 or Enter to pick · ← to close · Esc to cancel                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto review mode on (shift+tab to cycle)          6.1 Sol · medium effort

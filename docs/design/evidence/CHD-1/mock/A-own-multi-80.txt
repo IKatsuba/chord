@@ -1,0 +1,14 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ droid needs your answers to continue                                         │
+│                                                                              │
+│ ← ✔ Storage   ◉ Formats   ○ Submit →                                         │
+│                                                                              │
+│ Which formats should be accepted? (pick any)                                 │
+│                                                                              │
+│   [✔] 1. PNG                                                                 │
+│   [ ] 2. JPEG                                                                │
+│ ❯ [✔] 3. Other answer: HEIC▏                                                 │
+│                                                                              │
+│ Type your answer · Space to toggle · Enter for the next · Esc to cancel      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)           Default (recommended) · 4% used

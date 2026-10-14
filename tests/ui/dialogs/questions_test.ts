@@ -303,11 +303,12 @@ test('a step too tall keeps the focused row whole and counts the rows cut off', 
     above: 0,
     below: 0,
   });
+  // The option of three lines does not fit whole below the focused one.
   expect(windowOf(rows, 0, 6)).toStrictEqual({
     top: 0,
-    end: 5,
+    end: 3,
     above: 0,
-    below: 3,
+    below: 4,
   });
   expect(windowOf(rows, 4, 6)).toStrictEqual({
     top: 6,
@@ -404,4 +405,15 @@ test("an option's description too long for the box keeps its first lines and end
     'three fou…',
   ]);
   expect(capLines(['one'], 2)).toStrictEqual(['one']);
+});
+
+test('another option that does not fit whole is left out below and counted, never cut', () => {
+  const rows = [undefined, undefined, 0, ...Array<number>(7).fill(1), 2];
+
+  expect(windowOf(rows, 0, 9)).toStrictEqual({
+    top: 0,
+    end: 3,
+    above: 0,
+    below: 2,
+  });
 });

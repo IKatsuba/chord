@@ -1,4 +1,5 @@
 import { TextAttributes } from '@opentui/core';
+import cliTruncate from 'cli-truncate';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
@@ -383,7 +384,11 @@ function QuestionStep({
             </span>
             <Typed
               text={answer.own}
-              placeholder={own.placeholder ?? 'your own answer (optional)'}
+              placeholder={cliTruncate(
+                own.placeholder ?? 'your own answer (optional)',
+                // The `❯`, `Note  ` and the cursor's cell.
+                Math.max(width - 9, 1),
+              )}
               focused={focused}
               secret={question.secret}
             />

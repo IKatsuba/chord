@@ -1,7 +1,9 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import process from 'node:process';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { ElicitationForm } from '../../../src/ui/dialogs/Form.tsx';
 import {
   CTRL_C,
@@ -10,8 +12,12 @@ import {
   END,
   ESC,
   inputAsked,
+  leader,
+  quitAll,
   send,
   TAB,
+  until,
+  UP,
   withWindow,
 } from '../app/render.tsx';
 
@@ -190,4 +196,197 @@ test("a field's value keeps the agent's colours while the cursor is in it", asyn
   } finally {
     chalk.level = level;
   }
+});
+
+describe('CHD-1 tester: generic form row lifecycle', () => {
+  const labels = [
+    'Project name',
+    'Contact email',
+    'Replicas',
+    'Traffic share',
+    'Public',
+    'Region',
+    'Tags',
+  ];
+  const aligned = (frame: string) => {
+    const lines = frame.split('\n');
+    const columns = labels.flatMap((label) => {
+      const line = lines.find((line) => line.includes(label));
+
+      return line === undefined ? [] : [line.indexOf(label)];
+    });
+
+    expect(columns.length).toBeGreaterThan(1);
+
+    for (const column of columns) {
+      expect(column).toBe(columns[0] ?? -1);
+    }
+  };
+
+  for (const size of [
+    { columns: 120, rows: 40 },
+    { columns: 80, rows: 24 },
+  ]) {
+    test(`dropdowns, validation notes and overflow keep their columns at ${size.columns}x${size.rows}`, () =>
+      withWindow(async (window) => {
+        await send(window, 'form');
+        await inputAsked(window);
+        await window.type('ab');
+        await window.press(DOWN);
+        await window.shows('At least 3 characters');
+        aligned(window.frame());
+
+        for (let step = 0; step < 4; step++) {
+          await window.press(DOWN);
+        }
+
+        for (let cycle = 0; cycle < 2; cycle++) {
+          await window.press(' ');
+          await window.shows('1. Europe');
+          aligned(window.frame());
+          await window.press('2');
+          await window.shows('Region         United States');
+          await window.press(DOWN);
+          await window.press(' ');
+          await window.shows('☐ worker');
+          aligned(window.frame());
+          await window.press(' ');
+          await window.press(DOWN);
+          await window.press(' ');
+          await window.press('\r');
+          await window.shows(
+            cycle === 0 ? 'Tags           web, api' : 'Tags           ',
+          );
+          aligned(window.frame());
+          await window.press(UP);
+        }
+
+        for (let step = 0; step < 5; step++) {
+          await window.press(UP);
+        }
+
+        await window.shows('Project name   ab');
+        await window.press('\x15');
+        await window.type('web-app');
+        await window.press(DOWN);
+        await window.shows('Contact email');
+        expect(window.frame()).not.toContain('At least 3 characters');
+        aligned(window.frame());
+        await window.press(ESC);
+        await window.shows('Elicitation answer: cancel');
+      }, size));
+  }
+
+  test('two sessions keep separate form values and open lists when switched', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'form');
+        await inputAsked(window);
+        await window.type('alpha');
+
+        for (let step = 0; step < 5; step++) {
+          await window.press(DOWN);
+        }
+
+        await window.press(' ');
+        await window.shows('1. Europe');
+        await leader(window, 'c');
+        await until('the second agent', () => window.pids.length === 2);
+        await window.shows('● 1 fake asks for input · ctrl+x a');
+        await send(window, 'form');
+        await inputAsked(window);
+        await window.type('beta');
+        await window.press(DOWN);
+        await window.type('beta@example.com');
+        await leader(window, '1');
+        await inputAsked(window);
+        await window.shows('1. Europe');
+        aligned(window.frame());
+        await window.press('2');
+        await window.press(ESC);
+        await window.shows('Elicitation answer: cancel');
+        await leader(window, '2');
+        await inputAsked(window);
+        await window.shows('Project name   beta');
+        await window.shows('Contact email  beta@example.com');
+        aligned(window.frame());
+        expect(window.frame()).not.toContain('alpha');
+        await window.press(ESC);
+        await window.shows('Elicitation answer: cancel');
+        await quitAll(window);
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('a form cancels independently of a hung turn in another session', () =>
+    withWindow(
+      async (window) => {
+        await window.shows('? for shortcuts');
+        await window.type('/new wedged');
+        await window.press('\r');
+        await until('the second agent', () => window.pids.length === 2);
+        await send(window, 'never');
+        await window.shows('Working…');
+        await leader(window, '1');
+        await send(window, 'form');
+        await inputAsked(window);
+        await window.press(DOWN);
+        aligned(window.frame());
+        await window.press(CTRL_C);
+        await window.shows('⎿  Cancelled');
+        expect(window.frame()).not.toContain('fake asks for input');
+        await quitAll(window);
+      },
+      {
+        columns: 80,
+        rows: 24,
+        startupOf: (agent) => ({
+          agentCommand:
+            agent === 'wedged'
+              ? fakeAgentCommand(undefined, '--hang', 'turn')
+              : fakeAgentCommand(),
+        }),
+      },
+    ));
+
+  test('an agent exiting with a dropdown open withdraws the form', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'form');
+        await inputAsked(window);
+
+        for (let step = 0; step < 5; step++) {
+          await window.press(DOWN);
+        }
+
+        await window.press(' ');
+        await window.shows('1. Europe');
+
+        const pid = window.pids[0];
+
+        expect(pid).toBeDefined();
+        process.kill(pid!, 'SIGKILL');
+        await until(
+          'the exited agent to withdraw its form',
+          () => !window.frame().includes('fake asks for input'),
+        );
+        await window.shows('⎿  Cancelled');
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('a late reply before a new form leaves its rows and cancel key intact', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'late');
+        await window.shows('Late, after the answer.');
+        await send(window, 'form');
+        await inputAsked(window);
+        await window.press(DOWN);
+        aligned(window.frame());
+        await window.press(ESC);
+        await window.shows('Elicitation answer: cancel');
+      },
+      { columns: 80, rows: 24 },
+    ));
 });

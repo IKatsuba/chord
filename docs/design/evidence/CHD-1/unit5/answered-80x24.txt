@@ -1,7 +1,8 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.9JSd
  ▀▀     ? for shortcuts · /help
 
  › askclaude
-
    ⎿  fake asked · Language  Deno (TypeScript) (Recommended)
                    Checks    Types, Tests · also fmt
 
@@ -11,7 +12,6 @@
    fmt"}
 
  › askcodex
-
    ⎿  fake asked · Next step  Review existing work
                    Token      (hidden)
 

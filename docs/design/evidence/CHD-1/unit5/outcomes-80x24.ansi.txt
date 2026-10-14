@@ -1,20 +1,20 @@
-[38;2;255;255;255m   [39m{"next":"Review existing work","token":"hunter2"}[38;2;255;255;255m
+[38;2;255;255;255m                   [39mToken[38;2;255;255;255m      [39m(hidden)[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mElicitation answer: accept[38;2;255;255;255m
+   [39m{"next":"Review existing work","token":"hunter2"}[38;2;255;255;255m
 
  [2m[39m›[0m[38;2;255;255;255m [39maskclaude[38;2;255;255;255m
-
-   [2m[39m⎿[0m[38;2;255;255;255m  [39mfake asked · [38;2;255;107;128mSkipped[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mfake asked · Language, Checks · [38;2;255;107;128mSkipped[38;2;255;255;255m
 
  [39m⏺[38;2;255;255;255m [39mElicitation answer: decline[38;2;255;255;255m
 
  [2m[39m›[0m[38;2;255;255;255m [39maskdroid[38;2;255;255;255m
-
-   [2m[39m⎿[0m[38;2;255;255;255m  [39mfake asked · [38;2;255;107;128mCancelled[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mfake asked · Storage, Formats, Bucket · [38;2;255;107;128mCancelled[38;2;255;255;255m
 
  [39m⏺[38;2;255;255;255m [39mElicitation answer: cancel[38;2;255;255;255m
 
  [2m[39m›[0m[38;2;255;255;255m [39maskcodexwait[38;2;255;255;255m
-
-   [2m[39m⎿[0m[38;2;255;255;255m  [39mfake asked · [38;2;255;107;128mTimed out[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mfake asked · Next step, Token · [38;2;255;107;128mTimed out[38;2;255;255;255m
 
  [39m⏺[38;2;255;255;255m [39mElicitation answer: timed out[38;2;255;255;255m
 

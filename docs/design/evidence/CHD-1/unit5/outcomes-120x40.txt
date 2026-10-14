@@ -1,7 +1,9 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.uNn1
  ▀▀     ? for shortcuts · /help
 
  › askclaude
-
    ⎿  fake asked · Language  Deno (TypeScript) (Recommended)
                    Checks    Types, Tests · also fmt
 
@@ -9,7 +11,6 @@
    {"question_0":"Deno (TypeScript) (Recommended)","question_1":["Types","Tests"],"question_1_custom":"also fmt"}
 
  › askcodex
-
    ⎿  fake asked · Next step  Review existing work
                    Token      (hidden)
 
@@ -17,22 +18,21 @@
    {"next":"Review existing work","token":"hunter2"}
 
  › askclaude
-
-   ⎿  fake asked · Skipped
+   ⎿  fake asked · Language, Checks · Skipped
 
  ⏺ Elicitation answer: decline
 
  › askdroid
-
-   ⎿  fake asked · Cancelled
+   ⎿  fake asked · Storage, Formats, Bucket · Cancelled
 
  ⏺ Elicitation answer: cancel
 
  › askcodexwait
-
-   ⎿  fake asked · Timed out
+   ⎿  fake asked · Next step, Token · Timed out
 
  ⏺ Elicitation answer: timed out
+
+
 
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ ›                                                                                                                    │

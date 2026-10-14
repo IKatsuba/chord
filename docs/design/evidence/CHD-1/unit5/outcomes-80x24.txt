@@ -1,20 +1,20 @@
+                   Token      (hidden)
+
+ ⏺ Elicitation answer: accept
    {"next":"Review existing work","token":"hunter2"}
 
  › askclaude
-
-   ⎿  fake asked · Skipped
+   ⎿  fake asked · Language, Checks · Skipped
 
  ⏺ Elicitation answer: decline
 
  › askdroid
-
-   ⎿  fake asked · Cancelled
+   ⎿  fake asked · Storage, Formats, Bucket · Cancelled
 
  ⏺ Elicitation answer: cancel
 
  › askcodexwait
-
-   ⎿  fake asked · Timed out
+   ⎿  fake asked · Next step, Token · Timed out
 
  ⏺ Elicitation answer: timed out
 

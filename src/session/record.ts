@@ -17,6 +17,8 @@ import { unwrapMessage } from './tasks.ts';
 import { TASK_META } from './transcript/subagents.ts';
 import type {
   ChordCall,
+  ElicitationAnswer,
+  ElicitationWait,
   LeftOpen,
   MessageFrom,
   ShellRun,
@@ -112,6 +114,17 @@ export type RecordEntry =
    * parent go, was open when the session was left, and has no such line.
    */
   | { readonly type: 'closed'; readonly agent: string }
+  /**
+   * A form or link the agent asked the person, with the questions chord read
+   * in it, and how it was answered, written once it was: one never answered
+   * is not drawn again as waiting.
+   */
+  | {
+      readonly type: 'asked';
+      readonly turnId: string;
+      readonly wait: ElicitationWait;
+      readonly answer: ElicitationAnswer;
+    }
   /** The person interrupted a turn, which ends its subagents then. */
   | { readonly type: 'cancel'; readonly turnId: string; readonly at: number }
   /**
@@ -557,6 +570,22 @@ export function recordActions(
         });
 
         break;
+      case 'asked':
+        actions.push(
+          {
+            type: 'elicitation_requested',
+            turnId: id(entry.turnId),
+            elicitation: entry.wait,
+          },
+          {
+            type: 'elicitation_settled',
+            turnId: id(entry.turnId),
+            id: entry.wait.id,
+            answer: entry.answer,
+          },
+        );
+
+        break;
       case 'cancel':
         actions.push({
           type: 'cancel',
@@ -867,6 +896,8 @@ export class FileRecording implements Recording {
   /** Whether a prompt was sent in the session on screen. */
   #prompted = false;
   #state: StateEntry = stateEntry({});
+  /** The forms and links waiting on the person, kept for their answer's line. */
+  readonly #asking = new Map<string, ElicitationWait>();
   #writing: Promise<void> = Promise.resolve();
   #flushing = false;
   #reported = false;
@@ -973,6 +1004,8 @@ export class FileRecording implements Recording {
       this.#path = undefined;
       this.#held = [];
 
+      this.#asking.clear();
+
       return;
     }
 
@@ -980,7 +1013,26 @@ export class FileRecording implements Recording {
       return;
     }
 
-    const entry = entryOf(event, this.#state);
+    if (event.type === 'elicitation_requested') {
+      this.#asking.set(event.elicitation.id, event.elicitation);
+    }
+
+    const wait =
+      event.type === 'elicitation_settled'
+        ? this.#asking.get(event.id)
+        : undefined;
+
+    this.#asking.delete(wait?.id ?? '');
+
+    const entry =
+      wait !== undefined && event.type === 'elicitation_settled'
+        ? ({
+            type: 'asked',
+            turnId: event.turnId,
+            wait,
+            answer: event.answer,
+          } satisfies RecordEntry)
+        : entryOf(event, this.#state);
 
     if (entry?.type === 'state') {
       this.#state = entry;

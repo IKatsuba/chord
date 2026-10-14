@@ -3,6 +3,7 @@ import {
   type ConversationEvent,
   type Starting,
 } from '../../src/session/conversation.ts';
+import type { ElicitationReply } from '../../src/session/elicitations.ts';
 import { FileRecording } from '../../src/session/record.ts';
 import { openSession } from '../../src/session/session.ts';
 import type { Resume } from '../../src/session/sessions.ts';
@@ -23,7 +24,8 @@ export interface Sending {
  * returns the agent's id for the session. With `resume`, the session is that
  * one opened again, and its record goes on. `heard` hears every event the
  * conversation reports, as the window would. With `permit`, each permission
- * the agent asks is answered with its first option, as a key would.
+ * the agent asks is answered with its first option, as a key would, and with
+ * `answer`, each form or link with that reply.
  */
 export async function recordSession({
   stateDir,
@@ -34,6 +36,7 @@ export async function recordSession({
   starting = {},
   heard,
   permit = false,
+  answer,
 }: {
   stateDir: string;
   cwd: string;
@@ -43,6 +46,7 @@ export async function recordSession({
   starting?: Starting;
   heard?: (event: ConversationEvent) => void;
   permit?: boolean;
+  answer?: ElicitationReply;
 }): Promise<string> {
   const failures: string[] = [];
   const {
@@ -72,6 +76,12 @@ export async function recordSession({
         const { id } = event.permission;
 
         setTimeout(() => conversation.choose(id, option.optionId), 10);
+      }
+
+      if (answer !== undefined && event.type === 'elicitation_requested') {
+        const { id } = event.elicitation;
+
+        setTimeout(() => conversation.answer(id, answer), 10);
       }
 
       if (event.type === 'connected') {

@@ -8,7 +8,10 @@
  * answer goes back under the adapter's own field ids and anything that does
  * not read the shape answers the same form.
  */
-import type { CreateElicitationRequest } from '@agentclientprotocol/sdk';
+import type {
+  CreateElicitationRequest,
+  ElicitationContentValue,
+} from '@agentclientprotocol/sdk';
 import { recordOf } from './enrich.ts';
 
 /** The `_meta` key on an elicitation request that holds its questions. */
@@ -172,4 +175,77 @@ export function isText(property: Property): boolean {
     property.oneOf === undefined &&
     property.enum === undefined
   );
+}
+
+/**
+ * What the person gave one question: the options picked, by value, the text
+ * typed, and, where the text stands for an option (`instead`, `withValue`),
+ * whether that row is the one chosen.
+ */
+export interface QuestionAnswer {
+  readonly picks: readonly string[];
+  readonly typed: string;
+  readonly ownChosen: boolean;
+}
+
+/**
+ * The content an accepted form sends for `answers`, under the agent's own
+ * field ids: each pick in its question's field (a list where it takes
+ * several), the text typed in its own field or, for a question with no
+ * options, in the question's; with `instead`, the text alone when its row is
+ * chosen, and with `withValue`, the option it stands for beside it. A
+ * question left without an answer sends nothing.
+ */
+export function answerOf(
+  questions: Questions,
+  answers: Readonly<Record<string, QuestionAnswer>>,
+): Record<string, ElicitationContentValue> {
+  const content: Record<string, ElicitationContentValue> = {};
+
+  for (const question of questions.questions) {
+    const answer = answers[question.id];
+    const typed = answer?.typed.trim() ?? '';
+
+    if (answer === undefined) {
+      continue;
+    }
+
+    if (question.options.length === 0) {
+      if (typed !== '') {
+        content[question.id] = typed;
+      }
+
+      continue;
+    }
+
+    const { own } = question;
+    const ownSent =
+      own !== undefined &&
+      typed !== '' &&
+      (own.mode === 'beside' || answer.ownChosen);
+    const picks =
+      own?.mode === 'instead' && ownSent
+        ? []
+        : own?.mode === 'withValue' && ownSent && own.value !== undefined
+          ? [...answer.picks, own.value]
+          : [...answer.picks];
+
+    if (question.multiSelect) {
+      if (picks.length > 0) {
+        content[question.id] = picks;
+      }
+    } else {
+      const pick = picks.at(-1);
+
+      if (pick !== undefined) {
+        content[question.id] = pick;
+      }
+    }
+
+    if (ownSent) {
+      content[own.field] = typed;
+    }
+  }
+
+  return content;
 }

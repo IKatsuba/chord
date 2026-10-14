@@ -704,3 +704,16 @@ describe('CHD-1 tester: question record rendering', () => {
     }
   });
 });
+
+test("claude's lone question, once answered, reads Asking(<the question>)", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'askclaudeone');
+      await inputAsked(window, 'fake asks you a question');
+      await window.press('1');
+      await window.press('\r');
+      await window.shows('⏺ Asking(Which language should helper scripts use?)');
+      expect(window.frame()).not.toContain('Which(language');
+    },
+    { rows: 40, columns: 120 },
+  ));

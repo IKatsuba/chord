@@ -1,11 +1,27 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { readPast, recordActions } from '../../../src/session/record.ts';
+import { readRecords } from '../../../src/session/sessions.ts';
+import { reduceTranscript } from '../../../src/session/transcript/reducer.ts';
+import {
+  emptyTranscript,
+  type Entry,
+  type TranscriptAction,
+} from '../../../src/session/transcript/types.ts';
+import type { ConversationEvent } from '../../../src/session/conversation.ts';
+import { ElicitationRecord } from '../../../src/ui/dialogs/Form.tsx';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { recordSession } from '../../fixtures/records.ts';
+import { FORM_SCHEMA } from '../../fixtures/forms.ts';
 import type { PendingElicitation } from '../../../src/session/elicitations.ts';
 import { enricherRelay } from '../../../src/session/enrich.ts';
 import { ENRICHERS } from '../../../src/session/enrichers.ts';
 import { type Questions, questionsOf } from '../../../src/session/questions.ts';
 import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
-import { CODEX_QUESTIONS } from '../../fixtures/questions.ts';
+import { CODEX_QUESTIONS, DROID_QUESTIONS } from '../../fixtures/questions.ts';
 import { draw } from '../harness.tsx';
 import {
   DOWN,
@@ -444,6 +460,219 @@ describe('CHD-1 tester: question box lifecycle', () => {
       }
     } finally {
       await drawn.unmount();
+    }
+  });
+});
+
+describe('CHD-1 tester: question record rendering', () => {
+  test('a secret renders hidden live and from the saved record that omits its value, at both widths', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-question-record-'));
+    const stateDir = join(dir, 'state');
+    const events: ConversationEvent[] = [];
+
+    try {
+      await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(),
+        prompts: ['askcodex'],
+        answer: {
+          action: 'accept',
+          content: {
+            next: 'Review existing work',
+            next_note: 'tests first',
+            token: 'record-secret-for-tests',
+          },
+        },
+        heard: (event) => events.push(event),
+      });
+
+      const [file] = await readRecords(stateDir);
+
+      assert(file !== undefined);
+
+      const lines = await readPast(file.path);
+      const answer = lines.find((entry) => entry.type === 'answered');
+      const replay = recordActions(lines)
+        .filter((action): action is TranscriptAction => action.type !== 'usage')
+        .reduce(reduceTranscript, emptyTranscript);
+      const types = new Set([
+        'prompt',
+        'update',
+        'elicitation_requested',
+        'elicitation_settled',
+        'cancel',
+        'result',
+      ]);
+      const live = events
+        .filter((event): event is TranscriptAction => types.has(event.type))
+        .reduce(reduceTranscript, emptyTranscript);
+      const recorded = replay.entries.find(
+        (entry) => entry.kind === 'elicitation',
+      );
+      const current = live.entries.find(
+        (entry) => entry.kind === 'elicitation',
+      );
+
+      assert(answer?.type === 'answered' && answer.answer.type === 'accepted');
+      expect(answer.answer.content).toStrictEqual({
+        next: 'Review existing work',
+        next_note: 'tests first',
+      });
+      assert(
+        recorded?.kind === 'elicitation' && current?.kind === 'elicitation',
+      );
+      expect(current.content?.token).toBe('record-secret-for-tests');
+      expect(recorded.content?.token).toBeUndefined();
+
+      for (const entry of [current, recorded]) {
+        for (const columns of [80, 120]) {
+          for (const expanded of [false, true]) {
+            const rendered = await draw(
+              <ElicitationRecord
+                entry={entry}
+                agent='codex'
+                expanded={expanded}
+              />,
+              { columns, rows: 24 },
+            );
+
+            try {
+              const frame = rendered.frame();
+
+              expect(frame).toContain('codex asked · Next step');
+              expect(frame).toContain('Review existing work · tests first');
+              expect(frame).toMatch(/Token +\(hidden\)/);
+              expect(frame).not.toContain('record-secret-for-tests');
+            } finally {
+              await rendered.unmount();
+            }
+          }
+        }
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('droid records show option titles, combine its own answer and label an unanswered question skipped', async () => {
+    const [message] = enricherRelay(ENRICHERS).fromAgent({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'elicitation/create',
+      params: { ...DROID_QUESTIONS, sessionId: 's' },
+    });
+
+    assert(message !== undefined && 'params' in message);
+
+    const questions = questionsOf(message.params as typeof DROID_QUESTIONS);
+
+    assert(questions !== undefined);
+
+    const entry: Extract<Entry, { kind: 'elicitation' }> = {
+      kind: 'elicitation',
+      turnId: 't',
+      outcome: 'accepted',
+      wait: {
+        id: 'droid',
+        mode: 'form',
+        message: DROID_QUESTIONS.message,
+        schema: DROID_QUESTIONS.requestedSchema,
+        questions,
+      },
+      content: {
+        question_0: 'option_1',
+        question_1: ['option_0', 'other'],
+        question_1_other: 'HEIC',
+      },
+    };
+    const rendered = await draw(
+      <ElicitationRecord entry={entry} agent='droid' expanded={false} />,
+      { columns: 80, rows: 24 },
+    );
+
+    try {
+      const frame = rendered.frame();
+
+      expect(frame).toMatch(/Storage +S3 bucket/);
+      expect(frame).toMatch(/Formats +PNG, HEIC/);
+      expect(frame).toMatch(/Bucket +skipped/);
+      expect(frame).not.toContain('option_');
+      expect(frame).not.toContain('Answered ·');
+    } finally {
+      await rendered.unmount();
+    }
+  });
+
+  test('unanswered outcomes name all questions, while a record without questions keeps its old form summary', async () => {
+    const { questions } = askedCodex();
+
+    for (const [outcome, text] of [
+      ['declined', 'Skipped'],
+      ['cancelled', 'Cancelled'],
+      ['timed_out', 'Timed out'],
+    ] as const) {
+      const rendered = await draw(
+        <ElicitationRecord
+          entry={{
+            kind: 'elicitation',
+            turnId: 't',
+            outcome,
+            wait: {
+              id: 'e',
+              mode: 'form',
+              message: CODEX_QUESTIONS.message,
+              schema: CODEX_QUESTIONS.requestedSchema,
+              questions,
+            },
+          }}
+          agent='codex'
+          expanded={false}
+        />,
+        { columns: 80, rows: 24 },
+      );
+
+      try {
+        expect(rendered.frame()).toContain(
+          `codex asked · Next step, Token · ${text}`,
+        );
+      } finally {
+        await rendered.unmount();
+      }
+    }
+
+    const entry: Extract<Entry, { kind: 'elicitation' }> = {
+      kind: 'elicitation',
+      turnId: 't',
+      outcome: 'accepted',
+      wait: {
+        id: 'generic',
+        mode: 'form',
+        message: 'Set up the deploy target',
+        schema: FORM_SCHEMA,
+      },
+      content: { name: 'old-form', replicas: 2 },
+    };
+
+    for (const expanded of [false, true]) {
+      const rendered = await draw(
+        <ElicitationRecord entry={entry} agent='fake' expanded={expanded} />,
+        { columns: 80, rows: 24 },
+      );
+
+      try {
+        expect(rendered.frame()).toContain(
+          'fake asked: Set up the deploy target',
+        );
+        expect(rendered.frame()).toContain('Answered · 2 fields');
+        expect(rendered.frame()).not.toContain('fake asked ·');
+
+        if (expanded) {
+          expect(rendered.frame()).toMatch(/Project name +old-form/);
+        }
+      } finally {
+        await rendered.unmount();
+      }
     }
   });
 });

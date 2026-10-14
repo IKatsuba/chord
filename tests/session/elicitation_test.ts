@@ -430,3 +430,53 @@ test("a form is read as timed out only once the agent's whole wait has passed", 
   expect(ranOut(wait(300), 300)).toStrictEqual(true);
   expect(ranOut(wait(), 1_000_000)).toStrictEqual(false);
 });
+
+describe('CHD-1 tester: receipt-relative timeout outcomes', () => {
+  for (const [waited, outcome] of [
+    [299, 'cancelled'],
+    [300, 'timed_out'],
+    [301, 'timed_out'],
+  ] as const) {
+    test(`a real adapter withdrawal after ${waited} local milliseconds records ${outcome}`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-question-timeout-'));
+      const events: ConversationEvent[] = [];
+      let clock = 1_000;
+      const conversation = new Conversation(
+        () =>
+          openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(),
+          }),
+        (event) => {
+          events.push(event);
+
+          if (event.type === 'elicitation_requested') {
+            clock = 1_000 + waited;
+          }
+        },
+        () => clock,
+      );
+
+      try {
+        conversation.start();
+        await until(() => events.some((event) => event.type === 'connected'));
+        conversation.send('askcodexwait');
+        await until(() => events.some((event) => event.type === 'result'));
+
+        const records = entries(events).filter(
+          (entry) => entry.kind === 'elicitation',
+        );
+
+        expect(records.length).toBe(1);
+        expect(records[0]?.outcome).toBe(outcome);
+        expect(
+          events.filter((event) => event.type === 'elicitation_settled').length,
+        ).toBe(1);
+      } finally {
+        await conversation.close();
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+});

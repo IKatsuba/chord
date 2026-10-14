@@ -915,8 +915,8 @@ module's tests are follows from where it is.
   `askclaudeone`, `askcodex`, `askdroid`, `askopencode` and `askdimcode`
   each adapter's question form (`tests/fixtures/questions.ts`), claude's
   after AskUserQuestion's tool call as claude-agent-acp sends it,
-  `askcodexwait` codex's with a wait of 300 ms, withdrawn once it runs
-  out, as codex-acp does, and each says what came back, and
+  `askcodexwait` codex's with a wait of 300 ms, withdrawn 50 ms after it
+  runs out, as codex-acp withdraws it once it does, and each says what came back, and
   an accepted link is followed by `elicitation/complete`; `twins` asks a
   permission with two `allow_once` options and says the id picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the

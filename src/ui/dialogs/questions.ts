@@ -607,6 +607,18 @@ export function windowOf(
     }
   }
 
+  // Never another option cut at the bottom: the window ends before it, and
+  // it is counted below whole.
+  while (
+    end < count &&
+    end > top &&
+    rowOfLine[end] !== undefined &&
+    rowOfLine[end] !== focus &&
+    rowOfLine[end] === rowOfLine[end - 1]
+  ) {
+    end--;
+  }
+
   // A focused row taller than the room is cut at its end: the box never
   // takes more than its rows.
   while (

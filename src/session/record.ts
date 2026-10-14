@@ -13,6 +13,7 @@ import { shellContext, splitContext, withContext } from './context.ts';
 import type { ConversationEvent, Recording } from './conversation.ts';
 import type { PastAction, Session } from './session.ts';
 import { monitorsPast } from './monitors.ts';
+import { withoutSecrets } from './questions.ts';
 import { unwrapMessage } from './tasks.ts';
 import { TASK_META } from './transcript/subagents.ts';
 import type {
@@ -114,15 +115,20 @@ export type RecordEntry =
    * parent go, was open when the session was left, and has no such line.
    */
   | { readonly type: 'closed'; readonly agent: string }
-  /**
-   * A form or link the agent asked the person, with the questions chord read
-   * in it, and how it was answered, written once it was: one never answered
-   * is not drawn again as waiting.
-   */
+  /** A form or link the agent asked the person, with the questions chord read in it. */
   | {
       readonly type: 'asked';
       readonly turnId: string;
       readonly wait: ElicitationWait;
+    }
+  /**
+   * How a form or link was answered, by its id, where it was: what was given
+   * for a secret question left out.
+   */
+  | {
+      readonly type: 'answered';
+      readonly turnId: string;
+      readonly id: string;
       readonly answer: ElicitationAnswer;
     }
   /** The person interrupted a turn, which ends its subagents then. */
@@ -488,6 +494,9 @@ export function recordActions(
   let open: string | undefined;
   const id = (turnId: string) => `history-${turnId}`;
   const reachable = answeredReachable(entries);
+  const answered = new Set(
+    entries.flatMap((entry) => (entry.type === 'answered' ? [entry.id] : [])),
+  );
 
   const end = () => {
     if (open !== undefined) {
@@ -571,19 +580,31 @@ export function recordActions(
 
         break;
       case 'asked':
-        actions.push(
-          {
-            type: 'elicitation_requested',
-            turnId: id(entry.turnId),
-            elicitation: entry.wait,
-          },
-          {
+        actions.push({
+          type: 'elicitation_requested',
+          turnId: id(entry.turnId),
+          elicitation: entry.wait,
+        });
+
+        // One the record never saw answered, as chord was stopped while it
+        // waited, is not drawn again as waiting.
+        if (!answered.has(entry.wait.id)) {
+          actions.push({
             type: 'elicitation_settled',
             turnId: id(entry.turnId),
             id: entry.wait.id,
-            answer: entry.answer,
-          },
-        );
+            answer: { type: 'withdrawn' },
+          });
+        }
+
+        break;
+      case 'answered':
+        actions.push({
+          type: 'elicitation_settled',
+          turnId: id(entry.turnId),
+          id: entry.id,
+          answer: entry.answer,
+        });
 
         break;
       case 'cancel':
@@ -794,6 +815,12 @@ export function entryOf(
   switch (event.type) {
     case 'update':
       return updateEntry(event);
+    case 'elicitation_requested':
+      return {
+        type: 'asked',
+        turnId: event.turnId,
+        wait: event.elicitation,
+      };
     case 'cancel':
       return { type: 'cancel', turnId: event.turnId, at: event.at };
     case 'self_started':
@@ -1017,21 +1044,9 @@ export class FileRecording implements Recording {
       this.#asking.set(event.elicitation.id, event.elicitation);
     }
 
-    const wait =
-      event.type === 'elicitation_settled'
-        ? this.#asking.get(event.id)
-        : undefined;
-
-    this.#asking.delete(wait?.id ?? '');
-
     const entry =
-      wait !== undefined && event.type === 'elicitation_settled'
-        ? ({
-            type: 'asked',
-            turnId: event.turnId,
-            wait,
-            answer: event.answer,
-          } satisfies RecordEntry)
+      event.type === 'elicitation_settled'
+        ? this.#answered(event)
         : entryOf(event, this.#state);
 
     if (entry?.type === 'state') {
@@ -1043,6 +1058,38 @@ export class FileRecording implements Recording {
     }
 
     this.#flush();
+  }
+
+  /**
+   * An answer's line, once its form's line was written: the questions that
+   * form carries say which values are secret and stay out of the file.
+   */
+  #answered(
+    event: Extract<ConversationEvent, { type: 'elicitation_settled' }>,
+  ): RecordEntry | undefined {
+    const wait = this.#asking.get(event.id);
+    const { answer } = event;
+
+    this.#asking.delete(event.id);
+
+    if (wait === undefined) {
+      return undefined;
+    }
+
+    return {
+      type: 'answered',
+      turnId: event.turnId,
+      id: event.id,
+      answer:
+        answer.type === 'accepted' &&
+        answer.content !== undefined &&
+        wait.mode === 'form'
+          ? {
+              type: 'accepted',
+              content: withoutSecrets(wait.questions, answer.content),
+            }
+          : answer,
+    };
   }
 
   flushed(): Promise<void> {

@@ -1006,6 +1006,8 @@ test("a question form's questions and answer are recorded once answered, and a r
 
     assert(asked?.type === 'asked' && asked.wait.mode === 'form');
     expect(asked.wait.questions?.agent).toStrictEqual('codex');
+    // When it came is the live box's alone.
+    expect('at' in asked.wait).toStrictEqual(false);
     // The secret token stays out of chord's own lines; the fake agent's reply
     // echoing it is the agent's.
     expect(answered).toMatchObject({

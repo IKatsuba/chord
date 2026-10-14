@@ -43,8 +43,9 @@ export interface ToolCall {
    */
   readonly chord?: ChordCall;
   /**
-   * The questions the call asked were answered in chord's question box,
-   * whose record under the call stands in for its own lines while folded.
+   * The call's questions are asked in chord's question box, from when it
+   * opens: the call reads as asking, and the box's record under it stands
+   * in for its own lines while folded.
    */
   readonly asked?: true;
 }

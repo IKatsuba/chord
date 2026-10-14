@@ -1,0 +1,14 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ claude asks you 2 questions                                                                                          │
+│                                                                                                                      │
+│ ← ✔ Language   ✔ Verbosity   ◉ Submit →                                                                              │
+│                                                                                                                      │
+│ Language   Deno (TypeScript) (Recommended)                                                                           │
+│ Verbosity  Terse, one line                                                                                           │
+│                                                                                                                      │
+│ ❯ 1. Send the answers                                                                                                │
+│   2. Skip these questions                                                                                            │
+│                                                                                                                      │
+│ Enter to choose · ←→ or Tab for the questions · Esc to cancel                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                           Default (recommended) · medium effort · 4% context used

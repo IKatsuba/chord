@@ -1,0 +1,17 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ codex needs your input to continue                                           │
+│                                                                              │
+│ ← * ◉ Next step   ○ Submit →                                                 │
+│                                                                              │
+│ What would you like to focus on next?                                        │
+│                                                                              │
+│ ❯ 1. Plan a change (Recommended)                                             │
+│   2. Review existing work                                                    │
+│   3. Explain a topic                                                         │
+│   4. None of the above                                                       │
+│                                                                              │
+│   Note  Additional answer or note                                            │
+│                                                                              │
+│ Enter to pick · 1–4 · ↑↓ · ←→ questions · Esc to cancel                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)           Default (recommended) · 4% used

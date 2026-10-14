@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › form
+
+ ››› Waiting for your input… (4s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                          │
+│ Set up the deploy target                                                     │
+│                                                                              │
+│     ↑ 3 more fields                                                          │
+│     Traffic share  not set                                                   │
+│   ✔ Public         ☐ No                                                      │
+│ ❯ * Region         ▾                                                         │
+│                    ❯ 1. Europe                                               │
+│                      2. United States                                        │
+│                      3. Asia Pacific                                         │
+│     Tags           not set                                                   │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ ↑↓ · 1–3 or Enter to pick · ← to close · Esc to cancel                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

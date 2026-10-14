@@ -1,0 +1,18 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ claude asks for input                                                        │
+│ Please answer the following questions.                                       │
+│                                                                              │
+│   ✔ Language   Deno (TypeScript) (Recommended)                               │
+│                Which language should helper scripts use?                     │
+│       ↳ Note   not set                                                       │
+│ ❯   Verbosity  ▾                                                             │
+│                How verbose should responses be?                              │
+│                ❯ 1. Terse                                                    │
+│                  2. Detailed                                                 │
+│       ↳ Note   not set                                                       │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ ↑↓ · 1–2 or Enter to pick · ← to close · Esc to cancel                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)           Default (recommended) · 4% used

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   claude · Default (recommended)
+ ▄▀▀▀   /tmp/chord-qa.cndT
+ ▀▀     ? for shortcuts · /help
+
+ › Use AskUserQuestion to ask me two short questions with options, then stop.
+
+ ⏺ Asking(for your input)
+   ⎿  Which language should helper scripts use?
+      How verbose should responses be?
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (33s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ claude asks for input                                                                                                │
+│ Please answer the following questions.                                                                               │
+│                                                                                                                      │
+│     Language   not set                                                                                               │
+│                ❯   Other                                                                                             │
+│                Type your own answer, or add a note to the option you chose above (optional).                         │
+│     Verbosity  not set                                                                                               │
+│     Other      not set                                                                                               │
+│                                                                                                                      │
+│   Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ Type to fill in · ↑↓ to move · Enter for the next · Esc to cancel                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                         Default (recommended) · medium effort · 4% context used

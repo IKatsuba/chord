@@ -1,0 +1,18 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ claude asks for input                                                                                                │
+│ Please answer the following questions.                                                                               │
+│                                                                                                                      │
+│   ✔ Language   Deno (TypeScript) (Recommended)                                                                       │
+│                Which language should helper scripts use?                                                             │
+│       ↳ Note   not set                                                                                               │
+│ ❯   Verbosity  ▾                                                                                                     │
+│                How verbose should responses be?                                                                      │
+│                ❯ 1. Terse      One line where one line will do                                                       │
+│                  2. Detailed   Reasons and alternatives with each answer                                             │
+│       ↳ Note   not set                                                                                               │
+│                                                                                                                      │
+│   Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ ↑↓ to move · 1–2 or Enter to pick · ← to close the list · Esc to cancel                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                           Default (recommended) · medium effort · 4% context used

@@ -1,0 +1,13 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ codex needs your input to continue                                           │
+│                                                                              │
+│ ← * ○ Next step   ◉ Submit →                                                 │
+│                                                                              │
+│ Next step  no answer yet, and codex needs one                                │
+│                                                                              │
+│   1. Send the answers                                                        │
+│ ❯ 2. Skip these questions                                                    │
+│                                                                              │
+│ Enter to choose · ←→ questions · Esc to cancel                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)           Default (recommended) · 4% used

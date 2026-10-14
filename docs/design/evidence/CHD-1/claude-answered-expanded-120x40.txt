@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   claude · Default (recommended)
+ ▄▀▀▀   /tmp/chord-qa.cndT
+ ▀▀     ? for shortcuts · /help
+
+ › Use AskUserQuestion to ask me two short questions with options, then stop.
+
+ ⏺ Asking(for your input)
+   ⎿  The user answered: "Which language should helper script...at you not proceed — and follow what they actually say.
+   ⎿  Answered · 2 fields
+      Language  Deno (TypeScript) (Recommended)
+      Other     Terse, one line
+
+ ⏺ Got it: Deno (TypeScript) for scripts, and terse one-line replies.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                         Default (recommended) · medium effort · 4% context used

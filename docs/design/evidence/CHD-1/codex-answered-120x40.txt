@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   codex · 6.1 Sol
+ ▄▀▀▀   /tmp/chord-qa.dty8
+ ▀▀     ? for shortcuts · /help
+
+ › /config
+   ⎿  Collaboration mode set to Plan
+
+ › Ask me one multiple-choice question with your question tool, then stop.
+   ⎿  Answered · 2 fields
+
+ ⏺ Review existing work, with tests first.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto review mode on (shift+tab to cycle)                                6.1 Sol · medium effort · 5% context used

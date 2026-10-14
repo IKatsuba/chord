@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   claude · Default (recommended)
+ ▄▀▀▀   /tmp/chord-qa.cndT
+ ▀▀     ? for shortcuts · /help
+
+ › Use AskUserQuestion to ask me two short questions with options, then stop.
+
+ ⏺ Asking(for your input)
+   ⎿  Which language should helper scripts use?
+      How verbose should responses be?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (1m 11s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ claude asks for input                                                                                                │
+│ Please answer the following questions.                                                                               │
+│                                                                                                                      │
+│   ✔ Language   Deno (TypeScript) (Recommended)                                                                       │
+│                    Other      not set                                                                                │
+│                    Verbosity  not set                                                                                │
+│                  ✔ Other      Terse, one line                                                                        │
+│                                                                                                                      │
+│ ❯ Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ ←→ to switch · Enter to accept · Esc to cancel                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                         Default (recommended) · medium effort · 4% context used

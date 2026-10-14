@@ -346,7 +346,8 @@ module's tests are follows from where it is.
     record keeps only the task's start and end and draws its work from the
     task's own, or none once that has gone, each long-lived agent closed while
     the session went on, a run the person's `/team run` started as the
-    `run_team` call it was, each interrupt, each turn the agent started on
+    `run_team` call it was, each form or link answered, with the questions
+    chord read in it and the answer, each interrupt, each turn the agent started on
     its own and chord cancelled, and the agent's exit, each turn's
     result and tokens, the model, mode and config values in use, and the
     agent's id for the session), appended as the session goes once a prompt

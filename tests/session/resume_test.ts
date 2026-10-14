@@ -9,6 +9,7 @@ import {
   FileRecording,
   parseRecord,
   readPast,
+  recordActions,
   type RecordEntry,
 } from '../../src/session/record.ts';
 import {
@@ -982,3 +983,48 @@ test("a turn Codex's adapter started on its own and chord cancelled is recorded,
     expect(live).toContain('self_started');
     expect(live.indexOf('self_started')).toBeLessThan(live.indexOf('message'));
   }));
+
+test("a question form's questions and answer are recorded once answered, and a reopened session draws them", () =>
+  withPlace(async (place) => {
+    const content = { next: 'Review existing work', next_note: 'tests first' };
+    const id = await recordSession({
+      stateDir: place.stateDir,
+      cwd: place.dir,
+      command: place.command,
+      prompts: ['askcodex'],
+      answer: { action: 'accept', content },
+    });
+    const asked = (await only(place)).find((entry) => entry.type === 'asked');
+
+    assert(asked?.type === 'asked' && asked.wait.mode === 'form');
+    expect(asked.wait.questions?.agent).toStrictEqual('codex');
+    expect(asked.answer).toStrictEqual({ type: 'accepted', content });
+
+    const entry = (await reopened(place, id)).transcript.entries.find(
+      (each) => each.kind === 'elicitation',
+    );
+
+    assert(entry?.kind === 'elicitation' && entry.wait.mode === 'form');
+    expect(entry.outcome).toStrictEqual('accepted');
+    expect(entry.content).toStrictEqual(content);
+    expect(entry.wait.questions?.questions.map(({ id }) => id)).toStrictEqual([
+      'next',
+      'token',
+    ]);
+  }));
+
+test('a record kept before forms were recorded draws as it did, with no form', () => {
+  const entries = parseRecord(
+    [
+      '{"type":"prompt","turnId":"t","at":1,"prompt":"askcodex","images":0}',
+      '{"type":"result","turnId":"t","result":{"status":"completed","stopReason":"end_turn"}}',
+    ].join('\n'),
+  );
+
+  expect(
+    recordActions(entries)
+      .filter((action): action is TranscriptAction => action.type !== 'usage')
+      .reduce(reduceTranscript, emptyTranscript)
+      .entries.map((entry) => entry.kind),
+  ).toStrictEqual(['user']);
+});

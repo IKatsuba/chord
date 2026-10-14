@@ -3,13 +3,14 @@
  *
  *   bun run screenshots [name…]   rewrite docs/images/*.png, or those named
  *
- * Each shot runs chord from source in a tmux session of its own, 120×40, on
+ * Each shot runs chord from source in a tmux session of its own, `COLUMNS`
+ * × `ROWS`, on
  * the fake agent in tests/fixtures/, as `bun run chord:fake` does, types
  * what a person would, waits for the state the shot shows, and reads the
  * screen back with its colours (`capture-pane -e`). The frame is then drawn
- * in a terminal window in Chrome (puppeteer-core) through ansi_up and
- * captured at twice its size. Runs of blank rows above the transcript are
- * folded to one, so a shot is as tall as what it shows.
+ * in a Chorded terminal pane in Chrome (puppeteer-core) through ansi_up and
+ * captured at twice its size. chord lays the screen out itself, so every
+ * shot is the same size; `ROWS` is the fewest that hold the tallest whole.
  *
  * chord runs in a home of its own under a temporary directory, so nothing
  * of the person's settings, records or teams reaches a shot. There the
@@ -28,7 +29,6 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { AnsiUp } from 'ansi_up';
 import puppeteer from 'puppeteer-core';
 import { quote } from 'shell-quote';
-import stripAnsi from 'strip-ansi';
 
 /** What a shot does to the window before it is taken. */
 type Step =
@@ -141,6 +141,9 @@ const IMAGES = join(ROOT, 'docs', 'images');
 const CHROME =
   process.env['CHROME'] ??
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+/** The terminal's size; `proposal` is the tallest shot, and fits in this. */
+const COLUMNS = 120;
+const ROWS = 37;
 const SOCKET = `chord-screenshots-${String(process.pid)}`;
 
 /** The terminal's own colours behind and in front of chord. */
@@ -250,9 +253,9 @@ async function capture(shot: Shot): Promise<string> {
       '-s',
       'shot',
       '-x',
-      '120',
+      String(COLUMNS),
       '-y',
-      '40',
+      String(ROWS),
       `exec env ${quote([...env, ...chord])}`,
     );
     tmux('set', '-g', 'default-terminal', 'tmux-256color');
@@ -283,33 +286,14 @@ async function capture(shot: Shot): Promise<string> {
   }
 }
 
-/** Runs of two blank rows or more folded to one, and the ends trimmed. */
-function fold(lines: readonly string[]): string[] {
-  const blank = (line: string): boolean => stripAnsi(line).trim() === '';
-  const kept: string[] = [];
-  let run = 0;
-
-  for (const line of lines) {
-    run = blank(line) ? run + 1 : 0;
-
-    if (run < 2) {
-      kept.push(line);
-    }
-  }
-
-  while (kept.length > 0 && blank(kept.at(-1) ?? '')) {
-    kept.pop();
-  }
-
-  return kept;
-}
-
 function page(frame: string): string {
   const ansi = new AnsiUp();
 
   ansi.use_classes = false;
 
-  const rows = fold(frame.replace(/\n$/u, '').split('\n'))
+  const rows = frame
+    .replace(/\n$/u, '')
+    .split('\n')
     .map((line) => `<div class="row">${ansi.ansi_to_html(line) || ' '}</div>`)
     .join('');
 
@@ -319,37 +303,48 @@ function page(frame: string): string {
   @font-face { font-family: Term; src: local('JetBrains Mono'), local('JetBrainsMono-Regular'); }
   @font-face { font-family: Term; font-weight: bold; src: local('JetBrains Mono Bold'), local('JetBrainsMono-Bold'); }
   html, body { margin: 0; background: transparent; }
-  .page { padding: 28px; display: inline-block; }
+  .page { padding: 36px 40px 56px; display: inline-block; }
+  /* Chorded's window: a metal rim around a dark pane, its corners round. */
+  .rim {
+    padding: 7px; border-radius: 38px;
+    background: linear-gradient(180deg, #8e9095 0%, #5d5f64 45%, #3a3b40 100%);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.55),
+      0 24px 48px rgba(0, 0, 0, 0.28),
+      0 8px 16px rgba(0, 0, 0, 0.18);
+  }
   .window {
     background: ${BACKGROUND};
-    border-radius: 12px;
-    box-shadow: 0 0 0 1px #2a2c33, 0 18px 50px rgba(0, 0, 0, 0.35);
+    border-radius: 31px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6);
     overflow: hidden;
   }
   .bar {
-    height: 34px; display: flex; align-items: center; position: relative;
-    background: #22242a; border-bottom: 1px solid #2a2c33;
+    height: 50px; display: flex; align-items: center; gap: 14px;
+    padding: 0 22px 0 24px;
+    font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
   }
-  .lights { display: flex; gap: 8px; padding-left: 14px; }
-  .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
-  .title {
-    position: absolute; left: 0; right: 0; text-align: center;
-    font: 500 12.5px -apple-system, 'Helvetica Neue', sans-serif; color: #8b9099;
-  }
+  .bar svg { flex: none; }
+  .title { font-size: 15px; font-weight: 500; color: #ececec; }
+  .where { margin-left: auto; font-size: 12.5px; color: #8b9099; }
   .screen {
-    padding: 14px 16px 18px; color: ${FOREGROUND};
+    padding: 2px 22px 22px; color: ${FOREGROUND};
     font: 13.5px/1.3 Term, Menlo, monospace; white-space: pre;
     font-variant-ligatures: none;
   }
   .row { height: 1.3em; }
 </style>
-<div class="page"><div class="window">
+<div class="page"><div class="rim"><div class="window">
   <div class="bar">
-    <div class="lights"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div>
-    <div class="title">chord — ~/src/app</div>
+    <svg width="22" height="18" viewBox="0 0 22 18" fill="none" stroke="#c9cacd" stroke-width="1.5">
+      <rect x="1" y="1" width="20" height="16" rx="3.5"/><line x1="8" y1="1" x2="8" y2="17"/>
+      <line x1="3.5" y1="5" x2="5.5" y2="5" stroke-linecap="round"/><line x1="3.5" y1="8" x2="5.5" y2="8" stroke-linecap="round"/>
+    </svg>
+    <div class="title">Chorded</div>
+    <div class="where">~/src/app</div>
   </div>
   <div class="screen">${rows}</div>
-</div></div>`;
+</div></div></div>`;
 }
 
 const only = new Set(process.argv.slice(2));

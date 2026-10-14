@@ -397,14 +397,18 @@ module's tests are follows from where it is.
     window and `-p` read only what it leaves: each enricher pure, from a
     message the agent sent and what the chain has folded of its sessions to
     the messages in its place, ACP's shape both sides, with what chord
-    filled in named under `_meta`'s `chord/filled`. `enrichers.ts` is the
-    five: the adapters' `subagent_spawned` and `subagent_state_update` read
+    filled in named under `_meta`'s `chord/filled`. `enrichers.ts` is
+    them: the adapters' `subagent_spawned` and `subagent_state_update` read
     as ACP's `subagent_update`, the rest of their shape under `_meta`'s
     `chord/subagent_draft`, a cost from a turn's tokens for an agent that
     gives none, the context window from the model for a `usage_update` with
     none, a tool call's title and kind carried onto its updates and
-    permission requests, and a mode change read back from an answer that
-    says nothing, as Codex's. `prices.ts` is a model's price and window
+    permission requests, a mode change read back from an answer that
+    says nothing, as Codex's, and the question forms of claude, codex,
+    factory-droid, opencode and dimcode, each read by its adapter's own
+    marks into `questions.ts`'s one shape under `_meta`'s
+    `chord/questions`, the form left as sent so the answer goes back under
+    its own field ids. `prices.ts` is a model's price and window
     from @pydantic/genai-prices' data.
   - `subagents.ts` — which sessions are the session's own and its
     subagents', and what the window reads of the subagents: how many still
@@ -901,7 +905,9 @@ module's tests are follows from where it is.
   `chordtools`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn; `form` asks for a form with a field of each kind and
-  `link` for a link to open (`tests/fixtures/forms.ts`), and each says what came back, and
+  `link` for a link to open (`tests/fixtures/forms.ts`), `askclaude`,
+  `askclaudeone`, `askcodex`, `askdroid`, `askopencode` and `askdimcode`
+  each adapter's question form (`tests/fixtures/questions.ts`), and each says what came back, and
   an accepted link is followed by `elicitation/complete`; `twins` asks a
   permission with two `allow_once` options and says the id picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the

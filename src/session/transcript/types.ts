@@ -14,6 +14,7 @@ import type {
   ToolCallLocation,
   ToolKind,
 } from '@agentclientprotocol/sdk';
+import type { Questions } from '../questions.ts';
 import type { OpenEscape, TerminalCursor } from '../terminal_text.ts';
 import type { TokenUsage } from '../usage.ts';
 import type { Team } from '../../teams.ts';
@@ -589,7 +590,12 @@ export type ElicitationWait = {
   /** The task agent that asks, when the session's own agent does not. */
   readonly subagentId?: string;
 } & (
-  | { readonly mode: 'form'; readonly schema: ElicitationSchema }
+  | {
+      readonly mode: 'form';
+      readonly schema: ElicitationSchema;
+      /** The form's questions, where an enricher read the adapter's form. */
+      readonly questions?: Questions;
+    }
   | { readonly mode: 'url'; readonly url: string }
 );
 

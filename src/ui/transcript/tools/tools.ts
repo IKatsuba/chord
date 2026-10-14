@@ -73,6 +73,12 @@ function titleHeadline(call: ToolCall): Headline {
   const title = call.title?.trim() ?? '';
   const kindName = call.kind === undefined ? 'Tool' : KIND_NAMES[call.kind];
 
+  // A call whose questions chord's box answered asks: claude titles a lone
+  // question by the question itself, whose first word is no tool's name.
+  if (call.asked === true && title !== '') {
+    return { name: 'Asking', arg: title.replace(/^Asking\s+/, '') };
+  }
+
   if (title === '') {
     return { name: kindName };
   }

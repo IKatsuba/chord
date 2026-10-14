@@ -268,3 +268,19 @@ test('a call whose questions the box answered draws none of its own lines until 
     'User has answered your questions.',
   ]);
 });
+
+test("a call whose questions the box answered reads Asking(…), whatever its title's first word", () => {
+  expect(
+    headline({ id: 'a', title: 'Asking for your input', asked: true }),
+  ).toStrictEqual({ name: 'Asking', arg: 'for your input' });
+  expect(
+    headline({
+      id: 'a',
+      title: 'Which language should helper scripts use?',
+      asked: true,
+    }),
+  ).toStrictEqual({
+    name: 'Asking',
+    arg: 'Which language should helper scripts use?',
+  });
+});

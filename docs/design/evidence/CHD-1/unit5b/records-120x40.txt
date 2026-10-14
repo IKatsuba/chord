@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.Z0pn
+ ▀▀     ? for shortcuts · /help
+
+ › askclaudeone
+
+ ⏺ Asking(Which language should helper scripts use?)
+   ⎿  Language  Python
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Python"}
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+   ⎿  Language  Deno (TypeScript) (Recommended)
+      Checks    Types, Tests
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno (TypeScript) (Recommended)","question_1":["Types","Tests"]}
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+   ⎿  Language, Checks · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

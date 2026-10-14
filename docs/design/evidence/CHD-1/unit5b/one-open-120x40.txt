@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.Z0pn
+ ▀▀     ? for shortcuts · /help
+
+ › askclaudeone
+
+ ⏺ Asking(Which language should helper scripts use?)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you a question                                                                                             │
+│                                                                                                                      │
+│ ← ◉ Language   ○ Submit →                                                                                            │
+│                                                                                                                      │
+│ Which language should helper scripts use?                                                                            │
+│                                                                                                                      │
+│ ❯ 1. Deno                                                                                                            │
+│   2. Python                                                                                                          │
+│                                                                                                                      │
+│   Note  Type your own answer, or add a note to the option you chose above (optional).                                │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

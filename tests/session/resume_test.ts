@@ -986,7 +986,12 @@ test("a turn Codex's adapter started on its own and chord cancelled is recorded,
 
 test("a question form's questions and answer are recorded once answered, and a reopened session draws them", () =>
   withPlace(async (place) => {
-    const content = { next: 'Review existing work', next_note: 'tests first' };
+    const content = {
+      next: 'Review existing work',
+      next_note: 'tests first',
+      token: 'sk-secret',
+    };
+    const kept = { next: 'Review existing work', next_note: 'tests first' };
     const id = await recordSession({
       stateDir: place.stateDir,
       cwd: place.dir,
@@ -994,11 +999,26 @@ test("a question form's questions and answer are recorded once answered, and a r
       prompts: ['askcodex'],
       answer: { action: 'accept', content },
     });
-    const asked = (await only(place)).find((entry) => entry.type === 'asked');
+    const entries = await only(place);
+    const asked = entries.find((entry) => entry.type === 'asked');
+    const answered = entries.find((entry) => entry.type === 'answered');
 
     assert(asked?.type === 'asked' && asked.wait.mode === 'form');
     expect(asked.wait.questions?.agent).toStrictEqual('codex');
-    expect(asked.answer).toStrictEqual({ type: 'accepted', content });
+    // The secret token stays out of chord's own lines; the fake agent's reply
+    // echoing it is the agent's.
+    expect(answered).toMatchObject({
+      type: 'answered',
+      id: asked.wait.id,
+      answer: { type: 'accepted', content: kept },
+    });
+    expect(
+      entries.some(
+        (entry) =>
+          entry.type !== 'update' &&
+          JSON.stringify(entry).includes('sk-secret'),
+      ),
+    ).toStrictEqual(false);
 
     const entry = (await reopened(place, id)).transcript.entries.find(
       (each) => each.kind === 'elicitation',
@@ -1006,7 +1026,7 @@ test("a question form's questions and answer are recorded once answered, and a r
 
     assert(entry?.kind === 'elicitation' && entry.wait.mode === 'form');
     expect(entry.outcome).toStrictEqual('accepted');
-    expect(entry.content).toStrictEqual(content);
+    expect(entry.content).toStrictEqual(kept);
     expect(entry.wait.questions?.questions.map(({ id }) => id)).toStrictEqual([
       'next',
       'token',
@@ -1027,4 +1047,49 @@ test('a record kept before forms were recorded draws as it did, with no form', (
       .reduce(reduceTranscript, emptyTranscript)
       .entries.map((entry) => entry.kind),
   ).toStrictEqual(['user']);
+});
+
+test('a form the person interrupted is drawn cancelled when the session is reopened, as it was live', () =>
+  withPlace(async (place) => {
+    const id = await recordSession({
+      stateDir: place.stateDir,
+      cwd: place.dir,
+      command: place.command,
+      prompts: ['askcodex'],
+      answer: 'interrupt',
+    });
+    const forms = (await reopened(place, id)).transcript.entries.flatMap(
+      (entry) =>
+        entry.kind === 'elicitation' && entry.wait.mode === 'form'
+          ? [{ outcome: entry.outcome, agent: entry.wait.questions?.agent }]
+          : [],
+    );
+
+    expect(forms).toStrictEqual([{ outcome: 'cancelled', agent: 'codex' }]);
+  }));
+
+test('a form asked and never answered, as chord was stopped, is not drawn again as waiting', () => {
+  const wait = {
+    id: 'e-1',
+    mode: 'form',
+    message: 'Questions',
+    schema: { type: 'object', properties: {} },
+  };
+  const transcript = recordActions(
+    parseRecord(
+      [
+        '{"type":"prompt","turnId":"t","at":1,"prompt":"askcodex","images":0}',
+        JSON.stringify({ type: 'asked', turnId: 't', wait }),
+      ].join('\n'),
+    ),
+  )
+    .filter((action): action is TranscriptAction => action.type !== 'usage')
+    .reduce(reduceTranscript, emptyTranscript);
+
+  expect(transcript.asking).toStrictEqual([]);
+  expect(
+    transcript.entries.map((entry) =>
+      entry.kind === 'elicitation' ? entry.outcome : entry.kind,
+    ),
+  ).toStrictEqual(['user', 'cancelled']);
 });

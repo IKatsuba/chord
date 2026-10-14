@@ -178,23 +178,25 @@ export function isText(property: Property): boolean {
 }
 
 /**
- * What the person gave one question: the options picked, by value, the text
- * typed, and, where the text stands for an option (`instead`, `withValue`),
- * whether that row is the one chosen.
+ * What the person gave one question: the options picked, by value; the text
+ * typed as the answer to a question with no options; the text typed in its
+ * own answer; and, where that text stands for an option (`instead`,
+ * `withValue`), whether its row is the one chosen.
  */
 export interface QuestionAnswer {
   readonly picks: readonly string[];
-  readonly typed: string;
+  readonly text: string;
+  readonly own: string;
   readonly ownChosen: boolean;
 }
 
 /**
  * The content an accepted form sends for `answers`, under the agent's own
  * field ids: each pick in its question's field (a list where it takes
- * several), the text typed in its own field or, for a question with no
- * options, in the question's; with `instead`, the text alone when its row is
- * chosen, and with `withValue`, the option it stands for beside it. A
- * question left without an answer sends nothing.
+ * several), or the text typed for a question with no options; the own text
+ * in its own field, beside the pick, instead of it when its row is chosen,
+ * or, with `withValue`, with the option it stands for. A question left
+ * without an answer sends nothing.
  */
 export function answerOf(
   questions: Questions,
@@ -204,21 +206,13 @@ export function answerOf(
 
   for (const question of questions.questions) {
     const answer = answers[question.id];
-    const typed = answer?.typed.trim() ?? '';
 
     if (answer === undefined) {
       continue;
     }
 
-    if (question.options.length === 0) {
-      if (typed !== '') {
-        content[question.id] = typed;
-      }
-
-      continue;
-    }
-
     const { own } = question;
+    const typed = answer.own.trim();
     const ownSent =
       own !== undefined &&
       typed !== '' &&
@@ -229,8 +223,13 @@ export function answerOf(
         : own?.mode === 'withValue' && ownSent && own.value !== undefined
           ? [...answer.picks, own.value]
           : [...answer.picks];
+    const text = answer.text.trim();
 
-    if (question.multiSelect) {
+    if (question.options.length === 0) {
+      if (text !== '') {
+        content[question.id] = text;
+      }
+    } else if (question.multiSelect) {
       if (picks.length > 0) {
         content[question.id] = picks;
       }
@@ -248,4 +247,25 @@ export function answerOf(
   }
 
   return content;
+}
+
+/**
+ * `content` without what was given for a secret question, which must not
+ * reach a file: its own field and its own answer's.
+ */
+export function withoutSecrets(
+  questions: Questions | undefined,
+  content: Readonly<Record<string, ElicitationContentValue>>,
+): Record<string, ElicitationContentValue> {
+  const hidden = new Set(
+    (questions?.questions ?? []).flatMap((question) =>
+      question.secret === true
+        ? [question.id, ...(question.own ? [question.own.field] : [])]
+        : [],
+    ),
+  );
+
+  return Object.fromEntries(
+    Object.entries(content).filter(([key]) => !hidden.has(key)),
+  );
 }

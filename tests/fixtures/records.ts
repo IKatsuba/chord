@@ -25,7 +25,8 @@ export interface Sending {
  * one opened again, and its record goes on. `heard` hears every event the
  * conversation reports, as the window would. With `permit`, each permission
  * the agent asks is answered with its first option, as a key would, and with
- * `answer`, each form or link with that reply.
+ * `answer`, each form or link with that reply, or `interrupt` for the
+ * person interrupting the turn while it waits.
  */
 export async function recordSession({
   stateDir,
@@ -46,7 +47,7 @@ export async function recordSession({
   starting?: Starting;
   heard?: (event: ConversationEvent) => void;
   permit?: boolean;
-  answer?: ElicitationReply;
+  answer?: ElicitationReply | 'interrupt';
 }): Promise<string> {
   const failures: string[] = [];
   const {
@@ -81,7 +82,13 @@ export async function recordSession({
       if (answer !== undefined && event.type === 'elicitation_requested') {
         const { id } = event.elicitation;
 
-        setTimeout(() => conversation.answer(id, answer), 10);
+        setTimeout(() => {
+          if (answer === 'interrupt') {
+            conversation.interrupt();
+          } else {
+            conversation.answer(id, answer);
+          }
+        }, 10);
       }
 
       if (event.type === 'connected') {

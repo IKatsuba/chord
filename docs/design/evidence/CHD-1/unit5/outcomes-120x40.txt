@@ -1,0 +1,40 @@
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+   ⎿  fake asked · Language  Deno (TypeScript) (Recommended)
+                   Checks    Types, Tests · also fmt
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno (TypeScript) (Recommended)","question_1":["Types","Tests"],"question_1_custom":"also fmt"}
+
+ › askcodex
+
+   ⎿  fake asked · Next step  Review existing work
+                   Token      (hidden)
+
+ ⏺ Elicitation answer: accept
+   {"next":"Review existing work","token":"hunter2"}
+
+ › askclaude
+
+   ⎿  fake asked · Skipped
+
+ ⏺ Elicitation answer: decline
+
+ › askdroid
+
+   ⎿  fake asked · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askcodexwait
+
+   ⎿  fake asked · Timed out
+
+ ⏺ Elicitation answer: timed out
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

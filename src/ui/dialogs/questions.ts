@@ -645,6 +645,13 @@ export function capLines(lines: readonly string[], most: number): string[] {
   return [...kept.slice(0, -1), `${last.replace(/\s*\S?$/, '')}…`];
 }
 
+/** `Language, Checks`: what a box not answered asked, by its headers. */
+export function askedHeaders(questions: Questions): string {
+  return questions.questions
+    .map((_, index) => headerOf(questions, index))
+    .join(', ');
+}
+
 /** One question's row in an answered box's record. */
 export interface AnsweredQuestion {
   readonly label: string;

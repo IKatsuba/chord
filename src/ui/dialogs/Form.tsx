@@ -25,7 +25,7 @@ import {
   toFix,
   type ValueView,
 } from './form.ts';
-import { answeredQuestions } from './questions.ts';
+import { answeredQuestions, askedHeaders } from './questions.ts';
 
 /** Between the label column and the values. */
 export const FORM_GAP = 2;
@@ -130,7 +130,8 @@ const ENDED: Readonly<Record<string, string>> = {
 /**
  * How an agent's questions were answered: a row per question, its header
  * and the answer, or how the box ended. Out of a tool call it hangs under
- * the call; out of none, under the turn, saying who asked.
+ * the call; out of none, right under the turn's prompt, saying who asked.
+ * One not answered names its questions before how it ended.
  */
 function QuestionsRecord({
   entry,
@@ -167,12 +168,13 @@ function QuestionsRecord({
   );
 
   return (
-    <box {...(hangs ? {} : { marginTop: 1 })} flexShrink={0}>
+    <box flexShrink={0}>
       {ended !== undefined
         ? line(
             0,
             <text {...FILL}>
               {asked}
+              <Ansi text={`${askedHeaders(questions)} · `} />
               <span {...fg(colours.error)}>{ended}</span>
             </text>,
           )

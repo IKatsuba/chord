@@ -815,12 +815,13 @@ export function entryOf(
   switch (event.type) {
     case 'update':
       return updateEntry(event);
-    case 'elicitation_requested':
-      return {
-        type: 'asked',
-        turnId: event.turnId,
-        wait: event.elicitation,
-      };
+    case 'elicitation_requested': {
+      // When it came counts down a live box's wait, which a reopened
+      // session never shows: the agent's request is gone by then.
+      const { at: _, ...wait } = event.elicitation;
+
+      return { type: 'asked', turnId: event.turnId, wait };
+    }
     case 'cancel':
       return { type: 'cancel', turnId: event.turnId, at: event.at };
     case 'self_started':

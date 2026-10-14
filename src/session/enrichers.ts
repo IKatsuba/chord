@@ -2,8 +2,9 @@
  * The enrichers chord runs on every session, in order: a subagent in the
  * adapters' draft shape put in ACP's, a cost from the turn's tokens, the
  * context window from the model, a tool call's title and kind carried onto
- * its updates, and a mode read back from an answer that says nothing. Each
- * fills in only what the agent left out.
+ * its updates, a mode read back from an answer that says nothing, and the
+ * questions in each adapter's question form read into one shape. Each fills
+ * in only what the agent left out.
  */
 import type {
   SessionConfigOption,
@@ -25,6 +26,16 @@ import {
   withUpdate,
 } from './enrich.ts';
 import { modeConfigId } from './modes.ts';
+import {
+  choices,
+  formFields,
+  type FormFields,
+  isText,
+  type Question,
+  type Questions,
+  QUESTIONS,
+  text,
+} from './questions.ts';
 import {
   contextFrom,
   contextWindow,
@@ -325,6 +336,390 @@ export const subagentShape: Enricher = (message) => {
   return [withUpdate(message, update as SessionUpdate)];
 };
 
+/** A form field: its key and its schema. */
+type Field = readonly [string, Readonly<Record<string, unknown>>];
+
+/**
+ * A form's questions as one adapter lays them out, read from the request's
+ * params and its fields; none unless every mark of the adapter's is there
+ * and every field has its place, so no field a person must fill in is hidden.
+ */
+type QuestionReader = (
+  params: Readonly<Record<string, unknown>>,
+  fields: FormFields,
+) => Questions | undefined;
+
+/**
+ * The enricher that puts what `read` finds under `_meta["chord/questions"]`,
+ * leaving the form as the agent sent it. A request another enricher has
+ * already read passes as it is.
+ */
+function questionShape(read: QuestionReader): Enricher {
+  return (message) => {
+    if (
+      !('method' in message) ||
+      !('id' in message) ||
+      message.method !== 'elicitation/create'
+    ) {
+      return [message];
+    }
+
+    const params = recordOf(message.params);
+    const meta = recordOf(params._meta);
+    const fields = formFields(params);
+
+    if (meta[QUESTIONS] !== undefined || fields === undefined) {
+      return [message];
+    }
+
+    const questions = read(params, fields);
+
+    return questions === undefined
+      ? [message]
+      : [
+          withParams(message, {
+            ...params,
+            _meta: markFilled({ ...meta, [QUESTIONS]: questions }, [QUESTIONS]),
+          }),
+        ];
+  };
+}
+
+/**
+ * Pairs each question field with the own-answer field its key names, as
+ * claude's, factory-droid's and opencode's forms key them: `question` and
+ * `own` match a key, `own` with the question's key as its first group. Every
+ * key must be one or the other, and every own answer must have its question.
+ */
+function pairedByKey(
+  fields: FormFields,
+  question: RegExp,
+  own: RegExp,
+): { id: string; property: Field[1]; own?: Field }[] | undefined {
+  const owns = new Map<string, Field>();
+  const questions: Field[] = [];
+
+  for (const [key, property] of fields.properties) {
+    const ownOf = own.exec(key)?.[1];
+
+    if (ownOf !== undefined) {
+      owns.set(ownOf, [key, property]);
+    } else if (question.test(key)) {
+      questions.push([key, property]);
+    } else {
+      return undefined;
+    }
+  }
+
+  if ([...owns.keys()].some((id) => !questions.some(([key]) => key === id))) {
+    return undefined;
+  }
+
+  return questions.map(([id, property]) => {
+    const pair = owns.get(id);
+
+    return { id, property, ...(pair === undefined ? {} : { own: pair }) };
+  });
+}
+
+/**
+ * claude's AskUserQuestion: `question_<n>` with its header as the title and
+ * the question as the description, or, alone, as the form's message; then
+ * `question_<n>_custom`, titled `Other`, the own answer beside the pick.
+ */
+export const claudeQuestions = questionShape((params, fields) => {
+  const pairs = pairedByKey(
+    fields,
+    /^question_\d+$/,
+    /^(question_\d+)_custom$/,
+  );
+  const questions: Question[] = [];
+
+  for (const { id, property, own } of pairs ?? []) {
+    const picks = choices(property);
+    const question =
+      text(property.description) ??
+      (pairs?.length === 1 ? text(params.message) : undefined);
+    const header = text(property.title);
+
+    if (
+      picks === undefined ||
+      picks.options.length === 0 ||
+      question === undefined ||
+      own === undefined ||
+      own[1].title !== 'Other' ||
+      !isText(own[1])
+    ) {
+      return undefined;
+    }
+
+    const placeholder = text(own[1].description);
+
+    questions.push({
+      id,
+      ...(header === undefined ? {} : { header }),
+      text: question,
+      ...picks,
+      required: fields.required.has(id),
+      own: {
+        field: own[0],
+        mode: 'beside',
+        ...(placeholder === undefined ? {} : { placeholder }),
+      },
+    });
+  }
+
+  return pairs === undefined ? undefined : { agent: 'claude', questions };
+});
+
+/**
+ * codex's `request_user_input`: each question's field carries
+ * `_meta.codex`, with the question as its title and the header as its
+ * description, options or none, and its note, which `_meta.codex` marks a
+ * `user_note` for its `questionId`, goes beside the pick. The request's own
+ * `_meta.codex` gives how long codex waits for the person.
+ */
+export const codexQuestions = questionShape((params, fields) => {
+  const codex = recordOf(params._meta).codex;
+
+  if (!isRecord(codex)) {
+    return undefined;
+  }
+
+  const notes = new Map<string, Field>();
+  const asked: [...Field, Readonly<Record<string, unknown>>][] = [];
+
+  for (const [key, property] of fields.properties) {
+    const mark = recordOf(property._meta).codex;
+
+    if (!isRecord(mark)) {
+      return undefined;
+    }
+
+    if (mark.role === 'user_note') {
+      if (typeof mark.questionId !== 'string' || !isText(property)) {
+        return undefined;
+      }
+
+      notes.set(mark.questionId, [key, property]);
+    } else {
+      asked.push([key, property, mark]);
+    }
+  }
+
+  if ([...notes.keys()].some((id) => !asked.some(([key]) => key === id))) {
+    return undefined;
+  }
+
+  const questions: Question[] = [];
+
+  for (const [id, property, mark] of asked) {
+    const picks = isText(property)
+      ? { options: [], multiSelect: false }
+      : choices(property);
+    const question = text(property.title);
+    const header = text(property.description);
+    const note = notes.get(id);
+    const placeholder =
+      note === undefined
+        ? undefined
+        : (text(note[1].description) ?? text(note[1].title));
+
+    if (picks === undefined || question === undefined) {
+      return undefined;
+    }
+
+    questions.push({
+      id,
+      ...(header === undefined ? {} : { header }),
+      text: question,
+      ...picks,
+      required: fields.required.has(id),
+      ...(mark.isSecret === true ? { secret: true } : {}),
+      ...(note === undefined
+        ? {}
+        : {
+            own: {
+              field: note[0],
+              mode: 'beside',
+              ...(placeholder === undefined ? {} : { placeholder }),
+            },
+          }),
+    });
+  }
+
+  const wait = codex.autoResolutionMs;
+
+  return {
+    agent: 'codex',
+    questions,
+    ...(typeof wait === 'number' && wait >= 0 ? { expiresInMs: wait } : {}),
+  };
+});
+
+/** The message factory-droid's question forms open with. */
+const DROID_MESSAGE = 'Droid needs your answers to continue.';
+
+/**
+ * factory-droid's questions: `question_<i>`, its topic as the title and the
+ * question as the description, its options `option_<k>` and a last `other`,
+ * which `question_<i>_other` gives the text of; or a typed question with no
+ * options.
+ */
+export const droidQuestions = questionShape((params, fields) => {
+  const pairs =
+    params.message === DROID_MESSAGE
+      ? pairedByKey(fields, /^question_\d+$/, /^(question_\d+)_other$/)
+      : undefined;
+  const questions: Question[] = [];
+
+  for (const { id, property, own } of pairs ?? []) {
+    const picks = isText(property)
+      ? { options: [], multiSelect: false }
+      : choices(property);
+    const question = text(property.description);
+    const header = text(property.title);
+    const options = picks?.options.filter((option) => option.value !== 'other');
+    const offersOther = options?.length !== picks?.options.length;
+
+    if (
+      picks === undefined ||
+      options === undefined ||
+      question === undefined ||
+      options.some((option) => !/^option_\d+$/.test(option.value)) ||
+      offersOther !== (own !== undefined) ||
+      (own !== undefined && !isText(own[1]))
+    ) {
+      return undefined;
+    }
+
+    questions.push({
+      id,
+      ...(header === undefined ? {} : { header }),
+      text: question,
+      options,
+      multiSelect: picks.multiSelect,
+      required: fields.required.has(id),
+      ...(own === undefined
+        ? {}
+        : { own: { field: own[0], mode: 'withValue', value: 'other' } }),
+    });
+  }
+
+  return pairs === undefined ? undefined : { agent: 'droid', questions };
+});
+
+/**
+ * opencode's questions, under the message `Questions`: `q<i>`, its header as
+ * the title and the question as the description, then `q<i>_custom`, titled
+ * `(other)`, the own answer beside the pick.
+ */
+export const opencodeQuestions = questionShape((params, fields) => {
+  const pairs =
+    params.message === 'Questions'
+      ? pairedByKey(fields, /^q\d+$/, /^(q\d+)_custom$/)
+      : undefined;
+  const questions: Question[] = [];
+
+  for (const { id, property, own } of pairs ?? []) {
+    const picks = choices(property);
+    const question = text(property.description);
+    const header = text(property.title);
+
+    if (
+      picks === undefined ||
+      picks.options.length === 0 ||
+      question === undefined ||
+      own === undefined ||
+      own[1].title !== '(other)' ||
+      !isText(own[1])
+    ) {
+      return undefined;
+    }
+
+    const placeholder = text(own[1].description);
+
+    questions.push({
+      id,
+      ...(header === undefined ? {} : { header }),
+      text: question,
+      ...picks,
+      required: fields.required.has(id),
+      own: {
+        field: own[0],
+        mode: 'beside',
+        ...(placeholder === undefined ? {} : { placeholder }),
+      },
+    });
+  }
+
+  return pairs === undefined ? undefined : { agent: 'opencode', questions };
+});
+
+/**
+ * dimcode's questions, the request marked `_meta.lody.elicitation`: each
+ * question's field keyed by its id, its header as the title and the question
+ * as the description, and `__custom_<i>`, whose `_meta.lody.elicitation`
+ * names the question it answers instead of a pick, as dimcode refuses both.
+ */
+export const dimcodeQuestions = questionShape((params, fields) => {
+  const lody = (value: unknown) =>
+    recordOf(recordOf(recordOf(value)._meta).lody).elicitation;
+
+  if (!isRecord(lody(params))) {
+    return undefined;
+  }
+
+  const owns = new Map<string, Field>();
+  const asked: Field[] = [];
+
+  for (const [key, property] of fields.properties) {
+    const answers = recordOf(lody(property)).customAnswerFor;
+
+    if (typeof answers === 'string') {
+      if (!/^__custom_\d+$/.test(key) || !isText(property)) {
+        return undefined;
+      }
+
+      owns.set(answers, [key, property]);
+    } else {
+      asked.push([key, property]);
+    }
+  }
+
+  if ([...owns.keys()].some((id) => !asked.some(([key]) => key === id))) {
+    return undefined;
+  }
+
+  const questions: Question[] = [];
+
+  for (const [id, property] of asked) {
+    const picks = choices(property);
+    const question = text(property.description);
+    const header = text(property.title);
+    const own = owns.get(id);
+
+    if (
+      picks === undefined ||
+      picks.options.length === 0 ||
+      question === undefined
+    ) {
+      return undefined;
+    }
+
+    questions.push({
+      id,
+      ...(header === undefined ? {} : { header }),
+      text: question,
+      ...picks,
+      required: fields.required.has(id),
+      ...(own === undefined ? {} : { own: { field: own[0], mode: 'instead' } }),
+    });
+  }
+
+  return { agent: 'dimcode', questions };
+});
+
 /** Every enricher, in the order each runs over what the last one made. */
 export const ENRICHERS: readonly Enricher[] = [
   subagentShape,
@@ -332,6 +727,11 @@ export const ENRICHERS: readonly Enricher[] = [
   modeReadBack,
   costFromTokens,
   windowFromModel,
+  claudeQuestions,
+  codexQuestions,
+  droidQuestions,
+  opencodeQuestions,
+  dimcodeQuestions,
 ];
 
 /** The id of the model the session is on, as the agent last said it. */

@@ -234,3 +234,35 @@ test('an interrupt takes the open form with it, recorded as cancelled', () =>
       ),
     ).toStrictEqual(['user', 'elicitation:cancelled', 'cancelled']);
   }));
+
+test("each adapter's question form reaches the interface with its questions read, and its answer goes back as given", () =>
+  withSession(async (session) => {
+    for (const [scenario, agent] of [
+      ['askclaude', 'claude'],
+      ['askclaudeone', 'claude'],
+      ['askcodex', 'codex'],
+      ['askdroid', 'droid'],
+      ['askopencode', 'opencode'],
+      ['askdimcode', 'dimcode'],
+    ] as const) {
+      const content = { picked: 'yes' };
+      const { request, said } = await answered(session, scenario, {
+        action: 'accept',
+        content,
+      });
+
+      assert(request.wait.mode === 'form');
+      expect(request.wait.questions?.agent).toStrictEqual(agent);
+      expect(said).toStrictEqual(
+        `Elicitation answer: accept  \n${JSON.stringify(content)}`,
+      );
+    }
+  }));
+
+test("a form with no adapter's marks reaches the interface with no questions", () =>
+  withSession(async (session) => {
+    const { request } = await answered(session, 'form', { action: 'cancel' });
+
+    assert(request.wait.mode === 'form');
+    expect(request.wait.questions).toBeUndefined();
+  }));

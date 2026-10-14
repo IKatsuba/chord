@@ -4,6 +4,7 @@ import type {
   ElicitationContentValue,
   ElicitationSchema,
 } from '@agentclientprotocol/sdk';
+import { questionsOf } from './questions.ts';
 import type { ElicitationWait } from './transcript/types.ts';
 
 /**
@@ -63,7 +64,14 @@ export function waitOf(
       ? (request.requestedSchema as ElicitationSchema)
       : {};
 
-  return { ...common, mode: 'form', schema };
+  const questions = questionsOf(request);
+
+  return {
+    ...common,
+    mode: 'form',
+    schema,
+    ...(questions === undefined ? {} : { questions }),
+  };
 }
 
 /** Bridges the transport's elicitation handler to an interface that answers later. */

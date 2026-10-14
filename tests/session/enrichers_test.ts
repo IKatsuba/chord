@@ -8,6 +8,7 @@ import type {
 import { enricherRelay, FILLED } from '../../src/session/enrich.ts';
 import {
   costFromTokens,
+  ENRICHERS,
   modeReadBack,
   SUBAGENT_DRAFT,
   subagentShape,
@@ -19,6 +20,17 @@ import {
   contextWindow,
   turnCost,
 } from '../../src/session/prices.ts';
+import { type Questions, QUESTIONS } from '../../src/session/questions.ts';
+import { FORM_SCHEMA } from '../fixtures/forms.ts';
+import {
+  CLAUDE_QUESTION,
+  CLAUDE_QUESTIONS,
+  CODEX_QUESTIONS,
+  DIMCODE_QUESTIONS,
+  DROID_QUESTIONS,
+  OPENCODE_QUESTIONS,
+  type QuestionForm,
+} from '../fixtures/questions.ts';
 
 const SESSION = 'session-1';
 
@@ -711,4 +723,282 @@ test("an agent's own subagent_update, and a draft with no subagent named, pass a
       name: 'Look',
     } as unknown as SessionUpdate,
   ]);
+});
+
+/** What the whole chain makes of an elicitation request for `form`. */
+function asked(form: QuestionForm): Record<string, unknown> {
+  const [message] = enricherRelay(ENRICHERS).fromAgent({
+    jsonrpc: '2.0',
+    id: 'e-1',
+    method: 'elicitation/create',
+    params: { ...form, sessionId: SESSION },
+  });
+
+  assert(message !== undefined && 'params' in message);
+
+  return message.params as Record<string, unknown>;
+}
+
+/** The questions the chain read from `form`, checking it left the form be. */
+function questionsIn(form: QuestionForm): Questions | undefined {
+  const params = asked(form);
+  const { _meta, ...rest } = params;
+  const {
+    [QUESTIONS]: questions,
+    [FILLED]: filled,
+    ...meta
+  } = (_meta ?? {}) as Record<string, unknown>;
+
+  expect(rest).toStrictEqual({
+    ...Object.fromEntries(
+      Object.entries(form).filter(([key]) => key !== '_meta'),
+    ),
+    sessionId: SESSION,
+  });
+  expect(meta).toStrictEqual(form._meta ?? {});
+
+  if (questions !== undefined) {
+    expect(filled).toStrictEqual([QUESTIONS]);
+  }
+
+  return questions as Questions | undefined;
+}
+
+test("claude's questions: its header, the question, the options and the Other beside the pick", () => {
+  expect(questionsIn(CLAUDE_QUESTIONS)).toStrictEqual({
+    agent: 'claude',
+    questions: [
+      {
+        id: 'question_0',
+        header: 'Language',
+        text: 'Which language should helper scripts use?',
+        options: [
+          {
+            value: 'Deno (TypeScript) (Recommended)',
+            title: 'Deno (TypeScript) (Recommended)',
+            description:
+              'Runs from source with inline npm: and jsr: imports, no package manager',
+          },
+          {
+            value: 'Python',
+            title: 'Python',
+            description: 'Only where a library has no JS or TS equivalent',
+            preview: 'print("hi")',
+          },
+        ],
+        multiSelect: false,
+        required: false,
+        own: {
+          field: 'question_0_custom',
+          mode: 'beside',
+          placeholder:
+            'Type your own answer, or add a note to the option you chose above (optional).',
+        },
+      },
+      {
+        id: 'question_1',
+        header: 'Checks',
+        text: 'Which checks should run before a commit?',
+        options: [
+          { value: 'Types', title: 'Types' },
+          { value: 'Lint', title: 'Lint' },
+          { value: 'Tests', title: 'Tests' },
+        ],
+        multiSelect: true,
+        required: false,
+        own: {
+          field: 'question_1_custom',
+          mode: 'beside',
+          placeholder:
+            'Type your own answer to add to your selection above (optional).',
+        },
+      },
+    ],
+  });
+});
+
+test("claude's lone question is its form's message", () => {
+  expect(questionsIn(CLAUDE_QUESTION)?.questions[0]?.text).toBe(
+    'Which language should helper scripts use?',
+  );
+});
+
+test("codex's questions: the question its title, the header its description, the note beside, a secret and the wait", () => {
+  expect(questionsIn(CODEX_QUESTIONS)).toStrictEqual({
+    agent: 'codex',
+    expiresInMs: 300_000,
+    questions: [
+      {
+        id: 'next',
+        header: 'Next step',
+        text: 'What would you like to focus on next?',
+        options: [
+          {
+            value: 'Plan a change (Recommended)',
+            title: 'Plan a change (Recommended)',
+          },
+          {
+            value: 'Review existing work',
+            title: 'Review existing work',
+            description: 'Read what is there first',
+          },
+          {
+            value: 'None of the above',
+            title: 'None of the above',
+            description: 'Provide a different answer in the note field.',
+          },
+        ],
+        multiSelect: false,
+        required: true,
+        own: {
+          field: 'next_note',
+          mode: 'beside',
+          placeholder: 'Additional answer or note',
+        },
+      },
+      {
+        id: 'token',
+        header: 'Token',
+        text: 'Paste the API token for the staging deploy.',
+        options: [],
+        multiSelect: false,
+        required: true,
+        secret: true,
+      },
+    ],
+  });
+});
+
+test("factory-droid's questions: its other option taken out, to go with the text typed", () => {
+  expect(questionsIn(DROID_QUESTIONS)).toStrictEqual({
+    agent: 'droid',
+    questions: [
+      {
+        id: 'question_0',
+        header: 'Storage',
+        text: 'Where should uploads be kept?',
+        options: [
+          { value: 'option_0', title: 'Local disk' },
+          { value: 'option_1', title: 'S3 bucket' },
+        ],
+        multiSelect: false,
+        required: true,
+        own: { field: 'question_0_other', mode: 'withValue', value: 'other' },
+      },
+      {
+        id: 'question_1',
+        header: 'Formats',
+        text: 'Which formats should be accepted?',
+        options: [
+          { value: 'option_0', title: 'PNG' },
+          { value: 'option_1', title: 'JPEG' },
+        ],
+        multiSelect: true,
+        required: true,
+        own: { field: 'question_1_other', mode: 'withValue', value: 'other' },
+      },
+      {
+        id: 'question_2',
+        header: 'Bucket',
+        text: 'What should the bucket be called?',
+        options: [],
+        multiSelect: false,
+        required: true,
+      },
+    ],
+  });
+});
+
+test("opencode's and dimcode's questions, dimcode's own answer instead of a pick", () => {
+  expect(questionsIn(OPENCODE_QUESTIONS)).toStrictEqual({
+    agent: 'opencode',
+    questions: [
+      {
+        id: 'q0',
+        header: 'Tests',
+        text: 'Where should the new tests go?',
+        options: [
+          {
+            value: 'Beside the module',
+            title: 'Beside the module',
+            description: 'tests/ mirrors src/',
+          },
+          { value: 'In one file', title: 'In one file' },
+        ],
+        multiSelect: false,
+        required: false,
+        own: { field: 'q0_custom', mode: 'beside' },
+      },
+    ],
+  });
+  expect(questionsIn(DIMCODE_QUESTIONS)).toStrictEqual({
+    agent: 'dimcode',
+    questions: [
+      {
+        id: 'deploy',
+        header: 'Deploy',
+        text: 'Where should it deploy?',
+        options: [
+          { value: 'Staging', title: 'Staging' },
+          { value: 'Production', title: 'Production' },
+        ],
+        multiSelect: false,
+        required: false,
+        own: { field: '__custom_0', mode: 'instead' },
+      },
+    ],
+  });
+});
+
+test("a form with no adapter's marks passes as it came", () => {
+  const form: QuestionForm = {
+    mode: 'form',
+    message: 'Set up the deploy target',
+    requestedSchema: FORM_SCHEMA,
+  };
+
+  expect(asked(form)).toStrictEqual({ ...form, sessionId: SESSION });
+});
+
+test('a form with a field no question has a place for gets no questions', () => {
+  const schema = CLAUDE_QUESTIONS.requestedSchema;
+  const extra = (properties: Record<string, unknown>): QuestionForm => ({
+    ...CLAUDE_QUESTIONS,
+    requestedSchema: {
+      ...schema,
+      properties: { ...schema.properties, ...properties },
+    } as QuestionForm['requestedSchema'],
+  });
+
+  // A field of another kind.
+  expect(questionsIn(extra({ count: { type: 'integer' } }))).toBeUndefined();
+  // An own answer whose question is not there.
+  expect(
+    questionsIn(
+      extra({ question_9_custom: { type: 'string', title: 'Other' } }),
+    ),
+  ).toBeUndefined();
+
+  // A codex note for a question it does not ask.
+  const codex = CODEX_QUESTIONS.requestedSchema;
+
+  expect(
+    questionsIn({
+      ...CODEX_QUESTIONS,
+      requestedSchema: {
+        ...codex,
+        properties: {
+          ...codex.properties,
+          lost_note: {
+            type: 'string',
+            _meta: { codex: { questionId: 'lost', role: 'user_note' } },
+          },
+        },
+      } as QuestionForm['requestedSchema'],
+    }),
+  ).toBeUndefined();
+  // factory-droid's form under another message.
+  expect(
+    questionsIn({ ...DROID_QUESTIONS, message: 'Answer these.' }),
+  ).toBeUndefined();
 });

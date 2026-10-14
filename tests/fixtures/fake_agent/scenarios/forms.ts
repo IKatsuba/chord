@@ -1,6 +1,15 @@
 /** Elicitations: a form to fill in and a link to open. */
 import * as acp from '@agentclientprotocol/sdk';
 import { FORM_SCHEMA, LINK_URL } from '../../forms.ts';
+import {
+  CLAUDE_QUESTION,
+  CLAUDE_QUESTIONS,
+  CODEX_QUESTIONS,
+  DIMCODE_QUESTIONS,
+  DROID_QUESTIONS,
+  OPENCODE_QUESTIONS,
+  type QuestionForm,
+} from '../../questions.ts';
 import { type Play, type Turn } from '../turn.ts';
 
 /**
@@ -37,7 +46,21 @@ async function elicit(
   return 'end_turn';
 }
 
+/** Asks an adapter's question form, as that adapter sends it. */
+function ask(form: QuestionForm): Play {
+  return async (turn) =>
+    await elicit(turn, { ...form, sessionId: turn.sessionId });
+}
+
 export const FORMS = {
+  // Each adapter's question form, as `tests/fixtures/questions.ts` has it.
+  askclaude: ask(CLAUDE_QUESTIONS),
+  askclaudeone: ask(CLAUDE_QUESTION),
+  askcodex: ask(CODEX_QUESTIONS),
+  askdroid: ask(DROID_QUESTIONS),
+  askopencode: ask(OPENCODE_QUESTIONS),
+  askdimcode: ask(DIMCODE_QUESTIONS),
+
   // A form with a field of each kind, then what came back, so a capture
   // shows the round trip.
   async form(turn) {

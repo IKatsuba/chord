@@ -739,11 +739,15 @@ module's tests are follows from where it is.
   form an agent asks for: the fields its schema asks for, what each key
   does to them, their problems as zod finds them in chord's words, the rows
   the box draws as they scroll, the hint line, the answer sent and its
-  record, and the host a link opens; `saveChoices` is chord's own question's
+  record, and the host a link opens; `questions.ts` is the question box a
+  form the enrichers read questions in takes instead (layout A, one
+  question a step, then Submit): what each key does, the rows a step
+  keeps in view, the hint line, the summary and what Send gives back under
+  the agent's own field ids; `saveChoices` is chord's own question's
   choices, each with the file it writes. `Permission.tsx` draws the permission
   prompt, and in its shape chord's own question, `propose_team`'s save box,
   `Form.tsx` a form and a form's or link's record in the
-  transcript, and `Link.tsx` a link the agent asks the person to open.
+  transcript, `Questions.tsx` the question box, and `Link.tsx` a link the agent asks the person to open.
 - `src/ui/pickers/` — `Pickers.tsx` draws the model, resume, sessions,
   config, theme and teams pickers and `/mcp`'s panel, with the list they share and
   the numbered choices the permission prompt and a link take. `picker.ts` is
@@ -840,7 +844,8 @@ module's tests are follows from where it is.
   use, with whether each is on screen; `transcript/state.ts` the scroll,
   the first entry held mounted and ctrl+o's view; `shortcuts/state.ts` the panel, the keymap, a chord's first
   keys and the keybindings file's problems, with the key press and the
-  commands a key asks for; `dialogs/state.ts` the form being filled in,
+  commands a key asks for; `dialogs/state.ts` the form being filled in
+  and the question box being answered,
   with whether a permission, form or link waits on the person.
 - `tests/` — `bun test`; `*_test.ts` / `*_test.tsx`, each at the path that
   mirrors its module's: `tests/settings_test.ts` tests `src/settings.ts`,

@@ -375,6 +375,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'scrolled':
       return reduceView(state, action) as AppState;
     case 'form_filled':
+    case 'questions_answered':
       return reduceDialogs(state, action) as AppState;
     case 'connected':
       return state.connection.status === 'starting'
@@ -725,6 +726,7 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   imageCount: true,
   takesImages: true,
   filling: true,
+  answering: true,
 };
 
 /** A session's own part of the window as `state` fills it. */

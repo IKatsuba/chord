@@ -965,6 +965,30 @@ export function formRows(form: FormState, limit: number): FormRow[] {
   return all.slice(0, limit);
 }
 
+/**
+ * A key for each row that names what it is rather than where it is, so a row
+ * that moves into another's place is drawn anew: OpenTUI leaves a prop the
+ * new row lacks, such as a note's indent, on the box it reuses.
+ */
+export function rowKeys(rows: readonly FormRow[]): string[] {
+  let owner = '';
+
+  return rows.map((row) => {
+    switch (row.kind) {
+      case 'field':
+        owner = row.field.key;
+
+        return `field:${owner}`;
+      case 'note':
+        return `note:${owner}`;
+      case 'option':
+        return `option:${owner}:${row.option.value}`;
+      case 'more':
+        return `more:${row.direction}`;
+    }
+  });
+}
+
 /** How many problems the button row counts, once Accept has been refused. */
 export function toFix(form: FormState): number {
   return form.refused ? problemsOf(form).size : 0;

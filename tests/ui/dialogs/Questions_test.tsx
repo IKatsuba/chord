@@ -119,3 +119,38 @@ test('a Note placeholder too long for 80 columns is cut at its end', () =>
     },
     { rows: 24, columns: 80 },
   ));
+
+test('an answered box leaves a row per question under the turn, saying who asked', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'askcodex');
+      await inputAsked(window, 'fake asks you 2 questions');
+      await window.press('2');
+      await window.type('sk-1');
+      await window.press('\r');
+      await window.press('\r');
+      await window.shows('⎿  fake asked · Next step  Review existing work');
+      expect(window.frame()).toMatch(/^ +Token {6}\(hidden\)/m);
+
+      await send(window, 'askclaude');
+      await inputAsked(window, 'fake asks you 2 questions');
+      await window.press(TAB);
+      await window.press(TAB);
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('⎿  fake asked · Skipped');
+
+      await send(window, 'askdroid');
+      await inputAsked(window, 'fake asks you 3 questions');
+      await window.press(ESC);
+      await window.shows('⎿  fake asked · Cancelled');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+test("a box withdrawn as the agent's wait runs out reads Timed out", () =>
+  withWindow(async (window) => {
+    await send(window, 'askcodexwait');
+    await window.shows('⎿  fake asked · Timed out');
+    await window.shows('Elicitation answer: timed out');
+  }));

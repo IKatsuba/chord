@@ -1,8 +1,9 @@
 import { TextAttributes } from '@opentui/core';
-import { useRef, useState } from 'react';
+import { type ReactNode, useRef, useState } from 'react';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import type { ElicitationReply } from '../../session/elicitations.ts';
+import type { Questions } from '../../session/questions.ts';
 import type { ElicitationWait, Entry } from '../../session/transcript/types.ts';
 import { paint, useColours } from '../app/context.ts';
 import { usePress } from '../app/input.ts';
@@ -24,6 +25,7 @@ import {
   toFix,
   type ValueView,
 } from './form.ts';
+import { answeredQuestions } from './questions.ts';
 
 /** Between the label column and the values. */
 export const FORM_GAP = 2;
@@ -44,6 +46,18 @@ export function ElicitationRecord({
 }) {
   const colours = useColours();
   const { wait, outcome, content } = entry;
+
+  if (wait.mode === 'form' && wait.questions !== undefined) {
+    return (
+      <QuestionsRecord
+        entry={entry}
+        questions={wait.questions}
+        agent={agent}
+        hangs={wait.toolCallId !== undefined}
+      />
+    );
+  }
+
   const opened = outcome === 'accepted' && wait.mode === 'url';
   const text = opened
     ? `Opened ${wait.url}`
@@ -102,6 +116,86 @@ export function ElicitationRecord({
           </text>
         </box>
       ))}
+    </box>
+  );
+}
+
+/** How a box of questions ended, in words: none for one that was answered. */
+const ENDED: Readonly<Record<string, string>> = {
+  declined: 'Skipped',
+  cancelled: 'Cancelled',
+  timed_out: 'Timed out',
+};
+
+/**
+ * How an agent's questions were answered: a row per question, its header
+ * and the answer, or how the box ended. Out of a tool call it hangs under
+ * the call; out of none, under the turn, saying who asked.
+ */
+function QuestionsRecord({
+  entry,
+  questions,
+  agent,
+  hangs,
+}: {
+  entry: Extract<Entry, { kind: 'elicitation' }>;
+  questions: Questions;
+  agent: string;
+  hangs: boolean;
+}) {
+  const colours = useColours();
+  const asked = hangs ? '' : `${agent} asked · `;
+  const ended = ENDED[entry.outcome];
+  const rows =
+    ended === undefined
+      ? answeredQuestions(questions, entry.content ?? {})
+      : [];
+  const labelWidth = Math.max(0, ...rows.map((row) => stringWidth(row.label)));
+  const line = (index: number, children: ReactNode) => (
+    <box
+      key={index}
+      flexDirection='row'
+      paddingLeft={index === 0 ? 2 : 5 + stringWidth(asked)}
+    >
+      {index === 0 && (
+        <Gutter width={3} dimColor>
+          ⎿
+        </Gutter>
+      )}
+      {children}
+    </box>
+  );
+
+  return (
+    <box {...(hangs ? {} : { marginTop: 1 })} flexShrink={0}>
+      {ended !== undefined
+        ? line(
+            0,
+            <text {...FILL}>
+              {asked}
+              <span {...fg(colours.error)}>{ended}</span>
+            </text>,
+          )
+        : rows.map((row, index) =>
+            line(
+              index,
+              <>
+                {index === 0 && asked !== '' && (
+                  <text {...TEXT} flexShrink={0}>
+                    {asked}
+                  </text>
+                )}
+                <box width={labelWidth + FORM_GAP} flexShrink={0}>
+                  <text {...TEXT}>
+                    <Ansi text={row.label} />
+                  </text>
+                </box>
+                <text {...CUT}>
+                  <Ansi text={row.value} />
+                </text>
+              </>,
+            ),
+          )}
     </box>
   );
 }

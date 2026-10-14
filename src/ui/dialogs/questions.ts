@@ -608,3 +608,57 @@ export function windowOf(
 
   return { top, end, above, below };
 }
+
+/** One question's row in an answered box's record. */
+export interface AnsweredQuestion {
+  readonly label: string;
+  readonly value: string;
+}
+
+/**
+ * What an accepted box sent, a row per question, read back from the content
+ * under the agent's field ids: the options' titles, the text typed, the own
+ * answer (after ` · ` where it went beside a pick), `(hidden)` for a secret,
+ * whose values a reopened record does not keep, and `skipped` for a question
+ * left without an answer.
+ */
+export function answeredQuestions(
+  questions: Questions,
+  content: Readonly<Record<string, ElicitationContentValue>>,
+): AnsweredQuestion[] {
+  return questions.questions.map((question, index) => {
+    const label = headerOf(questions, index);
+    const sent = content[question.id];
+    const own =
+      question.own === undefined ? undefined : content[question.own.field];
+    const values = (
+      Array.isArray(sent) ? sent : sent === undefined ? [] : [sent]
+    )
+      .map(String)
+      .filter((value) => value !== question.own?.value);
+    const titles = values.map(
+      (value) =>
+        question.options.find((option) => option.value === value)?.title ??
+        value,
+    );
+    const ownText = typeof own === 'string' && own !== '' ? own : undefined;
+
+    if (question.secret === true) {
+      return { label, value: '(hidden)' };
+    }
+
+    const beside = question.own?.mode === 'beside';
+    const main = [
+      ...titles,
+      ...(ownText !== undefined && !beside ? [ownText] : []),
+    ];
+    const value = [
+      main.join(', '),
+      ...(ownText !== undefined && beside ? [ownText] : []),
+    ]
+      .filter((part) => part !== '')
+      .join(' · ');
+
+    return { label, value: value === '' ? 'skipped' : value };
+  });
+}

@@ -600,11 +600,13 @@ export type ElicitationWait = {
 );
 
 /** How an elicitation ended, as its record says it. */
-export type ElicitationOutcome = 'accepted' | 'declined' | 'cancelled';
+export type ElicitationOutcome =
+  'accepted' | 'declined' | 'cancelled' | 'timed_out';
 
 /**
  * How an elicitation stopped waiting: answered, or withdrawn because its turn
- * ended or the session closed, which its record calls cancelled.
+ * ended or the session closed, which its record calls cancelled, or once
+ * the wait its agent gave for an answer ran out (`timed_out`).
  */
 export type ElicitationAnswer =
   | {
@@ -613,7 +615,8 @@ export type ElicitationAnswer =
     }
   | { readonly type: 'declined' }
   | { readonly type: 'cancelled' }
-  | { readonly type: 'withdrawn' };
+  | { readonly type: 'withdrawn' }
+  | { readonly type: 'timed_out' };
 
 /** What the turn in flight is doing; times are epoch milliseconds. */
 export type TurnState =

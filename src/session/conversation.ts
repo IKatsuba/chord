@@ -44,6 +44,7 @@ import {
 import type {
   ChordCall,
   ElicitationAnswer,
+  ElicitationWait,
   MessageFrom,
   MonitorEnd,
   PermissionAnswer,
@@ -2019,13 +2020,16 @@ export class Conversation {
 
     const { id } = request;
     const turnId = turn.id;
+    const askedAt = this.#now();
     const withdrawn = () => {
       if (this.#elicitations.delete(id)) {
         this.#emit({
           type: 'elicitation_settled',
           turnId,
           id,
-          answer: { type: 'withdrawn' },
+          answer: ranOut(request.wait, this.#now() - askedAt)
+            ? { type: 'timed_out' }
+            : { type: 'withdrawn' },
         });
         this.#release();
       }
@@ -2213,6 +2217,19 @@ function answerOf(response: ElicitationReply): ElicitationAnswer {
     case 'cancel':
       return { type: 'cancelled' };
   }
+}
+
+/**
+ * Whether a request withdrawn after `waited` ms was withdrawn because the
+ * wait its agent gave for an answer ran out, as codex's does: chord sees
+ * only the withdrawal, so it reads one that came at the end of that wait,
+ * give or take the second the countdown shows, as that.
+ */
+function ranOut(wait: ElicitationWait, waited: number): boolean {
+  const expires =
+    wait.mode === 'form' ? wait.questions?.expiresInMs : undefined;
+
+  return expires !== undefined && waited >= expires - 1000;
 }
 
 /** Whether two readings name the same commands, described the same way. */

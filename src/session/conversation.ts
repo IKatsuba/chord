@@ -2039,7 +2039,7 @@ export class Conversation {
     this.#emit({
       type: 'elicitation_requested',
       turnId,
-      elicitation: request.wait,
+      elicitation: { ...request.wait, at: askedAt },
     });
     request.signal.addEventListener('abort', withdrawn, { once: true });
 

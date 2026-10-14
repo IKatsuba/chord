@@ -10,8 +10,10 @@ import {
   askHint,
   type AskKey,
   askKey,
+  askPaste,
   type AskState,
   blockers,
+  capLines,
   clock,
   expiresIn,
   openAsk,
@@ -72,7 +74,7 @@ function play(
   ...keys: string[]
 ): { state: AskState; response?: ElicitationReply } {
   const { questions } = read(form);
-  let state = openAsk(questions, 0);
+  let state = openAsk(questions);
   let response: ElicitationReply | undefined;
 
   for (const name of keys) {
@@ -166,10 +168,19 @@ test("an own answer that stands for droid's other option is picked by typing, an
   ).toMatchObject({
     question_0: { picks: ['option_1'], own: 'NFS', ownChosen: false },
   });
-  // A multi-select's own option ticks with Space while it holds no text.
+  // A multi-select's own row: Space is typed into it, and it is ticked
+  // exactly while it holds text.
   expect(
     play(DROID_QUESTIONS, 'tab', '↓', '↓', ' ').state.answers.question_1,
-  ).toMatchObject({ ownChosen: true, own: '' });
+  ).toMatchObject({ ownChosen: true, own: ' ' });
+  expect(
+    play(DROID_QUESTIONS, 'tab', '↓', '↓', 'HE', ' ', 'IC').state.answers
+      .question_1,
+  ).toMatchObject({ ownChosen: true, own: 'HE IC' });
+  expect(
+    play(DROID_QUESTIONS, 'tab', '↓', '↓', 'HEIC', 'ctrl + u').state.answers
+      .question_1,
+  ).toMatchObject({ ownChosen: false, own: '' });
 });
 
 test("dimcode's own answer clears the pick it stands instead of", () => {
@@ -252,9 +263,8 @@ test('the summary reads titles, a note after ·, and a secret as dots', () => {
   ).toBe('S3 bucket');
 });
 
-test('the heading counts the questions, and the countdown runs from when the box opened', () => {
+test('the heading counts the questions, and the countdown runs from when the request came', () => {
   const { questions } = read(CODEX_QUESTIONS);
-  const state = openAsk(questions, 1000);
 
   expect(askHeading('codex', questions)).toBe('codex asks you 2 questions');
   expect(
@@ -263,16 +273,16 @@ test('the heading counts the questions, and the countdown runs from when the box
       questions: questions.questions.slice(1),
     }),
   ).toBe('claude asks you a question');
-  expect(clock(expiresIn(questions, state, 1000 + 28_500) ?? 0)).toBe('4:32');
-  expect(expiresIn(questions, state, 1000 + 400_000)).toBe(0);
-  expect(expiresIn(read(CLAUDE_QUESTIONS).questions, state, 0)).toBeUndefined();
+  expect(clock(expiresIn(questions, 1000, 1000 + 28_500) ?? 0)).toBe('4:32');
+  expect(expiresIn(questions, 1000, 1000 + 400_000)).toBe(0);
+  expect(expiresIn(read(CLAUDE_QUESTIONS).questions, 1000, 0)).toBeUndefined();
 });
 
 test('the hint names ←→ for the questions on every row, short at 80 columns', () => {
   const { questions } = read(DROID_QUESTIONS);
   const at = (state: AskState, width: number) =>
     askHint(questions, state, width);
-  const open = openAsk(questions, 0);
+  const open = openAsk(questions);
   const own = { ...open, row: 2 };
   const multiOwn = { ...open, step: 1, row: 2 };
 
@@ -322,7 +332,7 @@ test("the own answer's number takes the ❯ there, and picks it once it holds te
     row: 2,
     answers: { question_0: { picks: [], own: 'NFS', ownChosen: true } },
   });
-  expect(askHint(questions, openAsk(questions, 0), 76)).toContain('1–3');
+  expect(askHint(questions, openAsk(questions), 76)).toContain('1–3');
   expect(
     play(DIMCODE_QUESTIONS, '3', 'canary', '↑', 'enter', '←', '3').state.answers
       .deploy,
@@ -351,4 +361,47 @@ test("an answered box's record reads titles, a note after ·, its own answer, (h
     { label: 'Formats', value: 'PNG, HEIC' },
     { label: 'Bucket', value: 'skipped' },
   ]);
+});
+
+test('a paste goes into the text row the ❯ is on, its line breaks spaces, and picks nothing elsewhere', () => {
+  const { questions } = read(CODEX_QUESTIONS);
+  const open = openAsk(questions);
+
+  // On an option row a pasted digit is not a pick.
+  expect(askPaste(questions, open, '2')).toBe(open);
+
+  const token = askPaste(questions, { ...open, step: 1 }, 'sk-1\nrest');
+
+  expect(token.answers.token?.text).toBe('sk-1 rest');
+
+  const note = askPaste(questions, { ...open, row: 3 }, 'tests first');
+
+  expect(note.answers.next?.own).toBe('tests first');
+
+  const { questions: droid } = read(DROID_QUESTIONS);
+
+  expect(
+    askPaste(droid, { ...openAsk(droid), row: 2 }, 'NFS').answers.question_0,
+  ).toMatchObject({ own: 'NFS', ownChosen: true });
+});
+
+test('a focused row taller than the box is cut at its end, so the window never passes its limit', () => {
+  const rows = [undefined, undefined, ...Array<number>(20).fill(0), 1];
+  const window = windowOf(rows, 0, 9);
+
+  expect(window).toStrictEqual({ top: 2, end: 9, above: 0, below: 1 });
+  expect(
+    window.end -
+      window.top +
+      (window.top > 0 ? 1 : 0) +
+      (window.end < rows.length ? 1 : 0),
+  ).toBeLessThanOrEqual(9);
+});
+
+test("an option's description too long for the box keeps its first lines and ends in …", () => {
+  expect(capLines(['one two', 'three four', 'five six'], 2)).toStrictEqual([
+    'one two',
+    'three fou…',
+  ]);
+  expect(capLines(['one'], 2)).toStrictEqual(['one']);
 });

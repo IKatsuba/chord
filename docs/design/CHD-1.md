@@ -574,7 +574,7 @@ and `minItems` and codex's `required`.
 │   [ ] 2. JPEG                                                                │
 │ ❯ [✔] 3. Other answer: HEIC▏                                                 │
 │                                                                              │
-│ Type your answer · Enter for the next · ↑↓ · Esc to cancel                   │
+│ Type your answer · Enter for the next · ←→ questions · Esc to cancel         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
   ⏵⏵ auto mode on (shift+tab to cycle)           Default (recommended) · 4% used
 ```

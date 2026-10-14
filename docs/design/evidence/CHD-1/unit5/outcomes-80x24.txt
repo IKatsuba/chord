@@ -1,0 +1,24 @@
+   {"next":"Review existing work","token":"hunter2"}
+
+ › askclaude
+
+   ⎿  fake asked · Skipped
+
+ ⏺ Elicitation answer: decline
+
+ › askdroid
+
+   ⎿  fake asked · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askcodexwait
+
+   ⎿  fake asked · Timed out
+
+ ⏺ Elicitation answer: timed out
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

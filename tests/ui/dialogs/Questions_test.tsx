@@ -1,5 +1,6 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import type { PendingElicitation } from '../../../src/session/elicitations.ts';
 import { enricherRelay } from '../../../src/session/enrich.ts';
 import { ENRICHERS } from '../../../src/session/enrichers.ts';
 import { type Questions, questionsOf } from '../../../src/session/questions.ts';
@@ -10,6 +11,8 @@ import {
   DOWN,
   ESC,
   inputAsked,
+  leader,
+  until,
   send,
   TAB,
   withWindow,
@@ -280,4 +283,167 @@ test("an option's description longer than an 80x24 box is cut, and the hint stay
   expect(frame).toContain('↓ 1 more');
   expect(frame).toContain('Esc to cancel');
   expect(frame).toContain('╰');
+});
+
+describe('CHD-1 tester: question box lifecycle', () => {
+  test('pasted digits do not pick, while notes and secret text reach the agent through their own fields', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'askcodex');
+        await inputAsked(window, 'fake asks you 2 questions');
+        await window.paste('2\n3');
+        expect(window.frame()).toContain('◉ Next step');
+        await window.press('2');
+        await window.press('\x1b[Z');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.paste('tests\r\nfirst 2');
+        await window.shows('Note  tests first 2');
+        await window.press(TAB);
+        await window.paste('2\nprivate');
+        await window.shows('❯ •••••••••');
+        expect(window.frame()).not.toContain('2 private');
+        await window.press('\r');
+        expect(window.frame()).toContain(
+          'Review existing work · tests first 2',
+        );
+        await window.press('\r');
+        await window.shows('Elicitation answer: accept');
+        await window.shows('"next_note":"tests first 2"');
+        await window.shows('"token":"2 private"');
+      },
+      { columns: 120, rows: 40 },
+    ));
+
+  test('switching sessions restores the question, secret draft and countdown without restarting it', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'askcodex');
+        await inputAsked(window, 'fake asks you 2 questions');
+        await window.press('2');
+        await window.type('first-token');
+        await window.shows('❯ •••••••••••');
+
+        const clockSeconds = () => {
+          const match = window.frame().match(/answers itself in (\d+):(\d+)/);
+
+          assert(match !== null);
+
+          return Number(match[1]) * 60 + Number(match[2]);
+        };
+
+        const before = clockSeconds();
+
+        await leader(window, 'c');
+        await until('the second fake agent', () => window.pids.length === 2);
+        await send(window, 'askdroid');
+        await inputAsked(window, 'fake asks you 3 questions');
+        await window.press('1');
+        await window.press('1');
+        await window.press('\r');
+        await window.type('uploads');
+        await window.press('\r');
+        await window.press('\r');
+        await window.shows('Elicitation answer: accept');
+        // Each following prompt waits out the preceding turn's trailing updates.
+        await send(window, 'late');
+        await window.shows('Late, after the answer.');
+        await send(window, 'text');
+        await window.shows('Hello, world.');
+        await leader(window, '1');
+        await inputAsked(window, 'fake asks you 2 questions');
+        expect(window.frame()).toContain('* ◉ Token');
+        expect(window.frame()).toContain('❯ •••••••••••');
+        expect(window.frame()).not.toContain('first-token');
+        expect(clockSeconds()).toBeLessThan(before);
+        await window.press(ESC);
+        await window.shows('Elicitation answer: cancel');
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('a short request withdrawn behind another session never reopens its box on return', () =>
+    withWindow(
+      async (window) => {
+        await window.shows('? for shortcuts');
+        await leader(window, 'c');
+        await until('the second fake agent', () => window.pids.length === 2);
+
+        const session = window.session();
+        let request: PendingElicitation | undefined;
+
+        assert(session !== undefined);
+
+        const unsubscribe = session.elicitations.subscribe((pending) => {
+          request = pending;
+        });
+
+        try {
+          await send(window, 'askcodexwait');
+          await leader(window, '1');
+          await until(
+            'the background request to withdraw',
+            () => request?.signal.aborted === true,
+          );
+          await leader(window, '2');
+          await window.shows('Elicitation answer: timed out');
+          expect(window.frame()).not.toContain('fake asks you 2 questions');
+          expect(window.frame()).not.toContain('answers itself in');
+        } finally {
+          unsubscribe();
+        }
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('every tall option stays reachable with its title, clipped end and cancel hint at 80x24', async () => {
+    const questions: Questions = {
+      agent: 'claude',
+      questions: [
+        {
+          id: 'q',
+          text: 'Pick a destination.',
+          required: false,
+          multiSelect: false,
+          options: Array.from({ length: 8 }, (_, index) => ({
+            value: String(index),
+            title: `Destination ${index + 1}`,
+            description: `Description ${index + 1} `.repeat(100),
+          })),
+        },
+      ],
+    };
+    const drawn = await draw(
+      <QuestionBox
+        wait={{
+          id: 'tall',
+          mode: 'form',
+          message: 'Pick',
+          schema: { type: 'object', properties: {} },
+        }}
+        questions={questions}
+        agent='fake'
+        windowRows={24}
+        width={80}
+        active
+        onAnswer={() => {}}
+      />,
+      { columns: 80, rows: 24 },
+    );
+
+    try {
+      for (let index = 0; index < 8; index++) {
+        const frame = drawn.frame();
+
+        expect(frame).toContain(`❯ ${index + 1}. Destination ${index + 1}`);
+        expect(frame).toContain('…');
+        expect(frame).toContain('Esc to cancel');
+        expect(frame).toContain('╰');
+        expect(frame.split('\n').length).toBeLessThanOrEqual(24);
+        await drawn.write(DOWN);
+      }
+    } finally {
+      await drawn.unmount();
+    }
+  });
 });

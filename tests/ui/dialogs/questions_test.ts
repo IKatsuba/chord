@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { enricherRelay } from '../../../src/session/enrich.ts';
 import { ENRICHERS } from '../../../src/session/enrichers.ts';
@@ -415,5 +415,87 @@ test('another option that does not fit whole is left out below and counted, neve
     end: 3,
     above: 0,
     below: 2,
+  });
+});
+
+describe('CHD-1 tester: question viewport and editing invariants', () => {
+  test('every focused option fits and every non-focused option is either whole or counted outside', () => {
+    for (let limit = 6; limit <= 14; limit++) {
+      const sizes = [1, limit - 2, 2, limit - 3, 1, 3];
+      const lines: (number | undefined)[] = [undefined, undefined];
+
+      sizes.forEach((size, row) =>
+        lines.push(...Array<number>(size).fill(row)),
+      );
+
+      for (let focus = 0; focus < sizes.length; focus++) {
+        const view = windowOf(lines, focus, limit);
+        const shown = lines.slice(view.top, view.end);
+
+        expect(shown).toContain(focus);
+        expect(shown.filter((row) => row === focus).length).toBe(
+          sizes[focus] ?? 0,
+        );
+        expect(
+          shown.length + Number(view.top > 0) + Number(view.end < lines.length),
+        ).toBeLessThanOrEqual(limit);
+
+        for (let row = 0; row < sizes.length; row++) {
+          const count = shown.filter((value) => value === row).length;
+
+          expect(count === 0 || count === sizes[row]).toBe(true);
+        }
+
+        expect(view.above).toBe(
+          sizes.filter((_, row) => lines.lastIndexOf(row) < view.top).length,
+        );
+        expect(view.below).toBe(
+          sizes.filter((_, row) => lines.indexOf(row) >= view.end).length,
+        );
+      }
+    }
+  });
+
+  test('own-row digits and Space type text; ctrl+w and ctrl+u clear its tick without changing normal picks', () => {
+    const { state } = play(
+      DROID_QUESTIONS,
+      'tab',
+      '1',
+      '↓',
+      '↓',
+      '2',
+      ' ',
+      'HEIC',
+    );
+
+    expect(state.answers.question_1).toMatchObject({
+      picks: ['option_0'],
+      own: '2 HEIC',
+      ownChosen: true,
+    });
+
+    const { questions, form } = read(DROID_QUESTIONS);
+    const shortened = askKey(questions, form.requestedSchema, state, 'w', {
+      ...NONE,
+      ctrl: true,
+    }).state;
+    const cleared = askKey(questions, form.requestedSchema, shortened, 'u', {
+      ...NONE,
+      ctrl: true,
+    }).state;
+
+    expect(shortened.answers.question_1?.own).toBe('2 ');
+    expect(cleared.answers.question_1).toMatchObject({
+      picks: ['option_0'],
+      own: '',
+      ownChosen: false,
+    });
+    expect(
+      askPaste(questions, cleared, 'one\r\ntwo').answers.question_1,
+    ).toMatchObject({
+      picks: ['option_0'],
+      own: 'one two',
+      ownChosen: true,
+    });
   });
 });

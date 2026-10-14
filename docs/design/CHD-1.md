@@ -640,6 +640,25 @@ and `minItems` and codex's `required`.
   to answer under -p)`, and `claude asked: <message> — skipped` for a
   generic form.
 
+### Settled while building unit 4
+
+- **The heading** is `<agent> asks you N questions`, or `<agent> asks you
+  a question` for one, for every agent. The agent's own message is not
+  shown, except where it is claude's lone question text. Where the mocks
+  read "codex needs your input to continue" or "droid needs your answers
+  to continue", this heading is the one that holds.
+- **Submit with a required question unanswered:** Send is drawn dim and
+  the `❯` skips it. The summary row says `<header>  no answer yet, and
+  <agent> needs one`. Enter on Skip declines.
+- **A text row** (a note, an own answer, a typed question) is edited at its
+  end, as today's form fields are: Backspace, ctrl+u and ctrl+w. ←→ still
+  move between the questions.
+- **A digit on a multiSelect** toggles that option and does not move on.
+- **Enter on a typed question's row** goes to the next step.
+- **Tab with nothing picked** moves on, and the step stays `○`.
+- **The required `*`** stands before its step's chip (`* ◉ Next step`), in
+  `warning`.
+
 ## Keys and the shortcuts panel
 
 The question box is a widget, like the permission prompt, so its keys are

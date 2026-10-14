@@ -660,6 +660,19 @@ and `minItems` and codex's `required`.
 - **Tab with nothing picked** moves on, and the step stays `○`.
 - **The required `*`** stands before its step's chip (`* ◉ Next step`), in
   `warning`.
+- **A step taller than the box's rows** (the owner's pick, 2026-10-15)
+  shows a window of whole rows:
+  - `↑ N more` and `↓ N more` count the options cut off, as the generic
+    form and the pickers do;
+  - the `❯` row is always in view;
+  - an option's description is never shown without its title;
+  - where the focused option's description still does not fit, it is cut
+    at its end with `…`;
+  - there is no scrollbar.
+
+  OpenTUI's `<scrollbox>` was tried and did not fit: it starts mid-option
+  and draws a scrollbar. `<tab-select>` did not fit the step chips either:
+  it cuts names and loses the per-state colours.
 
 ## Keys and the shortcuts panel
 

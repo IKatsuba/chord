@@ -305,3 +305,25 @@ test('a step too tall keeps the focused row whole and counts the rows cut off', 
     below: 0,
   });
 });
+
+test("the own answer's number takes the ❯ there, and picks it once it holds text; the hint counts it", () => {
+  const { questions } = read(DROID_QUESTIONS);
+
+  expect(play(DROID_QUESTIONS, '3').state).toMatchObject({
+    step: 0,
+    row: 2,
+  });
+  expect(play(DROID_QUESTIONS, '3').state.answers.question_0).toBeUndefined();
+  expect(
+    play(DROID_QUESTIONS, '3', 'NFS', '↑', 'enter', '←', '3').state,
+  ).toMatchObject({
+    step: 0,
+    row: 2,
+    answers: { question_0: { picks: [], own: 'NFS', ownChosen: true } },
+  });
+  expect(askHint(questions, openAsk(questions, 0), 76)).toContain('1–3');
+  expect(
+    play(DIMCODE_QUESTIONS, '3', 'canary', '↑', 'enter', '←', '3').state.answers
+      .deploy,
+  ).toMatchObject({ picks: [], ownChosen: true });
+});

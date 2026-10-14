@@ -102,3 +102,20 @@ test('a form with no questions read in it keeps the field table', () =>
     expect(window.frame()).toContain('❯ * Project name');
     expect(window.frame()).not.toContain('Submit →');
   }));
+
+test('a Note placeholder too long for 80 columns is cut at its end', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'askclaude');
+      await inputAsked(window, 'fake asks you 2 questions');
+
+      const note = window
+        .frame()
+        .split('\n')
+        .find((line) => line.includes('Note  '));
+
+      expect(note).toContain('Note  Type your own answer, or add a note to');
+      expect(note).toMatch(/…\s*│$/);
+    },
+    { rows: 24, columns: 80 },
+  ));

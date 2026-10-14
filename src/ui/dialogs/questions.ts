@@ -392,6 +392,15 @@ export function askKey(
       : { state: enter(picked, questions, state.step + 1) };
   }
 
+  // The own answer's number takes the `❯` there to type, and picks it if
+  // something is typed in it already.
+  if (digit === question.options.length && ownIsOption(question)) {
+    const { own } = answerTo(state, question);
+    const at = { ...state, row: digit };
+
+    return { state: own === '' ? at : typeOwn(at, question, own) };
+  }
+
   if (row?.kind !== 'option') {
     return { state };
   }
@@ -461,7 +470,10 @@ export function askHint(
     );
   }
 
-  const digits = `1–${Math.min(question.options.length, 9)}`;
+  const digits = `1–${Math.min(
+    question.options.length + (ownIsOption(question) ? 1 : 0),
+    9,
+  )}`;
 
   return pickHint(
     `Enter to pick · ${digits} · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel`,

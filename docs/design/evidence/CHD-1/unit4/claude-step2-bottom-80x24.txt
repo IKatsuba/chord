@@ -1,0 +1,24 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.VNmq
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+ ››› Waiting for your input… (15s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                    │
+│                                                                              │
+│ ← ✔ Language   ◉ Checks   ○ Submit →                                         │
+│                                                                              │
+│ Which checks should run before a commit? (pick any)                          │
+│                                                                              │
+│   [✔] 1. Types                                                               │
+│   [ ] 2. Lint                                                                │
+│   [✔] 3. Tests                                                               │
+│                                                                              │
+│ ❯ Note    Type your own answer to add to your selection above (optional).    │
+│                                                                              │
+│ Enter for the next · ↑ options · ←→ questions · Esc to cancel                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.D0ug
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+   ⎿  fake asked · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askdroid
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 3 questions                                                                                            │
+│                                                                                                                      │
+│ ← * ◉ Storage   * ○ Formats   * ○ Bucket   ○ Submit →                                                                │
+│                                                                                                                      │
+│ Where should uploads be kept?                                                                                        │
+│                                                                                                                      │
+│   1. Local disk                                                                                                      │
+│   2. S3 bucket                                                                                                       │
+│ ❯ 3. Other answer:                                                                                                   │
+│                                                                                                                      │
+│ Type your answer · Enter for the next · ←→ or Tab for the questions · Esc to cancel                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

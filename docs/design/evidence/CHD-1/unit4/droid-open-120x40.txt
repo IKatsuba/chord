@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.1VWJ
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+ ⏺ fake asked: Please answer the following questions.
+   ⎿  Answered · 3 fields
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno (TypeScript) (Recommended)","question_1":["Types","Tests"],"question_1_custom":"also fmt"}
+
+ › askcodex
+
+ ⏺ fake asked: Codex needs your input to continue.
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askdroid
+
+
+
+ ››› Waiting for your input… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 3 questions                                                                                            │
+│                                                                                                                      │
+│ ← * ◉ Storage   * ○ Formats   * ○ Bucket   ○ Submit →                                                                │
+│                                                                                                                      │
+│ Where should uploads be kept?                                                                                        │
+│                                                                                                                      │
+│ ❯ 1. Local disk                                                                                                      │
+│   2. S3 bucket                                                                                                       │
+│   3. Other answer:                                                                                                   │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

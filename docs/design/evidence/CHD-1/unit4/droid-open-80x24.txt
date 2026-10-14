@@ -1,0 +1,24 @@
+
+ ⏺ fake asked: Codex needs your input to continue.
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askdroid
+
+ ››› Waiting for your input… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 3 questions                                                    │
+│                                                                              │
+│ ← * ◉ Storage   * ○ Formats   * ○ Bucket   ○ Submit →                        │
+│                                                                              │
+│ Where should uploads be kept?                                                │
+│                                                                              │
+│ ❯ 1. Local disk                                                              │
+│   2. S3 bucket                                                               │
+│   3. Other answer:                                                           │
+│                                                                              │
+│ Enter to pick · 1–2 · ↑↓ · ←→ questions · Esc to cancel                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -557,8 +557,10 @@ and `minItems` and codex's `required`.
   ⏵⏵ auto mode on (shift+tab to cycle)           Default (recommended) · 4% used
 ```
 
-- **`withValue` with multiSelect:** the row is a checkbox. Typing ticks
-  it, and Space toggles it as any other row:
+- **`withValue` with multiSelect:** the row is a checkbox, ticked exactly
+  while its text is not empty. On that row every key types, Space
+  included, so typing ticks it and clearing the text (Backspace, ctrl+u)
+  unticks it. Space toggles only the option rows:
 
 ```
 ╭──────────────────────────────────────────────────────────────────────────────╮

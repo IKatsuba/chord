@@ -1,0 +1,24 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.a613
+ ▀▀     ? for shortcuts · /help
+
+ › askdroid
+
+
+ ››› Waiting for your input… (4s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 3 questions                                                    │
+│                                                                              │
+│ ← * ○ Storage   * ◉ Formats   * ○ Bucket   ○ Submit →                        │
+│                                                                              │
+│ Which formats should be accepted? (pick any)                                 │
+│                                                                              │
+│   [ ] 1. PNG                                                                 │
+│   [ ] 2. JPEG                                                                │
+│ ❯ [ ] 3. Other answer:                                                       │
+│                                                                              │
+│ Type your answer · Enter for the next · ←→ questions · Esc to cancel         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

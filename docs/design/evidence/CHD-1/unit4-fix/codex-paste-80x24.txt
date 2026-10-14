@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › askdroid
+
+   ⎿  fake asked · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askcodex
+
+ ››› Waiting for your input… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                             answers itself in 4:58 │
+│                                                                              │
+│ ← * ○ Next step   * ◉ Token   ○ Submit →                                     │
+│                                                                              │
+│ Paste the API token for the staging deploy.                                  │
+│                                                                              │
+│ ❯ •••••••••••••••                                                            │
+│                                                                              │
+│ Type your answer · Enter for the next · ←→ questions · Esc to cancel         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

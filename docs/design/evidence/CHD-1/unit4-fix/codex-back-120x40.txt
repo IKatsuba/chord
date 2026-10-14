@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                                            /tmp/chord-qa.Z8vP
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.Z8vP
+ ▀▀     ? for shortcuts · /help
+
+ › askdroid
+
+   ⎿  fake asked · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askcodex
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (44s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                                     answers itself in 4:17 │
+│                                                                                                                      │
+│ ← * ○ Next step   * ◉ Token   ○ Submit →                                                                             │
+│                                                                                                                      │
+│ Paste the API token for the staging deploy.                                                                          │
+│                                                                                                                      │
+│ ❯ •••••••••••••••                                                                                                    │
+│                                                                                                                      │
+│ Type your answer · Enter for the next · ←→ or Tab for the questions · Esc to cancel                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

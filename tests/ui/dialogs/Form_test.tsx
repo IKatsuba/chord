@@ -3,6 +3,8 @@ import process from 'node:process';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
+import type { ElicitationReply } from '../../../src/session/elicitations.ts';
+import { DROID_QUESTIONS } from '../../fixtures/questions.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { ElicitationForm } from '../../../src/ui/dialogs/Form.tsx';
 import {
@@ -389,4 +391,65 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
       },
       { columns: 80, rows: 24 },
     ));
+});
+
+describe('CHD-1 tester: Droid multi-select schema', () => {
+  test('repeated checkbox toggles send each selected option only once', async () => {
+    let answer: ElicitationReply | undefined;
+    const form = await draw(
+      <ElicitationForm
+        wait={{
+          id: 'droid',
+          mode: 'form',
+          message: DROID_QUESTIONS.message,
+          schema: DROID_QUESTIONS.requestedSchema,
+        }}
+        agent='fake'
+        windowRows={40}
+        width={120}
+        active
+        onAnswer={(response) => {
+          answer = response;
+        }}
+      />,
+      { columns: 120, rows: 40 },
+    );
+
+    try {
+      await form.write(' ');
+      await form.write('1');
+      await form.write(DOWN);
+      await form.write(DOWN);
+      await form.write(' ');
+
+      // Pick, unpick and pick PNG again, then add JPEG.
+      for (let toggle = 0; toggle < 3; toggle++) {
+        await form.write(' ');
+      }
+
+      await form.write(DOWN);
+      await form.write(' ');
+      await form.write('\r');
+      await form.write(DOWN);
+      await form.write(DOWN);
+      await form.write('uploads');
+      await form.write(DOWN);
+      await form.write('\r');
+      expect(answer?.action).toBe('accept');
+
+      const values =
+        answer?.action === 'accept' ? answer.content?.question_1 : undefined;
+
+      expect(values).toStrictEqual(['option_0', 'option_1']);
+
+      if (!Array.isArray(values)) {
+        throw new Error('Droid multi-select did not send an array');
+      }
+
+      // SDK parsing strips droid's uniqueItems; checkbox toggles keep its picks unique.
+      expect(new Set(values).size).toBe(values.length);
+    } finally {
+      await form.unmount();
+    }
+  });
 });

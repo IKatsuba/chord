@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import type {
   AnyMessage,
@@ -1062,4 +1062,148 @@ test('a second own answer for one question, or options as a plain enum, get no q
       }),
     ),
   ).toBeUndefined();
+});
+
+describe('CHD-1 tester: conservative question enrichment', () => {
+  const forms = [
+    CLAUDE_QUESTIONS,
+    CLAUDE_QUESTION,
+    CODEX_QUESTIONS,
+    DROID_QUESTIONS,
+    OPENCODE_QUESTIONS,
+    DIMCODE_QUESTIONS,
+  ];
+  const freeze = (value: unknown): void => {
+    if (value !== null && typeof value === 'object') {
+      Object.values(value).forEach(freeze);
+      Object.freeze(value);
+    }
+  };
+
+  test('frozen requests keep every original field and metadata key, and enrichment is idempotent', () => {
+    for (const fixture of forms) {
+      const form = structuredClone(fixture);
+
+      form._meta = {
+        ...form._meta,
+        untouched: { list: ['keep', 'these'] },
+        [FILLED]: ['existing'],
+      };
+
+      const original = structuredClone(form);
+
+      freeze(form);
+
+      const result = asked(form);
+      const meta = result._meta as Record<string, unknown>;
+      const questions = meta[QUESTIONS] as Questions;
+      const represented = questions.questions.flatMap((question) => [
+        question.id,
+        ...(question.own === undefined ? [] : [question.own.field]),
+      ]);
+
+      expect(form).toStrictEqual(original);
+      expect(new Set(represented).size).toBe(represented.length);
+      expect([...represented].sort()).toStrictEqual(
+        Object.keys(form.requestedSchema.properties ?? {}).sort(),
+      );
+      expect(result.requestedSchema).toStrictEqual(form.requestedSchema);
+      expect(meta.untouched).toStrictEqual({ list: ['keep', 'these'] });
+      expect(meta[FILLED]).toStrictEqual(['existing', QUESTIONS]);
+      expect(
+        enricherRelay(ENRICHERS).fromAgent({
+          jsonrpc: '2.0',
+          id: 'again',
+          method: 'elicitation/create',
+          params: result,
+        }),
+      ).toStrictEqual([
+        {
+          jsonrpc: '2.0',
+          id: 'again',
+          method: 'elicitation/create',
+          params: result,
+        },
+      ]);
+    }
+  });
+
+  test('one unsupported field leaves the whole original request available to the generic form', () => {
+    for (const fixture of forms) {
+      for (const extra of [
+        { type: 'integer', minimum: 1 },
+        { type: 'string', enum: ['small', 'large'] },
+        { type: 'array', items: { type: 'string', enum: ['one', 'two'] } },
+      ]) {
+        const form = structuredClone(fixture);
+
+        form.requestedSchema.properties!.extra = extra;
+        form.requestedSchema.required = [
+          ...(form.requestedSchema.required ?? []),
+          'extra',
+        ];
+
+        freeze(form);
+        expect(asked(form)).toStrictEqual({ ...form, sessionId: SESSION });
+      }
+    }
+  });
+
+  test('malformed choices and own answers fall back without dropping any fields', () => {
+    for (const fixture of forms) {
+      const id = Object.keys(fixture.requestedSchema.properties ?? {})[0];
+
+      assert(id !== undefined);
+
+      for (const options of [[], [{ const: 7, title: 'Seven' }]]) {
+        const form = structuredClone(fixture);
+        const property: Record<string, unknown> | undefined =
+          form.requestedSchema.properties![id];
+
+        assert(property !== undefined);
+        Object.assign(property, { type: 'string', oneOf: options });
+        freeze(form);
+        expect(asked(form)).toStrictEqual({ ...form, sessionId: SESSION });
+      }
+
+      const own = structuredClone(fixture);
+      const ownId = Object.keys(own.requestedSchema.properties ?? {}).find(
+        (key) => /(?:_custom|_note|_other)$|^__custom_/.test(key),
+      );
+
+      assert(ownId !== undefined);
+      Object.assign(own.requestedSchema.properties![ownId]!, {
+        type: 'integer',
+      });
+      freeze(own);
+      expect(asked(own)).toStrictEqual({ ...own, sessionId: SESSION });
+    }
+  });
+
+  test('codex note pairing follows questionId even when the note precedes its text question', () => {
+    const form = structuredClone(CODEX_QUESTIONS);
+    const properties = form.requestedSchema.properties;
+
+    form.requestedSchema.properties = {
+      token_note: {
+        type: 'string',
+        title: 'Token note',
+        _meta: { codex: { role: 'user_note', questionId: 'token' } },
+      },
+      ...properties,
+    };
+
+    const questions = questionsIn(form);
+
+    expect(questions?.questions.map((question) => question.id)).toStrictEqual([
+      'next',
+      'token',
+    ]);
+    expect(questions?.questions[1]?.own).toStrictEqual({
+      field: 'token_note',
+      mode: 'beside',
+      placeholder: 'Token note',
+    });
+    expect(questions?.questions[1]?.secret).toBe(true);
+  });
 });

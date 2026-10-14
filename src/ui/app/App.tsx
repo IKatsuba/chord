@@ -111,6 +111,7 @@ import { useMeasured } from './layout.ts';
 import { useTimers } from './timers.ts';
 import { AgentColours, COLOUR, Colours, Keys } from './context.ts';
 import { ElicitationForm } from '../dialogs/Form.tsx';
+import { QuestionBox } from '../dialogs/Questions.tsx';
 import { LinkPrompt } from '../dialogs/Link.tsx';
 import { PermissionPrompt } from '../dialogs/Permission.tsx';
 import {
@@ -968,7 +969,34 @@ export function App({
                     })}
               />
             )}
-            {inputAsked?.mode === 'form' && !listingSessions ? (
+            {inputAsked?.mode === 'form' &&
+            inputAsked.questions !== undefined &&
+            !listingSessions ? (
+              <QuestionBox
+                key={inputAsked.id}
+                wait={inputAsked}
+                questions={inputAsked.questions}
+                filled={
+                  state.answering?.id === inputAsked.id
+                    ? state.answering.state
+                    : undefined
+                }
+                agent={frontAgent}
+                windowRows={rows}
+                width={columns}
+                active={listening && !state.agentsFocus}
+                onFill={(answering) =>
+                  dispatch({
+                    type: 'questions_answered',
+                    id: inputAsked.id,
+                    state: answering,
+                  })
+                }
+                onAnswer={(response) =>
+                  conversation()?.answer(inputAsked.id, response)
+                }
+              />
+            ) : inputAsked?.mode === 'form' && !listingSessions ? (
               <ElicitationForm
                 key={inputAsked.id}
                 wait={inputAsked}

@@ -46,6 +46,12 @@ export interface Shortcut {
    */
   readonly form?: readonly string[];
   /**
+   * The presses the question box answers for this entry, besides typing and
+   * editing a text row and the keys it shares with the permission prompt's
+   * list, named as the key test names them.
+   */
+  readonly questions?: readonly string[];
+  /**
    * The presses the prompt's textarea sends the draft on, breaks its line on,
    * or walks history on, named the same way. Typing and editing the draft
    * (ctrl+a, ctrl+e, ctrl+k, ctrl+u, ctrl+w, ctrl+z, ctrl+y) are not listed,
@@ -391,13 +397,15 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: ['toggle_resume_scope'],
     actions: ['select:toggleScope'],
   },
-  // Forms: what an agent asks for in the prompt box's place. One line for
-  // all the form's keys, which its own hint line names as they apply, so the
-  // panel still fits 80x24.
+  // Forms and questions: what an agent asks for in the prompt box's place.
+  // One line for all their keys, which their own hint lines name as they
+  // apply, so the panel still fits 80x24; the permission prompt's keys pick
+  // a question's option.
   {
     key: 'tab ↑ ↓ space',
-    does: 'to fill in a form',
+    does: 'for forms and questions',
     commands: [],
+    questions: ['tab', 'shift + tab', '←', '→', ' ', 'esc'],
     form: [
       'tab',
       'shift + tab',

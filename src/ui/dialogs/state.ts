@@ -7,6 +7,7 @@ import type {
   Transcript,
 } from '../../session/transcript/types.ts';
 import type { FormState } from './form.ts';
+import type { AskState } from './questions.ts';
 
 /** The session's part: a dialog's state lives with the session asking. */
 export interface DialogsState {
@@ -15,21 +16,31 @@ export interface DialogsState {
    * answers, so switching away and back finds it as it was left.
    */
   readonly filling?: { readonly id: string; readonly form: FormState };
+  /** The question box as the person has answered it so far, the same way. */
+  readonly answering?: { readonly id: string; readonly state: AskState };
 }
 
 export type DialogsAction =
   /** A key changed the form answering the request `id`. */
-  {
-    readonly type: 'form_filled';
-    readonly id: string;
-    readonly form: FormState;
-  };
+  | {
+      readonly type: 'form_filled';
+      readonly id: string;
+      readonly form: FormState;
+    }
+  /** A key changed the question box answering the request `id`. */
+  | {
+      readonly type: 'questions_answered';
+      readonly id: string;
+      readonly state: AskState;
+    };
 
 export function reduceDialogs(
   state: DialogsState,
   action: DialogsAction,
 ): DialogsState {
-  return { ...state, filling: { id: action.id, form: action.form } };
+  return action.type === 'form_filled'
+    ? { ...state, filling: { id: action.id, form: action.form } }
+    : { ...state, answering: { id: action.id, state: action.state } };
 }
 
 /**

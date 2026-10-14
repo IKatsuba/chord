@@ -6,7 +6,9 @@ import type {
   ElicitationPropertySchema,
   ElicitationSchema,
 } from '@agentclientprotocol/sdk';
+import type { Questions } from '../../../src/session/questions.ts';
 import { ElicitationForm } from '../../../src/ui/dialogs/Form.tsx';
+import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
 import { PermissionPrompt } from '../../../src/ui/dialogs/Permission.tsx';
 import { ModelPicker } from '../../../src/ui/pickers/Pickers.tsx';
 import { PromptInput } from '../../../src/ui/prompt/Prompt.tsx';
@@ -587,6 +589,143 @@ test('every key a form answers is in the panel', async () => {
   for (const shortcut of SHORTCUTS) {
     for (const name of shortcut.form ?? []) {
       expect(answered.has(name), `${name} does nothing on a form`).toBeTruthy();
+    }
+  }
+});
+
+/** Questions with each kind of row the box has, nine options apiece. */
+const ASKED: Questions = {
+  agent: 'claude',
+  questions: [
+    {
+      id: 'one',
+      text: 'One?',
+      options: NINE.map((digit) => ({ value: digit, title: digit })),
+      multiSelect: false,
+      required: false,
+      own: { field: 'one_note', mode: 'beside' },
+    },
+    {
+      id: 'many',
+      text: 'Many?',
+      options: NINE.map((digit) => ({ value: digit, title: digit })),
+      multiSelect: true,
+      required: false,
+      own: { field: 'many_other', mode: 'withValue', value: 'other' },
+    },
+    {
+      id: 'typed',
+      text: 'Typed?',
+      options: [],
+      multiSelect: false,
+      required: false,
+    },
+  ],
+};
+
+/**
+ * The question box's rows, each reached by the presses after its name, and
+ * whether text typed there is the row's own.
+ */
+const QUESTION_STATES: [string, string[], boolean][] = [
+  ['option', [], false],
+  ['note', Array(9).fill('\x1b[B'), true],
+  ['multi-select', ['\t'], false],
+  ['multi-select own answer', ['\t', ...Array(9).fill('\x1b[B')], true],
+  ['typed answer', ['\t', '\t'], true],
+  ['submit', ['\t', '\t', '\t'], false],
+];
+
+/**
+ * Presses every key on the question box, on each kind of row afresh, and
+ * checks that each one it answers is in the panel, and that each the panel
+ * promises for it does something. Typing and editing a text row are not
+ * listed.
+ */
+test('every key the question box answers is in the panel', async () => {
+  const settle = (ms = 10) => new Promise((resolve) => setTimeout(resolve, ms));
+  const answered = new Set<string>();
+
+  for (const [state, prelude, typing] of QUESTION_STATES) {
+    const answers: unknown[] = [];
+    const draw = async () => {
+      const app = await harness.draw(
+        <QuestionBox
+          wait={{
+            id: 'e1',
+            mode: 'form',
+            message: 'Go?',
+            schema: { type: 'object', properties: {} },
+          }}
+          questions={ASKED}
+          agent='fake'
+          windowRows={40}
+          width={120}
+          active
+          onAnswer={(response) => answers.push(response)}
+        />,
+      );
+
+      await settle();
+
+      for (const press of prelude) {
+        await app.write(press);
+        await settle();
+      }
+
+      answers.length = 0;
+
+      return app;
+    };
+
+    let app = await draw();
+
+    try {
+      for (const { name, sequence } of FORM_PRESSES) {
+        const before = app.frame();
+
+        await app.write(sequence);
+        // A lone ESC waits 20 ms for the rest of a sequence that never comes.
+        await settle(40);
+
+        if (app.frame() === before && answers.length === 0) {
+          continue;
+        }
+
+        await app.unmount();
+
+        app = await draw();
+
+        if (
+          typing &&
+          (name.length === 1 ||
+            name.startsWith('ctrl + ') ||
+            name === 'backspace')
+        ) {
+          continue;
+        }
+
+        answered.add(name);
+        expect(
+          SHORTCUTS.some(
+            (shortcut) =>
+              shortcut.questions?.includes(name) ||
+              shortcut.choices?.includes(name),
+          ),
+          `${name} on the question box's ${state} is not listed`,
+        ).toBeTruthy();
+      }
+    } finally {
+      await app.unmount();
+    }
+  }
+
+  for (const shortcut of SHORTCUTS) {
+    for (const name of shortcut.questions ?? []) {
+      expect(
+        answered.has(name),
+        `${name} does nothing on the question box`,
+      ).toBeTruthy();
     }
   }
 });

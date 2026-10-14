@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -17,6 +17,7 @@ import {
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
 import { plainText } from '../../src/session/terminal_text.ts';
+import { TaskAgent } from '../../src/session/tasks.ts';
 import {
   openSession,
   type PastAction,
@@ -1092,4 +1093,300 @@ test('a form asked and never answered, as chord was stopped, is not drawn again 
       entry.kind === 'elicitation' ? entry.outcome : entry.kind,
     ),
   ).toStrictEqual(['user', 'cancelled']);
+});
+
+describe('CHD-1 tester: question record replay', () => {
+  const forms = (entries: readonly Entry[]) =>
+    entries.filter(
+      (entry): entry is Extract<Entry, { kind: 'elicitation' }> =>
+        entry.kind === 'elicitation',
+    );
+  const waitFor = async (check: () => boolean) => {
+    const deadline = Date.now() + 10_000;
+
+    while (!check()) {
+      if (Date.now() > deadline) {
+        throw new Error('timed out waiting for the recorded task form');
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  };
+
+  for (const action of ['accept', 'decline', 'cancel'] as const) {
+    test(`${action}: the reopened form keeps its question and exactly one outcome`, () =>
+      withPlace(async (place) => {
+        const content = { question_0: 'Python', question_0_custom: 'portable' };
+        const id = await recordSession({
+          stateDir: place.stateDir,
+          cwd: place.dir,
+          command: place.command,
+          prompts: ['askclaudeone'],
+          answer: action === 'accept' ? { action, content } : { action },
+        });
+        const lines = await only(place);
+        const asked = lines.filter((entry) => entry.type === 'asked');
+        const answered = lines.filter((entry) => entry.type === 'answered');
+
+        expect(asked.length).toBe(1);
+        expect(answered.length).toBe(1);
+
+        const state = await reopened(place, id);
+        const recorded = forms(state.transcript.entries);
+
+        expect(recorded.length).toBe(1);
+        expect(state.transcript.asking).toStrictEqual([]);
+        expect(recorded[0]?.outcome).toBe(
+          action === 'accept'
+            ? 'accepted'
+            : action === 'decline'
+              ? 'declined'
+              : 'cancelled',
+        );
+        expect(recorded[0]?.content).toStrictEqual(
+          action === 'accept' ? content : undefined,
+        );
+        expect(
+          recorded[0]?.wait.mode === 'form' &&
+            recorded[0].wait.questions?.questions[0]?.id,
+        ).toBe('question_0');
+      }));
+  }
+
+  test('an unfinished request followed by an answered one never returns as a pending request', () => {
+    const wait = (id: string) => ({
+      id,
+      mode: 'form' as const,
+      message: `Question ${id}`,
+      schema: {
+        type: 'object' as const,
+        properties: { q: { type: 'string' as const } },
+      },
+    });
+    const entries: RecordEntry[] = [
+      { type: 'prompt', turnId: 'first', at: 1, prompt: 'first', images: 0 },
+      { type: 'asked', turnId: 'first', wait: wait('one') },
+      { type: 'cancel', turnId: 'first', at: 2 },
+      { type: 'prompt', turnId: 'second', at: 3, prompt: 'second', images: 0 },
+      { type: 'asked', turnId: 'second', wait: wait('two') },
+      {
+        type: 'answered',
+        turnId: 'second',
+        id: 'two',
+        answer: { type: 'accepted', content: { q: 'yes' } },
+      },
+      {
+        type: 'result',
+        turnId: 'second',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+    ];
+    const transcript = recordActions(
+      parseRecord(entries.map((entry) => JSON.stringify(entry)).join('\n')),
+    )
+      .filter((action): action is TranscriptAction => action.type !== 'usage')
+      .reduce(reduceTranscript, emptyTranscript);
+
+    expect(transcript.asking).toStrictEqual([]);
+    expect(
+      forms(transcript.entries).map((entry) => ({
+        id: entry.wait.id,
+        outcome: entry.outcome,
+        content: entry.content,
+      })),
+    ).toStrictEqual([
+      { id: 'one', outcome: 'cancelled', content: undefined },
+      { id: 'two', outcome: 'accepted', content: { q: 'yes' } },
+    ]);
+  });
+
+  test('a task form and a simultaneous parent form replay under their original owners, with task secrets omitted', () =>
+    withPlace(async (place) => {
+      const events: ConversationEvent[] = [];
+      const failures: string[] = [];
+      const parentRecord = new FileRecording(place.stateDir, (message) =>
+        failures.push(message),
+      );
+      const parent = new Conversation(
+        () => open(place, place.command),
+        (event) => events.push(event),
+        Date.now,
+        {},
+        parentRecord,
+      );
+      let parentId: string | undefined;
+      let child: Conversation | undefined;
+      let childRecord: FileRecording | undefined;
+
+      try {
+        parent.start();
+        await waitFor(() => events.some((event) => event.type === 'connected'));
+
+        const connected = events.find((event) => event.type === 'connected');
+
+        assert(connected?.type === 'connected');
+
+        parentId = connected.sessionId;
+
+        parent.send('form');
+        await waitFor(() =>
+          events.some((event) => event.type === 'elicitation_requested'),
+        );
+
+        const rootAsk = events.find(
+          (event) => event.type === 'elicitation_requested',
+        );
+        const task = new TaskAgent(
+          {
+            id: 'question-task',
+            name: 'Question child',
+            runtime: 'fake',
+            prompt: 'askcodex',
+          },
+          parent.taskParent('question-task'),
+          Date.now,
+        );
+
+        assert(rootAsk?.type === 'elicitation_requested');
+
+        childRecord = new FileRecording(
+          place.stateDir,
+          (message) => failures.push(message),
+          Date.now,
+          {
+            parent: () => parentId,
+            name: 'Question child',
+            task: task.id,
+          },
+        );
+        child = new Conversation(
+          () => open(place, place.command),
+          (event) => task.heard(event),
+          Date.now,
+          {},
+          childRecord,
+        );
+
+        parent.adopt(task, child);
+        await waitFor(() =>
+          events.some(
+            (event) =>
+              event.type === 'elicitation_requested' &&
+              event.elicitation.subagentId === task.id,
+          ),
+        );
+
+        const childAsk = events.find(
+          (event) =>
+            event.type === 'elicitation_requested' &&
+            event.elicitation.subagentId === task.id,
+        );
+
+        assert(childAsk?.type === 'elicitation_requested');
+        parent.answer(childAsk.elicitation.id, {
+          action: 'accept',
+          content: {
+            next: 'Review existing work',
+            next_note: 'task note',
+            token: 'task-secret-unit3',
+          },
+        });
+        await waitFor(() => !task.running);
+        parent.answer(rootAsk.elicitation.id, {
+          action: 'accept',
+          content: {
+            name: 'parent-app',
+            region: 'eu',
+            replicas: 2,
+          },
+        });
+        await waitFor(() => events.some((event) => event.type === 'result'));
+      } finally {
+        await parent.close();
+        await child?.close();
+      }
+
+      expect(failures).toStrictEqual([]);
+      assert(
+        parentId !== undefined &&
+          parentRecord.path !== undefined &&
+          childRecord?.path !== undefined,
+      );
+
+      const parentLines = await readPast(parentRecord.path);
+      const childLines = await readPast(childRecord.path);
+      const childAnswer = childLines.find((entry) => entry.type === 'answered');
+
+      expect(parentLines.filter((entry) => entry.type === 'asked').length).toBe(
+        2,
+      );
+      expect(childAnswer).toMatchObject({
+        type: 'answered',
+        answer: {
+          type: 'accepted',
+          content: { next: 'Review existing work', next_note: 'task note' },
+        },
+      });
+      expect(JSON.stringify(childAnswer)).not.toContain('task-secret-unit3');
+
+      const resumed = await open(place, place.resuming, {
+        sessionId: parentId,
+        cwd: place.dir,
+        record: parentRecord.path,
+      });
+
+      try {
+        const transcript = resumed
+          .history()
+          .filter(
+            (action): action is TranscriptAction => action.type !== 'usage',
+          )
+          .reduce(reduceTranscript, emptyTranscript);
+        const taskEntry = transcript.entries.find(
+          (entry) =>
+            entry.kind === 'subagent' && entry.subagent.id === 'question-task',
+        );
+
+        assert(taskEntry?.kind === 'subagent');
+
+        // Forms are top-level transcript entries live; the wait keeps their owner.
+        const replayForms = forms(transcript.entries);
+        const childForms = replayForms.filter(
+          (entry) => entry.wait.subagentId === 'question-task',
+        );
+        const rootForms = replayForms.filter(
+          (entry) => entry.wait.subagentId === undefined,
+        );
+        const liveForms = forms(
+          events.reduce(reduceApp, initialAppState).transcript.entries,
+        );
+
+        expect(replayForms.map((entry) => entry.wait.subagentId)).toStrictEqual(
+          liveForms.map((entry) => entry.wait.subagentId),
+        );
+        expect(replayForms.length).toBe(2);
+
+        expect(rootForms.length).toBe(1);
+        expect(rootForms[0]?.content).toStrictEqual({
+          name: 'parent-app',
+          region: 'eu',
+          replicas: 2,
+        });
+        expect(childForms.length).toBe(1);
+        expect(childForms[0]?.outcome).toBe('accepted');
+        expect(childForms[0]?.content).toStrictEqual({
+          next: 'Review existing work',
+          next_note: 'task note',
+        });
+        expect(
+          childForms[0]?.wait.mode === 'form' &&
+            childForms[0].wait.questions?.questions.find(
+              (question) => question.id === 'token',
+            )?.secret,
+        ).toBe(true);
+        expect(transcript.asking).toStrictEqual([]);
+      } finally {
+        await resumed.close();
+      }
+    }));
 });

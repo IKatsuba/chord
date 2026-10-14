@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -11,6 +11,7 @@ import type {
   ElicitationReply,
   PendingElicitation,
 } from '../../src/session/elicitations.ts';
+import type { QuestionsAgent } from '../../src/session/questions.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import {
@@ -21,6 +22,15 @@ import {
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { FORM_SCHEMA, LINK_URL } from '../fixtures/forms.ts';
 import { run, said as saidIn } from '../fixtures/recorder.ts';
+import {
+  CLAUDE_QUESTION,
+  CLAUDE_QUESTIONS,
+  CODEX_QUESTIONS,
+  DIMCODE_QUESTIONS,
+  DROID_QUESTIONS,
+  OPENCODE_QUESTIONS,
+  type QuestionForm,
+} from '../fixtures/questions.ts';
 
 async function withSession(body: (session: Session) => Promise<void>) {
   const dir = await mkdtemp(join(tmpdir(), 'chord-elicitation-'));
@@ -266,3 +276,135 @@ test("a form with no adapter's marks reaches the interface with no questions", (
     assert(request.wait.mode === 'form');
     expect(request.wait.questions).toBeUndefined();
   }));
+
+describe('CHD-1 tester: question request round trips', () => {
+  const cases: {
+    scenario: string;
+    agent: QuestionsAgent;
+    form: QuestionForm;
+    content: Record<string, string | string[]>;
+  }[] = [
+    {
+      scenario: 'askclaude',
+      agent: 'claude',
+      form: CLAUDE_QUESTIONS,
+      content: {
+        question_0: 'Python',
+        question_0_custom: 'portable',
+        question_1: ['Types', 'Tests'],
+        question_1_custom: 'lint later',
+      },
+    },
+    {
+      scenario: 'askclaudeone',
+      agent: 'claude',
+      form: CLAUDE_QUESTION,
+      content: { question_0: 'Deno', question_0_custom: 'from source' },
+    },
+    {
+      scenario: 'askcodex',
+      agent: 'codex',
+      form: CODEX_QUESTIONS,
+      content: {
+        next: 'Review existing work',
+        next_note: 'tests first',
+        token: 'fake-secret-for-tests',
+      },
+    },
+    {
+      scenario: 'askdroid',
+      agent: 'droid',
+      form: DROID_QUESTIONS,
+      content: {
+        question_0: 'other',
+        question_0_other: 'NFS',
+        question_1: ['option_0', 'other'],
+        question_1_other: 'HEIC',
+        question_2: 'uploads',
+      },
+    },
+    {
+      scenario: 'askopencode',
+      agent: 'opencode',
+      form: OPENCODE_QUESTIONS,
+      content: { q0: 'Beside the module', q0_custom: 'with fixtures' },
+    },
+    {
+      scenario: 'askdimcode',
+      agent: 'dimcode',
+      form: DIMCODE_QUESTIONS,
+      content: { __custom_0: 'Preview environment' },
+    },
+  ];
+
+  const deliveredSchema = (entry: (typeof cases)[number]) => {
+    const schema = structuredClone(entry.form.requestedSchema);
+
+    if (entry.agent === 'droid') {
+      const formats = schema.properties?.question_1;
+
+      assert(formats !== undefined);
+      // The SDK strips this pre-existing keyword after the raw relay kept it.
+      // The generic multi-select's checkbox toggles keep its picks unique.
+      Reflect.deleteProperty(formats, 'uniqueItems');
+    }
+
+    return schema;
+  };
+
+  test('six sessions ask concurrently and return their own field ids and content unchanged', async () => {
+    await Promise.all(
+      cases.map((entry) =>
+        withSession(async (session) => {
+          const { request, said } = await answered(session, entry.scenario, {
+            action: 'accept',
+            content: entry.content,
+          });
+
+          assert(request.wait.mode === 'form');
+          expect(request.wait.schema).toStrictEqual(deliveredSchema(entry));
+          expect(request.wait.message).toBe(entry.form.message);
+          expect(request.wait.questions?.agent).toBe(entry.agent);
+          expect(said).toBe(
+            `Elicitation answer: accept  \n${JSON.stringify(entry.content)}`,
+          );
+        }),
+      ),
+    );
+  });
+
+  for (const entry of cases) {
+    test(`${entry.scenario}: cancellation rejects a late answer and the next request is independent`, () =>
+      withSession(async (session) => {
+        let receive: (pending: PendingElicitation) => void = () => {};
+
+        const pending = new Promise<PendingElicitation>((resolve) => {
+          receive = resolve;
+        });
+
+        const unsubscribe = session.elicitations.subscribe(receive);
+        const first = session.prompt(entry.scenario);
+        const request = await pending;
+
+        unsubscribe();
+        await first.cancel();
+        expect(request.signal.aborted).toBe(true);
+        expect((await first.result).status).toBe('cancelled');
+        request.answer({ action: 'accept', content: { stale: 'late answer' } });
+
+        const next = await answered(session, entry.scenario, {
+          action: 'accept',
+          content: entry.content,
+        });
+
+        expect(next.request.id).not.toBe(request.id);
+        assert(next.request.wait.mode === 'form');
+        expect(next.request.wait.schema).toStrictEqual(deliveredSchema(entry));
+        expect(next.request.wait.questions?.agent).toBe(entry.agent);
+        expect(next.said).toBe(
+          `Elicitation answer: accept  \n${JSON.stringify(entry.content)}`,
+        );
+        expect(next.said).not.toContain('late answer');
+      }));
+  }
+});

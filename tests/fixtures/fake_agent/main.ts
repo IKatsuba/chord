@@ -255,6 +255,7 @@ const SCENARIOS = [
   'askdroid',
   'askopencode',
   'askdimcode',
+  'askcodexwait',
   'mode',
   'effort',
   'late',

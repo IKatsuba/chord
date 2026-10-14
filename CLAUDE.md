@@ -913,7 +913,9 @@ module's tests are follows from where it is.
   its mounted tail in one turn; `form` asks for a form with a field of each kind and
   `link` for a link to open (`tests/fixtures/forms.ts`), `askclaude`,
   `askclaudeone`, `askcodex`, `askdroid`, `askopencode` and `askdimcode`
-  each adapter's question form (`tests/fixtures/questions.ts`), and each says what came back, and
+  each adapter's question form (`tests/fixtures/questions.ts`),
+  `askcodexwait` codex's with a wait of 300 ms, withdrawn once it runs
+  out, as codex-acp does, and each says what came back, and
   an accepted link is followed by `elicitation/complete`; `twins` asks a
   permission with two `allow_once` options and says the id picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the

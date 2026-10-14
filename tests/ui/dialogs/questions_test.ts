@@ -4,6 +4,7 @@ import { enricherRelay } from '../../../src/session/enrich.ts';
 import { ENRICHERS } from '../../../src/session/enrichers.ts';
 import { type Questions, questionsOf } from '../../../src/session/questions.ts';
 import {
+  answeredQuestions,
   answerText,
   askHeading,
   askHint,
@@ -326,4 +327,28 @@ test("the own answer's number takes the ❯ there, and picks it once it holds te
     play(DIMCODE_QUESTIONS, '3', 'canary', '↑', 'enter', '←', '3').state.answers
       .deploy,
   ).toMatchObject({ picks: [], ownChosen: true });
+});
+
+test("an answered box's record reads titles, a note after ·, its own answer, (hidden) for a secret and skipped for none", () => {
+  expect(
+    answeredQuestions(read(CODEX_QUESTIONS).questions, {
+      next: 'Review existing work',
+      next_note: 'tests first',
+    }),
+  ).toStrictEqual([
+    { label: 'Next step', value: 'Review existing work · tests first' },
+    { label: 'Token', value: '(hidden)' },
+  ]);
+  expect(
+    answeredQuestions(read(DROID_QUESTIONS).questions, {
+      question_0: 'other',
+      question_0_other: 'NFS',
+      question_1: ['option_0', 'other'],
+      question_1_other: 'HEIC',
+    }),
+  ).toStrictEqual([
+    { label: 'Storage', value: 'NFS' },
+    { label: 'Formats', value: 'PNG, HEIC' },
+    { label: 'Bucket', value: 'skipped' },
+  ]);
 });

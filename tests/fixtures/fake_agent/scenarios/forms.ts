@@ -61,6 +61,34 @@ export const FORMS = {
   askopencode: ask(OPENCODE_QUESTIONS),
   askdimcode: ask(DIMCODE_QUESTIONS),
 
+  // codex's questions with a wait of 300 ms, which it withdraws once the
+  // wait runs out, as codex-acp does, and answers for the person.
+  async askcodexwait(turn) {
+    const wait = 300;
+    const timer = new AbortController();
+    const timeout = setTimeout(() => timer.abort(), wait);
+    const answer = await turn.client
+      .request(
+        'elicitation/create',
+        {
+          ...CODEX_QUESTIONS,
+          _meta: { codex: { autoResolutionMs: wait } },
+          sessionId: turn.sessionId,
+        },
+        { cancellationSignal: timer.signal },
+      )
+      .catch(() => undefined)
+      .finally(() => clearTimeout(timeout));
+
+    await turn.say(
+      timer.signal.aborted
+        ? 'Elicitation answer: timed out'
+        : `Elicitation answer: ${answer?.action ?? 'none'}`,
+    );
+
+    return 'end_turn';
+  },
+
   // A form with a field of each kind, then what came back, so a capture
   // shows the round trip.
   async form(turn) {

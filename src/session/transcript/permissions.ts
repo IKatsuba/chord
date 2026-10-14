@@ -144,12 +144,17 @@ export function elicitationRequested(
     return state;
   }
 
-  return { ...state, asking: [...state.asking, elicitation] };
+  return {
+    ...state,
+    entries: askedIn(state.entries, elicitation),
+    asking: [...state.asking, elicitation],
+  };
 }
 
 /**
  * `entries` with the tool call a box of questions came out of marked as
- * answered there, so the box's record stands in for the call's own lines.
+ * asked there, from when the box opens: it reads as asking while the person
+ * answers, and the box's record stands in for its own lines.
  */
 function askedIn(
   entries: readonly Entry[],

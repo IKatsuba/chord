@@ -115,5 +115,21 @@ test('a box of questions answered out of a tool call marks that call as asked; a
     ]).entries.find((entry) => entry.kind === 'tool');
 
   expect(settled(true)).toMatchObject({ call: { id: 'ask-1', asked: true } });
+  // Marked from when the box opens.
+  expect(
+    fold([
+      { type: 'prompt', turnId: 't1', text: 'askclaude', at: 0 },
+      call,
+      {
+        type: 'elicitation_requested',
+        turnId: 't1',
+        elicitation: {
+          ...FORM_WAIT,
+          toolCallId: 'ask-1',
+          questions: { agent: 'claude', questions: [] },
+        },
+      },
+    ]).entries.find((entry) => entry.kind === 'tool'),
+  ).toMatchObject({ call: { asked: true } });
   expect(settled(false)).not.toMatchObject({ call: { asked: true } });
 });

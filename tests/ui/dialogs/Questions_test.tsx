@@ -705,11 +705,15 @@ describe('CHD-1 tester: question record rendering', () => {
   });
 });
 
-test("claude's lone question, once answered, reads Asking(<the question>)", () =>
+test("claude's lone question reads Asking(<the question>) while its box is open and once answered", () =>
   withWindow(
     async (window) => {
       await send(window, 'askclaudeone');
       await inputAsked(window, 'fake asks you a question');
+      // Above the open box too, as the person reads it while answering.
+      expect(window.frame()).toContain(
+        '⏺ Asking(Which language should helper scripts use?)',
+      );
       await window.press('1');
       await window.press('\r');
       await window.shows('⏺ Asking(Which language should helper scripts use?)');

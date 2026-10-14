@@ -248,3 +248,23 @@ test('what Team and Open handed over wraps to the row and folds after three line
     summary(call('send_message'), false, undefined, false, 40).lines,
   ).toStrictEqual([job]);
 });
+
+test('a call whose questions the box answered draws none of its own lines until ctrl+o', () => {
+  const call: ToolCall = {
+    id: 'ask-1',
+    title: 'Asking for your input',
+    status: 'completed',
+    asked: true,
+    content: [
+      {
+        type: 'content',
+        content: { type: 'text', text: 'User has answered your questions.' },
+      },
+    ],
+  };
+
+  expect(summary(call, false).lines).toStrictEqual([]);
+  expect(summary(call, true).lines).toStrictEqual([
+    'User has answered your questions.',
+  ]);
+});

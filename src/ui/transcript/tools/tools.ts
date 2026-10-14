@@ -165,6 +165,12 @@ export function summary(
   ended = false,
   width?: number,
 ): Summary {
+  // A box of questions' record under the call says what was asked and
+  // answered; ctrl+o shows the call's own lines too.
+  if (call.asked === true && !expanded) {
+    return { lines: [], hidden: 0, terminals: [], diffs: [] };
+  }
+
   const content = call.content ?? [];
   // chord's own say what was sent or answered, not the answer's JSON.
   const lines =

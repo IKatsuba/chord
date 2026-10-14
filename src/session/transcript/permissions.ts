@@ -147,6 +147,29 @@ export function elicitationRequested(
   return { ...state, asking: [...state.asking, elicitation] };
 }
 
+/**
+ * `entries` with the tool call a box of questions came out of marked as
+ * answered there, so the box's record stands in for the call's own lines.
+ */
+function askedIn(
+  entries: readonly Entry[],
+  wait: ElicitationWait,
+): readonly Entry[] {
+  const index =
+    wait.mode === 'form' &&
+    wait.questions !== undefined &&
+    wait.toolCallId !== undefined
+      ? entries.findLastIndex(
+          (entry) => entry.kind === 'tool' && entry.call.id === wait.toolCallId,
+        )
+      : -1;
+  const found = entries[index];
+
+  return found?.kind === 'tool'
+    ? entries.with(index, { ...found, call: { ...found.call, asked: true } })
+    : entries;
+}
+
 /** The person's answer to a form or link, or its withdrawal, as a record. */
 export function elicitationSettled(
   state: Transcript,
@@ -175,7 +198,7 @@ export function elicitationSettled(
 
   return {
     ...state,
-    entries: [...state.entries, entry],
+    entries: [...askedIn(state.entries, wait), entry],
     asking: state.asking.filter((other) => other !== wait),
   };
 }

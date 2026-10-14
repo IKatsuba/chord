@@ -20,6 +20,7 @@ import {
   formRows,
   type FormState,
   openForm,
+  rowKeys,
   toFix,
   type ValueView,
 } from './form.ts';
@@ -168,6 +169,7 @@ export function ElicitationForm({
     Math.floor(inner / 3),
   );
   const valueAt = FORM_MARKS + labelWidth + FORM_GAP;
+  const keys = rowKeys(rows);
   const fix = toFix(form);
 
   return (
@@ -193,7 +195,7 @@ export function ElicitationForm({
       <box marginTop={1}>
         {rows.map((row, index) => (
           <FormLine
-            key={index}
+            key={keys[index]}
             row={row}
             labelWidth={labelWidth}
             valueAt={valueAt}

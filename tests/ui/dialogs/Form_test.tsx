@@ -42,6 +42,23 @@ test("a form takes the prompt box's place, and typing goes to its field", () =>
     ).toBeTruthy();
   }));
 
+test("a field that moves up into a note's row lines up with the rest", () =>
+  withWindow(async (window) => {
+    await send(window, 'form');
+    await inputAsked(window);
+    // Leaving Project name takes its note away, and Contact email moves up
+    // into the row the note had.
+    await window.press(DOWN);
+    await window.shows('❯   Contact email');
+
+    const lines = window.frame().split('\n');
+    const column = (label: string) =>
+      lines.find((line) => line.includes(label))?.indexOf(label);
+
+    expect(column('Contact email')).toBe(column('Project name'));
+    expect(column('Replicas')).toBe(column('Project name'));
+  }));
+
 test('an invalid entry is refused in place, and Accept sends nothing', () =>
   withWindow(
     async (window) => {

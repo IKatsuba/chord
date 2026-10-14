@@ -2222,14 +2222,14 @@ function answerOf(response: ElicitationReply): ElicitationAnswer {
 /**
  * Whether a request withdrawn after `waited` ms was withdrawn because the
  * wait its agent gave for an answer ran out, as codex's does: chord sees
- * only the withdrawal, so it reads one that came at the end of that wait,
- * give or take the second the countdown shows, as that.
+ * only the withdrawal, so it reads one that came once the countdown, on the
+ * same clock, had reached 0 as that, and any earlier one as a cancel.
  */
-function ranOut(wait: ElicitationWait, waited: number): boolean {
+export function ranOut(wait: ElicitationWait, waited: number): boolean {
   const expires =
     wait.mode === 'form' ? wait.questions?.expiresInMs : undefined;
 
-  return expires !== undefined && waited >= expires - 1000;
+  return expires !== undefined && waited >= expires;
 }
 
 /** Whether two readings name the same commands, described the same way. */

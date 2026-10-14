@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   Conversation,
   type ConversationEvent,
+  ranOut,
 } from '../../src/session/conversation.ts';
 import type {
   ElicitationReply,
@@ -16,6 +17,7 @@ import { openSession, type Session } from '../../src/session/session.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import {
   emptyTranscript,
+  type ElicitationWait,
   type Entry,
   type TranscriptAction,
 } from '../../src/session/transcript/types.ts';
@@ -407,4 +409,24 @@ describe('CHD-1 tester: question request round trips', () => {
         expect(next.said).not.toContain('late answer');
       }));
   }
+});
+
+test("a form is read as timed out only once the agent's whole wait has passed", () => {
+  const wait = (expiresInMs?: number): ElicitationWait => ({
+    id: 'e',
+    mode: 'form',
+    message: 'Questions',
+    schema: { type: 'object', properties: {} },
+    ...(expiresInMs === undefined
+      ? {}
+      : { questions: { agent: 'codex', questions: [], expiresInMs } }),
+  });
+
+  expect(ranOut(wait(300_000), 299_100)).toStrictEqual(false);
+  expect(ranOut(wait(300_000), 300_000)).toStrictEqual(true);
+  expect(ranOut(wait(300_000), 301_000)).toStrictEqual(true);
+  // A wait shorter than a second: withdrawn before it ends is a cancel.
+  expect(ranOut(wait(300), 10)).toStrictEqual(false);
+  expect(ranOut(wait(300), 300)).toStrictEqual(true);
+  expect(ranOut(wait(), 1_000_000)).toStrictEqual(false);
 });

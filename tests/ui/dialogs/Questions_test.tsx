@@ -137,6 +137,11 @@ test('an answered box leaves a row per question under the turn, saying who asked
       await window.press('\r');
       await window.press('\r');
       await window.shows('⎿  fake asked · Next step  Review existing work');
+      // Right under the prompt it answers, as a command's outcome is.
+      const lines = window.frame().split('\n');
+      const prompt = lines.findIndex((line) => line.includes('› askcodex'));
+
+      expect(lines[prompt + 1]).toContain('⎿  fake asked · Next step');
       expect(window.frame()).toMatch(/^ +Token {6}\(hidden\)/m);
 
       await send(window, 'askclaude');
@@ -145,12 +150,14 @@ test('an answered box leaves a row per question under the turn, saying who asked
       await window.press(TAB);
       await window.press(DOWN);
       await window.press('\r');
-      await window.shows('⎿  fake asked · Skipped');
+      await window.shows('⎿  fake asked · Language, Checks · Skipped');
 
       await send(window, 'askdroid');
       await inputAsked(window, 'fake asks you 3 questions');
       await window.press(ESC);
-      await window.shows('⎿  fake asked · Cancelled');
+      await window.shows(
+        '⎿  fake asked · Storage, Formats, Bucket · Cancelled',
+      );
     },
     { rows: 40, columns: 120 },
   ));
@@ -158,7 +165,7 @@ test('an answered box leaves a row per question under the turn, saying who asked
 test("a box withdrawn as the agent's wait runs out reads Timed out", () =>
   withWindow(async (window) => {
     await send(window, 'askcodexwait');
-    await window.shows('⎿  fake asked · Timed out');
+    await window.shows('⎿  fake asked · Next step, Token · Timed out');
     await window.shows('Elicitation answer: timed out');
   }));
 

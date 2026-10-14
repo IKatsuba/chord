@@ -497,7 +497,11 @@ export const codexQuestions = questionShape((params, fields) => {
     }
 
     if (mark.role === 'user_note') {
-      if (typeof mark.questionId !== 'string' || !isText(property)) {
+      if (
+        typeof mark.questionId !== 'string' ||
+        !isText(property) ||
+        notes.has(mark.questionId)
+      ) {
         return undefined;
       }
 
@@ -677,7 +681,11 @@ export const dimcodeQuestions = questionShape((params, fields) => {
     const answers = recordOf(lody(property)).customAnswerFor;
 
     if (typeof answers === 'string') {
-      if (!/^__custom_\d+$/.test(key) || !isText(property)) {
+      if (
+        !/^__custom_\d+$/.test(key) ||
+        !isText(property) ||
+        owns.has(answers)
+      ) {
         return undefined;
       }
 

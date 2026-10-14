@@ -1,0 +1,13 @@
+[install.scopes]
+"@jsr" = "https://npm.jsr.io"
+
+# The tools in package.json run on Bun even where their bin asks for node,
+# so a contributor needs only Bun.
+[run]
+bun = true
+
+# Every test starts with chalk's colour off, whatever terminal runs it: a
+# frame carries escapes only while chalk has colour, and a test that wants
+# colour turns it on itself.
+[test]
+preload = ["./tests/colour.ts"]

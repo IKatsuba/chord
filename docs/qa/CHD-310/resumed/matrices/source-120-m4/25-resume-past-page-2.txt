@@ -1,0 +1,40 @@
+   │       "note": "models and modes not read yet; list_agents with agent \"junie\" reads them"              │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "kimi",                                                                                   │
+   │       "note": "models and modes not read yet; list_agents with agent \"kimi\" reads them"               │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "kiro",                                                                                   │
+   │       "note": "models and modes not read yet; list_agents with agent \"kiro\" reads them"               │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "openclaw",                                                                               │
+   │       "note": "models and modes not read yet; list_agents with agent \"openclaw\" reads them"           │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "opencode",                                                                               │
+   │       "note": "models and modes not read yet; list_agents with agent \"opencode\" reads them"           │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "poolside",                                                                               │
+   │       "note": "models and modes not read yet; list_agents with agent \"poolside\" reads them"           │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "zeroclaw",                                                                               │
+   │       "note": "models and modes not read yet; list_agents with agent \"zeroclaw\" reads them"           │
+   │     }                                                                                                   │
+   │   ]                                                                                                     │
+   │ }                                                                                                       │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+   list_sessions:
+
+   ┌ json ───────────────────────────────────────────────┐
+   │ {                                                   │
+ ── ↓ 67 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 3% context used

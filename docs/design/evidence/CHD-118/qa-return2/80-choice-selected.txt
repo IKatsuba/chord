@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                                /tmp/chord-qa.8n6hdxcq
+
+ › form
+
+ ✹ Waiting for your input… (6s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                          │
+│ Set up the deploy target                                                     │
+│                                                                              │
+│   ✔ Project name   keep                                                      │
+│   ⚠ Contact email  a@.devb                                                   │
+│                    Not an email address, such as name@example.com            │
+│   ✔ Replicas       2                                                         │
+│     Traffic share  not set                                                   │
+│   ✔ Public         ☐ No                                                      │
+│ ❯ ✔ Region         United States                                             │
+│     Tags           not set                                                   │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ → or Space to choose · ↑↓ to move · Esc to cancel                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

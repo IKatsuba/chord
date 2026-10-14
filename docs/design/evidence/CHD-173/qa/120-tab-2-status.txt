@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake    3 fake2                                   /private/tmp/chd173-qa-425601bd6783698a/120/proj
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /private/tmp/chd173-qa-425601bd6783698a/120/proj
+ █▀     ? for shortcuts · /help
+        resumed · just now · tools
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   b84af4cc-621e-4b18-8c5e-915e71e26c62
+      Directory: /private/tmp/chd173-qa-425601bd6783698a/120/proj
+      Sessions:  3 open
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

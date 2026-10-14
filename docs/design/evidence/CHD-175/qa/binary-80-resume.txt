@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   claude · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ claude's earlier sessions and saved windows in this directory.               │
+│                                                                              │
+│ ❯   1.  just now        ▣ 7 sessions · codex ×3, gemini ×2, claude ×2 · sav… │
+│     2.  1 minute ago    ▣ 3 sessions · claude, codex, claude · saved prompt… │
+│     3.  1 minute ago    ▣ 5 sessions · claude ×3, codex ×2 · saved prompt 5  │
+│     4.  2 minutes ago   saved prompt 1                                       │
+│     5.  3 minutes ago   ▣ 9 sessions · codex ×3, gemini ×3, claude ×3 · sav… │
+│   ↓ 6.  5 minutes ago   saved prompt 4                                       │
+│     … +5 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

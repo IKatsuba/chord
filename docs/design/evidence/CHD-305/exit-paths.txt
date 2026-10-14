@@ -1,0 +1,32 @@
+way=ctrl-c exit=0 flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all,cursor)=0,0,0,0,0,1
+stty: same
+stderr: 
+
+way=ctrl-d exit=0 flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all,cursor)=0,0,0,0,0,1
+stty: same
+stderr: 
+
+way=exit exit=0 flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all,cursor)=0,0,0,0,0,1
+stty: same
+stderr: 
+
+way=picker exit=0 flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all,cursor)=0,0,0,0,0,1
+stty: same
+stderr: 
+
+way=sigterm exit=143 flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all,cursor)=0,0,0,0,0,1
+stty: same
+stderr: 
+
+way=sighup exit=129 flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all,cursor)=0,0,0,0,0,1
+stty: same
+stderr: 
+
+way=exception exit=1 flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all,cursor)=0,0,0,0,0,1
+stty: same
+stderr: Error: probe: an uncaught exception|    at <anonymous> (throw.ts:6:15)|
+
+way=rejection exit=1 flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all,cursor)=0,0,0,0,0,1
+stty: same
+stderr: Error: probe: an unhandled rejection|    at <anonymous> (throw.ts:4:29)|
+

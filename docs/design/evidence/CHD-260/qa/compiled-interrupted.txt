@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from tester · fake.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   ...............................................................
+   ⎿  Interrupted by user
+
+╭─ coder · bugfix ─────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on         Fake Large with a 1M context window · 1% context used
+    main    fake
+    bugfix  team · fake  ✓ replied 15s ago
+    tester  fake
+    coder   fake

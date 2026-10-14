@@ -1,0 +1,9 @@
+ chord                                                fake · /tmp/chord-qa.8rq1
+ ⏺ .chord/settings.json: unknown key "agents.fake.permisionMode", ignored
+ ⏺ .chord/settings.json: unknown key "theme", ignored
+ ⏺ Could not start in bogus mode, set in ~/.config/chord/settings.json: the
+   agent offers default, acceptEdits, plan
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                   Fake Small

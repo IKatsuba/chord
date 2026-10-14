@@ -1,0 +1,24 @@
+ chord                                              fake · /tmp/chd-205-qa/work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd-205-qa/work
+ █▀     ? for shortcuts · /help
+
+ › keep [Image #1]
+
+ ⏺ Received an image: image/png, 73 bytes
+
+   Hello, world. This reply came in chunks.
+
+ › kee [Image #2] [Image #3] p
+
+ ⏺ Received an image: image/png, 73 bytes
+
+   Received an image: image/png, 73 bytes
+
+   Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › keep [Image #4]                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT --          Fake Large with a 1M context window · 99% context left

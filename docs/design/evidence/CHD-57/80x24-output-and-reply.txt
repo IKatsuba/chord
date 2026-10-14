@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.M3uH
+
+   Hello, world. This reply came in chunks.
+
+ ! echo start; sleep 30
+   ⎿  start
+      Stopped by the user
+
+ ! printf "a\nb\n"
+   ⎿  a
+      b
+
+ › and now?
+
+ ⏺ Received echo start; sleep 30: start
+
+   Received printf "a\nb\n": a
+
+   Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

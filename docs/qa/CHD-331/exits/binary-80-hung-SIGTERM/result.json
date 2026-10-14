@@ -1,0 +1,11 @@
+{
+  "exit": 143,
+  "expected": 143,
+  "seconds": 4.083,
+  "stty_exact": true,
+  "flags": "alternate=0 cursor=1 mouse=0,0,0",
+  "owned_alive": [],
+  "group_alive": [],
+  "stderr_crash": false,
+  "double_fired": false
+}

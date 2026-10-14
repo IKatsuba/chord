@@ -1,0 +1,24 @@
+ chord   1 fake ●    2 fake                          …/T/chord-qa.ofox6ids/work
+
+
+
+
+
+
+
+ › slow
+
+ ⏺ Working................
+   ⎿  Interrupted by user
+
+ › slow
+
+ ⏺ Working.....................................................................
+   .....................
+
+ ✶ Working… (4s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● 1 fake needs your permission · ctrl+x a  Fake Large with a 1M context win…

@@ -1,0 +1,40 @@
+ [1mchord[0m                                   [2mfake · /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/chord-qa.ofox6ids/work[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ ! sleep 137
+   [2m⎿[0m  [2mStopped by the user[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2mClosed 2 fake · /resume opens it again[0m                                           [2mFake Large with a 1M context window[0m

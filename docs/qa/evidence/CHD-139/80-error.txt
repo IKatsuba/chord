@@ -1,0 +1,24 @@
+ chord                                      fake · /tmp/chd139-qa/estimate-work
+ ⏺ Read it.
+
+ › /cost
+   ⎿  Total cost:   $0.0141 (chord's estimate)
+      Tokens in:    3,000
+      Tokens out:   600
+      Cache read:   2,400
+      Session time: 24s
+
+ › /context
+   ⎿  Used: 2,000 of 400,000 tokens (1%) (chord's estimate)
+      Free: 398,000 tokens (99%) (chord's estimate)
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)    GPT-5.3 Codex · ~99% context left

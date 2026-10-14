@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake    3 fake                                                                 /tmp/chd169-qa/work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd169-qa/work
+ █▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Edit(src/parse/tokenize.ts)
+      → main · queued
+      Bash(deno task test)
+      +2 more tool uses (ctrl+o to expand)
+
+ ⏺ It is running; I will check its report when it lands.
+
+
+
+
+
+
+
+
+
+
+
+
+ ✹ Working… (3s · esc to interrupt)
+ ← Fix the tokenizer · fake: Found it: a string at the end of a line lost its closing quote. Fixing src/parse/tokenize…
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,24 @@
+   │     {                                                                    │
+   │       "name": "sigit",                                                   │
+   │       "note": "models and modes not read yet; list_agents with agent \"s │
+   │ igit\" reads them"                                                       │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "cursor",                                                  │
+   │       "note": "models and modes not read yet; list_agents with agent \"c │
+   │ ursor\" reads them"                                                      │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "devin",                                                   │
+   │       "note": "models and modes not read yet; list_agents with agent \"d │
+   │ evin\" reads them"                                                       │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "fx",                                                      │
+   │       "note": "models and modes not read yet; list_agents with agent \"f │
+ ── ↓ 120 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 3% context used

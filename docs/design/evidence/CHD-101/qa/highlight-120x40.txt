@@ -1,0 +1,40 @@
+ chord                                                                   fake · /private/tmp/chd101-qa.Hd9bih/u/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /echo active unchanged
+
+ ⏺ active unchanged
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   608cdb21-5a47-40df-bc27-db7cd9f254fe
+      Directory: /private/tmp/chd101-qa.Hd9bih/u/src/app
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in every directory.                                                                          │
+│                                                                                                                      │
+│   1. just now  ~/src/app  /echo app transcript                                                                       │
+│ ❯ 2. just now  ~/src/api  /echo api transcript                                                                       │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

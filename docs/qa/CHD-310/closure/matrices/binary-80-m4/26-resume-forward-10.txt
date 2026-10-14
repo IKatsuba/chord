@@ -1,0 +1,24 @@
+   │       "note": "models and modes not read yet; list_agents with agent \"d │
+   │ imcode\" reads them"                                                     │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "dirac",                                                   │
+   │       "note": "models and modes not read yet; list_agents with agent \"d │
+   │ irac\" reads them"                                                       │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "factory-droid",                                           │
+   │       "note": "models and modes not read yet; list_agents with agent \"f │
+   │ actory-droid\" reads them"                                               │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "fast-agent",                                              │
+   │       "note": "models and modes not read yet; list_agents with agent \"f │
+   │ ast-agent\" reads them"                                                  │
+   │     },                                                                   │
+ ── ↓ 193 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 3% context used

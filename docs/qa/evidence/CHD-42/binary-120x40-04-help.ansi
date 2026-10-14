@@ -1,0 +1,40 @@
+ [1mchord[0m                                                    [2mfake · /private/tmp/chd81-binary-120x40-a37e855f2f9b7e96/work[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m /greet day
+
+ ⏺ Hello from the fake agent.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2menter to send[0m                         [2mtab to complete a command[0m      [2mctrl + c to clear input[0m
+  [2m\ + enter for a newline[0m               [2mesc to close commands[0m          [2mctrl + c twice to quit[0m
+  [2mshift + enter for a newline[0m           [2m@ for files[0m                    [2mctrl + d to quit[0m
+  [2m↑ ↓ for earlier prompts[0m               [2m↑ ↓ to pick a file[0m             [2m1–9 to pick a choice[0m
+  [2mctrl + r to search prompts[0m            [2mtab enter to add a file[0m        [2m↑ ↓ or j k to move between choices[0m
+  [2mtab enter to take a match[0m             [2mesc to close files[0m             [2menter to pick the highlighted choice[0m
+  [2mesc to cancel a search[0m                [2m! for bash mode[0m                [2mesc to reject a permission[0m
+  [2mpgup pgdn to scroll[0m                   [2mbackspace to leave bash mode[0m   [2mesc to close a picker[0m
+  [2mshift + ↑ ↓ to scroll a line[0m          [2mesc to stop a command[0m          [2m? for shortcuts[0m
+  [2mhome end for the top and the bottom[0m   [2mesc to interrupt[0m               [2mesc to close shortcuts[0m
+  [2m/ for commands[0m                        [2mshift + tab to cycle modes[0m
+  [2m↑ ↓ to pick a command[0m                 [2mctrl + o for verbose output[0m

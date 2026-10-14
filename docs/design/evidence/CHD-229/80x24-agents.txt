@@ -1,0 +1,79 @@
+$ chord agents
+agoragentic-acp     Agoragentic     npx                    npx -y
+                                                           agoragentic-mcp@1.3.0
+                                                           --acp
+auggie              Auggie CLI      npx                    AUGMENT_DISABLE_AUTO_
+                                                           UPDATE=1 npx -y @augm
+                                                           entcode/auggie@0.36.0
+                                                           --acp
+autohand            Autohand Code   npx                    npx -y @autohandai/au
+                                                           tohand-acp@0.2.1
+claude              Claude Agent    npx                    npx -y @agentclientpr
+                                                           otocol/claude-agent-a
+                                                           cp@0.87.0
+cline               Cline           npx                    npx -y cline@3.0.70
+                                                           --acp
+codebuddy-code      Codebuddy Code  npx                    npx -y @tencent-ai/co
+                                                           debuddy-code@2.162.0
+                                                           --acp
+codex               Codex           npx                    npx -y
+                                                           @agentclientprotocol/
+                                                           codex-acp@2.1.1
+deepagents          DeepAgents      npx                    npx -y
+                                                           deepagents-acp@0.1.7
+dimcode             DimCode         npx                    npx -y dimcode@0.5.16
+                                                           acp
+dirac               Dirac           npx                    npx -y
+                                                           dirac-cli@0.5.18
+                                                           --acp
+factory-droid       Factory Droid   npx                    DROID_DISABLE_AUTO_UP
+                                                           DATE=true
+                                                           FACTORY_DROID_AUTO_UP
+                                                           DATE_ENABLED=false
+                                                           npx -y droid@0.236.0
+                                                           exec --output-format
+                                                           acp-daemon
+fast-agent          fast-agent      uvx                    FAST_AGENT_MODEL=code
+                                                           xplan uvx
+                                                           fast-agent-acp@0.10.1
+                                                           -x
+gemini              Gemini CLI      npx                    npx -y @google/gemini
+                                                           -cli@0.63.0 --acp
+github-copilot-cli  GitHub Copilot  npx                    npx -y @github/copilo
+                                                           t@1.0.93 --acp
+glm-acp-agent       GLM Agent       npx                    npx -y
+                                                           glm-acp-agent@1.14.0
+grok-build          Grok Build      npx                    npx -y @xai-official/
+                                                           grok@1.0.50 agent
+                                                           stdio
+kilo                Kilo            npx                    npx -y
+                                                           @kilocode/cli@7.8.8
+                                                           acp
+minimax-code        MiniMax Code    npx                    npx -y @minimax-ai/co
+                                                           de@0.2.7 acp
+minion-code         Minion Code     uvx                    uvx
+                                                           minion-code@0.1.44
+                                                           acp
+nova                Nova            npx                    npx -y @compass-ai/no
+                                                           va@1.1.51 acp
+pi-acp              pi ACP          npx                    npx -y pi-acp@0.0.34
+qoder               Qoder CLI       npx                    npx -y @qoder-ai/qode
+                                                           rcli@0.2.14 --acp
+qwen-code           Qwen Code       npx                    npx -y @qwen-code/qwe
+                                                           n-code@0.25.0 --acp
+                                                           --experimental-skills
+sigit               siGit Code      npx                    npx -y
+                                                           @smbcloud/sigit@1.6.4
+cursor              Cursor          own CLI · not on PATH  agent acp
+devin               Devin           own CLI · not on PATH  devin acp
+fx                  fx              own CLI · not on PATH  fx acp
+goose               goose           own CLI · found        goose acp
+junie               Junie           own CLI · not on PATH  junie --acp true
+kimi                Kimi Code       own CLI · not on PATH  kimi acp
+kiro                Kiro            own CLI · not on PATH  kiro-cli acp
+openclaw            OpenClaw        own CLI · not on PATH  openclaw acp
+opencode            OpenCode        own CLI · not on PATH  opencode acp
+poolside            Poolside        own CLI · not on PATH  pool acp
+zeroclaw            ZeroClaw        own CLI · not on PATH  zeroclaw acp
+mine                from settings   settings               fake-agent
+$

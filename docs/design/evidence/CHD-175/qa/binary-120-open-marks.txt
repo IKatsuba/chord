@@ -1,0 +1,40 @@
+ chord   1 claude    2 codex    3 claude                                                                      ~/src/app
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.............................................................................................................
+   ....................................................
+   ⎿  Interrupted by user
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ codex's earlier sessions and saved windows in this directory.                                                        │
+│                                                                                                                      │
+│ ❯ 1.  just now        ▣ 5 sessions, 3 open · claude ×3, codex ×2 · saved prompt 5                                    │
+│   2.  just now        ▣ 3 sessions, all open · claude, codex, claude · saved prompt 2                                │
+│   3.  4 minutes ago   ▣ 9 sessions · codex ×3, gemini ×3, claude ×3 · saved prompt 11                                │
+│   4.  7 minutes ago   ▣ 2 sessions · codex, claude · saved prompt 5                                                  │
+│   5.  7 minutes ago   saved prompt 5                                                                                 │
+│   6.  10 minutes ago  saved prompt 8                                                                                 │
+│   7.  13 minutes ago  saved prompt 11                                                                                │
+│   8.  16 minutes ago  saved prompt 14                                                                                │
+│   9.  19 minutes ago  saved prompt 17                                                                                │
+│   10. 22 minutes ago  saved prompt 20                                                                                │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

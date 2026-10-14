@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · GPT-5.3 Codex
+ ▄▀▀▀   /tmp/chd-265-qa/work
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /context
+   ⎿  Used: 2,000 of 400,000 tokens (1%) (chord's estimate)
+      Free: 398,000 tokens (99%) (chord's estimate)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                     GPT-5.3 Codex · ~1% context used

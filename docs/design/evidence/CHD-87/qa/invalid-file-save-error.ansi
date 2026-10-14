@@ -1,0 +1,24 @@
+ [1mchord[0m                          [2mfake · /tmp/chd87-qa/behavior/invalid-file/work[0m
+
+
+
+
+
+
+
+
+
+
+ [38;2;138;90;0m⏺[39m [38;2;138;90;0m/tmp/chd87-qa/behavior/invalid-file/config/chord/settings.json: not valid [39m
+   [38;2;138;90;0mJSON (Expected property name or '}' in JSON at position 1 (line 1 column [39m
+   [38;2;138;90;0m2)); the file is ignored[39m
+
+ [2m›[0m /theme
+ [38;2;196;22;42m⏺[39m [38;2;196;22;42mCould not save the theme to [39m
+   [38;2;196;22;42m/tmp/chd87-qa/behavior/invalid-file/config/chord/settings.json: it is not [39m
+   [38;2;196;22;42mvalid JSON; it lasts until chord quits[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

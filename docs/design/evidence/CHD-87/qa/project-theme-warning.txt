@@ -1,0 +1,40 @@
+ chord                                                                 fake · /tmp/chd87-qa/behavior/project-theme/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ⏺ .chord/settings.json: "theme" is read only from /tmp/chd87-qa/behavior/project-theme/config/chord/settings.json,
+   ignored
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                                              Fake Large with a 1M context window

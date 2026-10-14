@@ -1,0 +1,23 @@
+ chord                                  fake · /tmp/chd87-qa/attached/dark/work
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Theme                                                                        │
+│ Choose the colours that read best on this terminal.                          │
+│                                                                              │
+│ ❯ 1. Auto (dark, from the terminal) ✔                                        │
+│   2. Dark                                                                    │
+│   3. Light                                                                   │
+│   4. Dark, colour-blind friendly                                             │
+│   5. Light, colour-blind friendly                                            │
+│   6. Dark, the terminal's 16 colours                                         │
+│   7. Light, the terminal's 16 colours                                        │
+│                                                                              │
+│ ↑↓ to preview · Enter to keep · Esc to go back to Auto                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

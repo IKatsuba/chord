@@ -1,0 +1,24 @@
+   coder waits for it and will edit src/parse/tokenize.ts only. I will report
+   when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ ← chord
+   The person closed docs (fake, id 922f8ffa). It takes no more messages;
+   open_agent starts another.
+
+ ⏺ Received the message from chord.
+
+ ← chord
+   The person closed parser (fake · fake-small, id df402ac3). It takes no
+   more messages; open_agent starts another.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester · bugfix 2 needs your permission · ctrl+x a   Fake Large… · 2% used
+    main       fake
+    bugfix     team · fake · 3 agents
+    bugfix 2   team · fake · 3 agents  ● tester: permission 1m 42s

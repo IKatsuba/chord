@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                            /tmp/chd170-qa.5NGLNs/work
+
+ ⏺ Received the message from parser · fake.
+
+ ← chord
+   The person closed docs (fake, id 5685c160). It takes no more messages;
+   open_agent starts another.
+
+ ⏺ Received the message from chord.
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  Closed
+
+ → @parser
+   ⎿  parser is closed; open_agent starts another
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

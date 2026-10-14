@@ -1,0 +1,24 @@
+ ⏺ Received the message from parser · fake.
+
+ ← [1m@parser[0;2m · fake[0m
+   [2m⎿[0m  [2mAll 214 parser tests pass now.[0m
+
+ ⏺ Received the message from parser · fake.
+
+ [2m›[0m chordtools
+
+ ⏺ list_agents:
+
+   [2m┌ json ────────────────────────────────────────────────────────────────────┐[0m
+   [2m│[0m {                                                                        [2m│[0m
+   [2m│[0m   "agents": [                                                            [2m│[0m
+   [2m│[0m     {                                                                    [2m│[0m
+   [2m│[0m       "name": "fake",                                                    [2m│[0m
+   [2m│[0m       "models": [                                                        [2m│[0m
+   [2m│[0m         {                                                                [2m│[0m
+ [2m── ↓ 278 lines below · end to jump to the bottom ─────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 3% context used[0m

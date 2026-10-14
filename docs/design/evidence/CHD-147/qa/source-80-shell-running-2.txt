@@ -1,0 +1,24 @@
+ chord                                               fake · /tmp/chd147-qa/work
+
+
+
+
+
+
+
+
+
+
+ › shell
+
+ ⏺ Run(deno task test)
+   ⎿  Task test deno test
+      running 3 tests
+      1/3
+
+ ✸ Working… (2s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

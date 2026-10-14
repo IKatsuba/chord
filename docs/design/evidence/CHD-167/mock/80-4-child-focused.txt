@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  2 failed, 212 passed
+
+ ⏺ Message(main)
+   ⎿  Ran deno task test tests/parse: 2 failures, both in
+      tests/parse/printer_test.ts.
+
+ ✉ main
+   I changed how a string at the end of a line is read. Run the parser tests
+   now and tell me only what fails.
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  Running…
+
+ ✻ Working… (12s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back
+    main    claude · Opus
+  ❯ parser  codex · gpt-5.3-codex  ✻ working 12s
+    docs    claude · Sonnet        ✉ message from main

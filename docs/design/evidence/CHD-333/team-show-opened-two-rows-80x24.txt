@@ -1,0 +1,24 @@
+
+      lead      claude · opus          default
+                Splits the job, says who edits which files, reports to main
+      tester    claude · sonnet        bypassPermissions
+                Writes the failing test, then proves the fix
+      coder     codex · gpt-5.3-codex  auto
+                Writes the fix, in the files the lead names
+      reviewer  codex · gpt-5.3-codex  read-only
+                Reads the diff and edits nothing
+
+      lead's instructions
+      Read the job and the code it points at until you can name the cause and
+      the files involved. Open tester first, coder once tester's test fails,
+      and reviewer last, on the diff.
+
+      tester's instructions
+      Write the smallest test that fails because of the bug, and run it to
+      show that.
+ ── ↓ 35 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

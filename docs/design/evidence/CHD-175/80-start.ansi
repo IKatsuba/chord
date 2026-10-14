@@ -1,0 +1,24 @@
+ [1mchord[0m                                                       [2mclaude · ~/src/app[0m
+
+
+
+
+
+
+
+
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mResume a session[0m                                                             [38;2;177;185;249m│
+│[39m [2mPick one of claude's earlier sessions, or a saved window, to open.[0m           [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [2m [0m [38;2;177;185;249m1. 10 minutes ago  ▣ 3 sessions · claude, codex, claude · fix the faili…[39m [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m [0m 2. 10 minutes ago  fix the failing date test in the parser               [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m [0m 3. 11 minutes ago  why does resume lose the plan?                        [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m [0m 4. 40 minutes ago  tidy the README's install section                     [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m [0m 5. yesterday       rename the health route to /livez                     [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m↓[0m 6. 2 days ago      ▣ 2 sessions · claude, gemini · add a --json flag to… [38;2;177;185;249m│
+│[39m     [2m… +3 more[0m                                                                [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [2mEnter to resume · Ctrl+a for all directories · Esc to quit[0m                   [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯

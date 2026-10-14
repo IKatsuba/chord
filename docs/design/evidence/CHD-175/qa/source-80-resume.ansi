@@ -1,0 +1,24 @@
+ █▄     [1mchord[0;2m v0.0.0
+[0m ▀██▄   [2mclaude · Fake Large with a 1M context window[0m
+ ▄██▀   [2m~/src/app[0m
+ █▀     [2m? for shortcuts · /help[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mResume a session[0m                                                             [2m│
+│[0m [2mclaude's earlier sessions and saved windows in this directory.[0m               [2m│
+│[0m                                                                              [2m│
+│[0m ❯ [2m [0m 1. just now        ▣ 3 sessions · claude, codex, claude · saved prompt 2 [2m│
+│[0m   [2m [0m 2. 3 minutes ago   saved prompt 1                                        [2m│
+│[0m   [2m [0m 3. 4 minutes ago   ▣ 9 sessions · codex ×3, gemini ×3, claude ×3 · save… [2m│
+│[0m   [2m [0m 4. 6 minutes ago   saved prompt 4                                        [2m│
+│[0m   [2m [0m 5. 7 minutes ago   ▣ 2 sessions · codex, claude · saved prompt 5         [2m│
+│[0m   [2m↓[0m 6. 9 minutes ago   saved prompt 7                                        [2m│
+│[0m     [2m… +3 more[0m                                                                [2m│
+│[0m                                                                              [2m│
+│[0m [2mEnter to resume · Ctrl+a for all directories · Esc to close[0m                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

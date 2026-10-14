@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake    3 fake ●                                                                         ~/src/app
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 3 fake needs your permission · ctrl+x a to go · ? for shortcuts                Fake Large with a 1M context window

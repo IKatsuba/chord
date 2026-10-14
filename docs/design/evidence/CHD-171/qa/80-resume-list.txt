@@ -1,0 +1,24 @@
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ⏺ The agent exited.
+
+ ⏺ parser (fake) and docs (fake) were open when this session was left and are
+   not reopened · /resume lists them
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions and saved windows in this directory.                 │
+│                                                                              │
+│ ❯ 1. just now      Fix the tokenizer · taskchild                             │
+│   2. just now      parser · agentchild                                       │
+│   3. just now      docs · permission                                         │
+│   4. 1 minute ago  Fix the tokenizer · taskchild                             │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 98% context left

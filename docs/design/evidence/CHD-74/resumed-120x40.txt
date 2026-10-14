@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.7b6e
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /echo add a --json flag to the agents command so scripts can read the list of installed agents without parsing
+   columns
+
+ ⏺ add a --json flag to the agents command so scripts can read the list of installed agents without parsing columns
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

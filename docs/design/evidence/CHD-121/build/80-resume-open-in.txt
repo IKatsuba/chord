@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake    3 fake ●                                 ~/src/app
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ Open one of fake's earlier sessions in this directory here.                  │
+│                                                                              │
+│ ❯ 1. just now      open in 3  text                                           │
+│   2. 1 minute ago             permission                                     │
+│   3. 1 minute ago  open in 1  fix the failing test in tests/keys_test.tsx    │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● 3 fake needs your permission · ctrl+x a  Fake Large with a 1M context win…

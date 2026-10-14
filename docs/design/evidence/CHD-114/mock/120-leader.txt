@@ -1,0 +1,40 @@
+ chord   1 fake    2 claude ●    3 fake ✓                                                                      ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › fix the failing test in tests/keys_test.tsx
+
+ ⏺ Read(tests/keys_test.tsx)
+   ⎿  Read 212 lines
+
+ ⏺ The test presses ctrl+x, which no entry names. I will add the entry.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ctrl+x …  c new · n next · p previous · 1–9 go to · w list · a the one that waits · k close · esc never mind

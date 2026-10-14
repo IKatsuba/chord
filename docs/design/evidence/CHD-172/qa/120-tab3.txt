@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake    3 fake2                                                     /tmp/chd172-final.XDzrEf/other
+ █▄     chord v0.0.0
+ ▀██▄   fake2 · Fake Small
+ ▄██▀   /tmp/chd172-final.XDzrEf/other
+ █▀     ? for shortcuts · /help
+        resumed · just now · permission
+
+ › permission
+
+ ⏺ Write(notes.txt)
+
+ ⏺ Permission: allow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 99% context left

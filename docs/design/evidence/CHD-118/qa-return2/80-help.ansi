@@ -1,0 +1,24 @@
+ [1mchord[0m   [2m1 fake ✓[0m   [1;7m 2 fake [0m                             [2m/tmp/chord-qa.8n6hdxcq[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2menter to send[0m                         [2m! for bash mode[0m
+  [2m\ + enter for a newline[0m               [2mbackspace to leave bash mode[0m
+  [2mshift + enter for a newline[0m           [2mesc to interrupt or stop a command[0m
+  [2mctrl + g to edit in $EDITOR[0m           [2mshift + tab to cycle modes[0m
+  [2mctrl + v to paste an image[0m            [2mctrl + o for verbose output[0m
+  [2m↑ ↓ for earlier prompts[0m               [2mctrl + c to clear input[0m
+  [2mctrl + r to search prompts[0m            [2mctrl + d or ctrl + c twice to quit[0m
+  [2mtab enter to take a match[0m             [2mctrl + x then a key for sessions[0m
+  [2mesc to cancel a search[0m                [2m1–9 to pick a choice[0m
+  [2mpgup pgdn to scroll[0m                   [2m↑ ↓ or j k to move between choices[0m
+  [2mshift + ↑ ↓ to scroll a line[0m          [2menter to pick the highlighted choice[0m
+  [2mhome end for the top and the bottom[0m   [2mesc to reject a permission[0m
+  [2m/ for commands[0m                        [2mesc to close a picker[0m
+  [2m↑ ↓ to pick a command[0m                 [2mctrl + a to show all directories[0m
+  [2mtab to complete a command[0m             [2mtab ↑ ↓ space to fill in a form[0m
+  [2m@ for files[0m                           [2mctrl + c to stop the turn and its form[0m
+  [2m↑ ↓ to pick a file[0m                    [2m/vim for vim mode[0m
+  [2mtab enter to add a file[0m               [2m? for shortcuts[0m
+  [2mesc to close commands or files[0m        [2mesc to close shortcuts[0m

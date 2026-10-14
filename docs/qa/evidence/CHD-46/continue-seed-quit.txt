@@ -1,0 +1,5 @@
+sh-3.2$ sh /tmp/chord-qa46-5ec53738c11e9e80/run0.sh
+Resume this session with:
+chord fake --agent-command /tmp/chord-qa46-5ec53738c11e9e80/fake --resume 56fb6dca-2e82-48ee-bba2-fb6cde474c62
+QA_EXIT_0
+sh-3.2$

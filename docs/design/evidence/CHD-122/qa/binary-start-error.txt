@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake2    3 fake2    4 fake2    5 fake2    6 broken                      /tmp/chd122-qa/binary-work
+ █▄     chord v0.0.0
+ ▀██▄   broken
+ ▄██▀   /tmp/chd122-qa/binary-work
+ █▀     ? for shortcuts · /help
+
+ ⏺ broken did not start: cannot start /tmp/chd122-qa/no-agent: Failed to spawn '/tmp/chd122-qa/no-agent': No such file
+   or directory (os error 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

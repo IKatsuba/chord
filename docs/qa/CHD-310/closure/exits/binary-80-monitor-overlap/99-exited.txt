@@ -1,0 +1,24 @@
+/tmp/chd310-closure/forced/binary-80-monitor-overlap/run.sh: line 9:  6517 Termi
+nated: 15          /tmp/chd310-closure/forced/repo/dist/bun-darwin-arm64/chord f
+ake --agent-command 'env -u BUN_OPTIONS bun /tmp/chd310-closure/forced/repo/test
+s/fixtures/fake_agent/main.ts' -C /tmp/chd310-closure/forced/binary-80-monitor-o
+verlap/work 2> /tmp/chd310-closure/forced/binary-80-monitor-overlap/stderr
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

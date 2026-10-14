@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd306-qa-final/qa306-source-normal/work
+ █▀     ? for shortcuts · /help
+
+ › say hello world, word
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.............................................................................................................
+   ...............................................................................
+   ⎿  Interrupted by user
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › row 1                                                                                                              │
+│   row 2                                                                                                              │
+│   row 3                                                                                                              │
+│   row 4                                                                                                              │
+│   row 5                                                                                                              │
+│   row 6                                                                                                              │
+│   row 7                                                                                                              │
+│   row 8                                                                                                              │
+│   row 9                                                                                                              │
+│ ↓ row 10                                                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                 Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,57 @@
+qa> chord fake --agent-command "$FAKE" --dangerously-skip-permissions > /tmp/chd108-qa/07-skip-without-print.stdout 2> /
+tmp/chd108-qa/07-skip-without-print.stderr; echo $? > /tmp/chd108-qa/07-skip-without-print.exit; printf "stdout:\n"; cat
+ /tmp/chd108-qa/07-skip-without-print.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/07-skip-without-print.stderr; print
+f "echo \$? (saved immediately):\n"; cat /tmp/chd108-qa/07-skip-without-print.exit; echo CAPTURE_DONE
+stdout:
+
+Usage:   chord [agent]
+Version: 0.0.0
+
+Description:
+
+  A full-screen terminal client for ACP coding agents.
+
+Options:
+
+  -h, --help                                 - Show this help.
+  -V, --version                              - Show the version number for this program.
+  -C, --cwd                       <dir>      - Directory the session works in.                 (Default:
+                                                                                               "/private/tmp/chd108-qa/
+                                                                                               work")
+  --agent-command                 <command>  - Start this ACP agent command instead of the
+                                               registry's; [agent] only names it.
+  -m, --model                     <model>    - Start each session on this model, by the        (Conflicts: --print)
+                                               agent's id for it.
+  --permission-mode               <mode>     - Start each session in this mode, by the
+                                               agent's id for it.
+  -c, --continue                             - Open the agent's latest session in this         (Conflicts: --resume)
+                                               directory again.
+  -r, --resume                    <id>       - Open the session with this id again; chord
+                                               prints it on quit.
+  -p, --print                     <prompt>   - Send this prompt, print the reply and exit;     (Conflicts: --continue,
+                                               piped input joins it.                           --resume)
+  --dangerously-skip-permissions             - Allow every permission the agent asks for.
+                                               Only with -p.
+  --output-format                 <format>   - How -p prints: the reply as it streams, or one  (Depends: --print,
+                                               JSON object at the end.                         Values: "text", "json")
+
+Commands:
+
+  agents  - List the agents chord can start, and the command for each.
+
+Examples:
+
+  Claude Code                 chord claude
+  Pick up where you left off  chord claude --continue
+  Codex in another directory  chord codex -C ~/src/app
+  One question, for a script  chord -p "What does this do?"
+  Piped input with the prompt git diff | chord -p "Review this" --output-format json
+  An agent acpx does not know chord my-agent --agent-command "my-agent --acp"
+
+stderr:
+  error: --dangerously-skip-permissions works only with -p
+
+echo $? (saved immediately):
+2
+CAPTURE_DONE
+qa>

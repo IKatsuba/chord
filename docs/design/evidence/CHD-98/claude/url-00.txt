@@ -1,0 +1,10 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  MCP server “ref” wants to open a URL
+
+  Sign in to Example to continue
+
+  https://example.com/oauth/authorize?client=abc
+
+  ❯ Accept    Decline
+
+  Esc to cancel · ←/→ to switch

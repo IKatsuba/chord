@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.UxK9
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.UxK9
+ ▀▀     ? for shortcuts · /help
+        resumed · just now · text
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

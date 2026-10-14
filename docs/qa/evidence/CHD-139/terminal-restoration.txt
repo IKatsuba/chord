@@ -1,0 +1,2 @@
+estimate: alternate-screen exit and cursor-show sequences follow the final alternate-screen entry; tmux reports alternate=0 cursor=1; shell marker visible; stty fields equal except macOS PENDIN.
+plain: alternate-screen exit and cursor-show sequences follow the final alternate-screen entry; tmux reports alternate=0 cursor=1; shell marker visible; stty fields equal except macOS PENDIN.

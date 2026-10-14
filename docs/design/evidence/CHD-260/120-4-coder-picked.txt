@@ -1,0 +1,40 @@
+ coder · fake · Fake Large with a 1M context window · bugfix's member · opened by @bugfix 10s ago
+
+ ⏺ bugfix's instructions for coder · 29 lines (ctrl+o to expand)
+
+ ← @bugfix
+   You will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.
+
+ → @tester · queued
+   ⎿  Reading src/parse/tokenize.ts now. Tell me when your test fails.
+
+ ⏺ Waiting for tester's test.
+
+ ← @tester · fake
+   The failing test is in tests/parse/tokenize_test.ts and stays mine. Fix readString so it passes; I will run
+   the suite after.
+
+ ⏺ Received the message from tester · fake.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ coder · bugfix ─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                            Fake Large with a 1M context window · 1% context used
+    main    fake · Fake Large with a 1M context window
+    bugfix  team · fake · Fake Large with a 1M context window
+    tester  fake · Fake Small                                  ● permission 9s
+  ❯ coder   fake · Fake Large with a 1M context window

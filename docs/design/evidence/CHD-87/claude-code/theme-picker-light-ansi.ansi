@@ -1,0 +1,22 @@
+[39m   [1m[34mTheme[0m
+
+   [1mChoose the text style that looks best with your terminal[0m
+
+       Auto (match terminal)
+     [32m✔[39m Dark mode
+       Light mode
+       Dark mode (colorblind-friendly)
+       Light mode (colorblind-friendly)
+       Dark mode (ANSI colors only)
+   [34m❯[39m   [34mLight mode (ANSI colors only)[39m
+       New custom theme…
+
+   [90m╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌[39m
+   [2m[30m 1 [0m[30m [96mfunction[30m [93mgreet[30m() {[39m
+   [91m 2 -[2m[30m  console.log("Hello, World!");                                                                               [0m
+   [92m 2 +[30m  console.[93mlog[30m([92m"Hello, Claude!"[30m);                                                                              [39m
+   [2m[30m 3 [0m[30m }[39m
+   [90m╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌[39m
+   [90m Syntax theme: ansi (ctrl+t to disable)[39m
+
+   [3m[90mEnter to select · Esc to cancel[0m

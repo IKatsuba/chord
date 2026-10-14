@@ -1,0 +1,4 @@
+stty before equals stty after
+alternate=0 cursor=1
+Isolated tmux server destroyed.
+Final ps inspection: no run-owned fake agent or tmux processes.

@@ -1,0 +1,40 @@
+ chord   1 fake ●    2 fake                                                                  /tmp/chd170-qa.5NGLNs/work
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd170-qa.5NGLNs/work
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions and saved windows in this directory.                                                         │
+│                                                                                                                      │
+│ ❯ 1. just now      open in 1  <message from="main"> agentchild </message>                                            │
+│   2. just now      open in 1  agents                                                                                 │
+│   3. 1 minute ago  open in 1  <message from="main"> permission </message>                                            │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 1 fake needs your permission · ctrl+x a to go · ? for shortcuts                Fake Large with a 1M context window

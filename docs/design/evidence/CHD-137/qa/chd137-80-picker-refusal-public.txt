@@ -1,0 +1,24 @@
+ chord                                        fake · /tmp/chord-qa.4vQVHX/other
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /resume
+   ⎿  That session is in /tmp/chord-qa.4vQVHX/work. Quit and open it there
+      with:
+      chord fake --agent-command '/tmp/chord-qa.4vQVHX/agent --resume-only'
+      --resume 9cfe17a9-e74a-4a08-9176-7996e417131e
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

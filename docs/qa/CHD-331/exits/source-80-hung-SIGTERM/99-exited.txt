@@ -1,0 +1,24 @@
+/tmp/chd331-qa/source-80-hung-SIGTERM/run.sh: line 9:  6273 Terminated: 15
+    bun /tmp/chd331-qa/repo/src/main.tsx fake --agent-command 'env -u BUN_OPTION
+S bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts' -C /tmp/chd331-qa/s
+ource-80-hung-SIGTERM/work 2> /tmp/chd331-qa/source-80-hung-SIGTERM/stderr
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,40 @@
+ chord                                                                                               claude · ~/src/app
+ parser · codex · gpt-5.3-codex · opened by main 4m ago
+
+ ✉ main
+   Run the parser tests after every change to src/parse and tell me what breaks.
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  2 failed, 212 passed
+
+ ⏺ Message(main)
+   ⎿  Ran deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ✉ main
+   I changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  Running…
+
+ ✻ Working… (12s · esc to interrupt)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back                    gpt-5.3-codex · 97% context left
+    main    claude · Opus
+  ❯ parser  codex · gpt-5.3-codex  ✻ working 12s
+    docs    claude · Sonnet        ✉ message from main

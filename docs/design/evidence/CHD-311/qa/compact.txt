@@ -1,0 +1,203 @@
+=== baseline 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== source 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== binary 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== baseline 80x24 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+
+=== source 80x24 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+
+=== binary 80x24 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

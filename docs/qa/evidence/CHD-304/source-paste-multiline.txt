@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd304-qa/work
+ █▀     ? for shortcuts · /help
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Answered · 4 fields
+
+ ⏺ Elicitation answer: accept
+   {"name":"web-app","replicas":2,"public":false,"region":"eu"}
+
+ › link
+
+ ⏺ fake asked: Sign in to Example to continue
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › one                                                                                                                │
+│   two                                                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                          Fake Small · 3% context used

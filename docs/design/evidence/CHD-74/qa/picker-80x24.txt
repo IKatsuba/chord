@@ -1,0 +1,24 @@
+ chord                          fake · /tmp/chord-qa-chd74-16a1a3f9/narrow-work
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   ad1191d8-1153-4154-bbd4-9a5f25f3b258
+      Directory: /tmp/chord-qa-chd74-16a1a3f9/narrow-work
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ Open one of fake's earlier sessions in this directory here.                  │
+│                                                                              │
+│ ❯ 1. 5 minutes ago  /echo newest fake session                                │
+│   2. 3 hours ago    /echo a long middle fake session prompt about refactori… │
+│   3. 2 days ago     /echo oldest fake session                                │
+│                                                                              │
+│ Enter to resume · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

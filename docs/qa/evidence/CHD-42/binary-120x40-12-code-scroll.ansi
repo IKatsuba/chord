@@ -1,0 +1,40 @@
+ [1mchord[0m                                                    [2mfake · /private/tmp/chd81-binary-120x40-a37e855f2f9b7e96/work[0m
+   Hello, world. This reply came in chunks.
+
+ [2m›[0m slow
+
+ ⏺ Working.............................................................................................................
+   .........................................................................................................
+   [2m⎿[0m  [31mInterrupted by user[39m
+
+ [2m›[0m thought
+
+ [2m∴[0m [2;3mThinking…[0m
+
+ ⏺ Here is the answer.
+
+ [2m›[0m markdown
+
+ ⏺ [1;4mReading the session layer[0m
+
+   The [1msession layer[0m wraps [3macpx[0m so the interface never touches a process. Start with [38;2;87;105;247msrc/session/session.ts[39m, then see
+   the [4m[34mACP spec[0;2m (https://agentclientprotocol.com)[0m for the wire format.
+
+   [1mWhat it does[0m
+
+   [2m-[0m opens one persistent session per chord session
+   [2m-[0m starts turns with [38;2;87;105;247mstartTurn[39m and cancels them
+     [2m1.[0m a cancel stops the turn at once
+     [2m2.[0m the agent is told with [38;2;87;105;247msession/cancel[39m
+   [2m-[0m closes the agent and waits until its exit is seen
+
+   [2m│[0m A closed agent counts as gone only once its exit is seen:
+   [2m│[0m [2m┌ ts ──────────────────────────────────────────────────────┐[0m
+   [2m│[0m [2m│[0m [38;2;163;94;232mawait[39m session.[38;2;47;138;216mclose[39m(); [38;2;125;133;144m// resolves once the exit is seen[39m [2m│[0m
+   [2m│[0m [2m└──────────────────────────────────────────────────────────┘[0m
+ [2m── ↓ 33 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;72;150;140m⏸ plan mode on[39m [2m(shift+tab to cycle)[0m                                                    [2mFake Small · 95% context left[0m

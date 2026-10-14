@@ -1,0 +1,24 @@
+ chord                                               fake · /tmp/chd151-qa/work
+   ├─ Agent(Find the session layer) · 5 tool uses · 23s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 17s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › subagentupdate
+
+ ⏺ Agent(Summarise the README)
+   ⎿  Done (1 tool use · 1s)
+
+ ⏺ It says chord is a terminal client for ACP agents.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

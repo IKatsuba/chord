@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                       /tmp/chd310-final/m3/binary-120-m3/work
+   ⎿  Done (1 tool use · 4s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+ › compactfail
+   ⎿  Compaction failed: Not enough messages to compact.
+
+ › mcp
+
+ ⏺ ┌ json ─────────────────────────────────┐
+   │ [                                     │
+   │   {                                   │
+   │     "name": "user-docs",              │
+   │     "url": "http://localhost:9/docs", │
+   │     "headers": [],                    │
+   │     "type": "http"                    │
+   │   },                                  │
+   │   {                                   │
+   │     "name": "project-files",          │
+   │     "command": "echo",                │
+   │     "args": [                         │
+   │       "m3-server"                     │
+   │     ],                                │
+   │     "env": []                         │
+   │   }                                   │
+   │ ]                                     │
+   └───────────────────────────────────────┘
+
+ › first session draft sent
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › first unsent draft                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                 Fake Large with a 1M context window · 2% context used

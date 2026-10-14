@@ -1,0 +1,40 @@
+ [1mchord[0m  [1;7m 1 codex [0m   [2m2 gemini[0m    [2m3 claude[0m    [2m4 codex[0m    [2m5 gemini[0m    [2m6 claude[0m    [2m7 codex[0m                        [2m~/src/app[0m
+ █▄     [1mchord[0;2m v0.0.0[0m
+ ▀██▄   [2mcodex · Fake Large with a 1M context window[0m
+ ▄██▀   [2m~/src/app[0m
+ █▀     [2m? for shortcuts · /help[0m
+        [2mresumed · 6 minutes ago · saved prompt 5[0m
+
+ [2m›[0m saved prompt 5
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mResume a session[0m                                                                                                     [2m│
+│[0m [2mcodex's earlier sessions and saved windows in this directory.[0m                                                        [2m│
+│[0m                                                                                                                      [2m│
+│[0m   [2m [0m 1.  just now                   ▣ 7 sessions, all open · codex ×3, gemini ×2, claude ×2 · saved prompt 5          [2m│
+│[0m   [2m [0m 2.  1 minute ago               ▣ 3 sessions · claude, codex, claude · saved prompt 2                             [2m│
+│[0m   [2m [0m 3.  1 minute ago               ▣ 5 sessions, 2 open · claude ×3, codex ×2 · saved prompt 5                       [2m│
+│[0m   [2m [0m 4.  3 minutes ago              ▣ 9 sessions, 4 open · codex ×3, gemini ×3, claude ×3 · saved prompt 11           [2m│
+│[0m   [2m [0m 5.  3 minutes ago              saved prompt 2                                                                    [2m│
+│[0m ❯ [2m [0m 6.  6 minutes ago              ▣ 2 sessions, all open · codex, claude · saved prompt 5                           [2m│
+│[0m   [2m [0m 7.  9 minutes ago   open in 4  saved prompt 8                                                                    [2m│
+│[0m   [2m [0m 8.  12 minutes ago  open in 7  saved prompt 11                                                                   [2m│
+│[0m   [2m [0m 9.  15 minutes ago             saved prompt 14                                                                   [2m│
+│[0m   [2m↓[0m 10. 18 minutes ago             saved prompt 17                                                                   [2m│
+│[0m     [2m… +1 more[0m                                                                                                        [2m│
+│[0m                                                                                                                      [2m│
+│[0m [2mEnter to resume · Ctrl+a for all directories · Esc to close[0m                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

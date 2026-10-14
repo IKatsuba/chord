@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.jBb8
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.jBb8
+ ▀▀     ? for shortcuts · /help
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                                                          │
+│ chord passed these to fake when the session started. ACP does not say whether fake connected to them.                │
+│                                                                                                                      │
+│ Name        Transport  Command or URL                      Defined in                                                │
+│ github      http       https://api.githubcopilot.com/mcp/  .mcp.json                                                 │
+│ playwright  stdio      npx @playwright/mcp@latest          .mcp.json                                                 │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

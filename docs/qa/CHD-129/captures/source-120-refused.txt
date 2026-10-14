@@ -1,0 +1,40 @@
+ chord                                                                                       fake · /tmp/chd129-qa/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › lock
+
+ ⏺ Mode locked.
+
+ ⏺ Could not switch to default mode: The fake agent holds its mode.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                           Fake Large with a 1M context window · 99% context left

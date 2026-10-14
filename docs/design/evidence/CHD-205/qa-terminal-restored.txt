@@ -1,0 +1,4 @@
+QA shell restored
+
+/tmp/chd-205-qa/work
+❯

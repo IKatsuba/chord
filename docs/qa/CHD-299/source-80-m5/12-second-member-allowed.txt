@@ -1,0 +1,24 @@
+   ⎿  It fails for that reason: "a" at the end of a line comes back as "a, wit…
+
+ → @coder · queued
+   ⎿  The failing test is in tests/parse/tokenize_test.ts and stays mine. Fix …
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  1 failed, 213 passed
+   ⎿  Allowed `deno task test tests/parse` · Allow
+
+ ⏺ The suite fails only where the new test does.
+
+ ← @coder · fake
+   ⎿  Reading src/parse/tokenize.ts now. Tell me when your test fails.
+
+ ⏺ Received the message from coder · fake.
+
+╭─ tester · bugfix 2 ──────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)         Fake Small · 2% context used
+    main       fake
+    bugfix     team · fake · 3 agents  ✓ coder: replied 20s ago
+    bugfix 2   team · fake             ✓ replied 4s ago
+    … +2 more

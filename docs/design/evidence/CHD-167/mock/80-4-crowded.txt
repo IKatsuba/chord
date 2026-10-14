@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+ › Fix the tokenizer bug in src/parse, and keep codex on the parser tests
+   while you do.
+
+ ⏺ Read(src/parse/printer.ts)
+   ⎿  Read 212 lines
+
+ ✻ Working… (1m 4s · esc to interrupt)
+  ⎿  ☒ Open the agents
+     ◐ Fix the printer
+     ☐ Run the whole suite
+ › and keep the old token name in the changelog
+ ✉ parser · codex: All 214 parser tests pass now.
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                      Opus · 91% context left
+    main    claude · Opus
+    parser  codex · gpt-5.3-codex       ✓ replied 4s ago
+    docs    claude · Sonnet             ✻ working 2m 10s
+    … +2 more

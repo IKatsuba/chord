@@ -1,0 +1,24 @@
+ chord   1 codex    2   3   4   5   6   7                             ~/src/app
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ codex's earlier sessions and saved windows in this directory.                │
+│                                                                              │
+│ ❯   1.  just now                   ▣ 7 sessions, all open · codex ×3, gemin… │
+│     2.  2 minutes ago              ▣ 7 sessions, all open · codex ×3, gemin… │
+│     3.  3 minutes ago              ▣ 3 sessions · claude, codex, claude · s… │
+│     4.  3 minutes ago              ▣ 5 sessions, 2 open · claude ×3, codex … │
+│     5.  5 minutes ago              ▣ 9 sessions, 4 open · codex ×3, gemini … │
+│   ↓ 6.  5 minutes ago              saved prompt 2                            │
+│     … +6 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,40 @@
+ chord                                                                                               claude · ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ Pick one of claude's earlier sessions, or a saved window, to open.                                                   │
+│                                                                                                                      │
+│ ❯ 1. 10 minutes ago  ▣ 3 sessions · claude, codex, claude · fix the failing date test in the parser                  │
+│   2. 10 minutes ago  fix the failing date test in the parser                                                         │
+│   3. 11 minutes ago  why does resume lose the plan?                                                                  │
+│   4. 40 minutes ago  tidy the README's install section                                                               │
+│   5. yesterday       rename the health route to /livez                                                               │
+│   6. 2 days ago      ▣ 2 sessions · claude, gemini · add a --json flag to the agents command                         │
+│   7. 2 days ago      add a --json flag to the agents command                                                         │
+│   8. 4 days ago      bump the retry budget for the flaky upload                                                      │
+│   9. last week       explain src/ui/state.ts                                                                         │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to quit                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

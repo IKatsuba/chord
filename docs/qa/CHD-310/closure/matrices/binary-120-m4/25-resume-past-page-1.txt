@@ -1,0 +1,40 @@
+   │ {                                                   │
+   │   "sessions": [                                     │
+   │     {                                               │
+   │       "id": "cd71ab0e-b60d-47dc-bd11-3a87197c13c8", │
+   │       "runtime": "fake",                            │
+   │       "model": "fake-large",                        │
+   │       "tab": 1,                                     │
+   │       "you": true,                                  │
+   │       "agents": [                                   │
+   │         {                                           │
+   │           "id": "46b18e63",                         │
+   │           "name": "parser",                         │
+   │           "runtime": "fake",                        │
+   │           "model": "fake-small"                     │
+   │         },                                          │
+   │         {                                           │
+   │           "id": "d5eb1dfb",                         │
+   │           "name": "docs",                           │
+   │           "runtime": "fake",                        │
+   │           "model": "fake-large"                     │
+   │         }                                           │
+   │       ]                                             │
+   │     }                                               │
+   │   ]                                                 │
+   │ }                                                   │
+   └─────────────────────────────────────────────────────┘
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  Closed
+
+ → @parser
+   ⎿  parser is closed; open_agent starts another
+ ── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 3% context used

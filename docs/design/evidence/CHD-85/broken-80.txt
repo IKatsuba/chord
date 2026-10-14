@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.LhQZ
+
+ ⏺ .mcp.json: "mcpServers.search.type": "ws" is not a transport ACP carries
+   (stdio, http, sse); the server is ignored
+
+ ⏺ .mcp.json: "mcpServers.github.url": missing; the server is ignored
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord passed these to fake when the session started. ACP does not say        │
+│ whether fake connected to them.                                              │
+│                                                                              │
+│ Name    Transport  Command or URL                              Defined in    │
+│ memory  stdio      npx -y @modelcontextprotocol/server-memory  .mcp.json     │
+│                                                                              │
+│ 2 servers in .mcp.json were ignored; chord said why when it started.         │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

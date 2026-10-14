@@ -1,0 +1,24 @@
+ chord                                                 fake · /tmp/chord-qa.cmp
+
+
+
+
+
+
+ › link
+
+ ✺ Waiting for your input… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you to open a link                                                 │
+│ Sign in to Example to continue                                               │
+│                                                                              │
+│   https://example.com/oauth/authorize?client=abc&state=9f2c                  │
+│   Opens example.com                                                          │
+│                                                                              │
+│ ❯ 1. Open in the browser                                                     │
+│   2. Decline                                                                 │
+│                                                                              │
+│ Enter to choose · Esc to cancel                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

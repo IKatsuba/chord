@@ -1,0 +1,24 @@
+ tester · limited · Fake Small · bugfix's member · opened by @bugfix 7s ago
+
+ ⏺ Could not start on low effort, set by team bugfix: the agent offers no
+   efforts
+
+ ⏺ bugfix's instructions for tester · 29 lines (ctrl+o to expand)
+
+ ← @bugfix
+   ⎿  Write a test in tests/parse/tokenize_test.ts that fails because
+      a string at the end of a line loses its closing quote. Edit tests/
+      only. Tell me when it fails for that reason.
+
+ ⏺ Write(tests/parse/tokenize_test.ts)
+   ⎿  Wrote 12 lines to tests/parse/tokenize_test.ts
+ ── ↓ 17 lines below · end to jump to the bottom ──────────────────────────────
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)         Fake Small · 2% context used
+    main       fake
+    bugfix     team · limited
+    ├─ tester  limited
+    └─ coder   limited         ✓ replied 6s ago

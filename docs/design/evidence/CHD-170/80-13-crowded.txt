@@ -1,0 +1,24 @@
+ ⏺ Open(docs 2) · fake
+   ⎿  permission
+
+ → parser
+   ⎿  I changed how a string at the end of a line is read. Run the parser test…
+
+ → parser
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Waiting on parser.
+
+ ✺ Working… (3s · esc to interrupt)
+ ← parser 2 · fake: Ran deno task test tests/parse: 2 failures, both in tests/…
+ › and keep the old token name in the changelog
+ ← parser 2 · fake: All 214 parser tests pass now.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● 2 agents wait · ctrl+x a    Fake Large with a 1M context window · 99% left
+    main      fake · Fake Large with a 1M context window  ✻ working 2s
+    parser    fake · Fake Small                           ✓ replied 7s ago
+    docs      fake · Fake Large with a 1M context window  ● permission 7s
+    … +2 more

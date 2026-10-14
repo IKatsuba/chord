@@ -1,0 +1,40 @@
+Resume this session with:
+chord fake --agent-command 'bun '\''/tmp/chd292-repo/tests/fixtures/fake_agent/main.ts'\''' --resume 43519c31-1c5a-4b9c-
+a9a3-2456465a9ebc
+bash-3.2$ stty -a | grep -oE "(-)?(icanon|echo|isig) " | tr -d "\\n"; echo
+icanon isig echo
+bash-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

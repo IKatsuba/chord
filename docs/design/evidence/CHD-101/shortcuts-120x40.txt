@@ -1,0 +1,40 @@
+ chord                                                                      fake · /private/tmp/chord-qa.9eDA/u/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /resume
+   ⎿  That session is in ~/src/api. Quit and open it there with:
+      chord fake --agent-command fake-agent --resume 8169c95c-e5d5-4cc5-9825-770c12613d16
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                         ↑ ↓ to pick a command                ctrl + d to quit
+  \ + enter for a newline               tab to complete a command            1–9 to pick a choice
+  shift + enter for a newline           @ for files                          ↑ ↓ or j k to move between choices
+  ctrl + g to edit in $EDITOR           ↑ ↓ to pick a file                   enter to pick the highlighted choice
+  ctrl + v to paste an image            tab enter to add a file              esc to reject a permission
+  ↑ ↓ for earlier prompts               esc to close commands or files       esc to close a picker
+  ctrl + r to search prompts            ! for bash mode                      ctrl + a to show all directories
+  tab enter to take a match             backspace to leave bash mode         tab ↑ ↓ space to fill in a form
+  esc to cancel a search                esc to interrupt or stop a command   ctrl + c to stop the turn and its form
+  pgup pgdn to scroll                   shift + tab to cycle modes           /vim for vim mode
+  shift + ↑ ↓ to scroll a line          ctrl + o for verbose output          ? for shortcuts
+  home end for the top and the bottom   ctrl + c to clear input              esc to close shortcuts
+  / for commands                        ctrl + c twice to quit

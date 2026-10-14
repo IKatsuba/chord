@@ -1,0 +1,9 @@
+qa> chord fake --agent-command "deno run --quiet --allow-env --config /tmp/chd108-qa/deno.json /tmp/chd108-qa/tests/fixt
+ures/refusemode.ts" -p permission --permission-mode plan > /tmp/chd108-qa/12-refusemode.stdout 2> /tmp/chd108-qa/12-refu
+semode.stderr; echo $? > /tmp/chd108-qa/12-refusemode.exit; cat /tmp/chd108-qa/12-refusemode.stdout /tmp/chd108-qa/12-re
+fusemode.stderr; cat /tmp/chd108-qa/12-refusemode.exit
+Permission: deny.
+chord: could not start in plan mode, set by --permission-mode: The fake agent holds its mode.
+chord: refused Write notes.txt: -p cannot ask for permission.
+0
+qa>

@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd306-qa-final/qa306-source-normal/work
+ █▀     ? for shortcuts · /help
+
+ › say hello world, word
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › say hello world, word                                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  search prompts: wor

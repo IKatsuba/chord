@@ -1,0 +1,3 @@
+Task chord deno run --allow-all src/main.tsx 'fx' '-C' '/tmp/chord-qa126.TEnN/fx' '-p' 'Reply with: ok'
+chord: fx did not start: ACP agent exited before initialize completed (exit=null, signal=SIGTERM)
+exit=1

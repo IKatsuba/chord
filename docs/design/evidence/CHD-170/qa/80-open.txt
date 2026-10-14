@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd170-qa.5NGLNs/work
+ ▀▀     ? for shortcuts · /help
+
+ › agents
+
+ ⏺ I will open parser on the tests and docs on the README.
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ ✷ Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M context window
+    main    fake · Fake Large with a 1M context window  ✻ working 0s
+    parser  fake · Fake Small                           ← message from @main
+    docs    fake · Fake Large with a 1M context window  ● permission 0s

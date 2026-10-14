@@ -1,0 +1,24 @@
+Resume this window with:
+chord --resume w-7c1ede00
+
+QA_DONE code=0
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

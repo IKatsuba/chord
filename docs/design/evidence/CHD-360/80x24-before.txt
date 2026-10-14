@@ -1,0 +1,24 @@
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POS...routes/login.tsx:41:22)"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ I will hear from the dev server when it errs.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   ............................................................................
+   ............................................................................
+   ............................................................................
+   ....................
+
+ ✹ Working… (2s · esc to interrupt)
+ ← dev server errors · monitor: ERROR [...rties of undefined (reading 'trim') …
+ › text
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+    dev server errors  $ sleep 1; echo "ERROR [router] …  running 3s · 1 event

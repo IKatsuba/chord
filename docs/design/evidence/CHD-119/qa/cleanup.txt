@@ -1,0 +1,3 @@
+Owned chord/agent PIDs sampled: 28777, 28838, 28989, 29145, 32962, 32969, 33124, 33183, 37645, 37741, 38290, 38406
+Remaining owned PIDs after all UI quits: 0
+Isolated tmux server: no server running after all sessions killed.

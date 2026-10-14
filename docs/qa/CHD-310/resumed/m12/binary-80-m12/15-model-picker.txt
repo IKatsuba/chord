@@ -1,0 +1,24 @@
+
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the testsne. Step 3 done.
+
+ › mode
+
+ ⏺ Mode: acceptEdits.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Select model              ──────────────                                ─────│
+│ Switch fake's model for this session.rni                    itter memory leak│
+│                                    o [Bo                                   Us│
+│ ❯ 1. Fake Large with a 1M context window ✔                                   │
+│   2. Fake Small             ..` to show                           ted)       │
+│                                    tecte                     s added to [BoxR│
+│dEnter to switch · Esc to closeUse emitte                                limit│
+╰──────────────────────────────────────────────────────────────────────────────╯
+ct                         dded to [BoxRen
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                 er memory leak detecte               steners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on     Fake Large with a 1M context window · 2% context used

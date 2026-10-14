@@ -1,0 +1,24 @@
+      review of the diff.
+
+      lead      claude · opus          default            Splits the job, sa…
+      tester    claude · sonnet        bypassPermissions  Writes the failing…
+      coder     codex · gpt-5.3-codex  auto               Writes the fix, in…
+      reviewer  codex · gpt-5.3-codex  read-only          Reads the diff and…
+      … +40 lines (ctrl+o to expand)
+
+ ✺ Waiting for you… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Save team bugfix?                                                            │
+│                                                                              │
+│ ❯ 1. Yes, for this project   .chord/teams/bugfix.md                          │
+│   2. Yes, for every project  /tmp/chd261-qa/config/chord/teams/bugfix.md     │
+│   3. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

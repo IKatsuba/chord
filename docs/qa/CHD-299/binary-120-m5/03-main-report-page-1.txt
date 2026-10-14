@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd299/binary-120-m5/work
+ █▀     ? for shortcuts · /help
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md
+      Fixes a bug end to end — a failing test first, then the fix.
+
+      lead    fake · fake-large  default      Splits the job, says who edits which files, reports to main
+      tester  fake · fake-small  acceptEdits  Writes the failing test, then proves the fix
+      coder   fake · fake-large  plan         Writes the fix, in the files the lead names
+
+      lead's instructions
+      Read the job and the code it points at until you can name the cause and
+      the files involved. Then open tester first, and coder only once tester's
+      test fails for the bug's own reason. You edit nothing yourself.
+
+      tester's instructions
+      Write the smallest test that fails because of the bug, not for any
+      other reason, and run it to show that.
+
+      coder's instructions
+      Make the failing test pass with the smallest change that fixes the
+      cause. Do not touch tests.
+
+      How bugfix works
+
+      1. The lead reads the job and names who may edit which files.
+      2. tester writes a test that fails for the bug's own reason, in tests/.
+ ── ↓ 21 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window  ✓ replied 4s ago
+    ├─ tester  fake · Fake Small                                  ● permission 2s
+    └─ coder   fake · Fake Large with a 1M context window         ✓ replied 3s ago

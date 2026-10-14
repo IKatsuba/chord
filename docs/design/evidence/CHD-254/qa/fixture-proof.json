@@ -1,0 +1,45 @@
+{
+  "parent": "7c30c12a-719e-468f-adf5-e83f9522ad83.jsonl",
+  "keptLines": 56,
+  "last": {
+    "type": "update",
+    "turnId": "62d220bf-3d6d-488d-a5b4-464e6f341e04",
+    "update": {
+      "sessionUpdate": "subagent_update",
+      "sessionId": "15aa9cb4-26ae-4b53-bbc8-23a1e10d163a",
+      "state": {
+        "state": "running"
+      },
+      "title": "Fix the tokenizer",
+      "description": "taskchild",
+      "_meta": {
+        "chord/task": {
+          "name": "Fix the tokenizer",
+          "runtime": "fake",
+          "model": "fake-small"
+        }
+      }
+    }
+  },
+  "next": {
+    "type": "served",
+    "turnId": "62d220bf-3d6d-488d-a5b4-464e6f341e04",
+    "call": {
+      "tool": "spawn_task",
+      "input": {
+        "agent": "fake",
+        "model": "fake-small",
+        "prompt": "taskchild",
+        "name": "Fix the tokenizer"
+      },
+      "answer": {
+        "id": "15aa9cb4-26ae-4b53-bbc8-23a1e10d163a",
+        "name": "Fix the tokenizer",
+        "agent": "fake",
+        "model": "fake-small"
+      },
+      "task": "15aa9cb4-26ae-4b53-bbc8-23a1e10d163a"
+    }
+  },
+  "recordCount": 1
+}

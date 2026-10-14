@@ -1,0 +1,40 @@
+      other reason, and run it to show that.
+
+      coder's instructions
+      Make the failing test pass with the smallest change that fixes the
+      cause. Do not touch tests.
+
+      How bugfix works
+
+      1. The lead reads the job and names who may edit which files.
+      2. tester writes a test that fails for the bug's own reason, in tests/.
+      3. coder fixes the code so that test passes, and never edits tests/.
+
+      Who edits what
+
+      - One writer per file at a time; a member asks a file's owner directly.
+      - Another run of a team may be working here: the leads agree on files.
+
+      Reporting
+
+      The lead writes to main when the job is done or cannot be done.
+
+ › /team run bugfix Issue 214 fix the closing quote
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  Issue 214 fix the closing quote
+
+ ← @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window  ✓ replied 3s ago
+    ├─ tester  fake · Fake Small                                  ● permission 1s
+    └─ coder   fake · Fake Large with a 1M context window         ✓ replied 2s ago

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.BBKI
+ ▀▀     ? for shortcuts · /help
+
+ › /team run bugfix issue 214: strings at the end of a line lose their closing quote
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  issue 214: strings at the end of a line lose their closing quote
+
+ ← @bugfix · fake
+   On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+   src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /team
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                                                                │
+│ Saved for this project in .chord/teams, and for every project in ~/.config/chord/teams.                              │
+│                                                                                                                      │
+│ ❯ 1. bugfix  3 agents · fake  this project  ✻ working 6s  Fixes a bug end to end — a failing test first, then the f… │
+│   2. triage  ✗ not read: members.0.agent is missing       ~/.config/chord/teams/triage.md                            │
+│                                                                                                                      │
+│ Enter to hand it a job · /team show <name> · Esc to close                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window  ✓ replied 7s ago
+    ├─ tester  fake · Fake Small                                  ● permission 5s
+    └─ coder   fake · Fake Large with a 1M context window         ✓ replied 6s ago

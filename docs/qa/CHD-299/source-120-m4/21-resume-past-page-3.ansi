@@ -1,0 +1,40 @@
+
+ [2m›[0m chordcalls
+
+ [2m⏺[0m [1mList agents[0m
+   [2m⎿[0m  [2m36 runtimes · fake, agoragentic-acp, auggie, autohand, +32 more[0m
+
+ [2m⏺[0m [1mList agents[0m(fake)
+   [2m⎿[0m  [2m2 models · fake-large, fake-small[0m
+
+ [2m⏺[0m [1mList sessions[0m
+   [2m⎿[0m  [2m1 open · 1 fake (you)[0m
+
+ [2m⏺[0m [1mAgent[0m(Fix the tokenizer)[2m · fakx · fake-small[0m
+   [2m⎿[0m  No agent named fakx; chord knows fake, agoragentic-acp, auggie, autohand, claude, cline, codebuddy-code, codex, …
+
+ ⏺ chord knows no fakx.
+
+ [2m›[0m task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ [2m⏺[0m [1mAgent[0m(Fix the tokenizer)[2m · fake · fake-small[0m
+   [2m⎿[0m  taskchild
+
+      [2m⏺[0m [1mSearch[0m(tokenize in src/parse)
+        [2m⎿[0m  [2msrc/parse/tokenize.ts[0m
+
+      [2m⏺[0m [1mRead[0m(src/parse/tokenize.ts)
+        [2m⎿[0m  [2m120 lines[0m
+
+      [2m⏺[0m [1mEdit[0m(src/parse/tokenize.ts)
+
+      → [1m@main[0m
+        [2m⎿[0m  [2mFound it: a string at the end of a line lost its closing quote. Fixing src/parse/tokenize.ts now.[0m
+ [2m── ↓ 100 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                [2mFake Large with a 1M context window · 3% context used[0m

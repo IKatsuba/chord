@@ -1,0 +1,40 @@
+
+ › permission                 ───────────────────────────┘
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+ ⏺ ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › first line
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan                       me in chunks.
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan                       3 done.
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+                     nge
+ › mode
+
+ ⏺ Mode: acceptEdits.                      ────────────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│U› /                                   wh                     reated)Large wit                                xt used │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  /clear    Start a new session with an empty transcript
+  /config   Change the agent's settings for this session, such as efforteak det                                    [Box
+  /context  Show how full the agent's context window is           increase limi
+ P/cost     Show the tokens and cost this session has spent             o [BoxR                     ners is 10. Use emi
+  /echo     Repeat what follows the command
+(n/exit     Quit chord     ceededWarning:                              leak det                               d to [BoxR
+  /greet    Say hello from the fake agent
+ P/help     Show keyboard shortcutsdetecte                          ed to [BoxR                 isteners is 10. Use emi
+  /mcp      Show the MCP servers chord passed to the agent
+  /model    Switch the agent's model

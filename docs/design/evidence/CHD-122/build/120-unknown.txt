@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.YpEj
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.YpEj
+ ▀▀     ? for shortcuts · /help
+
+ › /new codx
+ ⏺ No agent named codx · chord agents lists them
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

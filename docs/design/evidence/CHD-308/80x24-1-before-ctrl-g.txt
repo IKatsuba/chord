@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.Gn7q
+ ▀▀     ? for shortcuts · /help
+
+ › hi
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                         Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,24 @@
+   ⎿  3/3
+      ok | 2 passed
+      FAILED | 1 failed
+      … +2 lines (ctrl+o to expand)
+      Exit code 1
+
+ ⏺ The tests failed.
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 2 tool uses
+   │  ⎿  Read(src/acp/connection.ts)
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Search(function Tool in src/ui)
+
+ ✹ Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,24 @@
+   │ ova\" reads them"                                                        │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "pi-acp",                                                  │
+   │       "note": "models and modes not read yet; list_agents with agent \"p │
+   │ i-acp\" reads them"                                                      │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "qoder",                                                   │
+   │       "note": "models and modes not read yet; list_agents with agent \"q │
+   │ oder\" reads them"                                                       │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "qwen-code",                                               │
+   │       "note": "models and modes not read yet; list_agents with agent \"q │
+   │ wen-code\" reads them"                                                   │
+   │     },                                                                   │
+   │     {                                                                    │
+ ── ↓ 137 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 3% context used

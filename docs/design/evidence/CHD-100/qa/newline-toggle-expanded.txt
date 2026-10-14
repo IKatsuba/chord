@@ -1,0 +1,40 @@
+ chord                                                                        fake · /tmp/chd100-qa/newline-toggle/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › thought
+
+ ∴ Thinking…
+   Considering the question.
+
+ ⏺ Here is the answer.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

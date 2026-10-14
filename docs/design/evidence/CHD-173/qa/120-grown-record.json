@@ -1,0 +1,22 @@
+{
+  "id": "w-357f64b7",
+  "at": 1791472158878,
+  "tabs": [
+    {
+      "sessionId": "4ce3c509-10ba-4d7c-8152-9203c54988d7",
+      "agent": "fake",
+      "cwd": "/private/tmp/chd173-qa-425601bd6783698a/120/proj"
+    },
+    {
+      "sessionId": "6fd96e45-204a-45f6-94f1-9c7d94e5c4e8",
+      "agent": "fake2",
+      "cwd": "/private/tmp/chd173-qa-425601bd6783698a/120/proj"
+    },
+    {
+      "sessionId": "1755954c-5404-4a32-a9b0-3719ea91f775",
+      "agent": "fake",
+      "cwd": "/private/tmp/chd173-qa-425601bd6783698a/120/proj"
+    }
+  ],
+  "front": 2
+}

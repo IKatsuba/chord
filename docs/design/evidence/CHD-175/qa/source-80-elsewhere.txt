@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   claude · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+
+ › /resume
+   ⎿  That window has a tab in ~/src/api. Quit and open it there with:
+      chord --resume w-17500003
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

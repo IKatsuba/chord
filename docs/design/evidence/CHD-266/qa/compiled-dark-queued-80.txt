@@ -1,0 +1,24 @@
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ → @parser · queued
+   ⎿  I changed how a string at the end of a line is read. Run the parser test…
+
+ → @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ✸ Working… (2s · esc to interrupt)
+ ← @parser · fake: Ran deno task test tests/parse: 2 failures, both in tests/p…
+ ← @parser · fake: All 214 parser tests pass now.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M context window
+    main    fake · Fake Large with a 1M context window  ✻ working 2s
+    parser  fake · Fake Small                           ← message from @main
+    docs    fake · Fake Large with a 1M context window  ● permission 1s

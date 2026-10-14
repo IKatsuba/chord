@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                                             ~/src/app
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

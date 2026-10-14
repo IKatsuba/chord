@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   claude · Opus
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md
+      Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+      lead      claude · opus           default      Splits the job, says who edits which files, reports to main
+      tester    claude · sonnet         acceptEdits  Writes the failing test, then proves the fix
+      coder     codex · gpt-5.3-codex   auto         Writes the fix, in the files the lead names
+      reviewer  claude · opus           plan         Reads the diff and edits nothing
+
+      How bugfix works
+      1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      2. tester writes a test that fails for the bug's own reason. It edits tests/ only, and reports the failure.
+      … +15 lines (ctrl+o to expand)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                              Opus · 91% context left

@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.Qet6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                         ↑ ↓ to pick a command            ctrl + c to clear input
+  \ + enter for a newline               tab to complete a command        ctrl + c twice to quit
+  shift + enter for a newline           @ for files                      ctrl + d to quit
+  ctrl + g to edit in $EDITOR           ↑ ↓ to pick a file               1–9 to pick a choice
+  ↑ ↓ for earlier prompts               tab enter to add a file          ↑ ↓ or j k to move between choices
+  ctrl + r to search prompts            esc to close commands or files   enter to pick the highlighted choice
+  tab enter to take a match             ! for bash mode                  esc to reject a permission
+  esc to cancel a search                backspace to leave bash mode     esc to close a picker
+  pgup pgdn to scroll                   esc to stop a command            ? for shortcuts
+  shift + ↑ ↓ to scroll a line          esc to interrupt                 esc to close shortcuts
+  home end for the top and the bottom   shift + tab to cycle modes
+  / for commands                        ctrl + o for verbose output

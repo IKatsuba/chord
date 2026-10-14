@@ -1,0 +1,24 @@
+ █▄     [1mchord[0;2m v0.0.0
+[0m ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m/tmp/chd299/source-80-m5/work[0m
+ █▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m /team show bugfix
+   [2m⎿[0m  bugfix · .chord/teams/bugfix.md
+   [2m [0m  [2mFixes a bug end to end — a failing test first, then the fix.[0m
+
+   [2m [0m  lead    fake · fake-large  default      Splits the job, says who edits…
+   [2m [0m  tester  fake · fake-small  acceptEdits  Writes the failing test, then …
+   [2m [0m  coder   fake · fake-large  plan         Writes the fix, in the files t…
+   [2m [0m
+   [2m [0m  [1;4mHow bugfix works[0m
+      [2m… +26 lines (ctrl+o to expand)[0m
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

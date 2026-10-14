@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                         /tmp/chd300/binary-80-m3/work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd300/binary-80-m3/work
+ █▀     ? for shortcuts · /help
+
+ › second session prompt
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions and saved windows in this directory.                 │
+│                                                                              │
+│ ❯ 1. just now  open in 1  [Image #1]                                         │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

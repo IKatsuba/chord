@@ -1,0 +1,24 @@
+   All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ ← chord
+   The person closed docs (fake, id a8761c8f). It takes no more messages;
+   open_agent starts another.
+
+ ⏺ Received the message from chord.
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  Closed
+
+ → parser
+   ⎿  parser is closed; open_agent starts another
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

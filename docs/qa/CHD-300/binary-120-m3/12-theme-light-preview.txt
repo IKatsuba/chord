@@ -1,0 +1,40 @@
+
+ › [Image #1]
+
+ ⏺ Received an image: image/png, 132 bytes
+
+   Hello, world. This reply came in chunks.
+
+ › edited draft from scripted EDITOR
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /vim
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+ › /vim
+   ⎿  Vim mode off
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Theme                                                                                                                │
+│ NO_COLOR is set, so chord draws no colour.                                                                           │
+│                                                                                                                      │
+│   1. Auto (dark: the terminal did not say)                                                                           │
+│   2. Dark ✔                                                                                                          │
+│ ❯ 3. Light                                                                                                           │
+│   4. Dark, colour-blind friendly                                                                                     │
+│   5. Light, colour-blind friendly                                                                                    │
+│   6. Dark, the terminal's 16 colours                                                                                 │
+│   7. Light, the terminal's 16 colours                                                                                │
+│                                                                                                                      │
+│  1   function greet(name) {                                                                                          │
+│  2 -   return "hello " + name;                                                                                       │
+│  2 +   return `hello, ${name}`;                                                                                      │
+│                                                                                                                      │
+│ ↑↓ to preview · Enter to keep · Esc to go back to Dark                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

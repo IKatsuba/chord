@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.NW2g
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      Session time: 13s
+
+ › /context
+   ⎿  fake has not reported how full its context window is.
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   a83f1ba5-ecc8-4723-8977-2fe7dd632d75
+      Directory: /tmp/chord-qa.NW2g
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

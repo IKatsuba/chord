@@ -1,0 +1,24 @@
+     └─────────────────┘
+   2. Commit on main once every check has passed and the tree is clean, so
+     whoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+
+   ┌ sh ─────────────────────────────────────────────────┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › first line                                                                 │
+│   second line                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                         Fake Large with a 1M context window · 2% context used

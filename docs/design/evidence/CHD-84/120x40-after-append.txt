@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.kj0Z
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › a draft before the editor                                                                                          │
+│   appended by the editor                                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                Fake Large with a 1M context window · 99% context left

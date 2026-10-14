@@ -1,0 +1,24 @@
+ parser · fake · Fake Small · opened by main 19s ago
+
+ ← @main
+   ⎿  Read CLAUDE.md and docs/FEATURES.md before you start. Then:
+
+      1. Fix the tokenizer so a string at the end of a line keeps its closing
+        quote.
+      2. Add two cases to tests/parse/tokenize_test.ts.
+      3. Run deno task check in the foreground and do not hand back until it
+      … +3 lines (ctrl+o to expand)
+
+ ⏺ Received the message from main.
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                 Fake Small · 1% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small

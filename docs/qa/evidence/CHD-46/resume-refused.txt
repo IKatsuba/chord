@@ -1,0 +1,24 @@
+ chord                      fake · /tmp/chord-qa46-5ec53738c11e9e80/resume-work
+ ⏺ OK
+
+ › error
+
+ ⏺ About to fail.
+
+ › slow
+
+ ⏺ Working.....................................................
+
+ › /echo AFTER-INTERRUPT
+
+ ⏺ AFTER-INTERRUPT
+
+ › text
+
+ ⏺ Persistent ACP session 7e7ceba6-a8d7-4af3-9fa2-d6d188ac24f5 could not be
+   resumed: Resource not found: 7e7ceba6-a8d7-4af3-9fa2-d6d188ac24f5
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

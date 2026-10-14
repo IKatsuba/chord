@@ -1,0 +1,24 @@
+/tmp/chd310-closure/forced/source-80-hung-SIGTERM/run.sh: line 9:  1833 Terminat
+ed: 15          bun /tmp/chd310-closure/forced/repo/src/main.tsx fake --agent-co
+mmand 'env -u BUN_OPTIONS bun /tmp/chd310-closure/forced/repo/tests/fixtures/fak
+e_agent/main.ts' -C /tmp/chd310-closure/forced/source-80-hung-SIGTERM/work 2> /t
+mp/chd310-closure/forced/source-80-hung-SIGTERM/stderr
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

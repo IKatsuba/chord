@@ -1,0 +1,24 @@
+   I changed how a string at the end of a line is read. Run the parser tests
+   now and tell me only what fails.
+
+ ⏺ Received the message from main.
+
+ ← [1m@main[0m
+   The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Received the message from main.
+
+ [2m›[0m /theme
+   [2m⎿[0m  [2mTheme set to Light[0m
+
+ [2m›[0m /theme
+   [2m⎿[0m  [2mTheme set to Dark, the terminal's 16 colours[0m
+
+[94m╭─[1m parser [0m[94m─────────────────────────────────────────────────────────────────────╮
+│[39m › [7m [0m                                                                          [94m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m  [93m● 2 agents wait · ctrl+x a to go[39m [2m·[0m [2m? for shortcuts[0m     [2mFake Small · 95% left[0m
+  [94m  [39mmain    [2m  fake · Fake Large with a 1M context window[0m
+  [94m  [1mparser  [0;2m  fake · Fake Small                         [0m
+  [94m  [95mdocs    [2m[39m  fake · Fake Large with a 1M context window[0m[93m  ● permission 54s[39m
+  [2m  … +2 more[0m

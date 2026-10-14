@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd224-qa/work
+ █▀     ? for shortcuts · /help
+
+ › hello 1
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 2
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 3
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 4
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 5
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 6
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 7
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 8
+ ── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 96% context left

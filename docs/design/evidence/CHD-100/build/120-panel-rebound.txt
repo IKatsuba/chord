@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.h509
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ctrl + s to send                      ↑ ↓ to pick a command            ctrl + c twice to quit
+  \ + ctrl + s for a newline            tab to complete a command        ctrl + d to quit
+  shift + enter for a newline           @ for files                      1–9 to pick a choice
+  ctrl + e to edit in $EDITOR           ↑ ↓ to pick a file               ↑ ↓ or j k to move between choices
+  ctrl + v to paste an image            tab enter to add a file          enter to pick the highlighted choice
+  ↑ ↓ for earlier prompts               esc to close commands or files   esc to reject a permission
+  ctrl + r to search prompts            ! for bash mode                  esc to close a picker
+  tab enter to take a match             backspace to leave bash mode     tab ↑ ↓ space to fill in a form
+  esc to cancel a search                esc to stop a command            ctrl + c to stop the turn and its form
+  pgup pgdn to scroll                   esc to interrupt                 /vim for vim mode
+  shift + ↑ ↓ to scroll a line          shift + tab to cycle modes       ? for shortcuts
+  home end for the top and the bottom   ctrl + o for verbose output      esc to close shortcuts
+  / for commands                        ctrl + c to clear input

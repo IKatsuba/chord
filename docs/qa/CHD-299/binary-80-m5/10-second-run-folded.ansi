@@ -1,0 +1,24 @@
+   [2m [0m  lead    fake · fake-large  default      [2midle[0m               ← @tester ·…
+   [2m [0m  tester  fake · fake-small  acceptEdits  [2midle[0m               ← @coder · …
+   [2m [0m  coder   fake · fake-large  plan         ✓ replied 14s ago  ← @tester ·…
+
+ [2m›[0m /team run bugfix Issue 219 fix parseDate
+
+ [2m⏺[0m [1mTeam[0m(bugfix 2)[2m · fake · fake-large[0m
+   [2m⎿[0m  [2mIssue 219 fix parseDate[0m
+
+ ← [1m@bugfix 2[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test[0m
+   [2m [0m  [2min tests/parse/tokenize_test.ts; coder waits for it and will edit[0m
+   [2m [0m  [2msrc/parse/tokenize.ts only. I will report when the test fails[0m
+   [2m [0m  [2mfor the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m● tester · bugfix 2 needs your permission · ctrl+x a[0m   [2mFake Large… · 1% used[0m
+    [1mmain     [0;2m  fake                  [0m
+    bugfix   [2m  team · fake · 3 agents[0m  ✓ coder: replied 18s ago
+    bugfix 2 [2m  team · fake · 3 agents[0m  ● tester: permission 1s

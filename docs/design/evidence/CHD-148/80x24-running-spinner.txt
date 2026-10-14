@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.b7td
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › compact
+
+ ✶ Compacting conversation… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

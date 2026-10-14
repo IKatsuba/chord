@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.jhOK
+ ▀▀     ? for shortcuts · /help
+
+ › agentexit
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  crash
+
+ ⏺ Waiting on parser.
+
+ ← chord
+   parser's agent exited: fatal: out of memory reading
+   tests/parse/fixtures/huge.json. open_agent opens it again.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ✗ parser failed · ctrl+x a     Fake Large with a 1M context window · 1% used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✗ failed

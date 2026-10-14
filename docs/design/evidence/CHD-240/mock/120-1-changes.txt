@@ -1,0 +1,40 @@
+ ⏺ Team(bugfix) · proposal
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+      lead      claude · opus           default      Splits the job, says who edits which files, reports to main
+      tester    claude · sonnet         acceptEdits  Writes the failing test, then proves the fix
+      coder     codex · gpt-5.3-codex   auto         Writes the fix, in the files the lead names
+      reviewer  claude · opus           plan         Reads the diff and edits nothing
+      … +18 lines (ctrl+o to expand)
+      Not saved · the person will say what to change
+
+ › put the reviewer on codex too, and let the tester run the suite without asking
+
+ ⏺ Team(bugfix) · proposal
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+      lead      claude · opus           default            Splits the job, says who edits which files, reports to main
+      tester    claude · sonnet         bypassPermissions  Writes the failing test, then proves the fix
+      coder     codex · gpt-5.3-codex   auto               Writes the fix, in the files the lead names
+      reviewer  codex · gpt-5.3-codex   read-only          Reads the diff and edits nothing
+      … +18 lines (ctrl+o to expand)
+
+
+
+
+ ✸ Waiting for you… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Save team bugfix?                                                                                                    │
+│                                                                                                                      │
+│ ❯ 1. Yes, for this project      .chord/teams/bugfix.md                                                               │
+│   2. Yes, for every project     ~/.config/chord/teams/bugfix.md                                                      │
+│   3. No, tell claude what to change                                                                                  │
+│                                                                                                                      │
+│ Esc to tell claude what to change                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                              Opus · 90% context left

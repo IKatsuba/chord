@@ -1,0 +1,24 @@
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a
+      review of the diff.
+
+         lead      claude ·…  default                            Splits the …
+      ~  tester    claude ·…  bypassPermissions was acceptEdits  Writes the …
+         coder     codex · …  auto                               Writes the …
+      ~  reviewer  codex · …  read-only was plan                 Reads the d…
+      bugfix.md's body · 1 addition, 1 removal
+      … +20 lines (ctrl+o to expand)
+      Saved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix
+   and the bug, or just tell me to hand one to bugfix.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,24 @@
+ ⏺ Received the message from bugfix · fake.
+
+ › /team edit bugfix
+   ⎿  /team has no edit; it takes list, new, show, run or stop
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 21s on "issue 214: strings…"
+
+      lead    fake · fake-large  default      ✓ replied 21s ago  ← @tester ·…
+      tester  fake · fake-small  acceptEdits  ● permission 19s   Bash(deno t…
+      coder   fake · fake-large  plan         ✓ replied 20s ago  ← @tester ·…
+
+ › /team run triage the flaky test in tests/net
+   ⎿  ~/.config/chord/teams/triage.md is not a team chord can run:
+      members.0.agent is missing
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake
+    bugfix     team · fake  ✓ replied 24s ago
+    ├─ tester  fake         ● permission 22s
+    └─ coder   fake         ✓ replied 23s ago

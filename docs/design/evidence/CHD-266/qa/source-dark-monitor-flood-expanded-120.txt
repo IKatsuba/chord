@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd266-qa/work
+ ▀▀     ? for shortcuts · /help
+
+ › monitorflood
+
+ ⏺ Monitor(request log)
+   ⎿  $ yes '127.0.0.1 - - "GET /health HTTP/1.1" 200 2'
+      m1 · times out after 10m
+
+ ⏺ Watching the request log.
+
+ ← request log · monitor · flooded
+   ⎿  127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+ ── ↓ 85 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

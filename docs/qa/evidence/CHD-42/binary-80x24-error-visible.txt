@@ -1,0 +1,24 @@
+ chord             fake · /private/tmp/chd81-binary-80x24-cd0d7e84b6e1d7ed/work
+
+ › edit
+
+ ⏺ Edit(src/greeting.ts)
+   ⎿  Updated src/greeting.ts with 2 additions and 1 removal
+      1 + /** Greets someone by name. */
+      2   export function greet(name: string): string {
+      2 -   return "hello " + name;
+      3 +   return `hello, ${name}`;
+      4   }
+
+ ⏺ Edited.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)            Fake Small · 94% context left

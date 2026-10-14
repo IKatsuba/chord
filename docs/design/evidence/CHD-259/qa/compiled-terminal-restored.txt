@@ -1,0 +1,1 @@
+alternate=0 cursor=1 command=zsh

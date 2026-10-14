@@ -1,0 +1,43 @@
+{
+  "app": 3333,
+  "fakes": [
+    3355
+  ],
+  "owned": [
+    3333,
+    3355,
+    3381,
+    3384
+  ],
+  "groups": [
+    3355,
+    3381,
+    3384
+  ],
+  "rows": [
+    [
+      "3355",
+      "3333",
+      "3355",
+      "bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "3381",
+      "3333",
+      "3381",
+      "sleep 600"
+    ],
+    [
+      "3384",
+      "3333",
+      "3384",
+      "sleep 600"
+    ],
+    [
+      "3333",
+      "3326",
+      "3326",
+      "bun /tmp/chd310-closure/forced/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd310-closure/forced/source-80-monitor-exception/work"
+    ]
+  ]
+}

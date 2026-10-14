@@ -1,0 +1,40 @@
+ chord   1 codex    2 gemini    3 claude    4 codex    5 gemini    6 claude    7 codex                        ~/src/app
+ █▄     chord v0.0.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+        resumed · 6 minutes ago · saved prompt 5
+
+ › saved prompt 5
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ codex's earlier sessions and saved windows in every directory.                                                       │
+│                                                                                                                      │
+│ ❯   1.  just now                   ~/src/app     ▣ 7 sessions, all open · codex ×3, gemini ×2, claude ×2 · saved pr… │
+│     2.  1 minute ago               ~/src/app     ▣ 3 sessions · claude, codex, claude · saved prompt 2               │
+│     3.  1 minute ago               ~/src/app     ▣ 5 sessions, 2 open · claude ×3, codex ×2 · saved prompt 5         │
+│     4.  2 minutes ago              ~/src/app +1  ▣ 2 sessions · gemini, claude · saved prompt 18                     │
+│     5.  3 minutes ago              ~/src/app     ▣ 9 sessions, 4 open · codex ×3, gemini ×3, claude ×3 · saved prom… │
+│     6.  3 minutes ago              ~/src/app     saved prompt 2                                                      │
+│     7.  6 minutes ago              ~/src/app     ▣ 2 sessions, all open · codex, claude · saved prompt 5             │
+│     8.  9 minutes ago   open in 4  ~/src/app     saved prompt 8                                                      │
+│     9.  12 minutes ago  open in 7  ~/src/app     saved prompt 11                                                     │
+│   ↓ 10. 15 minutes ago             ~/src/app     saved prompt 14                                                     │
+│     … +2 more                                                                                                        │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

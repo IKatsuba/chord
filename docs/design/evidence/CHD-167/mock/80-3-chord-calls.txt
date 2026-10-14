@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+      breaks.
+
+ ⏺ Agent(Fix the tokenizer) · codex · gpt-5.3-codex
+   ⎿  Done (6 tool uses · 41s)
+
+ ⏺ Message(parser)
+   ⎿  Run the parser tests now and tell me only what fails.
+
+ ⏺ Message(docs) · queued
+   ⎿  When you finish the README section, add the new flag to docs/FEATURES.md.
+
+ ⏺ Close(parser)
+   ⎿  Closed
+
+ ⏺ Open(review) · codx
+   ⎿  No agent named codx · list_agents names them
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                      Opus · 91% context left
+    main  claude · Opus
+    docs  claude · Sonnet

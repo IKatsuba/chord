@@ -1,0 +1,24 @@
+$ chord goose
+$ echo exit=$?
+exit=0
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

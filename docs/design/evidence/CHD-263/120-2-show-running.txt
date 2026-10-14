@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.yiWl
+ ▀▀     ? for shortcuts · /help
+
+ › /team run bugfix issue 214: strings at the end of a line lose their closing quote
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  issue 214: strings at the end of a line lose their closing quote
+
+ ← @bugfix · fake
+   On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+   src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 8s on "issue 214: strings at the end of a line lose their closing q…"
+
+      lead    fake · fake-large  default      ✓ replied 8s ago  ← @tester · fake
+      tester  fake · fake-small  acceptEdits  ● permission 7s   Bash(deno task test tests/parse)
+      coder   fake · fake-large  plan         ✓ replied 8s ago  ← @tester · fake
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window  ✓ replied 14s ago
+    ├─ tester  fake · Fake Small                                  ● permission 12s
+    └─ coder   fake · Fake Large with a 1M context window         ✓ replied 13s ago

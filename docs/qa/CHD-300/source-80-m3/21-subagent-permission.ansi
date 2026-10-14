@@ -1,0 +1,24 @@
+ [2m⏺[0m Running 2 agents…[2m (ctrl+o to expand)[0m
+   [2m├─[0m [1mAgent[0m(Find the session layer)[2m · 5 tool uses[0m
+   [2m│[0m  [2m⎿[0m  [1mWrite[0m(notes/routing.md)[2m · waiting for permission[0m
+   [2m└─[0m [1mAgent[0m(Find where tool calls are drawn on screen and how they fold)
+      [2m⎿[0m  Failed
+
+ ✹ Waiting for permission… [2m(3s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mAgent[0m(Find the session layer) asks                                           [2m│
+│[0m [1mWrite notes/routing.md[0m                                                       [2m│
+│[0m                                                                              [2m│
+│[0m Do you want to proceed?                                                      [2m│
+│[0m ❯ 1. Allow                                                                   [2m│
+│[0m   2. Always allow                                                            [2m│
+│[0m   3. Deny                                                                    [2m│
+│[0m                                                                              [2m│
+│[0m [2mEsc to reject[0m                                                                [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

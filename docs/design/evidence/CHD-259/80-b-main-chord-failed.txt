@@ -1,0 +1,24 @@
+   tests/parse/fixtures/huge.json. open_agent opens it again.
+
+ ⏺ Received the message from chord.
+
+ › agentfail
+
+ ⏺ Open(parser 2) · fake · fake-small
+   ⎿  error
+
+ ⏺ Waiting on parser.
+
+ ← chord
+   parser 2's turn failed: The fake agent failed on purpose. It is still
+   open; send_message reaches it.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ✗ 2 sessions ended · ctrl+x a  Fake Large with a 1M context window · 1% used
+    main      fake · Fake Large with a 1M context window
+    parser    fake · Fake Small                           ✗ failed
+    parser 2  fake · Fake Small                           ✗ failed

@@ -1,0 +1,24 @@
+ chord                                               fake · /tmp/chd151-qa/work
+   │       ⎿  ☒ Find the transport
+   │          ☒ Find the listeners
+   │          ☒ Write the answer
+   │
+   │     ⏺ Search(sessionUpdate in src)
+   │       ⎿  Found 14 files
+   │
+   │     ⏺ Read(src/acp/connection.ts)
+   │
+   │     ⏺ Agent(Read the transport tests)
+   │       ⎿  Done (2 tool uses · 3s)
+   │
+   │     ⏺ Read(src/session/session.ts)
+   │
+   │     ⏺ Write(notes/routing.md)
+   │       ⎿  Failed
+   │       ⎿  Rejected Write notes/routing.md
+ ── ↓ new output · 26 lines below · end to jump to the bottom ─────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running         Fake Large with a 1M context window · 99% left

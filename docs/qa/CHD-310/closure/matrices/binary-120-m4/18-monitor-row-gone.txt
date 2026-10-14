@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 24s ago
+
+ ← @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow
+
+ ⏺ Permission: allow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back       Fake Large with a 1M context window · 1% used
+    main  fake · Fake Large with a 1M context window  ✓ replied 2s ago
+  ❯ docs  fake · Fake Large with a 1M context window

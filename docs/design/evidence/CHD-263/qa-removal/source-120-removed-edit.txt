@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd263-final.2kHQRR/source/work
+ █▀     ? for shortcuts · /help
+
+ › /team edit bugfix
+   ⎿  /team has no edit; it takes list, new, show, run or stop
+
+ › /team edit bugfix put the reviewer on codex
+   ⎿  /team has no edit; it takes list, new, show, run or stop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

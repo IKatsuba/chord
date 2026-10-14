@@ -1,0 +1,24 @@
+ chord                          fake · /tmp/chord-qa-chd74-16a1a3f9/narrow-work
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /echo a long middle fake session prompt about refactoring the parser and its
+    integration tests across multiple platforms without losing the transcript
+
+ ⏺ a long middle fake session prompt about refactoring the parser and its
+   integration tests across multiple platforms without losing the transcript
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

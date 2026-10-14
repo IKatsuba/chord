@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake2    3 fake2 ●              /tmp/chd122-qa/binary-work
+ › /new codx
+ ⏺ No agent named codx · chord agents lists them
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Plan
+      Session:   7a69e0c1-31ec-4e8e-8bd8-320bd3ced388
+      Directory: /tmp/chd122-qa/binary-work
+      Sessions:  3 open (2 wait)
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Plan
+      Session:   7a69e0c1-31ec-4e8e-8bd8-320bd3ced388
+      Directory: /tmp/chd122-qa/binary-work
+      Sessions:  3 open (1 waits)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● 3 fake2 asks for input · ctrl+x a · ⏸ plan mode on  Fake Large… · 99% left

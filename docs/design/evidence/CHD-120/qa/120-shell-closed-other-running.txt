@@ -1,0 +1,40 @@
+ chord                                   fake · /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/chord-qa.ofox6ids/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ ! sleep 137
+   ⎿  Running… (esc to stop)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Closed 2 fake · /resume opens it again                                           Fake Large with a 1M context window

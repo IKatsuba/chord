@@ -1,0 +1,24 @@
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix
+   and the bug, or just tell me to hand one to bugfix.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   .................................................................
+   ⎿  Interrupted by user
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

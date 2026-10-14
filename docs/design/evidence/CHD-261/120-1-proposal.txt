@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.BREI
+ ▀▀     ? for shortcuts · /help
+
+ › /team new fix bugs the way we do by hand: a failing test first, then the fix on codex, then a review of the diff
+   that edits nothing
+
+ ⏺ A lead on Opus to split the work, and three members, one for each step. Only one of them edits a file at a time.
+
+ ⏺ Team(bugfix) · proposal
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+      lead      claude · opus          default      Splits the job, says who edits which files, reports to main
+      tester    claude · sonnet        acceptEdits  Writes the failing test, then proves the fix
+      coder     codex · gpt-5.3-codex  auto         Writes the fix, in the files the lead names
+      reviewer  claude · opus          plan         Reads the diff and edits nothing
+
+      How bugfix works
+      1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      … +29 lines (ctrl+o to expand)
+
+
+
+ ✸ Waiting for you… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Save team bugfix?                                                                                                    │
+│                                                                                                                      │
+│ ❯ 1. Yes, for this project   .chord/teams/bugfix.md                                                                  │
+│   2. Yes, for every project  ~/.config/chord/teams/bugfix.md                                                         │
+│   3. No, tell fake what to change                                                                                    │
+│                                                                                                                      │
+│ Esc to tell fake what to change                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

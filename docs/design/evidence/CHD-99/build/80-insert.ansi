@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chord-qa.JiSL[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › the quick brown fox jumps over the lazy dog[7m [0m                               [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m-- INSERT --[0m          [2mFake Large with a 1M context window · 99% context left[0m

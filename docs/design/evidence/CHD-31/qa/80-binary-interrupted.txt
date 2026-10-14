@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chd31-qa/work
+   190. Line 190 of 200, streamed one at a time.
+   191. Line 191 of 200, streamed one at a time.
+   192. Line 192 of 200, streamed one at a time.
+   193. Line 193 of 200, streamed one at a time.
+   194. Line 194 of 200, streamed one at a time.
+   195. Line 195 of 200, streamed one at a time.
+   196. Line 196 of 200, streamed one at a time.
+   197. Line 197 of 200, streamed one at a time.
+   198. Line 198 of 200, streamed one at a time.
+   199. Line 199 of 200, streamed one at a time.
+   200. Line 200 of 200, streamed one at a time.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   .........
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

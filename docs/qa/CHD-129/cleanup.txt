@@ -1,0 +1,9 @@
+source quit: alternate=0 cursor=1
+binary quit: alternate=0 cursor=1
+final quit: alternate=0 cursor=1
+source stty: exact before/after match
+binary stty: exact before/after match
+ps source PIDs 27700,27717: absent after quit
+ps binary PIDs 33071,33277: absent after quit
+final ps: no child of QA shell 27049; no running QA TUI or agent
+isolated tmux server: killed after final quit

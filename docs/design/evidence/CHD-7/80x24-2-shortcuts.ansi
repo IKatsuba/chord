@@ -1,0 +1,24 @@
+ [1mchord[0m   [2mfake · /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.kCt6EGwx0Q[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2menter to send[0m                 [2m1–9 to answer a permission[0m
+  [2mesc to interrupt[0m              [2m↑ ↓ or j k to move between answers[0m
+  [2mctrl + o for verbose output[0m   [2menter to pick the highlighted answer[0m
+  [2mctrl + c to clear input[0m       [2mesc to reject a permission[0m
+  [2mctrl + c twice to quit[0m        [2m? for shortcuts[0m
+  [2mctrl + d to quit[0m              [2mesc to close shortcuts[0m

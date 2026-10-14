@@ -1,0 +1,24 @@
+
+   list_sessions:
+
+   ┌ json ───────────────────────────────────────────────┐
+   │ {                                                   │
+   │   "sessions": [                                     │
+   │     {                                               │
+   │       "id": "28c9e3fb-7f00-441f-bb81-454fd53ca059", │
+   │       "runtime": "fake",                            │
+   │       "model": "fake-large",                        │
+   │       "tab": 1,                                     │
+   │       "you": true,                                  │
+   │       "agents": [                                   │
+   │         {                                           │
+   │           "id": "28a085d9",                         │
+ ── ↓ 15 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small
+    docs    fake · Fake Large with a 1M context window

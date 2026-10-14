@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd357-qa/hanging
+ █▀     ? for shortcuts · /help
+
+ › /team run bugfix text
+
+ ⏺ Team(bugfix) · limited · fake-large
+   ⎿  text
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 1s on "text"
+
+      lead    limited · fake-large  default      idle
+      tester  limited · fake-small  acceptEdits  not opened
+      coder   limited · fake-large  plan         not opened
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window
+    main    fake · Fake Large with a 1M context window · medium
+    bugfix  team · limited · fake-large

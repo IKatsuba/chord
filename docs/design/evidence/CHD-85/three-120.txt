@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.rJM8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                                                          │
+│ chord passed these to fake when the session started. ACP does not say whether fake connected to them.                │
+│                                                                                                                      │
+│ Name        Transport  Command or URL                                               Defined in                       │
+│ docs        http       https://mcp.example.com/mcp                                  ~/.config/chord/settings.json    │
+│ filesystem  stdio      npx -y @modelcontextprotocol/server-filesystem .             .mcp.json                        │
+│ memory      stdio      npx -y @modelcontextprotocol/server-memory                   .mcp.json                        │
+│ github      stdio      docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN ghcr.io/  .chord/settings.json             │
+│                        github/github-mcp-server                                                                      │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

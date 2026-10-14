@@ -1,0 +1,40 @@
+ chord                                                                        fake · /tmp/chord-qa-76-caf0423fbcd13b6/B
+
+
+
+
+
+
+
+
+
+ ⏺ /tmp/chord-qa-76-caf0423fbcd13b6/config/chord/settings.json: unknown key "typo", ignored
+
+ ⏺ .chord/settings.json: unknown key "theme", ignored
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Small
+      Mode:      Default
+      Session:   ef1b50d3-17d1-4552-86f1-3d07e24688ce
+      Directory: /tmp/chord-qa-76-caf0423fbcd13b6/B
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                        Fake Small · 99% context left

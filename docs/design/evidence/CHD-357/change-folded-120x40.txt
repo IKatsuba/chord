@@ -1,0 +1,40 @@
+
+      How bugfix works
+      1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      … +30 lines (ctrl+o to expand)
+      Saved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix and the bug, or just tell me to hand one
+   to bugfix.
+
+ › more effort on the work
+
+ ⏺ tester on high and bypassPermissions, coder on xhigh, and the reviewer read-only.
+
+ ⏺ Team(bugfix) · change
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+         lead      claude · opus          high             default                            Splits the job, says w…
+      ~  tester    claude · sonnet        high was medium  bypassPermissions was acceptEdits  Writes the failing tes…
+      ~  coder     codex · gpt-5.3-codex  xhigh was —      auto                               Writes the fix, in the…
+      ~  reviewer  claude · opus          —                read-only was plan                 Reads the diff and edi…
+
+      How bugfix works
+      1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      … +30 lines (ctrl+o to expand)
+
+ ✷ Waiting for you… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                                                                 │
+│                                                                                                                      │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                                                                  │
+│   2. No, tell fake what to change                                                                                    │
+│                                                                                                                      │
+│ Esc to tell fake what to change                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

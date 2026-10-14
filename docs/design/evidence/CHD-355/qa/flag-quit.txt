@@ -1,0 +1,4 @@
+Resume this window with:
+chord --resume w-58abfb80
+QA_RETURN code=0
+sh-3.2$

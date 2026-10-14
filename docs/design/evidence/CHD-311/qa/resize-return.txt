@@ -1,0 +1,135 @@
+=== source 120x40 ===
+   133. Line 133 of 200, streamed one at a time.
+   134. Line 134 of 200, streamed one at a time.
+   135. Line 135 of 200, streamed one at a time.
+   136. Line 136 of 200, streamed one at a time.
+   137. Line 137 of 200, streamed one at a time.
+   138. Line 138 of 200, streamed one at a time.
+   139. Line 139 of 200, streamed one at a time.
+   140. Line 140 of 200, streamed one at a time.
+   141. Line 141 of 200, streamed one at a time.
+   142. Line 142 of 200, streamed one at a time.
+   143. Line 143 of 200, streamed one at a time.
+   144. Line 144 of 200, streamed one at a time.
+   145. Line 145 of 200, streamed one at a time.
+   146. Line 146 of 200, streamed one at a time.
+   147. Line 147 of 200, streamed one at a time.
+   148. Line 148 of 200, streamed one at a time.
+   149. Line 149 of 200, streamed one at a time.
+   150. Line 150 of 200, streamed one at a time.
+   151. Line 151 of 200, streamed one at a time.
+   152. Line 152 of 200, streamed one at a time.
+   153. Line 153 of 200, streamed one at a time.
+   154. Line 154 of 200, streamed one at a time.
+   155. Line 155 of 200, streamed one at a time.
+   156. Line 156 of 200, streamed one at a time.
+   157. Line 157 of 200, streamed one at a time.
+   158. Line 158 of 200, streamed one at a time.
+   159. Line 159 of 200, streamed one at a time.
+   160. Line 160 of 200, streamed one at a time.
+   161. Line 161 of 200, streamed one at a time.
+   162. Line 162 of 200, streamed one at a time.
+   163. Line 163 of 200, streamed one at a time.
+   164. Line 164 of 200, streamed one at a time.
+   165. Line 165 of 200, streamed one at a time.
+   166. Line 166 of 200, streamed one at a time.
+ ── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== source 80x24 ===
+   165. Line 165 of 200, streamed one at a time.
+   166. Line 166 of 200, streamed one at a time.
+   167. Line 167 of 200, streamed one at a time.
+   168. Line 168 of 200, streamed one at a time.
+   169. Line 169 of 200, streamed one at a time.
+   170. Line 170 of 200, streamed one at a time.
+   171. Line 171 of 200, streamed one at a time.
+   172. Line 172 of 200, streamed one at a time.
+   173. Line 173 of 200, streamed one at a time.
+   174. Line 174 of 200, streamed one at a time.
+   175. Line 175 of 200, streamed one at a time.
+   176. Line 176 of 200, streamed one at a time.
+   177. Line 177 of 200, streamed one at a time.
+   178. Line 178 of 200, streamed one at a time.
+   179. Line 179 of 200, streamed one at a time.
+   180. Line 180 of 200, streamed one at a time.
+   181. Line 181 of 200, streamed one at a time.
+   182. Line 182 of 200, streamed one at a time.
+ ── ↓ 18 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+
+=== binary 120x40 ===
+   133. Line 133 of 200, streamed one at a time.
+   134. Line 134 of 200, streamed one at a time.
+   135. Line 135 of 200, streamed one at a time.
+   136. Line 136 of 200, streamed one at a time.
+   137. Line 137 of 200, streamed one at a time.
+   138. Line 138 of 200, streamed one at a time.
+   139. Line 139 of 200, streamed one at a time.
+   140. Line 140 of 200, streamed one at a time.
+   141. Line 141 of 200, streamed one at a time.
+   142. Line 142 of 200, streamed one at a time.
+   143. Line 143 of 200, streamed one at a time.
+   144. Line 144 of 200, streamed one at a time.
+   145. Line 145 of 200, streamed one at a time.
+   146. Line 146 of 200, streamed one at a time.
+   147. Line 147 of 200, streamed one at a time.
+   148. Line 148 of 200, streamed one at a time.
+   149. Line 149 of 200, streamed one at a time.
+   150. Line 150 of 200, streamed one at a time.
+   151. Line 151 of 200, streamed one at a time.
+   152. Line 152 of 200, streamed one at a time.
+   153. Line 153 of 200, streamed one at a time.
+   154. Line 154 of 200, streamed one at a time.
+   155. Line 155 of 200, streamed one at a time.
+   156. Line 156 of 200, streamed one at a time.
+   157. Line 157 of 200, streamed one at a time.
+   158. Line 158 of 200, streamed one at a time.
+   159. Line 159 of 200, streamed one at a time.
+   160. Line 160 of 200, streamed one at a time.
+   161. Line 161 of 200, streamed one at a time.
+   162. Line 162 of 200, streamed one at a time.
+   163. Line 163 of 200, streamed one at a time.
+   164. Line 164 of 200, streamed one at a time.
+   165. Line 165 of 200, streamed one at a time.
+   166. Line 166 of 200, streamed one at a time.
+ ── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== binary 80x24 ===
+   165. Line 165 of 200, streamed one at a time.
+   166. Line 166 of 200, streamed one at a time.
+   167. Line 167 of 200, streamed one at a time.
+   168. Line 168 of 200, streamed one at a time.
+   169. Line 169 of 200, streamed one at a time.
+   170. Line 170 of 200, streamed one at a time.
+   171. Line 171 of 200, streamed one at a time.
+   172. Line 172 of 200, streamed one at a time.
+   173. Line 173 of 200, streamed one at a time.
+   174. Line 174 of 200, streamed one at a time.
+   175. Line 175 of 200, streamed one at a time.
+   176. Line 176 of 200, streamed one at a time.
+   177. Line 177 of 200, streamed one at a time.
+   178. Line 178 of 200, streamed one at a time.
+   179. Line 179 of 200, streamed one at a time.
+   180. Line 180 of 200, streamed one at a time.
+   181. Line 181 of 200, streamed one at a time.
+   182. Line 182 of 200, streamed one at a time.
+ ── ↓ 18 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

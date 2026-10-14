@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chd64-qa/work
+      2   export function greet(name: string): string {
+      2 -   return "hello " + name;
+      3 +   return `hello, ${name}`;
+      4   }
+
+ ⏺ Edited.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ....................
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

@@ -1,0 +1,24 @@
+ › text
+
+ ⏺ Received printf qa-shell: qa-shell
+
+   Hello, world. This reply came in chunks.
+
+ › /config
+   ⎿  Effort set to High
+
+ › /cost
+   ⎿  Total cost:   $0.1500
+      Tokens in:    12,000
+      Tokens out:   2,400              rni                    itter memory leak
+      Cache read:   9,600                                                    Us
+      Session time: 45s
+
+ › /context                                                    s added to [BoxR
+   ⎿  Used: 24,000 of 200,000 tokens (12%)
+      Free: 176,000 tokens (88%)
+ct
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                                                        eners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

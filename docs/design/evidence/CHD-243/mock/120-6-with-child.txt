@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   claude · Opus
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ Open(parser) · codex · gpt-5.3-codex
+   ⎿  Run the parser tests after every change to src/parse and tell me what breaks.
+
+ ⏺ parser keeps the parser tests; I stay on the login form.
+
+ ← @parser · codex
+   I watch tests/parse with a monitor now; I will tell you when something breaks.
+
+ ✻ Working… (41s · esc to interrupt)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                              Opus · 91% context left
+    main               claude · Opus
+    parser             codex · gpt-5.3-codex                                     ✻ working 41s
+    dev server errors  $ tail -f dev.log | grep --line-buffered -E "ERROR|WARN"  running 6m · 3 events
+    parser tests       $ deno test --watch=src/parse tests/parse                 running 2m · 1 event · parser

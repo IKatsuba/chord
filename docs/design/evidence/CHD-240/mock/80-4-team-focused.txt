@@ -1,0 +1,24 @@
+
+ ← @bugfix · claude
+   The test fails for the right reason and coder has the fix in. reviewer
+   read the diff and found nothing to change. tester is running the parser
+   suite once more before I call it done.
+
+ ⏺ bugfix is nearly done: the fix is in and reviewed, and the last test run
+   is going.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back                  Opus · 90% left
+    main         claude · Opus
+  ❯ bugfix       team · claude · Opus  ✓ replied 40s ago
+    ├─ tester    claude · Sonnet       ● permission 12s
+    … +3 more

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.sU52
+ ▀▀     ? for shortcuts · /help
+
+ › monitor
+
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot...   at validate (src/routes/login.tsx:41:22)"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ I will hear from the dev server when it errs.
+
+ › slow
+
+ ⏺ Working.............................................................................................................
+   ....................................................................................................................
+   ....................................................................................................................
+   .......................................................
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ✹ Interrupting… (2s)
+ ← dev server errors · monitor: ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim') …
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › text                                                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                 Fake Large with a 1M context window · 1% context used
+    dev server errors  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties …  running 3s · 1 event

@@ -1,0 +1,40 @@
+ tester · fake · Fake Small · bugfix's member · opened by @bugfix 10s ago
+
+ ⏺ bugfix's instructions for tester · 29 lines
+   You are tester, a member of team bugfix, opened by its lead, bugfix. You work in
+   /tmp/chd310-closure/m45/binary-120-m5/work, beside the team's other members: there are no worktrees.
+
+   Your tools on chord's server: send_message {to, text} reaches your lead, bugfix, and coder, the team's other members
+    while they are open, by name and directly: the lead does not see those. spawn_task and list_agents start task
+   agents for one-off jobs. You open no long-lived agents.
+
+   Your role: Writes the failing test, then proves the fix
+
+   Your instructions:
+   Write the smallest test that fails because of the bug, not for any
+   other reason, and run it to show that.
+
+   The members:
+   - tester: Writes the failing test, then proves the fix (fake · fake-small · acceptEdits)
+   - coder: Writes the fix, in the files the lead names (fake · fake-large · plan)
+
+   How the team works:
+   # How bugfix works
+
+   1. The lead reads the job and names who may edit which files.
+   2. tester writes a test that fails for the bug's own reason, in `tests/`.
+   3. coder fixes the code so that test passes, and never edits `tests/`.
+
+   ## Who edits what
+
+   - One writer per file at a time; a member asks a file's owner directly.
+ ── ↓ 29 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                 Fake Small · 2% context used
+    main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window
+    ├─ tester  fake · Fake Small
+    └─ coder   fake · Fake Large with a 1M context window         ✓ replied 9s ago

@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                        [2mfake · /tmp/chord-qa.M3uH[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [38;2;255;0;135m![39m ls; cat notes.txt; ls nope
+   [2m⎿[0m  notes.txt
+   [2m [0m  one
+   [2m [0m  two
+   [2m [0m  [31mls: nope: No such file or directory[39m
+   [2m [0m  [31mExit code 1[39m
+
+ [2m›[0m what did you get?
+
+ ⏺ Received [38;2;87;105;247mls; cat notes.txt; ls nope[39m: notes.txt
+
+   Hello, world. This reply came in chunks.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m

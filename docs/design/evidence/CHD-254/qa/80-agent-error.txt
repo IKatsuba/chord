@@ -1,0 +1,24 @@
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-s…
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

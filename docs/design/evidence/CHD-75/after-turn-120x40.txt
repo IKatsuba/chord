@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.yKmo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /config
+   ⎿  Effort set to High
+
+ › hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /config
+   ⎿  Effort set to Low
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

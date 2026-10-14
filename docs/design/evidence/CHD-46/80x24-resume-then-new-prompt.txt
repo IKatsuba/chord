@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.GWY0
+
+ ⏺ Read(README.md)
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the answer.
+
+ › /echo still the same session
+
+ ⏺ still the same session
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

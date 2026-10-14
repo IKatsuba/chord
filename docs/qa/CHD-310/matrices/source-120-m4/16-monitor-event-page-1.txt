@@ -1,0 +1,40 @@
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "zeroclaw",                                                                               │
+   │       "note": "models and modes not read yet; list_agents with agent \"zeroclaw\" reads them"           │
+   │     }                                                                                                   │
+   │   ]                                                                                                     │
+   │ }                                                                                                       │
+   └─────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+   list_sessions:
+
+   ┌ json ───────────────────────────────────────────────┐
+   │ {                                                   │
+   │   "sessions": [                                     │
+   │     {                                               │
+   │       "id": "df098696-9823-48d9-ab33-fe011af8323e", │
+   │       "runtime": "fake",                            │
+   │       "model": "fake-large",                        │
+   │       "tab": 1,                                     │
+   │       "you": true,                                  │
+   │       "agents": [                                   │
+   │         {                                           │
+   │           "id": "22e05888",                         │
+   │           "name": "parser",                         │
+   │           "runtime": "fake",                        │
+   │           "model": "fake-small"                     │
+   │         },                                          │
+   │         {                                           │
+   │           "id": "c16d1fe6",                         │
+   │           "name": "docs",                           │
+   │           "runtime": "fake",                        │
+ ── ↓ 31 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 3% context used
+    main               fake · Fake Large with a 1M context window
+    docs               fake · Fake Large with a 1M context window
+    dev server errors  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties …  running 2s · 1 event

@@ -1,0 +1,40 @@
+ ⏺ Open(coder) · fake · fake-large · plan
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.
+
+ → @main
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/pa…
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+ ← @tester · fake
+   It fails for that reason: "a" at the end of a line comes back as "a, with no closing quote. Only
+   tests/parse/tokenize_test.ts changed.
+
+ ⏺ Received the message from tester · fake.
+
+ ← @bugfix 2 · fake
+   This run keeps to src/parse/date.ts and tests/parse/date_test.ts. Which files do you hold?
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ ← chord
+   The person closed coder (fake · fake-large, id 3a1a8cab). It takes no more messages; open_agent opens it again.
+
+ ⏺ Received the message from chord.
+
+ › crash
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  Killed
+
+ ⏺ The agent exited: fatal: out of memory reading tests/parse/fixtures/huge.json
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main      fake · Fake Large with a 1M context window         ✓ replied 1s ago
+    bugfix    team · fake · Fake Large with a 1M context window  ✗ exited
+    bugfix 2  team · fake · Fake Large with a 1M context window  ✓ replied 49s ago
+    tester    fake · Fake Small                                  ● permission 47s
+    coder     fake · Fake Large with a 1M context window         ✓ replied 48s ago

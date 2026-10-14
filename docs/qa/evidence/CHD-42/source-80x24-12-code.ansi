@@ -1,0 +1,24 @@
+ [1mchord[0m             [2mfake · /private/tmp/chd81-source-80x24-aa25aa8ca589562e/work[0m
+   [2m│[0m [38;2;163;94;232mawait[39m turn.[38;2;200;80;138mresult[39m;                                           [2m│[0m
+   [2m└──────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [38;2;87;105;247mmain[39m once every check has passed and the tree is clean, so
+     whoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [38;2;163;94;232mfor[39m bin [38;2;163;94;232min[39m dist/*/chord; [38;2;163;94;232mdo[39m [38;2;26;150;160mecho[39m [38;2;168;122;16m"built [38;2;200;80;138m$bin[38;2;168;122;16m"[39m; [38;2;163;94;232mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;72;150;140m⏸ plan mode on[39m [2m(shift+tab to cycle)[0m            [2mFake Small · 95% context left[0m

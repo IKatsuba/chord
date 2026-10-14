@@ -1,0 +1,24 @@
+ [1mchord[0m   [2m1 fake[0m    [2m2 fake[0m    [2m3 fake[0m[32m ✓[39m    [2m4 fake[0m   [1;7m 5 fake [0m   [2m6 fake[0m      [2m…/work[0m
+
+ [2m›[0m form
+
+ [31m✺[39m [31mWaiting for your input…[39m [2m(1s)[0m
+
+[97m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[97mfake asks for input[0m                                                          [97m│
+│[39m Set up the deploy target                                                     [97m│
+│[39m                                                                              [97m│
+│[39m [97m❯[39m [2m✔[0m [1m[97mProject name[0m   keep[7m [0m                                                     [97m│
+│[39m                    [2mLowercase, dashes allowed[0m                                 [97m│
+│[39m [97m [39m [95m [39m Contact email  [2mnot set[0m                                                   [97m│
+│[39m [97m [39m [2m✔[0m Replicas       2                                                         [97m│
+│[39m [97m [39m [95m [39m Traffic share  [2mnot set[0m                                                   [97m│
+│[39m [97m [39m [2m✔[0m Public         ☐ No                                                      [97m│
+│[39m [97m [39m [95m*[39m Region         [2mnot set[0m                                                   [97m│
+│[39m [97m [39m [95m [39m Tags           [2mnot set[0m                                                   [97m│
+│[39m                                                                              [97m│
+│[39m [97m [39m Accept [97m [39m Decline                                                           [97m│
+│[39m                                                                              [97m│
+│[39m [2mType to fill in · ↑↓ to move · Esc to cancel[0m                                 [97m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

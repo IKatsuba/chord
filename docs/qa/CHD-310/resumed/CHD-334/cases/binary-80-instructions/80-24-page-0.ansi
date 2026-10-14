@@ -1,0 +1,24 @@
+[38;2;255;255;255m [39m█▄  [38;2;255;255;255m   [1m[39mchord[0;2m v0.0.0[0m[38;2;255;255;255m
+ [39m▀██▄[38;2;255;255;255m   [2m[39mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m/tmp/chd334-qa/exits/binary-80-instructions/work[0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team show dev[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mdev · .chord/teams/dev.md[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mComplete instruction QA[0m[38;2;255;255;255m
+
+   [2m[39m [0m[38;2;255;255;255m  [39mlead   fake  —  Splits the job, says who edits which files, reports to…[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mcoder  fake  —  Writes it[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead's instructions[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39minstruction001 instruction002 instruction003 instruction004[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39minstruction005 instruction006 instruction007 instruction008[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39minstruction009 instruction010 instruction011 instruction012[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39minstruction013 instruction014 instruction015 instruction016[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39minstruction017 instruction018 instruction019 instruction020[38;2;255;255;255m
+ [2m[39m── ↓ 23 lines below · end to jump to the bottom ──────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                          [2m[39mFake Large with a 1M context window[0m[38;2;255;255;255m

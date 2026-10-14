@@ -1,0 +1,40 @@
+ [1m[38;2;10;91;196mparser[0;2m · fake · Fake Small · opened by main 45s ago[0m
+
+ ← [1mmain[0m
+   agentchild
+
+ [38;2;44;122;57m⏺[39m [1mBash[0m(deno task test tests/parse)
+   [2m⎿[0m  [2m2 failed, 212 passed[0m
+
+ → [1mmain[0;2m · queued[0m
+   [2m⎿[0m  [2mRan deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.[0m
+
+ [38;2;44;122;57m⏺[39m [1mBash[0m(deno task test tests/parse)
+   [2m⎿[0m  [2m214 passed, 0 failed[0m
+
+ → [1mmain[0;2m · queued[0m
+   [2m⎿[0m  [2mAll 214 parser tests pass now.[0m
+
+ ⏺ I will run the parser tests on each change.
+
+ ← [1mmain[0m
+   I changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.
+
+ ⏺ Received the message from main.
+
+ ← [1mmain[0m
+   The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Received the message from main.
+
+
+
+
+
+[38;2;10;91;196m╭─[1m parser [0m[38;2;10;91;196m─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m ›                                                                                                                    [38;2;10;91;196m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[39m  [2m↑ ↓ to pick · enter to write to it · x to close · esc to go back[0m                       [2mFake Small · 97% context left[0m
+  [38;2;74;90;224m  [39mmain  [2m  fake · Fake Large with a 1M context window[0m
+  [38;2;74;90;224m❯ [1m[38;2;10;91;196mparser[0;2m  fake · Fake Small                         [0m
+  [38;2;74;90;224m  [38;2;122;63;214mdocs  [2m[39m  fake · Fake Large with a 1M context window[0m[38;2;138;90;0m  ● permission 45s[39m

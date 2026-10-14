@@ -1,0 +1,6 @@
+Command: ps -axo pid,ppid,command
+Observed owned QA fake agents/drivers/tmux servers: 0
+Command: tmux -S <each owned socket> list-sessions
+Checked sockets: 8
+Responding owned tmux servers: 0
+Other processes and default tmux server untouched.

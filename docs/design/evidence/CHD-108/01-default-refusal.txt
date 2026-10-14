@@ -1,0 +1,12 @@
+qa> chord fake --agent-command "$FAKE" -p permission > /tmp/chd108-qa/01-default-refusal.stdout 2> /tmp/chd108-qa/01-def
+ault-refusal.stderr; echo $? > /tmp/chd108-qa/01-default-refusal.exit; printf "stdout:\n"; cat /tmp/chd108-qa/01-default
+-refusal.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/01-default-refusal.stderr; printf "echo \$? (saved immediately):
+\n"; cat /tmp/chd108-qa/01-default-refusal.exit; echo CAPTURE_DONE
+stdout:
+Permission: deny.
+stderr:
+chord: refused Write notes.txt: -p cannot ask for permission.
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

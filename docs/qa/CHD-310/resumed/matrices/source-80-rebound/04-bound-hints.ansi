@@ -1,0 +1,24 @@
+[38;2;255;255;255m [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39mctrl + s to send[0m[38;2;255;255;255m
+  [2m[39m\ + ctrl + s for a newline[0m[38;2;255;255;255m
+  [2m[39mshift + enter alt + enter for a newline[0m[38;2;255;255;255m
+  [2m[39mctrl + g to edit in $EDITOR[0m[38;2;255;255;255m
+  [2m[39mctrl + v to paste an image[0m[38;2;255;255;255m
+  [2m[39m↑ ↓ for prompts, agents and monitors[0m[38;2;255;255;255m
+  [2m[39mx to close an agent or stop a monitor[0m[38;2;255;255;255m
+  [2m[39mctrl + r to search prompts[0m[38;2;255;255;255m
+  [2m[39mtab enter to take a match[0m[38;2;255;255;255m
+  [2m[39mesc to cancel a search[0m[38;2;255;255;255m
+  [2m[39mpgup pgdn or wheel to scroll[0m[38;2;255;255;255m
+[38;5;244m╭─[2m[39mshift + ↑ ↓ to scroll a line[0m[38;5;244m─────────────────────────────────────────────────╮
+│[38;2;255;255;255m [2m[39mhome end for the top and the bottom[0mWarning: Possible EventEmitter memory leak
+de[2m/ for commands[0mize listeners added to [BoxRenderable2]. MaxListeners is 10. Use
+ e[2m↑ ↓ to pick a command[0ms() to increase limit[2make Large with a 1M context window[0m[38;2;255;255;255m
+  [2m[39mtab to complete a command[0m[38;2;255;255;255m
+ [39mP[2m@ for files[0mntEmitter memory leak detected. 11 resize listeners added to [BoxR[38;2;255;255;255m
+  [2m[39m↑ ↓ to pick a file[0m[38;2;255;255;255m
+[39m  [2mtab enter [0m [2mo add a file[0m                  [38;2;255;255;255m                                   [39m

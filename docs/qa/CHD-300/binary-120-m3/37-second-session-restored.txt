@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                                /tmp/chd300/binary-120-m3/work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd300/binary-120-m3/work
+ █▀     ? for shortcuts · /help
+
+ › second session prompt
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › second unsent draft                                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                 Fake Large with a 1M context window · 1% context used

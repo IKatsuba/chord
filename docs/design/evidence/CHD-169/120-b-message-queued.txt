@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                                            /tmp/chord-qa.8lyB
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.8lyB
+ ▀▀     ? for shortcuts · /help
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Edit(src/parse/tokenize.ts)
+      Message(main) · queued
+      Bash(deno task test)
+      +2 more tool uses (ctrl+o to expand)
+
+ ⏺ It is running; I will check its report when it lands.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ✹ Working… (4s · esc to interrupt)
+ ✉ Fix the tokenizer · fake: Found it: a string at the end of a line lost its closing quote. Fixing src/parse/tokenize…
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

@@ -1,0 +1,24 @@
+ chord                                              fake · /tmp/chord-qa.CHD196
+
+
+
+
+
+
+
+
+
+
+
+ › bash
+
+ ⏺ Bash(git status --short)
+   ⎿   M src/main.tsx
+      ?? notes.md
+
+ ⏺ Two files changed.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,21 @@
+{
+  "bytes": 685788,
+  "bell_count": 12,
+  "notifications": [],
+  "alternate_enter": 2,
+  "alternate_leave": 2,
+  "cursor_show": 4,
+  "standalone_bell_offsets": [
+    6053,
+    15343,
+    191634,
+    266754,
+    323342,
+    442099,
+    569805,
+    580672,
+    605392,
+    620299,
+    647525
+  ]
+}

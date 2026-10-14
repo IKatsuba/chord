@@ -1,0 +1,90 @@
+        agree on files among themselves.
+      - Nobody commits. The person commits.
+
+      Reporting
+
+      The lead writes to main when it needs a decision only the person can
+      make, when the job is done, and when it cannot be done.
+      Saved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix
+   and the bug, or just tell me to hand one to bugfix.
+
+ › change it
+
+ ⏺ tester on high and bypassPermissions, coder on xhigh, and the reviewer
+   read-only.
+
+ ⏺ Team(bugfix) · change
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a
+      review of the diff.
+
+         lead      claude · opus          high             default
+                   Splits the job, says who edits which files, reports to
+                   main
+      ~  tester    claude · sonnet        high was medium  bypassPermissions
+                                                           was acceptEdits
+                   Writes the failing test, then proves the fix
+      ~  coder     codex · gpt-5.3-codex  xhigh was —      auto
+                   Writes the fix, in the files the lead names
+      ~  reviewer  claude · opus          —                read-only was plan
+                   Reads the diff and edits nothing
+
+      lead's instructions
+      Read the job and the code it points at until you can name the cause and
+      the files involved. Open tester first, coder once tester's test fails,
+      and reviewer last, on the diff.
+
+      tester's instructions
+      Write the smallest test that fails because of the bug, and run it to
+      show that.
+
+      coder's instructions
+      Make the failing test pass with the smallest change. Do not touch
+      tests.
+
+      reviewer's instructions
+      Read `git diff` and the test. Never edit a file.
+
+      How bugfix works
+
+      1. The lead reads the job, finds the files involved, and names who may
+        edit which before anyone starts.
+      2. tester writes a test that fails for the bug's own reason. It edits
+        tests/ only, and reports the failure.
+      3. coder fixes the code so that test passes. It edits only the files
+        the lead named for it, and never tests/.
+      4. reviewer reads the diff and edits nothing. If it finds a problem,
+        the lead hands it back to coder.
+      5. tester runs the whole suite once more, and the lead reports to main.
+
+      Who edits what
+
+      - One writer per file at a time. Before a member starts, the lead tells
+        it which files are its own.
+      - A member that needs a file it does not own asks its owner directly,
+        and tells the lead what they agreed.
+      - Another run of a team may be working in this directory: the leads
+        agree on files among themselves.
+      - Nobody commits. The person commits.
+
+      Reporting
+
+      The lead writes to main when it needs a decision only the person can
+      make, when the job is done, and when it cannot be done.
+
+ ✶ Waiting for you… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                         │
+│                                                                              │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                          │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

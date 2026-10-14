@@ -1,0 +1,40 @@
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                        Fake Small · 81% context used

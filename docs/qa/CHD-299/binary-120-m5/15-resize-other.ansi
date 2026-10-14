@@ -1,0 +1,24 @@
+   [2m [0m  [2msrc/parse/tokenize.ts only. I will report when the test fails[0m
+   [2m [0m  [2mfor the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ [2m›[0m /team stop bugfix 2
+   [2m⎿[0m  Stopped bugfix 2: its lead, tester, and coder are closed · /resume
+   [2m [0m  lists them
+
+ [2m←[0m [1mchord[0m
+   [2m⎿[0m  [2mThe person closed team bugfix 2: its lead (fake · fake-large, id[0m
+   [2m [0m  [2m80316dce) and its members tester and coder. It takes no more messages;[0m
+   [2m [0m  [2mrun_team starts it again.[0m
+
+ ⏺ Received the message from chord.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m
+    [1mmain     [0;2m  fake       [0m
+    bugfix   [2m  team · fake[0m  ✓ replied 8s ago
+    [2m├─ [0mtester[2m  fake       [0m
+    [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 23s ago

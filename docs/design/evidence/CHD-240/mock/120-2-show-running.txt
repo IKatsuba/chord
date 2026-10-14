@@ -1,0 +1,40 @@
+ ← @bugfix · claude
+   On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+   src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ bugfix has started: a failing test first, then the fix in src/parse/tokenize.ts.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 6m on "strings at the end of a line lose their closing quote; see…"
+
+      lead      claude · opus           default      ✻ working 8s       → @coder
+      tester    claude · sonnet         acceptEdits  ● permission 12s   Bash(deno task test tests/parse)
+      coder     codex · gpt-5.3-codex   auto         ✻ working 41s      Edit(src/parse/tokenize.ts)
+      reviewer  claude · opus           plan         not opened
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts                            Opus · 90% context left
+    main         claude · Opus
+    bugfix       team · claude · Opus   ✻ working 8s
+    ├─ tester    claude · Sonnet        ● permission 12s
+    └─ coder     codex · gpt-5.3-codex  ✻ working 41s

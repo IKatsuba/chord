@@ -1,0 +1,24 @@
+ chord             fake · /private/tmp/chd81-binary-80x24-cd0d7e84b6e1d7ed/work
+
+ › /greet day
+
+ ⏺ Hello from the fake agent.
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Plan
+      Session:   4f66bab1-ac03-4dbb-adf9-317b7693b9b1
+      Directory: /private/tmp/chd81-binary-80x24-cd0d7e84b6e1d7ed/work
+
+ › /cost
+   ⎿  Total cost:   $0.0125
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 12s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · 99% context left

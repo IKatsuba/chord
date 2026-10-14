@@ -1,0 +1,24 @@
+ chord   1 claude    2 codex    3 claude    4 codex    5 claude       ~/src/app
+ █▄     chord v0.0.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+        resumed · 7 minutes ago · saved prompt 5
+
+ › saved prompt 5
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.pUsJ
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Answered · 7 fields
+
+ ⏺ Elicitation answer: accept
+   {"name":"web-app","email":"ops@example.io","replicas":3,"ratio":0.25,"public":true,"region":"us","tags":["web","work
+   er"]}
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Declined
+
+ ⏺ Elicitation answer: decline
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Cancelled
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

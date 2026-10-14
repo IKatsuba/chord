@@ -1,0 +1,9 @@
+CHD331 first fired 1791751235713
+1 | const timer = setInterval(() => { if (!require("node:fs").existsSync("/tmp/chd310-final/forced/source-80-hung-double/fire")) return; clearInterval(timer); console.error("CHD331 first fired", Date.now()); setTimeout(() => { console.error("CHD331 second fired", Date.now()); throw new Error("CHD331 second exception"); }, 200); throw new Error("CHD331 injected exception"); }, 25);
+                                                                                                                                                                                                                                                                                                                                                    ^
+error: CHD331 injected exception
+      at <anonymous> (/private/tmp/chd310-final/forced/source-80-hung-double/crash.ts:1:337)
+
+CHD331 second fired 1791751235916
+Error: CHD331 injected exception
+    at <anonymous> (/private/tmp/chd310-final/forced/source-80-hung-double/crash.ts:1:337)

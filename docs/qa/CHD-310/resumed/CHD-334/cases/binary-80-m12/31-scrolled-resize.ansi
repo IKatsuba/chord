@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [2m[39mMode:      [0mAccept edits[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSession:   [0m4257babd-0bb5-4bf0-891e-f1b7dc2ab6f7[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mDirectory: [0m/tmp/chd334-qa/exits/binary-80-m12/work[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mslow[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mWorking..............................................................................[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mInterrupted by user[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mlong[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [2m[39m1.[0m Line 1 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m2.[0m Line 2 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m3.[0m Line 3 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m4.[0m Line 4 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m5.[0m Line 5 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m6.[0m Line 6 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m7.[0m Line 7 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m8.[0m Line 8 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m9.[0m Line 9 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m10.[0m Line 10 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m11.[0m Line 11 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m12.[0m Line 12 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m13.[0m Line 13 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m14.[0m Line 14 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m15.[0m Line 15 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m16.[0m Line 16 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m17.[0m Line 17 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m18.[0m Line 18 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m19.[0m Line 19 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m20.[0m Line 20 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m21.[0m Line 21 of 200, streamed one at a time.[38;2;255;255;255m
+ [2m[39m── [0;1m↓ new output[0;2m · 3 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────[0m[38;2;255;255;255m
+
+ [39m✶[38;2;255;255;255m [39mWorking…[38;2;255;255;255m [2m[39m(7s · esc to interrupt)[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m⏵⏵ accept edits on[0m [2m(shift+tab to cycle)[0m[38;2;255;255;255m                                                [2m[39mFake Small · 12% context used[0m[38;2;255;255;255m

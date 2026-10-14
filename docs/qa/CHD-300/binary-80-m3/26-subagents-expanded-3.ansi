@@ -1,0 +1,24 @@
+   [2m│[0m     [2m⏺[0m [2mPlan[0m
+   [2m│[0m       [2m⎿[0m  [2m☒ [9mFind the transport[0m
+   [2m│[0m       [2m [0m  [2m☒ [9mFind the listeners[0m
+   [2m│[0m       [2m [0m  [2m☒ [9mWrite the answer[0m
+   [2m│[0m
+   [2m│[0m     [2m⏺[0m [1mSearch[0m(sessionUpdate in src)
+   [2m│[0m       [2m⎿[0m  [2mFound 14 files[0m
+   [2m│[0m
+   [2m│[0m     [2m⏺[0m [1mRead[0m(src/acp/connection.ts)
+   [2m│[0m
+   [2m│[0m     [2m⏺[0m [1mAgent[0m(Read the transport tests)
+   [2m│[0m       [2m⎿[0m  [2mDone (2 tool uses · 0s)[0m
+   [2m│[0m
+   [2m│[0m     [2m⏺[0m [1mRead[0m(src/session/session.ts)
+   [2m│[0m
+   [2m│[0m     [2m⏺[0m [1mWrite[0m(notes/routing.md)
+   [2m│[0m       [2m⎿[0m  [2mAllowed Write notes/routing.md · Allow[0m
+   [2m│[0m
+ [2m── ↓ 27 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

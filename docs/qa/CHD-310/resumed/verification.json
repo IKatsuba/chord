@@ -1,0 +1,2945 @@
+{
+  "branch": "opentui",
+  "implementation": "77cf29fb",
+  "baseline_main": "3538862f",
+  "qa_result": "FAIL: CHD-334",
+  "check": {
+    "lint_tests": 51,
+    "tests": 1497,
+    "files": 108,
+    "failures": 0,
+    "seconds": 502.83
+  },
+  "binary_sha256": "68dd7e51f84c5a1853e96b8aeef8eb18640f4d0eee24231704355ff06d4c1d55",
+  "clipboard_restored": true,
+  "paired_screens": 987,
+  "terminal_checks": [
+    {
+      "case": "matrices/source-80-osc9/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtur\nes/fake_agent/main.ts --no-http\" -C \"/tmp/chd310-final/m3/source-80-osc9/work\"\nResume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts --no-http' --resume 8d1bcd9a-32ea-413c-8ec2-dfbf763a6a5d\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-osc9/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts --no-http' --resume 28ccfffa-d050-4165-8032-ae4eda6f88c2\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-m5/cleanup-first.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts' --resume 1d1376af-b795-4ce7-b8\nf0-29210cb98d48\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-m5/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts' --resume 1d1376af-b795-4ce7-b8\nf0-29210cb98d48\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-m5/cleanup-first.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/main.ts'\" -C \"/tmp/chd310-final/m45/source-\n120-m5/work\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts'\\''' --resume 94a2697f-d6ae\n-4e1a-b94e-c301ebac37fc\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-m5/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/main.ts'\" -C \"/tmp/chd310-final/m45/source-\n120-m5/work\" --resume \"94a2697f-d6ae-4e1a-b94e-c301ebac37fc\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts'\\''' --resume 94a2697f-d6ae\n-4e1a-b94e-c301ebac37fc\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-osc777/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtur\nes/fake_agent/main.ts --no-http\" -C \"/tmp/chd310-final/m3/source-80-osc777/work\"\nResume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts --no-http' --resume d2b61a31-87df-46ea-bb33-a58999adc93f\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-m4/cleanup-first.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/main.ts'\" -C \"/tmp/chd310-final/m45/source-\n120-m4/work\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts'\\''' --resume d670edaf-4275\n-4d1b-83f5-4bbdb17d1717\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-m4/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/main.ts'\" -C \"/tmp/chd310-final/m45/source-\n120-m4/work\" --resume \"d670edaf-4275-4d1b-83f5-4bbdb17d1717\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts'\\''' --resume d670edaf-4275\n-4d1b-83f5-4bbdb17d1717\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-m3/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http\" -C \"/tm\np/chd310-final/m3/source-120-m3/work\"\nResume this window with:\nchord --resume w-461d4887\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-m3/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this window with:\nchord --resume w-c98f0efd\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-m4/cleanup-first.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts' --resume add21c48-5b50-4451-a0\n3e-7cfeb03ae337\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-m4/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts' --resume add21c48-5b50-4451-a0\n3e-7cfeb03ae337\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-m3-other/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtur\nes/fake_agent/main.ts --no-http\" -C \"/tmp/chd310-final/m3/source-80-m3-other/wor\nk\"\nResume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts --no-http' --resume 7284652d-3151-4a99-976a-58bb218e0b5e\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-rebound/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtur\nes/fake_agent/main.ts --no-http\" -C \"/tmp/chd310-final/m3/source-80-rebound/work\n\"\nResume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts --no-http' --resume 903a5451-b412-464b-81db-18d38f038afb\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-m5/cleanup-first.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/mai\nn.ts'\" -C \"/tmp/chd310-final/m45/source-80-m5/work\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_a\ngent/main.ts'\\''' --resume 9c0c7406-c76d-48ee-a24e-9adbf2657589\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-m5/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/mai\nn.ts'\" -C \"/tmp/chd310-final/m45/source-80-m5/work\" --resume \"9c0c7406-c76d-48ee\n-a24e-9adbf2657589\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_a\ngent/main.ts'\\''' --resume 9c0c7406-c76d-48ee-a24e-9adbf2657589\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-m3/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtur\nes/fake_agent/main.ts --no-http\" -C \"/tmp/chd310-final/m3/source-80-m3/work\"\nResume this window with:\nchord --resume w-9fb12817\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-m4/cleanup-first.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/mai\nn.ts'\" -C \"/tmp/chd310-final/m45/source-80-m4/work\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_a\ngent/main.ts'\\''' --resume 31a252fb-4c8e-41a9-94f0-984703a4a706\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-m4/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/mai\nn.ts'\" -C \"/tmp/chd310-final/m45/source-80-m4/work\" --resume \"31a252fb-4c8e-41a9\n-94f0-984703a4a706\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_a\ngent/main.ts'\\''' --resume 31a252fb-4c8e-41a9-94f0-984703a4a706\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-rebound/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http' --resume d90807c6-5f\n81-4f72-ac0d-e26aca5ee4f6\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-vim-extra/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "QA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-osc777/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts --no-http' --resume 8696201b-4525-4d8d-a6c7-1762d9baa596\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-proposal/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/mai\nn.ts'\" -C \"/tmp/chd310-final/m45/source-80-proposal/work\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_a\ngent/main.ts'\\''' --resume 0b0e2557-c6fe-4d1b-a3b7-788abb50cce0\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-osc9/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http\" -C \"/tm\np/chd310-final/m3/source-120-osc9/work\"\nResume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http' --resume e7358ec0-dd\n92-4f62-a5c0-5e1c1a4c1502\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-rebound/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts --no-http' --resume a30bf0c9-8c89-4c4e-86d7-68bab7a6c018\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-proposal/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts' --resume f5029e81-5e23-4f1a-b7\na3-d584630ea609\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-rebound/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http\" -C \"/tm\np/chd310-final/m3/source-120-rebound/work\"\nResume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http' --resume 7947ba21-33\n01-4611-9a65-31e8b8e204eb\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-m3-other/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts --no-http' --resume 6180f2e3-1ec3-4f2a-9336-74f62df35ca5\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-m3-other/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http' --resume 62c08712-8d\n9d-4874-beca-ebd06d621a1b\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-vim-extra/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "QA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-proposal/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts' --resume e3d5f20c-013b-4bce-be47-92f2fea1996e\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-osc777/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http\" -C \"/tm\np/chd310-final/m3/source-120-osc777/work\"\nResume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http' --resume 57efe142-4e\n97-4265-9cb8-45a65b79eb07\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-80-vim-extra/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/mai\nn.ts'\" -C \"/tmp/chd310-final/m3/source-80-vim-extra/work\"\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-vim-extra/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/main.ts'\" -C \"/tmp/chd310-final/m3/source-1\n20-vim-extra/work\"\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-m3-other/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http\" -C \"/tm\np/chd310-final/m3/source-120-m3-other/work\"\nResume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http' --resume c889879a-9c\n7a-4bdd-a3be-e53e9ffd456d\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-m4/cleanup-first.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts' --resume d1c081f1-1c6c-4bd9-91e7-4c919c905278\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-m4/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts' --resume d1c081f1-1c6c-4bd9-91e7-4c919c905278\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-m3/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this window with:\nchord --resume w-efef894f\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-osc777/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http' --resume 7fc9ce07-cc\ne9-4606-b996-502b63331e34\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/source-120-proposal/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/main.ts'\" -C \"/tmp/chd310-final/m45/source-\n120-proposal/work\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts'\\''' --resume 9bd128a5-1079\n-46bc-aa76-b3444ef19ad7\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-120-osc9/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts --no-http' --resume 8d1a4627-09\n5b-4971-8947-406985342116\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-m5/cleanup-first.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts' --resume 28dd9163-80f5-4163-b757-56fffb8c1617\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "matrices/binary-80-m5/cleanup.json",
+      "terminal": "alternate=0 cursor=1",
+      "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+      "stty_equal": true,
+      "raw_alternate_enter": true,
+      "raw_alternate_leave": true,
+      "raw_cursor_show": true,
+      "screen": "Resume this session with:\nchord fake --agent-command 'bun /tmp/chd310-final-repo/tests/fixtures/fake_agent\n/main.ts' --resume 28dd9163-80f5-4163-b757-56fffb8c1617\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "owned_processes_remaining": []
+    },
+    {
+      "case": "exits/source-120-hung-rejection/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.051,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-hung-rejection/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.082,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-hung-SIGHUP/result.json",
+      "exit": 129,
+      "expected": 129,
+      "seconds": 4.04,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-120-hung-SIGHUP/result.json",
+      "exit": 129,
+      "expected": 129,
+      "seconds": 4.056,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-monitor-exception/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.085,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-picker/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-hung-SIGHUP/result.json",
+      "exit": 129,
+      "expected": 129,
+      "seconds": 4.033,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-hung-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.059,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-hung-exception/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.11,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-hung-exception/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.099,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-80-hung-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.039,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-80-hung-double/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.073,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": true
+    },
+    {
+      "case": "exits/binary-80-picker/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-hung-SIGTERM/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.079,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-80-hung-SIGTERM/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.05,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-monitor-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.073,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-80-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-slash/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-monitor-exception/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.039,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-120-hung-double/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.087,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": true
+    },
+    {
+      "case": "exits/source-120-hung-double/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.081,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": true
+    },
+    {
+      "case": "exits/binary-80-monitor-exception/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.08,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-tabs-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.031,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-80-tabs-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.046,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-hung-exception/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.097,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-hung-rejection/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.078,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-slash/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-hung-SIGTERM/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.099,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-hung-double/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.09,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": true
+    },
+    {
+      "case": "exits/binary-120-tabs-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.108,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-hung-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.058,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-80-hung-exception/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.09,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-120-hung-rejection/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.072,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-hung-SIGHUP/result.json",
+      "exit": 129,
+      "expected": 129,
+      "seconds": 4.035,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-monitor-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.024,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-hung-SIGTERM/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.107,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-80-slash/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-slash/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-picker/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-picker/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-hung-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.084,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-120-monitor-exception/result.json",
+      "exit": 1,
+      "expected": 1,
+      "seconds": 4.089,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": true,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-80-monitor-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.104,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/binary-120-monitor-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.106,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "exits/source-120-tabs-overlap/result.json",
+      "exit": 143,
+      "expected": 143,
+      "seconds": 4.068,
+      "stty_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "group_alive": [],
+      "stderr_crash": false,
+      "double_fired": false
+    },
+    {
+      "case": "regression/regression-current/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "regression/regression-binary-120/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "regression/regression-binary-80/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "regression/regression-source-80/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "regression/regression-before-parent-resize/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/source-120-m12/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/binary-120-m12/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/binary-120-window/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/source-80-m12/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/source-120-window/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/binary-80-m12/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/source-80-window/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/binary-80-window/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    }
+  ],
+  "raw_terminal_audits": [
+    {
+      "file": "m3/binary-80-osc9/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 10,
+      "notifications": [
+        {
+          "offset": 5903,
+          "hex": "1b50746d75783b1b1b5d393b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        },
+        {
+          "offset": 8573,
+          "hex": "1b50746d75783b1b1b5d393b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c"
+        },
+        {
+          "offset": 12498,
+          "hex": "1b50746d75783b1b1b5d393b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        }
+      ]
+    },
+    {
+      "file": "m3/source-80-osc9/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 10,
+      "notifications": [
+        {
+          "offset": 5959,
+          "hex": "1b50746d75783b1b1b5d393b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        },
+        {
+          "offset": 8629,
+          "hex": "1b50746d75783b1b1b5d393b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c"
+        },
+        {
+          "offset": 12525,
+          "hex": "1b50746d75783b1b1b5d393b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        }
+      ]
+    },
+    {
+      "file": "m3/source-80-osc777/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 10,
+      "notifications": [
+        {
+          "offset": 6067,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        },
+        {
+          "offset": 8754,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c"
+        },
+        {
+          "offset": 12696,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        }
+      ]
+    },
+    {
+      "file": "m3/binary-120-m3/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 29,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-120-m3/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 29,
+      "notifications": []
+    },
+    {
+      "file": "m3/binary-120-vim-extra/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-80-m3-other/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-80-m3/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 29,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-80-rebound/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 1,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "m3/binary-80-osc777/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 10,
+      "notifications": [
+        {
+          "offset": 5905,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        },
+        {
+          "offset": 8592,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c"
+        },
+        {
+          "offset": 12534,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        }
+      ]
+    },
+    {
+      "file": "m3/binary-120-rebound/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 3,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "m3/binary-80-rebound/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 1,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-120-osc9/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 10,
+      "notifications": [
+        {
+          "offset": 9553,
+          "hex": "1b50746d75783b1b1b5d393b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        },
+        {
+          "offset": 11656,
+          "hex": "1b50746d75783b1b1b5d393b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c"
+        },
+        {
+          "offset": 14692,
+          "hex": "1b50746d75783b1b1b5d393b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        }
+      ]
+    },
+    {
+      "file": "m3/binary-80-m3-other/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-120-osc777/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 10,
+      "notifications": [
+        {
+          "offset": 9557,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        },
+        {
+          "offset": 11675,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c"
+        },
+        {
+          "offset": 14644,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        }
+      ]
+    },
+    {
+      "file": "m3/binary-80-vim-extra/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-120-rebound/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 3,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "m3/binary-80-m3/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 29,
+      "notifications": []
+    },
+    {
+      "file": "m3/binary-120-osc777/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 10,
+      "notifications": [
+        {
+          "offset": 9394,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        },
+        {
+          "offset": 11512,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c"
+        },
+        {
+          "offset": 14333,
+          "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        }
+      ]
+    },
+    {
+      "file": "m3/binary-120-m3-other/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-120-m3-other/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-120-vim-extra/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "m3/source-80-vim-extra/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "m3/binary-120-osc9/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 10,
+      "notifications": [
+        {
+          "offset": 9392,
+          "hex": "1b50746d75783b1b1b5d393b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        },
+        {
+          "offset": 11495,
+          "hex": "1b50746d75783b1b1b5d393b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c"
+        },
+        {
+          "offset": 14560,
+          "hex": "1b50746d75783b1b1b5d393b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c"
+        }
+      ]
+    },
+    {
+      "file": "m45/binary-80-proposal/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 9,
+      "notifications": []
+    },
+    {
+      "file": "m45/binary-120-m5/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 11,
+      "notifications": []
+    },
+    {
+      "file": "m45/source-80-m5/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 11,
+      "notifications": []
+    },
+    {
+      "file": "m45/binary-120-m4/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "m45/binary-120-proposal/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 9,
+      "notifications": []
+    },
+    {
+      "file": "m45/source-80-proposal/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 9,
+      "notifications": []
+    },
+    {
+      "file": "m45/source-120-m4/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "m45/source-80-m4/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "m45/binary-80-m5/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 11,
+      "notifications": []
+    },
+    {
+      "file": "m45/source-120-proposal/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 9,
+      "notifications": []
+    },
+    {
+      "file": "m45/source-120-m5/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 11,
+      "notifications": []
+    },
+    {
+      "file": "m45/binary-80-m4/terminal.raw",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/regression-binary-80/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 2,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-120-window/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 9,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-80-picker/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 5,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-80-ctrld/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-120-m12/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 6,
+      "bells": 23,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-80-slash/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/regression-binary-120/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 3,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-120-window/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 9,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-80-ctrlc/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-80-m12/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 4,
+      "bells": 23,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-80-m12/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 4,
+      "bells": 23,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-120-m12/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 6,
+      "bells": 23,
+      "notifications": []
+    },
+    {
+      "file": "exits/regression-source-80/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 2,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-80-slash/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-80-window/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 9,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-120-ctrlc/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-120-slash/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-80-picker/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 5,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-120-ctrld/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/regression-current/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 3,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-120-slash/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-120-picker/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 5,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-80-ctrld/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-80-window/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 9,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-120-ctrld/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-80-ctrlc/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/regression-before-parent-resize/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "exits/binary-120-ctrlc/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "exits/source-120-picker/terminal.ansi",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 5,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-hung-rejection/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-hung-SIGTERM/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-hung-double/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-hung-SIGTERM/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-hung-SIGHUP/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-monitor-exception/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 8,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-hung-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-hung-SIGHUP/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-hung-rejection/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-hung-exception/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-hung-SIGHUP/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-hung-exception/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-hung-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-monitor-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 8,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-monitor-exception/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 8,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-hung-double/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-hung-double/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-monitor-exception/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 8,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-tabs-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-tabs-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-hung-exception/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-hung-rejection/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-hung-SIGTERM/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-hung-double/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-tabs-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-hung-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-80-hung-SIGHUP/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-hung-rejection/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-hung-SIGTERM/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-hung-exception/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-hung-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 6,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-monitor-exception/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 8,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-80-monitor-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 8,
+      "notifications": []
+    },
+    {
+      "file": "forced/binary-120-monitor-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 8,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-tabs-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 7,
+      "notifications": []
+    },
+    {
+      "file": "forced/source-120-monitor-overlap/terminal.raw.ansi.gz",
+      "entered": true,
+      "modes": {
+        "25": true,
+        "1000": false,
+        "1002": false,
+        "1003": false,
+        "1006": false,
+        "1049": false,
+        "2004": false
+      },
+      "warnings": 0,
+      "bells": 8,
+      "notifications": []
+    }
+  ],
+  "unjudged": [
+    "Owner physical kitty shift+Enter and final acceptance; desktop notification delivery.",
+    "CHD-163 existing fixture gaps; CHD-300 excluded splash/forms/rewind and Linux-display rows.",
+    "Other-platform execution; build evidence is CHD-309."
+  ],
+  "final_tree_check": {
+    "lint_tests": 51,
+    "tests": 1497,
+    "files": 108,
+    "failures": 0,
+    "assertions": 17858,
+    "seconds": 505.67
+  }
+}

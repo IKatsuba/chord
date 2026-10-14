@@ -1,0 +1,9 @@
+deno task check: passed types, lint, formatting and tests.
+ok | 850 passed (20 steps) | 0 failed (3m48s)
+deno task compile: passed; aarch64-apple-darwin binary started in tmux and completed fake-agent headless turns.
+Independent full-chain assertions: 4 mode/report race combinations and subsequent silent requests passed.
+Independent fake sessions: agent-reported and tokens-only/silent cases passed; owned agent PIDs exited.
+Final ps inspection: no owned fake-agent or Deno test-runner process remains. The pre-existing Codex adapter PIDs are unchanged and were left alone.
+Isolated tmux server: no server running after both owned sessions were removed.
+Private-path scan: no matches in docs/qa/evidence/CHD-139.
+No live model or agent used; no new findings filed. Existing CHD-143 stays separate.

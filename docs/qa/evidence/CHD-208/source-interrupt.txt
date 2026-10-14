@@ -1,0 +1,24 @@
+ chord                                               fake · /tmp/chd208-qa/work
+      ⏺ Bash(deno task test)
+
+      ⏺ Every test passed.
+   ⎿  Done (1 tool use · 2s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   .............................
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

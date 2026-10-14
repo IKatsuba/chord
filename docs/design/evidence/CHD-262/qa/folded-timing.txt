@@ -1,0 +1,24 @@
+permission:
+    main       fake · Fake
+    bugfix     team · fake · 3 agents  ● tester: permission 12s
+    parser     fake · Fake
+=>
+    main       fake · Fake
+    bugfix     team · fake · 3 agents  ● tester: permission 14s
+    parser     fake · Fake
+working:
+    main       fake · Fake
+    bugfix     team · fake · 3 agents  ✻ tester: working 12s
+    parser     fake · Fake
+=>
+    main       fake · Fake
+    bugfix     team · fake · 3 agents  ✻ tester: working 14s
+    parser     fake · Fake
+replied:
+    main       fake · Fake
+    bugfix     team · fake · 3 agents  ✓ tester: replied 12s ago
+    parser     fake · Fake
+=>
+    main       fake · Fake
+    bugfix     team · fake · 3 agents  ✓ tester: replied 14s ago
+    parser     fake · Fake

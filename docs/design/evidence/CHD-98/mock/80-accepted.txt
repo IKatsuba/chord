@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.Xk2p
+
+
+
+
+
+
+
+
+
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Answered · 7 fields
+
+ ⏺ Elicitation answer: accept
+   {"name":"web-app","email":"ops@example.io","replicas":3,"ratio":0.25,
+   "public":true,"region":"us","tags":["web","worker"]}
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                            Fake Large with a 1M context window

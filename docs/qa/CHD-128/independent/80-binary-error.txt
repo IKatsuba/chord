@@ -1,0 +1,24 @@
+ chord           fake · /tmp/chd128-independent-86b3e29bbbd49264/80-binary/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

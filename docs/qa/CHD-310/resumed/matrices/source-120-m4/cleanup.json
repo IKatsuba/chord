@@ -1,0 +1,11 @@
+{
+  "terminal": "alternate=0 cursor=1",
+  "stty_before": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+  "stty_after": "gfmt1:cflag=4b00:iflag=6b02:lflag=5cb:oflag=3:discard=f:dsusp=19:eof=4:eol=ff:eol2=ff:erase=7f:intr=3:kill=15:lnext=16:min=1:quit=1c:reprint=12:start=11:status=14:stop=13:susp=1a:time=0:werase=17:ispeed=9600:ospeed=9600",
+  "stty_equal": true,
+  "raw_alternate_enter": true,
+  "raw_alternate_leave": true,
+  "raw_cursor_show": true,
+  "screen": "$ bun src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/main.ts'\" -C \"/tmp/chd310-final/m45/source-\n120-m4/work\" --resume \"d670edaf-4275-4d1b-83f5-4bbdb17d1717\"\nResume this session with:\nchord fake --agent-command 'bun '\\''/tmp/chd310-final-repo/tests/fixtures/fake_agent/main.ts'\\''' --resume d670edaf-4275\n-4d1b-83f5-4bbdb17d1717\nQA_EXIT=0\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+  "owned_processes_remaining": []
+}

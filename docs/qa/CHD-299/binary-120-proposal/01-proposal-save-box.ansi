@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.0[0m
+ ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m/tmp/chd299/binary-120-proposal/work[0m
+ █▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m /team new a bugfix team
+
+ ⏺ A lead on Opus to split the work, and three members, one for each step. Only one of them edits a file at a time.
+
+ [2m⏺[0m [1mTeam[0m(bugfix)[2m · proposal[0m
+   [2m⎿[0m  [2mFixes a bug end to end: a failing test first, then the fix, then a review of the diff.[0m
+
+   [2m [0m  lead      claude · opus          default      Splits the job, says who edits which files, reports to main
+   [2m [0m  tester    claude · sonnet        acceptEdits  Writes the failing test, then proves the fix
+   [2m [0m  coder     codex · gpt-5.3-codex  auto         Writes the fix, in the files the lead names
+   [2m [0m  reviewer  claude · opus          plan         Reads the diff and edits nothing
+   [2m [0m
+   [2m [0m  [1;4mHow bugfix works[0m
+   [2m [0m  [2m1.[0m The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      [2m… +29 lines (ctrl+o to expand)[0m
+
+
+
+
+ ✺ Waiting for you… [2m(1s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mSave team bugfix?[0m                                                                                                    [2m│
+│[0m                                                                                                                      [2m│
+│[0m ❯ 1. Yes, for this project   .chord/teams/bugfix.md                                                                  [2m│
+│[0m   2. Yes, for every project  /tmp/chd299/binary-120-proposal/config/chord/teams/bugfix.md                            [2m│
+│[0m   3. No, tell fake what to change                                                                                    [2m│
+│[0m                                                                                                                      [2m│
+│[0m [2mEsc to tell fake what to change[0m                                                                                      [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m

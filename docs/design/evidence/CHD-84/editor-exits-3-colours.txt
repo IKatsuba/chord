@@ -1,0 +1,6 @@
+  ^[[38;2;255;193;7m = #ffc107, the dark theme warning tone; ^[[38;2;138;90;0m = #8a5a00, the light one
+
+dark, 80x24:
+  ^[[38;2;255;193;7mfail.sh exited with code 3; the draft is unchanged^[[39m    ^[[2mFake Large… · 99% left
+light, 80x24:
+  ^[[38;2;138;90;0mfail.sh exited with code 3; the draft is unchanged^[[39m     ^[[2mFake Large with a 1M…

@@ -1,0 +1,24 @@
+ chord                                         fake · /tmp/chord-qa.4vQVHX/work
+      4   }
+
+ ⏺ Edited.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0125
+      Tokens in:    3,000
+      Tokens out:   600
+      Cache read:   2,400
+      Session time: 0s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

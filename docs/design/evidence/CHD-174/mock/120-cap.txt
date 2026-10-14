@@ -1,0 +1,40 @@
+ chord   1 claude    2 codex    3 claude ✓    4 claude    5 gemini    6 claude    7 claude                     ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › fix the failing date test in the parser
+
+ ⏺ The parser reads the day before the month. Fixed in src/date.ts.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  That window needs 3 tabs and 2 are free · close 1 with ctrl+x k, then /resume again    Claude Opus · 100% context left

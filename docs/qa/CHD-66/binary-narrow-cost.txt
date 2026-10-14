@@ -1,0 +1,24 @@
+ chord                                              fake · /tmp/chd66-qa.uf7EKT
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 7s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

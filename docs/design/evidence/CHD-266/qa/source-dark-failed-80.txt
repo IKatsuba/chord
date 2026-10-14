@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd266-qa/work
+ ▀▀     ? for shortcuts · /help
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Failed (3 tool uses · 3s)
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ← Fix the tokenizer · fake · failed
+   ⎿  The edit to src/parse/tokenize.ts was denied, so the tokenizer is not
+      fixed.
+
+ ⏺ Received the message from Fix the tokenizer · fake · failed.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

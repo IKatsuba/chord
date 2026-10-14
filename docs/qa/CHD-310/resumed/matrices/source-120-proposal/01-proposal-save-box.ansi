@@ -1,0 +1,40 @@
+[38;2;255;255;255m [39m█▄  [38;2;255;255;255m   [1m[39mchord[0;2m v0.0.0[0m[38;2;255;255;255m
+ [39m▀██▄[38;2;255;255;255m   [2m[39mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m/tmp/chd310-final/m45/source-120-proposal/work[0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team new a bugfix team[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mA lead on Opus to split the work, and three members, one for each step. Only one of them edits a file at a time.[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(bugfix)[2m · proposal[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mFixes a bug end to end: a failing test first, then the fix, then a review of the diff.[0m[38;2;255;255;255m
+
+   [2m[39m [0m[38;2;255;255;255m  [39mlead      claude · opus          default      Splits the job, says who edits which files, reports to main[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mtester    claude · sonnet        acceptEdits  Writes the failing test, then proves the fix[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mcoder     codex · gpt-5.3-codex  auto         Writes the fix, in the files the lead names[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mreviewer  claude · opus          plan         Reads the diff and edits nothing[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [1;4m[39mHow bugfix works[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m1.[0m The lead reads the job, finds the files involved, and names who may edit which before anyone starts.[38;2;255;255;255m
+      [2m[39m… +30 lines (ctrl+o to expand)[0m[38;2;255;255;255m
+
+
+
+
+ [39m✺[38;2;255;255;255m [39mWaiting for you…[38;2;255;255;255m [2m[39m(1s)[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [1m[39mSave team bugfix?[0m[38;2;255;255;255m                                                                                                    [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [39m❯[38;2;255;255;255m [39m1. Yes, for this project   .chord/teams/bugfix.md[38;2;255;255;255m                                                                  [38;5;244m│
+│[38;2;255;255;255m [39m [38;2;255;255;255m [39m2. Yes, for every project  /tmp/chd310-final/m45/source-120-proposal/config/chord/teams/bugfix.md[38;2;255;255;255m                  [38;5;244m│
+│[38;2;255;255;255m [39m [38;2;255;255;255m [39m3. No, tell fake what to change[38;2;255;255;255m                                                                                    [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [2m[39mEsc to tell fake what to change[0m[38;2;255;255;255m                                                                                      [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                                                  [2m[39mFake Large with a 1M context window[0m[38;2;255;255;255m

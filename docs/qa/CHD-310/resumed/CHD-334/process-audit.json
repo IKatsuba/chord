@@ -1,0 +1,21 @@
+{
+  "completed_cases": [
+    "binary-120-instructions",
+    "binary-120-m12",
+    "binary-120-rebound",
+    "binary-120-shortcuts",
+    "binary-80-instructions",
+    "binary-80-m12",
+    "binary-80-rebound",
+    "binary-80-shortcuts",
+    "source-120-instructions",
+    "source-120-m12",
+    "source-120-rebound",
+    "source-120-shortcuts",
+    "source-80-instructions",
+    "source-80-m12",
+    "source-80-rebound",
+    "source-80-shortcuts"
+  ],
+  "owned_chord_or_fake_remaining": []
+}

@@ -1,0 +1,24 @@
+[38;2;255;255;255m [2m[39m⏺[0m[38;2;255;255;255m [2m[39mteam bugfix (3 agents) was open when this session was left and is not [0m[38;2;255;255;255m
+   [2m[39mreopened · /resume lists them · /team run bugfix starts the team again[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team run bugfix Fresh resumed job[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(bugfix)[2m · fake · fake-large[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mFresh resumed job[0m[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@bugfix[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39min tests/parse/tokenize_test.ts; coder waits for it and will edit[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39msrc/parse/tokenize.ts only. I will report when the test fails[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mfor the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix · fake.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m● tester needs your permission · ctrl+x a[0m[38;2;255;255;255m    [2m[39mFake Large with a 1M… · 1% used[0m[38;2;255;255;255m
+  [39m  [1mmain     [0;2m  fake       [0m[38;2;255;255;255m
+  [39m  bugfix   [2m  team · fake[0m  ✓ replied 3s ago[38;2;255;255;255m
+  [39m  [2m├─ [0mtester[2m  fake       [0m  ● permission 1s[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 2s ago[38;2;255;255;255m

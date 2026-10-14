@@ -1,0 +1,24 @@
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › first line
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on     Fake Large with a 1M context window · 2% context used

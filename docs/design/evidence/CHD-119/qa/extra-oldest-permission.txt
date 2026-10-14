@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake    3 fake ●                 /tmp/chd119-qa/extra-work
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ✹ Waiting for permission… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● 3 fake asks for input · ctrl+x a       Fake Large with a 1M context window

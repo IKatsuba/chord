@@ -1,0 +1,4 @@
+Resume this window with:
+chord --resume w-4955da7e
+QA_SHELL_RETURNED
+$

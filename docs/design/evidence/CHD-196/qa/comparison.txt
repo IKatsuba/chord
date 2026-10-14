@@ -1,0 +1,14 @@
+Fresh captures use an isolated scratch directory. Its longer path changes header spacing; only that first row is excluded from byte comparison. Every remaining row is compared whole, including whitespace.
+
+120-shell-folded.txt: identical to engineer after-capture below the scratch-directory header
+120-shell-expanded.txt: identical to engineer after-capture below the scratch-directory header
+120-shellcut-folded.txt: identical to engineer after-capture below the scratch-directory header
+120-shellcut-expanded.txt: identical to engineer after-capture below the scratch-directory header
+120-bash-folded.txt: identical to engineer after-capture below the scratch-directory header
+120-bash-expanded.txt: identical to engineer after-capture below the scratch-directory header
+80-shell-folded.txt: identical to engineer after-capture below the scratch-directory header
+80-shell-expanded.txt: identical to engineer after-capture below the scratch-directory header
+80-shellcut-folded.txt: identical to engineer after-capture below the scratch-directory header
+80-shellcut-expanded.txt: identical to engineer after-capture below the scratch-directory header
+80-bash-folded.txt: identical to engineer after-capture below the scratch-directory header
+80-bash-expanded.txt: identical to engineer after-capture below the scratch-directory header

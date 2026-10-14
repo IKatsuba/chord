@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd300/source-80-m3/work
+ █▀     ? for shortcuts · /help
+
+ › [Image #1]
+
+ ⏺ Received an image: image/png, 132 bytes
+
+   Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › edited draft from scripted EDITOR                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                         Fake Large with a 1M context window · 1% context used

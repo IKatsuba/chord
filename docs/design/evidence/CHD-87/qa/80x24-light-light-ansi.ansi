@@ -1,0 +1,103 @@
+--- markdown-top ---
+ [1mchord[0m                  [2mfake · /tmp/chd87-qa/matrix/80x24-light-light-ansi/work[0m
+
+ [2m›[0m markdown
+
+ ⏺ [1;4mReading the session layer[0m
+
+   The [1msession layer[0m wraps [3macpx[0m so the interface never touches a process. Start
+   with [34msrc/session/session.ts[39m, then see the [4m[34mACP spec[0m
+   [2m(https://agentclientprotocol.com)[0m for the wire format.
+
+   [1mWhat it does[0m
+
+   [2m-[0m opens one persistent session per chord session
+   [2m-[0m starts turns with [34mstartTurn[39m and cancels them
+     [2m1.[0m a cancel stops the turn at once
+     [2m2.[0m the agent is told with [34msession/cancel[39m
+   [2m-[0m closes the agent and waits until its exit is seen
+
+ [2m── ↓ 39 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [35m⏵⏵ accept edits on[39m    [2mFake Large with a 1M context window · 99% context left[0m
+
+--- markdown ---
+ [1mchord[0m                  [2mfake · /tmp/chd87-qa/matrix/80x24-light-light-ansi/work[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [34mmain[39m once every check has passed and the tree is clean, so
+     whoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [35mfor[39m bin [35min[39m dist/*/chord; [35mdo[39m [36mecho[39m [33m"built $bin"[39m; [35mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [33m✹[39m [33mWorking…[39m [2m(4s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [35m⏵⏵ accept edits on[39m    [2mFake Large with a 1M context window · 99% context left[0m
+
+--- edit ---
+ [1mchord[0m                  [2mfake · /tmp/chd87-qa/matrix/80x24-light-light-ansi/work[0m
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [35mfor[39m bin [35min[39m dist/*/chord; [35mdo[39m [36mecho[39m [33m"built $bin"[39m; [35mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m edit
+
+ [32m⏺[39m [1mEdit[0m(src/greeting.ts)
+   [2m⎿[0m  [2mUpdated src/greeting.ts with 2 additions and 1 removal[0m
+      [2m1[0m [32m+ /** Greets someone by name. */[39m
+      [2m2[0m   [35mexport[39m [35mfunction[39m [34mgreet[39m(name: [36mstring[39m): [36mstring[39m {
+      [2m2[0m [31m-   return "hello " + name;[39m
+      [2m3[0m [32m+   return `hello, ${name}`;[39m
+      [2m4[0m   }
+
+ ⏺ Edited.
+
+ [33m✷[39m [33mWorking…[39m [2m(0s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [35m⏵⏵ accept edits on[39m    [2mFake Large with a 1M context window · 99% context left[0m
+
+--- picker ---
+ [1mchord[0m                  [2mfake · /tmp/chd87-qa/matrix/80x24-light-light-ansi/work[0m
+[34m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[34mTheme[0m                                                                        [34m│
+│[39m [2mChoose the colours that read best on this terminal.[0m                          [34m│
+│[39m                                                                              [34m│
+│[39m [34m [39m 1. Auto (light, from the terminal)                                         [34m│
+│[39m [34m [39m 2. Dark                                                                    [34m│
+│[39m [34m [39m 3. Light                                                                   [34m│
+│[39m [34m [39m 4. Dark, colour-blind friendly                                             [34m│
+│[39m [34m [39m 5. Light, colour-blind friendly                                            [34m│
+│[39m [34m [39m 6. Dark, the terminal's 16 colours                                         [34m│
+│[39m [34m❯[39m [34m7. Light, the terminal's 16 colours ✔[39m                                      [34m│
+│[39m                                                                              [34m│
+│[39m  [2m1[0m   [35mfunction[39m [34mgreet[39m(name) {                                                  [34m│
+│[39m  [2m2[0m [31m-   return "hello " + name;[39m                                               [34m│
+│[39m  [2m2[0m [32m+   return `hello, ${name}`;[39m                                              [34m│
+│[39m                                                                              [34m│
+│[39m [2m↑↓ to preview · Enter to keep · Esc to go back to Light, the terminal's 16 …[0m [34m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [35m⏵⏵ accept edits on[39m    [2mFake Large with a 1M context window · 99% context left[0m

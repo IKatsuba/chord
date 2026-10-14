@@ -1,0 +1,27 @@
+{
+  "app": 8065,
+  "fakes": [
+    8070
+  ],
+  "owned": [
+    8065,
+    8070
+  ],
+  "groups": [
+    8070
+  ],
+  "rows": [
+    [
+      "8070",
+      "8065",
+      "8070",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "8065",
+      "8058",
+      "8058",
+      "bun /tmp/chd331-qa/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/source-120-hung-SIGABRT/work"
+    ]
+  ]
+}

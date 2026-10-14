@@ -1,0 +1,24 @@
+ bugfix · team · limited · Fake Large ...ontext window · opened by @main 4s ago
+
+ ⏺ Could not start on high effort, set by team bugfix: the agent offers no
+   efforts
+
+ ⏺ bugfix's instructions for the lead · 30 lines (ctrl+o to expand)
+
+ ← @main
+   ⎿  Issue 214: a string at the end of a line loses its closing quote.
+      readString in src/parse/tokenize.ts stops at the newline before it
+      consumes the quote. Add a test that fails for that reason, fix it,
+      and have the diff reviewed. Report to me when it is done.
+
+ ⏺ Open(tester) · limited · fake-small · acceptEdits
+ ── ↓ 18 lines below · end to jump to the bottom ──────────────────────────────
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+    main       fake
+  ❯ bugfix     team · limited
+    ├─ tester  limited         ● permission 3s
+    └─ coder   limited         ✓ replied 4s ago

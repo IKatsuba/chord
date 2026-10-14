@@ -1,0 +1,24 @@
+
+ › /context
+   ⎿  Used: 24,000 of 200,000 tokens (12%)
+      Free: 176,000 tokens (88%)
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Small
+      Mode:      Accept edits
+      Session:   c16ea221-dd46-4db0-b186-f2ba42cb6d84
+      Directory: /tmp/chd334-qa/exits/source-80-m12/work
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ......
+
+ ✶ Working… (1s · esc to interrupt)
+ › queued QA
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

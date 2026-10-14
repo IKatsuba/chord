@@ -1,0 +1,24 @@
+ chord                                fake · /tmp/chord-qa-76-caf0423fbcd13b6/A
+
+
+
+
+
+
+
+
+
+
+
+ ⏺ .chord/settings.json: unknown key "theme", ignored
+
+ ⏺ Could not start on nope, set by --model: the agent offers fake-large,
+   fake-small
+
+ ⏺ Could not start in bogus mode, set by --permission-mode: the agent offers
+   default, acceptEdits, plan
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

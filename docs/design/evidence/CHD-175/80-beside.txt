@@ -1,0 +1,24 @@
+ chord   1 claude    2 claude    3 gemini                             ~/src/app
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   claude · Fake Large with a 1M context window
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+        resumed · 2 days ago · add a --json flag to the agents command
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

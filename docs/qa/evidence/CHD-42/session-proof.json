@@ -1,0 +1,74 @@
+[
+  {
+    "run": "source-120x40",
+    "original_session_id": "18d424b8-579e-4e19-b777-66b3bf0c0d0c",
+    "clear_session_id": "809da2b9-6dd1-4ed9-995b-a48113af7dff",
+    "different_clear_session": true,
+    "original_user_prompts": [
+      "/greet day",
+      "@src/day.ts",
+      "<bash-input>printf \"day-context\\n\"</bash-input>\n<bash-stdout>day-context</bash-stdout><bash-stderr></bash-stderr>\n\ntext",
+      "slow",
+      "thought",
+      "markdown",
+      "edit",
+      "error"
+    ],
+    "queued_draft_sent": false,
+    "last_agent_exit_code": null
+  },
+  {
+    "run": "source-80x24",
+    "original_session_id": "3a02fece-942a-4eba-87d1-4a88deeaea17",
+    "clear_session_id": "a32e751b-375b-4d87-9a5a-e13296acbdb8",
+    "different_clear_session": true,
+    "original_user_prompts": [
+      "/greet day",
+      "@src/day.ts",
+      "<bash-input>printf \"day-context\\n\"</bash-input>\n<bash-stdout>day-context</bash-stdout><bash-stderr></bash-stderr>\n\ntext",
+      "slow",
+      "thought",
+      "markdown",
+      "edit",
+      "error"
+    ],
+    "queued_draft_sent": false,
+    "last_agent_exit_code": null
+  },
+  {
+    "run": "binary-120x40",
+    "original_session_id": "0db5d87d-e71e-4d6f-afc9-38c4ccbe0b86",
+    "clear_session_id": "210f89f1-cf33-4d27-a115-95df2bde5b01",
+    "different_clear_session": true,
+    "original_user_prompts": [
+      "/greet day",
+      "@src/day.ts",
+      "<bash-input>printf \"day-context\\n\"</bash-input>\n<bash-stdout>day-context</bash-stdout><bash-stderr></bash-stderr>\n\ntext",
+      "slow",
+      "thought",
+      "markdown",
+      "edit",
+      "error"
+    ],
+    "queued_draft_sent": false,
+    "last_agent_exit_code": null
+  },
+  {
+    "run": "binary-80x24",
+    "original_session_id": "4f66bab1-ac03-4dbb-adf9-317b7693b9b1",
+    "clear_session_id": "14712656-f59a-4f40-baa2-9a60d146f2a7",
+    "different_clear_session": true,
+    "original_user_prompts": [
+      "/greet day",
+      "@src/day.ts",
+      "<bash-input>printf \"day-context\\n\"</bash-input>\n<bash-stdout>day-context</bash-stdout><bash-stderr></bash-stderr>\n\ntext",
+      "slow",
+      "thought",
+      "markdown",
+      "edit",
+      "error"
+    ],
+    "queued_draft_sent": false,
+    "last_agent_exit_code": null
+  }
+]

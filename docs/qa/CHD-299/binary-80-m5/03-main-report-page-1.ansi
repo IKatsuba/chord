@@ -1,0 +1,24 @@
+   [2m [0m
+   [2m [0m  [1;4mHow bugfix works[0m
+   [2m [0m
+   [2m [0m  [2m1.[0m The lead reads the job and names who may edit which files.
+   [2m [0m  [2m2.[0m tester writes a test that fails for the bug's own reason, in tests/.
+   [2m [0m  [2m3.[0m coder fixes the code so that test passes, and never edits tests/.
+   [2m [0m
+   [2m [0m  [1mWho edits what
+[0m   [2m [0m
+   [2m [0m  [2m-[0m One writer per file at a time; a member asks a file's owner directly.
+   [2m [0m  [2m-[0m Another run of a team may be working here: the leads agree on files.
+   [2m [0m
+   [2m [0m  [1mReporting[0m
+   [2m [0m
+ [2m── ↓ 14 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m● tester needs your permission · ctrl+x a[0m    [2mFake Large with a 1M… · 1% used[0m
+    [1mmain     [0;2m  fake       [0m
+    bugfix   [2m  team · fake[0m  ✓ replied 4s ago
+    [2m├─ [0mtester[2m  fake       [0m  ● permission 2s
+    [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 3s ago

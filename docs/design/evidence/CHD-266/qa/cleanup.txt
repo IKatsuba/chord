@@ -1,0 +1,6 @@
+source-dark: stty restored=true; alternate leave=true; cursor show=true; shell marker=true
+source-light: stty restored=true; alternate leave=true; cursor show=true; shell marker=true
+compiled-dark: stty restored=true; alternate leave=true; cursor show=true; shell marker=true
+compiled-light: stty restored=true; alternate leave=true; cursor show=true; shell marker=true
+Recorded owned agent/application PIDs still alive: none
+Current process commands naming QA temporary directory: 0

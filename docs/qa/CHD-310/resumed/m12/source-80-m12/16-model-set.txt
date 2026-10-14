@@ -1,0 +1,24 @@
+ ⏺ Permission: deny.
+
+ › first line
+   second line
+                     ne. Step 3 done.
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan                     ──────────────                                ─────
+   ⎿  ☒ Read the code                  rni                    itter memory leak
+      ☒ Write the change             o [Bo                                   Us
+ e    ☒ Run the tests
+                              ` to show wh                          d)
+ › mode                              tecte                     s added to [BoxR
+ d                              Use emitte                                limit
+ ⏺ Mode: acceptEdits.
+ct                         dded to [BoxRen
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                 er memory leak detecte               steners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)         Fake Small · 2% context used

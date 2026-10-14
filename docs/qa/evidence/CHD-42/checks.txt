@@ -1,0 +1,13 @@
+Command: deno task check (with process-query access)
+Final staged evidence tree: types, lint, formatting passed.
+Tests: 444 passed (20 steps), 0 failed (4m29s).
+Command: deno task compile
+Produced: dist/aarch64-apple-darwin/chord
+Observed: binary starts and completes both day-driver sizes against the fake agent.
+Command: rg privacy-pattern scan of docs/qa/evidence/CHD-42
+Observed: no matches.
+Privacy result: new captures and report contain no private home paths.
+Command: capture and terminal assertions
+Observed: 168 passed, 0 failed.
+Command: git -c core.whitespace=-blank-at-eof diff --cached --check
+Observed: passed; fixed-height terminal captures retain blank pane padding.

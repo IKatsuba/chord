@@ -1,0 +1,4 @@
+Permission wait BEL count (startup OSC 11 terminator excluded): 1
+Whole run BEL count: 3 (permission, permission turn end, slow turn end).
+Exact stty restoration: true
+Raw output finishes after leaving alternate screen and showing cursor.

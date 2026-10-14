@@ -1,0 +1,24 @@
+ [1mdocs[0;2m · fake · Fake Large with a 1M context window · opened by main 26s ago[0m
+
+ ← [1m@main[0m
+   [2m⎿[0m  [2mpermission[0m
+
+ [2m⏺[0m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [2mAllowed Write notes.txt · Allow[0m
+
+ ⏺ Permission: allow.
+
+
+
+
+
+
+
+
+[2m╭─[0;1m docs[0;2m ───────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m↑ ↓ pick · x stop · esc back[0m   [2mFake Large with a 1M context window · 1% used[0m
+    main             [2m  fake                             [0m
+    [1mdocs             [0;2m  fake                             [0m
+  ❯ [1mdev server errors[0;2m  $ sleep 1; echo "ERROR [router] …  running 5s · 1 event[0m

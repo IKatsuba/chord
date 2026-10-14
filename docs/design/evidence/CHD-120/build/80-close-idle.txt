@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.wePm
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ✹ Waiting for permission… (14s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Closed 2 fake · /resume opens it again   Fake Large with a 1M context window

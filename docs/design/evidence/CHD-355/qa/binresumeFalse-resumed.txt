@@ -1,0 +1,40 @@
+█▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd355-qa-1i0j6hi4/b
+ █▀     ? for shortcuts · /help
+        resumed · just now · effort
+
+ › effort
+
+ ⏺ Effort: low.
+
+ › effort
+
+ ⏺ Effort: low.
+
+ › effort
+
+ ⏺ Effort: high.
+
+ › effort
+
+ ⏺ Effort: low.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

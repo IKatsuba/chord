@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+
+
+
+
+
+
+
+
+
+
+ › Find where chord hands each session/update to its listeners.
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Search(pattern: "sessionUpdate", path: "src")
+      Read(src/session/conversation.ts)
+      Read(src/acp/connection.ts)
+      +2 more tool uses (ctrl+o to expand)
+
+ ✻ Working… (34s · esc to interrupt)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                       Opus · 91% context left

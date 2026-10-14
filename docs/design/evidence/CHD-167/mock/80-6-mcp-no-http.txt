@@ -1,0 +1,24 @@
+ chord                                                           pi · ~/src/app
+ › hello
+
+ ⏺ Hello.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord passed these to pi when the session started. ACP does not say          │
+│ whether pi connected to them.                                                │
+│                                                                              │
+│ Name    Transport  Command or URL                      Defined in            │
+│ chord   http       not passed                          chord itself          │
+│ github  http       https://api.githubcopilot.com/mcp/  .mcp.json             │
+│                                                                              │
+│ chord's server was not passed: pi does not take MCP servers over             │
+│ HTTP, so it cannot start other agents.                                       │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                pi-default · 99% context left

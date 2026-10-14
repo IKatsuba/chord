@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                        [2mfake · /tmp/chord-qa.4FPa[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › /[7m [0m                                                                                                                 [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;87;105;247m/clear[39m  [38;2;87;105;247mStart a new session with an empty transcript[39m
+  [2m/echo[0m   [2mRepeat what follows the command[0m
+  [2m/exit[0m   [2mQuit chord[0m
+  [2m/greet[0m  [2mSay hello from the fake agent[0m
+  [2m/help[0m   [2mShow keyboard shortcuts[0m

@@ -1,0 +1,13 @@
+{
+  "exit": "143",
+  "stty_exact": true,
+  "stty_except_pendin": true,
+  "flags": "alternate=0 cursor=1 mouse=0,0,0",
+  "owned_alive": [
+    56600
+  ],
+  "probe_orphans_killed": [
+    56600
+  ],
+  "stty_a_exact": true
+}

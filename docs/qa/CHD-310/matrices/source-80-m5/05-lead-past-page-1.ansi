@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m- Another run of a team may be working here: the leads agree on files.[0m[38;2;255;255;255m
+
+   [2m[39m## Reporting[0m[38;2;255;255;255m
+
+   [2m[39mThe lead writes to main when the job is done or cannot be done.[0m[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIssue 214 fix the closing quote[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mOpen[0m(tester)[2m · fake · fake-small · acceptEdits[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mWrite a test in tests/parse/tokenize_test.ts that fails because a[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mstring at the end of a line loses its closing quote. Edit tests/ only.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mTell me when it fails for that reason.[0m[38;2;255;255;255m
+
+ [2m[39m── ↓ 14 lines below · end to jump to the bottom ──────────────────────────────[0m[38;2;255;255;255m
+
+[2m[39m╭─[0;1m bugfix[0;2m ─────────────────────────────────────────────────────────────────────╮
+[0m[38;5;244m│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m● tester needs your permission · ctrl+x a[0m[38;2;255;255;255m    [2m[39mFake Large with a 1M… · 1% used[0m[38;2;255;255;255m
+  [2m[39m [0m main     [2m  fake       [0m[38;2;255;255;255m
+  [39m  [1mbugfix   [0;2m  team · fake[0m[38;2;255;255;255m
+  [39m  [2m├─ [0mtester[2m  fake       [0m  ● permission 4s[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 5s ago[38;2;255;255;255m

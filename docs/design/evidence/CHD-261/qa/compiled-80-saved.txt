@@ -1,0 +1,24 @@
+
+ › reviewer on codex please
+
+ ⏺ The reviewer on codex too, read-only, and tester in bypassPermissions, so it
+   runs the suite without asking.
+
+ ⏺ Team(bugfix) · proposal
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a
+      review of the diff.
+
+      lead      claude · opus          default            Splits the job, sa…
+      tester    claude · sonnet        bypassPermissions  Writes the failing…
+      coder     codex · gpt-5.3-codex  auto               Writes the fix, in…
+      reviewer  codex · gpt-5.3-codex  read-only          Reads the diff and…
+      … +40 lines (ctrl+o to expand)
+      Saved to /tmp/chd261-qa/config/chord/teams/bugfix.md · /team run bugfix …
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix
+   and the bug, or just tell me to hand one to bugfix.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,24 @@
+ ⏺ Now the tests, in the background.
+
+ [2m⏺[0m [1mAgent[0m(Run the whole test suite)
+   [2m⎿[0m  Run deno task test and report what fails.
+
+      [2m⏺[0m [1mBash[0m(deno task test)
+
+      ⏺ Every test passed.
+   [2m⎿[0m  [2mDone (1 tool use · 4s)[0m
+
+ ⏺ It is running; I will say when it ends.
+
+ [2m›[0m compact
+   [2m⎿[0m  [2mConversation compacted[0m
+      [1mSummary[0m
+
+      The person asked for a README section on install, then for the tests
+      to run.
+ [2m── ↓ 30 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 2% context used[0m

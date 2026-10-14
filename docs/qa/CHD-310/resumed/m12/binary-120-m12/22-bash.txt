@@ -1,0 +1,40 @@
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › first line
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan                       me in chunks.
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+                              3 done.
+ › mode
+
+ ⏺ Mode: acceptEdits.
+                     nge
+ › /greet QA
+
+ ⏺ Hello from the fake agent.              ────────────────────────────────────────────────────────────────────────────
+
+ › @example.ts
+                                       ow                       created)rge wit                                xt used
+ ⏺ Received a link: example.ts, file:///tmp/chd310-final/exits/binary-120-m12/work/example.ts
+
+   Hello, world. This reply came in chunks.                             eak det                                    [Box
+
+ ! printf qa-shell                                                      o [BoxR                     ners is 10. Use emi
+   ⎿  qa-shell
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P›                                detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 11% context used

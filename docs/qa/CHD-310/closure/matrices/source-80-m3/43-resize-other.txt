@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                      /tmp/chd310-closure/m3/source-80-m3/work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd310-closure/m3/source-80-m3/work
+ █▀     ? for shortcuts · /help
+
+ › second session prompt
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working..............................................
+   ⎿  Interrupted by user
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,210 @@
+[
+  {
+    "name": "120-start",
+    "elapsedMs": 1841,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      67689,
+      67938
+    ],
+    "agentPids": [
+      67938
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "120-starting-model",
+    "elapsedMs": 4803,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      68595,
+      68771
+    ],
+    "agentPids": [
+      68771
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "120-starting-mode",
+    "elapsedMs": 4801,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      70236,
+      70296
+    ],
+    "agentPids": [
+      70296
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "120-clear",
+    "elapsedMs": 7056,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      70980,
+      71001,
+      71259
+    ],
+    "agentPids": [
+      71001,
+      71259
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "120-config",
+    "elapsedMs": 4803,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      72157,
+      72196
+    ],
+    "agentPids": [
+      72196
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "120-turn",
+    "elapsedMs": 1838,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      72902,
+      72946
+    ],
+    "agentPids": [
+      72946
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "80-start",
+    "elapsedMs": 1837,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      73406,
+      73469
+    ],
+    "agentPids": [
+      73469
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "80-starting-model",
+    "elapsedMs": 4808,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      73818,
+      73880
+    ],
+    "agentPids": [
+      73880
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "80-starting-mode",
+    "elapsedMs": 4823,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      74357,
+      74376
+    ],
+    "agentPids": [
+      74376
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "80-clear",
+    "elapsedMs": 7172,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      74553,
+      74581,
+      74635
+    ],
+    "agentPids": [
+      74581,
+      74635
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "80-config",
+    "elapsedMs": 4812,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      74891,
+      74912
+    ],
+    "agentPids": [
+      74912
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "80-turn",
+    "elapsedMs": 1750,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      75181,
+      75208
+    ],
+    "agentPids": [
+      75208
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  }
+]

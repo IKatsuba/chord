@@ -1,0 +1,24 @@
+
+ [2m›[0m [Image #1]
+
+ ⏺ Received an image: image/png, 132 bytes
+
+   Hello, world. This reply came in chunks.
+
+ [2m›[0m edited draft from scripted EDITOR
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m /vim
+   [2m⎿[0m  [2mVim mode on: Esc for normal mode, i to insert[0m
+
+ [2m›[0m /vim
+   [2m⎿[0m  [2mVim mode off[0m
+
+ [2m›[0m /theme
+   [2m⎿[0m  [2mTheme set to Light[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

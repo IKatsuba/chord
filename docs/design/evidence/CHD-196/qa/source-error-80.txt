@@ -1,0 +1,24 @@
+ chord                              fake · /tmp/chd196-qa-ada81cc592149753/work
+      running 3 tests
+      3/3
+   ⎿  Interrupted by user
+
+ › shellcut
+
+ ⏺ Run(deno task test)
+   ⎿  Task test deno test
+      FAILED | 1 failed
+      Exit code 1
+
+ ⏺ The tests failed.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

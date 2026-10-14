@@ -1,0 +1,24 @@
+   │           "id": "682304f3",                         │
+   │           "name": "parser",                         │
+   │           "runtime": "fake",                        │
+   │           "model": "fake-small"                     │
+   │         },                                          │
+   │         {                                           │
+   │           "id": "a5f8b10f",                         │
+   │           "name": "docs",                           │
+   │           "runtime": "fake",                        │
+   │           "model": "fake-large"                     │
+   │         }                                           │
+   │       ]                                             │
+   │     }                                               │
+   │   ]                                                 │
+   │ }                                                   │
+   └─────────────────────────────────────────────────────┘
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small
+    docs    fake · Fake Large with a 1M context window

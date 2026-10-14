@@ -1,0 +1,43 @@
+{
+  "app": 10110,
+  "fakes": [
+    10120
+  ],
+  "owned": [
+    10110,
+    10120,
+    10128,
+    10130
+  ],
+  "groups": [
+    10120,
+    10128,
+    10130
+  ],
+  "rows": [
+    [
+      "10120",
+      "10110",
+      "10120",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "10128",
+      "10110",
+      "10128",
+      "sleep 600"
+    ],
+    [
+      "10130",
+      "10110",
+      "10130",
+      "sleep 600"
+    ],
+    [
+      "10110",
+      "10103",
+      "10103",
+      "bun /tmp/chd331-qa/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/source-80-monitor-exception/work"
+    ]
+  ]
+}

@@ -1,0 +1,40 @@
+ bugfix · team · fake · Fake Large with a 1M context window · opened by @main 6s ago
+
+ ⏺ bugfix's instructions for the lead · 30 lines
+   You are the lead of team bugfix: a long-lived agent chord opened for main, the session the person talks to. You work
+    in /tmp/chd310-final/m45/binary-120-m5/work, and so does every member you open: there are no worktrees.
+
+   Your tools on chord's server: open_agent {member, prompt} opens one of the members below on the runtime, model and
+   mode the team gives it, with your prompt as its first message. send_message {to, text} reaches main, your open
+   members by name, and the leads of the other runs. close_agent {to} closes a member; close each when its part is
+   done. spawn_task and list_agents start task agents for one-off jobs. Each message of yours to main starts a turn of
+   main's.
+
+   No other run of a team is open in this session.
+
+   Your instructions:
+   Read the job and the code it points at until you can name the cause and
+   the files involved. Then open tester first, and coder only once tester's
+   test fails for the bug's own reason. You edit nothing yourself.
+
+   The members:
+   - tester: Writes the failing test, then proves the fix (fake · fake-small · acceptEdits)
+   - coder: Writes the fix, in the files the lead names (fake · fake-large · plan)
+
+   How the team works:
+   # How bugfix works
+
+   1. The lead reads the job and names who may edit which files.
+   2. tester writes a test that fails for the bug's own reason, in `tests/`.
+   3. coder fixes the code so that test passes, and never edits `tests/`.
+
+ ── ↓ 29 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window
+    ├─ tester  fake · Fake Small                                  ● permission 4s
+    └─ coder   fake · Fake Large with a 1M context window         ✓ replied 5s ago

@@ -1,0 +1,40 @@
+$ CHORD_FAKE_HANG=turn deno task chord:fake -C /tmp/chord-qa.G5KY 2>/dev/null; stty -a | head -4 | grep -oE '[-]?(icanon
+|echo) '
+Resume this session with:
+chord fake --agent-command 'deno run --quiet --allow-env --config '\''<repo>/deno.js
+on'\'' '\''<repo>/tests/fixtures/fake_agent.ts'\''' --resume b5d05c75-6a24-44fe-97e8
+-70c22f673cdf
+icanon
+echo
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,40 @@
+ chord   1 claude    2 codex    3 claude                                                                      ~/src/app
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   claude · Fake Large with a 1M context window
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+        resumed · 11 minutes ago · fix the failing date test in the parser
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /resume
+   ⎿  That window has a tab in ~/src/api. Quit and open it there with:
+      chord --resume w-7c41e09b
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

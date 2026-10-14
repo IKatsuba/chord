@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.h7Ea
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 11s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 5s
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Initializing…
+
+ ✸ Working… (11s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

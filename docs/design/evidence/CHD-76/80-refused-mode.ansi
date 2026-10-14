@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chord-qa.MSFi[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [31m⏺[39m [31mCould not start in bogus mode: Agent rejected session/set_mode for mode [39m
+   [31m"bogus": Invalid params: Mode bogus is not available in this session (ACP [39m
+   [31m-32602). The adapter may not implement session/set_mode, or the requested [39m
+   [31mvalue is not supported.[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                   [2mFake Small[0m

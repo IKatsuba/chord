@@ -1,0 +1,40 @@
+ chord                                                                           fake · /tmp/chd100-qa/conflict120/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ⏺ /tmp/chd100-qa/conflict120/config/chord/keybindings.json: ctrl+o already bound to app:toggleTranscript, not to
+   chat:externalEditor
+
+ ⏺ /tmp/chd100-qa/conflict120/config/chord/keybindings.json: unknown action "chat:nope", ignored
+
+ ⏺ /tmp/chd100-qa/conflict120/config/chord/keybindings.json: "hyper+z": "hyper" is not a modifier, ignored
+
+ ⏺ /tmp/chd100-qa/conflict120/config/chord/keybindings.json: pageup already bound to scroll:pageUp, not to chat:submit
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  keybindings.json: 4 problems · ctrl+o already bound to app:toggleTranscript, not to chat:externalEditor  Fake Large…

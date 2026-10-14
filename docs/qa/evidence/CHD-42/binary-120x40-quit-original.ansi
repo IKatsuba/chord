@@ -1,0 +1,40 @@
+
+The default interactive shell is now zsh.
+To update your account to use zsh, please run `chsh -s /bin/zsh`.
+For more details, please visit https://support.apple.com/kb/HT208050.
+bash-3.2$ /bin/bash '/tmp/chd81-binary-120x40-a37e855f2f9b7e96/run.sh'
+Resume this session with:
+chord fake --agent-command '/tmp/chd81-assets/deno run --quiet --allow-env --config '\''/tmp/chd81-assets/project/deno.j
+son'\'' '\''/tmp/chd81-assets/project/tests/fixtures/fake_agent.ts'\''' --resume 0db5d87d-e71e-4d6f-afc9-38c4ccbe0b86
+QA_EXIT=0
+bash-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

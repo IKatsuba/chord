@@ -1,0 +1,24 @@
+ [1mchord[0m   [2m1 fake[0m   [1;7m 2 fake [0m                                  [2m/tmp/chd169-qa/work[0m
+ [38;2;105;238;172m▀[38;2;99;237;171m[48;2;87;234;168m▀[38;2;92;236;170m[48;2;81;233;167m▀[38;2;74;232;166m[49m▄[39m   [2mfake · Fake Large with a 1M context window[0m
+ [38;2;70;231;165m▄[38;2;75;232;166m[48;2;64;227;165m▀[38;2;69;230;165m[48;2;59;223;164m▀[38;2;63;226;165m[49m▀[39m   [2m/tmp/chd169-qa/work[0m
+ [38;2;60;224;164m[48;2;49;217;164m▀[38;2;54;220;164m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ [38;2;255;107;128m⏺[39m [1mAgent[0m(Fix the tokenizer)[2m · fake · fake-small[0m
+   [2m⎿[0m  [38;2;255;107;128mFailed (3 tool uses · 2s)[39m
+
+ ⏺ It is running; I will check its report when it lands.
+
+ [38;2;255;107;128m←[39m [1mFix the tokenizer[0;2m · fake · failed[0m
+   [38;2;255;107;128mThe edit to src/parse/tokenize.ts was denied, so the tokenizer is not[39m
+   [38;2;255;107;128mfixed.[39m
+
+ ⏺ Received the message from Fix the tokenizer · fake · failed.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 99% context left[0m

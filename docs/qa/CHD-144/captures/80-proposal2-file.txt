@@ -1,0 +1,24 @@
+ chord                                    fake · /tmp/chord-qa.d0139afdeb0f6ed5
+ ⏺ I'll look first.
+
+ ⏺ file:///plans/proposal.md
+
+ ⏺ Plan written. Draft dropped.
+
+ › proposal
+
+ ⏺ I'll look first.
+
+ ⏺ 1. Inspect the code
+   2. Write the change
+
+ ⏺ file:///plans/proposal.md
+
+ ⏺ Plan written.
+
+ ✸ Working… (8s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

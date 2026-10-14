@@ -1,0 +1,14 @@
+{
+  "type": "result",
+  "is_error": false,
+  "result": "I'll look first.Plan written. Draft dropped.",
+  "session_id": "28963558-1211-43b8-8354-60f1bafb2f2c",
+  "stop_reason": "end_turn",
+  "usage": {
+    "input_tokens": 1000,
+    "output_tokens": 200,
+    "cache_read_input_tokens": 800,
+    "total_tokens": 2000
+  },
+  "total_cost_usd": 0.0125
+}

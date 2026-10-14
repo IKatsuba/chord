@@ -1,0 +1,4 @@
+# dark, 80x24
+[0m  [38;2;255;193;7mkilled.sh was stopped by SIGTERM; the draft is unchanged[39m  [2mFake Large with a…[0m
+# light, 80x24
+[0m  [38;2;138;90;0mkilled.sh was stopped by SIGTERM; the draft is unchanged[39m  [2mFake Large with a…[0m

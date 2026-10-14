@@ -1,0 +1,24 @@
+ chord                                              claude · /tmp/chord-qa.gLsS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ⏺ claude did not start: it cannot resume session
+   0472c84d-3d09-458e-bf8f-fe763f3a6abb: Resource not found:
+   0472c84d-3d09-458e-bf8f-fe763f3a6abb
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

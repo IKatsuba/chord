@@ -1,0 +1,22 @@
+d74
+
+CHORD_EXIT=0 TERMINAL_RESTORED
+sh-3.2$ /tmp/chd101-qa.Hd9bih/run.sh app
+Resume this session with:
+chord fake --agent-command fake-agent --resume 317b35ed-92ea-4aad-ab69-9fc32b84c
+f18
+
+CHORD_EXIT=0 TERMINAL_RESTORED
+sh-3.2$ /tmp/chd101-qa.Hd9bih/run.sh app
+Resume this session with:
+chord fake --agent-command fake-agent --resume 608cdb21-5a47-40df-bc27-db7cd9f25
+4fe
+
+CHORD_EXIT=0 TERMINAL_RESTORED
+sh-3.2$ /tmp/chd101-qa.Hd9bih/run.sh app 4f9a6735-6d25-4f1b-ac57-222548b8ad74
+Resume this session with:
+chord fake --agent-command fake-agent --resume 4f9a6735-6d25-4f1b-ac57-222548b8a
+d74
+
+CHORD_EXIT=0 TERMINAL_RESTORED
+sh-3.2$

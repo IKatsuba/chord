@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd310-closure/m45/binary-120-m4/work
+ █▀     ? for shortcuts · /help
+
+ › chordcalls
+
+ ⏺ List agents
+   ⎿  36 runtimes · fake, agoragentic-acp, auggie, autohand, +32 more
+
+ ⏺ List agents(fake)
+   ⎿  2 models · fake-large, fake-small
+
+ ⏺ List sessions
+   ⎿  1 open · 1 fake (you)
+
+ ⏺ Agent(Fix the tokenizer) · fakx · fake-small
+   ⎿  No agent named fakx; chord knows fake, agoragentic-acp, auggie, autohand, claude, cline, codebuddy-code, codex, …
+
+ ⏺ chord knows no fakx.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

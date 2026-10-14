@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.zqD9
+
+
+
+
+
+
+ › proposal
+
+ ⏺ I'll look first.
+
+ ⏺ 1. Inspect the code
+   2. Write the change
+
+ ⏺ file:///plans/proposal.md
+
+ ⏺ Plan written.
+
+ ✷ Working… (9s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

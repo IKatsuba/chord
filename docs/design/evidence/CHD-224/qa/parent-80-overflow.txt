@@ -1,0 +1,24 @@
+ chord                                               fake · /tmp/chd224-qa/work
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 13
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 14
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 15
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 16
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 96% context left

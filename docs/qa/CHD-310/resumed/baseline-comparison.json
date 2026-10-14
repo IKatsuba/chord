@@ -1,0 +1,221 @@
+{
+  "scope": "Functional markers against retained main captures; appearance remains designer-owned. Scripted editor draft text differs between fixtures. This does not override CHD-334 screen corruption.",
+  "cases": [
+    {
+      "case": "source-120-m3",
+      "baseline": "docs/qa/CHD-300/source-120-m3",
+      "current": "matrices/source-120-m3",
+      "markers": [
+        "image/png",
+        "Compaction failed",
+        "Interrupted by user",
+        "The fake agent failed on purpose.",
+        "project-files",
+        "user-docs",
+        "first unsent draft",
+        "second unsent draft"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "source-120-m4",
+      "baseline": "docs/qa/CHD-299/source-120-m4",
+      "current": "matrices/source-120-m4",
+      "markers": [
+        "List agents",
+        "List sessions",
+        "Close(parser)",
+        "parser is closed",
+        "docs asks",
+        "monitor",
+        "Interrupted by user"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "source-120-m5",
+      "baseline": "docs/qa/CHD-299/source-120-m5",
+      "current": "matrices/source-120-m5",
+      "markers": [
+        "Team(bugfix)",
+        "\u2190 @bugfix",
+        "tester",
+        "coder",
+        "bugfix 2"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "source-120-proposal",
+      "baseline": "docs/qa/CHD-299/source-120-proposal",
+      "current": "matrices/source-120-proposal",
+      "markers": [
+        "Save team bugfix?",
+        "Saved"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "source-80-m3",
+      "baseline": "docs/qa/CHD-300/source-80-m3",
+      "current": "matrices/source-80-m3",
+      "markers": [
+        "image/png",
+        "Compaction failed",
+        "Interrupted by user",
+        "The fake agent failed on purpose.",
+        "project-files",
+        "user-docs",
+        "first unsent draft",
+        "second unsent draft"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "source-80-m4",
+      "baseline": "docs/qa/CHD-299/source-80-m4",
+      "current": "matrices/source-80-m4",
+      "markers": [
+        "List agents",
+        "List sessions",
+        "Close(parser)",
+        "parser is closed",
+        "docs asks",
+        "monitor",
+        "Interrupted by user"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "source-80-m5",
+      "baseline": "docs/qa/CHD-299/source-80-m5",
+      "current": "matrices/source-80-m5",
+      "markers": [
+        "Team(bugfix)",
+        "\u2190 @bugfix",
+        "tester",
+        "coder",
+        "bugfix 2"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "source-80-proposal",
+      "baseline": "docs/qa/CHD-299/source-80-proposal",
+      "current": "matrices/source-80-proposal",
+      "markers": [
+        "Save team bugfix?",
+        "Saved"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "binary-120-m3",
+      "baseline": "docs/qa/CHD-300/binary-120-m3",
+      "current": "matrices/binary-120-m3",
+      "markers": [
+        "image/png",
+        "Compaction failed",
+        "Interrupted by user",
+        "The fake agent failed on purpose.",
+        "project-files",
+        "user-docs",
+        "first unsent draft",
+        "second unsent draft"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "binary-120-m4",
+      "baseline": "docs/qa/CHD-299/binary-120-m4",
+      "current": "matrices/binary-120-m4",
+      "markers": [
+        "List agents",
+        "List sessions",
+        "Close(parser)",
+        "parser is closed",
+        "docs asks",
+        "monitor",
+        "Interrupted by user"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "binary-120-m5",
+      "baseline": "docs/qa/CHD-299/binary-120-m5",
+      "current": "matrices/binary-120-m5",
+      "markers": [
+        "Team(bugfix)",
+        "\u2190 @bugfix",
+        "tester",
+        "coder",
+        "bugfix 2"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "binary-120-proposal",
+      "baseline": "docs/qa/CHD-299/binary-120-proposal",
+      "current": "matrices/binary-120-proposal",
+      "markers": [
+        "Save team bugfix?",
+        "Saved"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "binary-80-m3",
+      "baseline": "docs/qa/CHD-300/binary-80-m3",
+      "current": "matrices/binary-80-m3",
+      "markers": [
+        "image/png",
+        "Compaction failed",
+        "Interrupted by user",
+        "The fake agent failed on purpose.",
+        "project-files",
+        "user-docs",
+        "first unsent draft",
+        "second unsent draft"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "binary-80-m4",
+      "baseline": "docs/qa/CHD-299/binary-80-m4",
+      "current": "matrices/binary-80-m4",
+      "markers": [
+        "List agents",
+        "List sessions",
+        "Close(parser)",
+        "parser is closed",
+        "docs asks",
+        "monitor",
+        "Interrupted by user"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "binary-80-m5",
+      "baseline": "docs/qa/CHD-299/binary-80-m5",
+      "current": "matrices/binary-80-m5",
+      "markers": [
+        "Team(bugfix)",
+        "\u2190 @bugfix",
+        "tester",
+        "coder",
+        "bugfix 2"
+      ],
+      "all_baseline_and_current_markers_present": true
+    },
+    {
+      "case": "binary-80-proposal",
+      "baseline": "docs/qa/CHD-299/binary-80-proposal",
+      "current": "matrices/binary-80-proposal",
+      "markers": [
+        "Save team bugfix?",
+        "Saved"
+      ],
+      "all_baseline_and_current_markers_present": true
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+$ bun --define process.env.NODE_ENV:'"production"' src/main.tsx fake --agent-com
+mand "bun '$PWD/tests/fixtures/fake_agent/main.ts'" -C "/tmp/chd380-qa/source-na
+rrow/work"
+Resume this session with:
+chord fake --agent-command 'bun '\''/tmp/chd380-qa/repo/tests/fixtures/fake_agen
+t/main.ts'\''' --resume c6593a51-d2c2-4cba-a925-1db39459f208
+CHD380_EXIT=0
+Igors-MacBook-Pro%

@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.rJM8
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord passed these to fake when the session started. ACP does not say        │
+│ whether fake connected to them.                                              │
+│                                                                              │
+│ Name        Transport  Command or URL          Defined in                    │
+│ docs        http       https://                ~/.config/chord/settings.json │
+│                        mcp.example.com/mcp                                   │
+│ filesystem  stdio      npx -y                  .mcp.json                     │
+│                        @modelcontextprotocol/                                │
+│                        server-filesystem .                                   │
+│ … +2 more                                                                    │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

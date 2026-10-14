@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd245-qa/source120/work
+ ▀▀     ? for shortcuts · /help
+
+ › monitor
+
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')"; echo "  …
+      m1 · times out after 10m
+
+ ⏺ I will hear from the dev server when it errs.
+
+ ← dev server errors · monitor
+   ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+       at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left
+    dev server errors  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties …  running 2s · 1 event

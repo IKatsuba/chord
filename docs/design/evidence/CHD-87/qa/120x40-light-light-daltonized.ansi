@@ -1,0 +1,167 @@
+--- markdown-top ---
+ [1mchord[0m                                                   [2mfake · /tmp/chd87-qa/matrix/120x40-light-light-daltonized/work[0m
+
+ [2m›[0m markdown
+
+ ⏺ [1;4mReading the session layer[0m
+
+   The [1msession layer[0m wraps [3macpx[0m so the interface never touches a process. Start with [38;2;74;90;224msrc/session/session.ts[39m, then see
+   the [4m[38;2;11;92;173mACP spec[0;2m (https://agentclientprotocol.com)[0m for the wire format.
+
+   [1mWhat it does[0m
+
+   [2m-[0m opens one persistent session per chord session
+   [2m-[0m starts turns with [38;2;74;90;224mstartTurn[39m and cancels them
+     [2m1.[0m a cancel stops the turn at once
+     [2m2.[0m the agent is told with [38;2;74;90;224msession/cancel[39m
+   [2m-[0m closes the agent and waits until its exit is seen
+
+   [2m│[0m A closed agent counts as gone only once its exit is seen:
+   [2m│[0m [2m┌ ts ──────────────────────────────────────────────────────┐[0m
+   [2m│[0m [2m│[0m [38;2;130;80;223mawait[39m session.[38;2;11;92;173mclose[39m(); [38;2;110;119;129m// resolves once the exit is seen[39m [2m│[0m
+   [2m│[0m [2m└──────────────────────────────────────────────────────────┘[0m
+
+   [2m┌───────────────┬────────────────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                                  [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼────────────────────────────────────────┼────────────────────┤[0m
+   [2m│[0m [38;2;74;90;224msession.ts[39m    [2m│[0m opening, prompting and closing         [2m│[0m [38;2;74;90;224msession_test.ts[39m    [2m│[0m
+   [2m│[0m               [2m│[0m a session                              [2m│[0m                    [2m│[0m
+   [2m│[0m [38;2;74;90;224mprocesses.ts[39m  [2m│[0m the promise that a closed agent is     [2m│[0m [38;2;74;90;224mprocesses_test.ts[39m  [2m│[0m
+   [2m│[0m               [2m│[0m gone                                   [2m│[0m                    [2m│[0m
+   [2m│[0m [38;2;74;90;224mtranscript.ts[39m [2m│[0m the reducer from events to what is     [2m│[0m [38;2;74;90;224mtranscript_test.ts[39m [2m│[0m
+   [2m│[0m               [2m│[0m drawn                                  [2m│[0m                    [2m│[0m
+   [2m└───────────────┴────────────────────────────────────────┴────────────────────┘[0m
+ [2m── ↓ 22 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m
+
+ [38;2;185;83;47m✶[39m [38;2;185;83;47mWorking…[39m [2m(4s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;122;63;214m⏵⏵ accept edits on[39m [2m(shift+tab to cycle)[0m                       [2mFake Large with a 1M context window · 99% context left[0m
+
+--- markdown ---
+ [1mchord[0m                                                   [2mfake · /tmp/chd87-qa/matrix/120x40-light-light-daltonized/work[0m
+   [2m┌───────────────┬────────────────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                                  [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼────────────────────────────────────────┼────────────────────┤[0m
+   [2m│[0m [38;2;74;90;224msession.ts[39m    [2m│[0m opening, prompting and closing         [2m│[0m [38;2;74;90;224msession_test.ts[39m    [2m│[0m
+   [2m│[0m               [2m│[0m a session                              [2m│[0m                    [2m│[0m
+   [2m│[0m [38;2;74;90;224mprocesses.ts[39m  [2m│[0m the promise that a closed agent is     [2m│[0m [38;2;74;90;224mprocesses_test.ts[39m  [2m│[0m
+   [2m│[0m               [2m│[0m gone                                   [2m│[0m                    [2m│[0m
+   [2m│[0m [38;2;74;90;224mtranscript.ts[39m [2m│[0m the reducer from events to what is     [2m│[0m [38;2;74;90;224mtranscript_test.ts[39m [2m│[0m
+   [2m│[0m               [2m│[0m drawn                                  [2m│[0m                    [2m│[0m
+   [2m└───────────────┴────────────────────────────────────────┴────────────────────┘[0m
+
+   [2m┌ ts ──────────────────────────────────────────────────────────┐[0m
+   [2m│[0m [38;2;130;80;223mconst[39m session = [38;2;130;80;223mawait[39m [38;2;11;92;173mopenSession[39m({ [38;2;176;48;111magent[39m: [38;2;125;82;0m'claude'[39m, cwd }); [2m│[0m
+   [2m│[0m [38;2;130;80;223mconst[39m turn = session.[38;2;11;92;173mprompt[39m([38;2;125;82;0m'hello'[39m);                        [2m│[0m
+   [2m│[0m [38;2;130;80;223mawait[39m turn.[38;2;176;48;111mresult[39m;                                           [2m│[0m
+   [2m└──────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [38;2;74;90;224mmain[39m once every check has passed and the tree is clean, so whoever picks the work up next starts from
+     a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [38;2;130;80;223mfor[39m bin [38;2;130;80;223min[39m dist/*/chord; [38;2;130;80;223mdo[39m [38;2;0;114;122mecho[39m [38;2;125;82;0m"built [38;2;176;48;111m$bin[38;2;125;82;0m"[39m; [38;2;130;80;223mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [38;2;185;83;47m✺[39m [38;2;185;83;47mWorking…[39m [2m(4s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;122;63;214m⏵⏵ accept edits on[39m [2m(shift+tab to cycle)[0m                       [2mFake Large with a 1M context window · 99% context left[0m
+
+--- edit ---
+ [1mchord[0m                                                   [2mfake · /tmp/chd87-qa/matrix/120x40-light-light-daltonized/work[0m
+   [2m│[0m [38;2;130;80;223mconst[39m session = [38;2;130;80;223mawait[39m [38;2;11;92;173mopenSession[39m({ [38;2;176;48;111magent[39m: [38;2;125;82;0m'claude'[39m, cwd }); [2m│[0m
+   [2m│[0m [38;2;130;80;223mconst[39m turn = session.[38;2;11;92;173mprompt[39m([38;2;125;82;0m'hello'[39m);                        [2m│[0m
+   [2m│[0m [38;2;130;80;223mawait[39m turn.[38;2;176;48;111mresult[39m;                                           [2m│[0m
+   [2m└──────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [38;2;74;90;224mmain[39m once every check has passed and the tree is clean, so whoever picks the work up next starts from
+     a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [38;2;130;80;223mfor[39m bin [38;2;130;80;223min[39m dist/*/chord; [38;2;130;80;223mdo[39m [38;2;0;114;122mecho[39m [38;2;125;82;0m"built [38;2;176;48;111m$bin[38;2;125;82;0m"[39m; [38;2;130;80;223mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m edit
+
+ [38;2;44;122;57m⏺[39m [1mEdit[0m(src/greeting.ts)
+   [2m⎿[0m  [2mUpdated src/greeting.ts with 2 additions and 1 removal[0m
+      [2m[48;2;219;238;255m1[0m[48;2;219;238;255m [38;2;10;91;196m+[38;2;31;35;40m [38;2;98;107;117m/** Greets someone by name. */[39m                                                                               [49m
+      [2m2[0m   [38;2;130;80;223mexport[39m [38;2;130;80;223mfunction[39m [38;2;11;92;173mgreet[39m(name: [38;2;0;114;122mstring[39m): [38;2;0;114;122mstring[39m {
+      [2m[48;2;253;232;212m2[0m[48;2;253;232;212m [38;2;163;74;0m-[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m"hello "[38;2;31;35;40m + name;[39m                                                                                    [49m
+      [2m[48;2;219;238;255m3[0m[48;2;219;238;255m [38;2;10;91;196m+[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m`hello, ${name}`[38;2;31;35;40m;[39m                                                                                   [49m
+      [2m4[0m   }
+
+ ⏺ Edited.
+
+ [38;2;185;83;47m✷[39m [38;2;185;83;47mWorking…[39m [2m(0s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;122;63;214m⏵⏵ accept edits on[39m [2m(shift+tab to cycle)[0m                       [2mFake Large with a 1M context window · 99% context left[0m
+
+--- picker ---
+ [1mchord[0m                                                   [2mfake · /tmp/chd87-qa/matrix/120x40-light-light-daltonized/work[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [38;2;130;80;223mfor[39m bin [38;2;130;80;223min[39m dist/*/chord; [38;2;130;80;223mdo[39m [38;2;0;114;122mecho[39m [38;2;125;82;0m"built [38;2;176;48;111m$bin[38;2;125;82;0m"[39m; [38;2;130;80;223mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m edit
+
+ [38;2;44;122;57m⏺[39m [1mEdit[0m(src/greeting.ts)
+   [2m⎿[0m  [2mUpdated src/greeting.ts with 2 additions and 1 removal[0m
+      [2m[48;2;219;238;255m1[0m[48;2;219;238;255m [38;2;10;91;196m+[38;2;31;35;40m [38;2;98;107;117m/** Greets someone by name. */[39m                                                                               [49m
+      [2m2[0m   [38;2;130;80;223mexport[39m [38;2;130;80;223mfunction[39m [38;2;11;92;173mgreet[39m(name: [38;2;0;114;122mstring[39m): [38;2;0;114;122mstring[39m {
+      [2m[48;2;253;232;212m2[0m[48;2;253;232;212m [38;2;163;74;0m-[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m"hello "[38;2;31;35;40m + name;[39m                                                                                    [49m
+      [2m[48;2;219;238;255m3[0m[48;2;219;238;255m [38;2;10;91;196m+[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m`hello, ${name}`[38;2;31;35;40m;[39m                                                                                   [49m
+      [2m4[0m   }
+
+ ⏺ Edited.
+
+[38;2;74;90;224m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;74;90;224mTheme[0m                                                                                                                [38;2;74;90;224m│
+│[39m [2mChoose the colours that read best on this terminal.[0m                                                                  [38;2;74;90;224m│
+│[39m                                                                                                                      [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 1. Auto (light, from the terminal)                                                                                 [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 2. Dark                                                                                                            [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 3. Light                                                                                                           [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 4. Dark, colour-blind friendly                                                                                     [38;2;74;90;224m│
+│[39m [38;2;74;90;224m❯[39m [38;2;74;90;224m5. Light, colour-blind friendly ✔[39m                                                                                  [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 6. Dark, the terminal's 16 colours                                                                                 [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 7. Light, the terminal's 16 colours                                                                                [38;2;74;90;224m│
+│[39m                                                                                                                      [38;2;74;90;224m│
+│[39m  [2m1[0m   [38;2;130;80;223mfunction[39m [38;2;11;92;173mgreet[39m(name) {                                                                                          [38;2;74;90;224m│
+│[39m  [2m[48;2;253;232;212m2[0m[48;2;253;232;212m [38;2;163;74;0m-[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m"hello "[38;2;31;35;40m + name;[39m                                                                                      [49m [38;2;74;90;224m│
+│[39m  [2m[48;2;219;238;255m2[0m[48;2;219;238;255m [38;2;10;91;196m+[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m`hello, ${name}`[38;2;31;35;40m;[39m                                                                                     [49m [38;2;74;90;224m│
+│[39m                                                                                                                      [38;2;74;90;224m│
+│[39m [2m↑↓ to preview · Enter to keep · Esc to go back to Light, colour-blind friendly[0m                                       [38;2;74;90;224m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;122;63;214m⏵⏵ accept edits on[39m [2m(shift+tab to cycle)[0m                       [2mFake Large with a 1M context window · 99% context left[0m

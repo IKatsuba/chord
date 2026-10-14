@@ -1,0 +1,24 @@
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Run deno task test and report what fails.
+
+      ⏺ Bash(deno task test)
+
+      ⏺ Every test passed.
+   ⎿  Done (1 tool use · 4s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › compact
+   ⎿  Conversation compacted
+      Summary
+
+      The person asked for a README section on install, then for the tests
+ ── ↓ 31 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used

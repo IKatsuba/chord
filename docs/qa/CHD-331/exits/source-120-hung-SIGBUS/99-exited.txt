@@ -1,0 +1,40 @@
+/tmp/chd331-qa/source-120-hung-SIGBUS/run.sh: line 9:  8256 Bus error: 10           bun /tmp/chd331-qa/repo/src/main.tsx
+ fake --agent-command 'env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts' -C /tmp/chd331-qa/s
+ource-120-hung-SIGBUS/work 2> /tmp/chd331-qa/source-120-hung-SIGBUS/stderr
+
+QA_DONE code=138
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

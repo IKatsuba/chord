@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake2      /private/tmp/chd173-qa-425601bd6783698a/80/proj
+ ⏺ Hello, world. This reply came in chunks.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   ...............................................................
+   ⎿  Interrupted by user
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

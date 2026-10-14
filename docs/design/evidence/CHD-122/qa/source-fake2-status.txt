@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake2                                                                   /tmp/chd122-qa/source-work
+ █▄     chord v0.0.0
+ ▀██▄   fake2 · Fake Small
+ ▄██▀   /tmp/chd122-qa/source-work
+ █▀     ? for shortcuts · /help
+
+ › mode
+
+ ⏺ Mode: acceptEdits.
+
+ › /status
+   ⎿  Agent:     fake2
+      Model:     Fake Small
+      Mode:      Accept edits
+      Session:   11c10c01-6e89-4a5c-9f93-c660ca4bb924
+      Directory: /tmp/chd122-qa/source-work
+      Sessions:  2 open
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 99% context left

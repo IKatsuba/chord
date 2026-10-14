@@ -1,0 +1,40 @@
+   │       "id": "df098696-9823-48d9-ab33-fe011af8323e", │
+   │       "runtime": "fake",                            │
+   │       "model": "fake-large",                        │
+   │       "tab": 1,                                     │
+   │       "you": true,                                  │
+   │       "agents": [                                   │
+   │         {                                           │
+   │           "id": "22e05888",                         │
+   │           "name": "parser",                         │
+   │           "runtime": "fake",                        │
+   │           "model": "fake-small"                     │
+   │         },                                          │
+   │         {                                           │
+   │           "id": "c16d1fe6",                         │
+   │           "name": "docs",                           │
+   │           "runtime": "fake",                        │
+   │           "model": "fake-large"                     │
+   │         }                                           │
+   │       ]                                             │
+   │     }                                               │
+   │   ]                                                 │
+   │ }                                                   │
+   └─────────────────────────────────────────────────────┘
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  Closed
+
+ → @parser
+   ⎿  parser is closed; open_agent starts another
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 2% context used
+    main  fake · Fake Large with a 1M context window
+    docs  fake · Fake Large with a 1M context window

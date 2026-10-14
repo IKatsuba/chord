@@ -1,0 +1,40 @@
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 13s on "Issue 214 fix the closing quote"
+
+      lead    fake · fake-large  default      idle               ← @tester · fake
+      tester  fake · fake-small  acceptEdits  idle               ← @coder · fake
+      coder   fake · fake-large  plan         ✓ replied 13s ago  ← @tester · fake
+
+ › /team run bugfix Issue 219 fix parseDate
+
+ ⏺ Team(bugfix 2) · fake · fake-large
+   ⎿  Issue 219 fix parseDate
+
+ ← @bugfix 2 · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ › /team stop bugfix 2
+   ⎿  Stopped bugfix 2: its lead, tester, and coder are closed · /resume lists them
+
+ ← chord
+   ⎿  The person closed team bugfix 2: its lead (fake · fake-large, id 972a9152) and its members tester and coder. It
+      takes no more messages; run_team starts it again.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+    main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window  ✓ replied 9s ago
+    ├─ tester  fake · Fake Small
+    └─ coder   fake · Fake Large with a 1M context window         ✓ replied 24s ago

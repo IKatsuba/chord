@@ -1,0 +1,24 @@
+ ⏺ Permission: deny.
+
+ › first line
+   second line
+                    one. Step 3 done.
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+╭⏺ Plan                     ──────────────                                ─────╮
+│  ⎿  ☒ Read the code      rsExceededWarni                    itter memory leak
+d     ☒ Write the change             o [Bo                                   Use
+ e    ☒ Run the tests         increase lim
+(                             ` to show wh                          d)
+"› mode                              tecte                     s added to [BoxRe
+nd                       is 10. Use emitte                                limit"
+(⏺ Mode: acceptEdits.              rning:                                ak dete
+ct                         dded to [BoxRen
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                 er memory leak detecte               steners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on     Fake Large with a 1M context window · 2% context used

@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                                          /tmp/chord-qa.4TUr
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.4TUr
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+ ← @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 41s
+
+      This window             Cost     Tokens
+      1 fake               $0.0875     14,000
+        main               $0.0250      4,000
+        Fix the tokenizer  $0.0125      2,000  task agent, ended
+        bugfix             $0.0500      8,000  team run: lead $0.0250 · tester $0.0125 · coder $0.0125
+      2 fake               $0.0125      2,000
+      Total                $0.1000     16,000
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window · medium
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ✓ replied 14s ago
+    ├─ tester  fake · Fake Small · medium                                  ● permission 12s
+    └─ coder   fake · Fake Large with a 1M context window · medium         ✓ replied 13s ago

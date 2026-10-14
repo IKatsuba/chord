@@ -1,0 +1,40 @@
+      ☒ Run the tests
+
+ › mode
+
+ ⏺ Mode: acceptEdits.
+
+ › /greet QA
+
+ ⏺ Hello from the fake agent.
+
+ › @example.ts
+
+ ⏺ Received a link: example.ts, file:///tmp/chd310-final/exits/source-120-m12/work/example.ts
+
+   Hello, world. This reply came in chunks.
+
+ ! printf qa-shell
+   ⎿  qa-shell
+                              3 done.
+ › text
+
+ ⏺ Received printf qa-shell: qa-shell
+                     nge
+   Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Set Effort                                                                                                           │
+│ Choose fake's Effort for this session.                                                                               │
+│                                       wh                     reated)Large wit                                xt used │
+│   1. Low                                                                                                             │
+│ ❯ 2. Medium ✔                                                                                                        │
+│   3. High                                                             eak det                                    [Box│
+│                                                                                                                      │
+│ Enter to set · Esc to go back                                         o [BoxR                     ners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P›                                detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 12% context used

@@ -1,0 +1,40 @@
+ bugfix · team · fake · Fake Large with a 1M context window · opened by @main 5s ago
+
+ ⏺ bugfix's instructions for the lead · 30 lines (ctrl+o to expand)
+
+ ← @main
+   ⎿  Issue 214 fix the closing quote
+
+ ⏺ Open(tester) · fake · fake-small · acceptEdits
+   ⎿  Write a test in tests/parse/tokenize_test.ts that fails because a string at the end of a line loses its closing
+      quote. Edit tests/ only. Tell me when it fails for that reason.
+
+ ⏺ Open(coder) · fake · fake-large · plan
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.
+
+ → @main
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/pa…
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+ ← @tester · fake
+   ⎿  It fails for that reason: "a" at the end of a line comes back as "a, with no closing quote. Only
+      tests/parse/tokenize_test.ts changed.
+
+ ⏺ Received the message from tester · fake.
+
+
+
+
+
+
+
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window
+    ├─ tester  fake · Fake Small                                  ● permission 3s
+    └─ coder   fake · Fake Large with a 1M context window         ✓ replied 4s ago

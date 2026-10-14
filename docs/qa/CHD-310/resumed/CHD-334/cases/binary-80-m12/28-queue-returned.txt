@@ -1,0 +1,24 @@
+      Cache read:   9,600
+      Session time: 45s
+
+ › /context
+   ⎿  Used: 24,000 of 200,000 tokens (12%)
+      Free: 176,000 tokens (88%)
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Small
+      Mode:      Accept edits
+      Session:   4257babd-0bb5-4bf0-891e-f1b7dc2ab6f7
+      Directory: /tmp/chd334-qa/exits/binary-80-m12/work
+
+ › slow
+
+ ⏺ Working.....................................................................
+   .........
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › queued QA                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

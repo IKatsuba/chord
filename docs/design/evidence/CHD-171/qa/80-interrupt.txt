@@ -1,0 +1,24 @@
+ ⏺ Close(parser)
+   ⎿  parser was closed when this session was left; open_agent starts another
+
+ → @parser
+   ⎿  parser was closed when this session was left; open_agent starts another
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   .
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                            /tmp/chd170-qa.5NGLNs/work
+ ⏺ Received the message from main.
+
+ › /echo person to parser
+
+ ⏺ person to parser
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.........
+   ⎿  Interrupted by user
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Small · 96% context left
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small

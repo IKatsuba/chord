@@ -1,0 +1,40 @@
+ chord                                                                                       fake · /tmp/chd151-qa/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 27s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 5s
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Bash(deno task test)
+
+ ⏺ It is running; I will say when it ends.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running                                         Fake Large with a 1M context window · 99% context left

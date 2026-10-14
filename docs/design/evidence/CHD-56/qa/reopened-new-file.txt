@@ -1,0 +1,24 @@
+ chord                                           fake · /tmp/chord-qa.FdVo/work
+
+
+
+
+
+
+
+
+
+
+
+ › /echo explain @src/ui/state.ts
+
+ ⏺ explain @src/ui/state.ts
+
+ › /echo explain @src/ui/state.ts
+
+ ⏺ explain @src/ui/state.ts
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › @new                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  new.ts

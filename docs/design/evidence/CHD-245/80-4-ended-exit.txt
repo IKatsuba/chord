@@ -1,0 +1,24 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.2J1A
+ ▀▀     ? for shortcuts · /help
+
+ › monitorexit
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 1; echo "✓ lint in 41s"; echo "X test (ubuntu-latest) in 3m 12s"…
+      m1 · times out after 10m
+
+ ⏺ I will hear when the CI run ends.
+
+ ← CI run 4812 · monitor · exit code 1
+   ✓ lint in 41s
+   X test (ubuntu-latest) in 3m 12s
+   Run 4812 (ci.yml) failed: 1 of 3 jobs failed
+   Exited with code 1 after 1s.
+
+ ⏺ Received the message from CI run 4812 · monitor · exit code 1.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

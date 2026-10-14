@@ -1,0 +1,40 @@
+ chord   1 fake    2 claude ●    3 fake ✓                                                                      ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › fix the failing test in tests/keys_test.tsx
+
+ ⏺ Read(tests/keys_test.tsx)
+   ⎿  Read 212 lines
+
+ ⏺ The test presses ctrl+x, which no entry names. I will add the entry.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Sessions in ~/src/app                                                                                                │
+│                                                                                                                      │
+│   1. fake      here               fix the failing test in tests/keys_test.tsx                                        │
+│ ❯ 2. claude    ● permission 41s   add a notes file                                                                   │
+│   3. fake      ✓ replied 2m ago   explain src/ui/state.ts                                                            │
+│                                                                                                                      │
+│ Enter to go · 1–9 to pick · Esc to close                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+

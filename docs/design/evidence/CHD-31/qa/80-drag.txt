@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chd31-qa/work
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Cancelled
+   ⎿  Interrupted by user
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › hello
+ ── ↓ 2 lines below · end to jump to the bottom ───────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › a draft I am still typing                                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  shift + drag to select text

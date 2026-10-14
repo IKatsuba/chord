@@ -1,0 +1,40 @@
+
+ ! printf qa-shell
+   ⎿  qa-shell
+              d. This reply came in chunks.
+ › text
+
+ ⏺ Received printf qa-shell: qa-shell
+
+   Hello, world. This reply came in chunks.
+
+ › /config               0
+   ⎿  Effort set to High
+
+ › /cost
+   ⎿  Total cost:   $0.1500
+      Tokens in:    12,000
+      Tokens out:   2,400 000 tokens (12%)
+      Cache read:   9,600s (88%)
+      Session time: 45s                 wh                     reated)Large wit                                xt used
+
+ › /context
+   ⎿  Used: 24,000 of 200,000 tokens (12%)                              eak det                                    [Box
+      Free: 176,000 tokens (88%)
+                                66b-be37-fc2c7eb5f1d7                   o [BoxR                     ners is 10. Use emi
+ › /status
+   ⎿  Agent:     fake        ededWarning:                              leak det                               d to [Box
+      Model:     Fake Small
+│P    Mode:      Accept edits                               EventEmitter memory                                  s added
+ t    Session:   399fcfea-fc40-466b-be37-fc2c7eb5f1d7          teners() to incr                                ────────╯
+"     Directory: /tmp/chd310-final/exits/source-120-m12/work       ded to [BoxR                    eners is 10. Use emit
+t
+(› slow                                                                                                            [BoxR
+e
+"⏺ Working..................................................................................        ners is 10. Use emit
+t  ⎿  Interrupted by user
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P› queued QA                 leak detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 12% context used

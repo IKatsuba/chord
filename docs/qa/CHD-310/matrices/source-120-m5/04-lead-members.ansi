@@ -1,0 +1,40 @@
+[38;2;255;255;255m [1m[39mbugfix[0;2m · team · fake · Fake Large with a 1M context window · opened by @main 5s ago[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39mbugfix's instructions for the lead · 30 lines (ctrl+o to expand)[0m[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIssue 214 fix the closing quote[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mOpen[0m(tester)[2m · fake · fake-small · acceptEdits[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mWrite a test in tests/parse/tokenize_test.ts that fails because a string at the end of a line loses its closing[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mquote. Edit tests/ only. Tell me when it fails for that reason.[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mOpen[0m(coder)[2m · fake · fake-large · plan[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mYou will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.[0m[38;2;255;255;255m
+
+ [39m→[38;2;255;255;255m [1m[39m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/pa…[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mtester and coder are open; I wait for tester's test.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@tester[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIt fails for that reason: "a" at the end of a line comes back as "a, with no closing quote. Only[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mtests/parse/tokenize_test.ts changed.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from tester · fake.[38;2;255;255;255m
+
+
+
+
+
+
+
+
+[2m[39m╭─[0;1m bugfix[0;2m ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+[0m[38;5;244m│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m● tester needs your permission · ctrl+x a to go[0m [2m·[0m [2m? for shortcuts[0m[38;2;255;255;255m      [2m[39mFake Large with a 1M context window · 1% used[0m[38;2;255;255;255m
+  [2m[39m [0m main     [2m  fake · Fake Large with a 1M context window       [0m[38;2;255;255;255m
+  [39m  [1mbugfix   [0;2m  team · fake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+  [39m  [2m├─ [0mtester[2m  fake · Fake Small                                [0m  ● permission 3s[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake · Fake Large with a 1M context window       [0m  ✓ replied 4s ago[38;2;255;255;255m

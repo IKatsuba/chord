@@ -1,0 +1,5 @@
+Resume this session with:
+chord fake --agent-command 'bun /tmp/chd380-qa/repo/tests/fixtures/fake_agent/main.ts' --resume 51ebf7af-2254-46fa-b753-
+ef9955e7615c
+CHD380_EXIT=0
+Igors-MacBook-Pro%

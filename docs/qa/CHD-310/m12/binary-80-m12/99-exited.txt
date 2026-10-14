@@ -1,0 +1,24 @@
+Resume this session with:
+chord fake --agent-command 'bun /tmp/chd310-repo/tests/fixtures/fake_agent/main.
+ts' --resume fe7e25e4-e98a-4525-a48c-cee6f874c9e1
+
+QA_DONE code=0
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

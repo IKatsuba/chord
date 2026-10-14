@@ -1,0 +1,40 @@
+[38;2;255;255;255m
+ [39m⏺[38;2;255;255;255m [1;4m[39mReading the session layer[0m[38;2;255;255;255m
+
+   [39mThe [1msession layer[0m wraps [3mthe SDK[0m so the interface never touches a process. Start with src/session/session.ts, then[38;2;255;255;255m
+   [39msee the [4mACP spec[0;2m (https://agentclientprotocol.com)[0m for the wire format.[38;2;255;255;255m
+
+   [1m[39mWhat it does[0m[38;2;255;255;255m
+
+   [2m[39m-[0m opens one persistent session per chord session[38;2;255;255;255m
+   [2m[39m-[0m starts turns with startTurn and cancels them[38;2;255;255;255m
+   [39m  [2m1.[0m a cancel stops the turn at once[38;2;255;255;255m
+   [39m  [2m2.[0m the agent is told with session/cancel[38;2;255;255;255m
+   [2m[39m-[0m closes the agent and waits until its exit is seen[38;2;255;255;255m
+
+   [38;5;244m│[38;2;255;255;255m [39mA closed agent counts as gone only once its exit is seen:[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m [2m[39m┌ ts ──────────────────────────────────────────────────────┐[0m[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m [2m[39m│[0m await session.close(); // resolves once the exit is seen [2m│[0m[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m [2m[39m└──────────────────────────────────────────────────────────┘[0m[38;2;255;255;255m
+
+   [2m[39m┌───────────────┬────────────────────────────────────────┬────────────────────┐[0m[38;2;255;255;255m
+   [2m[39m│[0;1m Module        [0;2m│[0;1m Holds                                  [0;2m│[0;1m Tested by          [0;2m│[0m[38;2;255;255;255m
+   [2m[39m├───────────────┼────────────────────────────────────────┼────────────────────┤[0m[38;2;255;255;255m
+   [2m[39m│[0m session.ts    [2m│[0m opening, prompting and closing         [2m│[0m session_test.ts    [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m               [2m│[0m a session                              [2m│[0m                    [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m processes.ts  [2m│[0m the promise that a closed agent is     [2m│[0m processes_test.ts  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m               [2m│[0m gone                                   [2m│[0m                    [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m transcript.ts [2m│[0m the reducer from events to what is     [2m│[0m transcript_test.ts [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m               [2m│[0m drawn                                  [2m│[0m                    [2m│[0m[38;2;255;255;255m
+   [2m[39m└───────────────┴────────────────────────────────────────┴────────────────────┘[0m[38;2;255;255;255m
+
+   [2m[39m┌ ts ──────────────────────────────────────────────────────────┐[0m[38;2;255;255;255m
+   [2m[39m│[0m const session = await openSession({ agent: 'claude', cwd }); [2m│[0m[38;2;255;255;255m
+   [2m[39m└──────────────────────────────────────────────────────────────┘[0m[38;2;255;255;255m
+
+ [39m✶[38;2;255;255;255m [39mWorking…[38;2;255;255;255m [2m[39m(0s · esc to interrupt)[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                                [2m[39mFake Large with a 1M context window · 1% context used[0m[38;2;255;255;255m

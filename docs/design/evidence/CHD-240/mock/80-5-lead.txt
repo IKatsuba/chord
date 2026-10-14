@@ -1,0 +1,24 @@
+ ← @tester · claude
+   It fails for that reason: expected [Str "a\""] [Eol], got [Str "a"]
+   [Eol]. Only tests/parse/tokenize_test.ts changed.
+
+ → @coder
+   ⎿  tests/ is done and stays tester's. Fix readString in
+      src/parse/tokenize.ts so that test passes. Edit nothing else.
+
+
+
+
+
+
+
+
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back                  Opus · 88% left
+    main         claude · Opus
+  ❯ bugfix       team · claude · Opus   ✻ working 2s
+    ├─ tester    claude · Sonnet        ✓ replied 2s ago
+    └─ coder     codex · gpt-5.3-codex  ← message from @bugfix

@@ -1,0 +1,40 @@
+ chord                                                                                         fake · /tmp/chord-qa.cmp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › plan
+
+ ⏺ Planned. Step 2 done.
+
+ ✷ Working… (2s · esc to interrupt)
+  ⎿  ☒ Read the code
+     ☒ Write the change
+     ◐ Run the tests
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

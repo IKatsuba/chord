@@ -1,0 +1,24 @@
+ [1mchord[0m                                                   [2mfake · /tmp/chord-demo[0m
+ [2m›[0m permission
+   [2m⎿[0m  [2mAllowed Write notes.txt · Always allow[0m
+
+ ⏺ Permission: always.
+
+ [2m›[0m permission
+   [2m⎿[0m  [31mRejected Write notes.txt[39m
+
+ ⏺ Permission: deny.
+
+ [2m›[0m hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m permission
+   [2m⎿[0m  [31mRejected Write notes.txt[39m
+
+ ⏺ Permission: deny.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+

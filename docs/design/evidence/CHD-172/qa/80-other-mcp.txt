@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake    3 fake2             /tmp/chd172-final.XDzrEf/other
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord passed these to fake when the session started. ACP does not say        │
+│ whether fake connected to them.                                              │
+│                                                                              │
+│ Name          Transport  Command or URL              Defined in              │
+│ chord         http       http://127.0.0.1:62526/mcp  chord itself            │
+│ other-server  stdio      echo other                  .mcp.json               │
+│                                                                              │
+│ chord's server gives fake list_agents, list_sessions and spawn_task.         │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)            Fake Small · 99% context left

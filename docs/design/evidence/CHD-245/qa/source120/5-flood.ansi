@@ -1,0 +1,40 @@
+
+ [38;2;78;186;101m⏺[39m [1mMonitor[0m(CI run 4812)
+   [2m⎿[0m  [2m$ sleep 1; echo "✓ lint in 41s"; echo "X test (ubuntu-latest) in 3m 12s"; echo "Run 4812 (ci.yml) failed: 1 of 3…[0m
+   [2m [0m  [2mm1 · times out after 10m
+
+[0m ⏺ I will hear when the CI run ends.
+
+ [38;2;255;107;128m←[39m [1mCI run 4812[0;2m · monitor · exit code 1[0m
+   ✓ lint in 41s
+   X test (ubuntu-latest) in 3m 12s
+   Run 4812 (ci.yml) failed: 1 of 3 jobs failed
+   [2mExited with code 1 after 1s.[0m
+
+ ⏺ Received the message from CI run 4812 · monitor · exit code 1.
+
+ [2m›[0m monitorflood
+
+ [38;2;78;186;101m⏺[39m [1mMonitor[0m(request log)
+   [2m⎿[0m  [2m$ yes '127.0.0.1 - - "GET /health HTTP/1.1" 200 2'[0m
+   [2m [0m  [2mm2 · times out after 10m
+
+[0m ⏺ Watching the request log.
+
+ [38;2;255;107;128m←[39m [1mrequest log[0;2m · monitor · flooded[0m
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   [2m… +95 lines (ctrl+o to expand)[0m
+   [2mchord stopped it: 1,000 lines in 10s is more than a monitor may print. Filter its output (grep --line-buffered)[0m
+   [2mand start it again.[0m
+
+ ⏺ Received the message from request log · monitor · flooded.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

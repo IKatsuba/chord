@@ -1,0 +1,24 @@
+ chord                                              fake · /tmp/chd-205-qa/work
+
+   Hello, world. This reply came in chunks.
+
+ › kee [Image #5] p
+
+ ⏺ Received an image: image/png, 73 bytes
+
+   Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Select model                                                                 │
+│ Switch fake's model for this session.                                        │
+│                                                                              │
+│ ❯ 1. Fake Large with a 1M context window ✔                                   │
+│   2. Fake Small                                                              │
+│                                                                              │
+│ Enter to switch · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT -- ? for shortcuts  Fake Large with a 1M context window · 99% left

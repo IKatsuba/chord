@@ -1,0 +1,24 @@
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+ › ⎿laRejected Write notes.txt
+
+ ⏺ Permission: deny.one. Step 3 done.
+
+ › first line
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭› plan                     ──────────────                                ─────╮
+│                          rsExceededWarni                    itter memory leak
+d⏺ Planned. Step 2 done. Step 3 done.o [Bo                                   Use
+ e                            increase lim
+(⏺ Plan                       ..` to show                           ted)
+"P ⎿  ☒ Read the code                tecte                     s added to [BoxRe
+nd    ☒ Write the change is 10. Use emitte                                limit"
+(n    ☒ Run the tests  rsExceededWarning:                                ak dete
+ct                         dded to [BoxRen
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                 er memory leak detecte               steners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on     Fake Large with a 1M context window · 2% context used

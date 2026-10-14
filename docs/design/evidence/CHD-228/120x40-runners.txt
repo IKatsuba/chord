@@ -1,0 +1,39 @@
+$ cd chord; for a in claude fast-agent; do PATH=/tmp/chd228-empty deno run -A src/main.tsx $a; echo "exit $?"; done
+chord: claude runs "npx", which is not on PATH; npx comes with Node.js: https://nodejs.org/en/download
+exit 1
+chord: fast-agent runs "uvx", which is not on PATH; uvx comes with uv: https://docs.astral.sh/uv/getting-started/install
+ation/
+exit 1
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

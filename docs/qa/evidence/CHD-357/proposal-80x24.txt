@@ -1,0 +1,24 @@
+
+      lead      claude · opus          high    default      Splits the job, …
+      tester    claude · sonnet        medium  acceptEdits  Writes the faili…
+      coder     codex · gpt-5.3-codex  —       auto         Writes the fix, …
+      reviewer  claude · opus          —       plan         Reads the diff a…
+      … +43 lines (ctrl+o to expand)
+
+ ✶ Waiting for you… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Save team bugfix?                                                            │
+│                                                                              │
+│ ❯ 1. Yes, for this project   .chord/teams/bugfix.md                          │
+│   2. Yes, for every project  /tmp/chd357-qa/proposal/config/chord/teams/     │
+│   bugfix.md                                                                  │
+│   3. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

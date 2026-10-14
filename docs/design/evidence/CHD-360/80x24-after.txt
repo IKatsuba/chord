@@ -1,0 +1,24 @@
+ ⏺ I will hear from the dev server when it errs.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   ............................................................................
+   ............................................................................
+   ............................................................................
+   ...........................
+   ⎿  Interrupted by user
+
+ ← dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined
+      (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › text                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                         Fake Large with a 1M context window · 1% context used
+    dev server errors  $ sleep 1; echo "ERROR [router] …  running 6s · 1 event

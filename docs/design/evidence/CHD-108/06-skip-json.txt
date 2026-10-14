@@ -1,0 +1,14 @@
+qa> chord fake --agent-command "$FAKE" -p permission --dangerously-skip-permissions --output-format json > /tmp/chd108-q
+a/06-skip-json.stdout 2> /tmp/chd108-qa/06-skip-json.stderr; echo $? > /tmp/chd108-qa/06-skip-json.exit; printf "stdout:
+\n"; cat /tmp/chd108-qa/06-skip-json.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/06-skip-json.stderr; printf "echo \$
+? (saved immediately):\n"; cat /tmp/chd108-qa/06-skip-json.exit; echo CAPTURE_DONE
+stdout:
+{"type":"result","is_error":false,"result":"Permission: allow.","session_id":"14d55d75-d6d2-4606-88b0-422dcbc19f3e","sto
+p_reason":"end_turn","usage":{"input_tokens":1000,"output_tokens":200,"cache_read_input_tokens":800,"total_tokens":2000}
+,"total_cost_usd":0.0125}
+stderr:
+chord: allowed Write notes.txt.
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

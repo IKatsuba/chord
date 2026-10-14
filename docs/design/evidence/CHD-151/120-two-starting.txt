@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.h7Ea
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 1 tool use
+   │  ⎿  Search(sessionUpdate in src)
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 1 tool use
+      ⎿  Search(function Tool in src/ui)
+
+ ✹ Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

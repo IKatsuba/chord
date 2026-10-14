@@ -1,0 +1,60 @@
+{
+  "cycles": [
+    {
+      "children": 12,
+      "listeners": 1,
+      "widths": [
+        40,
+        20,
+        60
+      ]
+    },
+    {
+      "children": 3,
+      "listeners": 1,
+      "widths": [
+        40,
+        20,
+        60
+      ]
+    },
+    {
+      "children": 0,
+      "listeners": 0,
+      "widths": [
+        40,
+        20,
+        60
+      ]
+    },
+    {
+      "children": 12,
+      "listeners": 1,
+      "widths": [
+        40,
+        20,
+        60
+      ]
+    },
+    {
+      "children": 0,
+      "listeners": 0,
+      "widths": [
+        40,
+        20,
+        60
+      ]
+    },
+    {
+      "children": 12,
+      "listeners": 1,
+      "widths": [
+        40,
+        20,
+        60
+      ]
+    }
+  ],
+  "afterUnmount": 0,
+  "warnings": []
+}

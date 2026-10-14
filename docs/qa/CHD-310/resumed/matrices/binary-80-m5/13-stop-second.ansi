@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [2m[39msrc/parse/tokenize.ts only. I will report when the test fails[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mfor the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix 2 · fake.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team stop bugfix 2[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mStopped bugfix 2: its lead, tester, and coder are closed · /resume[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlists them[38;2;255;255;255m
+
+ [2m[39m←[0m[38;2;255;255;255m [1m[39mchord[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThe person closed team bugfix 2: its lead (fake · fake-large, id[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39md36e106f) and its members tester and coder. It takes no more messages;[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mrun_team starts it again.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from chord.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+[2m│[0m[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m        [2m[39mFake Large with a 1M context window · 1% context used[0m[38;2;255;255;255m
+  [39m  [1mmain     [0;2m  fake       [0m[38;2;255;255;255m
+  [39m  bugfix   [2m  team · fake[0m  ✓ replied 6s ago[38;2;255;255;255m
+  [39m  [2m├─ [0mtester[2m  fake       [0m[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 22s ago[38;2;255;255;255m

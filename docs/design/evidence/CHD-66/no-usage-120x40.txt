@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.WOCE
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      Session time: 13s
+
+ › /context
+   ⎿  fake has not reported how full its context window is.
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   3cdab9c8-448c-412d-a5ef-e38500b04b47
+      Directory: /tmp/chord-qa.WOCE
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

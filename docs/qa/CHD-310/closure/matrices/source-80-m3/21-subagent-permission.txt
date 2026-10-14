@@ -1,0 +1,24 @@
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses
+   │  ⎿  Write(notes/routing.md) · waiting for permission
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Failed
+
+ ✸ Waiting for permission… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Find the session layer) asks                                           │
+│ Write notes/routing.md                                                       │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

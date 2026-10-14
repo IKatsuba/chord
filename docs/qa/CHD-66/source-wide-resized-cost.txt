@@ -1,0 +1,24 @@
+ chord                                              fake · /tmp/chd66-qa.uf7EKT
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ..................................
+   ⎿  Interrupted by user
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 14s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

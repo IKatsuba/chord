@@ -1,0 +1,24 @@
+Resume these sessions with:
+chord fake --agent-command 'deno run --quiet --allow-env --allow-net=127.0.0.1 -
+-config=/tmp/chd172-final.XDzrEf/deno.json /tmp/chd172-final.XDzrEf/tests/fixtur
+es/fake_agent/main.ts --resume-only --step-ms 100' --resume 488905ef-f770-49ef-a
+6f9-1324e3d06fbb
+chord fake --agent-command 'deno run --quiet --allow-env --allow-net=127.0.0.1 -
+-config=/tmp/chd172-final.XDzrEf/deno.json /tmp/chd172-final.XDzrEf/tests/fixtur
+es/fake_agent/main.ts --resume-only --step-ms 100' --resume 517c521b-a1cd-496d-a
+a97-741c5b4c0c70
+chord fake2 --resume 4278154d-7142-4629-8861-37699e2a1fcb
+
+QA exit 0; terminal modes: restored
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+

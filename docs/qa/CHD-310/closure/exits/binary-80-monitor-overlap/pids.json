@@ -1,0 +1,43 @@
+{
+  "app": 6517,
+  "fakes": [
+    6522
+  ],
+  "owned": [
+    6517,
+    6522,
+    6535,
+    6538
+  ],
+  "groups": [
+    6522,
+    6535,
+    6538
+  ],
+  "rows": [
+    [
+      "6522",
+      "6517",
+      "6522",
+      "bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "6535",
+      "6517",
+      "6535",
+      "sleep 600"
+    ],
+    [
+      "6538",
+      "6517",
+      "6538",
+      "sleep 600"
+    ],
+    [
+      "6517",
+      "6510",
+      "6510",
+      "/tmp/chd310-closure/forced/repo/dist/bun-darwin-arm64/chord fake --agent-command env -u BUN_OPTIONS bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd310-closure/forced/binary-80-monitor-overlap/work"
+    ]
+  ]
+}

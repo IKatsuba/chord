@@ -1,0 +1,24 @@
+/tmp/chd331-qa/binary-80-hung-SIGHUP/run.sh: line 9:  6713 Hangup: 1
+   /tmp/chd331-qa/repo/dist/bun-darwin-arm64/chord fake --agent-command 'env -u
+BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts' -C /tmp/c
+hd331-qa/binary-80-hung-SIGHUP/work 2> /tmp/chd331-qa/binary-80-hung-SIGHUP/stde
+rr
+
+QA_DONE code=129
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

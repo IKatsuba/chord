@@ -1,0 +1,24 @@
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+
+ › mode
+
+ ⏺ Mode: acceptEdits.
+
+ › /greet QA
+
+ ⏺ Hello from the fake agent.─────────────                                ─────
+                                       rni                    itter memory leak
+ › @example.ts                       o [Bo                                   Us
+
+ ⏺ Received a link: example.ts,
+   file:///tmp/chd310-final/exits/source-80-m12/work/example.tss added to [BoxR
+
+   Hello, world. This reply came in chunks.
+ct
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                                                        eners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 11% context used

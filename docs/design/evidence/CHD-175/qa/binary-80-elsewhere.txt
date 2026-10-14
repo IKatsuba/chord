@@ -1,0 +1,24 @@
+ chord   1 codex    2   3   4   5   6   7                             ~/src/app
+ █▄     chord v0.0.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+        resumed · 7 minutes ago · saved prompt 5
+
+ › saved prompt 5
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /resume
+   ⎿  That window has a tab in ~/src/api. Quit and open it there with:
+      chord --resume w-17500003
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

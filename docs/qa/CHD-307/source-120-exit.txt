@@ -1,0 +1,5 @@
+Resume this session with:
+chord fake --agent-command 'bun /tmp/chd307-qa/branch/tests/fixtures/fake_agent/main.ts' --resume f6029426-1122-491f-ad1
+b-27456074b484
+QA_SHELL_RETURNED
+$

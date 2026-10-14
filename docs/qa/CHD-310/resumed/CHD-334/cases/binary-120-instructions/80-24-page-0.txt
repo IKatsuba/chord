@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd334-qa/exits/binary-120-instructions/work
+ █▀     ? for shortcuts · /help
+
+ › /team show dev
+   ⎿  dev · .chord/teams/dev.md
+      Complete instruction QA
+
+      lead   fake  —  Splits the job, says who edits which files, reports to…
+      coder  fake  —  Writes it
+
+      lead's instructions
+      instruction001 instruction002 instruction003 instruction004
+      instruction005 instruction006 instruction007 instruction008
+      instruction009 instruction010 instruction011 instruction012
+      instruction013 instruction014 instruction015 instruction016
+      instruction017 instruction018 instruction019 instruction020
+ ── ↓ 23 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

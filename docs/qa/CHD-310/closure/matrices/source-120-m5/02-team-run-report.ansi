@@ -1,0 +1,40 @@
+[38;2;255;255;255m [39m█▄  [38;2;255;255;255m   [1m[39mchord[0;2m v0.0.0[0m[38;2;255;255;255m
+ [39m▀██▄[38;2;255;255;255m   [2m[39mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m/tmp/chd310-closure/m45/source-120-m5/work[0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team show bugfix[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mbugfix · .chord/teams/bugfix.md[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mFixes a bug end to end — a failing test first, then the fix.[0m[38;2;255;255;255m
+
+   [2m[39m [0m[38;2;255;255;255m  [39mlead    fake · fake-large  default      Splits the job, says who edits which files, reports to main[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mtester  fake · fake-small  acceptEdits  Writes the failing test, then proves the fix[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mcoder   fake · fake-large  plan         Writes the fix, in the files the lead names[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [1;4m[39mHow bugfix works[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m1.[0m The lead reads the job and names who may edit which files.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m2.[0m tester writes a test that fails for the bug's own reason, in tests/.[38;2;255;255;255m
+      [2m[39m… +24 lines (ctrl+o to expand)[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team run bugfix Issue 214 fix the closing quote[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(bugfix)[2m · fake · fake-large[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIssue 214 fix the closing quote[0m[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@bugfix[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39msrc/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix · fake.[38;2;255;255;255m
+
+
+
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m● tester needs your permission · ctrl+x a to go[0m [2m·[0m [2m? for shortcuts[0m[38;2;255;255;255m      [2m[39mFake Large with a 1M context window · 1% used[0m[38;2;255;255;255m
+  [39m  [1mmain     [0;2m  fake · Fake Large with a 1M context window       [0m[38;2;255;255;255m
+  [39m  bugfix   [2m  team · fake · Fake Large with a 1M context window[0m  ✓ replied 3s ago[38;2;255;255;255m
+  [39m  [2m├─ [0mtester[2m  fake · Fake Small                                [0m  ● permission 1s[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake · Fake Large with a 1M context window       [0m  ✓ replied 2s ago[38;2;255;255;255m

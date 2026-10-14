@@ -1,0 +1,24 @@
+   [2m [0m
+   [2m [0m  The lead writes to main when the job is done or cannot be done.
+
+ [2m›[0m /team run bugfix Issue 214 fix the closing quote
+
+ [2m⏺[0m [1mTeam[0m(bugfix)[2m · fake · fake-large[0m
+   [2m⎿[0m  [2mIssue 214 fix the closing quote[0m
+
+ ← [1m@bugfix[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test[0m
+   [2m [0m  [2min tests/parse/tokenize_test.ts; coder waits for it and will edit[0m
+   [2m [0m  [2msrc/parse/tokenize.ts only. I will report when the test fails[0m
+   [2m [0m  [2mfor the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix · fake.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m● tester needs your permission · ctrl+x a[0m    [2mFake Large with a 1M… · 1% used[0m
+    [1mmain     [0;2m  fake       [0m
+    bugfix   [2m  team · fake[0m  ✓ replied 3s ago
+    [2m├─ [0mtester[2m  fake       [0m  ● permission 1s
+    [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 2s ago

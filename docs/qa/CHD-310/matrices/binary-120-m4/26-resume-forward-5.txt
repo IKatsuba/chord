@@ -1,0 +1,40 @@
+   │       "name": "factory-droid",                                                                          │
+   │       "note": "models and modes not read yet; list_agents with agent \"factory-droid\" reads them"      │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "fast-agent",                                                                             │
+   │       "note": "models and modes not read yet; list_agents with agent \"fast-agent\" reads them"         │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "gemini",                                                                                 │
+   │       "note": "models and modes not read yet; list_agents with agent \"gemini\" reads them"             │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "github-copilot-cli",                                                                     │
+   │       "note": "models and modes not read yet; list_agents with agent \"github-copilot-cli\" reads them" │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "glm-acp-agent",                                                                          │
+   │       "note": "models and modes not read yet; list_agents with agent \"glm-acp-agent\" reads them"      │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "grok-build",                                                                             │
+   │       "note": "models and modes not read yet; list_agents with agent \"grok-build\" reads them"         │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "kilo",                                                                                   │
+   │       "note": "models and modes not read yet; list_agents with agent \"kilo\" reads them"               │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "minimax-code",                                                                           │
+   │       "note": "models and modes not read yet; list_agents with agent \"minimax-code\" reads them"       │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "minion-code",                                                                            │
+   │       "note": "models and modes not read yet; list_agents with agent \"minion-code\" reads them"        │
+ ── ↓ 140 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 3% context used

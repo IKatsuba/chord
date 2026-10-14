@@ -1,0 +1,127 @@
+[
+  {
+    "capture": "02-image-received",
+    "contains": "Received an image: image/png, 132 bytes",
+    "passed": true
+  },
+  {
+    "capture": "03-editor-return",
+    "contains": "edited draft from scripted EDITOR",
+    "passed": true
+  },
+  {
+    "capture": "05-vim-insert",
+    "contains": "-- INSERT --",
+    "passed": true
+  },
+  {
+    "capture": "06-vim-normal",
+    "contains": "-- NORMAL --",
+    "passed": true
+  },
+  {
+    "capture": "07-vim-motions-change",
+    "contains": "ONE two three",
+    "passed": true
+  },
+  {
+    "capture": "10-vim-off",
+    "contains": "Vim mode off",
+    "passed": true
+  },
+  {
+    "capture": "13-theme-light-selected",
+    "contains": "Theme set to Light",
+    "passed": true
+  },
+  {
+    "capture": "14-theme-dark-selected",
+    "contains": "Theme set to Dark",
+    "passed": true
+  },
+  {
+    "capture": "16-terminal-stream-1",
+    "contains": "Task test deno test",
+    "passed": true
+  },
+  {
+    "capture": "18-terminal-exit",
+    "contains": "Exit code 1",
+    "passed": true
+  },
+  {
+    "capture": "21-subagent-permission",
+    "contains": "Agent(Find the session layer) asks",
+    "passed": true
+  },
+  {
+    "capture": "27-compacting",
+    "contains": "Compacting conversation",
+    "passed": true
+  },
+  {
+    "capture": "28-compacted",
+    "contains": "Conversation compacted",
+    "passed": true
+  },
+  {
+    "capture": "29-compaction-summary",
+    "contains": "Next: commit the change.",
+    "passed": true
+  },
+  {
+    "capture": "31-mcp-list",
+    "contains": "Not enough messages to compact.",
+    "passed": true
+  },
+  {
+    "capture": "31-mcp-list",
+    "contains": "project-files",
+    "passed": true
+  },
+  {
+    "capture": "36-first-session-restored",
+    "contains": "first unsent draft",
+    "passed": true
+  },
+  {
+    "capture": "37-second-session-restored",
+    "contains": "second unsent draft",
+    "passed": true
+  },
+  {
+    "capture": "38-resume-current-directory",
+    "contains": "in this directory",
+    "passed": true
+  },
+  {
+    "capture": "39-resume-all-directories",
+    "contains": "in every directory",
+    "passed": true
+  },
+  {
+    "capture": "40-resume-current-again",
+    "contains": "in this directory",
+    "passed": true
+  },
+  {
+    "capture": "41-agent-error",
+    "contains": "The fake agent failed on purpose.",
+    "passed": true
+  },
+  {
+    "capture": "42-interrupt",
+    "contains": "Interrupted by user",
+    "passed": true
+  },
+  {
+    "capture": "43-resize-other",
+    "rows": 40,
+    "passed": true
+  },
+  {
+    "capture": "44-resize-back",
+    "rows": 24,
+    "passed": true
+  }
+]

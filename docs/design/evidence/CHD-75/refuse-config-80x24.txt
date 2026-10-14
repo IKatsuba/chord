@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.wAp3
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /config
+ ⏺ Could not set Effort to High: The fake agent holds its effort.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

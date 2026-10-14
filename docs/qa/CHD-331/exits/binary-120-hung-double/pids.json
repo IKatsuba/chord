@@ -1,0 +1,27 @@
+{
+  "app": 9620,
+  "fakes": [
+    9625
+  ],
+  "owned": [
+    9620,
+    9625
+  ],
+  "groups": [
+    9625
+  ],
+  "rows": [
+    [
+      "9625",
+      "9620",
+      "9625",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "9620",
+      "9613",
+      "9613",
+      "/tmp/chd331-qa/repo/dist/bun-darwin-arm64/chord fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/binary-120-hung-double/work"
+    ]
+  ]
+}

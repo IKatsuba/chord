@@ -1,0 +1,24 @@
+
+ ⏺ Open(coder) · fake · fake-large · plan
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test
+      fails. Read it now; change nothing yet.
+
+ → @main
+   ⎿  On it. tester is writing a failing ...est fails for the bug's own reason.
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+ ← @tester · fake
+   ⎿  It fails for that reason: "a" at the end of a line comes back as "a,
+      with no closing quote. Only tests/parse/tokenize_test.ts changed.
+
+ ⏺ Received the message from tester · fake.
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+    main       fake
+  ❯ bugfix     team · fake
+    ├─ tester  fake         ● permission 21s
+    └─ coder   fake         ✓ replied 22s ago

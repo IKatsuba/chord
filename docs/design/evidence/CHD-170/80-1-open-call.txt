@@ -1,0 +1,24 @@
+
+ › agents
+
+ ⏺ I will open parser on the tests and docs on the README.
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ → parser · queued
+   ⎿  I changed how a string at the end of a line is read. Run the parser test…
+
+ ✶ Working… (1s · esc to interrupt)
+ ← parser · fake: Ran deno task test tests/parse: 2 failures, both in tests/pa…
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M context window
+    main    fake · Fake Large with a 1M context window  ✻ working 1s
+    parser  fake · Fake Small                           ← message from main
+    docs    fake · Fake Large with a 1M context window  ● permission 0s

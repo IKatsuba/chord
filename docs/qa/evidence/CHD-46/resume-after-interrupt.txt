@@ -1,0 +1,40 @@
+ chord                                                              fake · /tmp/chord-qa46-5ec53738c11e9e80/resume-work
+
+
+ › tools
+
+ ⏺ Read(README.md)
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /echo NEW-TURN
+
+ ⏺ NEW-TURN
+
+ › /echo OK
+
+ ⏺ OK
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................
+   ⎿  Interrupted by user
+
+ › /echo AFTER-INTERRUPT
+
+ ⏺ AFTER-INTERRUPT
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

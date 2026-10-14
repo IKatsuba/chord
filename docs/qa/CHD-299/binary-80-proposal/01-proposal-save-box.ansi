@@ -1,0 +1,24 @@
+
+   [2m [0m  lead      claude · opus          default      Splits the job, says who…
+   [2m [0m  tester    claude · sonnet        acceptEdits  Writes the failing test,…
+   [2m [0m  coder     codex · gpt-5.3-codex  auto         Writes the fix, in the f…
+   [2m [0m  reviewer  claude · opus          plan         Reads the diff and edits…
+      [2m… +39 lines (ctrl+o to expand)[0m
+
+ ✹ Waiting for you… [2m(2s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mSave team bugfix?[0m                                                            [2m│
+│[0m                                                                              [2m│
+│[0m ❯ 1. Yes, for this project   .chord/teams/bugfix.md                          [2m│
+│[0m   2. Yes, for every project                                                  [2m│
+│[0m   /tmp/chd299/binary-80-proposal/config/chord/teams/bugfix.md                [2m│
+│[0m   3. No, tell fake what to change                                            [2m│
+│[0m                                                                              [2m│
+│[0m [2mEsc to tell fake what to change[0m                                              [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

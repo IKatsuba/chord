@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.lmYi
+ ▀▀     ? for shortcuts · /help
+
+ › hello world, word
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › row 1
+   row 2
+   row 3
+   row 4
+   row 5
+   row 6
+   row 7
+   row 8
+   row 9
+   row 10
+   row 11
+   row 12
+   row 13
+   row 14
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ↑ row 5                                                                                                              │
+│   row 6                                                                                                              │
+│   row 7                                                                                                              │
+│   row 8                                                                                                              │
+│   row 9                                                                                                              │
+│   row 10                                                                                                             │
+│   row 11                                                                                                             │
+│   row 12                                                                                                             │
+│   row 13                                                                                                             │
+│   row 14                                                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  search prompts: row 13

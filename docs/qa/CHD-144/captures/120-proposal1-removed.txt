@@ -1,0 +1,40 @@
+ chord                                                                            fake · /tmp/chord-qa.517f871b20739cfd
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+
+ › proposal
+
+ ⏺ I'll look first.
+
+ ⏺ file:///plans/proposal.md
+
+ ⏺ Plan written. Draft dropped.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

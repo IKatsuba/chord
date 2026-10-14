@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd334-qa/exits/source-80-instructions/work
+ █▀     ? for shortcuts · /help
+
+ › /team show dev
+   ⎿  dev · .chord/teams/dev.md
+      Complete instruction QA
+
+      lead   fake  —  Splits the job, says who edits which files, reports to…
+      coder  fake  —  Writes it
+
+      Build it.
+      … +28 lines (ctrl+o to expand)
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

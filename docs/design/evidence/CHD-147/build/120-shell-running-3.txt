@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.ZL9K
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › shell
+
+ ⏺ Run(deno task test)
+   ⎿  running 3 tests
+      3/3
+      ok | 2 passed
+      … +1 line (ctrl+o to expand)
+
+ ✸ Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

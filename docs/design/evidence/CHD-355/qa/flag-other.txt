@@ -1,0 +1,40 @@
+chord   1 fake    2 fake    3 other                                                          /tmp/chd355-qa-1i0j6hi4/a
+ █▄     chord v0.0.0
+ ▀██▄   other · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd355-qa-1i0j6hi4/a
+ █▀     ? for shortcuts · /help
+
+ › effort
+
+ ⏺ Effort: medium.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

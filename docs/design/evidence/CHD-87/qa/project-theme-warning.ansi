@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                 [2mfake · /tmp/chd87-qa/behavior/project-theme/work[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [38;2;138;90;0m⏺[39m [38;2;138;90;0m.chord/settings.json: "theme" is read only from /tmp/chd87-qa/behavior/project-theme/config/chord/settings.json, [39m
+   [38;2;138;90;0mignored[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;0;107;102m⏸ plan mode on[39m [2m(shift+tab to cycle)[0m                                              [2mFake Large with a 1M context window[0m

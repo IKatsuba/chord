@@ -1,0 +1,13 @@
+qa> chord fake --agent-command "$FAKE" -p permission --permission-mode acceptEdits --dangerously-skip-permissions > /tmp
+/chd108-qa/08-both-permission.stdout 2> /tmp/chd108-qa/08-both-permission.stderr; echo $? > /tmp/chd108-qa/08-both-permi
+ssion.exit; printf "stdout:\n"; cat /tmp/chd108-qa/08-both-permission.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/08-
+both-permission.stderr; printf "echo \$? (saved immediately):\n"; cat /tmp/chd108-qa/08-both-permission.exit; echo CAPTU
+RE_DONE
+stdout:
+Permission: allow.
+stderr:
+chord: allowed Write notes.txt.
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

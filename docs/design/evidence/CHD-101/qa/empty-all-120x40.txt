@@ -1,0 +1,40 @@
+ chord                                                                 fake · /private/tmp/chd101-qa.Hd9bih/u/src/empty
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in every directory.                                                                          │
+│                                                                                                                      │
+│ ❯ 1. just now      ~/src/api  /echo api transcript                                                                   │
+│   2. 1 minute ago  ~/src/app  /echo active unchanged                                                                 │
+│   3. 1 minute ago  ~/src/app  /echo app transcript                                                                   │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

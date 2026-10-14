@@ -1,0 +1,24 @@
+      [38;2;78;186;101m⏺[39m [1mSearch[0m(tokenize in src/parse)
+        [2m⎿[0m  [2msrc/parse/tokenize.ts[0m
+
+      [38;2;78;186;101m⏺[39m [1mRead[0m(src/parse/tokenize.ts)
+        [2m⎿[0m  [2m120 lines
+
+[0m      [38;2;78;186;101m⏺[39m [1mEdit[0m(src/parse/tokenize.ts)
+        [2m⎿[0m  [2mAllowed Edit src/parse/tokenize.ts · Allow[0m
+
+      → [1mmain[0;2m · queued[0m
+        [2m⎿[0m  [2mFound it: a string at the end of a line lost its closing quote. Fix…[0m
+
+      [38;2;78;186;101m⏺[39m [1mBash[0m(deno task test)
+        [2m⎿[0m  [2m214 passed, 0 failed[0m
+
+ ⏺ It is running; I will check its report when it lands.
+
+ [38;2;215;119;87m✹[39m [38;2;215;119;87mWorking…[39m [2m(4s · esc to interrupt)[0m
+ [2m←[0m [2mFix the tokenizer · fake: Found it: a string at the end of a line lost its …[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

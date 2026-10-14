@@ -1,0 +1,24 @@
+
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+
+ › mode
+
+ ⏺ Mode: acceptEdits.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Select model                                                                 │
+│ Switch fake's model for this session.                                        │
+│                                                                              │
+│ ❯ 1. Fake Large with a 1M context window ✔                                   │
+│   2. Fake Small                                                              │
+│                                                                              │
+│ Enter to switch · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on     Fake Large with a 1M context window · 2% context used

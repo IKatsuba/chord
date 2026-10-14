@@ -1,0 +1,8 @@
+source: stty -g before equals after; exit code 0.
+source-new: stty -g before equals after; exit code 0.
+binary: stty -g before equals after; exit code 0.
+source-new: final alternate-screen control leaves it; final cursor visibility control shows it.
+binary: final alternate-screen control leaves it; final cursor visibility control shows it.
+source-new: Ctrl+C during pending save cancels; no team file was written.
+ps after quits: no QA-owned chord source, compiled binary or fake-agent process remains.
+Pre-existing live-agent processes were not started or signalled by QA.

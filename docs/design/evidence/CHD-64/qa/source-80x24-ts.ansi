@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chd64-qa/work[0m
+
+   [2m┌ ts ──────────────────────────────────────────────────────────┐[0m
+   [2m│[0m [38;2;163;94;232mconst[39m session = [38;2;163;94;232mawait[39m [38;2;47;138;216mopenSession[39m({ [38;2;200;80;138magent[39m: [38;2;168;122;16m'claude'[39m, cwd }); [2m│[0m
+   [2m│[0m [38;2;163;94;232mconst[39m turn = session.[38;2;47;138;216mprompt[39m([38;2;168;122;16m'hello'[39m);                        [2m│[0m
+   [2m│[0m [38;2;163;94;232mawait[39m turn.[38;2;200;80;138mresult[39m;                                           [2m│[0m
+   [2m└──────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [38;2;87;105;247mmain[39m once every check has passed and the tree is clean, so
+     whoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+ [2m── ↓ 17 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

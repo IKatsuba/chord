@@ -1,0 +1,9 @@
+# Mechanical reformats, skipped by `git blame` once
+# `git config blame.ignoreRevsFile .git-blame-ignore-revs` is set (GitHub reads
+# this file on its own).
+
+# style: reformat the tree to emulon's style
+8ec41ebfec9d8977067ce893e265dc770481eb44
+
+# style: reformat the tree with Prettier, which replaces deno fmt in check
+72455e410358f6d78eca8da4a9daeae1c33fa362

@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd171-qa/cwd
+ █▀     ? for shortcuts · /help
+        resumed · just now · task
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  taskchild
+
+      ⏺ Search(tokenize in src/parse)
+        ⎿  src/parse/tokenize.ts
+
+      ⏺ Read(src/parse/tokenize.ts)
+        ⎿  120 lines
+ ── ↓ 102 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

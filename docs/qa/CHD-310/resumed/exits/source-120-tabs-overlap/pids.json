@@ -1,0 +1,36 @@
+{
+  "app": 56034,
+  "fakes": [
+    56058,
+    56102
+  ],
+  "owned": [
+    56034,
+    56058,
+    56102
+  ],
+  "groups": [
+    56058,
+    56102
+  ],
+  "rows": [
+    [
+      "56058",
+      "56034",
+      "56058",
+      "bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "56102",
+      "56034",
+      "56102",
+      "bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "56034",
+      "56026",
+      "56026",
+      "bun /tmp/chd310-final/forced/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd310-final/forced/source-120-tabs-overlap/work"
+    ]
+  ]
+}

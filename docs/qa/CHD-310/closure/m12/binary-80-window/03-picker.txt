@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake              /tmp/chd310-closure/m3/binary-80-m3/work
+   │     "env": []                         │
+   │   }                                   │
+   │ ]                                     │
+   └───────────────────────────────────────┘
+
+ › first session draft sent
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions and saved windows in this directory.                 │
+│                                                                              │
+│ ❯ 1. 1 minute ago             ▣ 2 sessions, all open · fake, fake · second … │
+│   2. 1 minute ago  open in 2  second session prompt                          │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used

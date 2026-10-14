@@ -1,0 +1,40 @@
+/tmp/chd310/exits/binary-120-hup/run.sh: line 10: 56034 Hangup: 1               /tmp/chd310-repo/dist/bun-darwin-arm64/c
+hord fake --agent-command "bun /tmp/chd310-repo/tests/fixtures/fake_agent/main.ts" -C /tmp/chd310/exits/binary-120-hup/w
+ork
+
+QA_DONE code=129
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

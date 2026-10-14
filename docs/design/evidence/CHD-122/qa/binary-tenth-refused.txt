@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake2    3 fake2    4 fake2    5 fake2    6 fake2    7 fake2    8 fake2    9 fake2   …/binary-work
+ █▄     chord v0.0.0
+ ▀██▄   fake2 · Fake Small
+ ▄██▀   /tmp/chd122-qa/binary-work
+ █▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Nine sessions are open; close one with ctrl+x k first                                                     Fake Small

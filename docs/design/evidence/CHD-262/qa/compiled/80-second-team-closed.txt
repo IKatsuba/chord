@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from chord.
+
+ ← chord
+   The person closed parser (fake · fake-small, id df402ac3). It takes no
+   more messages; open_agent starts another.
+
+ ⏺ Received the message from chord.
+
+ ← chord
+   The person closed team bugfix 2: its lead (fake · fake-large, id c1012b46)
+   and its members tester and coder. It takes no more messages; run_team
+   starts it again.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 2% used
+  ❯ main       fake · Fake Large with a 1M context window
+    bugfix     team · fake · Fake Large with a 1M context window
+    ├─ tester  fake · Fake Small
+    └─ coder   fake · Fake Large with a 1M context window

@@ -1,0 +1,159 @@
+{
+  "qa_result": "PASS: CHD-334 focused acceptance",
+  "branch": "opentui",
+  "implementation": "27ebc48b",
+  "repair": "37e3eac9",
+  "main": "3538862f",
+  "binary_sha256": "815e32f29e8e29b48a25f38eec6bb53e908ba644125f640dd72dc3b599fbc687",
+  "full_check": {
+    "pass": 1498,
+    "fail": 0,
+    "files": 108,
+    "lint_tests": 51,
+    "seconds": 505.34
+  },
+  "focused_regressions": {
+    "pass": 41,
+    "fail": 0,
+    "files": 3,
+    "assertions": 131
+  },
+  "paired_screens": 364,
+  "terminal_checks": [
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "binary-120-instructions"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "binary-120-m12"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "binary-120-rebound"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "binary-120-shortcuts"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "binary-80-instructions"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "binary-80-m12"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "binary-80-rebound"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "binary-80-shortcuts"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "source-120-instructions"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "source-120-m12"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "source-120-rebound"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "source-120-shortcuts"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "source-80-instructions"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "source-80-m12"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "source-80-rebound"
+    },
+    {
+      "exit": "0",
+      "stty_exact": true,
+      "stty_a_exact": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "case": "source-80-shortcuts"
+    }
+  ],
+  "raw_warning_count": 0,
+  "owned_survivors": [],
+  "scope": "CHD-334 repair; CHD-310 whole-migration closure remains separate",
+  "privacy": {
+    "pass": 7,
+    "fail": 0
+  }
+}

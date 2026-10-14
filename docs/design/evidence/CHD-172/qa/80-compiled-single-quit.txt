@@ -1,0 +1,24 @@
+Resume this session with:
+chord fake --agent-command 'deno run --quiet --allow-env --allow-net=127.0.0.1 -
+-config=/tmp/chd172-final.XDzrEf/deno.json /tmp/chd172-final.XDzrEf/tests/fixtur
+es/fake_agent/main.ts --resume-only --step-ms 100' --resume 488905ef-f770-49ef-a
+6f9-1324e3d06fbb
+
+QA exit 0; terminal modes: restored
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

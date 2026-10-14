@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.ZymI
+ ▀▀     ? for shortcuts · /help
+
+ › graphemes
+
+ ⏺ A decomposed é then bold and then code after it.
+
+   - 👩‍💻   joined then
+   code
+   -   warning then code
+   - 👍🏽   toned then code
+   - plain bold then code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

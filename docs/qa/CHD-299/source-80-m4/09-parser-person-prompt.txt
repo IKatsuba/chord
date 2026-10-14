@@ -1,0 +1,24 @@
+ ⏺ I will run the parser tests on each change.
+
+ ← @main
+   ⎿  I changed how a string at the end of a line is read. Run the parser
+      tests now and tell me only what fails.
+
+ ⏺ Received the message from main.
+
+ ← @main
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Received the message from main.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go   Fake Small · 4% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small
+    docs    fake · Fake Large with a 1M context window  ● permission 10s

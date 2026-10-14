@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.leMw
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › late
+
+ ⏺ Answered. Late, after the answer.
+
+ › text
+
+ ⏺ Hello, world. This reply
+
+ ✹ Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

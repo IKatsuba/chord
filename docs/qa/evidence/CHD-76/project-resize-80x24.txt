@@ -1,0 +1,24 @@
+ chord                                fake · /tmp/chord-qa-76-caf0423fbcd13b6/A
+
+
+
+
+
+
+
+
+
+
+ ⏺ .chord/settings.json: unknown key "theme", ignored
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Small
+      Mode:      Plan
+      Session:   cd593876-6178-4012-afb1-2f0e6f79bb0f
+      Directory: /tmp/chord-qa-76-caf0423fbcd13b6/A
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                               Fake Small

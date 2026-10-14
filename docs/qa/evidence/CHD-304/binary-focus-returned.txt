@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                                           /tmp/chd304-qa/work
+ ⏺ Permission: deny.
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Answered · 4 fields
+
+ ⏺ Elicitation answer: accept
+   {"name":"web-app","replicas":2,"public":false,"region":"eu"}
+
+ › link
+
+ ⏺ fake asked: Sign in to Example to continue
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › form
+
+ ✹ Waiting for your input… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                                                                  │
+│ Set up the deploy target                                                                                             │
+│                                                                                                                      │
+│ ❯ * Project name                                                                                                     │
+│                    Lowercase, dashes allowed                                                                         │
+│     Contact email  not set                                                                                           │
+│   ✔ Replicas       2                                                                                                 │
+│     Traffic share  not set                                                                                           │
+│   ✔ Public         ☐ No                                                                                              │
+│   * Region         not set                                                                                           │
+│     Tags           not set                                                                                           │
+│                                                                                                                      │
+│   Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ Type to fill in · ↑↓ to move · Enter for the next · Esc to cancel                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                         Fake Small · 3% context used

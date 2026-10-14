@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.5dUn
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Declined
+
+ ⏺ Elicitation answer: decline
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Cancelled
+   ⎿  Interrupted by user
+
+ › link
+
+ ⏺ fake asked: Sign in to Example to continue
+   ⎿  Declined
+
+ ⏺ Elicitation answer: decline
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,24 @@
+ chord                                       fake · /tmp/chd99-qa/binary80/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › beta gamma delta epsilon
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › a                                                                          │
+│   z                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT --          Fake Large with a 1M context window · 99% context left

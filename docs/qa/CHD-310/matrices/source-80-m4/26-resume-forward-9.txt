@@ -1,0 +1,24 @@
+   │     {                                                                    │
+   │       "name": "codebuddy-code",                                          │
+   │       "note": "models and modes not read yet; list_agents with agent \"c │
+   │ odebuddy-code\" reads them"                                              │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "codex",                                                   │
+   │       "note": "models and modes not read yet; list_agents with agent \"c │
+   │ odex\" reads them"                                                       │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "deepagents",                                              │
+   │       "note": "models and modes not read yet; list_agents with agent \"d │
+   │ eepagents\" reads them"                                                  │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "dimcode",                                                 │
+   │       "note": "models and modes not read yet; list_agents with agent \"d │
+ ── ↓ 210 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 3% context used

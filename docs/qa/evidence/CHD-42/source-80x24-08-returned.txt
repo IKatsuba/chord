@@ -1,0 +1,24 @@
+ chord             fake · /private/tmp/chd81-source-80x24-aa25aa8ca589562e/work
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ! printf "day-context\n"
+   ⎿  day-context
+
+ › text
+
+ ⏺ Received printf "day-context\n": day-context
+
+   Hello, world. This reply came in chunks.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   ...................................................................
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › queued day draft                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)            Fake Small · 97% context left

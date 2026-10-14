@@ -1,0 +1,40 @@
+ [1mchord[0m                                                    [2mfake · /private/tmp/chd81-source-120x40-5dcbf7cff5f93e6a/work[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › /[7m [0m                                                                                                                 [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;87;105;247m/clear[39m    [38;2;87;105;247mStart a new session with an empty transcript[39m
+  [2m/config[0m   [2mChange the agent's settings for this session, such as effort[0m
+  [2m/context[0m  [2mShow how full the agent's context window is[0m
+  [2m/cost[0m     [2mShow the tokens and cost this session has spent[0m
+  [2m/echo[0m     [2mRepeat what follows the command[0m
+  [2m/exit[0m     [2mQuit chord[0m
+  [2m/greet[0m    [2mSay hello from the fake agent[0m
+  [2m/help[0m     [2mShow keyboard shortcuts[0m
+  [2m/model[0m    [2mSwitch the agent's model[0m
+  [2m/resume[0m   [2mResume an earlier session in this directory[0m

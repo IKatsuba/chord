@@ -1,0 +1,24 @@
+
+ ✷ Waiting for permission… (10s)
+ ← @coder · fake: Reading src/parse/tokenize.ts now. Tell me when your test fa…
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ tester asks                                                                  │
+│ `deno task test tests/parse`                                                 │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a · ⏵⏵ accept edits on      Fake Small
+    main       fake
+    bugfix     team · fake
+    ├─ tester  fake         ● permission 8s
+    … +3 more

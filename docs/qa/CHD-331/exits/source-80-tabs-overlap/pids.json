@@ -1,0 +1,36 @@
+{
+  "app": 9587,
+  "fakes": [
+    9599,
+    9646
+  ],
+  "owned": [
+    9587,
+    9599,
+    9646
+  ],
+  "groups": [
+    9599,
+    9646
+  ],
+  "rows": [
+    [
+      "9599",
+      "9587",
+      "9599",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "9646",
+      "9587",
+      "9646",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "9587",
+      "9580",
+      "9580",
+      "bun /tmp/chd331-qa/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/source-80-tabs-overlap/work"
+    ]
+  ]
+}

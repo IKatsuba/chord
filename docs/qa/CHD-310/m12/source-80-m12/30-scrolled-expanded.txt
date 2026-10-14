@@ -1,0 +1,24 @@
+      Mode:      Accept edits
+      Session:   296c337b-4eb5-4325-bd5c-e962ac7db0a9
+      Directory: /tmp/chd310/exits/source-80-m12/work
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............
+   ⎿  Interrupted by user
+
+ › long
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+   2. Line 2 of 200, streamed one at a time.
+   3. Line 3 of 200, streamed one at a time.
+   4. Line 4 of 200, streamed one at a time.
+ ── ↓ new output · 18 lines below · end to jump to the bottom ─────────────────
+
+ ✷ Working… (6s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

@@ -1,0 +1,40 @@
+% chord fake
+This window spent $0.1000: 1 fake $0.0875 (with 1 task and team bugfix), 2 fake $0.0125.
+Resume this session with:
+chord fake --resume 0f4c2a9e-5b1d-4e7a-9c3f-2d8b6a1e7f40
+%
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

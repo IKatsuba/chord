@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake2                                                                        /tmp/chd173.MTKG/proj
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake2 · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd173.MTKG/proj
+ ▀▀     ? for shortcuts · /help
+        resumed · just now · text
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Not reopened: fake tab e11b7184, its record is gone                              Fake Large with a 1M context window

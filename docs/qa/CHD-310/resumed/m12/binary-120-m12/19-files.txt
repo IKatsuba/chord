@@ -1,0 +1,40 @@
+
+   ┌ sh ─────────────────────────────────────────────────┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+ ⏺
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › first line                 me in chunks.
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+                              3 done.
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+                     nge
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change                   ────────────────────────────────────────────────────────────────────────────
+      ☒ Run the tests
+
+ › mode                                ow                       created)rge wit                                xt used
+
+ ⏺ Mode: acceptEdits.
+                                                                        eak det                                    [Box
+ › /greet QA                                                      increase limi
+ P                                                                      o [BoxR                     ners is 10. Use emi
+ ⏺ Hello from the fake agent.
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P› @exa                           detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  example.ts

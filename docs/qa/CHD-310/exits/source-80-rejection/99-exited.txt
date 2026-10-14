@@ -1,0 +1,24 @@
+Error: CHD-310 QA unhandled rejection
+    at <anonymous> (/private/tmp/chd310/exits/rejection.ts:1:44)
+
+QA_DONE code=1
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

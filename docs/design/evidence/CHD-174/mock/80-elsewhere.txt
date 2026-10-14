@@ -1,0 +1,24 @@
+ chord                                                        claude · ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+ › fix the failing date test in the parser
+
+ ⏺ The parser reads the day before the month. Fixed in src/date.ts.
+
+ › /resume
+   ⎿  That window has a tab in ~/src/api. Quit and open it there with:
+      chord --resume w-7c41e09b
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Claude Opus · 100% context left

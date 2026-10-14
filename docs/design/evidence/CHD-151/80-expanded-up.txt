@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.BGgP
+   │       ⎿  Done (2 tool uses · 3s)
+   │
+   │     ⏺ Read(src/session/session.ts)
+   │
+   │     ⏺ Write(notes/routing.md)
+   │       ⎿  Allowed Write notes/routing.md · Allow
+   │
+   │     ⏺ The listeners are kept per sessionId in openAgent; an id chord did
+   │       not open is dropped there.
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Find the component that draws a tool call and the rule that folds its
+         output.
+
+         ⏺ Search(function Tool in src/ui)
+           ⎿  Found 1 file
+
+ ── ↓ 17 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

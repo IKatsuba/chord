@@ -1,0 +1,40 @@
+ chord                                                                                               claude · ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › Where does chord route session/update, and where are tool calls drawn? Look in parallel.
+
+ ⏺ I'll send two agents, one for each side.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 4 tool uses
+   │  ⎿  Read(src/acp/connection.ts)
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses
+      ⎿  Search(pattern: "function Tool", path: "src/ui")
+
+ ✻ Working… (34s · esc to interrupt)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                               Opus · 91% context left

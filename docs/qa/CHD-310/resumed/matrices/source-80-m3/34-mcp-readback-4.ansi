@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [38;5;244m│[38;2;255;255;255m       [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mAllowed Write notes/routing.md · Allow[0m[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m     [39m⏺[38;2;255;255;255m [39mThe listeners are kept per sessionId in openAgent; an id chord did[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m       [39mnot open is dropped there.[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m  [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mDone[0m[38;2;255;255;255m
+   [2m[39m└─[0m[38;2;255;255;255m [1m[39mAgent[0m(Find where tool calls are drawn on screen and how they fold)[38;2;255;255;255m
+      [2m[39m⎿[0m[38;2;255;255;255m  [39mFind the component that draws a tool call and the rule that folds its [38;2;255;255;255m
+         [39moutput.[38;2;255;255;255m
+
+         [2m[39m⏺[0m[38;2;255;255;255m [1m[39mSearch[0m(function Tool in src/ui)[38;2;255;255;255m
+           [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mFound 1 file[0m[38;2;255;255;255m
+
+         [2m[39m⏺[0m[38;2;255;255;255m [1m[39mRead[0m(src/ui/App.tsx)[38;2;255;255;255m
+           [2m[39m⎿[0m[38;2;255;255;255m  [39mError: File is too large to read whole.[38;2;255;255;255m
+
+         [39m⏺[38;2;255;255;255m [39mCould not read the component.[38;2;255;255;255m
+      [2m[39m⎿[0m[38;2;255;255;255m  [39mFailed[38;2;255;255;255m
+
+ [2m[39m── ↓ 48 lines below · end to jump to the bottom ──────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m        [2m[39mFake Large with a 1M context window · 2% context used[0m[38;2;255;255;255m

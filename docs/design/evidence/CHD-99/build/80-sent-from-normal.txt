@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.JiSL
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › the brown fox jumps lazy dog
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT -- ? for shortcuts  Fake Large with a 1M context window · 99% left

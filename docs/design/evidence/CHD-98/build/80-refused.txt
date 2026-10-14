@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.5dUn
+
+ › form
+
+ ✹ Waiting for your input… (8s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                          │
+│ Set up the deploy target                                                     │
+│                                                                              │
+│ ❯ ⚠ Project name   ab                                                        │
+│                    At least 3 characters                                     │
+│   ⚠ Contact email  ops@                                                      │
+│                    Not an email address, such as name@example.com            │
+│   ⚠ Replicas       12                                                        │
+│                    A whole number from 1 to 9                                │
+│   ✔ Traffic share  0.25                                                      │
+│     ↓ 3 more fields                                                          │
+│                                                                              │
+│   Accept   Decline     4 fields to fix                                       │
+│                                                                              │
+│ Type to fill in · ↑↓ to move · Esc to cancel                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

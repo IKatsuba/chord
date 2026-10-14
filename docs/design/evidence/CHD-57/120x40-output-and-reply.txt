@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.M3uH
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ! ls; cat notes.txt; ls nope
+   ⎿  notes.txt
+      one
+      two
+      ls: nope: No such file or directory
+      Exit code 1
+
+ › what did you get?
+
+ ⏺ Received ls; cat notes.txt; ls nope: notes.txt
+
+   Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

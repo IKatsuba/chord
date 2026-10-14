@@ -1,0 +1,24 @@
+ chord                                    fake · /tmp/chord-qa.d0139afdeb0f6ed5
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › plan
+
+ ⏺ Planned.
+   ⎿  Interrupted by user
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+  Plan · 1 of 3 done
+  ⎿  ☒ Read the code
+     ◐ Write the change
+     ☐ Run the tests
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

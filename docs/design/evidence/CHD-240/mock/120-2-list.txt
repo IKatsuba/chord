@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   claude · Opus
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+
+ › /team
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                                                                │
+│ Saved for this project in .chord/teams, and for every project in ~/.config/chord/teams.                              │
+│                                                                                                                      │
+│ ❯ bugfix   4 agents · claude, codex  this project   ✻ working 6m  Fixes a bug end to end: a failing test first, the… │
+│   review   3 agents · claude         every project                Reviews a branch before it goes to the owner       │
+│   docs     2 agents · claude         this project                 Keeps README.md and docs/ in step with src/        │
+│   triage   ✗ not read: members.1.agent is missing                 ~/.config/chord/teams/triage.md                    │
+│                                                                                                                      │
+│ Enter to hand it a job · /team show <name> · Esc to close                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                              Opus · 91% context left

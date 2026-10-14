@@ -1,0 +1,40 @@
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 14
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 15
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello 16
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working...........
+   ⎿  Interrupted by user
+
+ › recovery 120
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   f57e1887-dabe-4ee1-8618-5fa1b9e72f6f
+      Directory: /tmp/chd224-qa/work
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 96% context left

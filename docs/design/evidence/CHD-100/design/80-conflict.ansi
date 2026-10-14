@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chord-qa.NYga[0m
+
+
+
+
+
+
+
+
+
+
+ [38;2;255;193;7m⏺[39m [38;2;255;193;7m/tmp/chd-xdgB.zQz4/chord/keybindings.json: ctrl+o already bound to [39m
+   [38;2;255;193;7mapp:toggleTranscript, not to chat:externalEditor[39m
+
+ [38;2;255;193;7m⏺[39m [38;2;255;193;7m/tmp/chd-xdgB.zQz4/chord/keybindings.json: unknown action "chat:nope", [39m
+   [38;2;255;193;7mignored[39m
+
+ [38;2;255;193;7m⏺[39m [38;2;255;193;7m/tmp/chd-xdgB.zQz4/chord/keybindings.json: "hyper+z": "hyper" is not a [39m
+   [38;2;255;193;7mmodifier, ignored
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;255;193;7mkeybindings.json: 3 problems · ctrl+o already bound to app:toggleTranscript…[39m

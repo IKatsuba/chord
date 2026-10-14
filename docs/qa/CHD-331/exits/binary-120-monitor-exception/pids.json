@@ -1,0 +1,43 @@
+{
+  "app": 9857,
+  "fakes": [
+    9861
+  ],
+  "owned": [
+    9857,
+    9861,
+    9869,
+    9871
+  ],
+  "groups": [
+    9861,
+    9869,
+    9871
+  ],
+  "rows": [
+    [
+      "9861",
+      "9857",
+      "9861",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "9869",
+      "9857",
+      "9869",
+      "sleep 600"
+    ],
+    [
+      "9871",
+      "9857",
+      "9871",
+      "sleep 600"
+    ],
+    [
+      "9857",
+      "9850",
+      "9850",
+      "/tmp/chd331-qa/repo/dist/bun-darwin-arm64/chord fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/binary-120-monitor-exception/work"
+    ]
+  ]
+}

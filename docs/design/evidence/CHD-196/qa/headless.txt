@@ -1,0 +1,12 @@
+Compared pre-change main 6b27797, source 797e6a9 and the newly compiled binary against fake agents. JSON comparison excludes only the generated session_id. The echo case includes piped stdin. No alternate-screen/cursor mode escapes emitted.
+
+shell, text: before/source/compiled identical; exit 0; stdout "The tests failed.\n"; stderr ""
+shell, json: before/source/compiled identical; exit 0; stdout "{\"type\":\"result\",\"is_error\":false,\"result\":\"The tests failed.\",\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":1000,\"output_tokens\":200,\"cache_read_input_tokens\":800,\"total_tokens\":2000},\"total_cost_usd\":0.0125}"; stderr ""
+shellcut, text: before/source/compiled identical; exit 0; stdout "The tests failed.\n"; stderr ""
+shellcut, json: before/source/compiled identical; exit 0; stdout "{\"type\":\"result\",\"is_error\":false,\"result\":\"The tests failed.\",\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":1000,\"output_tokens\":200,\"cache_read_input_tokens\":800,\"total_tokens\":2000},\"total_cost_usd\":0.0125}"; stderr ""
+bash, text: before/source/compiled identical; exit 0; stdout "Two files changed.\n"; stderr ""
+bash, json: before/source/compiled identical; exit 0; stdout "{\"type\":\"result\",\"is_error\":false,\"result\":\"Two files changed.\",\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":1000,\"output_tokens\":200,\"cache_read_input_tokens\":800,\"total_tokens\":2000},\"total_cost_usd\":0.0125}"; stderr ""
+error, text: before/source/compiled identical; exit 1; stdout "About to fail.\n"; stderr "chord: The fake agent failed on purpose.\n"
+error, json: before/source/compiled identical; exit 1; stdout "{\"type\":\"result\",\"is_error\":true,\"result\":\"About to fail.\",\"error\":\"The fake agent failed on purpose.\"}"; stderr "chord: The fake agent failed on purpose.\n"
+/echo tiny prompt, text: before/source/compiled identical; exit 0; stdout "tiny prompt\npiped input\n"; stderr ""
+/echo tiny prompt, json: before/source/compiled identical; exit 0; stdout "{\"type\":\"result\",\"is_error\":false,\"result\":\"tiny prompt\\npiped input\",\"stop_reason\":\"end_turn\",\"usage\":{\"input_tokens\":1000,\"output_tokens\":200,\"cache_read_input_tokens\":800,\"total_tokens\":2000},\"total_cost_usd\":0.0125}"; stderr ""

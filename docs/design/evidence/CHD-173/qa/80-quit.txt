@@ -1,0 +1,24 @@
+chord fakeqa$ chord fake
+Resume this window with:
+chord --resume w-27ec491a
+qa$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

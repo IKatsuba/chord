@@ -1,0 +1,24 @@
+ [1mchord[0m   [2m1 claude[0m    [2m2 codex[0m   [1;7m 3 claude [0m                             [2m~/src/app[0m
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mResume a session[0m                                                             [38;2;177;185;249m│
+│[39m [2mclaude's earlier sessions and saved windows in this directory.[0m               [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [2m [0m [38;2;177;185;249m1. 10 minutes ago             ▣ 3 sessions, all open · claude, codex, c…[39m [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m [0m 2. 10 minutes ago  open in 1  fix the failing date test in the parser    [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m [0m 3. 40 minutes ago             tidy the README's install section          [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m [0m 4. yesterday                  rename the health route to /livez          [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m [0m 5. 2 days ago                 ▣ 2 sessions · claude, gemini · add a --j… [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m↓[0m 6. 2 days ago                 add a --json flag to the agents command    [38;2;177;185;249m│
+│[39m     [2m… +2 more[0m                                                                [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [2mEnter to resume · Ctrl+a for all directories · Esc to close[0m                  [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

@@ -1,0 +1,24 @@
+      lead    fake · fake-large  default      Splits the job, says who edits…
+      tester  fake · fake-small  acceptEdits  Writes the failing test, then …
+      coder   fake · fake-large  plan         Writes the fix, in the files t…
+
+      How bugfix works
+      … +26 lines (ctrl+o to expand)
+
+ › /team
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                        │
+│ For this project in .chord/teams, for every project in                       │
+│ ~/.config/chord/teams.                                                       │
+│                                                                              │
+│ ❯ 1. bugfix  3 agents  this project  Fixes a bug end to end â€” a failing t… │
+│   2. triage  ✗ not read: members.0.agent is missing                          │
+│                                                                              │
+│ Enter to hand it a job · Esc to close                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

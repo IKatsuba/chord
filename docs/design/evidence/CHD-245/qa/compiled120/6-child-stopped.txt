@@ -1,0 +1,40 @@
+ parser · fake · Fake Large with a 1M context window · opened by main 5s ago
+
+ ← @main
+   childmonitor
+
+ ⏺ Monitor(parser tests)
+   ⎿  $ sleep 1; echo "ok 1 - parse a string at the end of a line"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ Watching the parser tests.
+
+ ← parser tests · monitor
+   ok 1 - parse a string at the end of a line
+
+ ⏺ Received the message from parser tests · monitor.
+
+ ← parser tests · monitor · stopped
+   The person stopped it after 4s.
+
+ ⏺ Received the message from parser tests · monitor · stopped.
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · x to stop it · enter esc to go back             Fake Large with a 1M context window · 99% context left
+    main               fake · Fake Large with a 1M context window
+    parser             fake · Fake Large with a 1M context window
+  ❯ dev server errors  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties …  running 4s · 1 event

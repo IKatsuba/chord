@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake    3 fake                                   ~/src/app
+   ...................
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ✶ Waiting for permission… (17s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Sessions in ~/src/app                                                        │
+│                                                                              │
+│ ❯ 1. fake  idle  fix the failing test in tests/keys_test.tsx                 │
+│   2. fake  idle                                                              │
+│   3. fake  here  text                                                        │
+│                                                                              │
+│ Enter to go · 1–3 to pick · Esc to close                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

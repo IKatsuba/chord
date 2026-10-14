@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd310-closure/m45/source-120-proposal/work
+ █▀     ? for shortcuts · /help
+
+ › /team new a bugfix team
+
+ ⏺ A lead on Opus to split the work, and three members, one for each step. Only one of them edits a file at a time.
+
+ ⏺ Team(bugfix) · proposal
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+      lead      claude · opus          default      Splits the job, says who edits which files, reports to main
+      tester    claude · sonnet        acceptEdits  Writes the failing test, then proves the fix
+      coder     codex · gpt-5.3-codex  auto         Writes the fix, in the files the lead names
+      reviewer  claude · opus          plan         Reads the diff and edits nothing
+
+      How bugfix works
+      1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      … +30 lines (ctrl+o to expand)
+      Saved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix and the bug, or just tell me to hand one
+   to bugfix.
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

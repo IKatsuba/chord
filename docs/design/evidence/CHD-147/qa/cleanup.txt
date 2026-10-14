@@ -1,0 +1,8 @@
+source: PID 88016, PPID 88001, PGID 88016, started Wed Oct 7 09:11:39 2026, absent after quit.
+source: PID 88001, PPID 87999, PGID 87999, started Wed Oct 7 09:11:38 2026, absent after quit.
+source: alternate=0 cursor=1 command=zsh; stty before/after identical.
+binary: PID 88805, PPID 88796, PGID 88805, started Wed Oct 7 09:12:26 2026, absent after quit.
+binary: PID 88796, PPID 88793, PGID 88793, started Wed Oct 7 09:12:25 2026, absent after quit.
+binary: alternate=0 cursor=1 command=zsh; stty before/after identical.
+Final ps snapshot: all four owned PIDs and both detached fake-agent process groups are absent.
+Final tmux list-sessions on the isolated QA server: no server running.

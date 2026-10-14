@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.c48w
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /echo explain @src/ui/state.ts
+
+ ⏺ explain @src/ui/state.ts
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

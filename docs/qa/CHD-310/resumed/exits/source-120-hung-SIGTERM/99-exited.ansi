@@ -1,0 +1,40 @@
+/tmp/chd310-final/forced/source-120-hung-SIGTERM/run.sh: line 9: 55016 Terminated: 15          bun /tmp/chd310-final/for
+ced/repo/src/main.tsx fake --agent-command 'env -u BUN_OPTIONS bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_age
+nt/main.ts' -C /tmp/chd310-final/forced/source-120-hung-SIGTERM/work 2> /tmp/chd310-final/forced/source-120-hung-SIGTERM
+/stderr
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

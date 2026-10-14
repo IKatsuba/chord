@@ -1,0 +1,24 @@
+                          Writes the fix, in the files the lead names
+      +  reviewer         codex · gpt-5.3-codex             read-only
+                          Reads the diff and edits nothing
+      -  security-review  claude ·                          bypassPermissions
+                          claude-sonnet-4-5-20250929
+                          Reviews the diff for security problems and edits
+                          nothing
+ ── ↓ 25 lines below · end to jump to the bottom ──────────────────────────────
+
+ ✹ Waiting for you… (19s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                         │
+│                                                                              │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                          │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

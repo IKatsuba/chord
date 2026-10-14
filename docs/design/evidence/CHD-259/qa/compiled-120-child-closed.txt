@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd259qa/work
+ █▀     ? for shortcuts · /help
+
+ › agenttask
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  task
+
+ ⏺ Waiting on parser.
+
+ ← chord
+   The person closed parser (fake · fake-small, id e53a9282). It takes no more messages; open_agent starts another.
+
+ ⏺ Received the message from chord.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chord-qa.VeRH[0m
+   [2m│[0m [38;2;130;80;223mawait[39m turn.[38;2;176;48;111mresult[39m;                                           [2m│[0m
+   [2m└──────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [38;2;74;90;224mmain[39m once every check has passed and the tree is clean, so
+     whoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [38;2;130;80;223mfor[39m bin [38;2;130;80;223min[39m dist/*/chord; [38;2;130;80;223mdo[39m [38;2;0;114;122mecho[39m [38;2;125;82;0m"built [38;2;176;48;111m$bin[38;2;125;82;0m"[39m; [38;2;130;80;223mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 99% context left[0m

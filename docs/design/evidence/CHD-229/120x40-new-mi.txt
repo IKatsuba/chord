@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   goose · Fake Large with a 1M context window
+ ▄█▀▀   /private/tmp/chord-qa.PNsp
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /new mi                                                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  mine          from settings
+  minimax-code  MiniMax Code
+  minion-code   Minion Code
+  gemini        Gemini CLI
+  kimi          Kimi Code · not on PATH

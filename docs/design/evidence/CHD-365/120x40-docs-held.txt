@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 11s ago
+
+ ← @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+
+
+
+
+
+ ✷ Waiting for permission… (16s)
+ ← @main · after your answer: When the README section is done, add the new flag to docs/FEATURES.md.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ docs asks                                                                                                            │
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window
+    main  fake · Fake Large with a 1M context window
+    docs  fake · Fake Large with a 1M context window  ● permission 15s

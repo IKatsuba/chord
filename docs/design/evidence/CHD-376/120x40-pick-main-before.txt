@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › agenteffort
+
+ ⏺ Open(tuner) · fake · fake-small · high
+   ⎿  text
+
+ ⏺ Started on high.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back       Fake Large with a 1M context window · 1% used
+  ❯ main   fake · Fake Large with a 1M context window · medium
+    tuner  fake · Fake Small · high

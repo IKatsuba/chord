@@ -1,0 +1,13 @@
+qa> CHORD_FAKE_NO_MODES=1 chord fake --agent-command "$FAKE" -p permission --permission-mode plan > /tmp/chd108-qa/05-no
+-modes.stdout 2> /tmp/chd108-qa/05-no-modes.stderr; echo $? > /tmp/chd108-qa/05-no-modes.exit; printf "stdout:\n"; cat /
+tmp/chd108-qa/05-no-modes.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/05-no-modes.stderr; printf "echo \$? (saved imm
+ediately):\n"; cat /tmp/chd108-qa/05-no-modes.exit; echo CAPTURE_DONE
+stdout:
+Permission: deny.
+stderr:
+chord: could not start in plan mode, set by --permission-mode: the agent offers no modes
+chord: refused Write notes.txt: -p cannot ask for permission.
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

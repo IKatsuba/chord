@@ -1,0 +1,1 @@
+{"type":"result","is_error":false,"result":"Hello, world. This reply came in chunks.","session_id":"9af29277-b930-4f85-a185-7a28e28f482f","stop_reason":"end_turn","usage":{"input_tokens":1000,"output_tokens":200,"cache_read_input_tokens":800,"total_tokens":2000},"total_cost_usd":0.0125}

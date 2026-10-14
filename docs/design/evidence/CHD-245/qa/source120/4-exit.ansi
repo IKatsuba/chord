@@ -1,0 +1,40 @@
+ [38;2;128;243;177m[48;2;116;241;175m▀[38;2;110;239;173m[49m▄[39m     [1mchord[0;2m v0.0.0[0m
+ [38;2;105;238;172m▀[38;2;99;237;171m[48;2;87;234;168m▀[38;2;92;236;170m[48;2;81;233;167m▀[38;2;74;232;166m[49m▄[39m   [2mfake · Fake Large with a 1M context window[0m
+ [38;2;70;231;165m▄[38;2;75;232;166m[48;2;64;227;165m▀[38;2;69;230;165m[48;2;59;223;164m▀[38;2;63;226;165m[49m▀[39m   [2m/tmp/chd245-qa/source120/work[0m
+ [38;2;60;224;164m[48;2;49;217;164m▀[38;2;54;220;164m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m monitorexit
+
+ [38;2;78;186;101m⏺[39m [1mMonitor[0m(CI run 4812)
+   [2m⎿[0m  [2m$ sleep 1; echo "✓ lint in 41s"; echo "X test (ubuntu-latest) in 3m 12s"; echo "Run 4812 (ci.yml) failed: 1 of 3…[0m
+   [2m [0m  [2mm1 · times out after 10m
+
+[0m ⏺ I will hear when the CI run ends.
+
+ [38;2;255;107;128m←[39m [1mCI run 4812[0;2m · monitor · exit code 1[0m
+   ✓ lint in 41s
+   X test (ubuntu-latest) in 3m 12s
+   Run 4812 (ci.yml) failed: 1 of 3 jobs failed
+   [2mExited with code 1 after 1s.[0m
+
+ ⏺ Received the message from CI run 4812 · monitor · exit code 1.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

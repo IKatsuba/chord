@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd312-work/mcp
+ ▀▀     ? for shortcuts · /help
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord passed these to fake when the session started. ACP does not say        │
+│ whether fake connected to them.                                              │
+│                                                                              │
+│ Name   Transport  Command or URL              Defined in                     │
+│ chord  http       http://127.0.0.1:63360/mcp  chord itself                   │
+│                                                                              │
+│ chord's server gives fake list_agents, list_sessions, list_teams,            │
+│ spawn_task, open_agent, run_team, propose_team, send_message, close_agent,   │
+│ monitor, stop_monitor and list_monitors.                                     │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

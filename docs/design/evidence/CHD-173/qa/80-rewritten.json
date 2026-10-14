@@ -1,0 +1,22 @@
+{
+  "id": "w-27ec491a",
+  "at": 1791472206269,
+  "tabs": [
+    {
+      "sessionId": "602996b3-677a-4cc0-bf5c-d4ddce0d00ac",
+      "agent": "fake",
+      "cwd": "/private/tmp/chd173-qa-425601bd6783698a/80/proj"
+    },
+    {
+      "sessionId": "0dfda1b5-af1c-4a87-8181-dce3af98acb7",
+      "agent": "fake",
+      "cwd": "/private/tmp/chd173-qa-425601bd6783698a/80/proj"
+    },
+    {
+      "sessionId": "661373f2-a2ab-4e26-826b-f73afbc5302a",
+      "agent": "fake2",
+      "cwd": "/private/tmp/chd173-qa-425601bd6783698a/80/proj"
+    }
+  ],
+  "front": 1
+}

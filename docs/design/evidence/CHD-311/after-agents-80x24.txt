@@ -1,0 +1,24 @@
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ → @parser · queued
+   ⎿  I changed how a string at the end o...ts now and tell me only what fails.
+
+ → @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Waiting on parser.
+
+ ✸ Working… (3s · esc to interrupt)
+ ← @parser · fake: Ran deno task test tests/parse: 2 failures, both in tests/p…
+ ← @parser · fake: All 214 parser tests pass now.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake · Fake Large with a 1M context window  ✻ working 3s
+    parser  fake · Fake Small                           ← message from @main
+    docs    fake · Fake Large with a 1M context window  ● permission 2s

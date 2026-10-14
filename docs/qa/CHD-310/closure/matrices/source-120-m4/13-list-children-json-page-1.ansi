@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m│[0m     },                                                                                                  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     {                                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "name": "junie",                                                                                  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "note": "models and modes not read yet; list_agents with agent \"junie\" reads them"              [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     },                                                                                                  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     {                                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "name": "kimi",                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "note": "models and modes not read yet; list_agents with agent \"kimi\" reads them"               [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     },                                                                                                  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     {                                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "name": "kiro",                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "note": "models and modes not read yet; list_agents with agent \"kiro\" reads them"               [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     },                                                                                                  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     {                                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "name": "openclaw",                                                                               [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "note": "models and modes not read yet; list_agents with agent \"openclaw\" reads them"           [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     },                                                                                                  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     {                                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "name": "opencode",                                                                               [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "note": "models and modes not read yet; list_agents with agent \"opencode\" reads them"           [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     },                                                                                                  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     {                                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "name": "poolside",                                                                               [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "note": "models and modes not read yet; list_agents with agent \"poolside\" reads them"           [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     },                                                                                                  [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     {                                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "name": "zeroclaw",                                                                               [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m       "note": "models and modes not read yet; list_agents with agent \"zeroclaw\" reads them"           [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m     }                                                                                                   [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m   ]                                                                                                     [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m }                                                                                                       [2m│[0m[38;2;255;255;255m
+ [2m[39m── ↓ 31 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                                [2m[39mFake Large with a 1M context window · 2% context used[0m[38;2;255;255;255m
+  [39m  [1mmain  [0;2m  fake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+  [39m  parser[2m  fake · Fake Small                         [0m[38;2;255;255;255m
+  [39m  docs  [2m  fake · Fake Large with a 1M context window[0m[38;2;255;255;255m

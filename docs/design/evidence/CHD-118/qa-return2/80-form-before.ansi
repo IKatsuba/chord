@@ -1,0 +1,24 @@
+ [1mchord[0m  [1;7m 1 fake [0m   [2m2 fake[0m                                [2m/tmp/chord-qa.8n6hdxcq[0m
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m form
+
+ ✺ Waiting for your input… [2m(1s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mfake asks for input[0m                                                          [2m│
+│[0m Set up the deploy target                                                     [2m│
+│[0m                                                                              [2m│
+│[0m   [2m✔[0m Project name   keep                                                      [2m│
+│[0m ❯   [1mContact email[0m  a@[7mb[0m                                                       [2m│
+│[0m   [2m✔[0m Replicas       2                                                         [2m│
+│[0m     Traffic share  [2mnot set[0m                                                   [2m│
+│[0m   [2m✔[0m Public         ☐ No                                                      [2m│
+│[0m   * Region         [2mnot set[0m                                                   [2m│
+│[0m     Tags           [2mnot set[0m                                                   [2m│
+│[0m                                                                              [2m│
+│[0m   Accept   Decline                                                           [2m│
+│[0m                                                                              [2m│
+│[0m [2mType to fill in · ↑↓ to move · Esc to cancel[0m                                 [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 99% context left[0m

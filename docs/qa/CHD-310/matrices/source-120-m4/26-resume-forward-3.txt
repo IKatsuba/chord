@@ -1,0 +1,40 @@
+   │           "id": "fake-large",                                                                           │
+   │           "name": "Fake Large with a 1M context window"                                                 │
+   │         },                                                                                              │
+   │         {                                                                                               │
+   │           "id": "fake-small",                                                                           │
+   │           "name": "Fake Small"                                                                          │
+   │         }                                                                                               │
+   │       ],                                                                                                │
+   │       "current": "fake-large",                                                                          │
+   │       "modes": [                                                                                        │
+   │         {                                                                                               │
+   │           "id": "default",                                                                              │
+   │           "name": "Default"                                                                             │
+   │         },                                                                                              │
+   │         {                                                                                               │
+   │           "id": "acceptEdits",                                                                          │
+   │           "name": "Accept edits"                                                                        │
+   │         },                                                                                              │
+   │         {                                                                                               │
+   │           "id": "plan",                                                                                 │
+   │           "name": "Plan"                                                                                │
+   │         }                                                                                               │
+   │       ],                                                                                                │
+   │       "currentMode": "default"                                                                          │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "agoragentic-acp",                                                                        │
+   │       "note": "models and modes not read yet; list_agents with agent \"agoragentic-acp\" reads them"    │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "auggie",                                                                                 │
+   │       "note": "models and modes not read yet; list_agents with agent \"auggie\" reads them"             │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+ ── ↓ 206 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 3% context used

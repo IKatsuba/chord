@@ -1,0 +1,11 @@
+qa> chord fake --agent-command "$FAKE" -p mode --permission-mode plan > /tmp/chd108-qa/02-flag-mode.stdout 2> /tmp/chd10
+8-qa/02-flag-mode.stderr; echo $? > /tmp/chd108-qa/02-flag-mode.exit; printf "stdout:\n"; cat /tmp/chd108-qa/02-flag-mod
+e.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/02-flag-mode.stderr; printf "echo \$? (saved immediately):\n"; cat /tmp
+/chd108-qa/02-flag-mode.exit; echo CAPTURE_DONE
+stdout:
+Mode: plan.
+stderr:
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

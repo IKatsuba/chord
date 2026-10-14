@@ -1,0 +1,14 @@
+{
+  "tmux_socket": "chd310",
+  "tmux_server_gone": true,
+  "qa_owned_agents_monitors_wrappers_remaining": [],
+  "probe_orphans_killed": [
+    56821,
+    56600,
+    55267,
+    56724,
+    56665
+  ],
+  "clipboard_item_data_restored": true,
+  "note": "The independent full-check processes were still running during this acceptance-session audit."
+}

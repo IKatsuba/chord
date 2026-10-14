@@ -1,0 +1,24 @@
+ [1mchord[0m             [2mfake · /private/tmp/chd81-source-80x24-aa25aa8ca589562e/work[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m edit
+
+ [32m⏺[39m [1mEdit[0m(src/greeting.ts)
+
+ ⏺ Edited.
+
+ [2m›[0m error
+
+ ⏺ About to fail.
+
+ [2m›[0m /status
+   [2m⎿[0m  [2mAgent:     [0mfake
+   [2m [0m  [2mModel:     [0mFake Small
+   [2m [0m  [2mMode:      [0mDefault
+   [2m [0m  [2mSession:   [0m3a02fece-942a-4eba-87d1-4a88deeaea17
+   [2m [0m  [2mDirectory: [0m/private/tmp/chd81-source-80x24-aa25aa8ca589562e/work
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                   [2mFake Small[0m

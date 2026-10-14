@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chord-qa.Aulp[0m
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [95mfor[39m bin [95min[39m dist/*/chord; [95mdo[39m [96mecho[39m [93m"built $bin"[39m; [95mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m edit
+
+ [92m⏺[39m [1mEdit[0m(src/greeting.ts)
+   [2m⎿[0m  [2mUpdated src/greeting.ts with 2 additions and 1 removal[0m
+      [2m1[0m [92m+ /** Greets someone by name. */[39m
+      [2m2[0m   [95mexport[39m [95mfunction[39m [94mgreet[39m(name: [96mstring[39m): [96mstring[39m {
+      [2m2[0m [91m-   return "hello " + name;[39m
+      [2m3[0m [92m+   return `hello, ${name}`;[39m
+      [2m4[0m   }
+
+ ⏺ Edited.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [96m⏸ plan mode on[39m        [2mFake Large with a 1M context window · 99% context left[0m

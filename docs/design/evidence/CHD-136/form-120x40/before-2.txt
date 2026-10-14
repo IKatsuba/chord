@@ -1,0 +1,40 @@
+ chord                                                                                         fake · /tmp/chord-qa.cmp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

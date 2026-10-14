@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                                /tmp/chd300/source-120-m3/work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd300/source-120-m3/work
+ █▀     ? for shortcuts · /help
+
+ › second session prompt
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions and saved windows in this directory.                                                         │
+│                                                                                                                      │
+│ ❯ 1. just now       open in 1  [Image #1]                                                                            │
+│   2. 1 minute ago              ▣ 2 sessions · fake, fake · second session prompt                                     │
+│   3. 1 minute ago              second session prompt                                                                 │
+│   4. 2 minutes ago             edited draft from scripted EDITOR                                                     │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

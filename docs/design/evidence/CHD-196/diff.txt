@@ -1,0 +1,26 @@
+diff -r docs/design/evidence/CHD-196/before/120-shellcut-expanded.txt docs/design/evidence/CHD-196/after/120-shellcut-expanded.txt
+31c31
+<    ⎿  … output cut
+---
+>    ⎿  Task test deno test
+diff -r docs/design/evidence/CHD-196/before/120-shellcut-folded.txt docs/design/evidence/CHD-196/after/120-shellcut-folded.txt
+28d27
+< 
+32c31,32
+<    ⎿  FAILED | 1 failed
+---
+>    ⎿  Task test deno test
+>       FAILED | 1 failed
+diff -r docs/design/evidence/CHD-196/before/80-shellcut-expanded.txt docs/design/evidence/CHD-196/after/80-shellcut-expanded.txt
+15c15
+<    ⎿  … output cut
+---
+>    ⎿  Task test deno test
+diff -r docs/design/evidence/CHD-196/before/80-shellcut-folded.txt docs/design/evidence/CHD-196/after/80-shellcut-folded.txt
+12d11
+< 
+16c15,16
+<    ⎿  FAILED | 1 failed
+---
+>    ⎿  Task test deno test
+>       FAILED | 1 failed

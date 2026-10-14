@@ -1,0 +1,40 @@
+ chord   1 fake    2 codex    3 gemini                                                             /tmp/chord-qa.4TUr
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.4TUr
+ ▀▀     ? for shortcuts · /help
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 41s
+
+      This window             Cost     Tokens
+      1 fake               $0.0250      4,000
+      2 codex             ~$0.4120    188,400  chord's estimate from gpt-5.3-codex's price
+      3 gemini       not reported          —
+      Total               ~$0.4370    192,400  part chord's estimate; gemini not reported
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,40 @@
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 1; echo "✓ lint in 41s"; echo "X test (ubuntu-latest) in 3m 12s"; echo "Run 4812 (ci.yml) failed: 1 of 3…
+      m1 · times out after 10m
+
+ ⏺ I will hear when the CI run ends.
+
+ ← CI run 4812 · monitor · exit code 1
+   ⎿  ✓ lint in 41s
+      X test (ubuntu-latest) in 3m 12s
+      Run 4812 (ci.yml) failed: 1 of 3 jobs failed
+      Exited with code 1 after 1s.
+
+ ⏺ Received the message from CI run 4812 · monitor · exit code 1.
+
+ › monitorflood
+
+ ⏺ Monitor(request log)
+   ⎿  $ yes '127.0.0.1 - - "GET /health HTTP/1.1" 200 2'
+      m2 · times out after 10m
+
+ ⏺ Watching the request log.
+
+ ← request log · monitor · flooded
+   ⎿  127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+      … +95 lines (ctrl+o to expand)
+      chord stopped it: 1,000 lines in 10s is more than a monitor may print. Filter its output (grep --line-buffered)
+      and start it again.
+
+ ⏺ Received the message from request log · monitor · flooded.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

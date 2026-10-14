@@ -1,0 +1,40 @@
+[38;2;255;255;255m
+ [39m⏺[38;2;255;255;255m [39mI will send two agents, one for each side.[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [39m2 agents ended · 1 failed[2m (ctrl+o to expand)[0m[38;2;255;255;255m
+   [2m[39m├─[0m[38;2;255;255;255m [1m[39mAgent[0m(Find the session layer)[2m · 5 tool uses · 3s[0m[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m  [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mDone[0m[38;2;255;255;255m
+   [2m[39m└─[0m[38;2;255;255;255m [1m[39mAgent[0m(Find where tool calls are drawn on screen and how they fold)[2m · 2 tool uses · 1s[0m[38;2;255;255;255m
+      [2m[39m⎿[0m[38;2;255;255;255m  [39mFailed[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mNow the tests, in the background.[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mAgent[0m(Run the whole test suite)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mDone (1 tool use · 4s)[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mIt is running; I will say when it ends.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mcompact[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mConversation compacted (ctrl+o for history)[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mcompactfail[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mCompaction failed: Not enough messages to compact.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [1m[39mMCP servers[0m[38;2;255;255;255m                                                                                                          [38;5;244m│
+│[38;2;255;255;255m [2m[39mchord passed these to fake when the session started. ACP does not say whether fake connected to them.[0m[38;2;255;255;255m                [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [2m[39mName           Transport  Command or URL           Defined in[0m[38;2;255;255;255m                                                        [38;5;244m│
+│[38;2;255;255;255m [39mchord          http       not passed               chord itself[38;2;255;255;255m                                                      [38;5;244m│
+│[38;2;255;255;255m [39muser-docs      http       http://localhost:9/docs  /tmp/chd310-final/m3/source-120-m3/config/chord/settings.json[38;2;255;255;255m     [38;5;244m│
+│[38;2;255;255;255m [39mproject-files  stdio      echo m3-server           .mcp.json[38;2;255;255;255m                                                         [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [2m[39mchord's server was not passed: fake does not take MCP servers over HTTP, so it cannot start other agents.[0m[38;2;255;255;255m            [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [2m[39mEsc to close[0m[38;2;255;255;255m                                                                                                         [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                                [2m[39mFake Large with a 1M context window · 2% context used[0m[38;2;255;255;255m

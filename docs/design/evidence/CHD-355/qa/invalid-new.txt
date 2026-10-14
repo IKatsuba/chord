@@ -1,0 +1,24 @@
+chord   1 fake    2 fake                       /tmp/chd355-qa-1i0j6hi4/invalid
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd355-qa-1i0j6hi4/invalid
+ █▀     ? for shortcuts · /help
+
+ ⏺ Could not start on max effort, set in .chord/settings.json: the agent offers
+   low, medium, high
+
+ › effort
+
+ ⏺ Effort: medium.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

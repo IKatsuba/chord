@@ -1,0 +1,24 @@
+chord fake --agent-command /tmp/chord-qa46-5ec53738c11e9e80/fake --resume 7e7ceb
+a6-a8d7-4af3-9fa2-d6d188ac24f5
+QA_EXIT_0
+sh-3.2$ sh /tmp/chord-qa46-5ec53738c11e9e80/run5.sh
+Resume this session with:
+chord fake --agent-command '/tmp/chord-qa46-5ec53738c11e9e80/fake --resume-only'
+ --resume 7e7ceba6-a8d7-4af3-9fa2-d6d188ac24f5
+QA_EXIT_0
+sh-3.2$ sh /tmp/chord-qa46-5ec53738c11e9e80/run6.sh
+Resume this session with:
+chord fake --agent-command '/tmp/chord-qa46-5ec53738c11e9e80/fake --resume-only'
+ --resume 7e7ceba6-a8d7-4af3-9fa2-d6d188ac24f5
+QA_EXIT_0
+sh-3.2$ sh /tmp/chord-qa46-5ec53738c11e9e80/run7.sh
+Resume this session with:
+chord fake --agent-command '/tmp/chord-qa46-5ec53738c11e9e80/fake --resume-only'
+ --resume 7e7ceba6-a8d7-4af3-9fa2-d6d188ac24f5
+QA_EXIT_0
+sh-3.2$ sh /tmp/chord-qa46-5ec53738c11e9e80/run8.sh
+Resume this session with:
+chord fake --agent-command /tmp/chord-qa46-5ec53738c11e9e80/fake --resume a8e8e8
+bb-8a97-47f0-a3fe-2f4546737feb
+QA_EXIT_0
+sh-3.2$

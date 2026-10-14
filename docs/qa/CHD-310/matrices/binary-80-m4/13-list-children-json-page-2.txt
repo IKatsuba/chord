@@ -1,0 +1,24 @@
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "poolside",                                                │
+   │       "note": "models and modes not read yet; list_agents with agent \"p │
+   │ oolside\" reads them"                                                    │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "zeroclaw",                                                │
+   │       "note": "models and modes not read yet; list_agents with agent \"z │
+   │ eroclaw\" reads them"                                                    │
+   │     }                                                                    │
+   │   ]                                                                      │
+   │ }                                                                        │
+   └──────────────────────────────────────────────────────────────────────────┘
+
+ ── ↓ 29 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small
+    docs    fake · Fake Large with a 1M context window

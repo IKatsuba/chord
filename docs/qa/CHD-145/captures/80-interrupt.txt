@@ -1,0 +1,24 @@
+ chord                                        fake · /tmp/chd145-qa.nDhwyN/work
+
+   Hello, world. This reply came in chunks.
+
+ › check @docs @missing.ts done
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ....................................................................
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

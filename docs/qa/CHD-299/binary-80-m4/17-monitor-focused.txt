@@ -1,0 +1,24 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 25s ago
+
+ ← @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow
+
+ ⏺ Permission: allow.
+
+
+
+
+
+
+
+
+╭─ docs ───────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · x stop · esc back   Fake Large with a 1M context window · 1% used
+    main               fake
+    docs               fake
+  ❯ dev server errors  $ sleep 1; echo "ERROR [router] …  running 3s · 1 event

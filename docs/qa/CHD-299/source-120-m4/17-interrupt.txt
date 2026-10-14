@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 36s ago
+
+ ← @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow
+
+ ⏺ Permission: allow.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working...........................................................................................................
+   ⎿  Interrupted by user
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+    main  fake · Fake Large with a 1M context window  ✓ replied 6s ago
+    docs  fake · Fake Large with a 1M context window

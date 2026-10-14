@@ -1,0 +1,1981 @@
+import { expect, spyOn, test } from 'bun:test';
+import assert from 'node:assert/strict';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { draw } from '../harness.tsx';
+import { readPast } from '../../../src/session/record.ts';
+import { openSession, type Session } from '../../../src/session/session.ts';
+import {
+  readRecords,
+  type ResumableTab,
+  type SessionRecord,
+} from '../../../src/session/sessions.ts';
+import { reduceTranscript } from '../../../src/session/transcript/reducer.ts';
+import {
+  emptyTranscript,
+  type TranscriptAction,
+} from '../../../src/session/transcript/types.ts';
+import { serveChord } from '../../../src/server/server.ts';
+import { App } from '../../../src/ui/app/App.tsx';
+import * as ansi from '../../../src/ui/theme/Ansi.tsx';
+import { editInEditor } from '../../../src/editor.ts';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import {
+  asked,
+  CTRL_C,
+  CTRL_O,
+  CTRL_D,
+  CTRL_G,
+  CTRL_X,
+  ESC,
+  inputAsked,
+  isAlive,
+  leader,
+  promptRow,
+  quitAll,
+  ready,
+  send,
+  TAB,
+  until,
+  UP,
+  type Window,
+  withWindow,
+} from './render.tsx';
+import manifest from '../../../package.json' with { type: 'json' };
+
+const VERSION = manifest.version;
+
+test('the header names the agent and the directory', () =>
+  withWindow(async (window) => {
+    await window.shows('chord');
+    // The model, which the ` · ` comes with, follows the session up.
+    await window.shows('fake · ');
+  }));
+
+test("the transcript opens with the header: chord's version, the agent and its model, the directory and the keys", () =>
+  withWindow(async (window) => {
+    await window.shows('fake · Fake Large with a 1M context window');
+
+    const lines = window.frame().split('\n');
+    const at = (text: string) => lines.findIndex((line) => line.includes(text));
+
+    expect(lines[at('chord v')] ?? '').toContain(`chord v${VERSION}`);
+    // The window's first row, not on the prompt with empty rows above it.
+    expect(at('chord v')).toStrictEqual(0);
+    expect(at('chord v') + 1).toStrictEqual(at('fake · Fake Large'));
+    expect(at('chord v') + 3).toStrictEqual(at('? for shortcuts · /help'));
+    // The mark stands to the left of the text.
+    expect(lines[at('chord v')] ?? '').toContain('▄     chord');
+
+    await send(window, 'text');
+    await window.shows('This reply came in chunks.');
+
+    const after = window.frame().split('\n');
+    const row = (text: string) =>
+      after.findIndex((line) => line.includes(text));
+
+    // The transcript grows down from the header while it fits.
+    expect(row('chord v')).toStrictEqual(0);
+    expect(row('› text')).toStrictEqual(row('? for shortcuts · /help') + 2);
+    expect(after[row('⏺ Hello') + 1]?.trim()).toStrictEqual('');
+    expect(after[row('⏺ Hello') + 2]?.trim()).toStrictEqual('');
+    expect(
+      !window.frame().includes('resumed'),
+      'a fresh session resumed',
+    ).toBeTruthy();
+  }));
+
+test('a warning chord was started with is in the transcript before anything else', () =>
+  withWindow(
+    async (window) => {
+      await window.shows(
+        '⏺ .chord/settings.json: unknown key "theme", ignored',
+      );
+      await send(window, 'text');
+      expect(
+        window.frame().indexOf('unknown key') <
+          window.frame().indexOf('› text'),
+      ).toBeTruthy();
+    },
+    { warnings: ['.chord/settings.json: unknown key "theme", ignored'] },
+  ));
+
+/** An SGR mouse report of the left button at the 0-based cell `x`, `y`. */
+const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+
+test('a drag says how to select text, standing alone, for a while', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('Fake Large');
+      await window.type('a draft');
+
+      // A click is no drag.
+      await window.press(left(5, 5, 'down') + left(5, 5, 'up'));
+      expect(!window.frame().includes('to select text')).toBeTruthy();
+
+      await window.press(left(5, 5, 'down'));
+      await window.press(left(30, 6, 'drag'));
+      await window.press(left(30, 6, 'up'));
+      await window.shows('option + drag to select text');
+
+      const status = window.frame().split('\n').at(-1)!;
+
+      expect(status.trim()).toStrictEqual('option + drag to select text');
+      expect(window.frame()).toContain('│ › a draft');
+      // The terminal selects, not OpenTUI, which would copy nothing.
+      expect(window.selected()).toStrictEqual('');
+      await until(
+        'the hint to go',
+        () => !window.frame().includes('to select text'),
+        5_000,
+      );
+      await window.shows('Fake Large');
+    },
+    { columns: 80, rows: 24, selectHint: 'option + drag to select text' },
+  ));
+
+test('a streamed chunk draws again only the entry it lands in', async () => {
+  // Every block of a reply is drawn through `Ansi`, so its calls with a
+  // reply's words count how often that reply was drawn.
+  const drawn = spyOn(ansi, 'Ansi');
+  const draws = (words: string) =>
+    drawn.mock.calls.filter(([{ text }]) => text.includes(words)).length;
+
+  try {
+    await withWindow(async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await send(window, 'markdown');
+      // The reply waits inside its first code fence, its turn still running.
+      await window.shows('const session = await openSession');
+
+      const earlier = draws('This reply came in chunks.');
+      const streamed = draws('Reading the session layer');
+
+      // A draft drawn on every key leaves the transcript alone too.
+      await window.type('a draft');
+      await window.shows('a draft');
+      await window.shows('deno task check');
+
+      expect(draws('This reply came in chunks.')).toStrictEqual(earlier);
+      expect(draws('Reading the session layer')).toBeGreaterThan(streamed);
+    });
+  } finally {
+    drawn.mockRestore();
+  }
+});
+
+test('Esc interrupts the turn and the prompt is usable again', () =>
+  withWindow(async (window) => {
+    await send(window, 'slow');
+    await window.shows('Working.');
+    await window.shows('esc to interrupt');
+    await window.press(ESC);
+    await window.shows('Interrupted by user');
+    await until(
+      'the spinner to go',
+      () => !window.frame().includes('Working…'),
+    );
+    await send(window, 'text');
+    await window.shows('This reply came in chunks.');
+  }));
+
+const OSC9 = {
+  channel: 'osc9',
+  env: { termProgram: 'iTerm.app', tmux: false },
+} as const;
+
+/** The writes to stdout that carry `bytes`. */
+function writes(window: Window, bytes: string): number {
+  return window.written().filter((written) => written.startsWith(bytes)).length;
+}
+
+test('a finished turn writes the notification to stdout, once', () =>
+  withWindow(
+    async (window) => {
+      const bytes = '\x1b]9;fake is waiting for your input\x07';
+
+      await send(window, 'hello');
+      await window.shows('This reply came in chunks.');
+      await until('the notification', () => writes(window, bytes) === 1);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(writes(window, bytes)).toStrictEqual(1);
+    },
+    { notifications: OSC9 },
+  ));
+
+test("the fake's permission request writes its notification, and the turn's end another", () =>
+  withWindow(
+    async (window) => {
+      const bytes = '\x1b]9;fake needs your permission: Write notes.txt\x07';
+
+      await send(window, 'permission');
+      await asked(window);
+      expect(writes(window, bytes)).toStrictEqual(1);
+      await window.press('1');
+      await until(
+        'the turn to end',
+        () => writes(window, '\x1b]9;fake is waiting for your input\x07') === 1,
+      );
+      expect(writes(window, bytes)).toStrictEqual(1);
+    },
+    { notifications: OSC9 },
+  ));
+
+test('a turn interrupted with Esc writes no notification', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await window.press(ESC);
+      await window.shows('Interrupted by user');
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(
+        !window.written().some((written) => written.includes('\x1b]9;')),
+        'a notification was written',
+      ).toBeTruthy();
+    },
+    { notifications: OSC9 },
+  ));
+
+test('a failed turn is an error line, and the prompt still works', () =>
+  withWindow(async (window) => {
+    await send(window, 'error');
+    await window.shows('About to fail.');
+    await window.shows('The fake agent failed on purpose.');
+    await send(window, 'text');
+    await window.shows('This reply came in chunks.');
+  }));
+
+test('ctrl+c warns once, then quits and stops the agent', () =>
+  withWindow(async (window) => {
+    await window.press(CTRL_C);
+    await window.shows('Press ctrl+c again to quit');
+    expect(
+      window.session()?.agentPids.size === 1,
+      'quit on the first press',
+    ).toBeTruthy();
+    await window.press(CTRL_C);
+    await until(
+      'the agent to stop',
+      () => window.session()?.agentPids.size === 0,
+    );
+  }));
+
+test('keys start nothing while the agent is still closing', () => {
+  const { promise: heldClose, resolve: release } =
+    Promise.withResolvers<void>();
+  const ran: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      try {
+        await ready(window);
+        await window.press(CTRL_D);
+        await window.shows('Stopping fake…');
+        await window.type('!');
+        await window.type('echo shutdown-race');
+        await window.press('\r');
+      } finally {
+        // Before anything fails, or the window's own close would wait on it.
+        release();
+      }
+
+      await until(
+        'the agent to stop',
+        () => window.session()?.agentPids.size === 0,
+      );
+      expect(ran).toStrictEqual([]);
+    },
+    {
+      heldClose,
+      shell: (command) => {
+        ran.push(command);
+
+        return { stop: () => {}, ended: new Promise(() => {}) };
+      },
+    },
+  );
+});
+
+/**
+ * Off the alternate screen and out of raw mode before the editor ran; both
+ * back, and then `drawn`, after. Each pair in the order OpenTUI gives them.
+ */
+function assertHandedOver(log: readonly string[], drawn: string) {
+  const editor = log.findIndex((chunk) => chunk.startsWith('editor: '));
+  const before = log.slice(0, editor);
+  const after = log.slice(editor);
+  const entered = before.findLastIndex((chunk) =>
+    chunk.includes('\x1b[?1049h'),
+  );
+  const left = before.findLastIndex((chunk) => chunk.includes('\x1b[?1049l'));
+  const cooked = before.lastIndexOf('raw off');
+  const raw = after.indexOf('raw on');
+  const enter = after.findIndex((chunk) => chunk.includes('\x1b[?1049h'));
+  // The first write by which the text is out, once the terminal is back.
+  const back = Math.max(raw, enter);
+  const shown = after.findIndex(
+    (_, at) =>
+      at > back &&
+      after
+        .slice(back, at + 1)
+        .join('')
+        .includes(drawn),
+  );
+
+  expect(editor >= 0, 'the editor did not run').toBeTruthy();
+  expect(left > entered, 'the alternate screen was not left').toBeTruthy();
+  expect(cooked > before.lastIndexOf('raw on'), 'raw mode was on').toBeTruthy();
+  expect(raw > 0, 'raw mode did not come back').toBeTruthy();
+  expect(enter > 0, 'the alternate screen did not come back').toBeTruthy();
+  expect(shown > back, 'the window was not drawn once back').toBeTruthy();
+}
+
+test('ctrl+g leaves the alternate screen and raw mode, and comes back drawn', () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('draft');
+      await window.shows('› draft');
+      await window.press(CTRL_G);
+      await window.shows('from the editor');
+      assertHandedOver(log, 'from the editor');
+      // The key goes on working once it is back.
+      await window.type('!');
+      await window.shows('from the editor!');
+    },
+    {
+      log,
+      editor: (draft) => {
+        log.push(`editor: ${draft}`);
+
+        return Promise.resolve({ text: `${draft}\nfrom the editor` });
+      },
+    },
+  );
+});
+
+test('an editor killed by a signal keeps the draft and gives the terminal back', () => {
+  const log: string[] = [];
+  const message = 'printf was stopped by SIGTERM; the draft is unchanged';
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('kept');
+      await window.shows('› kept');
+      await window.press(CTRL_G);
+      await window.shows(message);
+      assertHandedOver(log, message);
+      expect(
+        !window.frame().includes('overwritten'),
+        'the half-written file came back',
+      ).toBeTruthy();
+      // The draft is the one typed: a key goes on the end of it.
+      await window.type('!');
+      await window.shows('› kept!');
+    },
+    {
+      log,
+      editor: (draft) => {
+        log.push(`editor: ${draft}`);
+
+        // A scripted editor that writes the file and is then killed, as one
+        // that crashes half-way through a save would be.
+        return editInEditor(draft, {
+          env: (name) =>
+            name === 'EDITOR'
+              ? 'printf overwritten > "$1"; kill -TERM $$ #'
+              : undefined,
+          shell: ['/bin/sh', '-c'],
+        });
+      },
+    },
+  );
+});
+
+test('ctrl+c clears a draft without arming quit', () =>
+  withWindow(async (window) => {
+    await window.type('draft');
+    await window.shows('› draft');
+    await window.press(CTRL_C);
+    await until('the draft to go', () => !window.frame().includes('draft'));
+    expect(
+      !window.frame().includes('Press ctrl+c again'),
+      'clearing armed quit',
+    ).toBeTruthy();
+    // The input still takes text after it was cleared.
+    await window.type('next');
+    await window.shows('› next');
+  }));
+
+test('clearing a draft disarms a quit that was already armed', () =>
+  withWindow(async (window) => {
+    await window.press(CTRL_C);
+    await window.shows('Press ctrl+c again to quit');
+    await window.type('draft');
+    await window.shows('› draft');
+    await window.press(CTRL_C);
+    await until('the draft to go', () => !window.frame().includes('draft'));
+    expect(
+      !window.frame().includes('Press ctrl+c again'),
+      'the warning outlived the draft',
+    ).toBeTruthy();
+    await window.press(CTRL_C);
+    await window.shows('Press ctrl+c again to quit');
+    expect(
+      window.session()?.agentPids.size === 1,
+      'quit after clearing',
+    ).toBeTruthy();
+    await window.press(CTRL_C);
+    await until(
+      'the agent to stop',
+      () => window.session()?.agentPids.size === 0,
+    );
+  }));
+
+test('ctrl+d quits on an empty prompt, not on a draft', () =>
+  withWindow(async (window) => {
+    await window.type('draft');
+    await window.press(CTRL_D);
+    await window.shows('› draft');
+    expect(
+      !window.frame().includes('draftd'),
+      'ctrl+d typed a letter',
+    ).toBeTruthy();
+    expect(
+      window.session()?.agentPids.size === 1,
+      'quit with a draft',
+    ).toBeTruthy();
+
+    for (let i = 0; i < 'draft'.length; i++) {
+      await window.press('\x7f');
+    }
+
+    await window.press(CTRL_D);
+    await until(
+      'the agent to stop',
+      () => window.session()?.agentPids.size === 0,
+    );
+  }));
+
+test('ctrl+c quits mid-turn and stops the agent', () =>
+  withWindow(async (window) => {
+    await send(window, 'slow');
+    await window.shows('esc to interrupt');
+    await window.press(CTRL_C);
+    await window.press(CTRL_C);
+    await until(
+      'the agent to stop',
+      () => window.session()?.agentPids.size === 0,
+    );
+  }));
+
+test('/clear starts a new session with an empty transcript', () =>
+  withWindow(async (window) => {
+    await send(window, 'text');
+    await window.shows('This reply came in chunks.');
+    await until('the turn to end', () => !window.frame().includes('Working'));
+
+    const first = window.session();
+
+    await window.type('/cl');
+    await window.press('\r');
+    await until('a new session', () => window.session() !== first);
+    await ready(window);
+    expect(
+      !window.frame().includes('› text'),
+      'the transcript stayed',
+    ).toBeTruthy();
+    expect(
+      !window.frame().includes('in chunks'),
+      'the reply stayed',
+    ).toBeTruthy();
+    expect(
+      !promptRow(window)?.includes('/cl'),
+      'the draft stayed',
+    ).toBeTruthy();
+    await until('the first agent to stop', () => first?.agentPids.size === 0);
+    // The new session takes prompts, and history kept the command.
+    await send(window, 'text');
+    await window.shows('This reply came in chunks.');
+    await until('the turn to end', () => !window.frame().includes('Working'));
+    await window.press(UP);
+    await until(
+      'the recalled prompt',
+      () => promptRow(window)?.includes('› text') ?? false,
+    );
+    await window.press(UP);
+    await until(
+      'the command',
+      () => promptRow(window)?.includes('› /clear') ?? false,
+    );
+    // A recalled command is history's: no list opens over it.
+    expect(!window.frame().includes('/config'), 'the list opened').toBeTruthy();
+  }));
+
+/** The rows `/name` reported, from its line to the end of its block. */
+async function reported(window: Window, name: string): Promise<string> {
+  await window.type(name);
+  await window.press('\r');
+  await window.shows(`› ${name}`);
+
+  const lines = window.frame().split('\n');
+  const at = lines.findLastIndex((line) => line.includes(`› ${name}`));
+  const block = lines.slice(at + 1);
+  const end = block.findIndex((line) => line.trim() === '');
+
+  return block.slice(0, end < 0 ? undefined : end).join('\n');
+}
+
+test('/cost, /context and /status report what the agent said', () =>
+  withWindow(
+    async (window) => {
+      await window.shows('Fake Large with a 1M context window');
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await window.shows('% context used');
+      await send(window, 'tools');
+      await until(
+        'the second turn to report',
+        () =>
+          window.frame().includes('1% context used') &&
+          !window.frame().includes('Working'),
+      );
+
+      const cost = await reported(window, '/cost');
+
+      expect(cost).toContain('⎿  Total cost:   $0.0250');
+      expect(cost).toContain('Tokens in:    2,000');
+      expect(cost).toContain('Tokens out:   400');
+      expect(cost).toContain('Cache read:   1,600');
+      expect(cost).toMatch(/Session time: \d+s/);
+
+      const context = await reported(window, '/context');
+
+      expect(context).toContain('⎿  Used: 4,000 of 1,000,000 tokens (1%)');
+      expect(context).toContain('Free: 996,000 tokens (99%)');
+
+      const status = await reported(window, '/status');
+
+      expect(status).toContain('⎿  Agent:     fake');
+      expect(status).toContain(
+        'Model:     Fake Large with a 1M context window',
+      );
+      expect(status).toContain('Mode:      Default');
+      expect(status).toMatch(/Session: {3}[0-9a-f-]{36}/);
+      expect(status).toContain('Directory:');
+    },
+    { rows: 60 },
+  ));
+
+test('/cost says so when the agent reports no usage', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await until('the turn to end', () => !window.frame().includes('Working'));
+
+      const cost = await reported(window, '/cost');
+
+      expect(cost).toContain(
+        '⎿  fake has not reported what this session has used.',
+      );
+      expect(!cost.includes('$0'), cost).toBeTruthy();
+      expect(await reported(window, '/context')).toContain(
+        'fake has not reported how full its context window is.',
+      );
+    },
+    { agentCommand: fakeAgentCommand(undefined, '--no-usage') },
+  ));
+
+test('/help opens the shortcuts and /exit quits', () =>
+  withWindow(async (window) => {
+    await window.type('/help');
+    await window.press('\r');
+    await window.shows('ctrl + o for verbose output');
+    expect(
+      !promptRow(window)?.includes('/help'),
+      'the draft stayed',
+    ).toBeTruthy();
+    await window.press(ESC);
+    await window.type('/exit');
+    await window.press('\r');
+    await until(
+      'the agent to stop',
+      () => window.session()?.agentPids.size === 0,
+    );
+  }));
+
+const CTRL_N = '\x0e';
+
+test("one session's first row is its header's, and two sessions' is the tab strip, the header under it", () =>
+  withWindow(
+    async (window) => {
+      const first = () => window.frame().split('\n')[0] ?? '';
+
+      await window.shows('chord v');
+      expect(first()).toContain(`chord v${VERSION}`);
+      await leader(window, 'c');
+      await window.shows('2 fake');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      expect(first()).toContain('1 fake');
+      expect(
+        !first().includes('chord v'),
+        'the header on the strip',
+      ).toBeTruthy();
+      expect(window.frame().split('\n')[1] ?? '').toContain(
+        `chord v${VERSION}`,
+      );
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test('ctrl+x c opens a second session, and the leader switches between them', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('Hello, world. This reply came in chunks.');
+      expect(
+        !window.frame().includes('1 fake'),
+        'a strip with one session',
+      ).toBeTruthy();
+      await leader(window, 'c');
+      await window.shows('2 fake');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      expect(
+        !window.frame().includes('› text'),
+        "the first session's past",
+      ).toBeTruthy();
+      await send(window, 'the second one');
+      await leader(window, '1');
+      await window.shows('› text');
+      expect(!window.frame().includes('› the second one')).toBeTruthy();
+      await leader(window, CTRL_N);
+      await window.shows('› the second one');
+      expect(!window.frame().includes('› text')).toBeTruthy();
+      await leader(window, 'p');
+      await window.shows('› text');
+      // A number with no tab does nothing.
+      await leader(window, '5');
+      await until(
+        'the leader to go',
+        () => !window.frame().includes('ctrl+x …'),
+      );
+      expect(window.frame()).toContain('› text');
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test("/new opens the agent named on its own settings' model, refuses one chord cannot start, and /status counts the sessions", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      // A name the list matches nothing of, so Enter runs it as typed.
+      await window.type('/new qqq');
+      await window.press('\r');
+      await window.shows('No agent named qqq · chord agents lists them');
+      expect(window.frame()).toContain('› /new qqq');
+      expect(
+        !window.frame().includes('1 fake'),
+        'a strip with one session',
+      ).toBeTruthy();
+      expect(window.pids.length).toStrictEqual(1);
+      await window.type('/new fake2');
+      await window.press('\r');
+      await window.shows('2 fake2');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await window.shows('Fake Small');
+      // Alone, it is ctrl+x c: the front session's agent again.
+      await window.type('/new');
+      await window.press('\r');
+      await window.shows('3 fake2');
+      await until('the third agent', () => window.pids.length === 3);
+      await ready(window);
+
+      const status = await reported(window, '/status');
+
+      expect(status).toContain('Agent:     fake2');
+      expect(status).toContain('Model:     Fake Small');
+      expect(status).toContain('Sessions:  3 open');
+      await quitAll(window);
+    },
+    {
+      columns: 120,
+      rows: 40,
+      startupOf: (agent) =>
+        agent === 'fake'
+          ? { agentCommand: fakeAgentCommand() }
+          : agent === 'fake2'
+            ? {
+                agentCommand: fakeAgentCommand(),
+                starting: {
+                  model: { id: 'fake-small', from: 'set in settings' },
+                },
+              }
+            : undefined,
+    },
+  ));
+
+test("/new opens the agent named on its own settings' effort, and says one its runtime refuses", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('/new fake2');
+      await window.press('\r');
+      await window.shows('2 fake2');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await send(window, 'effort');
+      await window.shows('Effort: high.');
+      await window.type('/new fake3');
+      await window.press('\r');
+      await window.shows('3 fake3');
+      await until('the third agent', () => window.pids.length === 3);
+      await ready(window);
+      await window.shows(
+        'Could not start on max effort, set in .chord/settings.json: the ' +
+          'agent offers low, medium, high',
+      );
+      await send(window, 'effort');
+      await window.shows('Effort: medium.');
+      await quitAll(window);
+    },
+    {
+      columns: 140,
+      rows: 40,
+      startupOf: (agent) =>
+        agent === 'fake'
+          ? { agentCommand: fakeAgentCommand() }
+          : agent === 'fake2' || agent === 'fake3'
+            ? {
+                agentCommand: fakeAgentCommand(),
+                starting: {
+                  effort: {
+                    id: agent === 'fake2' ? 'high' : 'max',
+                    from: 'set in .chord/settings.json',
+                  },
+                },
+              }
+            : undefined,
+    },
+  ));
+
+test('/new offers a name only the settings define, and Tab and Enter open it', () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('/new ');
+      await window.shows('from settings');
+      // Settings first, then own CLIs PATH has, and those it lacks marked.
+      expect(window.frame()).toMatch(/mine +from settings\n.*goose +goose\n/);
+      expect(window.frame()).toMatch(/cursor +Cursor · not on PATH/);
+      await window.type('mi');
+      await window.press('\t');
+      await window.shows('› /new mine');
+      await window.press('\r');
+      await window.shows('2 mine');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await quitAll(window);
+    },
+    {
+      columns: 120,
+      rows: 40,
+      runtimes: ['fake', 'cursor', 'goose', 'mine'],
+      listed: [
+        {
+          name: 'cursor',
+          title: 'Cursor',
+          start: 'agent acp',
+          from: 'cli',
+          found: false,
+        },
+        {
+          name: 'goose',
+          title: 'goose',
+          start: 'goose acp',
+          from: 'cli',
+          found: true,
+        },
+        {
+          name: 'mine',
+          title: undefined,
+          start: 'fake-agent',
+          from: 'settings',
+        },
+      ],
+      startupOf: (agent) =>
+        agent === 'fake' || agent === 'mine'
+          ? { agentCommand: fakeAgentCommand() }
+          : undefined,
+    },
+  ));
+
+test('a permission behind is a glyph and a notice, and ctrl+x a goes to it', () =>
+  withWindow(
+    async (window) => {
+      const bytes =
+        '\x1b]9;fake (2) needs your permission: Write notes.txt\x07';
+
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await send(window, 'permission');
+      await asked(window);
+      await leader(window, '1');
+      await window.shows('2 fake ●');
+      await window.shows('● 2 fake needs your permission · ctrl+x a to go');
+      expect(writes(window, bytes)).toStrictEqual(1);
+      // The window never switches by itself, so a digit typed here is a draft.
+      await window.type('1');
+      await until(
+        'the digit in the draft',
+        () => promptRow(window)?.includes('1') ?? false,
+      );
+      expect(!window.frame().includes('Do you want to proceed?')).toBeTruthy();
+      expect(window.frame()).toContain('2 fake ●');
+      await leader(window, 'a');
+      await asked(window);
+      expect(window.frame()).toContain('Waiting for permission');
+      await window.press('1');
+      await until(
+        'the permission answered',
+        () => !window.frame().includes('Do you want to proceed?'),
+      );
+      await until(
+        'the turn to end',
+        () =>
+          !window.frame().includes('2 fake ●') &&
+          !window.frame().includes('Working'),
+      );
+      expect(writes(window, bytes)).toStrictEqual(1);
+      await leader(window, 'a');
+      await window.shows('No session waits');
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40, notifications: OSC9 },
+  ));
+
+test('a digit after the leader goes to a tab, not to the permission asked', () =>
+  withWindow(
+    async (window) => {
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await leader(window, '1');
+      await send(window, 'permission');
+      await asked(window);
+      await leader(window, '2');
+      await until(
+        'the second tab',
+        () => !window.frame().includes('Do you want to proceed?'),
+      );
+      // The first waits on the person, and its tab says so.
+      await window.shows('1 fake ●');
+      await leader(window, '1');
+      await asked(window);
+      expect(window.frame()).toContain('2. ');
+      await window.press('3');
+      await until(
+        'the permission answered',
+        () => !window.frame().includes('Do you want to proceed?'),
+      );
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test('ctrl+x w lists the sessions open, and Enter goes to the one highlighted', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await leader(window, 'w');
+      await window.shows('Sessions in ');
+      expect(window.frame()).toMatch(/1\. fake {2}idle {2}text/);
+      expect(window.frame()).toMatch(/2\. fake {2}here/);
+      expect(window.frame()).toContain(
+        'Enter to go · 1–2 to pick · Esc to close',
+      );
+      // None waits, so the highlight starts after the session in front.
+      expect(window.frame()).toMatch(/❯ 1\. fake/);
+      await window.press('\r');
+      await window.shows('› text');
+      expect(
+        !window.frame().includes('Sessions in '),
+        'the picker stayed open',
+      ).toBeTruthy();
+      expect(window.pids.length).toStrictEqual(2);
+
+      // Esc leaves the session in front as it was.
+      await leader(window, 'w');
+      await window.shows('Sessions in ');
+      await window.press(ESC);
+      await until(
+        'the picker to close',
+        () => !window.frame().includes('Sessions in '),
+      );
+      expect(window.frame()).toContain('› text');
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test('/resume marks a session open in another tab, and picking it goes there without a second agent', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      expect(
+        !window.frame().includes('› text'),
+        "tab 1's past in tab 2",
+      ).toBeTruthy();
+      await window.type('/resume');
+      await window.press('\r');
+      await window.shows('Resume a session');
+      await window.shows('open in 1');
+      await window.press('\r');
+      await window.shows('› text');
+      expect(!window.frame().includes('Resume a session')).toBeTruthy();
+      // Give a second agent the time it would take to start, had one been.
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(window.pids.length).toStrictEqual(2);
+      expect(
+        window
+          .frame()
+          .split('\n')
+          .filter((line) => line.includes('› text')).length,
+      ).toStrictEqual(1);
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test("/clear in tab 2 starts it afresh and leaves tab 1's transcript", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await send(window, 'tools');
+      await window.shows('Read it.');
+      await window.type('/clear');
+      await window.press('\r');
+      await until('tab 2 cleared', () => !window.frame().includes('› tools'));
+      await ready(window);
+      await leader(window, '1');
+      await window.shows('› text');
+      expect(window.frame()).toContain('This reply came in chunks.');
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test('ctrl+x k closes an idle session at once, and a busy one on the second press', () =>
+  withWindow(
+    async (window) => {
+      const header = () => window.frame().split('\n')[0] ?? '';
+
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await leader(window, 'k');
+      await window.shows('Closed 2 fake · /resume opens it again');
+      // The first comes back as it was left: nothing sent to it.
+      expect(
+        !window.frame().includes('› text'),
+        "the closed session's past",
+      ).toBeTruthy();
+      expect(
+        !header().includes('1 fake'),
+        'a strip with one session',
+      ).toBeTruthy();
+      await until(
+        'its agent to stop',
+        async () => !(await isAlive(window.pids[1]!)),
+      );
+
+      // A busy one asks first and is left as it was.
+      await leader(window, 'c');
+      await until('the third agent', () => window.pids.length === 3);
+      await ready(window);
+      await send(window, 'permission');
+      await asked(window);
+      await leader(window, 'k');
+      await window.shows(
+        '2 fake waits for your permission · ctrl+x k again to stop it and close',
+      );
+      expect(header()).toContain('2 fake');
+      expect(
+        await isAlive(window.pids[2]!),
+        'closed on the first press',
+      ).toBeTruthy();
+      await leader(window, 'k');
+      await window.shows('Closed 2 fake · /resume opens it again');
+      expect(!header().includes('2 fake'), 'its tab stayed').toBeTruthy();
+      expect(!window.frame().includes('Do you want to proceed?')).toBeTruthy();
+      await until(
+        'its agent to stop',
+        async () => !(await isAlive(window.pids[2]!)),
+      );
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test('ctrl+x k on a session running a command asks first, then stops that command and no other', () => {
+  const stops = new Map<string, number>();
+
+  return withWindow(
+    async (window) => {
+      const header = () => window.frame().split('\n')[0] ?? '';
+
+      await window.type('!');
+      await window.type('sleep 61');
+      await window.press('\r');
+      await window.shows('sleep 61');
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await window.type('!');
+      await window.type('sleep 60');
+      await window.press('\r');
+      await window.shows('sleep 60');
+      await leader(window, 'k');
+      await window.shows(
+        '2 fake is working · ctrl+x k again to stop it and close',
+      );
+      expect(stops.get('sleep 60') ?? 0).toStrictEqual(0);
+      await leader(window, 'k');
+      await until('its tab to close', () => !header().includes('2 fake'));
+      expect(stops.get('sleep 60')).toStrictEqual(1);
+      expect(
+        stops.get('sleep 61') ?? 0,
+        "the other tab's command",
+      ).toStrictEqual(0);
+      await window.shows('sleep 61');
+      await quitAll(window);
+    },
+    {
+      columns: 120,
+      rows: 40,
+      shell: (command) => {
+        const { promise: ended, resolve } = Promise.withResolvers<{
+          stopped: boolean;
+        }>();
+
+        return {
+          stop: () => {
+            stops.set(command, (stops.get(command) ?? 0) + 1);
+            resolve({ stopped: true });
+          },
+          ended,
+        };
+      },
+    },
+  );
+});
+
+test('an armed close that has run out asks again rather than closing', () =>
+  withWindow(
+    async (window) => {
+      const header = () => window.frame().split('\n')[0] ?? '';
+
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await leader(window, 'k');
+      await window.shows(
+        '2 fake is working · ctrl+x k again to stop it and close',
+      );
+      await until(
+        'the armed line to go',
+        () => !window.frame().includes('again to stop it and close'),
+        4000,
+      );
+      await leader(window, 'k');
+      await window.shows(
+        '2 fake is working · ctrl+x k again to stop it and close',
+      );
+      expect(header()).toContain('2 fake');
+      expect(
+        await isAlive(window.pids[1]!),
+        'closed on a press after it ran out',
+      ).toBeTruthy();
+      await quitAll(window);
+    },
+    {
+      columns: 120,
+      rows: 40,
+      agentCommand: fakeAgentCommand(undefined, '--step-ms', '200'),
+    },
+  ));
+
+test('ctrl+d with a session working arms and names it, then quits with each session to resume and no agent left', async () => {
+  let resumable: readonly ResumableTab[] | undefined;
+
+  await withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await leader(window, '1');
+      await window.shows('› text');
+      await window.press(CTRL_D);
+      await window.shows('2 fake is working · ctrl+d again to quit');
+      expect(resumable).toStrictEqual(undefined);
+
+      for (const pid of window.pids) {
+        expect(
+          await isAlive(pid),
+          `agent ${pid} stopped on the first press`,
+        ).toBeTruthy();
+      }
+
+      await quitAll(window);
+      expect(resumable?.map(({ agent }) => agent)).toStrictEqual([
+        'fake',
+        'fake',
+      ]);
+      expect(
+        new Set(resumable?.map(({ sessionId }) => sessionId)).size,
+      ).toStrictEqual(2);
+    },
+    {
+      columns: 120,
+      rows: 40,
+      // Slow enough that its turn still runs at the second press.
+      agentCommand: fakeAgentCommand(undefined, '--step-ms', '20'),
+      onQuit: (tabs) => (resumable = tabs),
+    },
+  );
+});
+
+test('a form left half filled in a session behind is as it was on coming back', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'form');
+      await inputAsked(window);
+      await window.type('keep');
+      await window.press(TAB);
+      await window.type('a@b');
+      await window.shows('Contact email  a@b');
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      expect(
+        !window.frame().includes('Project name'),
+        "tab 1's form in tab 2",
+      ).toBeTruthy();
+      // Its tab says it waits instead, and the status line names it.
+      await window.shows('● 1 fake asks for input · ctrl+x a');
+      await leader(window, '1');
+      await inputAsked(window);
+      expect(window.frame()).toContain('Project name   keep');
+      expect(window.frame()).toContain('Contact email  a@b');
+      // The focus came back too: the next key goes on where the last left off.
+      await window.type('.dev');
+      await window.shows('Contact email  a@b.dev');
+      await window.press(ESC);
+      await window.shows('Elicitation answer: cancel');
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test('an agent that does not start is an error line', async () => {
+  const app = await draw(
+    <App
+      agent='fake'
+      cwd='.'
+      // Never chord's own state directory, though nothing is sent here.
+      stateDir='/nonexistent/chord-state'
+      open={() => Promise.reject(new Error('spawn fake ENOENT'))}
+    />,
+  );
+
+  try {
+    await until('the error line', () =>
+      app.frame().includes('fake did not start: spawn fake ENOENT'),
+    );
+  } finally {
+    await app.unmount();
+  }
+});
+
+test('a resumed session draws its past, answers in the same session, and is named on quit', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
+  const stateDir = join(dir, 'state');
+  const sessions: Session[] = [];
+  let quitWith: string[] | undefined;
+  const id = crypto.randomUUID();
+  // An id chord has no record of: the fake agent loads it and replays.
+  const app = await draw(
+    <App
+      agent='fake'
+      cwd={dir}
+      stateDir={stateDir}
+      agentCommand={fakeAgentCommand()}
+      resume={{ sessionId: id, cwd: dir }}
+      onQuit={(tabs) => {
+        quitWith = tabs.map(({ sessionId }) => sessionId);
+      }}
+      open={async (options) => {
+        const session = await openSession(options);
+
+        sessions.push(session);
+
+        return session;
+      }}
+    />,
+  );
+  const frame = () => app.frame();
+
+  try {
+    await until('the past', () => frame().includes('Hello, world.'));
+
+    const past = frame();
+
+    expect(past).toContain('› tools');
+    // The agent's replay is all chord knows of it: no record says when.
+    expect(past).toContain('resumed · tools');
+    expect(past.indexOf('resumed') < past.indexOf('› tools')).toBeTruthy();
+    expect(past).toContain('Read(README.md)');
+    expect(past).toContain('Read it.');
+    expect(past).toContain('› text');
+
+    await app.write('/greet');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await app.write('\r');
+    await until('the answer', () => frame().includes('from the fake agent'));
+    expect(sessions.length).toStrictEqual(1);
+    expect(sessions[0]?.id).toStrictEqual(id);
+
+    await app.write(CTRL_D);
+    await until('the quit', () => quitWith !== undefined);
+    expect(quitWith).toStrictEqual([id]);
+
+    // The window kept the session, the past the agent replayed included, so
+    // the command printed on quit finds it.
+    await until('the record', async () =>
+      (await readRecords(stateDir)).some(
+        (record) => record.sessionId === id && record.prompt === 'tools',
+      ),
+    );
+  } finally {
+    await app.unmount();
+
+    for (const session of sessions) {
+      await session.close();
+    }
+
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('several resumed sessions open as tabs in order, the first in front, each on its own agent where it works', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
+  const here = join(dir, 'here');
+  const there = join(dir, 'there');
+  const sessions: Session[] = [];
+  const opened: {
+    agent: string;
+    id?: string | undefined;
+    cwd: string;
+    servers: string[];
+  }[] = [];
+  const ids = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+  const start = { agentCommand: fakeAgentCommand() };
+  const place = (cwd: string, server: string) => ({
+    cwd,
+    startupOf: () => start,
+    mcpServers: [
+      {
+        server: { name: server, command: 'true', args: [], env: [] },
+        from: '.mcp.json',
+      },
+    ],
+    mcpIgnored: [],
+  });
+  const atHere = place(here, 'here-server');
+  const atThere = place(there, 'there-server');
+
+  await mkdir(here);
+  await mkdir(there);
+
+  // Ids chord has no record of: the fake agent loads each and replays.
+  const app = await draw(
+    <App
+      agent='fake'
+      cwd={here}
+      home={undefined}
+      stateDir={join(dir, 'state')}
+      agentCommand={fakeAgentCommand()}
+      mcpServers={atHere.mcpServers}
+      resumes={[
+        {
+          agent: 'fake',
+          resume: { sessionId: ids[0]!, cwd: here },
+          place: atHere,
+        },
+        {
+          agent: 'fake2',
+          resume: { sessionId: ids[1]!, cwd: there },
+          place: atThere,
+        },
+        {
+          agent: 'fake',
+          resume: { sessionId: ids[2]!, cwd: there },
+          place: atThere,
+        },
+      ]}
+      open={async (options) => {
+        opened.push({
+          agent: options.agent,
+          id: options.resume?.sessionId,
+          cwd: options.cwd,
+          servers: (options.mcpServers ?? []).map(({ name }) => name),
+        });
+
+        const session = await openSession(options);
+
+        sessions.push(session);
+
+        return session;
+      }}
+    />,
+    { columns: 120 },
+  );
+
+  const frame = () => app.frame();
+
+  try {
+    await until('three sessions', () => sessions.length === 3);
+    await until('the past', () => frame().includes('Read it.'));
+    expect(opened).toStrictEqual([
+      { agent: 'fake', id: ids[0], cwd: here, servers: ['here-server'] },
+      { agent: 'fake2', id: ids[1], cwd: there, servers: ['there-server'] },
+      { agent: 'fake', id: ids[2], cwd: there, servers: ['there-server'] },
+    ]);
+    expect(frame()).toMatch(/1 fake .*2 fake2 .*3 fake/);
+    expect(frame()).toContain(here);
+    expect(
+      !frame().includes(there),
+      'the front tab is not the first',
+    ).toBeTruthy();
+
+    // Each tab has its own past, and works where its session does: `/new`
+    // opens beside it there, on that directory's servers.
+    await app.write(CTRL_X);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await app.write('2');
+    await until('the second tab', () => frame().includes(there));
+    await until('its past', () => frame().includes('Read it.'));
+    await app.write('/new');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await app.write('\r');
+    await until('a fourth session', () => sessions.length === 4);
+    expect(opened.at(-1)).toStrictEqual({
+      agent: 'fake2',
+      id: undefined,
+      cwd: there,
+      servers: ['there-server'],
+    });
+  } finally {
+    await app.unmount();
+
+    for (const session of sessions) {
+      await session.close();
+    }
+
+    await rm(dir, { recursive: true });
+  }
+});
+
+test("a window record's tabs open with its front tab in front and its note said, and quitting names their places and the front", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
+  const here = join(dir, 'here');
+  const there = join(dir, 'there');
+  const sessions: Session[] = [];
+  const ids = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+  const start = { agentCommand: fakeAgentCommand() };
+  const place = (cwd: string) => ({
+    cwd,
+    startupOf: () => start,
+    mcpServers: [],
+    mcpIgnored: [],
+  });
+  let quit: { tabs: readonly ResumableTab[]; front: number } | undefined;
+
+  await mkdir(here);
+  await mkdir(there);
+
+  const app = await draw(
+    <App
+      agent='fake'
+      cwd={here}
+      home={undefined}
+      stateDir={join(dir, 'state')}
+      agentCommand={fakeAgentCommand()}
+      resumes={[
+        {
+          agent: 'fake',
+          resume: { sessionId: ids[0]!, cwd: here },
+          place: place(here),
+        },
+        {
+          agent: 'fake2',
+          resume: { sessionId: ids[1]!, cwd: here },
+          place: place(here),
+        },
+        {
+          agent: 'fake',
+          resume: { sessionId: ids[2]!, cwd: there },
+          place: place(there),
+        },
+      ]}
+      resumedFront={2}
+      resumedNote='Not reopened: fake tab gone, its record is gone'
+      onQuit={(tabs, front) => {
+        quit = { tabs, front };
+      }}
+      open={async (options) => {
+        const session = await openSession(options);
+
+        sessions.push(session);
+
+        return session;
+      }}
+    />,
+    { columns: 120 },
+  );
+
+  const frame = () => app.frame();
+
+  try {
+    await until('three sessions', () => sessions.length === 3);
+    await until('the third in front', () => frame().includes(there));
+    await until('the note', () =>
+      frame().includes('Not reopened: fake tab gone'),
+    );
+    // Every past is in, so each tab had a prompt and is resumable.
+    await until('the past', () => frame().includes('Read it.'));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await app.write(CTRL_D);
+    await until('the quit', () => quit !== undefined);
+    expect(quit).toStrictEqual({
+      tabs: [
+        { agent: 'fake', sessionId: ids[0]!, cwd: here },
+        { agent: 'fake2', sessionId: ids[1]!, cwd: here },
+        { agent: 'fake', sessionId: ids[2]!, cwd: there },
+      ],
+      front: 2,
+    });
+  } finally {
+    await app.unmount();
+
+    for (const session of sessions) {
+      await session.close();
+    }
+
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('/clear after a resume starts a new session', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
+  const sessions: Session[] = [];
+  const id = crypto.randomUUID();
+  const app = await draw(
+    <App
+      agent='fake'
+      cwd={dir}
+      stateDir={join(dir, 'state')}
+      agentCommand={fakeAgentCommand()}
+      resume={{ sessionId: id, cwd: dir }}
+      open={async (options) => {
+        const session = await openSession(options);
+
+        sessions.push(session);
+
+        return session;
+      }}
+    />,
+  );
+  const frame = () => app.frame();
+
+  try {
+    await until('the past', () => frame().includes('Read it.'));
+    await app.write('/clear');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await app.write('\r');
+    await until('a second session', () => sessions.length === 2);
+    await until('the past gone', () => !frame().includes('Read it.'));
+    expect(sessions[1]?.id !== id).toBeTruthy();
+    expect(frame()).toContain('? for shortcuts · /help');
+    expect(
+      !frame().includes('resumed'),
+      'the new session says it resumed',
+    ).toBeTruthy();
+  } finally {
+    await app.unmount();
+
+    for (const session of sessions) {
+      await session.close();
+    }
+
+    await rm(dir, { recursive: true });
+  }
+});
+
+test("each session gets chord's server with a token of its own, good until its agent goes, and its tools read the window", async () => {
+  const server = serveChord();
+  let token: string | undefined;
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'mcp');
+        await window.shows(server.url);
+
+        token = /Bearer ([0-9a-f-]{36})/.exec(window.frame())?.[1];
+
+        expect(
+          token !== undefined,
+          'no token in the servers given',
+        ).toBeTruthy();
+
+        await send(window, 'chordtools');
+        await window.shows('list_sessions:');
+        await window.shows('"you": true');
+
+        const frame = window.frame();
+
+        expect(frame).toContain('"name": "fake"');
+        expect(frame).toContain('"name": "Fake Large with a 1M context');
+        expect(frame).toContain('"name": "Fake Small"');
+        expect(frame).toContain(`"id": "${window.session()?.id}"`);
+        expect(frame).toContain('"model": "fake-large"');
+        expect(frame).toContain('"tab": 1');
+      },
+      { server, runtimes: ['fake'], rows: 80, columns: 120 },
+    );
+
+    const refused = await fetch(server.url, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+      body: '{}',
+    });
+
+    expect(refused.status).toStrictEqual(401);
+    await refused.body?.cancel();
+  } finally {
+    await server.close();
+  }
+});
+
+test('an agent that does not take HTTP gets no chord server', async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'chordtools');
+        await window.shows('No chord server in this session.');
+      },
+      { server, agentCommand: fakeAgentCommand(undefined, '--no-http') },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test("a user's server named chord keeps its place, and chord's tools answer beside it", async () => {
+  const server = serveChord();
+  const theirs = {
+    type: 'http' as const,
+    name: 'chord',
+    url: server.url,
+    headers: [{ name: 'Authorization', value: 'Bearer user-server-token' }],
+  };
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'mcp');
+        await window.shows('user-server-token');
+        await window.shows('"name": "chord-2"');
+        await send(window, 'chordtools');
+        await window.shows('list_sessions:');
+        await window.shows('"you": true');
+      },
+      {
+        server,
+        runtimes: ['fake'],
+        mcpServers: [{ server: theirs, from: '.mcp.json' }],
+        rows: 80,
+        columns: 120,
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test("a task agent works nested in its parent's turn, asks the person in the parent's tab, messages it and reports", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'task');
+        await window.shows('Agent(Fix the tokenizer) · fake · fake-small');
+        // Its block stands in place of the call, which never draws.
+        expect(!window.frame().includes('mcp__chord__spawn_task')).toBeTruthy();
+        await window.shows('Agent(Fix the tokenizer) · fake asks');
+        await window.shows('· waiting for permission');
+        await window.press('\r');
+        await window.shows('← Fix the tokenizer · fake');
+        await window.shows(
+          'Received the message from Fix the tokenizer · fake.',
+        );
+        await window.shows('← Fix the tokenizer · fake · report');
+        await window.shows('Done (5 tool uses');
+        await window.shows(
+          'Received the message from Fix the tokenizer · fake · report.',
+        );
+        expect(window.frame()).toContain('deno task test passes.');
+      },
+      { server, runtimes: ['fake'], rows: 60, columns: 120 },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+/** The task blocks a session's past draws: each one's ending and work. */
+async function resumedTasks(
+  record: SessionRecord,
+): Promise<
+  { state: string; work: string[]; lost: boolean; queued: boolean[] }[]
+> {
+  const session = await openSession({
+    agent: 'fake',
+    cwd: record.cwd,
+    agentCommand: fakeAgentCommand(undefined, '--resume-only'),
+    resume: {
+      sessionId: record.sessionId,
+      cwd: record.cwd,
+      record: record.path,
+    },
+  });
+
+  try {
+    return session
+      .history()
+      .filter((action): action is TranscriptAction => action.type !== 'usage')
+      .reduce(reduceTranscript, emptyTranscript)
+      .entries.flatMap((entry) =>
+        entry.kind === 'subagent'
+          ? [
+              {
+                state: entry.subagent.state,
+                lost: entry.subagent.task?.workLost === true,
+                work: entry.subagent.entries.flatMap((each) =>
+                  each.kind === 'tool' ? [each.call.title ?? ''] : [],
+                ),
+                // Whether each message it sent went queued, as its row says.
+                queued: entry.subagent.entries.flatMap((each) =>
+                  each.kind === 'tool' &&
+                  each.call.chord?.tool === 'send_message'
+                    ? [each.call.chord.queued === true]
+                    : [],
+                ),
+              },
+            ]
+          : [],
+      );
+  } finally {
+    await session.close();
+  }
+}
+
+test("a resumed parent draws its task's work from the task's own record, and the bare block once that record has gone", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'task');
+        await window.shows('· waiting for permission');
+        await window.press('\r');
+        await window.shows('Done (5 tool uses');
+
+        const stateDir = join(window.dir, 'state');
+        let records: SessionRecord[] = [];
+
+        await until('both records', async () => {
+          records = await readRecords(stateDir);
+
+          return records.length === 2;
+        });
+
+        const parent = records.find((record) => record.parent === undefined);
+        const child = records.find((record) => record.parent !== undefined);
+
+        assert(parent !== undefined && child !== undefined);
+        expect(child.parent).toStrictEqual(parent.sessionId);
+        // The parent keeps the block's start and end; the work is the task's.
+        expect(
+          (await readPast(parent.path)).every(
+            (entry) =>
+              entry.type !== 'update' || entry.subagentId === undefined,
+          ),
+        ).toBeTruthy();
+
+        const [kept] = await resumedTasks(parent);
+
+        assert(kept !== undefined);
+        expect(kept.state).toStrictEqual('completed');
+        expect(!kept.lost).toBeTruthy();
+        expect(
+          kept.work.includes('Edit src/parse/tokenize.ts'),
+          kept.work.join(),
+        ).toBeTruthy();
+
+        await rm(child.path);
+
+        expect(await resumedTasks(parent)).toStrictEqual([
+          { state: 'completed', lost: true, work: [], queued: [] },
+        ]);
+      },
+      { server, runtimes: ['fake'], rows: 60, columns: 120 },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test("a task's message that goes as its parent's next turn after the task has ended marks the task's row queued, live and resumed", async () => {
+  const server = serveChord();
+  // Its steer is answered only once the parent's turn ends, after the task
+  // has reported, and the agent took it as a turn of its own.
+  const late = fakeAgentCommand(
+    undefined,
+    '--steering',
+    'codex',
+    '--steer-late',
+    '--step-ms',
+    '5',
+  );
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'task');
+        await window.shows('· waiting for permission');
+        await window.press('1');
+        await window.shows('Done (5 tool uses');
+        await window.shows('the agent started this on its own');
+        await window.shows(
+          'Received the message from Fix the tokenizer · fake.',
+        );
+        await window.press(CTRL_O);
+        await window.shows('→ @main · queued');
+
+        const stateDir = join(window.dir, 'state');
+        let parent: SessionRecord | undefined;
+
+        await until('the queued row kept', async () => {
+          const records = await readRecords(stateDir);
+
+          parent = records.find((record) => record.parent === undefined);
+
+          return parent !== undefined && records.length === 2
+            ? (await resumedTasks(parent)).some((task) =>
+                task.queued.includes(true),
+              )
+            : false;
+        });
+
+        assert(parent !== undefined);
+
+        const [kept] = await resumedTasks(parent);
+
+        expect(kept?.queued).toStrictEqual([true]);
+      },
+      {
+        server,
+        runtimes: ['fake'],
+        agentCommand: late,
+        startupOf: () => ({ agentCommand: late }),
+        rows: 100,
+        columns: 120,
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test('a task agent whose turn fails reports as failed, with the error', async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'task');
+        await window.shows('Agent(Fix the tokenizer) · fake asks');
+        await window.press('2');
+        await window.shows('← Fix the tokenizer · fake · failed');
+        await window.shows('was denied, so the tokenizer is not fixed.');
+        expect(!window.frame().includes('· report')).toBeTruthy();
+      },
+      { server, runtimes: ['fake'], rows: 60, columns: 120 },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test('a task started on an effort its runtime offers runs on it, and its block and the answer say so', async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'taskeffort');
+        await window.shows('Started on high.');
+        expect(window.frame()).toContain(
+          'Agent(Tune the parser) · fake · fake-small · high',
+        );
+        expect(!window.frame().includes('Could not')).toBeTruthy();
+      },
+      { server, runtimes: ['fake'], rows: 60, columns: 160 },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test("a task started on an effort its runtime refuses runs on the runtime's own, and the answer and the transcript say so", async () => {
+  const server = serveChord();
+  const refusal =
+    'Could not start on max effort, asked by spawn_task: the agent offers ' +
+    'low, medium, high';
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'taskmaxeffort');
+        await window.shows(`Started on medium. ${refusal}.`);
+        expect(window.frame()).toContain(`Tune the parser: ${refusal}`);
+        expect(window.frame()).toContain(
+          'Agent(Tune the parser) · fake · fake-small · medium',
+        );
+      },
+      { server, runtimes: ['fake'], rows: 60, columns: 160 },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test("chord's own calls draw by what chord served: the lists, and a task refused", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'chordcalls');
+        await window.shows('chord knows no fakx.');
+
+        const frame = window.frame();
+
+        expect(frame).toContain('List agents\n');
+        expect(frame).toContain('1 runtime · fake');
+        expect(frame).toContain('List agents(fake)');
+        expect(frame).toContain('2 models · fake-large, fake-small');
+        expect(frame).toContain('List sessions');
+        expect(frame).toContain('1 open · 1 fake (you)');
+        expect(frame).toContain('Agent(Fix the tokenizer) · fakx · fake-small');
+        expect(frame).toContain('No agent named fakx; chord knows fake');
+        expect(!frame.includes('mcp__chord__')).toBeTruthy();
+      },
+      { server, runtimes: ['fake'], rows: 60, columns: 120 },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test('Esc stops a running task agent, which sends no report, takes the queued prompt back, and its message goes at once', async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'task');
+        await window.shows('Agent(Fix the tokenizer) · fake asks');
+        await window.press('\r');
+        await window.shows('← Fix the tokenizer · fake:');
+        await send(window, 'text');
+        await window.press(ESC);
+        await window.shows('Cancelled (');
+        // The message is the next turn, with no prompt from the person,
+        // whose own is back in the draft and never ran.
+        await window.shows(
+          'Received the message from Fix the tokenizer · fake.',
+        );
+        expect(window.frame()).toContain('› text');
+        expect(!window.frame().includes('· report')).toBeTruthy();
+        expect(
+          !window.frame().includes('came in chunks'),
+          window.frame(),
+        ).toBeTruthy();
+      },
+      { server, runtimes: ['fake'], rows: 60, columns: 120 },
+    );
+  } finally {
+    await server.close();
+  }
+});

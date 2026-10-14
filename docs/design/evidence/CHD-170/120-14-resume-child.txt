@@ -1,0 +1,40 @@
+ chord   1 fake ●    2 fake                                                                          /tmp/chord-qa.gBDQ
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.gBDQ
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ Open one of fake's earlier sessions in this directory here.                                                          │
+│                                                                                                                      │
+│   1. just now  open in 1  agents                                                                                     │
+│ ❯ 2. just now  open in 1  <message from="main"> agentchild </message>                                                │
+│   3. just now  open in 1  <message from="main"> permission </message>                                                │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 1 fake needs your permission · ctrl+x a to go · ? for shortcuts                Fake Large with a 1M context window

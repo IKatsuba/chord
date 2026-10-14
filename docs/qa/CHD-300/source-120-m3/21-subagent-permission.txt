@@ -1,0 +1,40 @@
+
+ › shell
+
+ ⏺ Run(deno task test)
+   ⎿  3/3
+      ok | 2 passed
+      FAILED | 1 failed
+      … +2 lines (ctrl+o to expand)
+      Exit code 1
+
+ ⏺ The tests failed.
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses
+   │  ⎿  Write(notes/routing.md) · waiting for permission
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 1s
+      ⎿  Failed
+
+ ✹ Waiting for permission… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Find the session layer) asks                                                                                   │
+│ Write notes/routing.md                                                                                               │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

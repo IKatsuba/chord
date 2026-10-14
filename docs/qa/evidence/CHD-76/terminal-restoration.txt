@@ -1,0 +1,11 @@
+project: exit 0; alternate=0; cursor=1; stty identical; shell usable
+flags: exit 0; alternate=0; cursor=1; stty identical; shell usable
+refused: exit 0; alternate=0; cursor=1; stty identical; shell usable
+malformed: exit 0; alternate=0; cursor=1; stty identical; shell usable
+seed: exit 0; alternate=0; cursor=1; stty identical; shell usable
+resume: exit 0; alternate=0; cursor=1; stty identical; shell usable
+reused: exit 0; alternate=0; cursor=1; stty identical; shell usable
+resume-flag: exit 0; alternate=0; cursor=1; stty identical; shell usable
+Run-owned remaining processes: []
+Fake agent processes after cleanup: []
+Scratch removed; isolated tmux server stopped.

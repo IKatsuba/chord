@@ -1,0 +1,842 @@
+[
+  {
+    "run": "source-120x40",
+    "check": "01-settings",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "02-mode-default",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "02-mode-edits",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "02-mode-plan",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "03-agent-completion",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "03-agent-command",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "04-help",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "04-status",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "04-clear",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "05-model-picker",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "05-model-set",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "06-mention-finder",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "06-mention-picked",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "07-bash",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "07-bash-context",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "08-queued",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "08-returned",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "09-verbose",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "09-folded",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "10-history-search",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "10-history-older",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "12-code",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "12-diff",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "12-diff-colour",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "13-config-options",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "13-config-set",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "14-cost",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "14-context",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "11-continue",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "11-resume-id",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "11-resume-picker",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "11-resume-in-place",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "error-visible",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "resize-restored",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "headless-text",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "headless-json",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "quit-original-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "quit-continue-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "quit-resume-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "headless-text-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "headless-json-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-120x40",
+    "check": "balanced-alternate-screen",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "01-settings",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "02-mode-default",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "02-mode-edits",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "02-mode-plan",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "03-agent-completion",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "03-agent-command",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "04-help",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "04-status",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "04-clear",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "05-model-picker",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "05-model-set",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "06-mention-finder",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "06-mention-picked",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "07-bash",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "07-bash-context",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "08-queued",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "08-returned",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "09-verbose",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "09-folded",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "10-history-search",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "10-history-older",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "12-code",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "12-diff",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "12-diff-colour",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "13-config-options",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "13-config-set",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "14-cost",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "14-context",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "11-continue",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "11-resume-id",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "11-resume-picker",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "11-resume-in-place",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "error-visible",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "resize-restored",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "headless-text",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "headless-json",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "quit-original-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "quit-continue-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "quit-resume-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "headless-text-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "headless-json-terminal",
+    "pass": true
+  },
+  {
+    "run": "source-80x24",
+    "check": "balanced-alternate-screen",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "01-settings",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "02-mode-default",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "02-mode-edits",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "02-mode-plan",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "03-agent-completion",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "03-agent-command",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "04-help",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "04-status",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "04-clear",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "05-model-picker",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "05-model-set",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "06-mention-finder",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "06-mention-picked",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "07-bash",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "07-bash-context",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "08-queued",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "08-returned",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "09-verbose",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "09-folded",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "10-history-search",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "10-history-older",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "12-code",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "12-diff",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "12-diff-colour",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "13-config-options",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "13-config-set",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "14-cost",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "14-context",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "11-continue",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "11-resume-id",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "11-resume-picker",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "11-resume-in-place",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "error-visible",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "resize-restored",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "headless-text",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "headless-json",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "quit-original-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "quit-continue-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "quit-resume-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "headless-text-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "headless-json-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-120x40",
+    "check": "balanced-alternate-screen",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "01-settings",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "02-mode-default",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "02-mode-edits",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "02-mode-plan",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "03-agent-completion",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "03-agent-command",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "04-help",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "04-status",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "04-clear",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "05-model-picker",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "05-model-set",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "06-mention-finder",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "06-mention-picked",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "07-bash",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "07-bash-context",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "08-queued",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "08-returned",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "09-verbose",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "09-folded",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "10-history-search",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "10-history-older",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "12-code",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "12-diff",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "12-diff-colour",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "13-config-options",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "13-config-set",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "14-cost",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "14-context",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "11-continue",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "11-resume-id",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "11-resume-picker",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "11-resume-in-place",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "error-visible",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "resize-restored",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "headless-text",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "headless-json",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "quit-original-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "quit-continue-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "quit-resume-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "headless-text-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "headless-json-terminal",
+    "pass": true
+  },
+  {
+    "run": "binary-80x24",
+    "check": "balanced-alternate-screen",
+    "pass": true
+  }
+]

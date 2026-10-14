@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd357-qa/accepted
+ █▀     ? for shortcuts · /help
+
+ › /team run bugfix text
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  text
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 4s on "text"
+
+      lead    fake · fake-large  high  default      ✓ replied 4s ago  ← @main
+      tester  fake · fake-small  low   acceptEdits  not opened
+      coder   fake · fake-large  —     plan         not opened
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window
+    main    fake · Fake Large with a 1M context window · medium
+    bugfix  team · fake · Fake Large with a 1M context window · high  ✓ replied 5s ago

@@ -1,0 +1,24 @@
+ chord   1 claude    2 codex                                           ~/src/app
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ claude's earlier sessions and saved windows in this directory.               │
+│                                                                              │
+│ ❯   1. 10 minutes ago  ▣ 3 sessions, 2 open · claude, codex, claude · fix t… │
+│     2. 10 minutes ago  open in 1 · fix the failing date test in the parser   │
+│     3. 11 minutes ago  why does resume lose the plan?                        │
+│     4. 40 minutes ago  tidy the README's install section                     │
+│     5. 2 days ago      ▣ 2 sessions · claude, gemini · add a --json flag to… │
+│   ↓ 6. 2 days ago      add a --json flag to the agents command               │
+│     … +2 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Claude Opus · 100% context left

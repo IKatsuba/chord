@@ -1,0 +1,40 @@
+
+ › shell
+
+ ⏺ Run(deno task test)
+   ⎿  3/3
+      ok | 2 passed
+      FAILED | 1 failed
+      … +2 lines (ctrl+o to expand)
+      Exit code 1
+
+ ⏺ The tests failed.
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 3s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 1s
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 4s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+ › compactfail
+
+ ✹ Compacting conversation… (2s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

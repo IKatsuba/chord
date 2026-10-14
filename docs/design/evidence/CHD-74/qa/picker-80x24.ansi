@@ -1,0 +1,24 @@
+ [1mchord[0m                          [2mfake · /tmp/chord-qa-chd74-16a1a3f9/narrow-work[0m
+
+ [2m›[0m /status
+   [2m⎿[0m  [2mAgent:     [0mfake
+   [2m [0m  [2mModel:     [0mFake Large with a 1M context window
+   [2m [0m  [2mMode:      [0mDefault
+   [2m [0m  [2mSession:   [0mad1191d8-1153-4154-bbd4-9a5f25f3b258
+   [2m [0m  [2mDirectory: [0m/tmp/chord-qa-chd74-16a1a3f9/narrow-work
+
+[38;2;87;105;247m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;87;105;247mResume a session[0m                                                             [38;2;87;105;247m│
+│[39m [2mOpen one of fake's earlier sessions in this directory here.[0m                  [38;2;87;105;247m│
+│[39m                                                                              [38;2;87;105;247m│
+│[39m [38;2;87;105;247m❯[39m [38;2;87;105;247m1. 5 minutes ago  /echo newest fake session[39m                                [38;2;87;105;247m│
+│[39m [38;2;87;105;247m [39m 2. 3 hours ago    /echo a long middle fake session prompt about refactori… [38;2;87;105;247m│
+│[39m [38;2;87;105;247m [39m 3. 2 days ago     /echo oldest fake session                                [38;2;87;105;247m│
+│[39m                                                                              [38;2;87;105;247m│
+│[39m [2mEnter to resume · Esc to close[0m                                               [38;2;87;105;247m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

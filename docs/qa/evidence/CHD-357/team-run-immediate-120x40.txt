@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd357-qa/hanging
+ █▀     ? for shortcuts · /help
+
+ › /team run bugfix text
+
+ ⏺ Team(bugfix) · limited · fake-large
+   ⎿  text
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window
+    main    fake · Fake Large with a 1M context window · medium
+    bugfix  team · limited · fake-large

@@ -1,0 +1,24 @@
+ [2m›[0m compactfail
+   [2m⎿[0m  Compaction failed: Not enough messages to compact.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mMCP servers[0m                                                                  [2m│
+│[0m [2mchord passed these to fake when the session started. ACP does not say [0m       [2m│
+│[0m [2mwhether fake connected to them.[0m                                              [2m│
+│[0m                                                                              [2m│
+│[0m [2mName           Transport  Command or URL    Defined in[0m                       [2m│
+│[0m chord          http       not passed        chord itself                     [2m│
+│[0m user-docs      http       http://           …/config/chord/settings.json     [2m│
+│[0m                           localhost:9/docs                                   [2m│
+│[0m project-files  stdio      echo m3-server    .mcp.json                        [2m│
+│[0m                                                                              [2m│
+│[0m [2mchord's server was not passed: fake does not take MCP servers over HTTP, so [0m [2m│
+│[0m [2mit cannot start other agents.[0m                                                [2m│
+│[0m                                                                              [2m│
+│[0m [2mEsc to close[0m                                                                 [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 2% context used[0m

@@ -1,0 +1,77 @@
+=== baseline 80x24, settled and scrolled to the message ===
+
+ → @parser · queued
+   ⎿  I changed how a string at the end of a line is read. Run the parser test…
+
+ → @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Waiting on parser.
+
+ ← @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both
+      in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ── ↓ 4 lines below · end to jump to the bottom ───────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 51s ago
+    docs    fake · Fake Large with a 1M context window  ● permission 51s
+
+=== source 80x24, settled and scrolled to the message ===
+
+ → @parser · queued
+   ⎿  I changed how a string at the end o...ts now and tell me only what fails.
+
+ → @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Waiting on parser.
+
+ ← @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both
+      in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ── ↓ 4 lines below · end to jump to the bottom ───────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 53s ago
+    docs    fake · Fake Large with a 1M context window  ● permission 53s
+
+=== binary 80x24, settled and scrolled to the message ===
+
+ → @parser · queued
+   ⎿  I changed how a string at the end o...ts now and tell me only what fails.
+
+ → @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Waiting on parser.
+
+ ← @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both
+      in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ── ↓ 4 lines below · end to jump to the bottom ───────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 52s ago
+    docs    fake · Fake Large with a 1M context window  ● permission 52s

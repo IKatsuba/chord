@@ -1,0 +1,7 @@
+alternate-left=True
+cursor-shown=True
+mouse-1000-off=True
+mouse-1002-off=True
+mouse-1003-off=True
+mouse-1006-off=True
+paste-off=True

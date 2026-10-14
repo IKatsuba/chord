@@ -1,0 +1,40 @@
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ Now the login form.
+
+ ⏺ Update(src/routes/login.tsx)
+   ⎿  Updated src/routes/login.tsx with 6 additions and 2 removals
+
+ ← dev server errors · monitor
+   ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+       at validate (src/routes/login.tsx:41:22)
+       at handler (src/routes/login.tsx:58:9)
+
+ ⏺ My change broke the handler: validate() gets undefined when the field is missing. I'll guard it.
+
+ ⏺ Update(src/routes/login.tsx)
+   ⎿  Updated src/routes/login.tsx with 1 addition and 1 removal
+
+ ⏺ The guard is in. I'll push and watch CI too.
+
+ ⏺ Bash(git push)
+   ⎿  To github.com:acme/app.git
+         9c1e2f0..4b7a1d3  login-form -> login-form
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ gh run watch 4812 --exit-status --compact
+      m2 · times out after 30m
+
+ ⏺ Bash(deno task test tests/routes/login_test.ts)
+   ⎿  Running…
+
+ ✻ Working… (21s · esc to interrupt)
+ ← dev server errors · monitor: WARN [db] slow query 1.4s: SELECT * FROM sessions WHERE user_id = $1
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                              Opus · 91% context left
+    dev server errors  $ tail -f dev.log | grep --line-buffered -E "ERROR|WARN"  running 6m · 3 events
+    CI run 4812        $ gh run watch 4812 --exit-status --compact               running 1m · no events

@@ -1,0 +1,24 @@
+ chord   1 claude    2 codex    3 claude    4 codex    5 claude       ~/src/app
+ › saved prompt 5
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   ...............
+   ⎿  Interrupted by user
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

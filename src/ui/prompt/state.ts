@@ -1,0 +1,484 @@
+/**
+ * The prompt's part of the state: the draft, its cursor and its images, bash
+ * mode and the output it holds, the prompts queued, and, the window's, the
+ * slash command list, the `@` file finder, ctrl+r's search and vim mode.
+ */
+import { shellContext } from '../../session/context.ts';
+import type { ConversationEvent } from '../../session/conversation.ts';
+import type { ShellRun, Transcript } from '../../session/transcript/types.ts';
+import { asksPerson } from '../dialogs/state.ts';
+import {
+  agentQuery,
+  type CommandItem,
+  commandItems,
+  commandQuery,
+  matchAgents,
+  matchCommands,
+  moveHighlight,
+  teamItems,
+  teamQuery,
+  visibleRange,
+} from './commands.ts';
+import { imagesIn, type PastedImage } from './images.ts';
+import { matchFiles, type Mention, mentionAt } from './mentions.ts';
+import { type Cursor, START } from './prompt.ts';
+import type { Queued } from './queue.ts';
+import type { Search } from './search.ts';
+import { startingVim, type Vim } from './vim.ts';
+
+/** The session's part of the prompt: switching sessions swaps all of it. */
+export interface PromptSession {
+  /** Prompts sent while a turn ran, oldest first, until each one's starts. */
+  readonly queue: readonly Queued[];
+  /** `!` on an empty prompt: the box takes a shell command, not a prompt. */
+  readonly bash: boolean;
+  /**
+   * The finished shell runs, by id, whose output goes to the agent with the
+   * next prompt.
+   */
+  readonly held: readonly string[];
+  /** What the prompt box holds, kept across `/clear`. */
+  readonly draft: string;
+  /** Where the box's cursor is in the draft. */
+  readonly cursor: Cursor;
+  /**
+   * The images the draft may hold, by number; a prompt sends the ones whose
+   * placeholders are in its text. Kept across `/clear`, as the draft is.
+   */
+  readonly images: readonly PastedImage[];
+  /**
+   * The highest image number given out, so a pasted image never takes the
+   * number of one a queued or earlier prompt holds.
+   */
+  readonly imageCount: number;
+  /**
+   * Whether the agent takes images in a prompt, as its `promptCapabilities`
+   * say; unknown until the session is up.
+   */
+  readonly takesImages?: boolean;
+}
+
+/** The window's part of the prompt, whichever session is in front. */
+export interface PromptWindow {
+  /** The slash command list's highlight and scroll, and whether Esc shut it. */
+  readonly menu: MenuState;
+  /**
+   * The working directory's files as `@` last found them; none until it has
+   * looked.
+   */
+  readonly files?: readonly string[];
+  /** The `@` file finder's highlight and scroll, and whether Esc shut it. */
+  readonly finder: MenuState;
+  /** The agents `/new` offers by name, as the window can start them. */
+  readonly agents?: readonly CommandItem[];
+  /**
+   * The names `/team show`, `edit`, `run` and `stop` offer, as they were
+   * read when the draft last came to one; none until then.
+   */
+  readonly teamNames?: TeamNames;
+  /**
+   * ctrl+r: the reverse history search, while it is open. The draft stays as
+   * it was underneath, for Esc to give back.
+   */
+  readonly search?: Search;
+  /**
+   * ctrl+g's editor did not end well, said in the status line until the
+   * draft is touched again.
+   */
+  readonly editorFailed?: string;
+  /**
+   * ctrl+v or a pasted path found no image to take, said in the status line
+   * until the draft is touched again.
+   */
+  readonly pasteFailed?: string;
+  /**
+   * `/vim`: the prompt box edits as vim does, in insert or normal mode;
+   * absent while it is off.
+   */
+  readonly vim?: Vim;
+}
+
+export interface PromptState extends PromptSession, PromptWindow {}
+
+/** The saved teams by name, a broken file marked, and the runs open. */
+export interface TeamNames {
+  readonly teams: readonly {
+    readonly name: string;
+    readonly broken: boolean;
+  }[];
+  readonly runs: readonly string[];
+}
+
+export interface MenuState {
+  /** Index into the items the draft matches. */
+  readonly highlighted: number;
+  /** The first item shown, when there are more than fit. */
+  readonly top: number;
+  /** Esc put the list away; the next edit to the draft brings it back. */
+  readonly dismissed: boolean;
+}
+
+const initialMenu: MenuState = { highlighted: 0, top: 0, dismissed: false };
+
+export type PromptAction =
+  | Extract<ConversationEvent, { type: 'queued' | 'prompt_capabilities' }>
+  /**
+   * ↑ or ↓ in the slash command list; `count` is how many items the draft
+   * matches and `rows` how many the list shows.
+   */
+  | {
+      readonly type: 'menu_moved';
+      readonly step: 1 | -1;
+      readonly count: number;
+      readonly rows: number;
+    }
+  /** Esc, or a recalled prompt, puts the list away until the next edit. */
+  | { readonly type: 'menu_dismissed' }
+  /** The working directory's files, walked as an `@` opened the finder. */
+  | { readonly type: 'files_listed'; readonly files: readonly string[] }
+  /** The team files and runs, read as the draft came to a team's name. */
+  | { readonly type: 'team_names_listed'; readonly names: TeamNames }
+  /** ↑ or ↓ in the `@` file finder, counted as `menu_moved` counts. */
+  | {
+      readonly type: 'finder_moved';
+      readonly step: 1 | -1;
+      readonly count: number;
+      readonly rows: number;
+    }
+  /** Esc puts the finder away, keeping the text, until the next edit. */
+  | { readonly type: 'finder_dismissed' }
+  /** The draft was typed in; the list starts again from its first item. */
+  | { readonly type: 'draft_edited' }
+  /**
+   * The box holds `text`, or has its cursor at `cursor`, or both; what it
+   * means to the lists is `draft_edited`'s.
+   */
+  | {
+      readonly type: 'draft_set';
+      readonly text?: string;
+      readonly cursor?: Cursor;
+    }
+  /** `!` on an empty prompt, or a recalled command, turns bash mode on. */
+  | { readonly type: 'bash_mode'; readonly on: boolean }
+  /** A prompt took the output of the `held` runs to the agent. */
+  | { readonly type: 'context_sent'; readonly held: readonly string[] }
+  /** The editor exited with an error, and the draft is as it was. */
+  | { readonly type: 'editor_failed'; readonly message: string }
+  /**
+   * Images went into the draft, pasted or read from paths, or came back
+   * with a recalled prompt.
+   */
+  | { readonly type: 'images_added'; readonly images: readonly PastedImage[] }
+  /** ctrl+v found no image to take, or the agent takes none. */
+  | { readonly type: 'paste_failed'; readonly message: string }
+  /**
+   * A prompt took the draft's images; the box starts again without them,
+   * but for those `keeping`, a draft typed while the prompt waited, holds.
+   */
+  | { readonly type: 'images_sent'; readonly keeping?: string }
+  /** `/vim` turned vim mode on, in insert mode, or off. */
+  | { readonly type: 'vim_toggled'; readonly on: boolean }
+  /** A key in vim mode moved it on: its mode, a command half typed, `u`'s past. */
+  | { readonly type: 'vim_changed'; readonly vim: Vim };
+
+export const initialPrompt: PromptState = {
+  menu: initialMenu,
+  finder: initialMenu,
+  queue: [],
+  bash: false,
+  held: [],
+  draft: '',
+  cursor: START,
+  images: [],
+  imageCount: 0,
+};
+
+export function reducePrompt(
+  state: PromptState,
+  action: PromptAction,
+): PromptState {
+  switch (action.type) {
+    case 'prompt_capabilities':
+      return state.takesImages === action.image
+        ? state
+        : { ...state, takesImages: action.image };
+    case 'images_added': {
+      if (action.images.length === 0) {
+        return state;
+      }
+
+      const ids = action.images.map(({ id }) => id);
+
+      return {
+        ...state,
+        images: [
+          ...state.images.filter(({ id }) => !ids.includes(id)),
+          ...action.images,
+        ],
+        imageCount: Math.max(state.imageCount, ...ids),
+      };
+    }
+    case 'paste_failed':
+      return { ...state, pasteFailed: action.message };
+    case 'images_sent': {
+      const kept = imagesIn(action.keeping ?? '', state.images);
+
+      return kept.length === state.images.length
+        ? state
+        : { ...state, images: kept };
+    }
+    case 'vim_toggled': {
+      if (!action.on) {
+        const { vim: _, ...rest } = state;
+
+        return rest;
+      }
+
+      return { ...state, vim: state.vim ?? startingVim };
+    }
+    case 'vim_changed':
+      return state.vim === undefined ? state : { ...state, vim: action.vim };
+    case 'queued': {
+      // Not the person's: nothing of the box went with it. A monitor's
+      // message is reported again in its place as batches join it.
+      if (action.from !== undefined) {
+        const queued = {
+          turnId: action.turnId,
+          text: action.text,
+          from: action.from,
+          ...(action.afterAnswer ? { afterAnswer: action.afterAnswer } : {}),
+        };
+
+        return {
+          ...state,
+          queue: state.queue.some((item) => item.turnId === action.turnId)
+            ? state.queue.map((item) =>
+                item.turnId === action.turnId ? queued : item,
+              )
+            : [...state.queue, queued],
+        };
+      }
+
+      // Queued just before its `context_sent` and `images_sent`, so what is
+      // held and the draft's images went with it.
+      const images = imagesIn(action.text, state.images);
+
+      return {
+        ...state,
+        queue: [
+          ...state.queue,
+          {
+            turnId: action.turnId,
+            text: action.text,
+            ...(state.held.length > 0 ? { held: state.held } : {}),
+            ...(images.length > 0 ? { images } : {}),
+          },
+        ],
+      };
+    }
+    case 'menu_moved':
+      return { ...state, menu: moved(state.menu, action) };
+    case 'menu_dismissed':
+      return state.menu.dismissed
+        ? state
+        : { ...state, menu: { ...state.menu, dismissed: true } };
+    case 'files_listed':
+      return { ...state, files: action.files };
+    case 'team_names_listed':
+      return { ...state, teamNames: action.names };
+    case 'finder_moved':
+      return { ...state, finder: moved(state.finder, action) };
+    case 'finder_dismissed':
+      return state.finder.dismissed
+        ? state
+        : { ...state, finder: { ...state.finder, dismissed: true } };
+    case 'draft_edited':
+      return state.menu === initialMenu && state.finder === initialMenu
+        ? state
+        : { ...state, menu: initialMenu, finder: initialMenu };
+    case 'draft_set': {
+      const draft = action.text ?? state.draft;
+      const cursor = action.cursor ?? state.cursor;
+
+      return draft === state.draft && sameCursor(cursor, state.cursor)
+        ? state
+        : { ...state, draft, cursor };
+    }
+    case 'editor_failed':
+      return { ...state, editorFailed: action.message };
+    case 'bash_mode':
+      return state.bash === action.on ? state : { ...state, bash: action.on };
+    case 'context_sent': {
+      // Only what went: a run that ended since stays for the next prompt.
+      const held = state.held.filter((id) => !action.held.includes(id));
+
+      return held.length === state.held.length ? state : { ...state, held };
+    }
+  }
+}
+
+function sameCursor(one: Cursor, other: Cursor): boolean {
+  return one[0] === other[0] && one[1] === other[1];
+}
+
+/** A list's highlight one step on, and the window onto it kept round it. */
+function moved(
+  menu: MenuState,
+  {
+    step,
+    count,
+    rows,
+  }: {
+    readonly step: 1 | -1;
+    readonly count: number;
+    readonly rows: number;
+  },
+): MenuState {
+  const highlighted = moveHighlight(
+    Math.min(menu.highlighted, count - 1),
+    count,
+    step,
+  );
+  const { start } = visibleRange(count, highlighted, rows, menu.top);
+
+  return { ...menu, highlighted, top: start };
+}
+
+/** What the prompt reads of the session: its transcript. */
+interface Said {
+  readonly transcript: Transcript;
+}
+
+/**
+ * What the lists read of the session besides: whether the window is closing,
+ * when neither opens.
+ */
+interface Open extends Said {
+  readonly connection: { readonly status: string };
+}
+
+/** The shell run still going, if there is one; one runs at a time. */
+export function runningShell(state: Said): string | undefined {
+  return state.transcript.entries.find(
+    (entry) => entry.kind === 'shell' && entry.run.running,
+  )?.turnId;
+}
+
+/** The held runs' output as it goes ahead of the next prompt. */
+export function heldContext(state: PromptSession & Said): string {
+  const runs = state.held.flatMap((id): ShellRun[] => {
+    const entry = state.transcript.entries.find(
+      (entry) => entry.kind === 'shell' && entry.turnId === id,
+    );
+
+    return entry?.kind === 'shell' ? [entry.run] : [];
+  });
+
+  return shellContext(runs);
+}
+
+/** The slash command list as it stands: what the draft matches, and where. */
+export interface CommandMenu {
+  readonly items: readonly CommandItem[];
+  readonly highlighted: number;
+  /** The first item shown, when there are more than fit. */
+  readonly top: number;
+}
+
+/**
+ * The slash command list `draft` opens: a `/` and part of a name, `/new `
+ * and part of an agent's, or `/team show ` and the like and part of a team's, outside bash mode, while no permission is asked and Esc has not put it away. None when nothing matches,
+ * so Enter sends what was typed, as the agent may know a command chord does
+ * not list.
+ */
+export function commandMenu(
+  state: PromptState & Open,
+  draft: string,
+): CommandMenu | undefined {
+  const query = commandQuery(draft);
+  const named = agentQuery(draft);
+  const team = teamQuery(draft);
+
+  if (
+    (query === undefined && named === undefined && team === undefined) ||
+    state.menu.dismissed ||
+    state.bash ||
+    state.search !== undefined ||
+    state.connection.status === 'closing' ||
+    asksPerson(state.transcript)
+  ) {
+    return undefined;
+  }
+
+  const items =
+    team !== undefined
+      ? matchAgents(
+          teamItems(
+            team.form,
+            state.teamNames?.teams ?? [],
+            state.teamNames?.runs ?? [],
+          ),
+          team.name,
+        )
+      : query === undefined
+        ? matchAgents(state.agents ?? [], named ?? '')
+        : matchCommands(commandItems(state.transcript.commands), query);
+
+  if (items.length === 0) {
+    return undefined;
+  }
+
+  return {
+    items,
+    highlighted: Math.min(state.menu.highlighted, items.length - 1),
+    top: state.menu.top,
+  };
+}
+
+/** The `@` file finder as it stands: the mention, its files, and where. */
+export interface FileFinder {
+  readonly mention: Mention;
+  readonly files: readonly string[];
+  readonly highlighted: number;
+  /** The first file shown, when there are more than fit. */
+  readonly top: number;
+}
+
+/**
+ * The `@` file finder the draft opens: the cursor at the end of an `@` and
+ * part of a path, once the files are walked, outside bash mode, while no
+ * permission is asked and Esc has not put it away. None when nothing matches, so Enter sends what was
+ * typed.
+ */
+export function fileFinder(
+  state: PromptState & Open,
+  draft: string,
+  cursor: Cursor,
+): FileFinder | undefined {
+  const mention = mentionAt(draft, cursor);
+
+  if (
+    mention === undefined ||
+    state.files === undefined ||
+    state.bash ||
+    state.search !== undefined ||
+    state.finder.dismissed ||
+    state.connection.status === 'closing' ||
+    asksPerson(state.transcript)
+  ) {
+    return undefined;
+  }
+
+  const files = matchFiles(state.files, mention.query);
+
+  if (files.length === 0) {
+    return undefined;
+  }
+
+  return {
+    mention,
+    files,
+    highlighted: Math.min(state.finder.highlighted, files.length - 1),
+    top: state.finder.top,
+  };
+}

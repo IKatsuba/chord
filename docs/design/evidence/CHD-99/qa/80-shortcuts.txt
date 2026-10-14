@@ -1,0 +1,24 @@
+ chord                                       fake · /tmp/chd99-qa/binary80/work
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  enter to send                         ! for bash mode
+  \ + enter for a newline               backspace to leave bash mode
+  shift + enter for a newline           esc to stop a command
+  ctrl + g to edit in $EDITOR           esc to interrupt
+  ctrl + v to paste an image            shift + tab to cycle modes
+  ↑ ↓ for earlier prompts               ctrl + o for verbose output
+  ctrl + r to search prompts            ctrl + c to clear input
+  tab enter to take a match             ctrl + c twice to quit
+  esc to cancel a search                ctrl + d to quit
+  pgup pgdn to scroll                   1–9 to pick a choice
+  shift + ↑ ↓ to scroll a line          ↑ ↓ or j k to move between choices
+  home end for the top and the bottom   enter to pick the highlighted choice
+  / for commands                        esc to reject a permission
+  ↑ ↓ to pick a command                 esc to close a picker
+  tab to complete a command             tab ↑ ↓ space to fill in a form
+  @ for files                           ctrl + c to stop the turn and its form
+  ↑ ↓ to pick a file                    /vim for vim mode
+  tab enter to add a file               ? for shortcuts
+  esc to close commands or files        esc to close shortcuts

@@ -1,0 +1,60 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <W>
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › [Image #1]                                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                               Fake Large with a 1M context window
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <W>
+ ▀▀     ? for shortcuts · /help
+
+ › [Image #1]
+
+ ⏺ Received an image: image/png, 918798 bytes
+
+   Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                            Fake Large with a 1M context window · 1% context used

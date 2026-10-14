@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                        [2mfake · /tmp/chord-qa.MJ0T[0m
+
+   [2m┌ ts ──────────────────────────────────────────────────────────┐[0m
+   [2m│[0m [95mconst[39m session = [95mawait[39m [94mopenSession[39m({ agent: [93m'claude'[39m, cwd }); [2m│[0m
+   [2m│[0m [95mconst[39m turn = session.[94mprompt[39m([93m'hello'[39m);                        [2m│[0m
+   [2m│[0m [95mawait[39m turn.result;                                           [2m│[0m
+   [2m└──────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [94mmain[39m once every check has passed and the tree is clean, so whoever picks the work up next starts from
+     a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [95mfor[39m bin [95min[39m dist/*/chord; [95mdo[39m [96mecho[39m [93m"built $bin"[39m; [95mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m edit
+
+ [92m⏺[39m [1mEdit[0m(src/greeting.ts)
+   [2m⎿[0m  [2mUpdated src/greeting.ts with 2 additions and 1 removal[0m
+      [2m1[0m [92m+ /** Greets someone by name. */[39m
+      [2m2[0m   [95mexport[39m [95mfunction[39m [94mgreet[39m(name: [96mstring[39m): [96mstring[39m {
+      [2m2[0m [91m-   return "hello " + name;[39m
+      [2m3[0m [92m+   return `hello, ${name}`;[39m
+      [2m4[0m   }
+
+ ⏺ Edited.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [95m⏵⏵ accept edits on[39m [2m(shift+tab to cycle)[0m                       [2mFake Large with a 1M context window · 99% context left[0m

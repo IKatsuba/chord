@@ -1,0 +1,24 @@
+ › good, hand it to bugfix
+
+ ⏺ Team(bugfix) · claude · opus
+   ⎿  Issue 214: a string at the end of a line loses its closing quote.
+      readString in src/parse/tokenize.ts stops at the newline before it
+      consumes the quote. Add a test that fails for that reason, fix it, and
+      … +1 line (ctrl+o to expand)
+
+ ← @bugfix · claude
+   On it. tester is writing a failing test in tests/parse/tokenize_test.ts;
+   coder waits for it and will edit src/parse/tokenize.ts only. I will report
+   when the test fails for the bug's own reason.
+
+ ⏺ bugfix has started: a failing test first, then the fix.
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                      Opus · 90% context left
+    main         claude · Opus
+    bugfix       team · claude · Opus   ✓ replied 4s ago
+    ├─ tester    claude · Sonnet        ✻ working 3s
+    └─ coder     codex · gpt-5.3-codex

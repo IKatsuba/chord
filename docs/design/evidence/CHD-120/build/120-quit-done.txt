@@ -1,0 +1,40 @@
+$ chord fake --agent-command fake-agent -C /tmp/chord-qa.fnGs
+Resume these sessions with:
+chord fake --agent-command fake-agent --resume c4a65cb8-f4d0-4a5f-a0e1-2632025b590e
+chord fake --agent-command fake-agent --resume ece92b8c-e6a4-4039-92cc-0cc78fb8aa27
+chord fake --agent-command fake-agent --resume 5921a1d4-3572-43f0-bdef-c3ae2f0005f6
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

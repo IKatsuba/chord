@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.7b6e
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ Open one of fake's earlier sessions in this directory here.                  │
+│                                                                              │
+│ ❯ 1. 5 minutes ago  /echo why does resume lose the plan?                     │
+│   2. 3 hours ago    /echo add a --json flag to the agents command so script… │
+│   3. 2 days ago     /echo fix the failing date test in the parser            │
+│                                                                              │
+│ Enter to resume · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

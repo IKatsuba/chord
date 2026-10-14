@@ -1,0 +1,24 @@
+      Read the job and the code it points at until you can name the cause and
+      the files involved. Open tester first, coder once tester's test fails,
+      and reviewer last, on the diff.
+
+      tester's instructions
+      Write the smallest test that fails because of the bug, and run it to
+ ── ↓ 35 lines below · end to jump to the bottom ──────────────────────────────
+
+ ✹ Waiting for you… (25s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Save team bugfix?                                                            │
+│                                                                              │
+│ ❯ 1. Yes, for this project   .chord/teams/bugfix.md                          │
+│   2. Yes, for every project  ~/.config/chord/teams/bugfix.md                 │
+│   3. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

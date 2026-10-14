@@ -1,0 +1,40 @@
+ chord                                                                                         fake · /tmp/chord-qa.cmp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › link
+
+ ⏺ fake asked: Sign in to Example to continue
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

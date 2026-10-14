@@ -1,0 +1,24 @@
+$ /tmp/chd173.HXF6/run.sh fake -C /tmp/chd173.HXF6/proj
+Resume this window with:
+chord --resume w-fadf2418
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

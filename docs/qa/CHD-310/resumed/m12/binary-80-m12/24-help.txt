@@ -1,0 +1,24 @@
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›     ed: 24,000 of 200,000 tokens (12%)                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  enter to  end                        rni! for bash mode     itter memory leak
+ ›\/+ entsr f r a newline                 backspace to leave bash mode       Us
+  shift + tnt r forka newline             esc to interrupt or stop a command
+  ctrl + g to edit in $EDITOR             shift + tab to cycle modes
+  ctrl + v to paste an images             ctrl + o for verbose outputd to [BoxR
+  ↑ ↓ for prompts, agents and monitors4c-9ctrl + c to clear input
+  x to close an agent or stop a monitor   ctrl + d or ctrl + c twice to quit
+ctctrl + r to search prompts              ctrl + x then a key for sessions
+╭─tab enter to take a match───────────────1–9 to pick a choice─────────────────╮
+│ esc to cancel a searchxListenersExceeded↑ ↓ or j k to move between choicesory
+lepgup pgdn or wheel to scrollners added tenter to pick the highlighted choice10
+. shift + ↑ ↓.totscroll a line) to increasesc to reject a permission
+"Phome end fortthe top and the bottomtecteesc to close a pickers added to [BoxRe
+nd/rfor commands                          ctrl + a to show all directorieslimit"
+(n↑d↓ to pick a command                   tab ↑ ↓ space to fill in a formak dete
+cttab to complete a commanddded to [BoxRenctrl + c to stop the turn and its form
+  @ for files                             /vim for vim mode
+ P↑ ↓ to pick a fileer memory leak detecte? for shortcutssteners added to [BoxR
+  tab enter to add a file                 esc to close shortcuts
+  esc to close commands or files

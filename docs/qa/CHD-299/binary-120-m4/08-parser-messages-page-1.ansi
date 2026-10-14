@@ -1,0 +1,40 @@
+ [1mparser[0;2m · fake · Fake Small · opened by main 7s ago[0m
+
+ ← [1m@main[0m
+   [2m⎿[0m  [2magentchild[0m
+
+ [2m⏺[0m [1mBash[0m(deno task test tests/parse)
+   [2m⎿[0m  [2m2 failed, 212 passed[0m
+
+ → [1m@main[0;2m · queued[0m
+   [2m⎿[0m  [2mRan deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.[0m
+
+ [2m⏺[0m [1mBash[0m(deno task test tests/parse)
+   [2m⎿[0m  [2m214 passed, 0 failed[0m
+
+ → [1m@main[0;2m · queued[0m
+   [2m⎿[0m  [2mAll 214 parser tests pass now.[0m
+
+ ⏺ I will run the parser tests on each change.
+
+ ← [1m@main[0m
+   [2m⎿[0m  [2mI changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.[0m
+
+ ⏺ Received the message from main.
+
+ ← [1m@main[0m
+   [2m⎿[0m  [2mThe printer is fixed too; run the whole parser suite once more.[0m
+
+ ⏺ Received the message from main.
+
+
+
+
+
+[2m╭─[0;1m parser[0;2m ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m● docs needs your permission · ctrl+x a to go[0m [2m·[0m [2m? for shortcuts[0m                         [2mFake Small · 3% context used[0m
+    main  [2m  fake · Fake Large with a 1M context window[0m
+    [1mparser[0;2m  fake · Fake Small                         [0m
+    docs  [2m  fake · Fake Large with a 1M context window[0m  ● permission 6s

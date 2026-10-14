@@ -1,0 +1,24 @@
+
+ ← [1m@parser[0;2m · fake[0m
+   All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ [2m›[0m task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ [2m⏺[0m [1mAgent[0m(Fix the tokenizer)[2m · fake · fake-small[0m
+   [2m⎿[0m  taskchild
+      [2mIts work was not kept: the task's record is gone.[0m
+   [2m⎿[0m  [2mCancelled (10s)[0m
+
+ ⏺ It is running; I will check its report when it lands.
+
+ [2m⏺[0m [2mparser (fake) and docs (fake) were open when this session was left and are [0m
+   [2mnot reopened · /resume lists them[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 98% context left[0m

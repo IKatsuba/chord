@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 7s ago
+
+ ← @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+
+
+
+
+
+ ✹ Waiting for permission… (7s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ docs asks                                                                                                            │
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window
+    main    fake · Fake Large with a 1M context window  ✓ replied 2s ago
+    parser  fake · Fake Small
+    docs    fake · Fake Large with a 1M context window  ● permission 7s

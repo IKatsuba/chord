@@ -1,0 +1,74 @@
+[
+  {
+    "session": "source-120x40-normal",
+    "terminalModesRestored": true,
+    "alternateScreen": "0",
+    "cursorVisible": "1",
+    "alternateExitEmitted": true,
+    "cursorShowEmitted": true,
+    "shellAcceptedCommand": true
+  },
+  {
+    "session": "source-120x40-none",
+    "terminalModesRestored": true,
+    "alternateScreen": "0",
+    "cursorVisible": "1",
+    "alternateExitEmitted": true,
+    "cursorShowEmitted": true,
+    "shellAcceptedCommand": true
+  },
+  {
+    "session": "source-120x40-refuse",
+    "terminalModesRestored": true,
+    "alternateScreen": "0",
+    "cursorVisible": "1",
+    "alternateExitEmitted": true,
+    "cursorShowEmitted": true,
+    "shellAcceptedCommand": true
+  },
+  {
+    "session": "source-80x24-normal",
+    "terminalModesRestored": true,
+    "alternateScreen": "0",
+    "cursorVisible": "1",
+    "alternateExitEmitted": true,
+    "cursorShowEmitted": true,
+    "shellAcceptedCommand": true
+  },
+  {
+    "session": "source-80x24-none",
+    "terminalModesRestored": true,
+    "alternateScreen": "0",
+    "cursorVisible": "1",
+    "alternateExitEmitted": true,
+    "cursorShowEmitted": true,
+    "shellAcceptedCommand": true
+  },
+  {
+    "session": "source-80x24-refuse",
+    "terminalModesRestored": true,
+    "alternateScreen": "0",
+    "cursorVisible": "1",
+    "alternateExitEmitted": true,
+    "cursorShowEmitted": true,
+    "shellAcceptedCommand": true
+  },
+  {
+    "session": "binary-120x40-normal",
+    "terminalModesRestored": true,
+    "alternateScreen": "0",
+    "cursorVisible": "1",
+    "alternateExitEmitted": true,
+    "cursorShowEmitted": true,
+    "shellAcceptedCommand": true
+  },
+  {
+    "session": "binary-80x24-normal",
+    "terminalModesRestored": true,
+    "alternateScreen": "0",
+    "cursorVisible": "1",
+    "alternateExitEmitted": true,
+    "cursorShowEmitted": true,
+    "shellAcceptedCommand": true
+  }
+]

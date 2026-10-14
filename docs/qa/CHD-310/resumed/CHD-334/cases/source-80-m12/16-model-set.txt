@@ -1,0 +1,24 @@
+ ⏺ Permission: deny.
+
+ › first line
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+
+ › mode
+
+ ⏺ Mode: acceptEdits.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)         Fake Small · 2% context used

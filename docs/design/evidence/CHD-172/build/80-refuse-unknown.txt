@@ -1,0 +1,24 @@
+                                               reply as it          --print,
+                                               streams, or one      Values:
+                                               JSON object at the   "text",
+                                               end.                 "json")
+
+Commands:
+
+  agents  - List the agents chord can start: name, title and command.
+
+Examples:
+
+  Claude Code                  chord claude
+  Pick up where you left off   chord claude --continue
+  Codex in another directory   chord codex -C ~/src/app
+  One question, for a script   chord -p "What does this do?"
+  Piped input with the prompt  git diff | chord -p "Review this" --output-format
+                               json
+  An agent chord does not know chord my-agent --agent-command "my-agent --acp"
+
+  error: No session no-such-id among chord's records; one it never saw opens onl
+y on its own.
+
+exit=2
+

@@ -1,0 +1,24 @@
+
+ › /team edit bugfix
+   ⎿  /team has no edit; it takes list, new, show, run or stop
+
+ › /team edit bugfix put reviewer on codex
+   ⎿  /team has no edit; it takes list, new, show, run or stop
+
+ › /team
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                        │
+│ For this project in .chord/teams, for every project in                       │
+│ ~/.config/chord/teams.                                                       │
+│                                                                              │
+│   1. bugfix  3 agents  this project  Fixes a bug end to end — a failing tes… │
+│ ❯ 2. triage  ✗ not read: members.0.agent is missing                          │
+│                                                                              │
+│ Ask main to fix triage · Esc to close                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

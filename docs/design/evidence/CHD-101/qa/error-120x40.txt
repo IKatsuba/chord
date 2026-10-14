@@ -1,0 +1,40 @@
+ chord                                                                   fake · /private/tmp/chd101-qa.Hd9bih/u/src/api
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /echo api transcript
+
+ ⏺ api transcript
+
+ › /echo resumed continuation
+
+ ⏺ resumed continuation
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

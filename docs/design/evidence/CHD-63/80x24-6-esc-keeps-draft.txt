@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.iluf
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ! echo auth ok
+   ⎿  auth ok
+
+ › explain the auth flow
+
+ ⏺ Received echo auth ok: auth ok
+
+   Hello, world. This reply came in chunks.
+
+ › what is next
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft kept                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                                           Fake Large with a 1M context window

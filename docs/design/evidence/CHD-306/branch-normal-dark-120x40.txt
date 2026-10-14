@@ -1,0 +1,41 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.tAoV
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › keep this line                                                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  -- NORMAL --                                                                     Fake Large with a 1M context window
+cursor 17,37 visible=1 shape=block colour=#ffffff insert: block #ffffff

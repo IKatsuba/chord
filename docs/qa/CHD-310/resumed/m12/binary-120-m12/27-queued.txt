@@ -1,0 +1,40 @@
+   ⎿  qa-shell
+ ⏺
+ › text
+              d. This reply came in chunks.
+ ⏺ Received printf qa-shell: qa-shell
+
+   Hello, world. This reply came in chunks.
+
+ › /config
+   ⎿  Effort set to High
+                         0
+ › /cost
+   ⎿  Total cost:   $0.1500
+      Tokens in:    12,000
+      Tokens out:   2,400
+      Cache read:   9,600
+      Session time: 45s   000 tokens (12%)
+                         s (88%)
+ › /context                            ow                       created)rge wit                                xt used
+   ⎿  Used: 24,000 of 200,000 tokens (12%)
+      Free: 176,000 tokens (88%)
+                                                                        eak det                                    [Box
+ › /status
+   ⎿  Agent:     fake           e6e-a183-27a0a5e13437                   o [BoxR                     ners is 10. Use emi
+      Model:     Fake Small
+      Mode:      Accept editsededWarning:                              leak det                               d to [Box
+      Session:   2c75fbcb-e4e5-4e6e-a183-27a0a5e13437
+│P    Directory: /tmp/chd310-final/exits/binary-120-m12/workEventEmitter memory                                  s added
+ t                                                             teners() to incr                                ────────╯
+"› slow                                                            ded to [BoxR                    eners is 10. Use emit
+t
+(⏺ Working............................................................................                             [BoxR
+e                                                                    rease limi
+"✶ Working… (1s · esc to interrupt)                                     o [BoxR                     ners is 10. Use emit
+t› queued QA
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P›                           leak detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 12% context used

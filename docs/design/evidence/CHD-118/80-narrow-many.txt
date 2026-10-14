@@ -1,0 +1,24 @@
+ chord   1 fake    2 ●   3 ✓   4 ✻   5   6 ✻             /tmp/chord-qa.3sRI/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

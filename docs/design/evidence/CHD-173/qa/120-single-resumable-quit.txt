@@ -1,0 +1,40 @@
+qa$ chord fake
+Resume this session with:
+chord fake --agent-command '/tmp/chd173-fake-2c1cf296fe20dd63 --qa-owner chd173-120' --resume 9d796176-6424-422e-8172-fa
+68e6469ca1
+qa$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

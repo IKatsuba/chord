@@ -1,0 +1,24 @@
+ chord   1 fake ●    2 fake                          …/T/chord-qa.ofox6ids/work
+
+
+
+
+
+
+
+
+ › slow
+
+ ⏺ Working................
+   ⎿  Interrupted by user
+
+ › slow
+
+ ⏺ Working........................................
+
+ ✶ Working… (2s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 sessions busy · ctrl+d again to quit

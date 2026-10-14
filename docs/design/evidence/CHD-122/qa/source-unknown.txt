@@ -1,0 +1,40 @@
+ chord                                                                                fake · /tmp/chd122-qa/source-work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd122-qa/source-work
+ █▀     ? for shortcuts · /help
+
+ › mode
+
+ ⏺ Mode: plan.
+
+ › /new codx
+ ⏺ No agent named codx · chord agents lists them
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                           Fake Large with a 1M context window · 99% context left

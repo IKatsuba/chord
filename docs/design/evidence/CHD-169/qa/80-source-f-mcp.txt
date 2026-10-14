@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                                   /tmp/chd169-qa/work
+   The tokenizer dropped a closing quote when a string ended the line. Fixed
+   in src/parse/tokenize.ts, with two cases added
+   to tests/parse/tokenize_test.ts. deno task test passes.
+
+ ⏺ Received the message from Fix the tokenizer · fake · report.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord passed these to fake when the session started. ACP does not say        │
+│ whether fake connected to them.                                              │
+│                                                                              │
+│ Name   Transport  Command or URL              Defined in                     │
+│ chord  http       http://127.0.0.1:63226/mcp  chord itself                   │
+│                                                                              │
+│ chord's server gives fake list_agents, list_sessions and spawn_task.         │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

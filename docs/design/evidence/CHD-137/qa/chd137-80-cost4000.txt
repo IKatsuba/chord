@@ -1,0 +1,24 @@
+ chord                                         fake · /tmp/chord-qa.4vQVHX/work
+      1 + /** Greets someone by name. */
+      2   export function greet(name: string): string {
+      2 -   return "hello " + name;
+      3 +   return `hello, ${name}`;
+      4   }
+
+ ⏺ Edited.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 10s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

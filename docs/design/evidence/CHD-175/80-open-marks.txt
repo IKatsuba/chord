@@ -1,0 +1,24 @@
+ chord   1 claude    2 codex    3 claude                              ~/src/app
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ claude's earlier sessions and saved windows in this directory.               │
+│                                                                              │
+│ ❯   1. 10 minutes ago             ▣ 3 sessions, all open · claude, codex, c… │
+│     2. 10 minutes ago  open in 1  fix the failing date test in the parser    │
+│     3. 40 minutes ago             tidy the README's install section          │
+│     4. yesterday                  rename the health route to /livez          │
+│     5. 2 days ago                 ▣ 2 sessions · claude, gemini · add a --j… │
+│   ↓ 6. 2 days ago                 add a --json flag to the agents command    │
+│     … +2 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

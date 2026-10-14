@@ -1,0 +1,24 @@
+ chord                                    fake · /tmp/chord-qa.cd2751c66d691afb
+
+
+
+
+
+
+
+ › /config
+ ⏺ Could not set Effort to High: The fake agent holds its effort.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Settings                                                                     │
+│ Change fake's settings for this session.                                     │
+│                                                                              │
+│ ❯ 1. Effort  Medium                                                          │
+│                                                                              │
+│ Enter to choose · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

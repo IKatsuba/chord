@@ -1,0 +1,40 @@
+ ⏺ Started on medium. Could not start on max effort, asked by spawn_task: the agent offers low, medium, high.
+
+ ← Tune the parser · fake · report
+   ⎿  Hello, world. This reply came in chunks.
+
+ ⏺ Received the message from Tune the parser · fake · report.
+
+ › taskeffort
+
+ ⏺ Agent(Tune the parser) · fake · fake-small · high
+   ⎿  Done (0 tool uses · 0s)
+
+ ⏺ Started on high.
+
+ ← Tune the parser · fake · report
+   ⎿  Hello, world. This reply came in chunks.
+
+ ⏺ Received the message from Tune the parser · fake · report.
+
+ › agentmaxeffort
+
+ ⏺ Open(tuner) · fake · fake-small · medium
+   ⎿  text
+
+ ⏺ Started on medium. Could not start on max effort, asked by open_agent: the agent offers low, medium, high.
+
+ › agenteffort
+
+ ⏺ Open(tuner 2) · fake · fake-small · high
+   ⎿  text
+
+ ⏺ Started on high.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 2% context used
+    main     fake · Fake Large with a 1M context window · medium
+    tuner    fake · Fake Small · medium                           ✓ replied 9s ago
+    tuner 2  fake · Fake Small · high                             ✓ replied 4s ago

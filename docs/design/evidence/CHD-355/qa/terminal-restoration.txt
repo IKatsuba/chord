@@ -1,0 +1,14 @@
+project: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+user: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+flag: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+invalid: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+refused: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+none: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+override: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+binaryproject: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+binaryuser: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+seed: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+srcresumeFalse: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+srcresumeTrue: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+binresumeFalse: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0
+binresumeTrue: stty -g before == after; alternate_on=0; cursor_flag=1; exit=0

@@ -1,0 +1,24 @@
+ chord                                              fake · /tmp/chd-205-qa/work
+
+ ⏺ Received an image: image/png, 73 bytes
+
+   Hello, world. This reply came in chunks.
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow
+
+ ⏺ Permission: allow.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › hello text                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT --                                   Fake Small · 94% context left

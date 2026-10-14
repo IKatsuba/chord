@@ -1,0 +1,24 @@
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m permission
+
+ [2m⏺[0m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [2mWaiting…[0m
+
+ ✶ Waiting for permission… [2m(0s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mWrite notes.txt[0m                                                              [2m│
+│[0m                                                                              [2m│
+│[0m Do you want to proceed?                                                      [2m│
+│[0m ❯ 1. Allow                                                                   [2m│
+│[0m   2. Always allow                                                            [2m│
+│[0m   3. Deny                                                                    [2m│
+│[0m                                                                              [2m│
+│[0m [2mEsc to reject[0m                                                                [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

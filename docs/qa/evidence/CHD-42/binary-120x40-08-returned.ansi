@@ -1,0 +1,40 @@
+ [1mchord[0m                                                    [2mfake · /private/tmp/chd81-binary-120x40-a37e855f2f9b7e96/work[0m
+   [2m [0m  [2mDirectory: [0m/private/tmp/chd81-binary-120x40-a37e855f2f9b7e96/work
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:   [0m$0.0125
+   [2m [0m  [2mTokens in:    [0m1,000
+   [2m [0m  [2mTokens out:   [0m200
+   [2m [0m  [2mCache read:   [0m800
+   [2m [0m  [2mSession time: [0m12s
+
+ [2m›[0m /context
+   [2m⎿[0m  [2mUsed: [0m2,000 of 1,000,000 tokens (1%)
+   [2m [0m  [2mFree: [0m998,000 tokens (99%)
+
+ [2m›[0m /config
+   [2m⎿[0m  [2mEffort set to High[0m
+
+ [2m›[0m @src/day.ts
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [38;2;255;0;135m![39m printf "day-context\n"
+   [2m⎿[0m  day-context
+
+ [2m›[0m text
+
+ ⏺ Received [38;2;87;105;247mprintf "day-context\n"[39m: day-context
+
+   Hello, world. This reply came in chunks.
+
+ [2m›[0m slow
+
+ ⏺ Working.............................................................................................................
+   .........................................................................................................
+   [2m⎿[0m  [31mInterrupted by user[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › queued day draft[7m [0m                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;72;150;140m⏸ plan mode on[39m [2m(shift+tab to cycle)[0m                                                    [2mFake Small · 97% context left[0m

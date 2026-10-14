@@ -1,0 +1,9 @@
+{
+  "recorded_pids_checked": 148,
+  "process_groups_checked": 56,
+  "owned_survivors": [],
+  "tmux": {
+    "chd310-closure": "no sessions",
+    "chd310-closure-forced": "no sessions"
+  }
+}

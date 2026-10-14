@@ -1,0 +1,24 @@
+ ⏺ Received the message from bugfix · fake.
+
+ ← [1m@bugfix 2[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test[0m
+   [2m [0m  [2min tests/parse/tokenize_test.ts; coder waits for it and will edit[0m
+   [2m [0m  [2msrc/parse/tokenize.ts only. I will report when the test fails[0m
+   [2m [0m  [2mfor the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ [2m←[0m [1mchord[0m
+   [2m⎿[0m  [2mThe person closed team bugfix 2: its lead (fake · fake-large, id[0m
+   [2m [0m  [2maad58bbd) and its members tester and coder. It takes no more messages;[0m
+   [2m [0m  [2mrun_team starts it again.[0m
+
+ ⏺ Received the message from chord.
+
+ [2m⏺[0m [2mteam bugfix (3 agents) was open when this session was left and is not [0m
+   [2mreopened · /resume lists them · /team run bugfix starts the team again[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

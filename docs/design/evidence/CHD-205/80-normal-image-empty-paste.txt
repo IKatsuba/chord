@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.qhQK
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.qhQK
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › what i [Image #1] s                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- NORMAL --                             Fake Large with a 1M context window

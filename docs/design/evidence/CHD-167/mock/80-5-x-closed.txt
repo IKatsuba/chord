@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+ ⏺ Open(parser) · codex · gpt-5.3-codex
+   ⎿  Run the parser tests after every change to src/parse and tell me what
+      breaks.
+
+ ⏺ Waiting on parser.
+
+ ✉ chord
+   The person closed parser (codex · gpt-5.3-codex, id 7f3a9c2e). It takes no
+   more messages; open_agent starts another.
+
+ ⏺ parser is closed, so I will run the parser tests myself.
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  Running…
+
+ ✻ Working… (34s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                      Opus · 91% context left
+    main  claude · Opus
+    docs  claude · Sonnet

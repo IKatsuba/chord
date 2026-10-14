@@ -1,0 +1,40 @@
+ chord                                                                                      fake · /tmp/chd66-qa.uf7EKT
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $1.25
+      Tokens in:    100,000
+      Tokens out:   20,000
+      Cache read:   80,000
+      Session time: 3m 1s
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $1.26
+      Tokens in:    101,000
+      Tokens out:   20,200
+      Cache read:   80,800
+      Session time: 3m 4s
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 79% context left

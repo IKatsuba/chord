@@ -1,0 +1,40 @@
+ › permission
+                        ─────────────────────────────────┘
+ ⏺ Write(notes.txt)
+ › ⎿  Failed
+   ⎿  Rejected Write notes.txt
+ ⏺
+ ⏺ Permission: deny.
+
+ › first line
+ ⏺ second line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan
+                              me in chunks.
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan
+   ⎿  ☒ Read the code         3 done.
+      ☒ Write the change
+      ☒ Run the tests
+
+ › mode              nge
+              e tests
+ ⏺ Mode: acceptEdits.
+                                           ────────────────────────────────────────────────────────────────────────────
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Select model . MaxListeners is 10. Use e              isteners() to increase                                   ──────│
+│USwitch fake's model for this session.ow                       created)rge wit                                xt used │
+│                                    tecte                         ded to [BoxR                    eners is 10. Use emi│
+│e❯ 1. Fake Large with a 1M context window ✔                                                                           │
+│   2. Fake Small           eededWarning:                   ter memory leak det                                    [Box│
+│                                     mitt                        increase limi                                        │
+│PEnter to switch · Esc to close       cte                              o [BoxR                     ners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P›                           leak detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                        Fake Large with a 1M context window · 2% context used

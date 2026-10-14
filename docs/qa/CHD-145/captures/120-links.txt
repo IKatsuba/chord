@@ -1,0 +1,40 @@
+ chord                                                                                fake · /tmp/chd145-qa.nDhwyN/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › look at @src/a.ts @docs @nope.ts and @"my notes.md" @src/a.ts
+
+ ⏺ Received a link: src/a.ts, file:///tmp/chd145-qa.nDhwyN/work/src/a.ts
+
+   Received a link: my notes.md, file:///tmp/chd145-qa.nDhwyN/work/my%20notes.md
+
+   Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

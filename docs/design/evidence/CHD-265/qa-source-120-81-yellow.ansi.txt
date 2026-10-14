@@ -1,0 +1,40 @@
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m /context
+   [2m⎿[0m  [2mUsed: [0m160,000 of 200,000 tokens (80%)
+   [2m [0m  [2mFree: [0m40,000 tokens (20%)
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                        [2mFake Small · [0m[38;2;255;193;7m81% context used[39m

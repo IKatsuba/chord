@@ -1,0 +1,27 @@
+{
+  "app": 799,
+  "fakes": [
+    807
+  ],
+  "owned": [
+    799,
+    807
+  ],
+  "groups": [
+    807
+  ],
+  "rows": [
+    [
+      "807",
+      "799",
+      "807",
+      "bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "799",
+      "784",
+      "784",
+      "bun /tmp/chd310-closure/forced/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd310-closure/forced/source-120-hung-rejection/work"
+    ]
+  ]
+}

@@ -1,0 +1,40 @@
+[38;2;255;255;255m [1m[39mbugfix[0;2m · team · fake · Fake Large with a 1M context window · opened by @main 6s ago[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39mbugfix's instructions for the lead · 30 lines[0m[38;2;255;255;255m
+   [2m[39mYou are the lead of team bugfix: a long-lived agent chord opened for main, the session the person talks to. You work[0m[38;2;255;255;255m
+   [2m[39m in /tmp/chd310-closure/m45/binary-120-m5/work, and so does every member you open: there are no worktrees.[0m[38;2;255;255;255m
+
+   [2m[39mYour tools on chord's server: open_agent {member, prompt} opens one of the members below on the runtime, model and [0m[38;2;255;255;255m
+   [2m[39mmode the team gives it, with your prompt as its first message. send_message {to, text} reaches main, your open [0m[38;2;255;255;255m
+   [2m[39mmembers by name, and the leads of the other runs. close_agent {to} closes a member; close each when its part is [0m[38;2;255;255;255m
+   [2m[39mdone. spawn_task and list_agents start task agents for one-off jobs. Each message of yours to main starts a turn of [0m[38;2;255;255;255m
+   [2m[39mmain's.[0m[38;2;255;255;255m
+
+   [2m[39mNo other run of a team is open in this session.[0m[38;2;255;255;255m
+
+   [2m[39mYour instructions:[0m[38;2;255;255;255m
+   [2m[39mRead the job and the code it points at until you can name the cause and[0m[38;2;255;255;255m
+   [2m[39mthe files involved. Then open tester first, and coder only once tester's[0m[38;2;255;255;255m
+   [2m[39mtest fails for the bug's own reason. You edit nothing yourself.[0m[38;2;255;255;255m
+
+   [2m[39mThe members:[0m[38;2;255;255;255m
+   [2m[39m- tester: Writes the failing test, then proves the fix (fake · fake-small · acceptEdits)[0m[38;2;255;255;255m
+   [2m[39m- coder: Writes the fix, in the files the lead names (fake · fake-large · plan)[0m[38;2;255;255;255m
+
+   [2m[39mHow the team works:[0m[38;2;255;255;255m
+   [2m[39m# How bugfix works[0m[38;2;255;255;255m
+
+   [2m[39m1. The lead reads the job and names who may edit which files.[0m[38;2;255;255;255m
+   [2m[39m2. tester writes a test that fails for the bug's own reason, in `tests/`.[0m[38;2;255;255;255m
+   [2m[39m3. coder fixes the code so that test passes, and never edits `tests/`.[0m[38;2;255;255;255m
+
+ [2m[39m── ↓ 29 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m[38;2;255;255;255m
+
+[2m[39m╭─[0;1m bugfix[0;2m ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+[0m[38;5;244m│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m● tester needs your permission · ctrl+x a to go[0m [2m·[0m [2m? for shortcuts[0m[38;2;255;255;255m      [2m[39mFake Large with a 1M context window · 1% used[0m[38;2;255;255;255m
+  [2m[39m [0m main     [2m  fake · Fake Large with a 1M context window       [0m[38;2;255;255;255m
+  [39m  [1mbugfix   [0;2m  team · fake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+  [39m  [2m├─ [0mtester[2m  fake · Fake Small                                [0m  ● permission 4s[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake · Fake Large with a 1M context window       [0m  ✓ replied 5s ago[38;2;255;255;255m

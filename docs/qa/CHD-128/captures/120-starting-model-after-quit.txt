@@ -1,0 +1,40 @@
+$ CHORD_FAKE_HANG=config deno task chord:fake -C /tmp/chord-qa.dOAm/app --model fake-small; stty -a | g
+rep -oE -- '-?icanon|-?echo ' ; echo exited
+╭ Warning
+│
+│  Ignored build scripts for packages:
+│  npm:fsevents@2.3.3
+│
+│  Lifecycle scripts are only supported when using a `node_modules` directory.
+│  Enable it in your deno config file:
+│  "nodeModulesDir": "auto"
+╰─
+Task chord:fake deno run --allow-all src/main.tsx fake --agent-command "deno run --quiet --allow-env --config '$PWD/deno
+.json' '$PWD/tests/fixtures/fake_agent.ts'" '-C' '/tmp/chord-qa.dOAm/app' '--model' 'fake-small'
+icanon
+echo
+exited
+$ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

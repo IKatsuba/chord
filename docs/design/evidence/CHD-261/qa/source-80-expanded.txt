@@ -1,0 +1,24 @@
+       4   2. tester writes a test that fails for the bug's own reason. It edi…
+       5   3. coder fixes the code so that test passes. It edits only the file…
+       6   4. reviewer reads the diff and edits nothing. If it finds a problem…
+       7 - 5. tester runs the whole suite once more, and the lead reports to m…
+       7 + 5. tester runs the whole suite once more, without asking, and the l…
+       8
+       9   ## Who edits what
+      10
+
+ ✶ Waiting for you… (15s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                         │
+│                                                                              │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                          │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

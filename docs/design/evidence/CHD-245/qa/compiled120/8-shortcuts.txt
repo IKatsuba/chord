@@ -1,0 +1,40 @@
+ parser · fake · Fake Large with a 1M context window · opened by main 6s ago
+
+ ← @main
+   childmonitor
+
+ ⏺ Monitor(parser tests)
+   ⎿  $ sleep 1; echo "ok 1 - parse a string at the end of a line"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ Watching the parser tests.
+
+ ← parser tests · monitor
+   ok 1 - parse a string at the end of a line
+
+ ⏺ Received the message from parser tests · monitor.
+
+ ← parser tests · monitor · stopped
+   The person stopped it after 4s.
+
+ ⏺ Received the message from parser tests · monitor · stopped.
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                           / for commands                       ctrl + d or ctrl + c twice to quit
+  \ + enter for a newline                 ↑ ↓ to pick a command                ctrl + x then a key for sessions
+  shift + enter for a newline             tab to complete a command            1–9 to pick a choice
+  ctrl + g to edit in $EDITOR             @ for files                          ↑ ↓ or j k to move between choices
+  ctrl + v to paste an image              ↑ ↓ to pick a file                   enter to pick the highlighted choice
+  ↑ ↓ for prompts, agents and monitors    tab enter to add a file              esc to reject a permission
+  x to close an agent or stop a monitor   esc to close commands or files       esc to close a picker
+  ctrl + r to search prompts              ! for bash mode                      ctrl + a to show all directories
+  tab enter to take a match               backspace to leave bash mode         tab ↑ ↓ space to fill in a form
+  esc to cancel a search                  esc to interrupt or stop a command   ctrl + c to stop the turn and its form
+  pgup pgdn or wheel to scroll            shift + tab to cycle modes           /vim for vim mode
+  shift + ↑ ↓ to scroll a line            ctrl + o for verbose output          ? for shortcuts
+  home end for the top and the bottom     ctrl + c to clear input              esc to close shortcuts
+    main               fake · Fake Large with a 1M context window
+    parser             fake · Fake Large with a 1M context window
+    dev server errors  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties …  running 6s · 1 event

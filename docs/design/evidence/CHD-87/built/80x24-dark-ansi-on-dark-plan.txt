@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.Aulp
+   Then build the binary with:
+
+   ┌ sh ─────────────────────────────────────────────────┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ › edit
+
+ ⏺ Edit(src/greeting.ts)
+   ⎿  Updated src/greeting.ts with 2 additions and 1 removal
+      1 + /** Greets someone by name. */
+      2   export function greet(name: string): string {
+      2 -   return "hello " + name;
+      3 +   return `hello, ${name}`;
+      4   }
+
+ ⏺ Edited.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · 99% context left

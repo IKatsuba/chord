@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.NYga
+
+
+
+
+
+
+
+
+
+
+ ⏺ /tmp/chd-xdgB.zQz4/chord/keybindings.json: ctrl+o already bound to
+   app:toggleTranscript, not to chat:externalEditor
+
+ ⏺ /tmp/chd-xdgB.zQz4/chord/keybindings.json: unknown action "chat:nope",
+   ignored
+
+ ⏺ /tmp/chd-xdgB.zQz4/chord/keybindings.json: "hyper+z": "hyper" is not a
+   modifier, ignored
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  keybindings.json: 3 problems · ctrl+o already bound to app:toggleTranscript…

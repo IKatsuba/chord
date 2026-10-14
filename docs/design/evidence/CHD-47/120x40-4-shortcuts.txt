@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.pZdm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                         ↑ ↓ to pick a command         ctrl + d to quit
+  \ + enter for a newline               tab to complete a command     1–9 to pick a choice
+  shift + enter for a newline           esc to close commands         ↑ ↓ or j k to move between choices
+  ↑ ↓ for earlier prompts               esc to interrupt              enter to pick the highlighted choice
+  pgup pgdn to scroll                   shift + tab to cycle modes    esc to reject a permission
+  shift + ↑ ↓ to scroll a line          ctrl + o for verbose output   esc to close the model picker
+  home end for the top and the bottom   ctrl + c to clear input       ? for shortcuts
+  / for commands                        ctrl + c twice to quit        esc to close shortcuts

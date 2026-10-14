@@ -1,0 +1,24 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  MCP server “ref” requests your input
+
+  Set up the deploy target
+
+    ✔ Project name: web-app
+        Lowercase, dashes allowed
+
+    ✔ Contact email: a@b.io
+
+    ✔ Replicas: 3
+
+  ❯ ✔ Traffic share: 0.5
+
+    ✔ Public: ☒
+        Reachable from the internet
+
+    ✔ Region: United States
+
+    ✔ Tags: web, worker
+
+    Accept    Decline
+
+  Esc to cancel · ↑/↓ to navigate · Backspace to unset

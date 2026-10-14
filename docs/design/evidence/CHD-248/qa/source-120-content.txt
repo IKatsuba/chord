@@ -1,0 +1,40 @@
+
+ ⏺ Permission: always.
+
+ › mcpask
+
+ ⏺ Tool(mcp__chord__monitor)
+   ⎿  Allowed mcp__chord__monitor · Yes
+
+ ⏺ Permission: allow.
+
+ › mcpask
+
+ ⏺ Tool(mcp__chord__monitor)
+   ⎿  Failed
+   ⎿  Rejected mcp__chord__monitor
+
+ ⏺ Permission: deny.
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ✶ Waiting for permission… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

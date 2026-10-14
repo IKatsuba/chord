@@ -1,0 +1,4 @@
+Task chord deno run --allow-all src/main.tsx 'fx' '-C' '/tmp/chord-qa126.TEnN/fx'
+Resume this session with:
+chord fx --resume zpQNQyfD_Gj6
+Mac%

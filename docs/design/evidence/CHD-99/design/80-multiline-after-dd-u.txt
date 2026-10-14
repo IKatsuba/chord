@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.f3Vj
+
+
+
+ › /vim
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+ › fix the parser src/ui/form.ts and then run the tests again
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   ............................................................................
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › one two three four five six seven eight nine ten eleven twelve thirteen fo │
+│   urteen fifteen sixtee                                                      │
+│   second line                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- NORMAL --          Fake Large with a 1M context window · 99% context left

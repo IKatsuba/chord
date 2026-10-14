@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake    3 fake                         /tmp/chd169-qa/work
+ ▄██▀   /tmp/chd169-qa/work
+ █▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Search(tokenize in src/parse)
+      Read(src/parse/tokenize.ts)
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ✺ Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  3 fake has 1 task agent running · ctrl+d again to quit

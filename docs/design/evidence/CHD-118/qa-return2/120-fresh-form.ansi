@@ -1,0 +1,40 @@
+ [1mchord[0m  [1;7m 1 fake [0m   [2m2 fake[0m                                                                        [2m/tmp/chord-qa.8n6hdxcq[0m
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m form
+
+ ⏺ fake asked: Set up the deploy target
+   [2m⎿[0m  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ [2m›[0m form
+
+ ✹ Waiting for your input… [2m(0s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mfake asks for input[0m                                                                                                  [2m│
+│[0m Set up the deploy target                                                                                             [2m│
+│[0m                                                                                                                      [2m│
+│[0m ❯ * [1mProject name[0m   [7m [0m                                                                                                 [2m│
+│[0m                    [2mLowercase, dashes allowed[0m                                                                         [2m│
+│[0m     Contact email  [2mnot set[0m                                                                                           [2m│
+│[0m   [2m✔[0m Replicas       2                                                                                                 [2m│
+│[0m     Traffic share  [2mnot set[0m                                                                                           [2m│
+│[0m   [2m✔[0m Public         ☐ No                                                                                              [2m│
+│[0m   * Region         [2mnot set[0m                                                                                           [2m│
+│[0m     Tags           [2mnot set[0m                                                                                           [2m│
+│[0m                                                                                                                      [2m│
+│[0m   Accept   Decline                                                                                                   [2m│
+│[0m                                                                                                                      [2m│
+│[0m [2mType to fill in · ↑↓ to move · Enter for the next · Esc to cancel[0m                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

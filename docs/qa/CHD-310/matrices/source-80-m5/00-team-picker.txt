@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd310/m45/source-80-m5/work
+ █▀     ? for shortcuts · /help
+
+ › /team
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                        │
+│ For this project in .chord/teams, for every project in                       │
+│ /tmp/chd310/m45/source-80-m5/config/chord/teams.                             │
+│                                                                              │
+│ ❯ 1. bugfix  3 agents  this project  Fixes a bug end to end — a failing tes… │
+│                                                                              │
+│ Enter to hand it a job · Esc to close                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

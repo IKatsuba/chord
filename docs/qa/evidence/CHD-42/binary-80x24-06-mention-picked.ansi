@@ -1,0 +1,24 @@
+ [1mchord[0m             [2mfake · /private/tmp/chd81-binary-80x24-cd0d7e84b6e1d7ed/work[0m
+   [2m [0m  [2mModel:     [0mFake Large with a 1M context window
+   [2m [0m  [2mMode:      [0mPlan
+   [2m [0m  [2mSession:   [0m4f66bab1-ac03-4dbb-adf9-317b7693b9b1
+   [2m [0m  [2mDirectory: [0m/private/tmp/chd81-binary-80x24-cd0d7e84b6e1d7ed/work
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:   [0m$0.0125
+   [2m [0m  [2mTokens in:    [0m1,000
+   [2m [0m  [2mTokens out:   [0m200
+   [2m [0m  [2mCache read:   [0m800
+   [2m [0m  [2mSession time: [0m12s
+
+ [2m›[0m /context
+   [2m⎿[0m  [2mUsed: [0m2,000 of 1,000,000 tokens (1%)
+   [2m [0m  [2mFree: [0m998,000 tokens (99%)
+
+ [2m›[0m /config
+   [2m⎿[0m  [2mEffort set to High[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › @src/day.ts [7m [0m                                                              [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;72;150;140m⏸ plan mode on[39m [2m(shift+tab to cycle)[0m            [2mFake Small · 99% context left[0m

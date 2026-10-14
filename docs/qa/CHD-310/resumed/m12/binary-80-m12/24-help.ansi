@@ -1,0 +1,24 @@
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m     [2m[39med: [0m24,000 of 200,000 tokens (12%)[38;2;255;255;255m                                     [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39menter to [0m[38;2;255;255;255m [2m[39mend[0m[38;2;255;255;255m                        [39mrni[2m! for bash mode[0m[38;2;255;255;255m     [39mitter memory leak[38;2;255;255;255m
+ [2m[39m›\[0m/[2m+ ent[0ms[2mr f[0m[38;2;255;255;255m [2m[39mr a[0m[38;2;255;255;255m [2m[39mnewline[0m[38;2;255;255;255m                 [2m[39mbackspace to leave bash mode[0m[38;2;255;255;255m      [39m Us[38;2;255;255;255m
+  [2m[39mshift + tnt r for[0mk[2ma newline[0m[38;2;255;255;255m             [2m[39mesc to interrupt or stop a command[0m[38;2;255;255;255m
+  [2m[39mctrl + g to edit in $EDITOR[0m[38;2;255;255;255m             [2m[39mshift + tab to cycle modes[0m[38;2;255;255;255m
+  [2m[39mctrl + v to paste an image[0ms[38;2;255;255;255m             [2m[39mctrl + o for verbose output[0md to [BoxR[38;2;255;255;255m
+  [2m[39m↑ ↓ for prompts, agents and monitors[0m4c-9[2mctrl + c to clear input[0m[38;2;255;255;255m
+  [2m[39mx to close an agent or stop a monitor[0m[38;2;255;255;255m   [2m[39mctrl + d or ctrl + c twice to quit[0m[38;2;255;255;255m
+[39mct[2mctrl + r to search prompts[0m[38;2;255;255;255m              [2m[39mctrl + x then a key for sessions[0m[38;2;255;255;255m
+[38;5;244m╭─[2m[39mtab enter to take a match[0m[38;5;244m───────────────[2m[39m1–9 to pick a choice[0m[38;5;244m─────────────────╮
+│[38;2;255;255;255m [2m[39mesc to cancel a search[0mxListenersExceeded[2m↑ ↓ or j k to move between choices[0mory
+le[2mpgup pgdn or[0m [2mwheel to scroll[0mners added t[2menter to pick the highlighted choice[0m10
+. [2mshift + ↑ ↓[0m.[2mto[0mt[2mscroll a line[0m) to increas[2mesc to reject a permission[0m[38;2;255;255;255m          [39m
+"P[2mhome end for[0mt[2mthe top and the bottom[0mtecte[2mesc to close a picker[0ms added to [BoxRe
+nd[2m/[0mr[2mfor commands[0m[38;2;255;255;255m                          [2m[39mctrl + a to show all directories[0mlimit"
+(n[2m↑[0md[2m↓ to pick a command[0m[38;2;255;255;255m                   [2m[39mtab ↑ ↓ space to fill in a form[0mak dete
+ct[2mtab to complete a command[0mdded to [BoxRen[2mctrl + c to stop the turn and its form
+[38;2;255;255;255m  [39m@ for files[0m[38;2;255;255;255m                             [2m[39m/vim for vim mode[0m[38;2;255;255;255m
+ [39mP[2m↑ ↓ to pick a file[0mer memory leak detecte[2m? for shortcuts[0msteners added to [BoxR[38;2;255;255;255m
+  [2m[39mtab enter to add a file[0m[38;2;255;255;255m                 [2m[39mesc to close shortcuts[0m[38;2;255;255;255m
+[39m  [2mesc to close commands or files[0m

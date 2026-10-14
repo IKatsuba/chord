@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.NyoL
+   171. Line 171 of 200, streamed one at a time.
+   172. Line 172 of 200, streamed one at a time.
+   173. Line 173 of 200, streamed one at a time.
+   174. Line 174 of 200, streamed one at a time.
+   175. Line 175 of 200, streamed one at a time.
+   176. Line 176 of 200, streamed one at a time.
+   177. Line 177 of 200, streamed one at a time.
+   178. Line 178 of 200, streamed one at a time.
+   179. Line 179 of 200, streamed one at a time.
+   180. Line 180 of 200, streamed one at a time.
+   181. Line 181 of 200, streamed one at a time.
+   182. Line 182 of 200, streamed one at a time.
+   183. Line 183 of 200, streamed one at a time.
+   184. Line 184 of 200, streamed one at a time.
+   185. Line 185 of 200, streamed one at a time.
+   186. Line 186 of 200, streamed one at a time.
+   187. Line 187 of 200, streamed one at a time.
+ ── ↓ 13 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › a draft I am still typing                                                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                        Fake Large with a 1M context window · 99% context left

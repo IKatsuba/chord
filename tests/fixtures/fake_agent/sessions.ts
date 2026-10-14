@@ -1,0 +1,95 @@
+/**
+ * What each session holds: its working directory, its MCP servers, and the
+ * model, mode and effort it runs with, with the config options that offer
+ * them. Here rather than in `main.ts` because the scenarios that move a mode
+ * read and write them too.
+ */
+import * as acp from '@agentclientprotocol/sdk';
+import { NO_CONFIG, NO_MODES, TOKENS_ONLY } from './options.ts';
+
+/** Each session's working directory, which its commands run in. */
+export const cwds = new Map<string, string>();
+
+/** The MCP servers each session was opened with, as they arrived. */
+export const mcpServers = new Map<string, acp.McpServer[]>();
+
+/** Claude Code's first three modes, in its order. */
+export const AVAILABLE_MODES: acp.SessionMode[] = [
+  { id: 'default', name: 'Default' },
+  { id: 'acceptEdits', name: 'Accept edits' },
+  { id: 'plan', name: 'Plan' },
+];
+
+/** Each session's mode. */
+export const modes = new Map<string, string>();
+/** Each session's model, once one was asked for. */
+export const models = new Map<string, string>();
+/** Each session's effort, once one was asked for. */
+export const efforts = new Map<string, string>();
+
+/** The efforts every session offers, `medium` until set. */
+export const AVAILABLE_EFFORTS = [
+  { value: 'low', name: 'Low' },
+  { value: 'medium', name: 'Medium' },
+  { value: 'high', name: 'High' },
+];
+
+/** The two models every session offers, the first in use until switched. */
+export const AVAILABLE_MODELS = TOKENS_ONLY
+  ? [
+      { value: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' },
+      { value: 'claude-haiku-4-5', name: 'Claude Haiku 4.5' },
+    ]
+  : [
+      { value: 'fake-large', name: 'Fake Large with a 1M context window' },
+      { value: 'fake-small', name: 'Fake Small' },
+    ];
+
+export const FIRST_MODEL = AVAILABLE_MODELS[0]?.value ?? 'fake-large';
+export const locked = new Set<string>();
+
+/**
+ * A model, the modes and an effort chosen through config options, as current
+ * ACP agents send them; the modes also go the older way, in `session/new`'s
+ * `modes`.
+ */
+export function configOptions(sessionId: string): acp.SessionConfigOption[] {
+  const effort: acp.SessionConfigOption[] = NO_CONFIG
+    ? []
+    : [
+        {
+          id: 'effort',
+          name: 'Effort',
+          category: 'thought_level',
+          type: 'select',
+          currentValue: efforts.get(sessionId) ?? 'medium',
+          options: AVAILABLE_EFFORTS,
+        },
+      ];
+
+  const mode: acp.SessionConfigOption[] = NO_MODES
+    ? []
+    : [
+        {
+          id: 'mode',
+          name: 'Mode',
+          category: 'mode',
+          type: 'select',
+          currentValue: modes.get(sessionId) ?? 'default',
+          options: AVAILABLE_MODES.map(({ id, name }) => ({ value: id, name })),
+        },
+      ];
+
+  return [
+    {
+      id: 'model',
+      name: 'Model',
+      category: 'model',
+      type: 'select',
+      currentValue: models.get(sessionId) ?? FIRST_MODEL,
+      options: AVAILABLE_MODELS,
+    },
+    ...mode,
+    ...effort,
+  ];
+}

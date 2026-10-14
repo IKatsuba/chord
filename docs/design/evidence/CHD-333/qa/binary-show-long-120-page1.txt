@@ -1,0 +1,40 @@
+
+      1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      2. tester writes a test that fails for the bug's own reason. It edits tests/ only, and reports the failure.
+      3. coder fixes the code so that test passes. It edits only the files the lead named for it, and never tests/.
+      4. reviewer reads the diff and edits nothing. If it finds a problem, the lead hands it back to coder.
+      5. tester runs the whole suite once more, and the lead reports to main.
+
+      Who edits what
+
+      - One writer per file at a time. Before a member starts, the lead tells it which files are its own.
+      - A member that needs a file it does not own asks its owner directly, and tells the lead what they agreed.
+      - Another run of a team may be working in this directory: the leads agree on files among themselves.
+      - Nobody commits. The person commits.
+
+      Reporting
+
+      The lead writes to main when it needs a decision only the person can make, when the job is done, and when it
+      cannot be done.
+      Saved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix and the bug, or just tell me to hand one
+   to bugfix.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md
+      Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+      lead             claude · opus                        default
+                       Splits the job, says who edits which files, reports to main
+      tester           claude · sonnet                      acceptEdits
+                       Writes the failing test, then proves the fix
+      coder            codex · gpt-5.3-codex                auto
+                       Writes the fix, in the files the lead names
+      security-review  claude · claude-sonnet-4-5-20250929  bypassPermissions
+ ── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,40 @@
+ [1mchord[0m  [1;7m 1 fake [0m   [2m2 fake[0m                                                                        [2m/tmp/chord-qa.8n6hdxcq[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m form
+
+ ✹ Waiting for your input… [2m(6s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mfake asks for input[0m                                                                                                  [2m│
+│[0m Set up the deploy target                                                                                             [2m│
+│[0m                                                                                                                      [2m│
+│[0m   [2m✔[0m Project name   keep                                                                                              [2m│
+│[0m   ⚠ Contact email  a@.devb                                                                                           [2m│
+│[0m                    Not an email address, such as name@example.com                                                    [2m│
+│[0m   [2m✔[0m Replicas       2                                                                                                 [2m│
+│[0m     Traffic share  [2mnot set[0m                                                                                           [2m│
+│[0m   [2m✔[0m Public         ☐ No                                                                                              [2m│
+│[0m ❯ * [1mRegion[0m         ▾                                                                                                 [2m│
+│[0m                      1. Europe                                                                                       [2m│
+│[0m                    ❯ 2. United States                                                                                [2m│
+│[0m                      3. Asia Pacific                                                                                 [2m│
+│[0m     Tags           [2mnot set[0m                                                                                           [2m│
+│[0m                                                                                                                      [2m│
+│[0m   Accept   Decline                                                                                                   [2m│
+│[0m                                                                                                                      [2m│
+│[0m [2m↑↓ to move · 1–3 or Enter to pick · ← to close the list · Esc to cancel[0m                                              [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m

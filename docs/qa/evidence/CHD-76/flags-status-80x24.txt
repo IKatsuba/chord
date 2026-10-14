@@ -1,0 +1,24 @@
+ chord                                fake · /tmp/chord-qa-76-caf0423fbcd13b6/A
+
+
+
+
+
+
+
+
+
+
+ ⏺ .chord/settings.json: unknown key "theme", ignored
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Accept edits
+      Session:   3f317eff-19cc-4c88-a045-c988b3d07495
+      Directory: /tmp/chord-qa-76-caf0423fbcd13b6/A
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)  Fake Large with a 1M context window

@@ -1,0 +1,40 @@
+Task chord:fake deno run --allow-all src/main.tsx fake --agent-command "deno run --quiet --allow-env --config '$PWD/deno
+.json' '$PWD/tests/fixtures/fake_agent.ts'" '-C' '/tmp/chd43-qa/work'
+
+QA_RETURN exit=0
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

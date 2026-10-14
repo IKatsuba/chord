@@ -1,0 +1,40 @@
+   │       ⎿  Found 14 files
+   │
+   │     ⏺ Read(src/acp/connection.ts)
+   │
+   │     ⏺ Agent(Read the transport tests)
+   │       ⎿  Done (2 tool uses · 0s)
+   │
+   │     ⏺ Read(src/session/session.ts)
+   │
+   │     ⏺ Write(notes/routing.md)
+   │       ⎿  Allowed Write notes/routing.md · Allow
+   │
+   │     ⏺ The listeners are kept per sessionId in openAgent; an id chord did not open is dropped there.
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 1s
+      ⎿  Find the component that draws a tool call and the rule that folds its output.
+
+         ⏺ Search(function Tool in src/ui)
+           ⎿  Found 1 file
+
+         ⏺ Read(src/ui/App.tsx)
+           ⎿  Error: File is too large to read whole.
+
+         ⏺ Could not read the component.
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Run deno task test and report what fails.
+
+      ⏺ Bash(deno task test)
+        ⎿  Running…
+
+ ⏺ It is running; I will say when it ends.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running                                          Fake Large with a 1M context window · 1% context used

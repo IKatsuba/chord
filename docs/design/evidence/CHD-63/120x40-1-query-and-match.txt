@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.QpAc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › fix the login bug in auth.ts
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ! echo auth ok
+   ⎿  auth ok
+
+ › explain the auth flow
+
+ ⏺ Received echo auth ok: auth ok
+
+   Hello, world. This reply came in chunks.
+
+ › what is next
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › explain the auth flow                                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  search prompts: auth

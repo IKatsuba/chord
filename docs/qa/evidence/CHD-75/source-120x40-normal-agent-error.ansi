@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                            [2mfake · /tmp/chord-qa.8ca4999f6e96c872[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m /config
+   [2m⎿[0m  [2mEffort set to High[0m
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m error
+
+ ⏺ About to fail.
+
+ [31m⏺[39m [31mThe fake agent failed on purpose.[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

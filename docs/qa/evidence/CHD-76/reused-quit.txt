@@ -1,0 +1,8 @@
+Resume this session with:
+chord fake --agent-command 'deno run --quiet --allow-env --config='\''/tmp/chord-qa-76-caf0423fbcd13b6/source/deno.json'
+\'' '\''/tmp/chord-qa-76-caf0423fbcd13b6/source/tests/fixtures/fake_agent.ts'\'' --qa-fixture '\''/tmp/chord-qa-76-caf04
+23fbcd13b6'\'' --qa-resume' --resume ef1b50d3-17d1-4552-86f1-3d07e24688ce
+QA_EXIT=0
+sh-3.2$ echo QA_SHELL_USABLE
+QA_SHELL_USABLE
+sh-3.2$

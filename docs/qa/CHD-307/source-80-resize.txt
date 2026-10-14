@@ -1,0 +1,30 @@
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa
+ █▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --fi…
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+ › long
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+   2. Line 2 of 200, streamed one at a time.
+ ── ↓ new output · 33 lines below · end to jump to the bottom ─────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                            Fake Large with a 1M context window · 1% context used

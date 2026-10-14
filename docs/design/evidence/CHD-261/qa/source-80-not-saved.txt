@@ -1,0 +1,24 @@
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix
+   and the bug, or just tell me to hand one to bugfix.
+
+ › reviewer on codex please
+
+ ⏺ The reviewer on codex too, read-only, and tester in bypassPermissions, so it
+   runs the suite without asking.
+
+ ⏺ Team(bugfix) · change
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a
+      review of the diff.
+
+         lead      claude ·…  default                            Splits the …
+      ~  tester    claude ·…  bypassPermissions was acceptEdits  Writes the …
+         coder     codex · …  auto                               Writes the …
+      ~  reviewer  codex · …  read-only was plan                 Reads the d…
+      bugfix.md's body · 1 addition, 1 removal
+      … +20 lines (ctrl+o to expand)
+      Not saved · the person will say what to change
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

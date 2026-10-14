@@ -1,0 +1,24 @@
+ ⏺ Now the login form.
+
+ ⏺ Update(src/routes/login.tsx)
+   ⎿  Updated src/routes/login.tsx with 6 additions and 2 removals
+
+ ← dev server errors · monitor
+   ERROR [router] POST /login 500: Cannot read properties of undefined (reading
+   'trim')
+       at validate (src/routes/login.tsx:41:22)
+       at handler (src/routes/login.tsx:58:9)
+
+ ⏺ My change broke the handler: validate() gets undefined when the field is
+   missing. I'll guard it.
+
+ ⏺ Update(src/routes/login.tsx)
+   ⎿  Updated src/routes/login.tsx with 1 addition and 1 removal
+
+ ✻ Working… (8s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                      Opus · 91% context left
+    dev server errors  $ tail -f dev.log | grep --line-…  running 2m · 1 event

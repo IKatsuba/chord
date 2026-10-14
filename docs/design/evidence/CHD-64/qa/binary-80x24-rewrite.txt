@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chd64-qa/work
+      30     { id: 29, name: 'row 29' },
+      31     { id: 30, name: 'row 30' },
+      32 -   { id: 31, name: 'row 31' },
+      32 +   { id: 31, name: 'a row whose name runs well past the edge of a na…
+      33     { id: 32, name: 'row 32' },
+      34     { id: 33, name: 'row 33' },
+      35     { id: 34, name: 'row 34' },
+         …
+      49     { id: 48, name: 'row 48' },
+      50     { id: 49, name: 'row 49' },
+      51     { id: 50, name: 'row 50' },
+      52 -   { id: 51, name: 'row 51' },
+      53 -   { id: 52, name: 'row 52' },
+      52     { id: 53, name: 'row 53' },
+      53     { id: 54, name: 'row 54' },
+      54     { id: 55, name: 'row 55' },
+
+ ⏺ Rewrote the table.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

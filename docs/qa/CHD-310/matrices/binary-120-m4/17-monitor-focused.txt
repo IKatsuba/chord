@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 24s ago
+
+ ← @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow
+
+ ⏺ Permission: allow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · x to stop it · enter esc to go back              Fake Large with a 1M context window · 1% context used
+    main               fake · Fake Large with a 1M context window
+    docs               fake · Fake Large with a 1M context window
+  ❯ dev server errors  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties …  running 4s · 1 event

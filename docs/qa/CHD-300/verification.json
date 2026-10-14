@@ -1,0 +1,15 @@
+{
+  "check": {
+    "command": "bun run check",
+    "exit_code": 0,
+    "lint_tests": 51,
+    "tests": 1508,
+    "test_files": 109,
+    "failures": 0,
+    "suite_seconds": 481.81
+  },
+  "fake_agents_remaining": [],
+  "tmux_server_running": false,
+  "captured_clean_quits": 26,
+  "host_binary_sha256": "e96b38725e4008632a531e764dd7db6bc958f90ca7bbccb56d2772c9319f721f"
+}

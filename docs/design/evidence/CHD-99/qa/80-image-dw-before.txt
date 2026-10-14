@@ -1,0 +1,24 @@
+ chord                                      fake · /tmp/chd99-qa/restart80/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /vim
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › [Image #2]                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT --                             Fake Large with a 1M context window

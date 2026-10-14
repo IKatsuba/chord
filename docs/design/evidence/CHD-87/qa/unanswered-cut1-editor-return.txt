@@ -1,0 +1,40 @@
+ chord                                                               fake · /tmp/chd87-qa/behavior/unanswered-cut1/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › slow
+
+ ⏺ Working.................................................
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › draft edited                                                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                Fake Large with a 1M context window · 99% context left

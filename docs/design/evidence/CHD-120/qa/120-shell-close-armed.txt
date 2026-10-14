@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                       /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/chord-qa.ofox6ids/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ! sleep 139
+   ⎿  Running… (esc to stop)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  2 fake is working · ctrl+x k again to stop it and close

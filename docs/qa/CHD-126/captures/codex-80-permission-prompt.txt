@@ -1,0 +1,24 @@
+ chord                                      codex · /tmp/chord-qa126.TEnN/codex
+   approval.
+
+ ⏺ Bash(printf ok > ../permission2.txt)
+   ⎿  Output in a terminal
+
+ ✶ Waiting for permission… (46s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Run command                                                                  │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Yes, proceed                                                            │
+│   2. Yes, and don't ask again for commands that start with `printf ok >      │
+│   ../permission2.txt`                                                        │
+│   3. No, and tell Codex what to do differently                               │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ approve for me mode on (shift+tab to cycle)                        6 Luna

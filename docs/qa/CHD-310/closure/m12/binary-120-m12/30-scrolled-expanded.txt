@@ -1,0 +1,40 @@
+
+ › @example.ts
+
+ ⏺ Received a link: example.ts, file:///tmp/chd310-closure/exits/binary-120-m12/work/example.ts
+
+   Hello, world. This reply came in chunks.
+
+ ! printf qa-shell
+   ⎿  qa-shell
+
+ › text
+
+ ⏺ Received printf qa-shell: qa-shell
+
+   Hello, world. This reply came in chunks.
+
+ › /config
+   ⎿  Effort set to High
+
+ › /cost
+   ⎿  Total cost:   $0.1500
+      Tokens in:    12,000
+      Tokens out:   2,400
+      Cache read:   9,600
+      Session time: 46s
+
+ › /context
+   ⎿  Used: 24,000 of 200,000 tokens (12%)
+      Free: 176,000 tokens (88%)
+
+ › /status
+   ⎿  Agent:     fake
+ ── ↓ new output · 34 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────
+
+ ✹ Working… (6s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 12% context used

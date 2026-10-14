@@ -1,0 +1,24 @@
+
+ › long
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+   2. Line 2 of 200, streamed one at a time.
+   3. Line 3 of 200, streamed one at a time.
+   4. Line 4 of 200, streamed one at a time.
+   5. Line 5 of 200, streamed one at a time.
+   6. Line 6 of 200, streamed one at a time.
+   7. Line 7 of 200, streamed one at a time.
+   8. Line 8 of 200, streamed one at a time.
+   9. Line 9 of 200, streamed one at a time.
+   10. Line 10 of 200, streamed one at a time.
+   11. Line 11 of 200, streamed one at a time.
+   12. Line 12 of 200, streamed one at a time.
+   13. Line 13 of 200, streamed one at a time.
+   14. Line 14 of 200, streamed one at a time.
+   15. Line 15 of 200, streamed one at a time.
+ ── ↓ new output · 30 lines below · end to jump to the bottom ─────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

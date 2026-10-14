@@ -1,0 +1,41 @@
+alternate_on=0 cursor_flag=1 pane_dead=0
+qa$ chord fake
+Resume this session with:
+chord fake --agent-command '/tmp/chd173-fake-2c1cf296fe20dd63 --qa-owner chd173-120' --resume 9d796176-6424-422e-8172-fa
+68e6469ca1
+qa$ stty -a
+speed 9600 baud; 40 rows; 120 columns;
+lflags: icanon isig iexten echo echoe -echok echoke -echonl echoctl
+	-echoprt -altwerase -noflsh -tostop -flusho pendin -nokerninfo
+	-extproc
+iflags: -istrip icrnl -inlcr -igncr ixon -ixoff ixany imaxbel iutf8
+	-ignbrk brkint -inpck -ignpar -parmrk
+oflags: opost onlcr -oxtabs -onocr -onlret
+cflags: cread cs8 -parenb -parodd hupcl -clocal -cstopb -crtscts -dsrflow
+	-dtrflow -mdmbuf
+cchars: discard = ^O; dsusp = ^Y; eof = ^D; eol = <undef>;
+	eol2 = <undef>; erase = ^?; intr = ^C; kill = ^U; lnext = ^V;
+	min = 1; quit = ^\; reprint = ^R; start = ^Q; status = ^T;
+	stop = ^S; susp = ^Z; time = 0; werase = ^W;
+qa$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

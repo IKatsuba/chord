@@ -1,0 +1,24 @@
+ ⏺ Received the message from Tune the parser · fake · report.
+
+ › agentmaxeffort
+
+ ⏺ Open(tuner) · fake · fake-small · medium
+   ⎿  text
+
+ ⏺ Started on medium. Could not start on max effort, asked by open_agent:
+   the agent offers low, medium, high.
+
+ › agenteffort
+
+ ⏺ Open(tuner 2) · fake · fake-small · high
+   ⎿  text
+
+ ⏺ Started on high.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used
+    main     fake · Fake Large with a 1M context window
+    tuner    fake · Fake Small                           ✓ replied 10s ago
+    tuner 2  fake · Fake Small                           ✓ replied 5s ago

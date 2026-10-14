@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.Xk2p
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › form
+
+ ✺ Waiting for your input… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                                                                  │
+│ Set up the deploy target                                                                                             │
+│                                                                                                                      │
+│   ✔ Project name   web-app                                                                                           │
+│   ✔ Contact email  ops@example.io                                                                                    │
+│   ✔ Replicas       3                                                                                                 │
+│   ✔ Traffic share  0.25                                                                                              │
+│   ✔ Public         ☒ Yes                                                                                             │
+│   ✔ Region         United States                                                                                     │
+│   ✔ Tags           web, worker                                                                                       │
+│                                                                                                                      │
+│ ❯ Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ ←→ to switch · Enter to accept · Esc to cancel                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                 Fake Large with a 1M context window · 99% context left

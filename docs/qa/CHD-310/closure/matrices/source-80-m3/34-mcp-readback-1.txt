@@ -1,0 +1,24 @@
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+ › /vim
+   ⎿  Vim mode off
+
+ › /theme
+   ⎿  Theme set to Light
+
+ › /theme
+   ⎿  Theme set to Dark
+
+ › shell
+
+ ⏺ Run(deno task test)
+   ⎿  Task test deno test
+      running 3 tests
+      3/3
+      ok | 2 passed
+ ── ↓ 99 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used

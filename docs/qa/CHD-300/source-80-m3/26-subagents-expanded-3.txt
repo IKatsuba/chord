@@ -1,0 +1,24 @@
+   │     ⏺ Plan
+   │       ⎿  ☒ Find the transport
+   │          ☒ Find the listeners
+   │          ☒ Write the answer
+   │
+   │     ⏺ Search(sessionUpdate in src)
+   │       ⎿  Found 14 files
+   │
+   │     ⏺ Read(src/acp/connection.ts)
+   │
+   │     ⏺ Agent(Read the transport tests)
+   │       ⎿  Done (2 tool uses · 0s)
+   │
+   │     ⏺ Read(src/session/session.ts)
+   │
+   │     ⏺ Write(notes/routing.md)
+   │       ⎿  Allowed Write notes/routing.md · Allow
+   │
+ ── ↓ 27 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

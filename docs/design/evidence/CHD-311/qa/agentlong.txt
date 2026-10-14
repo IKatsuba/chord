@@ -1,0 +1,203 @@
+=== baseline 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › agentlong
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  Read CLAUDE.md and docs/FEATURES.md before you start. Then:
+
+      1. Fix the tokenizer so a string at the end of a line keeps its closing quote.
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Waiting on parser.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 2s ago
+
+=== source 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › agentlong
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  Read CLAUDE.md and docs/FEATURES.md before you start. Then:
+
+      1. Fix the tokenizer so a string at the end of a line keeps its closing quote.
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Waiting on parser.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 5s ago
+
+=== binary 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › agentlong
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  Read CLAUDE.md and docs/FEATURES.md before you start. Then:
+
+      1. Fix the tokenizer so a string at the end of a line keeps its closing quote.
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Waiting on parser.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 3s ago
+
+=== baseline 80x24 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › agentlong
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  Read CLAUDE.md and docs/FEATURES.md before you start. Then:
+
+      1. Fix the tokenizer so a string at the end of a line keeps its closing
+      … +6 lines (ctrl+o to expand)
+
+ ⏺ Waiting on parser.
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 1s ago
+
+=== source 80x24 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › agentlong
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  Read CLAUDE.md and docs/FEATURES.md before you start. Then:
+
+      1. Fix the tokenizer so a string at the end of a line keeps its closing
+      … +6 lines (ctrl+o to expand)
+
+ ⏺ Waiting on parser.
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 4s ago
+
+=== binary 80x24 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › agentlong
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  Read CLAUDE.md and docs/FEATURES.md before you start. Then:
+
+      1. Fix the tokenizer so a string at the end of a line keeps its closing
+      … +6 lines (ctrl+o to expand)
+
+ ⏺ Waiting on parser.
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 3s ago

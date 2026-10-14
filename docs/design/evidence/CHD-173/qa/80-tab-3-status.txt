@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake    3 fake2   …/tmp/chd173-qa-425601bd6783698a/80/proj
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /status
+   ⎿  Agent:     fake2
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   661373f2-a2ab-4e26-826b-f73afbc5302a
+      Directory: /private/tmp/chd173-qa-425601bd6783698a/80/proj
+      Sessions:  3 open
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

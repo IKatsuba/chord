@@ -1,0 +1,40 @@
+  -h, --help                                 - Show this help.
+  -V, --version                              - Show the version number for this program.
+  -C, --cwd                       <dir>      - Directory the session works in.            (Default:
+                                                                                          "/private/tmp/chd172-final.XD
+                                                                                          zrEf/launch")
+  --agent-command                 <command>  - Start this ACP agent command instead of
+                                               chord's own; [agent] only names it.
+  -m, --model                     <model>    - Start each of [agent]'s sessions on this   (Conflicts: --print)
+                                               model, by its id for it.
+  --permission-mode               <mode>     - Start each of [agent]'s sessions in this
+                                               mode, by its id for it.
+  -c, --continue                             - Open the agent's latest session in this    (Conflicts: --resume)
+                                               directory again.
+  -r, --resume                    <id>       - Open a session by the id chord prints on
+                                               quit; repeated, a tab each.
+  -p, --print                     <prompt>   - Send this prompt, print the reply and      (Conflicts: --continue,
+                                               exit; piped input joins it.                --resume)
+  --dangerously-skip-permissions             - Allow every permission the agent asks
+                                               for. Only with -p.
+  --output-format                 <format>   - How -p prints: the reply as it streams,    (Depends: --print, Values:
+                                               or one JSON object at the end.             "text", "json")
+
+Commands:
+
+  agents  - List the agents chord can start: name, title and command.
+
+Examples:
+
+  Claude Code                  chord claude
+  Pick up where you left off   chord claude --continue
+  Codex in another directory   chord codex -C ~/src/app
+  One question, for a script   chord -p "What does this do?"
+  Piped input with the prompt  git diff | chord -p "Review this" --output-format json
+  An agent chord does not know chord my-agent --agent-command "my-agent --acp"
+
+  error: No session missing among chord's records; one it never saw opens only on its own.
+
+
+QA exit 2; terminal modes: restored
+sh-3.2$

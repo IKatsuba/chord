@@ -1,0 +1,24 @@
+   │           "model": "fake-large"                     │
+   │         }                                           │
+   │       ]                                             │
+   │     }                                               │
+   │   ]                                                 │
+   │ }                                                   │
+   └─────────────────────────────────────────────────────┘
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  Closed
+
+ → @parser
+   ⎿  parser is closed; open_agent starts another
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used
+    main  fake · Fake Large with a 1M context window
+    docs  fake · Fake Large with a 1M context window

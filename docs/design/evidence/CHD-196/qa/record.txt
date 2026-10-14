@@ -1,0 +1,6 @@
+120-shell: every delta preserved byte-for-byte, escapes included; 5 updates
+120-shellcut: every delta preserved byte-for-byte, escapes included; 3 updates
+120-bash: every whole output preserved byte-for-byte, escapes included; 1 updates
+80-shell: every delta preserved byte-for-byte, escapes included; 5 updates
+80-shellcut: every delta preserved byte-for-byte, escapes included; 3 updates
+80-bash: every whole output preserved byte-for-byte, escapes included; 1 updates

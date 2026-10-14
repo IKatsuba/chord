@@ -1,0 +1,40 @@
+   │           "runtime": "fake",                        │
+   │           "model": "fake-large"                     │
+   │         }                                           │
+   │       ]                                             │
+   │     }                                               │
+   │   ]                                                 │
+   │ }                                                   │
+   └─────────────────────────────────────────────────────┘
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  Closed
+
+ → @parser
+   ⎿  parser is closed; open_agent starts another
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+ › monitor
+
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')"; echo "  …
+      m1 · times out after 10m
+
+ ⏺ I will hear from the dev server when it errs.
+
+ ← dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 3% context used
+    main               fake · Fake Large with a 1M context window
+    docs               fake · Fake Large with a 1M context window
+    dev server errors  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties …  running 1s · 1 event

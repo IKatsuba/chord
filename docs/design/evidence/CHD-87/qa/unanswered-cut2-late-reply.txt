@@ -1,0 +1,24 @@
+ chord                       fake · /tmp/chd87-qa/behavior/unanswered-cut2/work
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › /theme
+   ⎿  Theme set to Light
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › hi                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                        Fake Large with a 1M context window · 99% context left

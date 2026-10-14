@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                        [2mfake · /tmp/chord-qa.c48w[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › explain @stt[7m [0m                                                                                                      [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;87;105;247msrc/ui/state.ts[39m
+  [2mpackages/very-long-package-name/src/components/deeply/nested/directory/SomeComponentWithAVeryLongName.test.tsx[0m
+  [2mdocs/meeting notes.md[0m

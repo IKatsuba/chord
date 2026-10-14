@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                      [2mfake · /private/tmp/chord-qa.9eDA/u/src/app[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mResume a session[0m                                                                                                     [38;2;177;185;249m│
+│[39m [2mfake's earlier sessions in every directory.[0m                                                                          [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [38;2;177;185;249m1. 5 minutes ago  ~/src/api                   /echo rename the health route to /livez[39m                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 2. 3 hours ago    ~/src/app                   /echo why does resume lose the plan?                                 [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 3. yesterday      ~/src/api                   /echo add a --json flag to the agents command                        [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 4. 2 days ago     ~/src/app                   /echo fix the failing date test in the parser                        [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 5. 3 days ago     …/with-a-long-name/service  /echo bump the retry budget for the flaky upload                     [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2mEnter to resume · Ctrl+a for this directory · Esc to close[0m                                                           [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m

@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake    3 fake ●                                                                         ~/src/app
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Sessions in ~/src/app                                                                                                │
+│                                                                                                                      │
+│   1. fake  here             text                                                                                     │
+│   2. fake  idle             tools                                                                                    │
+│ ❯ 3. fake  ● permission 2s  permission                                                                               │
+│                                                                                                                      │
+│ Enter to go · 1–3 to pick · Esc to close                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 3 fake needs your permission · ctrl+x a to go · ? for shortcuts     Fake Large with a 1M context window · 99% left

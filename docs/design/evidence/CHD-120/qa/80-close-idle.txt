@@ -1,0 +1,24 @@
+ chor…· /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/chord-qa.ofox6ids/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Closed 2 fake · /resume opens it again   Fake Large with a 1M context window

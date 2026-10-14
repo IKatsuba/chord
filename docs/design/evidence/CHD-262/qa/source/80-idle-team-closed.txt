@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from chord.
+
+ ← chord
+   bugfix 2's turn failed: The fake agent failed on purpose. It is still
+   open; send_message reaches it.
+
+ ⏺ Received the message from chord.
+
+ ← chord
+   The person closed team bugfix: its lead (fake · fake-large, id 54141916)
+   and its members tester and coder. It takes no more messages; run_team
+   starts it again.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 3% used
+  ❯ main       fake · Fake Large with a 1M context window
+    bugfix 2   team · fake · Fake Large with a 1M context window
+    ├─ tester  fake · Fake Small
+    └─ coder   fake · Fake Large with a 1M context window

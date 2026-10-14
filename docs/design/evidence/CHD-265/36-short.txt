@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Small
+ ▄▀▀▀   /tmp/chord-qa.GRO6
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came
+   in chunks.
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────╮
+│ ›                                │
+╰──────────────────────────────────╯
+  ⏸ plan mode on   Fake… · 1% used

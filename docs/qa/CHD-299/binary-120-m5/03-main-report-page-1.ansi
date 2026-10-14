@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.0[0m
+ ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m/tmp/chd299/binary-120-m5/work[0m
+ █▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m /team show bugfix
+   [2m⎿[0m  bugfix · .chord/teams/bugfix.md
+   [2m [0m  [2mFixes a bug end to end — a failing test first, then the fix.[0m
+
+   [2m [0m  lead    fake · fake-large  default      Splits the job, says who edits which files, reports to main
+   [2m [0m  tester  fake · fake-small  acceptEdits  Writes the failing test, then proves the fix
+   [2m [0m  coder   fake · fake-large  plan         Writes the fix, in the files the lead names
+   [2m [0m
+   [2m [0m  lead's instructions
+   [2m [0m  Read the job and the code it points at until you can name the cause and
+   [2m [0m  the files involved. Then open tester first, and coder only once tester's
+   [2m [0m  test fails for the bug's own reason. You edit nothing yourself.
+   [2m [0m
+   [2m [0m  tester's instructions
+   [2m [0m  Write the smallest test that fails because of the bug, not for any
+   [2m [0m  other reason, and run it to show that.
+   [2m [0m
+   [2m [0m  coder's instructions
+   [2m [0m  Make the failing test pass with the smallest change that fixes the
+   [2m [0m  cause. Do not touch tests.
+   [2m [0m
+   [2m [0m  [1;4mHow bugfix works[0m
+   [2m [0m
+   [2m [0m  [2m1.[0m The lead reads the job and names who may edit which files.
+   [2m [0m  [2m2.[0m tester writes a test that fails for the bug's own reason, in tests/.
+ [2m── ↓ 21 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m● tester needs your permission · ctrl+x a to go[0m [2m·[0m [2m? for shortcuts[0m      [2mFake Large with a 1M context window · 1% used[0m
+    [1mmain     [0;2m  fake · Fake Large with a 1M context window       [0m
+    bugfix   [2m  team · fake · Fake Large with a 1M context window[0m  ✓ replied 4s ago
+    [2m├─ [0mtester[2m  fake · Fake Small                                [0m  ● permission 2s
+    [2m└─ [0mcoder [2m  fake · Fake Large with a 1M context window       [0m  ✓ replied 3s ago

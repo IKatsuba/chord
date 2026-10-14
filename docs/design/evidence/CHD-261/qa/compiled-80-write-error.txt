@@ -1,0 +1,24 @@
+
+ ⏺ Team(main)
+   ⎿  the name main is taken
+
+ › proposeagain
+
+ ⏺ The reviewer on codex too, read-only, and tester in bypassPermissions, so it
+   runs the suite without asking.
+
+ ⏺ Tool(mcp__chord__propose_team)
+   ⎿  Error: Not a directory (os error 20): readdir '/tmp/chd261-qa/failure-pr…
+
+ › proposeagain
+
+ ⏺ The reviewer on codex too, read-only, and tester in bypassPermissions, so it
+   runs the suite without asking.
+
+ ⏺ Team(bugfix)
+   ⎿  .chord/teams/bugfix.md was not saved: Is a directory (os error 21): rena…
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

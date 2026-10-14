@@ -1,0 +1,27 @@
+ ⏺ Team(bugfix) · change
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a
+      review of the diff.
+
+         lead      claude ·…  default                            Splits the
+                                                                 job, says
+                                                                 who edits
+                                                                 which
+                                                                 files,
+                                                                 reports to
+                                                                 main
+      ~  tester    claude ·…  acceptEdits was bypassPermissions  Writes the
+                                                                 failing
+                                                                 test, then
+                                                                 proves the
+                                                                 fix
+         coder     codex · …  auto                               Writes the
+                                                                 fix, in
+                                                                 the files
+                                                                 the lead
+                                                                 names
+      ~  reviewer  claude ·…  plan was read-only                 Reads the
+                                                                 diff and
+                                                                 edits
+                                                                 nothing
+
+      lead's instructions

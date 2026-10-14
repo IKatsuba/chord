@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+
+
+
+
+
+
+
+
+ › Plan it, then send an agent to read the session layer.
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Read(src/acp/connection.ts)
+      Read(src/session/conversation.ts)
+      +3 more tool uses (ctrl+o to expand)
+
+ ✻ Working… (34s · esc to interrupt)
+  ⎿  ☒ Plan the change
+     ◐ Read the session layer
+     ☐ Write the design
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                       Opus · 91% context left

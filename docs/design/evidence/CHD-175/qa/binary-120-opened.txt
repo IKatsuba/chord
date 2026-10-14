@@ -1,0 +1,40 @@
+ chord   1 codex    2 gemini    3 claude    4 codex    5 gemini    6 claude    7 codex                        ~/src/app
+ █▄     chord v0.0.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+        resumed · 6 minutes ago · saved prompt 5
+
+ › saved prompt 5
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

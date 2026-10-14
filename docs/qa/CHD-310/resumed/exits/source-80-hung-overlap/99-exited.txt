@@ -1,0 +1,24 @@
+/tmp/chd310-final/forced/source-80-hung-overlap/run.sh: line 9: 57392 Terminated
+: 15          bun /tmp/chd310-final/forced/repo/src/main.tsx fake --agent-comman
+d 'env -u BUN_OPTIONS bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_agen
+t/main.ts' -C /tmp/chd310-final/forced/source-80-hung-overlap/work 2> /tmp/chd31
+0-final/forced/source-80-hung-overlap/stderr
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

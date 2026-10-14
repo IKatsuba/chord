@@ -1,0 +1,40 @@
+
+ [2m›[0m /theme
+   [2m⎿[0m  [2mTheme set to Dark[0m
+
+ [2m›[0m shell
+
+ [2m⏺[0m [1mRun[0m(deno task test)
+   [2m⎿[0m  [2m3/3[0m
+   [2m [0m  [2mok | 2 passed[0m
+   [2m [0m  [2mFAILED | 1 failed[0m
+      [2m… +2 lines (ctrl+o to expand)[0m
+   [2m [0m  Exit code 1
+
+ ⏺ The tests failed.
+
+ [2m›[0m subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ [2m⏺[0m 2 agents ended · 1 failed[2m (ctrl+o to expand)[0m
+   [2m├─[0m [1mAgent[0m(Find the session layer)[2m · 5 tool uses · 3s[0m
+   [2m│[0m  [2m⎿[0m  [2mDone[0m
+   [2m└─[0m [1mAgent[0m(Find where tool calls are drawn on screen and how they fold)[2m · 2 tool uses · 1s[0m
+      [2m⎿[0m  Failed
+
+ ⏺ Now the tests, in the background.
+
+ [2m⏺[0m [1mAgent[0m(Run the whole test suite)
+   [2m⎿[0m  [2mDone (1 tool use · 4s)[0m
+
+ ⏺ It is running; I will say when it ends.
+
+ [2m›[0m compact
+
+ ✸ Compacting conversation… [2m(0s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                [2mFake Large with a 1M context window · 1% context used[0m

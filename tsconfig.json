@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext"],
+    "types": ["bun"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "@opentui/react",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "paths": {
+      "convert-layout/ru.js": ["./src/ui/shortcuts/convert-layout.d.ts"]
+    }
+  },
+  "include": ["src/", "tests/", "scripts/", "lint/"],
+  "files": [
+    "tests/ui/agents/Agents_test.tsx",
+    "tests/ui/dialogs/Form_test.tsx",
+    "tests/ui/dialogs/Permission_test.tsx",
+    "tests/ui/plan/Plan_test.tsx",
+    "tests/ui/prompt/Prompt_test.tsx",
+    "tests/ui/splash/Splash_test.tsx",
+    "tests/ui/status/Status_test.tsx",
+    "tests/ui/teams/Teams_test.tsx"
+  ]
+}

@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ Pick one of claude's earlier sessions, or a saved window, to open.           │
+│                                                                              │
+│ ❯   1.  6 minutes ago   ▣ 7 sessions · codex ×3, gemini ×2, claude ×2 · sav… │
+│     2.  7 minutes ago   ▣ 7 sessions · codex ×3, gemini ×2, claude ×2 · sav… │
+│     3.  8 minutes ago   ▣ 7 sessions · codex ×3, gemini ×2, claude ×2 · sav… │
+│     4.  10 minutes ago  ▣ 3 sessions · claude, codex, claude · saved prompt… │
+│     5.  10 minutes ago  ▣ 5 sessions · claude ×3, codex ×2 · saved prompt 5  │
+│   ↓ 6.  11 minutes ago  saved prompt 1                                       │
+│     … +7 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to quit                   │
+╰──────────────────────────────────────────────────────────────────────────────╯

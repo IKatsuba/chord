@@ -1,0 +1,135 @@
+=== source 120x40 ===
+Resume this window with:
+chord --resume w-c2ee27d8
+QA_EXIT:0
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== source 80x24 ===
+Resume this window with:
+chord --resume w-3c69d891
+QA_EXIT:0
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== binary 120x40 ===
+Resume this window with:
+chord --resume w-276ea34f
+QA_EXIT:0
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== binary 80x24 ===
+Resume this window with:
+chord --resume w-abd1d01f
+QA_EXIT:0
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

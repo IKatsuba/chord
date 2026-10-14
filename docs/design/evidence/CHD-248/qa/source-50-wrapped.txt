@@ -1,0 +1,24 @@
+
+ ✹ Waiting for permission… (9s)
+
+╭────────────────────────────────────────────────╮
+│ mcp__chord__monitor                            │
+│   command: tail -f dev.log | grep              │
+│   --line-buffered -E "ERROR|WARN"              │
+│   description: dev server errors               │
+│   timeout_ms: 600000                           │
+│                                                │
+│ Do you want to proceed?                        │
+│ ❯ 1. Yes                                       │
+│   2. Yes, and don't ask again for chord -      │
+│   monitor commands                             │
+│   3. No, and tell Claude what to do            │
+│   differently                                  │
+│                                                │
+│ Esc to reject                                  │
+╰────────────────────────────────────────────────╯
+
+╭────────────────────────────────────────────────╮
+│ ›                                              │
+╰────────────────────────────────────────────────╯
+  ? for shortcuts  Fake Large with a 1M context…

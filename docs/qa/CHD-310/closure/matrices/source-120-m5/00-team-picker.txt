@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd310-closure/m45/source-120-m5/work
+ █▀     ? for shortcuts · /help
+
+ › /team
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                                                                │
+│ Saved for this project in .chord/teams, and for every project in                                                     │
+│ /tmp/chd310-closure/m45/source-120-m5/config/chord/teams.                                                            │
+│                                                                                                                      │
+│ ❯ 1. bugfix  3 agents · fake  this project  Fixes a bug end to end — a failing test first, then the fix.             │
+│                                                                                                                      │
+│ Enter to hand it a job · /team show <name> · Esc to close                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

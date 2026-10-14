@@ -1,0 +1,24 @@
+ chord                                       fake · /private/tmp/chd108-qa/work
+
+
+
+
+
+
+
+
+
+ › mode
+
+ ⏺ Mode: plan.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · 99% context left

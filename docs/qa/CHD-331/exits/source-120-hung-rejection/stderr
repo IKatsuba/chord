@@ -1,0 +1,8 @@
+CHD331 first fired 1791745820489
+1 | const timer = setInterval(() => { if (!require("node:fs").existsSync("/tmp/chd331-qa/source-120-hung-rejection/fire")) return; clearInterval(timer); console.error("CHD331 first fired", Date.now()); Promise.reject(new Error("CHD331 injected rejection")); }, 25);
+                                                                                                                                                                                                                             ^
+error: CHD331 injected rejection
+      at <anonymous> (/private/tmp/chd331-qa/source-120-hung-rejection/crash.ts:1:218)
+
+Error: CHD331 injected rejection
+    at <anonymous> (/private/tmp/chd331-qa/source-120-hung-rejection/crash.ts:1:218)

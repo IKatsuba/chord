@@ -1,0 +1,24 @@
+ chord   1   2   3   4   5   6   7   8    9 fake2    /tmp/chd122-qa/source-work
+ █▄     chord v0.0.0
+ ▀██▄   fake2 · Fake Small
+ ▄██▀   /tmp/chd122-qa/source-work
+ █▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Nine sessions are open; close one with ctrl+x k first             Fake Small

@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.BGgP
+
+
+
+
+
+
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 3 tool uses
+   │  ⎿  Agent(Read the transport tests)
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Read(src/ui/App.tsx)
+
+ ✺ Working… (4s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

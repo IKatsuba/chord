@@ -1,0 +1,258 @@
+[
+  {
+    "file": "exits/binary-120-shortcuts/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 9,
+    "notifications": []
+  },
+  {
+    "file": "exits/source-80-instructions/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 7,
+    "notifications": []
+  },
+  {
+    "file": "exits/source-120-m12/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 23,
+    "notifications": []
+  },
+  {
+    "file": "exits/source-80-rebound/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 8,
+    "notifications": []
+  },
+  {
+    "file": "exits/binary-80-m12/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 23,
+    "notifications": []
+  },
+  {
+    "file": "exits/binary-120-m12/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 23,
+    "notifications": []
+  },
+  {
+    "file": "exits/source-120-rebound/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 8,
+    "notifications": []
+  },
+  {
+    "file": "exits/source-80-shortcuts/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 9,
+    "notifications": []
+  },
+  {
+    "file": "exits/binary-80-rebound/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 8,
+    "notifications": []
+  },
+  {
+    "file": "exits/source-120-shortcuts/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 9,
+    "notifications": []
+  },
+  {
+    "file": "exits/binary-120-rebound/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 8,
+    "notifications": []
+  },
+  {
+    "file": "exits/source-120-instructions/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 7,
+    "notifications": []
+  },
+  {
+    "file": "exits/binary-120-instructions/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 7,
+    "notifications": []
+  },
+  {
+    "file": "exits/source-80-m12/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 23,
+    "notifications": []
+  },
+  {
+    "file": "exits/binary-80-shortcuts/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 9,
+    "notifications": []
+  },
+  {
+    "file": "exits/binary-80-instructions/terminal.ansi",
+    "entered": true,
+    "modes": {
+      "25": true,
+      "1000": false,
+      "1002": false,
+      "1003": false,
+      "1006": false,
+      "1049": false,
+      "2004": false
+    },
+    "warnings": 0,
+    "bells": 7,
+    "notifications": []
+  }
+]

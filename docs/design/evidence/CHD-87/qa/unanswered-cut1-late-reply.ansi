@@ -1,0 +1,24 @@
+ [1mchord[0m                       [2mfake · /tmp/chd87-qa/behavior/unanswered-cut1/work[0m
+   [2m⎿[0m  [38;2;196;22;42mInterrupted by user[39m
+
+ [2m›[0m permission
+
+ [38;2;196;22;42m⏺[39m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [38;2;196;22;42mFailed[39m
+   [2m⎿[0m  [38;2;196;22;42mRejected Write notes.txt[39m
+
+ ⏺ Permission: deny.
+
+ [2m›[0m error
+
+ ⏺ About to fail.
+
+ [38;2;196;22;42m⏺[39m [38;2;196;22;42mThe fake agent failed on purpose.[39m
+
+ [2m›[0m /theme
+   [2m⎿[0m  [2mTheme set to Light[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › hi[7m [0m                                                                        [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m                        [2mFake Large with a 1M context window · 99% context left[0m

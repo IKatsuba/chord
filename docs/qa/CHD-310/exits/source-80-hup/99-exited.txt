@@ -1,0 +1,24 @@
+/tmp/chd310/exits/source-80-hup/run.sh: line 10: 55393 Hangup: 1               b
+un /tmp/chd310-repo/src/main.tsx fake --agent-command "bun /tmp/chd310-repo/test
+s/fixtures/fake_agent/main.ts" -C /tmp/chd310/exits/source-80-hup/work
+
+QA_DONE code=129
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

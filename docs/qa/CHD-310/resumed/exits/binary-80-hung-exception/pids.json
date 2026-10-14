@@ -1,0 +1,27 @@
+{
+  "app": 60203,
+  "fakes": [
+    60211
+  ],
+  "owned": [
+    60203,
+    60211
+  ],
+  "groups": [
+    60211
+  ],
+  "rows": [
+    [
+      "60211",
+      "60203",
+      "60211",
+      "bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "60203",
+      "60196",
+      "60196",
+      "/tmp/chd310-final/forced/repo/dist/bun-darwin-arm64/chord fake --agent-command env -u BUN_OPTIONS bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd310-final/forced/binary-80-hung-exception/work"
+    ]
+  ]
+}

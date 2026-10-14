@@ -1,0 +1,40 @@
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+
+ › mode
+                              me in chunks.
+ ⏺ Mode: acceptEdits.
+
+ › /greet QA
+                              3 done.
+ ⏺ Hello from the fake agent.
+
+ › @example.ts
+                     nge
+ ⏺ Received a link: example.ts, file:///tmp/chd310-final/exits/binary-120-m12/work/example.ts
+
+   Hello, world. This reply came in chunks.                                                  ──────────────────────────
+
+ ! printf qa-shell
+   ⎿  qa-shell                         ow                       created)rge wit                                xt used
+
+ › text
+                                                                        eak det                                    [Box
+ ⏺ Received printf qa-shell: qa-shell
+                                                                        o [BoxR                     ners is 10. Use emi
+   Hello, world. This reply came in chunks.
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P›                                detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 12% context used

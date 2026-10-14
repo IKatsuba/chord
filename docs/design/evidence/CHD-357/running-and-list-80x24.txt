@@ -1,0 +1,24 @@
+
+ ← @bugfix · fake
+   ⎿  On it. tester is writing a failing test
+      in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails
+      for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 6s on "issue 214: strings a…"
+
+      lead    fake · fake-large  default      ✓ replied 6s ago  ← @tester · …
+      tester  fake · fake-small  acceptEdits  ● permission 4s   Bash(deno ta…
+      coder   fake · fake-large  plan         ✓ replied 5s ago  ← @tester · …
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake
+    bugfix     team · fake  ✓ replied 9s ago
+    ├─ tester  fake         ● permission 7s
+    └─ coder   fake         ✓ replied 8s ago

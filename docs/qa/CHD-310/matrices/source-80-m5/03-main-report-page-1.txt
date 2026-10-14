@@ -1,0 +1,24 @@
+
+      How bugfix works
+
+      1. The lead reads the job and names who may edit which files.
+      2. tester writes a test that fails for the bug's own reason, in tests/.
+      3. coder fixes the code so that test passes, and never edits tests/.
+
+      Who edits what
+
+      - One writer per file at a time; a member asks a file's owner directly.
+      - Another run of a team may be working here: the leads agree on files.
+
+      Reporting
+
+ ── ↓ 14 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake
+    bugfix     team · fake  ✓ replied 3s ago
+    ├─ tester  fake         ● permission 1s
+    └─ coder   fake         ✓ replied 2s ago

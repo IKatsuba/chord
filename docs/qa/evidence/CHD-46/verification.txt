@@ -1,0 +1,24 @@
+continue-seed: terminal modes restored; only macOS PENDIN differs.
+continue-seed: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+continue-first: terminal modes restored; only macOS PENDIN differs.
+continue-first: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+continue-second: terminal modes restored; only macOS PENDIN differs.
+continue-second: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+--continue: original and migrated record ACP ids match quit id 56fb6dca-2e82-48ee-bba2-fb6cde474c62; both flags retained full history on second resume; source and compiled binary answered.
+continue-refused: terminal modes restored; only macOS PENDIN differs.
+continue-refused: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+resume-seed: terminal modes restored; only macOS PENDIN differs.
+resume-seed: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+resume-first: terminal modes restored; only macOS PENDIN differs.
+resume-first: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+resume-second: terminal modes restored; only macOS PENDIN differs.
+resume-second: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+--resume: original and migrated record ACP ids match quit id 7e7ceba6-a8d7-4af3-9fa2-d6d188ac24f5; both flags retained full history on second resume; source and compiled binary answered.
+resume-refused: terminal modes restored; only macOS PENDIN differs.
+resume-refused: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+external: terminal modes restored; only macOS PENDIN differs.
+external: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+unknown: terminal modes restored; only macOS PENDIN differs.
+unknown: exit 0; alternate_on=0 cursor_flag=1; fake-agent ps count=0; stty exact=false
+Empty --continue: clear CLI error, exit 2, shell returned; the initial harness expected exit 1 and was corrected after reading Cliffy output.
+Final process check: no QA-owned fake agent or tmux server remains. Temporary work/state directories removed. No live agent used.

@@ -1,0 +1,40 @@
+/tmp/chd331-qa/binary-120-tabs-overlap/run.sh: line 9: 10033 Terminated: 15          /tmp/chd331-qa/repo/dist/bun-darwin
+-arm64/chord fake --agent-command 'env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts' -C /tmp
+/chd331-qa/binary-120-tabs-overlap/work 2> /tmp/chd331-qa/binary-120-tabs-overlap/stderr
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIt fails for that reason: "a" at the end of a line comes back as "a, wit…[0m[38;2;255;255;255m
+
+ [39m→[38;2;255;255;255m [1m[39m@coder[0;2m · queued[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThe failing test is in tests/parse/tokenize_test.ts and stays mine. Fix …[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mBash[0m(deno task test tests/parse)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39m1 failed, 213 passed[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mAllowed `deno task test tests/parse` · Allow[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mThe suite fails only where the new test does.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@coder[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mReading src/parse/tokenize.ts now. Tell me when your test fails.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from coder · fake.[38;2;255;255;255m
+
+[2m[39m╭─[0;1m tester[0;2m · bugfix ────────────────────────────────────────────────────────────╮
+[0m[38;5;244m│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m⏵⏵ accept edits on[0m [2m(shift+tab to cycle)[0m[38;2;255;255;255m         [2m[39mFake Small · 2% context used[0m[38;2;255;255;255m
+  [2m[39m [0m main     [2m  fake       [0m[38;2;255;255;255m
+  [39m  bugfix   [2m  team · fake[0m[38;2;255;255;255m
+  [39m  [2m├─ [0;1mtester[0;2m  fake       [0m[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 9s ago[38;2;255;255;255m

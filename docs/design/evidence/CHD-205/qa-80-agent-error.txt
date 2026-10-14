@@ -1,0 +1,24 @@
+ chord                                              fake · /tmp/chd-205-qa/work
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow
+
+ ⏺ Permission: allow.
+
+ › [Image #6]
+
+ ⏺ Received an image: image/png, 70 bytes
+
+   Hello, world. This reply came in chunks.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT -- ? for shortcuts                   Fake Small · 93% context left

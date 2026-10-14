@@ -1,0 +1,40 @@
+ tuner · fake · Fake Small · opened by main 33s ago
+
+ ⏺ Could not start on max effort, asked by open_agent: the agent offers low, medium, high
+
+ ← @main
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ tuner ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                         Fake Small · 1% context used
+    main     fake · Fake Large with a 1M context window · medium
+    tuner    fake · Fake Small · medium
+    tuner 2  fake · Fake Small · high                             ✓ replied 34s ago

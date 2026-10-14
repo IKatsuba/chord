@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd-265-qa/work
+ ▀▀     ? for shortcuts · /help
+
+ › /vim
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT -- ⏵⏵ accept edits on  Fake Large with a 1M context win… · 1% used

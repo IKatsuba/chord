@@ -1,0 +1,8 @@
+CHD331 first fired 1791745948097
+1 | const timer = setInterval(() => { if (!require("node:fs").existsSync("/tmp/chd331-qa/binary-120-hung-mixed/fire")) return; clearInterval(timer); console.error("CHD331 first fired", Date.now()); throw new Error("CHD331 injected exception"); }, 25);
+                                                                                                                                                                                                                ^
+error: CHD331 injected exception
+      at <anonymous> (/private/tmp/chd331-qa/binary-120-hung-mixed/crash.ts:1:205)
+
+Error
+    at <anonymous> (/private/tmp/chd331-qa/binary-120-hung-mixed/crash.ts:1:205)

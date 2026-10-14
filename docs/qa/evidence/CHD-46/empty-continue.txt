@@ -1,0 +1,4 @@
+  error: No earlier fake session in /tmp/chord-qa46-5ec53738c11e9e80/external-work to continue.
+
+QA_EXIT_2
+sh-3.2$

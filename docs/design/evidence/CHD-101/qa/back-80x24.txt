@@ -1,0 +1,24 @@
+ chord                           fake · /private/tmp/chd101-qa.Hd9bih/u/src/app
+      chord fake --agent-command fake-agent --resume
+      4f9a6735-6d25-4f1b-ac57-222548b8ad74
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   608cdb21-5a47-40df-bc27-db7cd9f254fe
+      Directory: /private/tmp/chd101-qa.Hd9bih/u/src/app
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ Open one of fake's earlier sessions in this directory here.                  │
+│                                                                              │
+│ ❯ 1. just now  /echo app transcript                                          │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

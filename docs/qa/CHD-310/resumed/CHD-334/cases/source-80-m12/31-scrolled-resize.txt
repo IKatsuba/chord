@@ -1,0 +1,40 @@
+      Mode:      Accept edits
+      Session:   c16ea221-dd46-4db0-b186-f2ba42cb6d84
+      Directory: /tmp/chd334-qa/exits/source-80-m12/work
+
+ › slow
+
+ ⏺ Working..............................................................................
+   ⎿  Interrupted by user
+
+ › long
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+   2. Line 2 of 200, streamed one at a time.
+   3. Line 3 of 200, streamed one at a time.
+   4. Line 4 of 200, streamed one at a time.
+   5. Line 5 of 200, streamed one at a time.
+   6. Line 6 of 200, streamed one at a time.
+   7. Line 7 of 200, streamed one at a time.
+   8. Line 8 of 200, streamed one at a time.
+   9. Line 9 of 200, streamed one at a time.
+   10. Line 10 of 200, streamed one at a time.
+   11. Line 11 of 200, streamed one at a time.
+   12. Line 12 of 200, streamed one at a time.
+   13. Line 13 of 200, streamed one at a time.
+   14. Line 14 of 200, streamed one at a time.
+   15. Line 15 of 200, streamed one at a time.
+   16. Line 16 of 200, streamed one at a time.
+   17. Line 17 of 200, streamed one at a time.
+   18. Line 18 of 200, streamed one at a time.
+   19. Line 19 of 200, streamed one at a time.
+   20. Line 20 of 200, streamed one at a time.
+   21. Line 21 of 200, streamed one at a time.
+ ── ↓ new output · 3 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────
+
+ ✶ Working… (7s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 12% context used

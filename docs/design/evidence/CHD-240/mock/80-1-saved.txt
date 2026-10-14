@@ -1,0 +1,24 @@
+ ⏺ Team(bugfix) · proposal
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a
+      review of the diff.
+
+      lead      claude · opus          default      Splits the job, says who…
+      tester    claude · sonnet        acceptEdits  Writes the failing test,…
+      coder     codex · gpt-5.3-codex  auto         Writes the fix, in the f…
+      reviewer  claude · opus          plan         Reads the diff and edits…
+      … +18 lines (ctrl+o to expand)
+      Saved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix
+   and the bug, or just tell me to hand one to bugfix.
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                      Opus · 91% context left

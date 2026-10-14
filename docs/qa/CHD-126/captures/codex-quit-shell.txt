@@ -1,0 +1,10 @@
+❯ cd [redacted home]/projects/ikatsuba/chord && XDG_CONFIG_HOME=/tmp/chord-qa
+126.TEnN/config XDG_STATE_HOME=/tmp/chor
+d-qa126.TEnN/state deno task chord codex -C /tmp/chord-qa126.TEnN/codex
+Task chord deno run --allow-all src/main.tsx 'codex' '-C' '/tmp/chord-qa126.TEnN
+/codex'
+Resume this session with:
+chord codex --resume 01a11230-056c-7b11-8ce9-4db6cb825452
+
+chord on  main [$?⇡] is 󰏗 v0.0.0 via  v2.9.7 took 3m46s
+❯

@@ -1,0 +1,40 @@
+[38;2;255;255;255m
+ [39m←[38;2;255;255;255m [1m[39mFix the tokenizer[0;2m · fake · report[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThe tokenizer dropped a closing quote when a string ended the line. Fixed in src/parse/tokenize.ts, with two[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mcases added to tests/parse/tokenize_test.ts. deno task test passes.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from Fix the tokenizer · fake · report.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39magents[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mI will open parser on the tests and docs on the README.[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mOpen[0m(parser)[2m · fake · fake-small[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39magentchild[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mOpen[0m(docs)[2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mpermission[0m[38;2;255;255;255m
+
+ [39m→[38;2;255;255;255m [1m[39m@parser[0;2m · queued[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mI changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.[0m[38;2;255;255;255m
+
+ [39m→[38;2;255;255;255m [1m[39m@parser[0;2m · queued[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThe printer is fixed too; run the whole parser suite once more.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mWaiting on parser.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@parser[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mRan deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from parser · fake.[38;2;255;255;255m
+
+ [39m✸[38;2;255;255;255m [39mWorking…[38;2;255;255;255m [2m[39m(0s · esc to interrupt)[0m[38;2;255;255;255m
+ [2m[39m←[0m[38;2;255;255;255m [2m[39m@parser · fake: All 214 parser tests pass now.[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m● docs needs your permission · ctrl+x a to go[0m [2m·[0m [2m? for shortcuts[0m[38;2;255;255;255m        [2m[39mFake Large with a 1M context window · 2% used[0m[38;2;255;255;255m
+  [39m  [1mmain  [0;2m  fake · Fake Large with a 1M context window  ✻ working 0s[0m[38;2;255;255;255m
+  [39m  parser[2m  fake · Fake Small                         [0m  ✓ replied 3s ago[38;2;255;255;255m
+  [39m  docs  [2m  fake · Fake Large with a 1M context window[0m  ● permission 3s[38;2;255;255;255m

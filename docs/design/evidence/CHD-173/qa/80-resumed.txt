@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake    3 fake2   …/tmp/chd173-qa-425601bd6783698a/80/proj
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /private/tmp/chd173-qa-425601bd6783698a/80/proj
+ █▀     ? for shortcuts · /help
+        resumed · just now · tools
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

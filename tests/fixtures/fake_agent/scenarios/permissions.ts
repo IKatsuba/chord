@@ -1,0 +1,127 @@
+/**
+ * Permissions: a write asked for, with three options or with two of one kind,
+ * and an MCP call asked for by its name and arguments alone.
+ */
+import * as acp from '@agentclientprotocol/sdk';
+import { type Play, type Turn } from '../turn.ts';
+
+/**
+ * Asks for permission to write a file with `options`, and says which option
+ * came back, by its id.
+ */
+async function askPermission(
+  turn: Turn,
+  options: acp.PermissionOption[],
+): Promise<acp.StopReason> {
+  const id = turn.callId('write');
+  const toolCall: acp.ToolCall = {
+    toolCallId: id,
+    title: 'Write notes.txt',
+    kind: 'edit',
+    status: 'pending',
+    locations: [{ path: 'notes.txt' }],
+  };
+
+  await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
+
+  // The request carries the diff and the arguments, as Claude Code's adapter
+  // asks for a write; with content of its own, its arguments stay unshown.
+  const answer = await turn.client.request('session/request_permission', {
+    sessionId: turn.sessionId,
+    toolCall: {
+      ...toolCall,
+      content: [{ type: 'diff', path: 'notes.txt', newText: 'notes\n' }],
+      rawInput: { file_path: 'notes.txt', content: 'notes\n' },
+    },
+    options,
+  });
+
+  if (answer.outcome.outcome === 'cancelled') {
+    return 'cancelled';
+  }
+
+  const allowed = answer.outcome.optionId !== 'deny';
+
+  await turn.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: id,
+    status: allowed ? 'completed' : 'failed',
+  });
+  await turn.say(`Permission: ${answer.outcome.optionId}.`);
+
+  return 'end_turn';
+}
+
+export const PERMISSIONS = {
+  async permission(turn) {
+    return await askPermission(turn, [
+      { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'always', name: 'Always allow', kind: 'allow_always' },
+      { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+    ]);
+  },
+
+  // Two options of one kind, as Codex's adapter offers two ways to allow
+  // once; only the option's id says which the person picked.
+  async twins(turn) {
+    return await askPermission(turn, [
+      { optionId: 'allow', name: 'Allow once', kind: 'allow_once' },
+      {
+        optionId: 'allow-here',
+        name: 'Allow once in this folder',
+        kind: 'allow_once',
+      },
+      { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+    ]);
+  },
+
+  // As claude-agent-acp asks for an MCP tool: the title is the tool's name,
+  // the arguments are only in rawInput, and there is no content.
+  async mcpask(turn) {
+    const id = turn.callId('monitor');
+    const toolCall: acp.ToolCall = {
+      toolCallId: id,
+      title: 'mcp__chord__monitor',
+      kind: 'other',
+      status: 'pending',
+      rawInput: {
+        command: 'tail -f dev.log | grep --line-buffered -E "ERROR|WARN"',
+        description: 'dev server errors',
+        timeout_ms: 600000,
+      },
+    };
+
+    await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
+
+    const answer = await turn.client.request('session/request_permission', {
+      sessionId: turn.sessionId,
+      toolCall,
+      options: [
+        { optionId: 'allow', name: 'Yes', kind: 'allow_once' },
+        {
+          optionId: 'always',
+          name: "Yes, and don't ask again for chord - monitor commands",
+          kind: 'allow_always',
+        },
+        {
+          optionId: 'deny',
+          name: 'No, and tell Claude what to do differently',
+          kind: 'reject_once',
+        },
+      ],
+    });
+
+    if (answer.outcome.outcome === 'cancelled') {
+      return 'cancelled';
+    }
+
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: id,
+      status: answer.outcome.optionId === 'deny' ? 'failed' : 'completed',
+    });
+    await turn.say(`Permission: ${answer.outcome.optionId}.`);
+
+    return 'end_turn';
+  },
+} satisfies Record<string, Play>;

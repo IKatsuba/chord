@@ -1,0 +1,24 @@
+ █▀     ? for shortcuts · /help
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl + s to send
+  \ + ctrl + s for a newline
+  shift + enter alt + enter for a newline
+  ctrl + g to edit in $EDITOR
+  ctrl + v to paste an image
+  ↑ ↓ for prompts, agents and monitors
+  x to close an agent or stop a monitor
+  ctrl + r to search prompts
+  tab enter to take a match
+  esc to cancel a search
+  pgup pgdn or wheel to scroll
+╭─shift + ↑ ↓ to scroll a line─────────────────────────────────────────────────╮
+│ home end for the top and the bottomWarning: Possible EventEmitter memory leak
+de/ for commandsize listeners added to [BoxRenderable2]. MaxListeners is 10. Use
+ e↑ ↓ to pick a commands() to increase limitake Large with a 1M context window
+  tab to complete a command
+ P@ for filesntEmitter memory leak detected. 11 resize listeners added to [BoxR
+  ↑ ↓ to pick a file
+  tab enter  o add a file

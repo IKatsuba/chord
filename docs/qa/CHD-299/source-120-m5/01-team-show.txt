@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd299/source-120-m5/work
+ █▀     ? for shortcuts · /help
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md
+      Fixes a bug end to end — a failing test first, then the fix.
+
+      lead    fake · fake-large  default      Splits the job, says who edits which files, reports to main
+      tester  fake · fake-small  acceptEdits  Writes the failing test, then proves the fix
+      coder   fake · fake-large  plan         Writes the fix, in the files the lead names
+
+      How bugfix works
+      1. The lead reads the job and names who may edit which files.
+      2. tester writes a test that fails for the bug's own reason, in tests/.
+      … +24 lines (ctrl+o to expand)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

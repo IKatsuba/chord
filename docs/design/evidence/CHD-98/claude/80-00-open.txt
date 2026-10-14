@@ -1,0 +1,16 @@
+────────────────────────────────────────────────────────────────────────────────
+  MCP server “ref” requests your input
+
+  Set up the deploy target
+
+  ❯ * Project name: Type something…
+        Lowercase, dashes allowed
+
+      Contact email: not set
+
+    ✔ Replicas: 2
+
+    ↓ 4 more below
+    Accept    Decline
+
+  Esc to cancel · ↑/↓ to navigate · Backspace to unset

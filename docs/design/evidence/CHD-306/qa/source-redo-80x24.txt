@@ -1,0 +1,24 @@
+   row 12
+   row 13
+   row 14
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › say aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa beyond
+    the hills and far away
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › say a
+   auth
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › say hello world, word
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › abc                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                         Fake Large with a 1M context window · 1% context used

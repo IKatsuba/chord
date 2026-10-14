@@ -1,0 +1,24 @@
+Resume this session with:
+chord fake --agent-command 'bun '\''/tmp/chd309/repo/tests/fixtures/fake_agent/m
+ain.ts'\''' --resume 6ddd2e6a-f339-4170-bf9a-ee45ce5e9190
+EXIT=0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

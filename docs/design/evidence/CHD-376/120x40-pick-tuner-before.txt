@@ -1,0 +1,40 @@
+ tuner · fake · Fake Small · opened by main 1m ago
+
+ ← @main
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ tuner ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back                        Fake Small · 1% context used
+    main   fake · Fake Large with a 1M context window · medium
+  ❯ tuner  fake · Fake Small · high

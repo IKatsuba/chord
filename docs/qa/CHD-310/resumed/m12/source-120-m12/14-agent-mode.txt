@@ -1,0 +1,40 @@
+   2. Commit on main once every check has passed and the tree is clean, so whoever picks the work up next starts from
+     a build that runs.       ───────────────────────────┘
+
+ › Then build the binary with:
+
+ ⏺ ┌ sh ─────────────────────────────────────────────────┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+ ⏺
+ › permission
+ ›
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txtme in chunks.
+
+ ⏺ Permission: deny.
+
+ › first line                 3 done.
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+                     nge
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.      ────────────────────────────────────────────────────────────────────────────
+
+B⏺ Plan                 eners is 10. Use e              isteners() to increase                                   ──────╯
+(U ⎿  ☒ Read the code    s ...` to show wh                     reated)Large wit                                xt used
+"     ☒ Write the change             tecte                         ded to [BoxR                    eners is 10. Use emit
+t     ☒ Run the tests        ease limit"
+(                           eededWarning:                   ter memory leak det                                    [BoxR
+e› mode                               mitt                        increase limi
+"P                                     cte                              o [BoxR                     ners is 10. Use emit
+t⏺ Mode: acceptEdits.              imit"
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P›                           leak detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edi s on (shift+tab to cycle)                        Fake Large with a 1M  ont xt window · 2% context used

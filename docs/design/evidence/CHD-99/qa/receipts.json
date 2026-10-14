@@ -1,0 +1,35 @@
+{
+  "source120": {
+    "terminal": "alternate=0 cursor=1",
+    "stty_exactly_restored": true,
+    "exit_zero": true,
+    "shell_restored": true,
+    "alternate_exit_emitted": true,
+    "cursor_show_emitted": true,
+    "normal_mode_prompt": "beta gamma delta epsilon",
+    "fake_agent_reply": "Hello, world. This reply came in chunks."
+  },
+  "binary80": {
+    "terminal": "alternate=0 cursor=1",
+    "stty_exactly_restored": true,
+    "exit_zero": true,
+    "shell_restored": true,
+    "alternate_exit_emitted": true,
+    "cursor_show_emitted": true,
+    "normal_mode_prompt": "beta gamma delta epsilon",
+    "fake_agent_reply": "Hello, world. This reply came in chunks."
+  },
+  "restart80": {
+    "terminal": "alternate=0 cursor=1",
+    "stty_exactly_restored": true,
+    "exit_zero": true,
+    "shell_restored": true,
+    "alternate_exit_emitted": true,
+    "cursor_show_emitted": true
+  },
+  "final_cleanup": {
+    "remaining_fake_agents": 0,
+    "remaining_qa_processes": 0,
+    "owned_tmux_sessions_closed": true
+  }
+}

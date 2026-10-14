@@ -1,0 +1,40 @@
+$ PATH=/tmp/chord-qa.cibD/bin ./chord cursor
+chord: cursor runs "agent", which is not on PATH; install it from https://cursor.com/docs/cli/installation
+$ echo "exit $?"
+exit 1
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.wAp3
+
+
+
+
+
+ › /config
+   ⎿  Effort set to High
+
+ › hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /config
+   ⎿  Effort set to Low
+
+ › /context
+   ⎿  Used: 2,000 of 1,000,000 tokens (1%)
+      Free: 998,000 tokens (99%)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

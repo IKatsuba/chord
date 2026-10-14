@@ -1,0 +1,40 @@
+ chord                                                                      fake · /tmp/chd87-qa/behavior/no-color/work
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ › edit
+
+ ⏺ Edit(src/greeting.ts)
+   ⎿  Updated src/greeting.ts with 2 additions and 1 removal
+      1 + /** Greets someone by name. */
+      2   export function greet(name: string): string {
+      2 -   return "hello " + name;
+      3 +   return `hello, ${name}`;
+      4   }
+
+ ⏺ Edited.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Theme                                                                                                                │
+│ NO_COLOR is set, so chord draws no colour.                                                                           │
+│                                                                                                                      │
+│   1. Auto (light, from the terminal) ✔                                                                               │
+│   2. Dark                                                                                                            │
+│   3. Light                                                                                                           │
+│   4. Dark, colour-blind friendly                                                                                     │
+│   5. Light, colour-blind friendly                                                                                    │
+│   6. Dark, the terminal's 16 colours                                                                                 │
+│ ❯ 7. Light, the terminal's 16 colours                                                                                │
+│                                                                                                                      │
+│  1   function greet(name) {                                                                                          │
+│  2 -   return "hello " + name;                                                                                       │
+│  2 +   return `hello, ${name}`;                                                                                      │
+│                                                                                                                      │
+│ ↑↓ to preview · Enter to keep · Esc to go back to Auto                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                       Fake Large with a 1M context window · 99% context left

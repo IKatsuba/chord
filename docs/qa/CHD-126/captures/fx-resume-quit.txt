@@ -1,0 +1,21 @@
+Task chord deno run --allow-all src/main.tsx 'fx' '-C' '/tmp/chord-qa126.TEnN/fx'
+Resume this session with:
+chord fx --resume zpQNQyfD_Gj6
+Mac% XDG_CONFIG_HOME=/tmp/chord-qa126.TEnN/config XDG_STATE_HOME=/tmp/chord-qa126.TEnN/state deno task chord fx -C /tmp/
+chord-qa126.TEnN/fx --continue -m gpt-5.6-luna
+Task chord deno run --allow-all src/main.tsx 'fx' '-C' '/tmp/chord-qa126.TEnN/fx' '--continue' '-m' 'gpt-5.6-luna'
+Resume this session with:
+chord fx --resume zpQNQyfD_Gj6
+Mac% XDG_CONFIG_HOME=/tmp/chord-qa126.TEnN/config XDG_STATE_HOME=/tmp/chord-qa12
+6.TEnN/state deno task chord fx -C /tmp/chord-qa126.TEnN/fx --resume zpQNQyfD_Gj
+6
+Task chord deno run --allow-all src/main.tsx 'fx' '-C' '/tmp/chord-qa126.TEnN/fx' '--resume' 'zpQNQyfD_Gj6'
+Resume this session with:
+chord fx --resume zpQNQyfD_Gj6
+Mac% XDG_CONFIG_HOME=/tmp/chord-qa126.TEnN/config XDG_STATE_HOME=/tmp/chord-qa12
+6.TEnN/state deno task chord fx -C /tmp/chord-qa126.TEnN/fx --resume zpQNQyfD_Gj
+6
+Task chord deno run --allow-all src/main.tsx 'fx' '-C' '/tmp/chord-qa126.TEnN/fx' '--resume' 'zpQNQyfD_Gj6'
+Resume this session with:
+chord fx --resume zpQNQyfD_Gj6
+Mac%

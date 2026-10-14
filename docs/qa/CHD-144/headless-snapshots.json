@@ -1,0 +1,18 @@
+{
+  "snapshots": [
+    {
+      "content": "1. Read the code",
+      "result": "I'll look first.1. Read the code"
+    },
+    {
+      "content": "1. Inspect the code",
+      "result": "I'll look first.1. Inspect the code"
+    },
+    {
+      "content": "1. Inspect the code\n2. Write the change",
+      "result": "I'll look first.1. Inspect the code\n2. Write the change"
+    }
+  ],
+  "stdout": "I'll look first.1. Read the codePlan written. Draft dropped.",
+  "final": "I'll look first.Plan written. Draft dropped."
+}

@@ -1,0 +1,103 @@
+--- markdown-top ---
+ [1mchord[0m                        [2mfake · /tmp/chd87-qa/matrix/80x24-light-auto/work[0m
+
+ [2m›[0m markdown
+
+ ⏺ [1;4mReading the session layer[0m
+
+   The [1msession layer[0m wraps [3macpx[0m so the interface never touches a process. Start
+   with [38;2;74;90;224msrc/session/session.ts[39m, then see the [4m[38;2;11;92;173mACP spec[0m
+   [2m(https://agentclientprotocol.com)[0m for the wire format.
+
+   [1mWhat it does[0m
+
+   [2m-[0m opens one persistent session per chord session
+   [2m-[0m starts turns with [38;2;74;90;224mstartTurn[39m and cancels them
+     [2m1.[0m a cancel stops the turn at once
+     [2m2.[0m the agent is told with [38;2;74;90;224msession/cancel[39m
+ [2m── ↓ 39 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+ [38;2;185;83;47m✹[39m [38;2;185;83;47mWorking…[39m [2m(4s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;122;63;214m⏵⏵ accept edits on[39m    [2mFake Large with a 1M context window · 99% context left[0m
+
+--- markdown ---
+ [1mchord[0m                        [2mfake · /tmp/chd87-qa/matrix/80x24-light-auto/work[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [38;2;74;90;224mmain[39m once every check has passed and the tree is clean, so
+     whoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [38;2;130;80;223mfor[39m bin [38;2;130;80;223min[39m dist/*/chord; [38;2;130;80;223mdo[39m [38;2;0;114;122mecho[39m [38;2;125;82;0m"built [38;2;176;48;111m$bin[38;2;125;82;0m"[39m; [38;2;130;80;223mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [38;2;185;83;47m✸[39m [38;2;185;83;47mWorking…[39m [2m(4s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;122;63;214m⏵⏵ accept edits on[39m    [2mFake Large with a 1M context window · 99% context left[0m
+
+--- edit ---
+ [1mchord[0m                        [2mfake · /tmp/chd87-qa/matrix/80x24-light-auto/work[0m
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [38;2;130;80;223mfor[39m bin [38;2;130;80;223min[39m dist/*/chord; [38;2;130;80;223mdo[39m [38;2;0;114;122mecho[39m [38;2;125;82;0m"built [38;2;176;48;111m$bin[38;2;125;82;0m"[39m; [38;2;130;80;223mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m edit
+
+ [38;2;44;122;57m⏺[39m [1mEdit[0m(src/greeting.ts)
+   [2m⎿[0m  [2mUpdated src/greeting.ts with 2 additions and 1 removal[0m
+      [2m[48;2;220;245;224m1[0m[48;2;220;245;224m [38;2;23;112;47m+[38;2;31;35;40m [38;2;98;107;117m/** Greets someone by name. */[39m                                       [49m
+      [2m2[0m   [38;2;130;80;223mexport[39m [38;2;130;80;223mfunction[39m [38;2;11;92;173mgreet[39m(name: [38;2;0;114;122mstring[39m): [38;2;0;114;122mstring[39m {
+      [2m[48;2;253;226;226m2[0m[48;2;253;226;226m [38;2;196;22;42m-[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m"hello "[38;2;31;35;40m + name;[39m                                            [49m
+      [2m[48;2;220;245;224m3[0m[48;2;220;245;224m [38;2;23;112;47m+[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m`hello, ${name}`[38;2;31;35;40m;[39m                                           [49m
+      [2m4[0m   }
+
+ ⏺ Edited.
+
+ [38;2;185;83;47m✷[39m [38;2;185;83;47mWorking…[39m [2m(0s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;122;63;214m⏵⏵ accept edits on[39m    [2mFake Large with a 1M context window · 99% context left[0m
+
+--- picker ---
+ [1mchord[0m                        [2mfake · /tmp/chd87-qa/matrix/80x24-light-auto/work[0m
+[38;2;74;90;224m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;74;90;224mTheme[0m                                                                        [38;2;74;90;224m│
+│[39m [2mChoose the colours that read best on this terminal.[0m                          [38;2;74;90;224m│
+│[39m                                                                              [38;2;74;90;224m│
+│[39m [38;2;74;90;224m❯[39m [38;2;74;90;224m1. Auto (light, from the terminal) ✔[39m                                       [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 2. Dark                                                                    [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 3. Light                                                                   [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 4. Dark, colour-blind friendly                                             [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 5. Light, colour-blind friendly                                            [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 6. Dark, the terminal's 16 colours                                         [38;2;74;90;224m│
+│[39m [38;2;74;90;224m [39m 7. Light, the terminal's 16 colours                                        [38;2;74;90;224m│
+│[39m                                                                              [38;2;74;90;224m│
+│[39m  [2m1[0m   [38;2;130;80;223mfunction[39m [38;2;11;92;173mgreet[39m(name) {                                                  [38;2;74;90;224m│
+│[39m  [2m[48;2;253;226;226m2[0m[48;2;253;226;226m [38;2;196;22;42m-[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m"hello "[38;2;31;35;40m + name;[39m                                              [49m [38;2;74;90;224m│
+│[39m  [2m[48;2;220;245;224m2[0m[48;2;220;245;224m [38;2;23;112;47m+[38;2;31;35;40m   [38;2;122;69;208mreturn[38;2;31;35;40m [38;2;110;73;0m`hello, ${name}`[38;2;31;35;40m;[39m                                             [49m [38;2;74;90;224m│
+│[39m                                                                              [38;2;74;90;224m│
+│[39m [2m↑↓ to preview · Enter to keep · Esc to go back to Auto[0m                       [38;2;74;90;224m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;122;63;214m⏵⏵ accept edits on[39m    [2mFake Large with a 1M context window · 99% context left[0m

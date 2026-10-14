@@ -1,0 +1,40 @@
+ chord                                                                                               claude · ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › Where does chord route session/update, and where are tool calls drawn? Look in parallel.
+
+ ⏺ I'll send two agents, one for each side.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(explorer) · 3 tool uses
+   │  ⎿  Bash(rg -n sessionUpdate src)
+   └─ Agent(worker) · 1 tool use
+      ⎿  Read(src/ui/App.tsx)
+
+ ⏺ Wait(explorer, worker)
+   ⎿  Running…
+
+ ✻ Working… (34s · esc to interrupt)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                               Opus · 91% context left

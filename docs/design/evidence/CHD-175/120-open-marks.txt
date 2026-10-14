@@ -1,0 +1,40 @@
+ chord   1 claude    2 codex    3 claude                                                                      ~/src/app
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   claude · Fake Large with a 1M context window
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+        resumed · 11 minutes ago · why does resume lose the plan?
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ claude's earlier sessions and saved windows in this directory.                                                       │
+│                                                                                                                      │
+│ ❯ 1. 10 minutes ago             ▣ 3 sessions, all open · claude, codex, claude · fix the failing date test in the p… │
+│   2. 10 minutes ago  open in 1  fix the failing date test in the parser                                              │
+│   3. 40 minutes ago             tidy the README's install section                                                    │
+│   4. yesterday                  rename the health route to /livez                                                    │
+│   5. 2 days ago                 ▣ 2 sessions · claude, gemini · add a --json flag to the agents command              │
+│   6. 2 days ago                 add a --json flag to the agents command                                              │
+│   7. 4 days ago                 bump the retry budget for the flaky upload                                           │
+│   8. last week                  explain src/ui/state.ts                                                              │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

@@ -1,0 +1,24 @@
+ chord                                      fake · /tmp/chd139-qa/estimate-work
+
+ › /cost
+   ⎿  Total cost:   $0.0141 (chord's estimate)
+      Tokens in:    3,000
+      Tokens out:   600
+      Cache read:   2,400
+      Session time: 0s
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0188 (chord's estimate)
+      Tokens in:    4,000
+      Tokens out:   800
+      Cache read:   3,200
+      Session time: 3s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                            GPT-5.3 Codex · ~99% context left

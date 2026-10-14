@@ -1,0 +1,8 @@
+qa> chord fake --agent-command "deno run --quiet --allow-env --config /tmp/chd108-qa/deno.json /tmp/chd108-qa/tests/fixt
+ures/always.ts" -p permission --dangerously-skip-permissions > /tmp/chd108-qa/12-always.stdout 2> /tmp/chd108-qa/12-alwa
+ys.stderr; echo $? > /tmp/chd108-qa/12-always.exit; cat /tmp/chd108-qa/12-always.stdout /tmp/chd108-qa/12-always.stderr;
+ cat /tmp/chd108-qa/12-always.exit
+Permission: always.
+chord: allowed Write notes.txt.
+0
+qa>

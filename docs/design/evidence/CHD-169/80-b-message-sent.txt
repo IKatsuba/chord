@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                                    /tmp/chord-qa.7mUU
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Done (5 tool uses · 9s)
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ✉ Fix the tokenizer · fake
+   Found it: a string at the end of a line lost its closing quote. Fixing
+   src/parse/tokenize.ts now.
+
+ ⏺ Received the message from Fix the tokenizer · fake.
+
+ ✸ Working… (0s · esc to interrupt)
+ ✉ Fix the tokenizer · fake · report: The tokenizer dropped a closing quote wh…
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,40 @@
+ chord                                                                                      fake · /tmp/chord-qa.CHD196
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › shellcut
+
+ ⏺ Run(deno task test)
+   ⎿  … output cut
+      FAILED | 1 failed
+      Exit code 1
+
+ ⏺ The tests failed.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

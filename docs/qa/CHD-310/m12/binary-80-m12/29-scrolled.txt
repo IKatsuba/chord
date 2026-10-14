@@ -1,0 +1,24 @@
+      Mode:      Accept edits
+      Session:   fe7e25e4-e98a-4525-a48c-cee6f874c9e1
+      Directory: /tmp/chd310/exits/binary-80-m12/work
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............
+   ⎿  Interrupted by user
+
+ › long
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+   2. Line 2 of 200, streamed one at a time.
+   3. Line 3 of 200, streamed one at a time.
+   4. Line 4 of 200, streamed one at a time.
+ ── ↓ new output · 17 lines below · end to jump to the bottom ─────────────────
+
+ ✸ Working… (6s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

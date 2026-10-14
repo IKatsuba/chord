@@ -1,0 +1,40 @@
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 3s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 1s
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 4s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+ › compactfail
+   ⎿  Compaction failed: Not enough messages to compact.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                                                          │
+│ chord passed these to fake when the session started. ACP does not say whether fake connected to them.                │
+│                                                                                                                      │
+│ Name           Transport  Command or URL           Defined in                                                        │
+│ chord          http       not passed               chord itself                                                      │
+│ user-docs      http       http://localhost:9/docs  /tmp/chd310-closure/m3/source-120-m3/config/chord/settings.json   │
+│ project-files  stdio      echo m3-server           .mcp.json                                                         │
+│                                                                                                                      │
+│ chord's server was not passed: fake does not take MCP servers over HTTP, so it cannot start other agents.            │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 2% context used

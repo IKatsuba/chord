@@ -1,0 +1,24 @@
+ ⏺ Received the message from bugfix · fake.
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 23s
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 20s on "Issue 214: a string…"
+
+      lead    fake · fake-large  default      ✓ replied 20s ago  ← @tester ·…
+      tester  fake · fake-small  acceptEdits  ● permission 19s   Bash(deno t…
+      coder   fake · fake-large  plan         ✓ replied 20s ago  ← @tester ·…
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake
+    bugfix     team · fake  ✓ replied 27s ago
+    ├─ tester  fake         ● permission 25s
+    └─ coder   fake         ✓ replied 26s ago

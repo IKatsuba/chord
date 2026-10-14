@@ -1,0 +1,27 @@
+{
+  "app": 8478,
+  "fakes": [
+    8490
+  ],
+  "owned": [
+    8478,
+    8490
+  ],
+  "groups": [
+    8490
+  ],
+  "rows": [
+    [
+      "8490",
+      "8478",
+      "8490",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "8478",
+      "8471",
+      "8471",
+      "bun /tmp/chd331-qa/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/source-120-hung-exception/work"
+    ]
+  ]
+}

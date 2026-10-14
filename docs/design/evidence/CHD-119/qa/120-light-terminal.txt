@@ -1,0 +1,1 @@
+After quit: alternate_on cursor_flag = 0 1

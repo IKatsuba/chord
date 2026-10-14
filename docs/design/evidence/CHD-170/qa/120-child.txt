@@ -1,0 +1,40 @@
+ parser · fake · Fake Small · opened by main 3s ago
+
+ ← @main
+   agentchild
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  Running…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ✷ Working… (3s · esc to interrupt)
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back                                          Fake Small
+    main    fake · Fake Large with a 1M context window  ✻ working 3s
+  ❯ parser  fake · Fake Small                           ✻ working 2s
+    docs    fake · Fake Large with a 1M context window  ● permission 2s

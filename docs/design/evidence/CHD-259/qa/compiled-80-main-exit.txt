@@ -1,0 +1,24 @@
+   ⎿  task
+
+ ⏺ Waiting on parser.
+
+ › agentexit
+
+ ⏺ Open(parser 2) · fake · fake-small
+   ⎿  crash
+
+ ⏺ Waiting on parser.
+
+ ← chord
+   parser 2's agent exited: fatal: out of memory reading
+   tests/parse/fixtures/huge.json. open_agent opens it again.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ✗ parser 2 failed · ctrl+x a   Fake Large with a 1M context window · 1% used
+    main      fake · Fake Large with a 1M context window
+    parser    fake · Fake Small
+    parser 2  fake · Fake Small                           ✗ failed

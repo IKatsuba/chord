@@ -1,0 +1,24 @@
+$ CHORD_FAKE_HANG=start deno task chord:fake -C /tmp/chord-qa.gv15 2>/dev/null;
+stty -a | head -4 | grep -oE '[-]?(icanon|echo) '
+icanon
+echo
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

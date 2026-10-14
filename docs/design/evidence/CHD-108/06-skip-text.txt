@@ -1,0 +1,12 @@
+qa> chord fake --agent-command "$FAKE" -p permission --dangerously-skip-permissions > /tmp/chd108-qa/06-skip-text.stdout
+ 2> /tmp/chd108-qa/06-skip-text.stderr; echo $? > /tmp/chd108-qa/06-skip-text.exit; printf "stdout:\n"; cat /tmp/chd108-
+qa/06-skip-text.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/06-skip-text.stderr; printf "echo \$? (saved immediately)
+:\n"; cat /tmp/chd108-qa/06-skip-text.exit; echo CAPTURE_DONE
+stdout:
+Permission: allow.
+stderr:
+chord: allowed Write notes.txt.
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

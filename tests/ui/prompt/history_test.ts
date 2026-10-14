@@ -1,0 +1,106 @@
+import { expect, test } from 'bun:test';
+import {
+  emptyHistory,
+  type History,
+  left,
+  newer,
+  older,
+  recalledImages,
+  recorded,
+  recordedWith,
+  walking,
+} from '../../../src/ui/prompt/history.ts';
+
+const sent = ['first', 'second'].reduce(recorded, emptyHistory);
+
+test('a sent prompt is kept once, after the ones before it', () => {
+  expect(sent.prompts).toStrictEqual(['first', 'second']);
+  expect(recorded(sent, 'second').prompts).toStrictEqual(['first', 'second']);
+  expect(recorded(sent, 'first').prompts).toStrictEqual([
+    'first',
+    'second',
+    'first',
+  ]);
+});
+
+test('↑ walks back to the oldest prompt and stops there', () => {
+  const one = older(sent, '');
+  const two = one && older(one.history, one.text);
+
+  expect(one?.text).toStrictEqual('second');
+  expect(two?.text).toStrictEqual('first');
+  expect(two && older(two.history, two.text)).toStrictEqual(undefined);
+  expect(older(emptyHistory, 'draft')).toStrictEqual(undefined);
+});
+
+test('↓ walks forward and then gives back the draft ↑ left', () => {
+  const back = older(sent, 'half typed')!;
+  const further = older(back.history, back.text)!;
+  const forward = newer(further.history)!;
+  const home = newer(forward.history)!;
+
+  expect(forward.text).toStrictEqual('second');
+  expect(home.text).toStrictEqual('half typed');
+  expect(home.history.index).toStrictEqual(undefined);
+  // Off the walk ↓ has nowhere to go.
+  expect(newer(home.history)).toStrictEqual(undefined);
+  expect(newer(sent)).toStrictEqual(undefined);
+});
+
+test('sending ends the walk', () => {
+  const back = older(sent, 'draft')!;
+  const after: History = recorded(back.history, 'third');
+
+  expect(after.index).toStrictEqual(undefined);
+  expect(after.draft).toStrictEqual('');
+  expect(older(after, '')?.text).toStrictEqual('third');
+});
+
+test('the arrows are history’s only while a recalled prompt is untouched', () => {
+  const back = older(sent, '')!;
+
+  expect(walking(sent, '')).toStrictEqual(false);
+  expect(walking(back.history, back.text)).toStrictEqual(true);
+  expect(walking(back.history, `${back.text}!`)).toStrictEqual(false);
+});
+
+test('a prompt taken some other way ends the walk without sending', () => {
+  const back = older(sent, 'draft')!;
+  const after = left(back.history);
+
+  expect(after.index).toStrictEqual(undefined);
+  expect(after.prompts).toStrictEqual(sent.prompts);
+  expect(older(after, '')?.text).toStrictEqual('second');
+  expect(left(sent)).toStrictEqual(sent);
+});
+
+test('a recalled prompt brings back the images it sent', () => {
+  const image = { id: 1, mediaType: 'image/png', data: 'AAAA', bytes: 3 };
+  const sent = recordedWith(emptyHistory, 'look at [Image #1]', [image]);
+
+  expect(recalledImages(sent, 'look at [Image #1]')).toStrictEqual([image]);
+  expect(recalledImages(sent, 'something else')).toStrictEqual([]);
+  // Sent again without them, it brings none.
+  expect(
+    recalledImages(recorded(sent, 'look at [Image #1]'), 'look at [Image #1]'),
+  ).toStrictEqual([]);
+});
+
+test('↑ and ↓ step over a prompt the box cannot hold (CHD-323)', () => {
+  const kept = ['first', 'bad\u000cinput', 'last'].reduce(
+    recorded,
+    emptyHistory,
+  );
+  const last = older(kept, 'draft')!;
+  const first = older(last.history, last.text)!;
+
+  expect(last.text).toStrictEqual('last');
+  expect(first.text).toStrictEqual('first');
+  expect(older(first.history, first.text)).toStrictEqual(undefined);
+  expect(newer(first.history)?.text).toStrictEqual('last');
+
+  // Alone, it is as if there were no history.
+  const only = recorded(emptyHistory, 'bad\u000cinput');
+
+  expect(older(only, 'draft')).toStrictEqual(undefined);
+});

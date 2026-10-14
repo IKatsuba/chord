@@ -1,0 +1,40 @@
+ [1mchord[0m   [2m1 fake[0m   [1;7m 2 fake [0m   [2m3 fake[0m[38;2;78;186;101m ✓[39m                                                      [2m/tmp/chd119-qa/120-dark-work[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m permission
+
+ [38;2;78;186;101m⏺[39m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [2mAllowed Write notes.txt · Allow[0m
+
+ ⏺ Permission: allow.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m✓ 3 fake replied · ctrl+x a to go[0m [2m·[0m [2m? for shortcuts[0m           [2mFake Large with a 1M context window · 99% context left[0m

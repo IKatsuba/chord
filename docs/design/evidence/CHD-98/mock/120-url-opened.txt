@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.Xk2p
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › link
+
+ ⏺ fake asked: Sign in to Example to continue
+   ⎿  Opened https://example.com/oauth/authorize?client=abc&state=9f2c
+
+ ⏺ Elicitation answer: accept
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                 Fake Large with a 1M context window · 99% context left

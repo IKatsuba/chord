@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.BGgP
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 17s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 2 cancelled (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 3 tool uses · 4s
+   │  ⎿  Cancelled
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Cancelled
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

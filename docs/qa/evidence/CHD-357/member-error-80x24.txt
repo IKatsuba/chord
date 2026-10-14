@@ -1,0 +1,24 @@
+   ⎿  Failed
+   ⎿  Rejected `deno task test tests/parse`
+
+ ⏺ Not run; I will ask bugfix how to go on.
+
+ ← @coder · fake
+   ⎿  Reading src/parse/tokenize.ts now. Tell me when your test fails.
+
+ ⏺ Received the message from coder · fake.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)         Fake Small · 2% context used
+    main       fake
+    bugfix     team · fake  ✓ replied 1m ago
+    ├─ tester  fake
+    └─ coder   fake         ✓ replied 2m ago

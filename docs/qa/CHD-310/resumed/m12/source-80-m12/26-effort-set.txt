@@ -1,0 +1,24 @@
+
+ › @example.ts
+
+ ⏺ Received a link: example.ts,
+   file:///tmp/chd310-final/exits/source-80-m12/work/example.ts
+
+   Hello, world. This reply came in chunks.
+
+ ! printf qa-shell
+   ⎿  qa-shell
+
+ › text
+                                       rni                    itter memory leak
+ ⏺ Received printf qa-shell: qa-shell                                        Us
+
+   Hello, world. This reply came in chunks.
+                                                               s added to [BoxR
+ › /config
+   ⎿  Effort set to High
+ct
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                                                        eners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

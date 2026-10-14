@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake ✻                          …/T/chord-qa.ofox6ids/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 fake is working · ctrl+d again to quit

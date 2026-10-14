@@ -1,0 +1,40 @@
+ › compact
+   ⎿  Conversation compacted
+      Summary
+
+      The person asked for a README section on install, then for the tests to run.
+
+      - Read README.md and deno.json
+      - Wrote the install section with deno task install
+      - Ran deno task test: 3 passed
+
+      Next: commit the change.
+
+ › compactfail
+   ⎿  Compaction failed: Not enough messages to compact.
+
+ › mcp
+
+ ⏺ ┌ json ─────────────────────────────────┐
+   │ [                                     │
+   │   {                                   │
+   │     "name": "user-docs",              │
+   │     "url": "http://localhost:9/docs", │
+   │     "headers": [],                    │
+   │     "type": "http"                    │
+   │   },                                  │
+   │   {                                   │
+   │     "name": "project-files",          │
+   │     "command": "echo",                │
+   │     "args": [                         │
+   │       "m3-server"                     │
+   │     ],                                │
+   │     "env": []                         │
+   │   }                                   │
+   │ ]                                     │
+   └───────────────────────────────────────┘
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 2% context used

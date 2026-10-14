@@ -1,0 +1,40 @@
+/tmp/chd310/exits/source-120-term/run.sh: line 10: 52577 Terminated: 15          bun /tmp/chd310-repo/src/main.tsx fake
+--agent-command "bun /tmp/chd310-repo/tests/fixtures/fake_agent/main.ts" -C /tmp/chd310/exits/source-120-term/work
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

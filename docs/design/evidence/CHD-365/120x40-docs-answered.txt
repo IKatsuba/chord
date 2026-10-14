@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 16s ago
+
+ ← @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow
+
+ ← @main
+   ⎿  When the README section is done, add the new flag to docs/FEATURES.md.
+
+ ⏺ Read the message from main.
+
+   Permission: allow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+    main  fake · Fake Large with a 1M context window
+    docs  fake · Fake Large with a 1M context window

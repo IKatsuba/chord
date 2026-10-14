@@ -1,0 +1,40 @@
+
+ ← @bugfix · fake
+   On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+   src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 11s on "issue 214: strings at the end of a line lose their closing…"
+
+      lead    fake · fake-large  default      ✓ replied 11s ago  → @main
+      tester  fake · fake-small  acceptEdits  ● permission 9s    Bash(deno task test tests/parse)
+      coder   fake · fake-large  plan         ✓ replied 10s ago  → @tester
+
+ › /team stop bugfix
+   ⎿  Stopped bugfix: its lead, tester, and coder are closed · /resume lists them
+
+ ← chord
+   The person closed team bugfix: its lead (fake · fake-large, id ea32f18b) and its members tester and coder. It
+   takes no more messages; run_team starts it again.
+
+ ⏺ Received the message from chord.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md
+      Fixes a bug end to end — a failing test first, then the fix.
+
+      lead    fake · fake-large  default      Splits the job, says who edits which files, reports to main
+      tester  fake · fake-small  acceptEdits  Writes the failing test, then proves the fix
+      coder   fake · fake-large  plan         Writes the fix, in the files the lead names
+
+      How bugfix works
+      1. The lead reads the job and names who may edit which files.
+      2. tester writes a test that fails for the bug's own reason, in tests/.
+      … +24 lines (ctrl+o to expand)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

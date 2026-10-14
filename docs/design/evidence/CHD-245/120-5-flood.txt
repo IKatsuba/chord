@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.CO2V
+ ▀▀     ? for shortcuts · /help
+
+ › monitorflood
+
+ ⏺ Monitor(request log)
+   ⎿  $ yes '127.0.0.1 - - "GET /health HTTP/1.1" 200 2'
+      m1 · times out after 10m
+
+ ⏺ Watching the request log.
+
+ ← request log · monitor · flooded
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   127.0.0.1 - - "GET /health HTTP/1.1" 200 2
+   … +95 lines (ctrl+o to expand)
+   chord stopped it: 1,000 lines in 10s is more than a monitor may print. Filter its output (grep --line-buffered)
+   and start it again.
+
+ ⏺ Received the message from request log · monitor · flooded.
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

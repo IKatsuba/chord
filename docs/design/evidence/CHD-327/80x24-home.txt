@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.HjRk
+ ▀▀     ? for shortcuts · /help
+
+ › steps
+
+ ⏺ Read(step-1.ts)
+
+ ⏺ Read(step-2.ts)
+
+ ⏺ Read(step-3.ts)
+
+ ⏺ Read(step-4.ts)
+
+ ⏺ Read(step-5.ts)
+
+ ⏺ Read(step-6.ts)
+ ── ↓ 290 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

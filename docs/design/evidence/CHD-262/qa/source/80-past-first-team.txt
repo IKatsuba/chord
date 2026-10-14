@@ -1,0 +1,24 @@
+ → @main · queued
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ I will run the parser tests on each change.
+
+ ← @main
+   I changed how a string at the end of a line is read. Run the parser tests
+   now and tell me only what fails.
+
+ ⏺ Received the message from main.
+
+ ← @main
+   The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Received the message from main.
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back     Fake Small · 3% context used
+    main       fake
+    bugfix     team · fake · 3 agents
+  ❯ parser     fake
+    … +2 more

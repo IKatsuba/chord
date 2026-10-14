@@ -1,0 +1,24 @@
+/tmp/chd331-qa/binary-80-hung-SIGQUIT/run.sh: line 9:  7299 Quit: 3
+    /tmp/chd331-qa/repo/dist/bun-darwin-arm64/chord fake --agent-command 'env -u
+ BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts' -C /tmp/
+chd331-qa/binary-80-hung-SIGQUIT/work 2> /tmp/chd331-qa/binary-80-hung-SIGQUIT/s
+tderr
+
+QA_DONE code=131
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

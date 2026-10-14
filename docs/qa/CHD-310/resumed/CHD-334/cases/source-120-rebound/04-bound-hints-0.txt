@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                  /tmp/chd334-qa/exits/source-120-rebound/work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd334-qa/exits/source-120-rebound/work
+ █▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ctrl + s to send                          ↑ ↓ to pick a command                ctrl + t for a new session
+  \ + ctrl + s for a newline                tab to complete a command            1–9 to pick a choice
+  shift + enter alt + enter for a newline   @ for files                          ↑ ↓ or j k to move between choices
+  ctrl + g to edit in $EDITOR               ↑ ↓ to pick a file                   enter to pick the highlighted choice
+  ctrl + v to paste an image                tab enter to add a file              esc to reject a permission
+  ↑ ↓ for prompts, agents and monitors      esc to close commands or files       esc to close a picker
+  x to close an agent or stop a monitor     ! for bash mode                      ctrl + a to show all directories
+  ctrl + r to search prompts                backspace to leave bash mode         tab ↑ ↓ space to fill in a form
+  tab enter to take a match                 esc to interrupt or stop a command   ctrl + c to stop the turn and its form
+  esc to cancel a search                    shift + tab to cycle modes           /vim for vim mode
+  pgup pgdn or wheel to scroll              ctrl + o for verbose output          ? for shortcuts
+  shift + ↑ ↓ to scroll a line              ctrl + c to clear input              esc to close shortcuts
+  home end for the top and the bottom       ctrl + d or ctrl + c twice to quit
+  / for commands                            ctrl + x then a key for sessions

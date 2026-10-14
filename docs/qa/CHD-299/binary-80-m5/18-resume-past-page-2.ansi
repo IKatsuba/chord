@@ -1,0 +1,24 @@
+ █▄     [1mchord[0;2m v0.0.0
+[0m ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m/tmp/chd299/binary-80-m5/work[0m
+ █▀     [2m? for shortcuts · /help[0m
+        [2mresumed · just now · On it. tester is writing a failing test in tests/…[0m
+
+ ← [1m@bugfix[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test[0m
+   [2m [0m  [2min tests/parse/tokenize_test.ts; coder waits for it and will edit[0m
+   [2m [0m  [2msrc/parse/tokenize.ts only. I will report when the test fails[0m
+   [2m [0m  [2mfor the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix · fake.
+
+ ← [1m@bugfix 2[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test[0m
+   [2m [0m  [2min tests/parse/tokenize_test.ts; coder waits for it and will edit[0m
+   [2m [0m  [2msrc/parse/tokenize.ts only. I will report when the test fails[0m
+ [2m── ↓ 13 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

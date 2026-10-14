@@ -1,0 +1,40 @@
+ [38;2;78;186;101m⏺[39m [1mOpen[0m(docs)[2m · fake[0m
+   [2m⎿[0m  [2mpermission[0m
+
+ → [1mparser[0;2m · queued[0m
+   [2m⎿[0m  [2mI changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.[0m
+
+ → [1mparser[0;2m · queued[0m
+   [2m⎿[0m  [2mThe printer is fixed too; run the whole parser suite once more.[0m
+
+ ⏺ Waiting on parser.
+
+ ← [1mparser[0;2m · fake[0m
+   Ran deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← [1mparser[0;2m · fake[0m
+   All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ [2m←[0m [1mchord[0m
+   The person closed docs (fake, id 3b1f81d8). It takes no more messages; open_agent starts another.
+
+ ⏺ Received the message from chord.
+
+ [2m›[0m agentclose
+
+ [38;2;78;186;101m⏺[39m [1mClose[0m(parser)
+   [2m⎿[0m  [2mClosed[0m
+
+ [38;2;255;107;128m→[39m [1mparser[0m
+   [2m⎿[0m  [38;2;255;107;128mparser is closed; open_agent starts another[39m
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

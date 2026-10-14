@@ -1,0 +1,40 @@
+ chord                                                                                               claude · ~/src/app
+ › What can you start, and is anything else open?
+
+ ⏺ List agents
+   ⎿  22 runtimes · claude, codex, gemini, opencode, +18 more
+
+ ⏺ List agents(codex)
+   ⎿  3 models · gpt-5.3-codex, gpt-5.3-codex-mini, gpt-5.2
+
+ ⏺ List sessions
+   ⎿  2 open · 1 claude (you), 2 codex
+
+ ⏺ Open(parser) · codex · gpt-5.3-codex
+   ⎿  Run the parser tests after every change to src/parse and tell me what breaks.
+
+ ⏺ Agent(Fix the tokenizer) · codex · gpt-5.3-codex
+   ⎿  Done (6 tool uses · 41s)
+
+ ⏺ Message(parser)
+   ⎿  Run the parser tests now and tell me only what fails.
+
+ ⏺ Message(docs) · queued
+   ⎿  When you finish the README section, add the new flag to docs/FEATURES.md.
+
+ ⏺ Close(parser)
+   ⎿  Closed
+
+ ⏺ Open(review) · codx
+   ⎿  No agent named codx · list_agents names them
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                              Opus · 91% context left
+    main  claude · Opus
+    docs  claude · Sonnet

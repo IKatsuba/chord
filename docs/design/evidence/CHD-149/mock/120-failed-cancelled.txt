@@ -1,0 +1,40 @@
+ chord                                                                                               claude · ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › Find the session layer.
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Failed (2 tool uses · 9s)
+
+ ⏺ The agent failed; I will look myself.
+
+ › Where does chord route session/update, and where are tool calls drawn? Look in parallel.
+
+ ⏺ I'll send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed, 1 cancelled (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 4 tool uses · 12s
+   │  ⎿  Cancelled
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 1 tool use · 12s
+      ⎿  Failed
+   ⎿  Interrupted by user
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                               Opus · 91% context left

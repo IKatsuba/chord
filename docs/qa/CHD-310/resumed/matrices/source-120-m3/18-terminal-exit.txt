@@ -1,0 +1,40 @@
+ █▀     ? for shortcuts · /help
+
+ › [Image #1]
+
+ ⏺ Received an image: image/png, 132 bytes
+
+   Hello, world. This reply came in chunks.
+
+ › edited M3 draft
+   second editor line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /vim
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+ › /vim
+   ⎿  Vim mode off
+
+ › /theme
+   ⎿  Theme set to Light
+
+ › /theme
+   ⎿  Theme set to Dark
+
+ › shell
+
+ ⏺ Run(deno task test)
+   ⎿  3/3
+      ok | 2 passed
+      FAILED | 1 failed
+      … +2 lines (ctrl+o to expand)
+      Exit code 1
+
+ ⏺ The tests failed.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                        [2mfake · /tmp/chord-qa.SiBl[0m
+   [2m│[0m [2m└──────────────────────────────────────────────────────────┘[0m
+
+   [2m┌───────────────┬────────────────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                                  [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼────────────────────────────────────────┼────────────────────┤[0m
+   [2m│[0m [94msession.ts[39m    [2m│[0m opening, prompting and closing         [2m│[0m [94msession_test.ts[39m    [2m│[0m
+   [2m│[0m               [2m│[0m a session                              [2m│[0m                    [2m│[0m
+   [2m│[0m [94mprocesses.ts[39m  [2m│[0m the promise that a closed agent is     [2m│[0m [94mprocesses_test.ts[39m  [2m│[0m
+   [2m│[0m               [2m│[0m gone                                   [2m│[0m                    [2m│[0m
+   [2m│[0m [94mtranscript.ts[39m [2m│[0m the reducer from events to what is     [2m│[0m [94mtranscript_test.ts[39m [2m│[0m
+   [2m│[0m               [2m│[0m drawn                                  [2m│[0m                    [2m│[0m
+   [2m└───────────────┴────────────────────────────────────────┴────────────────────┘[0m
+
+   [2m┌ ts ──────────────────────────────────────────────────────────┐[0m
+   [2m│[0m [95mconst[39m session = [95mawait[39m [94mopenSession[39m({ [39magent[39m: [93m'claude'[39m, cwd }); [2m│[0m
+   [2m│[0m [95mconst[39m turn = session.[94mprompt[39m([93m'hello'[39m);                        [2m│[0m
+   [2m│[0m [95mawait[39m turn.[39mresult[39m;                                           [2m│[0m
+   [2m└──────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1.[0m Run the checks:
+     [2m┌ sh ─────────────┐[0m
+     [2m│[0m deno task check [2m│[0m
+     [2m└─────────────────┘[0m
+   [2m2.[0m Commit on [94mmain[39m once every check has passed and the tree is clean, so whoever picks the work up next starts from
+     a build that runs.
+
+   Then build the binary with:
+
+   [2m┌ sh ─────────────────────────────────────────────────┐[0m
+   [2m│[0m deno task compile --all                             [2m│[0m
+   [2m│[0m [95mfor[39m bin [95min[39m dist/*/chord; [95mdo[39m [96mecho[39m [93m"built [39m$bin[93m"[39m; [95mdone[39m [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

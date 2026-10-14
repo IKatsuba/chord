@@ -1,0 +1,2 @@
+BEL after waits: 1
+BEL after the answer and tab 3's end: 3

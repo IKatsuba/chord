@@ -1,0 +1,24 @@
+
+   Hello, world. This reply came in chunks.
+
+ › edited M3 draft
+   second editor line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /vim
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+ › /vim
+   ⎿  Vim mode off
+
+ › /theme
+   ⎿  Theme set to Light
+
+ › /theme
+   ⎿  Theme set to Dark
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

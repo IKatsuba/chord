@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                                    /tmp/chd170-qa.5NGLNs/work
+ docs · fake · Fake Large with a 1M context window · opened by main 2m ago
+
+ ← @main
+   permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+
+
+
+
+ ✹ Waiting for permission… (2m 8s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ docs asks                                                                                                            │
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  docs waits for your permission · x again to stop it and close
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small
+  ❯ docs    fake · Fake Large with a 1M context window  ● permission 2m 8s

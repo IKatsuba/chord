@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [39mlead             claude · opus                        default[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m                 Splits the job, says who edits which files, reports to[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m                 main[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mtester           claude · sonnet                      acceptEdits[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m                 Writes the failing test, then proves the fix[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mcoder            codex · gpt-5.3-codex                auto[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m                 Writes the fix, in the files the lead names[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39msecurity-review  claude · claude-sonnet-4-5-20250929  [38;2;255;193;7mbypassPermissions[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m                 Reviews the diff for security problems and edits[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m                 nothing[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead's instructions[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mRead the job and the code it points at until you can name the cause and[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mthe files involved. Open tester first, coder once tester's test fails,[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mand reviewer last, on the diff.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mtester's instructions[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mWrite the smallest test that fails because of the bug, and run it to[38;2;255;255;255m
+ [2m[39m── ↓ 35 lines below · end to jump to the bottom ──────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m        [2m[39mFake Large with a 1M context window · 1% context used[0m[38;2;255;255;255m

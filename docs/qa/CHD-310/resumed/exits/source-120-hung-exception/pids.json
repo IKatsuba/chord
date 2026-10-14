@@ -1,0 +1,27 @@
+{
+  "app": 55180,
+  "fakes": [
+    55187
+  ],
+  "owned": [
+    55180,
+    55187
+  ],
+  "groups": [
+    55187
+  ],
+  "rows": [
+    [
+      "55187",
+      "55180",
+      "55187",
+      "bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "55180",
+      "55173",
+      "55173",
+      "bun /tmp/chd310-final/forced/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd310-final/forced/source-120-hung-exception/work"
+    ]
+  ]
+}

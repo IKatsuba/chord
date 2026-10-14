@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                       [2mfake · /tmp/chd151-qa/work[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ [2m⏺[0m Running 2 agents…[2m (ctrl+o to expand)[0m
+   [2m├─[0m [1mAgent[0m(Find the session layer)[2m · 2 tool uses[0m
+   [2m│[0m  [2m⎿[0m  [1mRead[0m(src/acp/connection.ts)
+   [2m└─[0m [1mAgent[0m(Find where tool calls are drawn on screen and how they fold)[2m · 1 tool use[0m
+      [2m⎿[0m  [1mSearch[0m(function Tool in src/ui)
+
+ [38;2;215;119;87m✶[39m [38;2;215;119;87mWorking…[39m [2m(2s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m

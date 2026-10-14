@@ -1,0 +1,25 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.gxYm
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ↑ row 7                                                                      │
+│   row 8                                                                      │
+│   row 9                                                                      │
+│   row 10                                                                     │
+│   row 11                                                                     │
+│   row 12                                                                     │
+│   row 13                                                                     │
+│   row 14                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                                           Fake Large with a 1M context window
+cursor 10,21 visible=1

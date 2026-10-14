@@ -1,0 +1,40 @@
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /context
+   ⎿  Used: 160,000 of 200,000 tokens (80%)
+      Free: 40,000 tokens (20%)
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /context
+   ⎿  Used: 162,000 of 200,000 tokens (81%)
+      Free: 38,000 tokens (19%)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                        Fake Small · 81% context used

@@ -1,0 +1,40 @@
+/tmp/chd331-qa/source-120-hung-SIGHUP/run.sh: line 9:  6498 Hangup: 1               bun /tmp/chd331-qa/repo/src/main.tsx
+ fake --agent-command 'env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts' -C /tmp/chd331-qa/s
+ource-120-hung-SIGHUP/work 2> /tmp/chd331-qa/source-120-hung-SIGHUP/stderr
+
+QA_DONE code=129
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

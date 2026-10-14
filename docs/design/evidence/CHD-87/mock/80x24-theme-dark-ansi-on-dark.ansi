@@ -1,0 +1,24 @@
+ [1mchord[0m                                                  [2mfake · /tmp/chord-qa.Mk3p[0m
+[94m╭──────────────────────────────────────────────────────────────────────────────╮[0m
+[94m│[0m [1m[94mTheme[0m                                                                        [94m│[0m
+[94m│[0m [2mChoose the colours that read best on this terminal.[0m                          [94m│[0m
+[94m│[0m                                                                              [94m│[0m
+[94m│[0m   1. Auto (dark, from the terminal) ✔                                        [94m│[0m
+[94m│[0m   2. Dark                                                                    [94m│[0m
+[94m│[0m   3. Light                                                                   [94m│[0m
+[94m│[0m   4. Dark, colour-blind friendly                                             [94m│[0m
+[94m│[0m   5. Light, colour-blind friendly                                            [94m│[0m
+[94m│[0m [94m❯[0m [94m6. Dark, the terminal's 16 colours[0m                                         [94m│[0m
+[94m│[0m   7. Light, the terminal's 16 colours                                        [94m│[0m
+[94m│[0m                                                                              [94m│[0m
+[94m│[0m  [2m1[0m   [95mfunction[0m [94mgreet[0m(name) {                                                  [94m│[0m
+[94m│[0m  [2m2[0m [91m-   return "hello " + name;[0m                                               [94m│[0m
+[94m│[0m  [2m2[0m [92m+   return `hello, ${name}`;[0m                                              [94m│[0m
+[94m│[0m                                                                              [94m│[0m
+[94m│[0m [2m↑↓ to preview · Enter to keep · Esc to go back to Auto[0m                       [94m│[0m
+[94m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮[0m
+[2m│[0m ›                                                                            [2m│[0m
+[2m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+  [2m? for shortcuts[0m

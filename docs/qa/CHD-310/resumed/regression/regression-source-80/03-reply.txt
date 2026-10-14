@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd310-final/exits/regression-source-80/work
+ █▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+╭─                          ──────────────                                ─────╮
+│                          rsExceededWarni                    itter memory leak
+de                      eners added to [Bo                                   Use
+ e                            increase lim
+(U                            ` to show wh                          d)
+"P                                   tecte                     s added to [BoxRe
+nd              isteners is 10. Use emitte                                limit"
+(                                  rning:                                ak dete
+ct                         dded to [BoxRen
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                 er memory leak detecte               steners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

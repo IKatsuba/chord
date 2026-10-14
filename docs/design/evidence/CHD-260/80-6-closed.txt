@@ -1,0 +1,24 @@
+ ⏺ bugfix 2 has the job. Its lead will report here; you can look in with ↓.
+
+ ← @bugfix 2 · fake
+   On it. tester is writing a failing test in tests/parse/tokenize_test.ts;
+   coder waits for it and will edit src/parse/tokenize.ts only. I will report
+   when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ ← chord
+   The person closed team bugfix: its lead (fake · fake-large, id 1a24fa44)
+   and its members tester and coder. It takes no more messages; run_team
+   starts it again.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ❯ main      fake
+    bugfix 2  team · fake  ✓ replied 10s ago
+    tester    fake         ● permission 9s
+    coder     fake         ✓ replied 10s ago

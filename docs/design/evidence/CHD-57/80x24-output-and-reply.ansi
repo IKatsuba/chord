@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chord-qa.M3uH[0m
+
+   Hello, world. This reply came in chunks.
+
+ [38;2;255;0;135m![39m echo start; sleep 30
+   [2m⎿[0m  start
+   [2m [0m  [2mStopped by the user[0m
+
+ [38;2;255;0;135m![39m printf "a\nb\n"
+   [2m⎿[0m  a
+   [2m [0m  b
+
+ [2m›[0m and now?
+
+ ⏺ Received [38;2;87;105;247mecho start; sleep 30[39m: start
+
+   Received [38;2;87;105;247mprintf "a\nb\n"[39m: a
+
+   Hello, world. This reply came in chunks.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

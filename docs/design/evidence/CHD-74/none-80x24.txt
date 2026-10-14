@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.P4gy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /resume
+   ⎿  No earlier fake session in /tmp/chord-qa.P4gy to resume.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

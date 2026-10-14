@@ -1,0 +1,729 @@
+{
+  "branch": "opentui",
+  "implementation": "699e16eef3a6ee84a2d649112e352455c56f1c0c",
+  "baseline_main": "3538862f04fe93ff6093c70c9cf3876ca0d9e7f3",
+  "qa_result": "FAIL: CHD-331",
+  "checks": [
+    {
+      "case": "matrices/source-80-osc9/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-osc9/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-m5/cleanup-first.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-m5/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-m5/cleanup-first.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-m5/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-osc777/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-m4/cleanup-first.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-m4/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-m3/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-m3/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-m4/cleanup-first.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-m4/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-m3-other/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-rebound/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-m5/cleanup-first.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-m5/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-m3/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-m4/cleanup-first.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-m4/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-rebound/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-vim-extra/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-osc777/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-proposal/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-osc9/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-rebound/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-proposal/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-rebound/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-m3-other/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-m3-other/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-vim-extra/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-proposal/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-osc777/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-80-vim-extra/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-vim-extra/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-m3-other/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-m4/cleanup-first.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-m4/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-m3/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-osc777/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/source-120-proposal/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-120-osc9/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-m5/cleanup-first.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "matrices/binary-80-m5/cleanup.json",
+      "stty_equal": true,
+      "owned_alive": [],
+      "terminal": "alternate=0 cursor=1"
+    },
+    {
+      "case": "exits/source-80-hung-rejection/result.json",
+      "exit": "1",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [
+        56821
+      ],
+      "probe_orphans_killed": [
+        56821
+      ]
+    },
+    {
+      "case": "exits/source-120-term/result.json",
+      "exit": "143",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-hung-term/result.json",
+      "exit": "143",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [
+        56600
+      ],
+      "probe_orphans_killed": [
+        56600
+      ]
+    },
+    {
+      "case": "exits/source-80-picker/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "probe_orphans_killed": [
+        55267
+      ],
+      "case": "exits/source120-hung-term-real/result.json",
+      "exit": "143",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [
+        55267
+      ]
+    },
+    {
+      "case": "exits/source-80-hung-exception/result.json",
+      "exit": "1",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [
+        56724
+      ],
+      "probe_orphans_killed": [
+        56724
+      ]
+    },
+    {
+      "case": "exits/binary-80-picker/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-slash/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-term/result.json",
+      "exit": "143",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-hung-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-term/result.json",
+      "exit": "143",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-hung-hup/result.json",
+      "exit": "129",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [
+        56665
+      ],
+      "probe_orphans_killed": [
+        56665
+      ]
+    },
+    {
+      "case": "exits/source-120-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-term/result.json",
+      "exit": "143",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-slash/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-hup/result.json",
+      "exit": "129",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-hup/result.json",
+      "exit": "129",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source120-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-int/result.json",
+      "exit": "130",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-int/result.json",
+      "exit": "130",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-rejection/result.json",
+      "exit": "1",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-rejection/result.json",
+      "exit": "1",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-hung-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-slash/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-slash/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-picker/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-ctrld/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-ctrlc/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-hup/result.json",
+      "exit": "129",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-80-hup/result.json",
+      "exit": "129",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-picker/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-int/result.json",
+      "exit": "130",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/binary-120-int/result.json",
+      "exit": "130",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-80-exception/result.json",
+      "exit": "1",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-exception/result.json",
+      "exit": "1",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/source-120-m12/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/binary-120-m12/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/binary-120-window/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/source-80-m12/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/source-120-window/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/binary-80-m12/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/source-80-window/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "m12/binary-80-window/result.json",
+      "exit": "0",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": []
+    },
+    {
+      "case": "exits/source-120-monitor-signal/result.json",
+      "exit": "143",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "stty_a_exact": true
+    },
+    {
+      "case": "exits/binary-80-monitor-signal/result.json",
+      "exit": "129",
+      "stty_exact": true,
+      "stty_except_pendin": true,
+      "flags": "alternate=0 cursor=1 mouse=0,0,0",
+      "owned_alive": [],
+      "stty_a_exact": true
+    }
+  ],
+  "clipboard_restored": true,
+  "binary_sha256": "1a7ada1b8e42009a4be9615130a4bf4d0d4ee34e5ab5ded7de6a017bac9eff38",
+  "paired_screens": 906,
+  "unjudged": [
+    "Production binary injected uncaught exception/unhandled rejection: not exercised; source crash proof only.",
+    "Physical kitty shift+Enter and desktop notification delivery.",
+    "Existing CHD-163 subagent fixture gaps; CHD-300 exclusions remain."
+  ],
+  "validation": {
+    "initial_full_check": {
+      "lint_tests": 51,
+      "tests": 1489,
+      "failures": 0,
+      "test_seconds": 495.86
+    },
+    "test_todo_count": 0,
+    "excluded_direct_dependencies_absent": true,
+    "matrix_content_audit": "passed",
+    "final_full_check": {
+      "lint_tests": 51,
+      "tests": 1489,
+      "failures": 0,
+      "test_seconds": 504.77
+    },
+    "final_privacy_tests": {
+      "tests": 7,
+      "failures": 0
+    },
+    "whitespace": "passed with blank-at-eof allowed to retain terminal rows"
+  }
+}

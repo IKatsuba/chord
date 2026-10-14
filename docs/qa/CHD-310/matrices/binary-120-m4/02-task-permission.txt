@@ -1,0 +1,40 @@
+
+ ⏺ List agents(fake)
+   ⎿  2 models · fake-large, fake-small
+
+ ⏺ List sessions
+   ⎿  1 open · 1 fake (you)
+
+ ⏺ Agent(Fix the tokenizer) · fakx · fake-small
+   ⎿
+
+ ⏺ chord knows no fakx.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Search(tokenize in src/parse)
+      Read(src/parse/tokenize.ts)
+      Edit(src/parse/tokenize.ts) · waiting for permission
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ✹ Waiting for permission… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Fix the tokenizer) · fake asks                                                                                 │
+│ Edit src/parse/tokenize.ts                                                                                           │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

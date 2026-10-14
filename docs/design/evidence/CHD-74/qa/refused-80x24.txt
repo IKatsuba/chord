@@ -1,0 +1,24 @@
+ chord                          fake · /tmp/chord-qa-chd74-16a1a3f9/narrow-work
+ › long
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+   2. Line 2 of 200, streamed one at a time.
+   3. Line 3 of 200, streamed one at a time.
+   4. Line 4 of 200, streamed one at a time.
+
+ › /resume
+   ⎿  A turn is running. Wait for it to end, or press Esc to interrupt it, then
+       /resume.
+
+ ⏺ 5. Line 5 of 200, streamed one at a time.
+   6. Line 6 of 200, streamed one at a time.
+   7. Line 7 of 200, streamed one at a time.
+   8. Line 8 of 200, streamed one at a time.
+   9. Line 9 of 200, streamed one at a time.
+
+ ✹ Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

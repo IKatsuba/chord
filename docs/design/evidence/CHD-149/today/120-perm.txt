@@ -1,0 +1,40 @@
+ chord                                                                                                 fake · ~/src/app
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls dra…
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ✷ Waiting for permission… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

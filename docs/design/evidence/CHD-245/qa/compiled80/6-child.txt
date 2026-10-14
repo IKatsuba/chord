@@ -1,0 +1,24 @@
+ ⏺ Open(parser) · fake
+   ⎿  childmonitor
+
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties …
+      m1 · times out after 10m
+
+ ⏺ parser watches its tests; I watch the dev server.
+
+ ← dev server errors · monitor
+   ERROR [router] POST /login 500: Cannot read properties of undefined
+   (reading 'trim')
+       at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left
+    main               fake
+    parser             fake                      ✓ replied 1s ago
+    dev server errors  $ sleep 1; echo "ERROR …  running 1s · 1 event
+    parser tests       $ sleep 1; echo "ok 1 -…  running 1s · 1 event · parser

@@ -1,0 +1,24 @@
+
+ › /context
+   ⎿  Used: 24,000 of 200,000 tokens (12%)
+      Free: 176,000 tokens (88%)
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Small
+      Mode:      Accept edits
+      Session:   7402b5e9-623b-40be-9bda-adf6fb0c5f4f
+      Directory: /tmp/chd310-closure/exits/binary-80-m12/work
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ......
+
+ ✶ Working… (1s · esc to interrupt)
+ › queued QA
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

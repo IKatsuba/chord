@@ -1,0 +1,40 @@
+      3 + 1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      … +31 lines (ctrl+o to expand)
+      Saved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix and the bug, or just tell me to hand one
+   to bugfix.
+
+ › put the reviewer on codex
+
+ ⏺ The reviewer on codex too, read-only, and tester in bypassPermissions, so it runs the suite without asking.
+
+ ⏺ Team(bugfix) · change
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a review of the diff.
+
+         lead      claude · opus          default                            Splits the job, says who edits which fi…
+      ~  tester    claude · sonnet        bypassPermissions was acceptEdits  Writes the failing test, then proves th…
+         coder     codex · gpt-5.3-codex  auto                               Writes the fix, in the files the lead n…
+      ~  reviewer  codex · gpt-5.3-codex  read-only was plan                 Reads the diff and edits nothing
+      bugfix.md's body · 1 addition, 1 removal
+      6   4. reviewer reads the diff and edits nothing. If it finds a problem, the lead hands it back to coder.
+      7 - 5. tester runs the whole suite once more, and the lead reports to main.
+      7 + 5. tester runs the whole suite once more, without asking, and the lead reports to main.
+      8
+      … +16 lines (ctrl+o to expand)
+
+ ✺ Waiting for you… (0s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                                                                 │
+│                                                                                                                      │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                                                                  │
+│   2. No, tell fake what to change                                                                                    │
+│                                                                                                                      │
+│ Esc to tell fake what to change                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

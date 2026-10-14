@@ -1,0 +1,6 @@
+fake (2) needs your permission: Write notes.txt
+fake (3) asks for input: Set up the deploy target
+fake (2) is waiting for your input
+fake (3) is waiting for your input
+fake (3) is waiting for your input
+Notification count before/after interrupt: 5/5

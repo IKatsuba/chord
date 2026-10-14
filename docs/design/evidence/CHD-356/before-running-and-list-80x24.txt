@@ -1,0 +1,24 @@
+ ⏺ Received the message from bugfix · fake.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 6s on "issue 214: strings a…"
+
+      lead    fake · fake-large  default      ✓ replied 6s ago  ← @tester · …
+      tester  fake · fake-small  acceptEdits  ● permission 5s   Bash(deno ta…
+      coder   fake · fake-large  plan         ✓ replied 6s ago  ← @tester · …
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 17s on "issue 214: strings…"
+
+      lead    fake · fake-large  default      ✓ replied 16s ago  ← @tester ·…
+      tester  fake · fake-small  acceptEdits  ● permission 15s   Bash(deno t…
+      coder   fake · fake-large  plan         ✓ replied 16s ago  ← @tester ·…
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake
+    bugfix     team · fake  ✓ replied 18s ago
+    ├─ tester  fake         ● permission 16s
+    └─ coder   fake         ✓ replied 17s ago

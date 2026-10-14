@@ -1,0 +1,24 @@
+ chor…mp/chd147-qa/work
+
+
+
+
+
+
+
+ › shell
+
+ ⏺ Run(deno task test)
+   ⎿  Task test deno t…
+      running 3 tests
+      3/3
+      ok | 2 passed
+      FAILED | 1 failed
+      Exit code 1
+
+ ⏺ The tests failed.
+
+╭──────────────────────╮
+│ ›                    │
+╰──────────────────────╯
+  Fake Lar… · 99% left

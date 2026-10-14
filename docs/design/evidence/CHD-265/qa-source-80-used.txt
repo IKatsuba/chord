@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Small
+ ▄▀▀▀   /tmp/chd-265-qa/work
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /context
+   ⎿  Used: 2,000 of 200,000 tokens (1%)
+      Free: 198,000 tokens (99%)
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                 Fake Small · 1% context used

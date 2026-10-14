@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake2                           /tmp/chd122-qa/binary-work
+ █▄     chord v0.0.0
+ ▀██▄   fake2 · Fake Small
+ ▄██▀   /tmp/chd122-qa/binary-work
+ █▀     ? for shortcuts · /help
+
+ › mode
+
+ ⏺ Mode: acceptEdits.
+
+ › /status
+   ⎿  Agent:     fake2
+      Model:     Fake Small
+      Mode:      Accept edits
+      Session:   599d5918-8ed2-4d31-afbd-edc1f1b01020
+      Directory: /tmp/chd122-qa/binary-work
+      Sessions:  2 open
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 99% context left

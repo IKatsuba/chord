@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake2 · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chd173d/proj
+ ▀▀     ? for shortcuts · /help
+        resumed · just now · text
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Not reopened: 2 tabs whose records are gone (fake 770f57f5, fake b5285ea8)       Fake Large with a 1M context window

@@ -1,0 +1,167 @@
+--- markdown-top ---
+ chord                                                           fake · /tmp/chd87-qa/matrix/120x40-dark-dark-ansi/work
+
+ › markdown
+
+ ⏺ Reading the session layer
+
+   The session layer wraps acpx so the interface never touches a process. Start with src/session/session.ts, then see
+   the ACP spec (https://agentclientprotocol.com) for the wire format.
+
+   What it does
+
+   - opens one persistent session per chord session
+   - starts turns with startTurn and cancels them
+     1. a cancel stops the turn at once
+     2. the agent is told with session/cancel
+   - closes the agent and waits until its exit is seen
+
+   │ A closed agent counts as gone only once its exit is seen:
+   │ ┌ ts ──────────────────────────────────────────────────────┐
+   │ │ await session.close(); // resolves once the exit is seen │
+   │ └──────────────────────────────────────────────────────────┘
+
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                                  │ Tested by          │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │
+   │               │ a session                              │                    │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │               │ gone                                   │                    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │               │ drawn                                  │                    │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘
+
+   ┌ ts ──────────────────────────────────────────────────────────┐
+ ── ↓ 22 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                       Fake Large with a 1M context window · 99% context left
+
+--- markdown ---
+ chord                                                           fake · /tmp/chd87-qa/matrix/120x40-dark-dark-ansi/work
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                                  │ Tested by          │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │
+   │               │ a session                              │                    │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │               │ gone                                   │                    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │               │ drawn                                  │                    │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘
+
+   ┌ ts ──────────────────────────────────────────────────────────┐
+   │ const session = await openSession({ agent: 'claude', cwd }); │
+   │ const turn = session.prompt('hello');                        │
+   │ await turn.result;                                           │
+   └──────────────────────────────────────────────────────────────┘
+
+   That is the whole loop. To land a change:
+
+   1. Run the checks:
+     ┌ sh ─────────────┐
+     │ deno task check │
+     └─────────────────┘
+   2. Commit on main once every check has passed and the tree is clean, so whoever picks the work up next starts from
+     a build that runs.
+
+   Then build the binary with:
+
+   ┌ sh ─────────────────────────────────────────────────┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ ✹ Working… (4s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                       Fake Large with a 1M context window · 99% context left
+
+--- edit ---
+ chord                                                           fake · /tmp/chd87-qa/matrix/120x40-dark-dark-ansi/work
+   │ const session = await openSession({ agent: 'claude', cwd }); │
+   │ const turn = session.prompt('hello');                        │
+   │ await turn.result;                                           │
+   └──────────────────────────────────────────────────────────────┘
+
+   That is the whole loop. To land a change:
+
+   1. Run the checks:
+     ┌ sh ─────────────┐
+     │ deno task check │
+     └─────────────────┘
+   2. Commit on main once every check has passed and the tree is clean, so whoever picks the work up next starts from
+     a build that runs.
+
+   Then build the binary with:
+
+   ┌ sh ─────────────────────────────────────────────────┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ › edit
+
+ ⏺ Edit(src/greeting.ts)
+   ⎿  Updated src/greeting.ts with 2 additions and 1 removal
+      1 + /** Greets someone by name. */
+      2   export function greet(name: string): string {
+      2 -   return "hello " + name;
+      3 +   return `hello, ${name}`;
+      4   }
+
+ ⏺ Edited.
+
+ ✷ Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                       Fake Large with a 1M context window · 99% context left
+
+--- picker ---
+ chord                                                           fake · /tmp/chd87-qa/matrix/120x40-dark-dark-ansi/work
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ › edit
+
+ ⏺ Edit(src/greeting.ts)
+   ⎿  Updated src/greeting.ts with 2 additions and 1 removal
+      1 + /** Greets someone by name. */
+      2   export function greet(name: string): string {
+      2 -   return "hello " + name;
+      3 +   return `hello, ${name}`;
+      4   }
+
+ ⏺ Edited.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Theme                                                                                                                │
+│ Choose the colours that read best on this terminal.                                                                  │
+│                                                                                                                      │
+│   1. Auto (dark, from the terminal)                                                                                  │
+│   2. Dark                                                                                                            │
+│   3. Light                                                                                                           │
+│   4. Dark, colour-blind friendly                                                                                     │
+│   5. Light, colour-blind friendly                                                                                    │
+│ ❯ 6. Dark, the terminal's 16 colours ✔                                                                               │
+│   7. Light, the terminal's 16 colours                                                                                │
+│                                                                                                                      │
+│  1   function greet(name) {                                                                                          │
+│  2 -   return "hello " + name;                                                                                       │
+│  2 +   return `hello, ${name}`;                                                                                      │
+│                                                                                                                      │
+│ ↑↓ to preview · Enter to keep · Esc to go back to Dark, the terminal's 16 colours                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                       Fake Large with a 1M context window · 99% context left

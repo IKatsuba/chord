@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › /team
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                        │
+│ For this project in .chord/teams, for every project in                       │
+│ ~/.config/chord/teams.                                                       │
+│                                                                              │
+│ ❯ bugfix  4 agents  this project   ✻ working 6m  Fixes a bug end to end…     │
+│   review  3 agents  every project                Reviews a branch befor…     │
+│   docs    2 agents  this project                 Keeps README.md and do…     │
+│   triage  ✗ not read: members.1.agent is missing                             │
+│                                                                              │
+│ Enter to hand it a job · Esc to close                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                      Opus · 91% context left

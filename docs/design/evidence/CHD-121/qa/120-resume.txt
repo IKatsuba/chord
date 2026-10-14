@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake    3 fake ●                                                                         ~/src/app
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ Open one of fake's earlier sessions in this directory here.                                                          │
+│                                                                                                                      │
+│ ❯ 1. just now  open in 3  permission                                                                                 │
+│   2. just now  open in 1  text                                                                                       │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 3 fake needs your permission · ctrl+x a to go · ? for shortcuts     Fake Large with a 1M context window · 99% left

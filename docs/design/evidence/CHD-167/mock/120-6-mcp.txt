@@ -1,0 +1,40 @@
+ chord                                                                                               claude · ~/src/app
+ › Fix the tokenizer bug in src/parse, and keep codex on the parser tests while you do.
+
+ ⏺ Done; the printer is fixed and all 214 tests pass.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                                                          │
+│ chord passed these to claude when the session started. ACP does not say whether claude connected to them.            │
+│                                                                                                                      │
+│ Name        Transport  Command or URL                      Defined in                                                │
+│ chord       http       http://127.0.0.1:52817/mcp          chord itself                                              │
+│ github      http       https://api.githubcopilot.com/mcp/  .mcp.json                                                 │
+│ playwright  stdio      npx @playwright/mcp@latest          .mcp.json                                                 │
+│                                                                                                                      │
+│ chord's server gives claude list_agents, list_sessions, spawn_task, open_agent, send_message and close_agent.        │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                              Opus · 91% context left

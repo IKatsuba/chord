@@ -1,0 +1,24 @@
+   [2m│[0m           "id": "28a085d9",                         [2m│[0m
+   [2m│[0m           "name": "parser",                         [2m│[0m
+   [2m│[0m           "runtime": "fake",                        [2m│[0m
+   [2m│[0m           "model": "fake-small"                     [2m│[0m
+   [2m│[0m         },                                          [2m│[0m
+   [2m│[0m         {                                           [2m│[0m
+   [2m│[0m           "id": "4c634f90",                         [2m│[0m
+   [2m│[0m           "name": "docs",                           [2m│[0m
+   [2m│[0m           "runtime": "fake",                        [2m│[0m
+   [2m│[0m           "model": "fake-large"                     [2m│[0m
+   [2m│[0m         }                                           [2m│[0m
+   [2m│[0m       ]                                             [2m│[0m
+   [2m│[0m     }                                               [2m│[0m
+   [2m│[0m   ]                                                 [2m│[0m
+   [2m│[0m }                                                   [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 2% context used[0m
+    [1mmain  [0;2m  fake · Fake Large with a 1M context window[0m
+    parser[2m  fake · Fake Small                         [0m
+    docs  [2m  fake · Fake Large with a 1M context window[0m

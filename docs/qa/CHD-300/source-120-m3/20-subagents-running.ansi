@@ -1,0 +1,40 @@
+
+ [2m›[0m /vim
+   [2m⎿[0m  [2mVim mode on: Esc for normal mode, i to insert[0m
+
+ [2m›[0m /vim
+   [2m⎿[0m  [2mVim mode off[0m
+
+ [2m›[0m /theme
+   [2m⎿[0m  [2mTheme set to Light[0m
+
+ [2m›[0m /theme
+   [2m⎿[0m  [2mTheme set to Dark[0m
+
+ [2m›[0m shell
+
+ [2m⏺[0m [1mRun[0m(deno task test)
+   [2m⎿[0m  [2m3/3[0m
+   [2m [0m  [2mok | 2 passed[0m
+   [2m [0m  [2mFAILED | 1 failed[0m
+      [2m… +2 lines (ctrl+o to expand)[0m
+   [2m [0m  Exit code 1
+
+ ⏺ The tests failed.
+
+ [2m›[0m subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ [2m⏺[0m Running 2 agents…[2m (ctrl+o to expand)[0m
+   [2m├─[0m [1mAgent[0m(Find the session layer)[2m · 2 tool uses[0m
+   [2m│[0m  [2m⎿[0m  [1mRead[0m(src/acp/connection.ts)
+   [2m└─[0m [1mAgent[0m(Find where tool calls are drawn on screen and how they fold)[2m · 1 tool use[0m
+      [2m⎿[0m  [1mSearch[0m(function Tool in src/ui)
+
+ ✹ Working… [2m(0s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                [2mFake Large with a 1M context window · 1% context used[0m

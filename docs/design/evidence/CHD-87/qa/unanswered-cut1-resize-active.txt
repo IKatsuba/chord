@@ -1,0 +1,40 @@
+ chord                                                               fake · /tmp/chd87-qa/behavior/unanswered-cut1/work
+ › slow
+
+ ⏺ Working.................................................
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › /theme
+   ⎿  Theme set to Light
+
+ › long
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+   2. Line 2 of 200, streamed one at a time.
+   3. Line 3 of 200, streamed one at a time.
+   4. Line 4 of 200, streamed one at a time.
+   5. Line 5 of 200, streamed one at a time.
+   6. Line 6 of 200, streamed one at a time.
+   7. Line 7 of 200, streamed one at a time.
+   8. Line 8 of 200, streamed one at a time.
+
+ ✷ Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

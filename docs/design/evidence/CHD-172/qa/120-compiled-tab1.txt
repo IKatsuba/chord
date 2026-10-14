@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake    3 fake2                                                      /tmp/chd172-final.XDzrEf/proj
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd172-final.XDzrEf/proj
+ █▀     ? for shortcuts · /help
+        resumed · 1 minute ago · text
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › mode
+
+ ⏺ Mode: default.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

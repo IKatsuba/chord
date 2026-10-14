@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake ✓                              /tmp/chord-qa.3sRI/app
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  enter to send                         ! for bash mode
+  \ + enter for a newline               backspace to leave bash mode
+  shift + enter for a newline           esc to interrupt or stop a command
+  ctrl + g to edit in $EDITOR           shift + tab to cycle modes
+  ctrl + v to paste an image            ctrl + o for verbose output
+  ↑ ↓ for earlier prompts               ctrl + c to clear input
+  ctrl + r to search prompts            ctrl + d or ctrl + c twice to quit
+  tab enter to take a match             ctrl + x then a key for sessions
+  esc to cancel a search                1–9 to pick a choice
+  pgup pgdn to scroll                   ↑ ↓ or j k to move between choices
+  shift + ↑ ↓ to scroll a line          enter to pick the highlighted choice
+  home end for the top and the bottom   esc to reject a permission
+  / for commands                        esc to close a picker
+  ↑ ↓ to pick a command                 ctrl + a to show all directories
+  tab to complete a command             tab ↑ ↓ space to fill in a form
+  @ for files                           ctrl + c to stop the turn and its form
+  ↑ ↓ to pick a file                    /vim for vim mode
+  tab enter to add a file               ? for shortcuts
+  esc to close commands or files        esc to close shortcuts

@@ -1,0 +1,24 @@
+
+ [2m›[0m /team new a bugfix team
+
+ ⏺ A lead on Opus to split the work, and three members, one for each step. Only
+   one of them edits a file at a time.
+
+ [2m⏺[0m [1mTeam[0m(bugfix)[2m · proposal[0m
+   [2m⎿[0m  [2mFixes a bug end to end: a failing test first, then the fix, then a[0m
+   [2m [0m  [2mreview of the diff.[0m
+
+   [2m [0m  lead      claude · opus          default      Splits the job, says who…
+   [2m [0m  tester    claude · sonnet        acceptEdits  Writes the failing test,…
+   [2m [0m  coder     codex · gpt-5.3-codex  auto         Writes the fix, in the f…
+   [2m [0m  reviewer  claude · opus          plan         Reads the diff and edits…
+      [2m… +39 lines (ctrl+o to expand)[0m
+   [2m [0m  Saved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix
+   and the bug, or just tell me to hand one to bugfix.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

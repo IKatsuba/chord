@@ -1,0 +1,40 @@
+ [1mdocs[0;2m · fake · Fake Large with a 1M context window · opened by main 7s ago[0m
+
+ ← [1m@main[0m
+   [2m⎿[0m  [2mpermission[0m
+
+ [2m⏺[0m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [2mWaiting…[0m
+
+
+
+
+
+
+
+
+
+
+
+
+ ✹ Waiting for permission… [2m(7s)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mdocs[0m asks                                                                                                            [2m│
+│[0m [1mWrite notes.txt[0m                                                                                                      [2m│
+│[0m                                                                                                                      [2m│
+│[0m Do you want to proceed?                                                                                              [2m│
+│[0m ❯ 1. Allow                                                                                                           [2m│
+│[0m   2. Always allow                                                                                                    [2m│
+│[0m   3. Deny                                                                                                            [2m│
+│[0m                                                                                                                      [2m│
+│[0m [2mEsc to reject[0m                                                                                                        [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─[0;1m docs[0;2m ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m
+    main  [2m  fake · Fake Large with a 1M context window[0m  ✓ replied 2s ago
+    parser[2m  fake · Fake Small                         [0m
+    [1mdocs  [0;2m  fake · Fake Large with a 1M context window[0m  ● permission 7s

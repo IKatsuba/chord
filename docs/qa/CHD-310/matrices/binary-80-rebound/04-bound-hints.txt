@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                 /tmp/chd310/m3/binary-80-rebound/work
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl + s to send
+  \ + ctrl + s for a newline
+  shift + enter alt + enter for a newline
+  ctrl + g to edit in $EDITOR
+  ctrl + v to paste an image
+  ↑ ↓ for prompts, agents and monitors
+  x to close an agent or stop a monitor
+  ctrl + r to search prompts
+  tab enter to take a match
+  esc to cancel a search
+  pgup pgdn or wheel to scroll
+  shift + ↑ ↓ to scroll a line
+  home end for the top and the bottom
+  / for commands
+  ↑ ↓ to pick a command
+  tab to complete a command
+  @ for files
+  ↑ ↓ to pick a file
+  tab enter to add a file

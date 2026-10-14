@@ -1,0 +1,24 @@
+ ⏺ Read(step-40.ts)
+
+ ⏺ Read(step-41.ts)
+
+ ⏺ Read(step-42.ts)
+
+ ⏺ Read(step-43.ts)
+
+ ⏺ Read(step-44.ts)
+
+ ⏺ Read(step-45.ts)
+
+ ⏺ Read(step-46.ts)
+
+ ⏺ Read(step-47.ts)
+
+ ⏺ Read(step-48.ts)
+
+ ── ↓ 205 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

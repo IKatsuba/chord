@@ -1,0 +1,24 @@
+ chord             fake · /private/tmp/chd81-source-80x24-aa25aa8ca589562e/work
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ Open one of fake's earlier sessions in this directory here.                  │
+│                                                                              │
+│ ❯ 1. just now  /greet day                                                    │
+│                                                                              │
+│ Enter to resume · Esc to close                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,40 @@
+ [1mchord[0m   [2m1 fake[0m    [2m2 fake[0m   [1;7m 3 fake2 [0m                                  [2m/private/tmp/chd173-qa-425601bd6783698a/120/proj[0m
+ █▄     [1mchord[0;2m v0.0.0[0m
+ ▀██▄   [2mfake2 · Fake Large with a 1M context window[0m
+ ▄██▀   [2m/private/tmp/chd173-qa-425601bd6783698a/120/proj[0m
+ █▀     [2m? for shortcuts · /help[0m
+        [2mresumed · just now · text[0m
+
+ [2m›[0m tools
+
+ [2m⏺[0m [1mRead[0m(README.md)
+   [2m⎿[0m  [2m# chord[0m
+
+ ⏺ Read it.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m /status
+   [2m⎿[0m  [2mAgent:     [0mfake2
+   [2m [0m  [2mModel:     [0mFake Large with a 1M context window
+   [2m [0m  [2mMode:      [0mDefault
+   [2m [0m  [2mSession:   [0m6fd96e45-204a-45f6-94f1-9c7d94e5c4e8
+   [2m [0m  [2mDirectory: [0m/private/tmp/chd173-qa-425601bd6783698a/120/proj
+   [2m [0m  [2mSessions:  [0m3 open
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m

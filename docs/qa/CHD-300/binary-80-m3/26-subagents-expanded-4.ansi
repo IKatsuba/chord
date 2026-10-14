@@ -1,0 +1,24 @@
+   [2m│[0m
+   [2m│[0m     ⏺ The listeners are kept per sessionId in openAgent; an id chord did
+   [2m│[0m       not open is dropped there.
+   [2m│[0m  [2m⎿[0m  [2mDone[0m
+   [2m└─[0m [1mAgent[0m(Find where tool calls are drawn on screen and how they fold)
+      [2m⎿[0m  Find the component that draws a tool call and the rule that folds its
+         output.
+
+         [2m⏺[0m [1mSearch[0m(function Tool in src/ui)
+           [2m⎿[0m  [2mFound 1 file[0m
+
+         [2m⏺[0m [1mRead[0m(src/ui/App.tsx)
+           [2m⎿[0m  Error: File is too large to read whole.
+
+         ⏺ Could not read the component.
+      [2m⎿[0m  Failed
+
+ ⏺ Now the tests, in the background.
+ [2m── ↓ 10 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

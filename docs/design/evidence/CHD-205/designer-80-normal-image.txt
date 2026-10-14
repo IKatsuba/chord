@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.WsKL
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.WsKL
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ .chord/settings.json: "editorMode" is read only from
+   /tmp/chord-xdg.oTiX/chord/settings.json, ignored
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › what i [Image #5] s                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- NORMAL --                             Fake Large with a 1M context window

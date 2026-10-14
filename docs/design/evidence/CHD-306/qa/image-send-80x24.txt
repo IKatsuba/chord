@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/chord-app-rV4Llj
+ █▀     ? for shortcuts · /help
+
+ › cut [Image #1]
+
+ ⏺ Received an image: image/png, 70 bytes
+
+   Hello, world. This reply
+
+
+
+
+
+
+
+
+ ✶ Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

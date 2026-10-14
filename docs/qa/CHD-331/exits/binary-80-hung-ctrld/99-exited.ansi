@@ -1,0 +1,24 @@
+Resume this session with:
+chord fake --agent-command 'env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fix
+tures/fake_agent/main.ts' --resume db149943-e8ba-4d63-bee2-2e7a5f22433e
+
+QA_DONE code=0
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+[38;2;255;255;255m
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mOpen[0m(coder)[2m · fake · fake-large · plan[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mYou will edit src/parse/tokenize.ts, and only it, once tester's test[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mfails. Read it now; change nothing yet.[0m[38;2;255;255;255m
+
+ [39m→[38;2;255;255;255m [1m[39m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts;…[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mtester and coder are open; I wait for tester's test.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@tester[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIt fails for that reason: "a" at the end of a line comes back as "a,[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mwith no closing quote. Only tests/parse/tokenize_test.ts changed.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from tester · fake.[38;2;255;255;255m
+
+[2m[39m╭─[0;1m bugfix[0;2m ─────────────────────────────────────────────────────────────────────╮
+[0m[38;5;244m│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m● tester needs your permission · ctrl+x a[0m[38;2;255;255;255m    [2m[39mFake Large with a 1M… · 1% used[0m[38;2;255;255;255m
+  [2m[39m [0m main     [2m  fake       [0m[38;2;255;255;255m
+  [39m  [1mbugfix   [0;2m  team · fake[0m[38;2;255;255;255m
+  [39m  [2m├─ [0mtester[2m  fake       [0m  ● permission 3s[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 4s ago[38;2;255;255;255m

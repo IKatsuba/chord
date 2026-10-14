@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.NdXs
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.NdXs
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › what is                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                                           Fake Large with a 1M context window

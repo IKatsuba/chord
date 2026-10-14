@@ -1,0 +1,591 @@
+# chord
+
+A full-screen terminal client for coding agents that speak the
+[Agent Client Protocol](https://agentclientprotocol.com) — Claude Code, Codex,
+Gemini CLI, Cursor, fx, OpenCode and the rest — with everything people reach for
+in Claude Code's own interface: permission modes, slash commands, `@` file
+mentions, `!` bash mode, plans, diffs, history, resume, and a keyboard for all
+of it.
+
+> **Status: pre-alpha.** You can send prompts, read the replies as plain
+> text, and answer the agent's permission requests and forms; tool calls and
+> the rest are on their way.
+> `docs/FEATURES.md` is the map of what is coming and in which order.
+
+## Why
+
+Claude Code's terminal interface is the best one there is for working with a
+coding agent, and it only talks to Claude. ACP separates the agent from the
+interface, so the interface can be one program and the agent anything. chord is
+that program: open source, one binary, one window, any agent.
+
+chord is the open sibling of [Chorded](https://chorded.app), a native macOS
+workspace for agent sessions driven by key chords. The two share a belief —
+every action has a key, and nothing needs a pointer — and a mark, which chord
+draws when a session starts. They share no code, no licence and no account.
+
+## Install
+
+```sh
+npm install -g @chorded/chord
+```
+
+The npm package is a small shim around a prebuilt standalone binary for your
+platform (macOS and Linux; arm64 and x64). There is no Node build of chord.
+The macOS binaries are signed and notarised.
+
+`chord upgrade` installs the latest version through the package manager
+that installed chord (npm, bun, pnpm or yarn); `chord upgrade --version
+<version>` installs that one, and `chord upgrade -l` lists them.
+
+Or build from source with [Bun](https://bun.sh) 1.4.2 or newer:
+
+```sh
+bun install
+bun run compile --install   # compiles into ~/.local/bin/chord
+```
+
+## Use
+
+```sh
+chord                 # Claude Code, or your settings' agent, here
+chord codex           # any agent `chord agents` lists
+chord gemini -C ~/src/app
+chord --continue      # Claude Code's latest session in this directory, again
+chord --resume <id>   # a session by its id, which chord prints when you quit
+chord -r <id> -r <id> …   # each a tab of one window, the first in front
+chord --resume w-<id> # a whole window again, as chord prints when you quit it
+chord --resume        # pick an earlier session or a saved window first
+chord agents          # the agents chord can start: name, what starts each, and whether PATH has its CLI
+chord -p "Explain src/main.tsx"                # the reply on stdout, then exit
+git diff | chord -p "Review this" --output-format json
+```
+
+Inside chord, `/resume` lists this directory's earlier sessions and saved
+windows in one list, newest first, each with when it was last used and its
+first prompt, after its name for an agent another agent started; a window reads `▣ 3 sessions · claude, codex, claude` and its
+front tab's first prompt, and its sessions are on the list too, just under
+it. Enter opens the highlighted session in the same window and Esc leaves
+things as they were. Enter on a window opens its tabs beside those open, at
+the end of the strip, with its front tab in front; one already open is not
+opened twice, and a front tab no prompt went to gives its place. A window
+that would take more than nine tabs opens none, and the status line says
+how many to close. ctrl+a lists every directory's, as Claude Code's does,
+each row naming its directory from `~` (a window's front tab's, `+1` for
+each other directory its tabs work in), and ctrl+a again goes back to this
+one. A session or window from another directory is not opened in this
+window, whose settings, MCP servers and files are that directory's; chord
+says so and gives the `chord <agent> --resume <id>` or
+`chord --resume w-<id>` that opens it where it works.
+
+`chord --resume` with no id opens the same picker before any agent starts,
+as `claude --resume` does; Enter opens what it picks, from any directory,
+as its own `--resume` would, and Esc quits with nothing started.
+
+ctrl+x c opens another session of the same agent in the same directory,
+in front, beside the one already open, up to nine; `/new` does the same, and
+`/new codex` opens one of the agent it names, on that agent's command, model
+and mode from the settings files; `/new ` and part of a name lists the agents
+chord can start, those only your settings name among them, an agent whose own
+CLI is not on your `PATH` marked so, and Tab or Enter picks one. An agent chord cannot start is refused in
+the transcript, and a tenth session on the status line. With two or more open the
+window's top row has a tab for each, the one in front in inverse; a tab behind marks a
+turn running (`✻`), a reply not yet seen (`✓`), a failure (`✗`) or a
+permission or form waiting (`●`). ctrl+x n and ctrl+x p go to the next and
+the previous tab, ctrl+x 1 to 9 to a tab by its number, each with its own
+transcript, draft and prompt as it was left. After ctrl+x the status line
+names the keys that can follow, and Esc lets it go. A session behind that
+asks for permission or a form, or ends its turn, never comes to the front by
+itself: the status line says so
+(`● 2 claude needs your permission · ctrl+x a`), and ctrl+x a goes to the one
+that has waited longest, then the next on each press. ctrl+x k closes the
+session in front, the one to its left coming forward; one that is working
+or running a `!` command, waits on you, has prompts queued, or task agents
+running or long-lived agents working or waiting asks for a
+second ctrl+x k first, and its command stops with it. Its long-lived agents
+close with it. Closing the last one
+quits. With several open and any of them busy, ctrl+d
+and `/exit` ask for a second press too and name the busy ones. Quitting
+closes every session, waits for each agent to exit, and prints a
+`chord <agent> --resume <id>` for the session a prompt went to. With two or
+more such sessions it saves the window instead
+(`~/.local/state/chord/windows/`) and prints one command for all of them,
+`chord --resume w-<id>`, which opens every tab again in its order, each on
+its own agent where it works, the one that was in front in front. A window
+opened that way and quit again is saved over its own record, as it is then.
+A tab whose session record has gone is left out, and the status line says
+which; a window id goes on its own, never among session ids.
+
+A resumed session shows its earlier prompts, replies and tool calls, an
+edit with its diff, and the next prompt goes on in the same session. chord
+keeps a record of every session a prompt was sent in, in its state directory
+(`~/.local/state/chord/records/`), which `--continue`, `--resume` and
+`/resume` read, and the past is drawn from it whichever way the agent
+reopens the session. The id is the agent's own: for Claude Code, the one
+`claude --resume` takes, so `--resume <id>` also opens a session chord never
+saw, its past as the agent replays it.
+
+`--resume` (`-r`), given once per id, takes up to nine, the most one window
+holds, and opens each
+in a tab of its own, in the order given, the first in front. Each tab runs
+its session's own agent in its session's own directory, with that
+directory's settings and MCP servers; `@`, `!` commands, `/status` and the
+header follow the tab in front, and ctrl+x c and `/new` open beside it in
+its directory. Several ids open only sessions chord has a record of: an
+unknown id, the same id twice or a tenth refuses the whole command before
+the window opens. Each `--resume` takes one id or none, so the agent goes
+anywhere around them: `chord codex -r <id> -r <id>`. As the id is optional,
+a word after `--resume` that names one of chord's own flags (`model`, `c`)
+is not read as an id.
+
+ctrl+g opens the prompt in your editor (`$VISUAL`, then `$EDITOR`, then
+`vi`), run through your shell; what it saves comes back as the prompt when
+it exits. An editor that exits with an error or is killed leaves the
+prompt as it was, and the status line says so.
+
+ctrl+v puts the image on the clipboard into the prompt as `[Image #1]`, at
+the cursor, and Enter sends it after the text. So does the terminal's own
+paste (cmd+V) where the terminal sends an empty paste for a clipboard that
+holds only an image, as Ghostty does; one with nothing on the clipboard
+changes nothing. A path to a PNG, JPEG, GIF
+or WebP file pasted or typed into the prompt (`/…`, `~/…`, `file://…`, as a
+terminal writes a dropped file) is taken the same way. Backspace after
+the placeholder, or delete before it, takes it whole, and the image stays
+behind. An agent that says it takes no
+images gets none, and the status line says so.
+
+`/config` lists the agent's own settings for the session other than its
+model and mode, such as Claude's effort, each with its value; Enter on one
+lists its values and Enter on a value sets it.
+
+Each session's transcript opens with a header: Chorded's mark in its
+gradient, drawn in half blocks, and beside it chord's version, the agent and
+the model the session started on, its directory and the keys to `?` and
+`/help`; a resumed session's says when it was last used and its first
+prompt. It stands at the top, the window's first row with one session open
+and under the row of tabs with more, and the conversation grows down from it;
+once the conversation fills the window the header scrolls away, and `home`
+brings it back.
+
+`/theme` chooses chord's colours: Auto, Dark, Light, each of those two
+colour-blind friendly, or in the terminal's own 16 colours. Moving through
+the list shows the whole window in the highlighted theme; Enter keeps it and
+saves it to your settings file, and Esc goes back. Auto, the default, asks
+the terminal for its background as chord starts. chord never colours plain
+text, so it stays your terminal's own, and `NO_COLOR` turns every colour off
+whatever the theme.
+
+`/vim` turns vim mode on for the prompt, and off again; the choice is kept
+for the next start. The box starts in insert mode, where it types as ever,
+and `-- INSERT --` or `-- NORMAL --` under it says which mode it is in. Esc
+goes to normal mode, which takes `h j k l`, `w b e`, `0 $ ^`, `x`, `dd`,
+`dw`, `cw`, `D`, `C`, `i a I A o O`, `u`, `p` and counts such as `3w` or
+`d2w`; an `[Image #N]` goes whole under `x` and `dw`. Enter sends from
+either mode. Esc in normal mode does what it does without vim mode, so
+interrupting a turn takes Esc twice from insert mode; an open list, picker
+or panel still closes on the first Esc.
+
+`-p` draws no window: it sends one prompt, with anything piped in after it
+on a line of its own, writes the reply to stdout as it streams, and exits 0
+when the agent ends its turn, or 1 with the error on stderr. Nobody is there
+to answer a permission, so each one is refused and stderr says so.
+`--permission-mode`, or `permissionMode` in the settings files, starts the
+turn in that mode, and `--effort`, or `effort`, on that effort; one the
+agent does not take is a `chord: could not start in <mode> mode, …` or
+`chord: could not start on <effort> effort, …` line on stderr, and the turn
+runs as the agent chose. `--dangerously-skip-permissions`, only with `-p` and never a setting,
+allows every permission instead, each with a `chord: allowed <title>.` line
+on stderr; with both, the mode is asked for and whatever the agent still asks
+is allowed.
+`--output-format json` prints one object at the end instead: `result`,
+`session_id` (which `--resume` takes), `stop_reason`, `is_error`, and `usage`
+and `total_cost_usd` when the agent reports them. An agent that reports its
+tokens but no cost, as Codex can, gets a cost chord works out from the
+model's price, with `cost_estimated: true` beside it; `/cost` says
+`(chord's estimate)` after such a cost, and a context window chord took from
+the model's data is marked `~` on the status line.
+
+## Settings
+
+chord reads two settings files before it starts: the user's,
+`~/.config/chord/settings.json` (under `$XDG_CONFIG_HOME` when that is set),
+and the project's, `.chord/settings.json` in the directory the session works
+in. The project's file overrides the user's, and a command-line flag overrides
+both.
+
+```json
+{
+  "agent": "codex",
+  "agents": {
+    "claude": { "effort": "high", "permissionMode": "plan" },
+    "my-agent": { "command": "my-agent --acp" }
+  }
+}
+```
+
+| Key                            | Sets                                                 | Flag                |
+| ------------------------------ | ---------------------------------------------------- | ------------------- |
+| `agent`                        | the agent `chord` starts when none is named          | `[agent]`           |
+| `agents.<name>.command`        | the command that starts that agent instead of chord's own   | `--agent-command` |
+| `agents.<name>.model`          | the model each of its sessions starts on             | `-m, --model`       |
+| `agents.<name>.effort`         | the effort each of its sessions starts on            | `--effort`          |
+| `agents.<name>.permissionMode` | the mode each of its sessions starts in              | `--permission-mode` |
+| `preferredNotifChannel`        | how the terminal is told chord waits on you          |                     |
+| `theme`                        | chord's colours, as `/theme` chooses them; user's file only | `/theme`     |
+| `editorMode`                   | `vim` for vim mode in the prompt, as `/vim` leaves it; user's file only | `/vim` |
+| `mouse`                        | `false` leaves the mouse to the terminal; user's file only |                     |
+| `mcpServers`                   | MCP servers handed to the agent, as `.mcp.json` writes them |             |
+
+When a turn ends, a permission is asked or the agent asks you to fill in a form
+or open a link, chord tells the terminal, so a window in the background can say
+so. `preferredNotifChannel` is `auto` by default: OSC 9, a desktop
+notification, in iTerm2, WezTerm, Ghostty and kitty;
+OSC 777 in foot; the bell elsewhere and inside tmux. `bell`, `osc9`, `osc777`
+choose one, and `off` turns it off. A turn you interrupt with Esc is not
+announced. With several sessions open, the notification names the tab:
+`fake (2) needs your permission: Write notes.txt`.
+
+`theme` takes Claude Code's ids: `auto` (the default), `dark`, `light`,
+`dark-daltonized`, `light-daltonized`, `dark-ansi` and `light-ansi`. It is
+about your terminal and your eyes rather than a project, so it is read only
+from the user's file, and one in a project's file is reported and left out.
+`/theme` writes it there, keeping the file's other keys. `editorMode`,
+`normal` (the default) or `vim` as Claude Code names them, is read from the
+user's file alone for the same reason, and `/vim` writes it there the same
+way.
+
+chord reads the mouse, so the wheel and the trackpad scroll the
+transcript, as pgup, pgdn and shift+↑/↓ do, and ↑/↓ stay with your earlier
+prompts. To select text, hold your terminal's modifier while you drag:
+option in iTerm2, fn in Terminal.app (or turn mouse reporting off with
+⌘R), shift in most others. Inside tmux, the wheel reaches chord only with
+`set -g mouse on`; without it the terminal sends ↑/↓. `"mouse": false`, read
+from the user's file only, leaves the mouse to the terminal, as before.
+
+### Keybindings
+
+`~/.config/chord/keybindings.json`, beside the settings file, rebinds
+chord's keys. It has the shape of Claude Code's `~/.claude/keybindings.json`
+and the same action names, so a block copied from there means the same
+here; chord never reads Claude Code's file itself.
+
+```json
+{
+  "bindings": [
+    {
+      "context": "Chat",
+      "bindings": {
+        "enter": "chat:newline",
+        "ctrl+s": "chat:submit",
+        "ctrl+g": null,
+        "ctrl+x ctrl+e": "chat:externalEditor"
+      }
+    }
+  ]
+}
+```
+
+A key bound in a context replaces what it did there, `null` takes it away,
+and a chord is keys separated by spaces, each within 3 seconds of the one
+before. The actions are `chat:submit`, `chat:newline`, `chat:cancel`,
+`chat:cycleMode`, `chat:externalEditor`, `chat:imagePaste`,
+`history:previous`, `history:next` and `help:toggle` in `Chat`;
+`app:toggleTranscript`, `history:search`, and chord's own `session:new`,
+`session:next`, `session:previous`, `session:goto1` to `session:goto9`,
+`session:list`, `session:attention` and `session:close` in `Global`;
+chord's own `agents:close` (`x`) in `Agents`, the list of a session's
+agents and monitors, where it closes an agent or stops a monitor;
+`autocomplete:accept`, `dismiss`, `previous` and `next` in `Autocomplete`;
+`historySearch:next`, `accept` and `cancel` in `HistorySearch`;
+`confirm:no` in `Confirmation`; `help:dismiss` in `Help`; `select:cancel`
+and `select:toggleScope` (`/resume`'s ctrl+a, chord's own name) in `Select`; and `scroll:pageUp`, `pageDown`, `lineUp`, `lineDown`, `top`
+and `bottom` in `Scroll`. ctrl+c and ctrl+d cannot be rebound, nor can the
+keys inside lists, forms and vim mode. An unknown context, action or key,
+and a key that would mean two actions at once, such as a key the
+transcript scrolls on bound in `Chat`, is left out and named as a
+warning in the transcript and on stderr, and the status line counts them; the
+rest of the file still applies. The `?` panel and the hints name the keys as
+bound, and `\ + enter for a newline` names the key that sends.
+
+The keys work on a Russian layout too, the defaults and the file's alike: a
+press that does nothing as typed is read as the US key in the same place,
+so ctrl+ч is ctrl+x, `с` after it opens a session and vim's normal mode
+moves on р о л д. Text is never read again: Cyrillic typed in the prompt,
+a form, the search line or vim's insert mode stays as typed, and a key the
+file binds in Cyrillic is its own. Punctuation a US layout also types stays
+itself, so on "Russian – PC", where the key in `?`'s place types `,`,
+shift+7's `?` opens the panel. In a terminal speaking the kitty keyboard
+protocol (kitty, Ghostty, WezTerm, iTerm2 with CSI u on), every key is
+found on any layout, Greek, Ukrainian or Hebrew as well, by the key in its
+place that the terminal names, so there the key in `?`'s place opens the
+panel on an empty prompt too, and types its `,` after a draft.
+
+chord hands the agent MCP servers for each session it opens, new or
+resumed, from three places, each over the one before: `mcpServers` in the
+user's settings file, the `.mcp.json` in the directory the session works in
+(the file Claude Code and other tools share), and `mcpServers` in the
+project's `.chord/settings.json`. A server named twice is the later one,
+whole. Each is written the way `.mcp.json` writes it:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."], "env": { "DEBUG": "1" } },
+    "docs": { "type": "http", "url": "https://mcp.example.com/mcp", "headers": { "Authorization": "Bearer …" } }
+  }
+}
+```
+
+A server started as a command has `command`, and may have `args` and `env`;
+one reached over the network has `type` (`http` or `sse`), `url`, and may
+have `headers`. `/mcp` lists the servers chord passed: each one's name, its
+transport, its command or URL, and the file that defined it; Esc closes it.
+It does not show `env` or `headers`. Whether the agent then connected to
+them, ACP does not say, and neither does `/mcp`. chord only reads these
+files; it never writes `.mcp.json` or the agent's own configuration. A
+server that is wrong is named with its file and left out, and the others
+still count; a `.mcp.json` that is not a JSON object is named and ignored.
+`/mcp` says under its list how many servers each file lost that way.
+`-p` passes the same servers.
+
+Beside them, every session the window opens gets an MCP server of chord's
+own, named `chord` (or `chord-2`, … where one of the user's already is), where
+its agent takes MCP over HTTP: chord serves it on
+the loopback while the window is open, and each session reaches it with a
+token of its own, so nothing else on the machine can call it. Its tools let
+an agent see what it could start: `list_agents` names every agent chord can
+start and the models and modes of those already read, or, given an agent's
+name, that one's, starting it briefly to read them if no session of it is
+open;
+`list_sessions` names the window's open sessions with their agent, model and
+tab. `spawn_task` starts a task agent: another agent, on any runtime chord
+knows and a model it offers, does one job with no tab of its own. Its work
+draws in its parent's turn as a subagent's block does, `Agent(<name>) ·
+codex · gpt-5.3-codex`, its permission requests, forms and links come to you
+in the parent's tab, and what it tells its parent with `send_message`, its
+one tool, and the report its first turn ends with reach the parent as
+messages, drawn as a `←` row: a turn of the parent's, or, while one runs,
+what the task tells it goes into that turn, and the report waits behind it
+the way a prompt does. Every agent chord opens but a task has `spawn_task` and
+`list_agents`, so a long-lived child starts task agents of its own, drawn in
+its own turn and closed with it; a task starts none. Esc stops the turn's
+task agents with it, and they
+send no report; `/clear` closes them with the session it lets go. A task
+asked for a model its runtime refuses fails before it starts work. Asked
+for an effort too, as `list_agents` lists them, it starts on it, and its
+block says it after the model; one the runtime does not take leaves it on
+the runtime's own, which the block says instead, and the refusal is a line
+in the parent's transcript and in the answer, which waits for the task to
+be up.
+
+`open_agent` opens a long-lived agent the same way, with the prompt as its
+first turn, a message from `main`. It gets no tab: while a session has one,
+a list of its agents sits under the status line, `main` and each child in
+the order it opened, each child in a colour of its own, with its runtime,
+model, the effort it is on (`open_agent` takes one as `spawn_task` does)
+and state (`✻ working 41s`, `● permission 12s`, `← message from
+@main`, `✓ replied 2m ago`). ↓ on an empty prompt that is not walking
+history moves into the list, where ↑ ↓ or j k pick; Enter or Esc goes back
+to the box with the pick kept. The picked agent's chat fills the window,
+the box takes its colour and its name on the top border, and the status line
+its model, effort and context: what you type goes to it as your own prompt. `send_message` from the parent reaches a
+child, and from a child its parent alone, each a turn of the recipient's,
+as many as they trade; `list_sessions` gives each session's children. A
+message to an agent that is working goes into its turn at once, where its
+runtime takes that (Claude's and Codex's adapters advertise ACP's
+`_session/steering`), and draws there, among the turn's calls; while the
+turn waits on your answer to a permission, form or link, it waits under the
+working line as `← @main · after your answer: …` and goes in once you
+answer. A runtime without steering takes it as the next turn, as the queue
+under the working line shows. Should the message reach the agent just as
+its turn ended, and the agent start a turn of its own with it, as Codex's
+adapter does, chord cancels that turn at once, closes it with a dim
+`Interrupted · the agent started this on its own` line, and sends the
+message as the next turn. A monitor's events and your own prompts
+always wait for the turn's end. A
+child that waits on you is named on the status line, ctrl+x a picks it, and
+its permission box opens there. `x` in the list closes the picked child, a
+second time while it works or waits, and chord tells the parent so;
+`close_agent` closes one from the parent, and a message to a closed one is
+refused. A child whose agent exits, or whose turn fails, is news to its
+parent too: a `← chord` message, a turn of the parent's, says
+`parser's agent exited: <the end of its stderr>. open_agent opens it
+again.`, or that its turn failed and why, so a parent waiting on a report
+does not wait for ever. A session holds eight children at most, a team's
+lead counting as one and its members as none. `/clear` with a child
+picked is refused; on `main` it closes the children with the session.
+
+A team saved in `.chord/teams/<name>.md`, or in `teams/` beside your
+settings file for every project, takes a job from the session you talk to:
+say "hand it to bugfix" and the agent calls `run_team`, which chord draws
+as `Team(bugfix) · claude · opus` with the job under it. `list_teams` names
+the saved teams and their runs open. The team's lead is a long-lived child
+named after the team, on the lead's runtime, model, effort and mode; a second run
+of a running team is `bugfix 2`. Its first prompt is the team's
+instructions, drawn as one line (`bugfix's instructions for the lead · 58
+lines`, ctrl+o for all of them), then the job as a message from `@main`.
+The lead's `open_agent` takes a member's name and opens only the file's
+members, on the file's runtime, model, effort and mode (`Open(tester) ·
+claude · sonnet · high · acceptEdits`); an effort the runtime does not take
+leaves the agent on its own, which the answer and the agent's transcript
+say; its `send_message` reaches main, its members and
+the other runs' leads, and each message to main is a turn of main's. A
+member messages its lead and the team's other open members by name,
+directly. In the list the lead's row reads `team · claude · Opus` and its
+open members are nested under it (`├─ tester`); when the list does not fit
+its rows, each team folds to its lead's row, `team · claude · 4 agents` and
+its most urgent state with the member's name (`● tester: permission 12s`),
+and the team you are in unfolds. A member picked has its box read `tester ·
+bugfix`; its permissions are yours to answer, as a child's are, the
+notification says `tester (bugfix) needs your permission`, and with two
+runs open the status line says which run's `tester` asks. `x` on a lead
+closes the team, members and all, twice while any of it works, and chord
+tells main; a member closed tells the lead, and a lead whose agent exits
+closes its members and tells main.
+
+A team is made by asking for one: the agent you talk to calls
+`propose_team`, and chord draws its proposal as `Team(bugfix) · proposal`,
+a row per agent with its runtime, model, effort where any agent sets one,
+mode and role, each mode whole and
+one that skips your ok in the warning colour, then how the team works,
+folded. A box shaped like the permission box asks `Save team bugfix?`: for
+this project (`.chord/teams/bugfix.md`), for every project
+(`~/.config/chord/teams/bugfix.md`), or no, tell the agent what to change,
+which Esc picks too. chord writes the file, never the agent; the call ends
+`Saved to …` or `Not saved`, and your next words go to the agent. A
+proposal under a saved team's name is `Team(bugfix) · change`, its changed
+rows marked, a changed effort or mode with the one it had (`high was
+medium`), and its body's change
+counted and drawn as a diff (whole with ctrl+o), and saves back in place.
+
+`/team` is chord's own command for teams, and talks to the session you
+opened whatever agent is picked. `/team` alone (or `/team list`) opens the
+teams picker: each saved team with its size and runtimes, where it is
+saved, `✻ working 6m` or `✻ 2 runs` while it runs in the window, and its
+description, and a file that is not a team with its first problem. Enter
+puts `/team run bugfix ` in the box for you to type the job. `/team new
+<words>` asks the agent for a team through `propose_team`; to change one,
+ask the agent in plain words, and it proposes the change against the saved
+team through the same tool. `/team show bugfix`
+reports the team under the command, and while it runs each agent's state
+and latest call or message. `/team run bugfix <job>` hands it your words as
+they are, drawn as `run_team`'s `Team(bugfix)` row, with no turn of the
+agent's; the agent hears of it with your next prompt. `/team stop bugfix`
+closes that run and its members at once, and chord tells the agent. A
+team's name is completed after `show`, `run` and `stop`.
+
+`monitor` runs a command in the background for the agent that asks, a
+session's or a long-lived child's, and each batch of lines it prints reaches
+that agent later as a message: a turn of its own, drawn `← dev server errors
+· monitor` with the lines as printed, folded after six. Its end is one more,
+`· exit code 1`, `· timed out`, `· flooded` or `· stopped`, with chord's
+sentence last. While one runs it is a row in the list under the prompt, after
+the agents, with its command and how long it has run, a child's ending with
+its name; ↓ reaches it, and `x` on it stops it at once. A turn an event
+started does not ring the terminal when it ends. `stop_monitor` and
+`list_monitors` are the agent's own, and a resumed session draws its events
+again and names the monitors it left running, which are not restarted.
+
+A session resumed after its agents ran draws them as they were: each task
+agent's block, its work behind ctrl+o (read from the task's own record,
+so a task whose record was deleted keeps its block and how long it ran,
+without the work), a
+task still running when the
+session was left ending `Disconnected`, every message both ways, and the
+`Open`, `Close` and `→` calls. Its long-lived agents are not reopened with
+it; a closing line names those still open when it was left, which
+`/resume` lists like any session, and a message the parent sends one is
+refused. Opened from `/resume`, such a child is your own session, in a tab,
+with no parent to message. A team run is one of them, named with how many of
+its agents were open (`team bugfix (4 agents)`), and the line ends with
+`/team run bugfix starts the team again`: a fresh run, with no memory of
+the last but the working tree and what main was told. `/resume` lists its
+lead and members like any child. A task agent gets no command on quit.
+chord's own calls draw as `List agents`, `List sessions`, `Open(parser)`
+and `Close(parser)`, and a message sent as `→ @main` or `→ @parser`, never as
+their MCP names. A name after an arrow takes `@` where `send_message` reaches
+it, `main` and a long-lived child; a task, named by its title, and chord's
+own `← chord` stay bare. `/mcp` lists chord's server first,
+and says what it gives the agent, or that the agent does not take HTTP and
+got none. `-p` gets no such server.
+
+Models, efforts and modes are set per agent because their ids are the
+agent's own: `/model`, `/config` and shift+tab show what an agent offers, and
+`chord agents` lists the names. An effort is one the model the session starts
+on offers. A starting model, effort or mode the agent refuses is said in the
+transcript, with where it was set and what the agent offers, and the session
+goes on as the agent chose; an agent with no effort starts on its own, and
+the line says it offers none. An unknown key, or a key with the wrong kind of value, is
+named with its file and left out, and the rest of the file still counts; a
+file that is not a JSON object is named and ignored. Either way chord starts:
+the problem is a line on stderr and a yellow line at the top of the
+transcript. `-p` takes `agent`, `command`, `effort` and `permissionMode`
+from the files, and says a refused effort or mode on stderr; `--model` is for
+the window. `--agent-command`, `--model`, `--effort` and `--permission-mode`
+speak for the agent the command line names: a session `/new` opens of another agent starts on that
+agent's settings alone.
+
+chord knows the agents the [ACP Registry](https://agentclientprotocol.com/registry)
+offers through npx or uvx, each at the version chord's source pins: `claude`
+and `codex` for Claude's and Codex's adapters, every other one by its
+registry id. It starts one as `npx -y <package>@<version>` or
+`uvx <package>@<version>`, so `npx` or `uvx` must be on your `PATH`.
+
+Some agents ship their own CLI, which speaks ACP itself: `cursor`, `devin`,
+`fx`, `goose`, `junie`, `kimi`, `kiro`, `openclaw`, `opencode`, `poolside`
+and `zeroclaw`. chord starts each by the command its docs give (Cursor's
+`agent acp`, goose's `goose acp`, …), which you install yourself; when it is
+not on your `PATH`, chord says which command it looked for and where the
+agent says to install it, and exits before the window. chord downloads
+nothing for them: the registry also offers most of these as archives to
+unpack, but a CLI you installed and keep up to date is the one you already
+signed in to. Any other ACP agent starts with `agents.<name>.command` or
+`--agent-command`, which also replace the command chord knows for a name; a
+name your settings files alone give a command starts as `chord <name>` and
+opens with `/new <name>`. `chord agents` lists them all: each one's name and
+title (`from settings` for a name only they define), `npx` or `uvx` for the
+registry's, `own CLI · found` or `own CLI · not on PATH` for those that need
+their own CLI, and `settings` where a settings file's command starts it, then
+what starts it, that command in the table's or the registry's place, wrapped
+within its column on a terminal and one line per agent when piped.
+You sign in to the agent the way it expects: chord starts the agent's ACP
+adapter or CLI, it does not sign you in to anybody.
+
+## Development
+
+```sh
+bun install           # the dependencies
+bun run chord         # run from source
+bun run check         # types, lint, format, tests — must pass before every commit
+bun run compile       # this machine's binary into dist/
+bun run registry      # refetch the ACP Registry's agents into src/registry.ts
+```
+
+`CLAUDE.md` is how the code is written and is binding for people and agents
+alike. `docs/decisions.md` records why the stack is what it is.
+
+A chord that has grown large: `kill -USR2 <pid>` writes a heap snapshot of
+it, without stopping it, into `heaps/` in chord's state directory, for
+Chrome's DevTools. `docs/memory.md` has how, and the long-run memory check
+(`bun scripts/memory.ts`).
+
+## Built on
+
+- [ACP Registry](https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json)
+  — the agents chord knows by name, frozen into `src/registry.ts`, beside
+  `src/clis.ts`'s agents started by their own CLI.
+- [OpenTUI](https://github.com/anomalyco/opentui) — the terminal interface, through
+  its React bindings.
+- [Agent Client Protocol SDK](https://github.com/agentclientprotocol/typescript-sdk)
+  — the connection to the agent, and the protocol types.
+- [Cliffy](https://cliffy.io) — the command line.
+
+## Licence
+
+chord's code is [MIT](LICENSE).
+
+The Chorded name and the chevron mark, which chord draws at the top of a
+session (`scripts/mark.svg`, and `src/ui/header/mark.ts` generated from it), are
+trademarks of Igor Katsuba. The MIT licence does not cover them: a fork may
+keep the code, but should take the mark out and draw its own. See
+[TRADEMARKS.md](TRADEMARKS.md).

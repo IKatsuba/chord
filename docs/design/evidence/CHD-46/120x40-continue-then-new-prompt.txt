@@ -1,0 +1,22 @@
+
+
+ › tools
+
+ ⏺ Read(README.md)
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the answer.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

@@ -1,0 +1,8 @@
+deno task check: exit 0; types, lint and formatting passed.
+Tests: 1266 passed (20 steps), 0 failed; 6m57s.
+deno task compile: exit 0; binary started and completed the 80x24 matrix.
+Staged-evidence privacy test: 7 passed, 0 failed.
+Evidence private-path scan: no matches.
+Before/after stty -a sections: identical at 120x40 and 80x24.
+Only CHD-173 QA evidence was staged. No implementation edit.
+Raw terminal captures retain blank rows and CLI help padding intentionally.

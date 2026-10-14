@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.UldA
+ ▀▀     ? for shortcuts · /help
+
+ › agenttask
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  task
+
+ ⏺ Waiting on parser.
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● parser needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ● permission 3s

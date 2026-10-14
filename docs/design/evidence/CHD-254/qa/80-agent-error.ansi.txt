@@ -1,0 +1,24 @@
+   [2m [0m  [2mimport { App } from './ui/App.tsx';[0m
+      [2m… +4 lines (ctrl+o to expand)[0m
+
+ [2m⏺[0m [1mBash[0m(deno test --allow-read --allow-write --allow-env --allow-run --allow-s…
+   [2m⎿[0m  Interrupted by user
+
+ [2m›[0m permission
+
+ [2m⏺[0m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  Failed
+   [2m⎿[0m  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ [2m›[0m error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 99% context left[0m

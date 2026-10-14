@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m└─────────────────────────────────────────────────────┘[0m[38;2;255;255;255m
+                        [2m[39m─────────────────────────────────┘[0m[38;2;255;255;255m
+ [2m[39m›[0m[38;2;255;255;255m [39mpermission[38;2;255;255;255m
+ [2m[39m›[0m[38;2;255;255;255m
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mWrite[0m(no[38;2;255;255;255m [39mes.txt)[38;2;255;255;255m
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39m⎿[0m[38;2;255;255;255m  [39mFailet[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mRejected Write notes.txt[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: deny.[38;2;255;255;255m
+ [39m⏺[38;2;255;255;255m
+ [2m[39m›[0m[38;2;255;255;255m [39mfirst line[38;2;255;255;255m
+ [2m[39m›[0m[38;2;255;255;255m [39msecsnd line[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mHello, world. This reply came in chunks.[38;2;255;255;255m
+             [39mld. This reply came in chunks.[38;2;255;255;255m
+ [2m[39m›[0m[38;2;255;255;255m [39mplan[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPlanned. Step 2 done. Step 3 done.[38;2;255;255;255m
+ [39m⏺[38;2;255;255;255m  [39mla[38;2;255;255;255m                        [39m3 done.[38;2;255;255;255m
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39mPlan[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39m☒ [9mRead the code[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m☒ [9mWrite the change[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m☒ [9mRun the testsnge[0m[38;2;255;255;255m
+              [2;9m[39me tests[0m[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                        [38;5;244m────────────────────────────────────────────────────────────────────────────│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[39mB[38;2;255;255;255m [2m[39menter to send[0m. MaxListeners is 10. Use e[2m/ for commands[0misteners() to increase [2mctrl + d or ctrl + c twice to quit[0m[38;5;244m──────╯
+[39m(U[2m\ + enter for a newline[0mngs ...` to show [2m↑ ↓ to pick a command[0m created)[2mrge witctrl + x then a key for sessionsxt used[0m[38;2;255;255;255m
+[39m"[38;2;255;255;255m [2m[39mshift + enter for a newline[0m[38;2;255;255;255m        [39mtecte[2mtab to complete a command[0mded to [BoxR[2m1–9 to pick a choice[0meners is 10. Use emit
+te[2mctrl + g to edit in $EDITOR[0mease limit"  [2m@ for files[0m                          [2m↑ ↓ or j k to move between choices[0m
+([38;2;255;255;255m [2m[39mctrl + v to paste an image[0meededWarning: [2m↑ ↓ to pick a file[0mter memory leak det[2menter to pick the highlighted choice[0m[BoxR
+en[2m↑ ↓ for prompts, agents and monitors[0mmitt[2mtab enter to add a file[0m increase limi[2mesc to reject a permission[0m
+"P[2mx[0ms[2mto close an agent or stop a monitor[0mcte[2mesc to close commands or files[0mo [BoxR[2mesc to close a picker[0mners is 10. Use emit
+te[2mctrl + r to search prompts[0mrease limit"  [2m! for bash mode[0m                      [2mctrl + a to show all directories[0m
+(n[2mtab enter to take a match[0mceededWarning: [2mbackspace to leave bash mode[0m leak det[2mtab ↑ ↓ space to fill in a form[0md to [BoxR
+[38;2;255;255;255m  [2m[39mesc to cancel a search[0m[38;2;255;255;255m                  [2m[39mesc to interrupt or stop a command[0m[38;2;255;255;255m   [2m[39mctrl + c to stop the turn and its form[0m[38;2;255;255;255m
+ [39mP[2mpgup pgdn or wheel to scroll[0mleak detecte[2mshift + tab to cycle modes[0med to [BoxR[2m/vim for vim mode[0misteners is 10. Use emi[38;2;255;255;255m
+  [2m[39mshift + ↑ ↓ to scroll a line[0m[38;2;255;255;255m            [2m[39mctrl + o for verbose output[0m[38;2;255;255;255m          [2m[39m? for shortcuts[0m[38;2;255;255;255m
+[39m  [2mhome end for [0m [2mhe top and the bottom[0m     [2mctrl + c to clear input[0m[38;2;255;255;255m              [2m[39mesc[0m [2mto[0m  [2mlos[0m [2m shortcuts[0m[38;2;255;255;255m                 [39m

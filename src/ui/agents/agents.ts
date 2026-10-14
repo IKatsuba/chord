@@ -1,0 +1,746 @@
+/**
+ * The list of a session's agents under the prompt, kept out of the
+ * component: `main` and each long-lived child, one row each with its
+ * runtime, model and state, a team's members nested under its lead or
+ * folded into its row, then the monitors its agents run, each with its
+ * command and how long it has run, cut to the window's height and width;
+ * and where ↑ ↓ and `x` move the `❯` in it.
+ */
+import cliTruncate from 'cli-truncate';
+import stringWidth from 'string-width';
+import type { TabWait } from '../../session/tabs.ts';
+import { GLYPHS } from '../app/strip.ts';
+import { queueRowLimit } from '../prompt/queue.ts';
+import { formatElapsed } from '../../session/elapsed.ts';
+import type { RunningMonitor } from '../../session/monitors.ts';
+import type { LeftOpen } from '../../session/transcript/types.ts';
+
+/** One agent of the front session, as the list is asked to draw it. */
+export interface AgentRow {
+  /** Its session's key: the tab's own for `main`, the child's for a child. */
+  readonly key: number;
+  /** `main`, or the child's name. */
+  readonly name: string;
+  readonly runtime: string;
+  /** The model as the status line names it; none until known. */
+  readonly model?: string | undefined;
+  /** The effort it is on, by its id; none for a runtime with none. */
+  readonly effort?: string | undefined;
+  /** Its place among the theme's agent colours; none for `main`. */
+  readonly colour?: number;
+  readonly wait: TabWait;
+  /** The prompt goes to it. */
+  readonly picked: boolean;
+  /** Its agent never came up. */
+  readonly failed: boolean;
+  /** A team's lead and each of its members: the lead's key. */
+  readonly team?: number;
+  /** A member's place in its lead's tree, as `teamRows` draws it. */
+  readonly branch?: '├─' | '└─';
+  /** A lead folded with its open members: they, in their order. */
+  readonly folded?: readonly AgentRow[];
+}
+
+/** How a state is painted: the theme's role, or dim. */
+export type AgentTone = 'warning' | 'error' | 'success' | 'dim';
+
+/** What a row says of its agent: the glyph, then the words. */
+export interface AgentState {
+  readonly glyph: string;
+  readonly words: string;
+  readonly tone: AgentTone;
+}
+
+/** `41s`, `2m`: the first unit of an elapsed time. */
+function briefly(ms: number): string {
+  return formatElapsed(ms).split(' ')[0]!;
+}
+
+/**
+ * Where an agent stands, most urgent first, as the strip's glyphs and the
+ * sessions picker's words say it, with `←` for a message not yet seen;
+ * none while it is idle and seen.
+ */
+export function agentState(row: AgentRow, now: number): AgentState | undefined {
+  if (row.folded !== undefined) {
+    return teamState(row, row.folded, now);
+  }
+
+  const { wait } = row;
+
+  if (wait.asking) {
+    return {
+      glyph: GLYPHS.asking,
+      words: `${wait.asking.on.kind === 'input' ? 'input' : 'permission'} ${formatElapsed(
+        now - wait.asking.since,
+      )}`,
+      tone: 'warning',
+    };
+  }
+
+  if (row.failed || wait.unseen?.kind === 'failed') {
+    return { glyph: GLYPHS.failed, words: 'failed', tone: 'error' };
+  }
+
+  if (wait.exited) {
+    return { glyph: GLYPHS.failed, words: 'exited', tone: 'error' };
+  }
+
+  if (wait.unseen?.kind === 'message') {
+    return {
+      glyph: '←',
+      words: `message from ${wait.unseen.from ?? '@main'}`,
+      tone: 'dim',
+    };
+  }
+
+  if (wait.unseen?.kind === 'replied') {
+    return {
+      glyph: GLYPHS.replied,
+      words: `replied ${briefly(now - wait.unseen.since)} ago`,
+      tone: 'success',
+    };
+  }
+
+  return wait.working === undefined
+    ? undefined
+    : {
+        glyph: GLYPHS.working,
+        words: `working ${formatElapsed(now - wait.working)}`,
+        tone: 'dim',
+      };
+}
+
+/**
+ * How urgent an agent's state is, as `agentState` orders them, lowest
+ * first, then how long it has stood, longest first; none while it is idle
+ * and seen.
+ */
+function urgency(row: AgentRow): readonly [number, number] | undefined {
+  const { wait } = row;
+
+  if (wait.asking) {
+    return [0, wait.asking.since];
+  }
+
+  if (row.failed || wait.unseen?.kind === 'failed') {
+    return [1, wait.unseen?.since ?? 0];
+  }
+
+  if (wait.exited) {
+    return [2, 0];
+  }
+
+  if (wait.unseen !== undefined) {
+    return [wait.unseen.kind === 'message' ? 3 : 4, wait.unseen.since];
+  }
+
+  return wait.working === undefined ? undefined : [5, wait.working];
+}
+
+/**
+ * A folded team's state: the most urgent among its lead and members, as the
+ * sessions picker gives a tab's children's, naming the member whose it is:
+ * `● tester: permission 12s`.
+ */
+function teamState(
+  lead: AgentRow,
+  members: readonly AgentRow[],
+  now: number,
+): AgentState | undefined {
+  const { folded: _, ...own } = lead;
+  const first = [own, ...members]
+    .flatMap((row) => {
+      const rank = urgency(row);
+
+      return rank === undefined ? [] : [{ row, rank }];
+    })
+    .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1])[0]?.row;
+
+  if (first === undefined) {
+    return undefined;
+  }
+
+  const state = agentState(first, now)!;
+
+  return first === own
+    ? state
+    : { ...state, words: `${first.name}: ${state.words}` };
+}
+
+/**
+ * The agents as the list draws them: each member under its lead with
+ * CHD-149's `├─` and `└─`, and, with `fold`, each team but the one whose
+ * agent is picked folded into its lead's row, its members kept for its
+ * size and its state. A lead with no member open has nothing to fold.
+ */
+export function teamRows(
+  agents: readonly AgentRow[],
+  { fold }: { readonly fold: boolean },
+): AgentRow[] {
+  const picked = agents.find((row) => row.picked)?.team;
+  const membersOf = (lead: number) =>
+    agents.filter((row) => row.team === lead && row.key !== lead);
+
+  return agents.flatMap((row): AgentRow[] => {
+    if (row.team === undefined) {
+      return [row];
+    }
+
+    const members = membersOf(row.team);
+
+    if (row.key !== row.team) {
+      return fold && row.team !== picked
+        ? []
+        : [
+            {
+              ...row,
+              branch: row === members[members.length - 1] ? '└─' : '├─',
+            },
+          ];
+    }
+
+    return fold && row.team !== picked && members.length > 0
+      ? [{ ...row, folded: members }]
+      : [row];
+  });
+}
+
+/**
+ * Whether a time on the list goes on counting, so the list ticks: a
+ * monitor's, or an agent asking, working or with a reply not yet seen,
+ * a folded team's members among them, since their state stands on the
+ * lead's row.
+ */
+export function listTimed(rows: readonly ListRow[]): boolean {
+  const timed = (row: AgentRow): boolean =>
+    row.wait.asking !== undefined ||
+    row.wait.working !== undefined ||
+    row.wait.unseen?.kind === 'replied' ||
+    (row.folded ?? []).some(timed);
+
+  return rows.some((row) => isMonitorRow(row) || timed(row));
+}
+
+/** At most this many rows, the queue's own limit: 4 at 24 rows, 6 at 40. */
+export function agentsRowLimit(rows: number): number {
+  return queueRowLimit(rows);
+}
+
+/**
+ * One monitor of the front session's agents, as the list draws it after
+ * them: whose it is, what it watches and how long, never something to write
+ * to, so focusing it picks nothing.
+ */
+export interface MonitorRow {
+  readonly kind: 'monitor';
+  /** The session that started it: the tab's own key, or a child's. */
+  readonly key: number;
+  readonly id: string;
+  readonly description: string;
+  readonly command: string;
+  readonly startedAt: number;
+  readonly events: number;
+  /** A child's: its name and its place among the agent colours. */
+  readonly owner?: { readonly name: string; readonly colour: number };
+  /** It has the `❯` while the list has the keys. */
+  readonly focused: boolean;
+}
+
+/** A row of the list: an agent, or a monitor after the agents. */
+export type ListRow = AgentRow | MonitorRow;
+
+export function isMonitorRow(row: ListRow): row is MonitorRow {
+  return 'kind' in row && row.kind === 'monitor';
+}
+
+/** A monitor by the session that started it and its id there. */
+export interface MonitorRef {
+  readonly key: number;
+  readonly id: string;
+}
+
+/**
+ * The list's rows: the agents, drawn only while there is a child, then every
+ * running monitor of the tab's agents, in the order they started.
+ * The `❯` is on the monitor `focus` names; failing that, on the agent picked,
+ * or with no agents drawn, on the first monitor. When they all do not fit
+ * `limit` rows, each team the pick is not in folds to its lead's row.
+ */
+export function listRows(
+  agents: readonly AgentRow[],
+  monitors: readonly {
+    readonly key: number;
+    readonly owner?: { readonly name: string; readonly colour: number };
+    readonly monitor: RunningMonitor;
+  }[],
+  focus: MonitorRef | undefined,
+  limit = Infinity,
+): ListRow[] {
+  const nested = teamRows(agents, {
+    fold: agents.length + monitors.length > limit,
+  });
+  const found = monitors.some(
+    ({ key, monitor }) => key === focus?.key && monitor.id === focus.id,
+  );
+
+  return [
+    ...nested,
+    ...monitors
+      .toSorted((a, b) => a.monitor.startedAt - b.monitor.startedAt)
+      .map(({ key, owner, monitor }, index): MonitorRow => ({
+        kind: 'monitor',
+        key,
+        id: monitor.id,
+        description: monitor.description,
+        command: monitor.command,
+        startedAt: monitor.startedAt,
+        events: monitor.events,
+        ...(owner === undefined ? {} : { owner }),
+        focused: found
+          ? key === focus?.key && monitor.id === focus.id
+          : agents.length === 0 && index === 0,
+      })),
+  ];
+}
+
+/** Where the `❯` goes: an agent, which is picked, or a monitor. */
+export type ListTarget =
+  | { readonly kind: 'agent'; readonly key: number }
+  | ({ readonly kind: 'monitor' } & MonitorRef);
+
+function targetOf(row: ListRow): ListTarget {
+  return isMonitorRow(row)
+    ? { kind: 'monitor', key: row.key, id: row.id }
+    : { kind: 'agent', key: row.key };
+}
+
+/** The row with the `❯`: a focused monitor's, or the agent picked. */
+function focusedAt(rows: readonly ListRow[]): number {
+  const monitor = rows.findIndex((row) => isMonitorRow(row) && row.focused);
+
+  return monitor !== -1
+    ? monitor
+    : Math.max(
+        0,
+        rows.findIndex((row) => !isMonitorRow(row) && row.picked),
+      );
+}
+
+/**
+ * ↑ ↓ in the list: the row `by` from the focused one, the last staying the
+ * last; none above the first, which hands the keys back to the box.
+ */
+export function moveListFocus(
+  rows: readonly ListRow[],
+  by: number,
+): ListTarget | undefined {
+  const at = focusedAt(rows) + by;
+
+  if (rows.length === 0 || at < 0) {
+    return undefined;
+  }
+
+  return targetOf(rows[Math.min(at, rows.length - 1)]!);
+}
+
+/**
+ * The focused monitor `x` stops, and where the `❯` goes once its row has
+ * left: the row above, or the one that takes its place at the top; none
+ * once the list is gone.
+ */
+export function stopFocused(
+  rows: readonly ListRow[],
+): { readonly stop: MonitorRef; readonly then?: ListTarget } | undefined {
+  const at = rows.findIndex((row) => isMonitorRow(row) && row.focused);
+  const row = rows[at];
+
+  if (row === undefined || !isMonitorRow(row)) {
+    return undefined;
+  }
+
+  const rest = rows.filter((other) => other !== row);
+  const then = rest[Math.max(0, at - 1)];
+
+  return {
+    stop: { key: row.key, id: row.id },
+    ...(then === undefined ? {} : { then: targetOf(then) }),
+  };
+}
+
+/** One row laid out: its columns, each padded to the widest. */
+export interface LaidRow {
+  readonly row: ListRow;
+  /** `❯ ` on the focused row while the list has the keys, else two spaces. */
+  readonly mark: string;
+  /** A member's `├─ ` or `└─ `, drawn dim ahead of its name. */
+  readonly branch?: string;
+  /** The name, padded so that with the branch it fills the column. */
+  readonly name: string;
+  /** An agent's runtime and model, or a monitor's `$ command`. */
+  readonly detail: string;
+  readonly state?: {
+    readonly text: string;
+    readonly tone: AgentTone;
+    /** ` · parser` after a child's monitor's state, in the child's colour. */
+    readonly owner?: { readonly text: string; readonly colour: number };
+  };
+}
+
+export interface AgentsLayout {
+  readonly rows: readonly LaidRow[];
+  /** How many rows `… +N more` stands for; 0 when all are drawn. */
+  readonly more: number;
+}
+
+/** The least a name is ever cut to, so one stays readable. */
+const NAME_FLOOR = 12;
+
+/** A monitor's description at most, so a long one leaves room. */
+const DESCRIPTION_CELLS = 24;
+
+/** The least a monitor's command is cut to: `$ `, twelve cells, `…`. */
+const COMMAND_FLOOR = 15;
+
+/** The gap between the columns. */
+const GAP = '  ';
+
+/** `no events`, `1 event`, `3 events`. */
+function eventsWords(events: number): string {
+  return events === 0
+    ? 'no events'
+    : `${events} ${events === 1 ? 'event' : 'events'}`;
+}
+
+/**
+ * What one way of fitting the rows keeps: an agent's model and its effort,
+ * an agent's state words and a folded team's size, a monitor's command
+ * whole, and its `running 6m · `.
+ */
+interface Fit {
+  readonly model: boolean;
+  readonly effort: boolean;
+  readonly words: boolean;
+  readonly whole: boolean;
+  readonly running: boolean;
+}
+
+/**
+ * Each way of fitting, the fullest first: a monitor's command is cut first,
+ * then an agent's effort goes, then its model, then a monitor's running
+ * time, then an agent's state words, leaving its glyph.
+ */
+const FITS: readonly Fit[] = [
+  { model: true, effort: true, words: true, whole: true, running: true },
+  { model: true, effort: true, words: true, whole: false, running: true },
+  { model: true, effort: false, words: true, whole: false, running: true },
+  { model: false, effort: false, words: true, whole: false, running: true },
+  { model: false, effort: false, words: true, whole: false, running: false },
+  { model: false, effort: false, words: false, whole: false, running: false },
+];
+
+/**
+ * The rows drawn in `limit` at `width`: past the limit, the last row is
+ * `… +N more`, and while the list has the keys the rows shown move so the
+ * focused one is among them. A row that does not fit gives way as `FITS`
+ * says; the name is cut last, never below twelve columns.
+ */
+export function agentsLayout(
+  rows: readonly ListRow[],
+  {
+    limit,
+    width,
+    focused,
+    now,
+  }: {
+    readonly limit: number;
+    readonly width: number;
+    readonly focused: boolean;
+    readonly now: number;
+  },
+): AgentsLayout {
+  const room = Math.max(1, limit);
+  const fits = rows.length <= room;
+  const shown = fits ? rows.length : room - 1;
+  const monitorAt = rows.findIndex((row) => isMonitorRow(row) && row.focused);
+  const at =
+    monitorAt !== -1
+      ? monitorAt
+      : Math.max(
+          0,
+          rows.findIndex((row) => !isMonitorRow(row) && row.picked),
+        );
+  const start =
+    fits || !focused
+      ? 0
+      : Math.min(Math.max(0, at - shown + 1), rows.length - shown);
+  const visible = rows.slice(start, start + shown);
+  const states = new Map(
+    rows.map((row) => [
+      row,
+      isMonitorRow(row) ? undefined : agentState(row, now),
+    ]),
+  );
+  // Widths over every row, drawn or not, so scrolling never moves a column.
+  const widest = (texts: readonly string[]) =>
+    Math.max(0, ...texts.map((text) => stringWidth(text)));
+  const nameOf = (row: ListRow) =>
+    isMonitorRow(row)
+      ? cliTruncate(row.description, DESCRIPTION_CELLS)
+      : row.name;
+  const branchOf = (row: ListRow) =>
+    isMonitorRow(row) || row.branch === undefined ? '' : `${row.branch} `;
+  // A folded team's members count too, under their branch as unfolded, so
+  // folding never moves a column.
+  const nameWidth = widest(
+    rows.flatMap((row) => [
+      branchOf(row) + nameOf(row),
+      ...(isMonitorRow(row) ? [] : (row.folded ?? [])).map(
+        (member) => `├─ ${member.name}`,
+      ),
+    ]),
+  );
+  const commands = rows.filter(isMonitorRow).map((row) => `$ ${row.command}`);
+
+  for (const fit of FITS) {
+    // A folded lead's size stands where its model would, and stays while
+    // the states keep their words: it says more than a model.
+    const runtimeOf = (row: AgentRow) =>
+      [
+        row.runtime,
+        row.folded !== undefined
+          ? fit.words
+            ? `${row.folded.length + 1} agents`
+            : undefined
+          : fit.model
+            ? row.model
+            : undefined,
+        // After its model, which it tunes; a folded lead says its size.
+        row.folded === undefined && fit.model && fit.effort
+          ? row.effort
+          : undefined,
+      ]
+        .filter((part) => part !== undefined)
+        .join(' · ');
+    const stateOf = (row: ListRow): LaidRow['state'] => {
+      if (isMonitorRow(row)) {
+        const events = eventsWords(row.events);
+
+        return {
+          text: fit.running
+            ? `running ${briefly(Math.max(0, now - row.startedAt))} · ${events}`
+            : events,
+          tone: 'dim',
+          ...(row.owner === undefined
+            ? {}
+            : {
+                owner: {
+                  text: ` · ${row.owner.name}`,
+                  colour: row.owner.colour,
+                },
+              }),
+        };
+      }
+
+      const state = states.get(row);
+
+      return (
+        state && {
+          text: fit.words ? `${state.glyph} ${state.words}` : state.glyph,
+          tone: state.tone,
+        }
+      );
+    };
+
+    const stateText = (row: ListRow) => {
+      const state = stateOf(row);
+
+      return state === undefined ? '' : state.text + (state.owner?.text ?? '');
+    };
+
+    const runtimeWidth = widest(
+      rows
+        .filter((row) => !isMonitorRow(row))
+        .map((row) => runtimeOf(row as AgentRow)),
+    );
+    const stateWidth = widest(rows.map(stateText));
+    const fixed =
+      2 +
+      nameWidth +
+      GAP.length +
+      (stateWidth === 0 ? 0 : GAP.length + stateWidth);
+    const whole = widest(commands);
+    // What the detail column may take; a cut command no shorter than its floor.
+    const left = width - fixed;
+    const detailWidth = fit.whole
+      ? Math.max(runtimeWidth, whole)
+      : Math.max(runtimeWidth, Math.min(whole, Math.max(left, COMMAND_FLOOR)));
+    const last = fit === FITS[FITS.length - 1];
+
+    if (fixed + detailWidth > width && !last) {
+      continue;
+    }
+
+    // Past the last fallback the name gives way, down to its floor.
+    const names = Math.max(
+      Math.min(nameWidth, NAME_FLOOR),
+      nameWidth - Math.max(0, fixed + detailWidth - width),
+    );
+
+    return {
+      more: rows.length - shown,
+      rows: visible.map((row) => {
+        const state = stateOf(row);
+        const mark =
+          focused &&
+          (isMonitorRow(row) ? row.focused : row.picked && monitorAt === -1)
+            ? '❯ '
+            : '  ';
+
+        const branch = branchOf(row);
+        const room = names - stringWidth(branch);
+
+        return {
+          row,
+          mark,
+          ...(branch === '' ? {} : { branch }),
+          name: pad(cliTruncate(nameOf(row), room), room),
+          detail: pad(
+            isMonitorRow(row)
+              ? cliTruncate(`$ ${row.command}`, detailWidth)
+              : runtimeOf(row),
+            detailWidth,
+          ),
+          ...(state === undefined ? {} : { state }),
+        };
+      }),
+    };
+  }
+
+  return { rows: [], more: 0 };
+}
+
+function pad(text: string, width: number): string {
+  return text + ' '.repeat(Math.max(0, width - stringWidth(text)));
+}
+
+/** What the status line's right side takes beside the hint. */
+const RIGHT_ROOM = 40;
+
+/**
+ * The status line's hint while the list has the keys, as a picker's last
+ * line says what its keys do; shortened where the full one does not fit.
+ */
+export function agentsHint(width: number, close: string | undefined): string {
+  const full = [
+    '↑ ↓ to pick',
+    'enter to write to it',
+    ...(close === undefined ? [] : [`${close} to close`]),
+    'esc to go back',
+  ].join(' · ');
+
+  // Room left for the model and the context beside it, as the status line
+  // keeps them; at 80 columns that takes the short words.
+  return stringWidth(full) + RIGHT_ROOM <= width
+    ? full
+    : [
+        '↑ ↓ pick',
+        'enter write',
+        ...(close === undefined ? [] : [`${close} close`]),
+        'esc back',
+      ].join(' · ');
+}
+
+/**
+ * The status line's hint while a monitor's row has the `❯`: it is stopped,
+ * not written to; shortened where the full one does not fit.
+ */
+export function monitorHint(width: number, stop: string | undefined): string {
+  const full = [
+    '↑ ↓ to pick',
+    ...(stop === undefined ? [] : [`${stop} to stop it`]),
+    'enter esc to go back',
+  ].join(' · ');
+
+  return stringWidth(full) + RIGHT_ROOM <= width
+    ? full
+    : [
+        '↑ ↓ pick',
+        ...(stop === undefined ? [] : [`${stop} stop`]),
+        'esc back',
+      ].join(' · ');
+}
+
+/**
+ * The line that stands in a child's transcript where the startup header
+ * would: `parser · codex · gpt-5.3-codex · opened by main 4m ago`; a team's
+ * lead's says `team` and a member's names its run, each opened by an agent
+ * that `send_message` reaches by that name: `tester · claude · Sonnet ·
+ * bugfix's member · opened by @bugfix 6m ago`.
+ */
+export function childLine(
+  child: {
+    readonly name: string;
+    readonly runtime: string;
+    readonly openedAt: number;
+    readonly team?: string | undefined;
+    /** A member's lead, by its name. */
+    readonly leadName?: string | undefined;
+  },
+  model: string | undefined,
+  now: number,
+): { readonly name: string; readonly rest: string } {
+  const ago = briefly(Math.max(0, now - child.openedAt));
+  const team = child.team !== undefined;
+
+  return {
+    name: child.name,
+    rest: [
+      '',
+      ...(team && child.leadName === undefined ? ['team'] : []),
+      child.runtime,
+      ...(model === undefined ? [] : [model]),
+      ...(child.leadName === undefined ? [] : [`${child.leadName}'s member`]),
+      team
+        ? `opened by @${child.leadName ?? 'main'} ${ago} ago`
+        : `opened by main ${ago} ago`,
+    ].join(' · '),
+  };
+}
+
+/**
+ * The note a resumed session's transcript closes with when long-lived agents
+ * were open as it was left: `parser (codex) and team bugfix (4 agents) were
+ * open when this session was left and are not reopened · /resume lists them ·
+ * /team run bugfix starts the team again`. Each team run is one item, and
+ * each team's way back is named once, however many of its runs were open.
+ */
+export function leftOpenLine(agents: readonly LeftOpen[]): string {
+  const list = new Intl.ListFormat('en', { type: 'conjunction' });
+  const names = list.format(
+    agents.map(({ name, runtime, team, agents: count = 1 }) =>
+      team === undefined
+        ? `${name} (${runtime})`
+        : `team ${name} (${count} ${count === 1 ? 'agent' : 'agents'})`,
+    ),
+  );
+  const teams = [
+    ...new Set(
+      agents.flatMap(({ team }) => (team === undefined ? [] : [team])),
+    ),
+  ];
+  const left =
+    agents.length === 1
+      ? 'was open when this session was left and is not reopened'
+      : 'were open when this session was left and are not reopened';
+  // A run is its lead and its members, each a session /resume lists.
+  const listed = agents.length === 1 && teams.length === 0 ? 'it' : 'them';
+  const back =
+    teams.length === 0
+      ? ''
+      : ` · ${list.format(teams.map((team) => `/team run ${team}`))} ${
+          teams.length === 1 ? 'starts the team again' : 'start the teams again'
+        }`;
+
+  return `${names} ${left} · /resume lists ${listed}${back}`;
+}

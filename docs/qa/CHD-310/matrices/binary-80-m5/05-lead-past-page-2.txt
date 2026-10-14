@@ -1,0 +1,24 @@
+   - coder: Writes the fix, in the files the lead names (fake · fake-large ·
+   plan)
+
+   How the team works:
+   # How bugfix works
+
+   1. The lead reads the job and names who may edit which files.
+   2. tester writes a test that fails for the bug's own reason, in `tests/`.
+   3. coder fixes the code so that test passes, and never edits `tests/`.
+
+   ## Who edits what
+
+   - One writer per file at a time; a member asks a file's owner directly.
+   - Another run of a team may be working here: the leads agree on files.
+ ── ↓ 27 lines below · end to jump to the bottom ──────────────────────────────
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake
+    bugfix     team · fake
+    ├─ tester  fake         ● permission 4s
+    └─ coder   fake         ✓ replied 5s ago

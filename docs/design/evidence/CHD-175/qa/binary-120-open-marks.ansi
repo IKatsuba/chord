@@ -1,0 +1,40 @@
+ [1mchord[0m   [2m1 claude[0m   [1;7m 2 codex [0m   [2m3 claude[0m                                                                      [2m~/src/app[0m
+
+ ⏺ The fake agent failed on purpose.
+
+ [2m›[0m slow
+
+ ⏺ Working.............................................................................................................
+   ....................................................
+   [2m⎿[0m  Interrupted by user
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mResume a session[0m                                                                                                     [2m│
+│[0m [2mcodex's earlier sessions and saved windows in this directory.[0m                                                        [2m│
+│[0m                                                                                                                      [2m│
+│[0m ❯ 1.  just now        ▣ 5 sessions, 3 open · claude ×3, codex ×2 · saved prompt 5                                    [2m│
+│[0m   2.  just now        ▣ 3 sessions, all open · claude, codex, claude · saved prompt 2                                [2m│
+│[0m   3.  4 minutes ago   ▣ 9 sessions · codex ×3, gemini ×3, claude ×3 · saved prompt 11                                [2m│
+│[0m   4.  7 minutes ago   ▣ 2 sessions · codex, claude · saved prompt 5                                                  [2m│
+│[0m   5.  7 minutes ago   saved prompt 5                                                                                 [2m│
+│[0m   6.  10 minutes ago  saved prompt 8                                                                                 [2m│
+│[0m   7.  13 minutes ago  saved prompt 11                                                                                [2m│
+│[0m   8.  16 minutes ago  saved prompt 14                                                                                [2m│
+│[0m   9.  19 minutes ago  saved prompt 17                                                                                [2m│
+│[0m   10. 22 minutes ago  saved prompt 20                                                                                [2m│
+│[0m                                                                                                                      [2m│
+│[0m [2mEnter to resume · Ctrl+a for all directories · Esc to close[0m                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

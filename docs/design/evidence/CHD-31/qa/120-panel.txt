@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chd31-qa/work
+   165. Line 165 of 200, streamed one at a time.
+   166. Line 166 of 200, streamed one at a time.
+   167. Line 167 of 200, streamed one at a time.
+   168. Line 168 of 200, streamed one at a time.
+   169. Line 169 of 200, streamed one at a time.
+   170. Line 170 of 200, streamed one at a time.
+   171. Line 171 of 200, streamed one at a time.
+   172. Line 172 of 200, streamed one at a time.
+   173. Line 173 of 200, streamed one at a time.
+   174. Line 174 of 200, streamed one at a time.
+   175. Line 175 of 200, streamed one at a time.
+   176. Line 176 of 200, streamed one at a time.
+   177. Line 177 of 200, streamed one at a time.
+   178. Line 178 of 200, streamed one at a time.
+   179. Line 179 of 200, streamed one at a time.
+   180. Line 180 of 200, streamed one at a time.
+   181. Line 181 of 200, streamed one at a time.
+   182. Line 182 of 200, streamed one at a time.
+   183. Line 183 of 200, streamed one at a time.
+   184. Line 184 of 200, streamed one at a time.
+   185. Line 185 of 200, streamed one at a time.
+ ── ↓ 15 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                         ↑ ↓ to pick a command                ctrl + x then a key for sessions
+  \ + enter for a newline               tab to complete a command            1–9 to pick a choice
+  shift + enter for a newline           @ for files                          ↑ ↓ or j k to move between choices
+  ctrl + g to edit in $EDITOR           ↑ ↓ to pick a file                   enter to pick the highlighted choice
+  ctrl + v to paste an image            tab enter to add a file              esc to reject a permission
+  ↑ ↓ for earlier prompts               esc to close commands or files       esc to close a picker
+  ctrl + r to search prompts            ! for bash mode                      ctrl + a to show all directories
+  tab enter to take a match             backspace to leave bash mode         tab ↑ ↓ space to fill in a form
+  esc to cancel a search                esc to interrupt or stop a command   ctrl + c to stop the turn and its form
+  pgup pgdn or wheel to scroll          shift + tab to cycle modes           /vim for vim mode
+  shift + ↑ ↓ to scroll a line          ctrl + o for verbose output          ? for shortcuts
+  home end for the top and the bottom   ctrl + c to clear input              esc to close shortcuts
+  / for commands                        ctrl + d or ctrl + c twice to quit

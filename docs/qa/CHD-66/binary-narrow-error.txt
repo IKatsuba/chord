@@ -1,0 +1,24 @@
+ chord                                              fake · /tmp/chd66-qa.uf7EKT
+      Session time: 7s
+
+ › /context
+   ⎿  Used: 4,000 of 1,000,000 tokens (1%)
+      Free: 996,000 tokens (99%)
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   0983a3c7-6367-4697-bc25-4f9a09b301b7
+      Directory: /tmp/chd66-qa.uf7EKT
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

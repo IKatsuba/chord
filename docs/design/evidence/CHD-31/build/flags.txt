@@ -1,0 +1,12 @@
+tmux display -p '#{alternate_on} #{mouse_standard_flag} #{mouse_sgr_flag} #{mouse_all_flag}'
+(mouse_all_flag is 1003; tmux's mouse_any_flag is 1 whenever any mouse mode is on)
+
+shell before chord           0 0 0 0
+chord running (source)       1 1 1 0
+ctrl+g's editor (vi) open    1 0 0 0   (alternate_on is vi's own screen)
+after the editor exits       1 1 1 0
+after ctrl+d                 0 0 0 0
+after SIGTERM                0 0 0 0
+after SIGHUP                 0 0 0 0
+chord running (binary)       1 1 1 0
+after ctrl+c twice (binary)  0 0 0 0

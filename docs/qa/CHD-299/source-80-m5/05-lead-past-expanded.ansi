@@ -1,0 +1,24 @@
+
+ [2m⏺[0m [1mOpen[0m(coder)[2m · fake · fake-large · plan[0m
+   [2m⎿[0m  [2mYou will edit src/parse/tokenize.ts, and only it, once tester's test[0m
+   [2m [0m  [2mfails. Read it now; change nothing yet.[0m
+
+ → [1m@main[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts;…[0m
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+ ← [1m@tester[0;2m · fake[0m
+   [2m⎿[0m  [2mIt fails for that reason: "a" at the end of a line comes back as "a,[0m
+   [2m [0m  [2mwith no closing quote. Only tests/parse/tokenize_test.ts changed.[0m
+
+ ⏺ Received the message from tester · fake.
+
+[2m╭─[0;1m bugfix[0;2m ─────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m● tester needs your permission · ctrl+x a[0m    [2mFake Large with a 1M… · 1% used[0m
+    main     [2m  fake       [0m
+    [1mbugfix   [0;2m  team · fake[0m
+    [2m├─ [0mtester[2m  fake       [0m  ● permission 4s
+    [2m└─ [0mcoder [2m  fake       [0m  ✓ replied 5s ago

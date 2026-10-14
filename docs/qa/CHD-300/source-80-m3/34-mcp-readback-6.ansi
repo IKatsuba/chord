@@ -1,0 +1,24 @@
+      to run.
+
+      [2m-[0m Read README.md and deno.json
+      [2m-[0m Wrote the install section with deno task install
+      [2m-[0m Ran deno task test: 3 passed
+
+      Next: commit the change.
+
+ [2m›[0m compactfail
+   [2m⎿[0m  Compaction failed: Not enough messages to compact.
+
+ [2m›[0m mcp
+
+ ⏺ [2m┌ json ─────────────────────────────────┐[0m
+   [2m│[0m [                                     [2m│[0m
+   [2m│[0m   {                                   [2m│[0m
+   [2m│[0m     "name": "user-docs",              [2m│[0m
+   [2m│[0m     "url": "http://localhost:9/docs", [2m│[0m
+ [2m── ↓ 13 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 2% context used[0m

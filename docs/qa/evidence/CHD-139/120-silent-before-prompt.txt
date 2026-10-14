@@ -1,0 +1,40 @@
+ chord                                                                              fake · /tmp/chd139-qa/estimate-work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0047 (chord's estimate)
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 10s
+
+ › /context
+   ⎿  Used: 2,000 of 400,000 tokens (1%) (chord's estimate)
+      Free: 398,000 tokens (99%) (chord's estimate)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                            GPT-5.3 Codex · ~99% context left

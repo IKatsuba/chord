@@ -1,0 +1,40 @@
+
+ ! printf qa-shell
+   ⎿  qa-shell
+
+ › text
+
+ ⏺ Received printf qa-shell: qa-shell
+
+   Hello, world. This reply came in chunks.
+
+ › /config
+   ⎿  Effort set to High
+
+ › /cost
+   ⎿  Total cost:   $0.1500
+      Tokens in:    12,000
+      Tokens out:   2,400
+      Cache read:   9,600
+      Session time: 45s
+
+ › /context
+   ⎿  Used: 24,000 of 200,000 tokens (12%)
+      Free: 176,000 tokens (88%)
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Small
+      Mode:      Accept edits
+      Session:   69c364b3-2d9d-4c4b-b10b-0596f7f0f1a6
+      Directory: /tmp/chd310-closure/exits/source-120-m12/work
+
+ › slow
+
+ ⏺ Working................................................................................
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › queued QA                                                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 12% context used

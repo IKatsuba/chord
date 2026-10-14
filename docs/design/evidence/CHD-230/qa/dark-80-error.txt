@@ -1,0 +1,24 @@
+
+ ← Fix the tokenizer · fake
+   Found it: a string at the end of a line lost its closing quote. Fixing
+   src/parse/tokenize.ts now.
+
+ ⏺ Received the message from Fix the tokenizer · fake.
+
+ ← Fix the tokenizer · fake · report
+   The tokenizer dropped a closing quote when a string ended the line. Fixed
+   in src/parse/tokenize.ts, with two cases added
+   to tests/parse/tokenize_test.ts. deno task test passes.
+
+ ⏺ Received the message from Fix the tokenizer · fake · report.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

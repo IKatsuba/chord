@@ -1,0 +1,24 @@
+      review of the diff.
+
+      lead      claude · opus          default      Splits the job, says who…
+      tester    claude · sonnet        acceptEdits  Writes the failing test,…
+      coder     codex · gpt-5.3-codex  auto         Writes the fix, in the f…
+      reviewer  claude · opus          plan         Reads the diff and edits…
+      … +39 lines (ctrl+o to expand)
+
+ ✹ Waiting for you… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Save team bugfix?                                                            │
+│                                                                              │
+│ ❯ 1. Yes, for this project   .chord/teams/bugfix.md                          │
+│   2. Yes, for every project  ~/.config/chord/teams/bugfix.md                 │
+│   3. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

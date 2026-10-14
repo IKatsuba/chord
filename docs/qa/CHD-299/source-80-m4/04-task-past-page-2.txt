@@ -1,0 +1,24 @@
+
+ ⏺ List agents(fake)
+   ⎿  2 models · fake-large, fake-small
+
+ ⏺ List sessions
+   ⎿  1 open · 1 fake (you)
+
+ ⏺ Agent(Fix the tokenizer) · fakx · fake-small
+   ⎿  No agent named fakx; chord knows fake, agoragentic-acp, auggie, autohand…
+
+ ⏺ chord knows no fakx.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  taskchild
+ ── ↓ 35 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

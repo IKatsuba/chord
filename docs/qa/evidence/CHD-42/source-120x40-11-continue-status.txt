@@ -1,0 +1,40 @@
+ chord                                                    fake · /private/tmp/chd81-source-120x40-5dcbf7cff5f93e6a/work
+   └──────────────────────────────────────────────────────────────┘
+
+   That is the whole loop. To land a change:
+
+   1. Run the checks:
+     ┌ sh ─────────────┐
+     │ deno task check │
+     └─────────────────┘
+   2. Commit on main once every check has passed and the tree is clean, so whoever picks the work up next starts from
+     a build that runs.
+
+   Then build the binary with:
+
+   ┌ sh ─────────────────────────────────────────────────┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ › edit
+
+ ⏺ Edit(src/greeting.ts)
+
+ ⏺ Edited.
+
+ › error
+
+ ⏺ About to fail.
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Small
+      Mode:      Default
+      Session:   18d424b8-579e-4e19-b777-66b3bf0c0d0c
+      Directory: /private/tmp/chd81-source-120x40-5dcbf7cff5f93e6a/work
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                                           Fake Small

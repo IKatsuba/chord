@@ -1,0 +1,3 @@
+ps -ax -o pid,ppid,stat,command: no fake_agent/main.ts process with --qa-owner chd173-120 or chd173-80 remained.
+Owned tmux server: removed.
+No real agent or model ran. Pre-existing processes were not signalled.

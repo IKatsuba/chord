@@ -1,0 +1,22 @@
+Task check deno check lint/ src/ tests/ scripts/ && deno lint && deno fmt --check && deno task test
+Task test deno test --allow-read --allow-write --allow-env --allow-run --allow-sys --allow-net=127.0.0.1 lint/ tests/
+ok | 1221 passed (20 steps) | 0 failed (6m23s)
+
+Focused task regressions:
+a nested subagent's permission in a task is answered by that task, not the first one running ... ok (8ms)
+/clear closes the running task agents, and nothing they say after reaches the new session ... ok (5ms)
+a task stopped by the parent's Esc while it starts never sends its job ... ok (2ms)
+a task's model the runtime lists and refuses fails the task, and its job never runs ... ok (5ms)
+a task's model the runtime does not list fails the task, and its job never runs ... ok (5ms)
+a task's model the runtime refuses listing none fails the task, and its job never runs ... ok (5ms)
+a task stopped while its open is pending is closed, and its job never runs ... ok (10ms)
+a task stopped while its starting model is pending is closed, and its job never runs ... ok (10ms)
+a task is named as asked, or by its prompt's first line ... ok (315µs)
+a task's first turn is its job: its work relayed under its id, its last message the report ... ok (1ms)
+a task's permission is asked in the parent's name for it, and answered through it ... ok (72µs)
+a task the parent stopped ends Cancelled with no report, a line held for the next prompt instead ... ok (127µs)
+a task stopped while it starts ends Cancelled there, and its job is never sent ... ok (53µs)
+ok | 14 passed | 0 failed | 13 filtered out (127ms)
+
+PASS: parent start/end and relayed send_message recorded; two wrapped message prompts; child names parent, uses fake-small and has exactly one job turn.
+PASS: source quit removed all sampled owned parent/child PIDs; source and compiled stty values match before/after exactly.

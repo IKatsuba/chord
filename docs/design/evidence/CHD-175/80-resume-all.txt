@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   claude · Fake Large with a 1M context window
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ claude's earlier sessions and saved windows in every directory.              │
+│                                                                              │
+│ ❯   1.  10 minutes ago  ~/src/app     ▣ 3 sessions · claude, codex, claude … │
+│     2.  10 minutes ago  ~/src/app     fix the failing date test in the pars… │
+│     3.  11 minutes ago  ~/src/app     why does resume lose the plan?         │
+│     4.  40 minutes ago  ~/src/app     tidy the README's install section      │
+│     5.  yesterday       ~/src/app +1  ▣ 2 sessions · claude, codex · rename… │
+│   ↓ 6.  yesterday       ~/src/app     rename the health route to /livez      │
+│     … +11 more                                                               │
+│                                                                              │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

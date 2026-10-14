@@ -1,0 +1,479 @@
+import * as acp from '@agentclientprotocol/sdk';
+import manifest from '../../package.json' with { type: 'json' };
+import type { Exit } from '../platform/process.ts';
+import {
+  type AgentProcess,
+  settledWithin,
+  spawnAgent,
+  type StopBounds,
+} from './process.ts';
+import { type Relay, relayStream, tapStream, type Traffic } from './traffic.ts';
+
+/**
+ * The elicitation modes chord draws: a form of flat fields, and a link to
+ * open. `initialize` declares them, and a request in any other mode is
+ * cancelled without reaching the person.
+ */
+export const ELICITATION_MODES = ['form', 'url'] as const;
+
+export type ElicitationMode = (typeof ELICITATION_MODES)[number];
+
+export interface OpenAgentOptions {
+  /** A command line or an argv, as `agentStart` gives it. */
+  readonly command: string | readonly string[];
+  /** Laid over chord's own environment for the agent alone. */
+  readonly env?: Readonly<Record<string, string>>;
+  /** Where the process starts; each session names its own directory too. */
+  readonly cwd: string;
+  /**
+   * Stands between the agent's stdio and everything else, the subscriber
+   * included, so what it fills in is all that chord ever reads.
+   */
+  readonly relay?: Relay;
+  /**
+   * The one subscriber: every message either way, in wire order as the relay
+   * leaves it, and the agent's stderr. It must not throw; nothing is filtered
+   * for it.
+   */
+  readonly onTraffic: (traffic: Traffic) => void;
+  /**
+   * Answers a permission request. The signal aborts once the answer stops
+   * mattering — its session's turn was cancelled, the agent withdrew it, or
+   * the agent is closing — and chord has answered `cancelled` itself.
+   */
+  readonly onPermission: (
+    request: acp.RequestPermissionRequest,
+    signal: AbortSignal,
+  ) => Promise<acp.RequestPermissionResponse>;
+  /** Answers a form or a link the agent asks for; the signal as above. */
+  readonly onElicitation: (
+    request: acp.CreateElicitationRequest,
+    signal: AbortSignal,
+  ) => Promise<acp.CreateElicitationResponse>;
+  /** Gives up on a start: the agent is stopped and the open rejects. */
+  readonly signal?: AbortSignal;
+  /** How long `close()` waits at each step; chord's own bounds by default. */
+  readonly stop?: StopBounds;
+}
+
+/**
+ * `session/set_model`, which ACP v1 has not made stable but Claude's adapter
+ * answers when an agent offers no `model` config option.
+ */
+export interface SetSessionModelRequest {
+  readonly sessionId: string;
+  readonly modelId: string;
+}
+
+/**
+ * `_session/steering`, the steering extension Claude's and Codex's adapters
+ * answer and ACP's schema does not have yet: a prompt put into the turn the
+ * session is running. `promptRequired` asks an agent with no turn running to
+ * answer so and do nothing; Claude's adapter honours it, Codex's does not.
+ */
+export interface SteerRequest {
+  readonly sessionId: string;
+  readonly prompt: readonly acp.ContentBlock[];
+  readonly _meta?: {
+    readonly steering?: { readonly idleBehavior?: 'promptRequired' };
+  };
+}
+
+/**
+ * The agent's answer to a steer, unchecked: `injected` into the running turn,
+ * `startedNewTurn` of its own, `promptRequired` with nothing done, or
+ * Codex's `failed`.
+ */
+export type SteerResponse = Readonly<Record<string, unknown>>;
+
+/**
+ * A running agent and its ACP connection, initialised, until `close()`. Every
+ * request takes a signal that stops the wait for its answer.
+ */
+export interface Agent {
+  readonly pid: number;
+  /** The agent's answer to `initialize`: its version, capabilities and info. */
+  readonly init: acp.InitializeResponse;
+  /**
+   * Whether the agent takes `_session/steering`, as its answer to
+   * `initialize` says under `_meta.steering.supported`.
+   */
+  readonly steering: boolean;
+  /** Settles once the agent's exit is seen, however it came. */
+  readonly exited: Promise<Exit>;
+  /**
+   * Once the agent's connection has gone, the end of what it wrote to stderr,
+   * empty when it left nothing; undefined while it is up. A turn that failed
+   * with this set failed because the agent went.
+   */
+  gone(): string | undefined;
+  newSession(
+    request: acp.NewSessionRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.NewSessionResponse>;
+  /** Throws without asking when the agent does not offer `session/load`. */
+  loadSession(
+    request: acp.LoadSessionRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.LoadSessionResponse>;
+  /** Throws without asking when the agent does not offer `session/resume`. */
+  resumeSession(
+    request: acp.ResumeSessionRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.ResumeSessionResponse>;
+  /** Throws without asking when the agent does not offer `session/list`. */
+  listSessions(
+    request: acp.ListSessionsRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.ListSessionsResponse>;
+  /**
+   * Sends a prompt and settles with the agent's answer. Its updates, and any
+   * the agent sends after answering, come to the subscriber, not here. The
+   * signal stops the wait and cancels the turn too.
+   */
+  prompt(
+    request: acp.PromptRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.PromptResponse>;
+  /**
+   * Asks the agent to stop the session's turn, and answers `cancelled` to the
+   * permission requests and session forms it has waiting, as ACP asks, and to
+   * those of `subagents`, the sessions the turn's subagents run in, whose
+   * work the turn's cancel stops too; the prompt then settles with the
+   * agent's own answer.
+   */
+  cancel(sessionId: string, subagents?: Iterable<string>): Promise<void>;
+  setConfigOption(
+    request: acp.SetSessionConfigOptionRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.SetSessionConfigOptionResponse>;
+  setMode(
+    request: acp.SetSessionModeRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.SetSessionModeResponse>;
+  setModel(
+    request: SetSessionModelRequest,
+    signal?: AbortSignal,
+  ): Promise<unknown>;
+  /** Throws without asking when the agent does not offer steering. */
+  steer(request: SteerRequest, signal?: AbortSignal): Promise<SteerResponse>;
+  /**
+   * Stops the agent within the bounds whatever it answers, and returns once
+   * its exit is seen and what it wrote before going has reached the
+   * subscriber; rejects with `AgentExitError` if that exit is not seen even
+   * after SIGKILL. Idempotent.
+   */
+  close(): Promise<void>;
+}
+
+/** How long, past the exit, the rest of stdout gets to reach the subscriber. */
+const DRAIN_MS = 1000;
+
+/**
+ * What chord tells an agent it can do: forms and links, plans by id (Codex's
+ * adapter sends its plan as reply text to a client that does not say so),
+ * compactions by id (Claude's and Codex's adapters send one otherwise as a
+ * tool call, which carries no summary), subagents as sessions of their own
+ * (Claude's adapter otherwise stamps a child's updates into its parent's
+ * under a `_meta` of its own, and Codex's sends none of them), and nothing of
+ * files or terminals, so agents use their own tools for those.
+ * `terminal_output_delta` asks for what those tools' commands write as
+ * `_meta` on the tool call, which chord draws itself: Claude's adapter sends
+ * it only to a client that says so, and a block of text otherwise.
+ */
+const CLIENT_CAPABILITIES: acp.ClientCapabilities = {
+  elicitation: Object.fromEntries(ELICITATION_MODES.map((mode) => [mode, {}])),
+  plan: {},
+  session: { compaction: {} },
+  subagents: {},
+  _meta: { terminal_output_delta: true },
+};
+
+/**
+ * Starts the agent, connects to it on its stdio and initialises ACP v1.
+ * Rejects, with the agent stopped, if it cannot start, will not initialise,
+ * or the signal aborts first.
+ */
+export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
+  options.signal?.throwIfAborted();
+
+  const process = await spawnAgent({
+    command: options.command,
+    ...(options.env === undefined ? {} : { env: options.env }),
+    cwd: options.cwd,
+    onStderr: (text) => options.onTraffic({ from: 'stderr', text }),
+  });
+  /** What each session has waiting on the person, to cancel with its turn. */
+  const waiting = new Map<string, Set<AbortController>>();
+  const closing = new AbortController();
+
+  /**
+   * Runs a handler for a request the agent sent, answering `fallback` once
+   * the answer stops mattering or the handler fails, whichever comes first.
+   */
+  const answer = <T>(
+    sessionId: string | undefined,
+    requestSignal: AbortSignal,
+    fallback: T,
+    handler: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T> => {
+    const controller = new AbortController();
+    const signal = AbortSignal.any([
+      controller.signal,
+      requestSignal,
+      closing.signal,
+    ]);
+    const held =
+      sessionId === undefined
+        ? undefined
+        : (waiting.get(sessionId) ?? new Set());
+
+    if (sessionId !== undefined && held !== undefined) {
+      held.add(controller);
+      waiting.set(sessionId, held);
+    }
+
+    return new Promise<T>((resolve) => {
+      const withdrawn = () => resolve(fallback);
+
+      if (signal.aborted) {
+        return withdrawn();
+      }
+
+      signal.addEventListener('abort', withdrawn, { once: true });
+      handler(signal).then(resolve, withdrawn);
+    }).finally(() => {
+      held?.delete(controller);
+
+      if (sessionId !== undefined && held?.size === 0) {
+        waiting.delete(sessionId);
+      }
+    });
+  };
+
+  const app = acp
+    .client({ name: 'chord' })
+    .onRequest('session/request_permission', ({ params, signal }) =>
+      answer(
+        params.sessionId,
+        signal,
+        { outcome: { outcome: 'cancelled' } },
+        (signal) => options.onPermission(params, signal),
+      ),
+    )
+    .onRequest('elicitation/create', ({ params, signal }) => {
+      const cancel: acp.CreateElicitationResponse = { action: 'cancel' };
+
+      if (!(ELICITATION_MODES as readonly string[]).includes(params.mode)) {
+        return cancel;
+      }
+
+      const sessionId =
+        'sessionId' in params && typeof params.sessionId === 'string'
+          ? params.sessionId
+          : undefined;
+
+      return answer(sessionId, signal, cancel, (signal) =>
+        options.onElicitation(params, signal),
+      );
+    });
+
+  const wire = acp.ndJsonStream(process.stdin, process.stdout);
+  const connection = app.connect(
+    tapStream(
+      options.relay === undefined ? wire : relayStream(wire, options.relay),
+      options.onTraffic,
+    ),
+  );
+
+  /**
+   * Waits for the agent's answer, giving up on the signal or on the agent's
+   * exit, whichever comes first.
+   */
+  const ask = async <T>(
+    send: () => Promise<T>,
+    signal: AbortSignal | undefined,
+  ): Promise<T> => {
+    let stop: (() => void) | undefined;
+    const gone = AbortSignal.any([
+      connection.signal,
+      ...(signal === undefined ? [] : [signal]),
+    ]);
+
+    // Withdrawn work must not reach the agent: a rejected set_mode that still
+    // changed the mode, or a prompt that still started a turn, lies to the caller.
+    if (gone.aborted) {
+      throw signal?.aborted ? signal.reason : new Error(exitMessage(process));
+    }
+
+    const request = send();
+
+    request.catch(() => {});
+
+    try {
+      return await Promise.race([
+        request,
+        new Promise<never>((_, reject) => {
+          stop = () =>
+            reject(
+              signal?.aborted ? signal.reason : new Error(exitMessage(process)),
+            );
+
+          if (gone.aborted) {
+            stop();
+          } else {
+            gone.addEventListener('abort', stop, { once: true });
+          }
+        }),
+      ]);
+    } finally {
+      if (stop) {
+        gone.removeEventListener('abort', stop);
+      }
+    }
+  };
+
+  let closed: Promise<void> | undefined;
+
+  const close = () =>
+    (closed ??= (async () => {
+      closing.abort();
+
+      try {
+        await process.stop(options.stop);
+      } finally {
+        // stdout ends once the group is gone; what it held still counts.
+        await settledWithin(connection.closed, DRAIN_MS);
+        connection.close();
+      }
+    })());
+
+  let init: acp.InitializeResponse;
+
+  try {
+    init = await ask(
+      () =>
+        connection.agent.request('initialize', {
+          protocolVersion: acp.PROTOCOL_VERSION,
+          clientCapabilities: CLIENT_CAPABILITIES,
+          clientInfo: { name: 'chord', version: manifest.version },
+        }),
+      options.signal,
+    );
+  } catch (error) {
+    await close();
+
+    throw error;
+  }
+
+  const offers = init.agentCapabilities ?? {};
+
+  const offered = (method: string, yes: unknown) => {
+    if (!yes) {
+      throw new Error(`The agent does not offer ${method}.`);
+    }
+  };
+
+  const steering = steeringOf(init);
+
+  const agent: Agent = {
+    pid: process.pid,
+    init,
+    steering,
+    exited: process.status,
+    gone: () =>
+      connection.signal.aborted ? process.stderrTail().trim() : undefined,
+    newSession: (request, signal) =>
+      ask(() => connection.agent.request('session/new', request), signal),
+    loadSession: async (request, signal) => {
+      offered('session/load', offers.loadSession);
+
+      return await ask(
+        () => connection.agent.request('session/load', request),
+        signal,
+      );
+    },
+    resumeSession: async (request, signal) => {
+      offered('session/resume', offers.sessionCapabilities?.resume);
+
+      return await ask(
+        () => connection.agent.request('session/resume', request),
+        signal,
+      );
+    },
+    listSessions: async (request, signal) => {
+      offered('session/list', offers.sessionCapabilities?.list);
+
+      return await ask(
+        () => connection.agent.request('session/list', request),
+        signal,
+      );
+    },
+    prompt: async (request, signal) => {
+      const cancel = () => void agent.cancel(request.sessionId).catch(() => {});
+
+      signal?.addEventListener('abort', cancel, { once: true });
+
+      try {
+        return await ask(
+          () => connection.agent.request('session/prompt', request),
+          signal,
+        );
+      } finally {
+        signal?.removeEventListener('abort', cancel);
+      }
+    },
+    cancel: async (sessionId, subagents = []) => {
+      for (const each of [sessionId, ...subagents]) {
+        for (const controller of waiting.get(each) ?? []) {
+          controller.abort();
+        }
+      }
+
+      await connection.agent.notify('session/cancel', { sessionId });
+    },
+    setConfigOption: (request, signal) =>
+      ask(
+        () => connection.agent.request('session/set_config_option', request),
+        signal,
+      ),
+    setMode: (request, signal) =>
+      ask(() => connection.agent.request('session/set_mode', request), signal),
+    setModel: (request, signal) =>
+      ask(() => connection.agent.request('session/set_model', request), signal),
+    steer: async (request, signal) => {
+      offered('_session/steering', steering);
+
+      return await ask(
+        () =>
+          connection.agent.request<SteerResponse, SteerRequest>(
+            '_session/steering',
+            request,
+          ),
+        signal,
+      );
+    },
+    close,
+  };
+
+  return agent;
+}
+
+/** Whether `initialize`'s answer advertises `_session/steering`. */
+function steeringOf(init: acp.InitializeResponse): boolean {
+  const steering: unknown = init._meta?.['steering'];
+
+  return (
+    typeof steering === 'object' &&
+    steering !== null &&
+    'supported' in steering &&
+    steering.supported === true
+  );
+}
+
+/** The agent went, with the end of its stderr when it left any. */
+function exitMessage(process: AgentProcess): string {
+  const tail = process.stderrTail().trim();
+
+  return tail === '' ? 'The agent exited.' : `The agent exited: ${tail}`;
+}

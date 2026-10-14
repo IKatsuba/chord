@@ -1,0 +1,40 @@
+/bin/bash '/tmp/chd81-binary-120x40-a37e855f2f9b7e96/run.sh' -p text
+The default interactive shell is now zsh.
+To update your account to use zsh, please run `chsh -s /bin/zsh`.
+For more details, please visit https://support.apple.com/kb/HT208050.
+bash-3.2$ /bin/bash '/tmp/chd81-binary-120x40-a37e855f2f9b7e96/run.sh' -p text
+Hello, world. This reply came in chunks.
+QA_EXIT=0
+bash-3.2$ /bin/bash '/tmp/chd81-binary-120x40-a37e855f2f9b7e96/run.sh' -p text --output-format json
+{"type":"result","is_error":false,"result":"Hello, world. This reply came in chunks.","session_id":"e93fb1e3-9a55-45ee-a
+221-780c5bf7dc26","stop_reason":"end_turn","usage":{"input_tokens":1000,"output_tokens":200,"cache_read_input_tokens":80
+0,"total_tokens":2000},"total_cost_usd":0.0125}
+QA_EXIT=0
+bash-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

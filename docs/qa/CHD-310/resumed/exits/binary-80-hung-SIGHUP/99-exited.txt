@@ -1,0 +1,24 @@
+/tmp/chd310-final/forced/binary-80-hung-SIGHUP/run.sh: line 9: 60023 Hangup: 1
+             /tmp/chd310-final/forced/repo/dist/bun-darwin-arm64/chord fake --ag
+ent-command 'env -u BUN_OPTIONS bun /tmp/chd310-final/forced/repo/tests/fixtures
+/fake_agent/main.ts' -C /tmp/chd310-final/forced/binary-80-hung-SIGHUP/work 2> /
+tmp/chd310-final/forced/binary-80-hung-SIGHUP/stderr
+
+QA_DONE code=129
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

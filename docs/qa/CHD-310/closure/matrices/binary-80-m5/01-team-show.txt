@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd310-closure/m45/binary-80-m5/work
+ █▀     ? for shortcuts · /help
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md
+      Fixes a bug end to end — a failing test first, then the fix.
+
+      lead    fake · fake-large  default      Splits the job, says who edits…
+      tester  fake · fake-small  acceptEdits  Writes the failing test, then …
+      coder   fake · fake-large  plan         Writes the fix, in the files t…
+
+      How bugfix works
+      … +27 lines (ctrl+o to expand)
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

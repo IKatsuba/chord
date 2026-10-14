@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chord-qa.BGgP[0m
+
+         [38;2;255;107;128m⏺[39m [1mRead[0m(src/ui/App.tsx)
+           [2m⎿[0m  [38;2;255;107;128mError: File is too large to read whole.[39m
+
+         ⏺ Could not read the component.
+      [2m⎿[0m  [38;2;255;107;128mFailed[39m
+
+ ⏺ Now the tests, in the background.
+
+ [38;2;78;186;101m⏺[39m [1mAgent[0m(Run the whole test suite)
+   [2m⎿[0m  Run deno task test and report what fails.
+
+      [38;2;78;186;101m⏺[39m [1mBash[0m(deno task test)
+
+      ⏺ Every test passed.
+   [2m⎿[0m  [2mDone (1 tool use · 17s)[0m
+
+ ⏺ It is running; I will say when it ends.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 99% context left[0m

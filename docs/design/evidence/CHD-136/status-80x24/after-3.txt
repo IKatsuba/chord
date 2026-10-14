@@ -1,0 +1,24 @@
+ chord                                                 fake · /tmp/chord-qa.cmp
+
+
+ › status
+
+ ⏺ Status sent.
+
+ › /cost
+   ⎿  Total cost:   $0.0100
+      Tokens in:    1,000
+      Tokens out:   200
+      Session time: 7s
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Plan
+      Session:   6b2f7b4f-dd5b-4cc9-b50b-6cc23f87ef68
+      Directory: /tmp/chord-qa.cmp
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · 99% context left

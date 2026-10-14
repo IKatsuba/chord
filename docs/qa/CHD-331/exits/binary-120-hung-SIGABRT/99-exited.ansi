@@ -1,0 +1,40 @@
+/tmp/chd331-qa/binary-120-hung-SIGABRT/run.sh: line 9:  7920 Abort trap: 6           /tmp/chd331-qa/repo/dist/bun-darwin
+-arm64/chord fake --agent-command 'env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts' -C /tmp
+/chd331-qa/binary-120-hung-SIGABRT/work 2> /tmp/chd331-qa/binary-120-hung-SIGABRT/stderr
+
+QA_DONE code=134
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

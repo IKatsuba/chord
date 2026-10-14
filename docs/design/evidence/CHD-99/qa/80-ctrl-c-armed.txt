@@ -1,0 +1,24 @@
+ chord                                      fake · /tmp/chd99-qa/restart80/work
+ ⏺ Working.....................................................................
+   ............................................................................
+   ......................................................................
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT -- Press ctrl+c again to quit     Fake Large with a 1M… · 99% left

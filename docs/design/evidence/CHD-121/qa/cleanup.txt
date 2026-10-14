@@ -1,0 +1,8 @@
+Terminal settings before, after source quit and after compiled quit: identical.
+Alternate-screen entries: 2; exits: 2.
+After each quit tmux reports alternate_on=0, cursor_flag=1.
+120-resume-before: 3 fake agents; PID / parent PID: 73857 / 73839, 73928 / 73839, 73967 / 73839.
+120-resume-after: 3 fake agents; PID / parent PID: 73857 / 73839, 73928 / 73839, 73967 / 73839.
+80-binary-resume-before: 2 fake agents; PID / parent PID: 76842 / 76706, 76890 / 76706.
+80-binary-resume-after: 2 fake agents; PID / parent PID: 76842 / 76706, 76890 / 76706.
+Source quit: zero owned fake agents. Compiled quit: zero owned fake agents.

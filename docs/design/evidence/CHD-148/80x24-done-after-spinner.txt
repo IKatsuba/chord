@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.b7td
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › compact
+   ⎿  Conversation compacted (ctrl+o for history)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

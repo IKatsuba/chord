@@ -1,0 +1,24 @@
+   ⎿  Failed
+   ⎿  Rejected mcp__chord__monitor
+
+ ⏺ Permission: deny.
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › mcpask
+
+ ⏺ Tool(mcp__chord__monitor)
+   ⎿  Allowed mcp__chord__monitor · Yes
+
+ ⏺ Permission: allow.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake                                                                            /tmp/chord-qa.jBb8
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.jBb8
+ ▀▀     ? for shortcuts · /help
+
+ › plan
+
+ ⏺ Planned. Step 2 done.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ✹ Working… (2s · esc to interrupt)
+  ⎿  ☒ Read the code
+     ☒ Write the change
+     ◐ Run the tests
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

@@ -1,0 +1,39 @@
+{
+  "implementation_commit": "a715528",
+  "runtime": "Bun 1.4.2",
+  "target": "bun-darwin-arm64",
+  "matrix": [
+    "source-120x40",
+    "source-80x24",
+    "binary-120x40",
+    "binary-80x24"
+  ],
+  "check": {
+    "command": "bun run check",
+    "exit_code": 0,
+    "lint_tests": 51,
+    "tests": 1508,
+    "test_files": 109,
+    "failures": 0,
+    "test_seconds": 481.15
+  },
+  "privacy": {
+    "command": "bun test ./tests/privacy_test.ts",
+    "tests": 7,
+    "failures": 0,
+    "new_captures_staged": true
+  },
+  "compile": {
+    "command": "bun run compile",
+    "exit_code": 0,
+    "binary_started_and_driven": true
+  },
+  "terminal_captures": 271,
+  "final_cleanup": {
+    "qa_tmux_server_running": false,
+    "fake_agents_running": false,
+    "qa_monitor_shells_running": false
+  },
+  "findings_filed": [],
+  "live_agents_used": false
+}

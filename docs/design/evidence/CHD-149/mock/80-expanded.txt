@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+   │          src/acp/connection.ts:214: listeners.get(sessionId)?.(update);
+   │
+   │     ⏺ Agent(Read the transport tests)
+   │       ⎿  Done (2 tool uses · 6s)
+   │
+   │     ⏺ The listeners are kept per sessionId in openAgent; an id chord
+   │       did not open is dropped there.
+   │
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Find the component that draws a tool call and the rule that
+         folds its output.
+
+         ⏺ Search(pattern: "function Tool", path: "src/ui")
+           ⎿  Found 1 file
+
+         ⏺ Read(src/ui/App.tsx)
+           ⎿  Running…
+
+ ✻ Working… (34s · esc to interrupt)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                       Opus · 91% context left

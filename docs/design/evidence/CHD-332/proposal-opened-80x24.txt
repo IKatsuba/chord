@@ -1,0 +1,24 @@
+ › propose
+
+ ⏺ A lead on Opus to split the work, and three members, one for each step. Only
+   one of them edits a file at a time.
+
+ ⏺ Team(bugfix) · proposal
+ ── ↓ 50 lines below · end to jump to the bottom ──────────────────────────────
+
+ ✺ Waiting for you… (13s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Save team bugfix?                                                            │
+│                                                                              │
+│ ❯ 1. Yes, for this project   .chord/teams/bugfix.md                          │
+│   2. Yes, for every project  ~/.config/chord/teams/bugfix.md                 │
+│   3. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

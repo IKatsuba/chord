@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                                             ~/src/app
+ ▄██▀   ~/src/app
+ █▀     ? for shortcuts · /help
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Sessions in ~/src/app                                                        │
+│                                                                              │
+│ ❯ 1. fake  idle  text                                                        │
+│   2. fake  here  tools                                                       │
+│                                                                              │
+│ Enter to go · 1–2 to pick · Esc to close                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

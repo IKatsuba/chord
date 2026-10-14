@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chd31-qa/work
+   32. Line 32 of 200, streamed one at a time.
+   33. Line 33 of 200, streamed one at a time.
+   34. Line 34 of 200, streamed one at a time.
+   35. Line 35 of 200, streamed one at a time.
+   36. Line 36 of 200, streamed one at a time.
+   37. Line 37 of 200, streamed one at a time.
+   38. Line 38 of 200, streamed one at a time.
+   39. Line 39 of 200, streamed one at a time.
+   40. Line 40 of 200, streamed one at a time.
+   41. Line 41 of 200, streamed one at a time.
+   42. Line 42 of 200, streamed one at a time.
+   43. Line 43 of 200, streamed one at a time.
+   44. Line 44 of 200, streamed one at a time.
+   45. Line 45 of 200, streamed one at a time.
+   46. Line 46 of 200, streamed one at a time.
+   47. Line 47 of 200, streamed one at a time.
+   48. Line 48 of 200, streamed one at a time.
+   49. Line 49 of 200, streamed one at a time.
+   50. Line 50 of 200, streamed one at a time.
+   51. Line 51 of 200, streamed one at a time.
+   52. Line 52 of 200, streamed one at a time.
+   53. Line 53 of 200, streamed one at a time.
+   54. Line 54 of 200, streamed one at a time.
+   55. Line 55 of 200, streamed one at a time.
+   56. Line 56 of 200, streamed one at a time.
+   57. Line 57 of 200, streamed one at a time.
+   58. Line 58 of 200, streamed one at a time.
+   59. Line 59 of 200, streamed one at a time.
+   60. Line 60 of 200, streamed one at a time.
+   61. Line 61 of 200, streamed one at a time.
+   62. Line 62 of 200, streamed one at a time.
+   63. Line 63 of 200, streamed one at a time.
+   64. Line 64 of 200, streamed one at a time.
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

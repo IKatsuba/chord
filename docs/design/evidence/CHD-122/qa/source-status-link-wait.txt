@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake2    3 fake2 ●                                                      /tmp/chd122-qa/source-work
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd122-qa/source-work
+ █▀     ? for shortcuts · /help
+
+ › mode
+
+ ⏺ Mode: plan.
+
+ › /new codx
+ ⏺ No agent named codx · chord agents lists them
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Plan
+      Session:   bc7e4d6b-7315-476b-96de-8f398a141a65
+      Directory: /tmp/chd122-qa/source-work
+      Sessions:  3 open (2 wait)
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Plan
+      Session:   bc7e4d6b-7315-476b-96de-8f398a141a65
+      Directory: /tmp/chd122-qa/source-work
+      Sessions:  3 open (1 waits)
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 3 fake2 asks for input · ctrl+x a to go · ⏸ plan mode on    Fake Large with a 1M context window · 99% context left

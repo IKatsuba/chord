@@ -1,0 +1,24 @@
+   [2m│[0m       ]                                             [2m│[0m
+   [2m│[0m     }                                               [2m│[0m
+   [2m│[0m   ]                                                 [2m│[0m
+   [2m│[0m }                                                   [2m│[0m
+   [2m└─────────────────────────────────────────────────────┘[0m
+
+ [2m›[0m agentclose
+
+ [2m⏺[0m [1mClose[0m(parser)
+   [2m⎿[0m  [2mClosed[0m
+
+ → [1m@parser[0m
+   [2m⎿[0m  parser is closed; open_agent starts another
+
+ ⏺ parser is closed, so I will run the tests myself.
+ [2m── ↓ 15 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 3% context used[0m
+    [1mmain             [0;2m  fake                             [0m
+    docs             [2m  fake                             [0m
+    dev server errors[2m  $ sleep 1; echo "ERROR [router] …  running 3s · 1 event[0m

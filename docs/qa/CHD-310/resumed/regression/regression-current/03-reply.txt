@@ -1,0 +1,40 @@
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ─ ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+Bo             . MaxListeners is 10. Use e              isteners() to increase                                   ──────╯
+(U                       s ...` to show wh                     reated)                                          window
+"P                            leak detecte                         ded to [BoxR                    eners is 10. Use emit
+te                           ease limit"
+(n                          eededWarning:                   ter memory leak det                                    [BoxR
+en                                    mitt                        increase limi
+"P                                     cte                              o [BoxR                     ners is 10. Use emit
+t                                  imit"
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P›                           leak detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

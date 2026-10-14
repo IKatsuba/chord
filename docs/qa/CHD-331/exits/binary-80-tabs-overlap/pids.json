@@ -1,0 +1,36 @@
+{
+  "app": 9911,
+  "fakes": [
+    9916,
+    9935
+  ],
+  "owned": [
+    9911,
+    9916,
+    9935
+  ],
+  "groups": [
+    9916,
+    9935
+  ],
+  "rows": [
+    [
+      "9916",
+      "9911",
+      "9916",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "9935",
+      "9911",
+      "9935",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "9911",
+      "9904",
+      "9904",
+      "/tmp/chd331-qa/repo/dist/bun-darwin-arm64/chord fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/binary-80-tabs-overlap/work"
+    ]
+  ]
+}

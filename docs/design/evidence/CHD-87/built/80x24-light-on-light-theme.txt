@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.4ndp
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Theme                                                                        │
+│ Choose the colours that read best on this terminal.                          │
+│                                                                              │
+│   1. Auto (light, from the terminal)                                         │
+│   2. Dark                                                                    │
+│ ❯ 3. Light ✔                                                                 │
+│   4. Dark, colour-blind friendly                                             │
+│   5. Light, colour-blind friendly                                            │
+│   6. Dark, the terminal's 16 colours                                         │
+│   7. Light, the terminal's 16 colours                                        │
+│                                                                              │
+│  1   function greet(name) {                                                  │
+│  2 -   return "hello " + name;                                               │
+│  2 +   return `hello, ${name}`;                                              │
+│                                                                              │
+│ ↑↓ to preview · Enter to keep · Esc to go back to Light                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · 99% context left

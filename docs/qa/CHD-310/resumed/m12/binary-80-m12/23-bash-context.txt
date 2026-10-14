@@ -1,0 +1,24 @@
+ › /greet QA
+
+ ⏺ Hello from the fake agent.
+
+ › @example.ts
+
+ ⏺ Received a link: example.ts,
+   file:///tmp/chd310-final/exits/binary-80-m12/work/example.ts
+
+   Hello, world. This reply came in chunks.
+
+ ! printf qa-shell                                                        ─────
+   ⎿  qa-shell                         rni                    itter memory leak
+                                                                             Us
+ › text
+
+ ⏺ Received printf qa-shell: qa-shell                          s added to [BoxR
+
+   Hello, world. This reply came in chunks.
+ct
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                                                        eners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

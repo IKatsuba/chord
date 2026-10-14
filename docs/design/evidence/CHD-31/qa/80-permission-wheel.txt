@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chd31-qa/work
+   189. Line 189 of 200, streamed one at a time.
+   190. Line 190 of 200, streamed one at a time.
+   191. Line 191 of 200, streamed one at a time.
+   192. Line 192 of 200, streamed one at a time.
+ ── ↓ 13 lines below · end to jump to the bottom ──────────────────────────────
+
+ ✸ Waiting for permission… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

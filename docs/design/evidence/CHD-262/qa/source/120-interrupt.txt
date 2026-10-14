@@ -1,0 +1,40 @@
+   bugfix 2's turn failed: The fake agent failed on purpose. It is still open; send_message reaches it.
+
+ ⏺ Received the message from chord.
+
+ ← chord
+   The person closed team bugfix: its lead (fake · fake-large, id 54141916) and its members tester and coder. It
+   takes no more messages; run_team starts it again.
+
+ ⏺ Received the message from chord.
+
+ › slow
+
+ ⏺ Working.............................................................................................................
+   ....................................................................................................................
+   ....................................................................................................................
+   ............................................
+   ⎿  Interrupted by user
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.............................................................................................................
+   ....................................................................................................................
+   ....................................................................................................................
+   ...........................................
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 3% context used
+    main       fake · Fake Large with a 1M context window
+    bugfix 2   team · fake · Fake Large with a 1M context window
+    ├─ tester  fake · Fake Small
+    └─ coder   fake · Fake Large with a 1M context window

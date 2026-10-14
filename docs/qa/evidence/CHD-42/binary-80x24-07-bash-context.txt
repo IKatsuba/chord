@@ -1,0 +1,24 @@
+ chord             fake · /private/tmp/chd81-binary-80x24-cd0d7e84b6e1d7ed/work
+   ⎿  Used: 2,000 of 1,000,000 tokens (1%)
+      Free: 998,000 tokens (99%)
+
+ › /config
+   ⎿  Effort set to High
+
+ › @src/day.ts
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ! printf "day-context\n"
+   ⎿  day-context
+
+ › text
+
+ ⏺ Received printf "day-context\n": day-context
+
+   Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)            Fake Small · 97% context left

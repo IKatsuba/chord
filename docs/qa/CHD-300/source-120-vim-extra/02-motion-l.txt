@@ -1,0 +1,40 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd300/source-120-vim-extra/work
+ █▀     ? for shortcuts · /help
+
+ › /vim
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › alpha beta                                                                                                         │
+│   gamma delta                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  -- NORMAL --                                                                     Fake Large with a 1M context window

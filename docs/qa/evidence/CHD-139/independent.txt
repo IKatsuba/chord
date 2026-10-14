@@ -1,0 +1,3 @@
+PASS: 4 full-chain mode/report race combinations and subsequent silent requests
+PASS: fake session agent-reported mode confirmed inside turns, tool-update title/kind, running cost/window provenance
+PASS: fake session tokens-only/silent mode confirmed inside turns, tool-update title/kind, running cost/window provenance

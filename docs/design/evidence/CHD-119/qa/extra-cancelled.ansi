@@ -1,0 +1,24 @@
+ [1mchord[0m  [1;7m 1 fake [0m   [2m2 fake[0m    [2m3 fake[0m                   [2m/tmp/chd119-qa/extra-work[0m
+ ⏺ [2m1.[0m Line 1 of 200, streamed one at a time.
+   [2m2.[0m Line 2 of 200, streamed one at a time.
+   [2m3.[0m Line 3 of 200, streamed one at a time.
+   [2m4.[0m Line 4 of 200, streamed one at a time.
+   [2m5.[0m Line 5 of 200, streamed one at a time.
+   [2m6.[0m Line 6 of 200, streamed one at a time.
+   [2m7.[0m Line 7 of 200, streamed one at a time.
+   [2m8.[0m Line 8 of 200, streamed one at a time.
+   [2m9.[0m Line 9 of 200, streamed one at a time.
+   [2m10.[0m Line 10 of 200, streamed one at a time.
+   [2m11.[0m Line 11 of 200, streamed one at a time.
+   [2m12.[0m Line 12 of 200, streamed one at a time.
+   [2m13.[0m Line 13 of 200, streamed one at a time.
+   [2m14.[0m Line 14 of 200, streamed one at a time.
+   [2m15.[0m Line 15 of 200, streamed one at a time.
+   [2m16.[0m Line 16 of 200, streamed one at a time.
+   [2m17.[0m Line 17 of 200, streamed one at a time.
+   [2m⎿[0m  [38;2;255;107;128mInterrupted by user[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

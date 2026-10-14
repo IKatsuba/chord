@@ -1,0 +1,24 @@
+ [1mchord[0m   [2m1 fake[0m   [1;7m 2 fake [0m                   [2m/tmp/chd300/source-80-rebound/work[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2mctrl + s to send[0m
+  [2m\ + ctrl + s for a newline[0m
+  [2mshift + enter alt + enter for a newline[0m
+  [2mctrl + g to edit in $EDITOR[0m
+  [2mctrl + v to paste an image[0m
+  [2m↑ ↓ for prompts, agents and monitors[0m
+  [2mx to close an agent or stop a monitor[0m
+  [2mctrl + r to search prompts[0m
+  [2mtab enter to take a match[0m
+  [2mesc to cancel a search[0m
+  [2mpgup pgdn or wheel to scroll[0m
+  [2mshift + ↑ ↓ to scroll a line[0m
+  [2mhome end for the top and the bottom[0m
+  [2m/ for commands[0m
+  [2m↑ ↓ to pick a command[0m
+  [2mtab to complete a command[0m
+  [2m@ for files[0m
+  [2m↑ ↓ to pick a file
+[0m  [2mtab enter to add a file[0m

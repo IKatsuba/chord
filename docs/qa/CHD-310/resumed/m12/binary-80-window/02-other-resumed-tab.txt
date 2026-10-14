@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                /tmp/chd310-final/m3/binary-80-m3/work
+   │     "url": "http://localhost:9/docs", │
+   │     "headers": [],                    │
+   │     "type": "http"                    │
+   │   },                                  │
+   │   {                                   │
+   │     "name": "project-files",          │
+   │     "command": "echo",                │
+   │     "args": [                         │
+   │       "m3-server"                     │
+   │     ],                                │
+   │     "env": []                         │
+   │   }                                   │
+   │ ]                                     │
+   └───────────────────────────────────────┘
+
+ › first session draft sent
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used

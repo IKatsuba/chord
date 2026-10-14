@@ -1,0 +1,40 @@
+ chord                                                                                      fake · /tmp/chd66-qa.uf7EKT
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      Session time: 6s
+
+ › /context
+   ⎿  fake has not reported how full its context window is.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

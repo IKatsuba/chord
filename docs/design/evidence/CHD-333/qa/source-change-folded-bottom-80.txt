@@ -1,0 +1,24 @@
+
+         lead             c…  default                            Splits the …
+      ~  tester           c…  bypassPermissions was acceptEdits  Writes the …
+         coder            c…  auto                               Writes the …
+      +  reviewer         c…  read-only                          Reads the d…
+      -  security-review  c…  bypassPermissions                  Reviews the…
+      bugfix.md's body · 1 addition, 1 removal
+      … +24 lines (ctrl+o to expand)
+
+ ✷ Waiting for you… (47s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                         │
+│                                                                              │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                          │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

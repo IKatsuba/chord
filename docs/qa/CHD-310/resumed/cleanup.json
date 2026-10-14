@@ -1,0 +1,10 @@
+{
+  "recorded_pids": 150,
+  "recorded_alive": [],
+  "probe_processes": [],
+  "tmux_sessions": {
+    "chd310-final": "",
+    "chd310-final-forced": ""
+  },
+  "clipboard_backups_absent": true
+}

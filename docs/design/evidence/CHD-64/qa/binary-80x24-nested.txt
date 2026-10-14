@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chd64-qa/work
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+   - Quoted multiline code:
+     │ ┌ ts ──────────────────────────────────────────────────────────────────┐
+     │ │ /* first comment line                                                │
+     │ │ second comment line */                                               │
+     │ │ const longName = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwx │
+     │ │ yzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";             │
+     │ └──────────────────────────────────────────────────────────────────────┘
+
+   ┌ unknown-language ─────────┐
+   │ const plainUnknown = 123; │
+   └───────────────────────────┘
+
+   ┌───────────────────────────┐
+   │ const plainMissing = 456; │
+   └───────────────────────────┘
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

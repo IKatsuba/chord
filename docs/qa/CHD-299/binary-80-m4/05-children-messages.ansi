@@ -1,0 +1,24 @@
+ → [1m@parser[0;2m · queued[0m
+   [2m⎿[0m  [2mI changed how a string at the end of a line is read. Run the parser test…[0m
+
+ → [1m@parser[0;2m · queued[0m
+   [2m⎿[0m  [2mThe printer is fixed too; run the whole parser suite once more.[0m
+
+ ⏺ Waiting on parser.
+
+ ← [1m@parser[0;2m · fake[0m
+   [2m⎿[0m  [2mRan deno task test tests/parse: 2 failures, both[0m
+   [2m [0m  [2min tests/parse/printer_test.ts.[0m
+
+ ⏺ Received the message from parser · fake.
+
+ ✶ Working… [2m(0s · esc to interrupt)[0m
+ [2m←[0m [2m@parser · fake: All 214 parser tests pass now.[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m● docs needs your permission · ctrl+x a[0m  [2mFake Large with a 1M con… · 2% used[0m
+    [1mmain  [0;2m  fake · Fake Large with a 1M context window  ✻ working 0s[0m
+    parser[2m  fake · Fake Small                         [0m  ✓ replied 3s ago
+    docs  [2m  fake · Fake Large with a 1M context window[0m  ● permission 3s

@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake2 ●    3 fake                                                               /tmp/chord-qa.YpEj
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.YpEj
+ ▀▀     ? for shortcuts · /help
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   31b5e5eb-4cb4-42a5-ae34-c136aa0cca88
+      Directory: /tmp/chord-qa.YpEj
+      Sessions:  3 open (1 waits)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 2 fake2 needs your permission · ctrl+x a to go · ? for shortcuts               Fake Large with a 1M context window

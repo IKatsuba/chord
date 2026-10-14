@@ -1,0 +1,24 @@
+{
+  "bytes": 52253,
+  "bell_count": 4,
+  "notifications": [
+    {
+      "offset": 5868,
+      "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c",
+      "escaped": "b'\\x1bPtmux;\\x1b\\x1b]777;notify;chord;fake is waiting for your input\\x07\\x1b\\\\'"
+    },
+    {
+      "offset": 10988,
+      "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b65206e6565647320796f7572207065726d697373696f6e3a205772697465206e6f7465732e747874071b5c",
+      "escaped": "b'\\x1bPtmux;\\x1b\\x1b]777;notify;chord;fake needs your permission: Write notes.txt\\x07\\x1b\\\\'"
+    },
+    {
+      "offset": 44549,
+      "hex": "1b50746d75783b1b1b5d3737373b6e6f746966793b63686f72643b66616b652069732077616974696e6720666f7220796f757220696e707574071b5c",
+      "escaped": "b'\\x1bPtmux;\\x1b\\x1b]777;notify;chord;fake is waiting for your input\\x07\\x1b\\\\'"
+    }
+  ],
+  "alternate_enter": 1,
+  "alternate_leave": 1,
+  "cursor_show": 3
+}

@@ -1,0 +1,203 @@
+=== baseline 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls dra…
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== source 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --...sys lint/ tests/ --filter "tool calls draw their status")
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== binary 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --...sys lint/ tests/ --filter "tool calls draw their status")
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== baseline 80x24 ===
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-s…
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+
+=== source 80x24 ===
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-...ilter "tool calls draw their status")
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+
+=== binary 80x24 ===
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-...ilter "tool calls draw their status")
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,40 @@
+ [2m›[0m chordcalls
+
+ [2m⏺[0m [1mList agents[0m
+   [2m⎿[0m  [2m36 runtimes · fake, agoragentic-acp, auggie, autohand, +32 more[0m
+
+ [2m⏺[0m [1mList agents[0m(fake)
+   [2m⎿[0m  [2m2 models · fake-large, fake-small[0m
+
+ [2m⏺[0m [1mList sessions[0m
+   [2m⎿[0m  [2m1 open · 1 fake (you)[0m
+
+ [2m⏺[0m [1mAgent[0m(Fix the tokenizer)[2m · fakx · fake-small[0m
+   [2m⎿[0m  No agent named fakx; chord knows fake, agoragentic-acp, auggie, autohand, claude, cline, codebuddy-code, codex, …
+
+ ⏺ chord knows no fakx.
+
+ [2m›[0m task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ [2m⏺[0m [1mAgent[0m(Fix the tokenizer)[2m · fake · fake-small[0m
+   [2m⎿[0m  [2mDone (5 tool uses · 13s)
+
+[0m ⏺ It is running; I will check its report when it lands.
+
+ ← [1mFix the tokenizer[0;2m · fake[0m
+   [2m⎿[0m  [2mFound it: a string at the end of a line lost its closing quote. Fixing src/parse/tokenize.ts now.[0m
+
+ ⏺ Received the message from Fix the tokenizer · fake.
+
+ ← [1mFix the tokenizer[0;2m · fake · report[0m
+   [2m⎿[0m  [2mThe tokenizer dropped a closing quote when a string ended the line. Fixed in src/parse/tokenize.ts, with two[0m
+   [2m [0m  [2mcases added to tests/parse/tokenize_test.ts. deno task test passes.[0m
+
+ ⏺ Received the message from Fix the tokenizer · fake · report.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                [2mFake Large with a 1M context window · 1% context used[0m

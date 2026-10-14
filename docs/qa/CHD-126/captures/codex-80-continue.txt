@@ -1,0 +1,24 @@
+ chord                                      codex · /tmp/chord-qa126.TEnN/codex
+
+
+
+ › Reply with: ok
+
+ ⏺ ok
+
+ › Read note.txt; replace old with new.
+
+ ⏺ I’ll read note.txt and replace old with new.
+
+ ⏺ Read(file '/tmp/chord-qa126.TEnN/codex/note.txt')
+
+ ⏺ Editing(files)
+
+ ⏺ Updated note.txt: replaced old with new.
+
+ › Run sleep 10 then say ok.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ approve for me mode on (shift+tab to cycle)                        6 Luna

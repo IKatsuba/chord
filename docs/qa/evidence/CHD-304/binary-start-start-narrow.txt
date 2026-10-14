@@ -1,0 +1,24 @@
+ chord                                               fake · /tmp/chd304-qa/work
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ Pick one of fake's earlier sessions, or a saved window, to open.             │
+│                                                                              │
+│   1. just now  /tmp/chd304-qa/work  ▣ 2 sessions · fake, fake · permission   │
+│ ❯ 2. just now  /tmp/chd304-qa/work  permission                               │
+│   3. just now  /tmp/chd304-qa/work  permission                               │
+│   4. just now  /tmp/chd304-qa/work  text                                     │
+│                                                                              │
+│ Enter to resume · Ctrl+a for this directory · Esc to quit                    │
+╰──────────────────────────────────────────────────────────────────────────────╯

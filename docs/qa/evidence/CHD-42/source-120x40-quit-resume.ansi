@@ -1,0 +1,40 @@
+
+The default interactive shell is now zsh.
+To update your account to use zsh, please run `chsh -s /bin/zsh`.
+For more details, please visit https://support.apple.com/kb/HT208050.
+bash-3.2$ /bin/bash '/tmp/chd81-source-120x40-5dcbf7cff5f93e6a/run.sh'
+Resume this session with:
+chord fake --agent-command '/tmp/chd81-assets/deno run --quiet --allow-env --config '\''/tmp/chd81-assets/project/deno.j
+son'\'' '\''/tmp/chd81-assets/project/tests/fixtures/fake_agent.ts'\''' --resume 18d424b8-579e-4e19-b777-66b3bf0c0d0c
+QA_EXIT=0
+bash-3.2$ /bin/bash '/tmp/chd81-source-120x40-5dcbf7cff5f93e6a/run.sh' --continue
+Resume this session with:
+chord fake --agent-command '/tmp/chd81-assets/deno run --quiet --allow-env --config '\''/tmp/chd81-assets/project/deno.j
+son'\'' '\''/tmp/chd81-assets/project/tests/fixtures/fake_agent.ts'\''' --resume 18d424b8-579e-4e19-b777-66b3bf0c0d0c
+QA_EXIT=0
+bash-3.2$ /bin/bash '/tmp/chd81-source-120x40-5dcbf7cff5f93e6a/run.sh' --resume 18d424b8-579e-4e19-b777-66b3bf0c0d0c
+Resume this session with:
+chord fake --agent-command '/tmp/chd81-assets/deno run --quiet --allow-env --config '\''/tmp/chd81-assets/project/deno.j
+son'\'' '\''/tmp/chd81-assets/project/tests/fixtures/fake_agent.ts'\''' --resume 18d424b8-579e-4e19-b777-66b3bf0c0d0c
+QA_EXIT=0
+bash-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

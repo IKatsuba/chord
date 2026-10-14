@@ -1,0 +1,17 @@
+────────────────────────────────────────────────────────────────────────────────
+  MCP server “ref” requests your input
+
+  Set up the deploy target
+
+    ↑ 2 more above
+    ✔ Replicas: 2
+
+  ❯   Traffic share: Type something…
+
+    ✔ Public: ☐
+        Reachable from the internet
+
+    ↓ 2 more below
+    Accept    Decline
+
+  Esc to cancel · ↑/↓ to navigate · Backspace to unset

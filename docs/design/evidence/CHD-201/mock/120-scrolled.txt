@@ -1,0 +1,40 @@
+
+ ⏺ The parser read the month as zero-based; it is fixed and the test passes.
+
+ › walk me through every caller of parseDate
+
+   1. src/api/caller_1.ts calls parseDate with a user's input
+   2. src/cli/caller_2.ts calls parseDate with a user's input
+   3. src/jobs/caller_3.ts calls parseDate with a user's input
+   4. src/api/caller_4.ts calls parseDate with a user's input
+   5. src/cli/caller_5.ts calls parseDate with a user's input
+   6. src/jobs/caller_6.ts calls parseDate with a user's input
+   7. src/api/caller_7.ts calls parseDate with a user's input
+   8. src/cli/caller_8.ts calls parseDate with a user's input
+   9. src/jobs/caller_9.ts calls parseDate with a user's input
+   10. src/api/caller_10.ts calls parseDate with a user's input
+   11. src/cli/caller_11.ts calls parseDate with a user's input
+   12. src/jobs/caller_12.ts calls parseDate with a user's input
+   13. src/api/caller_13.ts calls parseDate with a user's input
+   14. src/cli/caller_14.ts calls parseDate with a user's input
+   15. src/jobs/caller_15.ts calls parseDate with a user's input
+   16. src/api/caller_16.ts calls parseDate with a user's input
+   17. src/cli/caller_17.ts calls parseDate with a user's input
+   18. src/jobs/caller_18.ts calls parseDate with a user's input
+   19. src/api/caller_19.ts calls parseDate with a user's input
+   20. src/cli/caller_20.ts calls parseDate with a user's input
+   21. src/jobs/caller_21.ts calls parseDate with a user's input
+   22. src/api/caller_22.ts calls parseDate with a user's input
+   23. src/cli/caller_23.ts calls parseDate with a user's input
+   24. src/jobs/caller_24.ts calls parseDate with a user's input
+   25. src/api/caller_25.ts calls parseDate with a user's input
+   26. src/cli/caller_26.ts calls parseDate with a user's input
+   27. src/jobs/caller_27.ts calls parseDate with a user's input
+   28. src/api/caller_28.ts calls parseDate with a user's input
+   29. src/cli/caller_29.ts calls parseDate with a user's input
+   30. src/jobs/caller_30.ts calls parseDate with a user's input
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                        Sonnet 4.5 · 96% context left

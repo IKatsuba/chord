@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                   [2mfake · /private/tmp/chd101-qa.Hd9bih/u/src/app[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m›[0m /echo active unchanged
+
+ ⏺ active unchanged
+
+ [2m›[0m /status
+   [2m⎿[0m  [2mAgent:     [0mfake
+   [2m [0m  [2mModel:     [0mFake Large with a 1M context window
+   [2m [0m  [2mMode:      [0mDefault
+   [2m [0m  [2mSession:   [0m608cdb21-5a47-40df-bc27-db7cd9f254fe
+   [2m [0m  [2mDirectory: [0m/private/tmp/chd101-qa.Hd9bih/u/src/app
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mResume a session[0m                                                                                                     [2m│
+│[0m [2mfake's earlier sessions in every directory.[0m                                                                          [2m│
+│[0m                                                                                                                      [2m│
+│[0m   1. just now  ~/src/app  /echo app transcript                                                                       [2m│
+│[0m ❯ 2. just now  ~/src/api  /echo api transcript                                                                       [2m│
+│[0m                                                                                                                      [2m│
+│[0m [2mEnter to resume · Ctrl+a for this directory · Esc to close[0m                                                           [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

@@ -1,0 +1,24 @@
+ [1mchord[0m                         [2mfake · /private/tmp/chd101-qa.Hd9bih/u/src/empty[0m
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mResume a session[0m                                                             [2m│
+│[0m [2mfake's earlier sessions in every directory.[0m                                  [2m│
+│[0m                                                                              [2m│
+│[0m ❯ 1. just now      ~/src/api  /echo api transcript                           [2m│
+│[0m   2. 1 minute ago  ~/src/app  /echo active unchanged                         [2m│
+│[0m   3. 1 minute ago  ~/src/app  /echo app transcript                           [2m│
+│[0m                                                                              [2m│
+│[0m [2mEnter to resume · Ctrl+a for this directory · Esc to close[0m                   [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

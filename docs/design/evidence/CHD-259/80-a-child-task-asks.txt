@@ -1,0 +1,24 @@
+      Read(src/parse/tokenize.ts)
+      Edit(src/parse/tokenize.ts) · waiting for permission
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ✺ Waiting for permission… (7s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Fix the tokenizer) · fake asks                                         │
+│ Edit src/parse/tokenize.ts                                                   │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back                       Fake Small
+    main    fake · Fake Large with a 1M context window
+  ❯ parser  fake · Fake Small                           ● permission 5s

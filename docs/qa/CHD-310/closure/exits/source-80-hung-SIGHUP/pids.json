@@ -1,0 +1,27 @@
+{
+  "app": 2097,
+  "fakes": [
+    2125
+  ],
+  "owned": [
+    2097,
+    2125
+  ],
+  "groups": [
+    2125
+  ],
+  "rows": [
+    [
+      "2125",
+      "2097",
+      "2125",
+      "bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "2097",
+      "2090",
+      "2090",
+      "bun /tmp/chd310-closure/forced/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd310-closure/forced/source-80-hung-SIGHUP/work"
+    ]
+  ]
+}

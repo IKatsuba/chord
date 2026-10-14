@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.M3uH
+
+
+ ! ls; cat notes.txt; ls nope
+   ⎿  notes.txt
+      one
+      two
+      ls: nope: No such file or directory
+      Exit code 1
+
+ › what did you get?
+
+ ⏺ Received ls; cat notes.txt; ls nope: notes.txt
+
+   Hello, world. This reply came in chunks.
+
+ ! echo start; sleep 30
+   ⎿  start
+      Stopped by the user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ! printf "a\nb\n"                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ! for bash mode                          Fake Large with a 1M context window

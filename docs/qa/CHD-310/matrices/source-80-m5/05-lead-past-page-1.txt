@@ -1,0 +1,24 @@
+   - Another run of a team may be working here: the leads agree on files.
+
+   ## Reporting
+
+   The lead writes to main when the job is done or cannot be done.
+
+ ← @main
+   ⎿  Issue 214 fix the closing quote
+
+ ⏺ Open(tester) · fake · fake-small · acceptEdits
+   ⎿  Write a test in tests/parse/tokenize_test.ts that fails because a
+      string at the end of a line loses its closing quote. Edit tests/ only.
+      Tell me when it fails for that reason.
+
+ ── ↓ 14 lines below · end to jump to the bottom ──────────────────────────────
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake
+    bugfix     team · fake
+    ├─ tester  fake         ● permission 4s
+    └─ coder   fake         ✓ replied 5s ago

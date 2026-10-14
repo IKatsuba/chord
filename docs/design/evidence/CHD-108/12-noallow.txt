@@ -1,0 +1,8 @@
+qa> chord fake --agent-command "deno run --quiet --allow-env --config /tmp/chd108-qa/deno.json /tmp/chd108-qa/tests/fixt
+ures/noallow.ts" -p permission --dangerously-skip-permissions > /tmp/chd108-qa/12-noallow.stdout 2> /tmp/chd108-qa/12-no
+allow.stderr; echo $? > /tmp/chd108-qa/12-noallow.exit; cat /tmp/chd108-qa/12-noallow.stdout /tmp/chd108-qa/12-noallow.s
+tderr; cat /tmp/chd108-qa/12-noallow.exit
+Permission: deny.
+chord: refused Write notes.txt: -p cannot ask for permission.
+0
+qa>

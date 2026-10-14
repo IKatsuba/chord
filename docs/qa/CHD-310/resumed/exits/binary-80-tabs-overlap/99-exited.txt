@@ -1,0 +1,24 @@
+/tmp/chd310-final/forced/binary-80-tabs-overlap/run.sh: line 9: 61136 Terminated
+: 15          /tmp/chd310-final/forced/repo/dist/bun-darwin-arm64/chord fake --a
+gent-command 'env -u BUN_OPTIONS bun /tmp/chd310-final/forced/repo/tests/fixture
+s/fake_agent/main.ts' -C /tmp/chd310-final/forced/binary-80-tabs-overlap/work 2>
+ /tmp/chd310-final/forced/binary-80-tabs-overlap/stderr
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

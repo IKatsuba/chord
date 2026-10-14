@@ -1,0 +1,42 @@
+CHD-380 independent QA at 3a85912f
+
+Ran:
+- bun run check: types, lint, formatting and 51 lint tests passed;
+  1,584 repository tests passed, 0 failed across 116 files (547.09s).
+- Staged evidence: privacy checks passed (7 tests); check:static passed
+  including 51 lint tests. Existing React act warnings remain CHD-341.
+- bun run compile; started dist/bun-darwin-arm64/chord against the fake.
+- bun run chord:fake in isolated tmux at 120x40 and 80x24.
+- Compiled TUI in isolated tmux at 120x40; resized to 80x24 and back.
+- Each run used scratch HOME, XDG config/state and working directories.
+- agenteffort, Down twice, then no input through two minute boundaries.
+- Up/Down between main and tuner; ctrl+x c/1/2/k through another fake tab.
+- Resize to the other terminal size and back; leave the child idle again.
+- Enter, error, slow, Esc, /echo recovered-after-interrupt, Ctrl+D.
+- Compare stty before/after; inspect tmux alternate/cursor state, raw quit
+  bytes and ps for only the processes these QA sessions started.
+
+Saw:
+- All three selected headlines began at 0s ago, advanced by seconds with
+  no input, then reached 1m ago and 2m ago. The first-minute text equals
+  the accepted CHD-376 mock headline, including the leading screen space.
+- Selection/tab unmount and remount retained the original opening time.
+  Source headlines continued from 2m to 3m while idle after remount.
+  The binary also reached 3m through remount and resize.
+- Both sizes stayed usable after resize and return.
+- The fake error appeared: The fake agent failed on purpose.
+- Esc produced Interrupted by user. The next prompt replied with
+  recovered-after-interrupt in every session.
+- Every quit exited 0. No live agent was used.
+
+source-wide: exit 0; alternate=0; cursor=1; identical stty; alternate exit and cursor show bytes present.
+source-narrow: exit 0; alternate=0; cursor=1; identical stty; alternate exit and cursor show bytes present.
+binary-wide: exit 0; alternate=0; cursor=1; identical stty; alternate exit and cursor show bytes present.
+No recorded QA-owned chord/fake-agent PID remains in ps.
+
+Scope:
+- Proved behavior of the selected child's shared-clock headline.
+- Designer-approved appearance, the status line and CHD-375 were not
+  reopened. No new component, parser, renderer, protocol helper or library
+  was written during QA; no additional library trial applies.
+- No task-owned failure or minor finding was identified.

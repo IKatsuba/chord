@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                        [2mfake · /tmp/chord-qa.LhQZ[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [38;2;255;193;7m⏺[39m [38;2;255;193;7m.mcp.json: "mcpServers.search.type": "ws" is not a transport ACP carries (stdio, http, sse); the server is ignored[39m
+
+ [38;2;255;193;7m⏺[39m [38;2;255;193;7m.mcp.json: "mcpServers.github.url": missing; the server is ignored[39m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mMCP servers[0m                                                                                                          [38;2;177;185;249m│
+│[39m [2mchord passed these to fake when the session started. ACP does not say whether fake connected to them.[0m                [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2mName    Transport  Command or URL                              Defined in[0m                                            [38;2;177;185;249m│
+│[39m memory  stdio      npx -y @modelcontextprotocol/server-memory  .mcp.json                                             [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2m2 servers in .mcp.json were ignored; chord said why when it started.[0m                                                 [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2mEsc to close[0m                                                                                                         [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m

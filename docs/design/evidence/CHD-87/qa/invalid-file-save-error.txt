@@ -1,0 +1,24 @@
+ chord                          fake · /tmp/chd87-qa/behavior/invalid-file/work
+
+
+
+
+
+
+
+
+
+
+ ⏺ /tmp/chd87-qa/behavior/invalid-file/config/chord/settings.json: not valid
+   JSON (Expected property name or '}' in JSON at position 1 (line 1 column
+   2)); the file is ignored
+
+ › /theme
+ ⏺ Could not save the theme to
+   /tmp/chd87-qa/behavior/invalid-file/config/chord/settings.json: it is not
+   valid JSON; it lasts until chord quits
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

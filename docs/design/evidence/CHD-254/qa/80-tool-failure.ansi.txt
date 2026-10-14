@@ -1,0 +1,24 @@
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ [2m›[0m calls
+
+ [2m⏺[0m [1mRead[0m(src/main.tsx)
+   [2m⎿[0m  [2mimport { Command } from '@cliffy/command';[0m
+   [2m [0m  [2mimport { render } from 'ink';[0m
+   [2m [0m  [2mimport { App } from './ui/App.tsx';[0m
+      [2m… +4 lines (ctrl+o to expand)[0m
+
+ [2m⏺[0m [1mBash[0m(deno test --allow-read --allow-write --allow-env --allow-run --allow-s…
+   [2m⎿[0m  [2mok | 1 passed | 0 failed (12ms)[0m
+
+ [2m⏺[0m [1mRead[0m(src/missing.ts)
+   [2m⎿[0m  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 99% context left[0m

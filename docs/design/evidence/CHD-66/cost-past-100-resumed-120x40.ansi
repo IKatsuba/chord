@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                        [2mfake · /tmp/chord-qa.VhJS[0m
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:   [0m$1.26
+   [2m [0m  [2mTokens in:    [0m100,000
+   [2m [0m  [2mTokens out:   [0m20,000
+   [2m [0m  [2mCache read:   [0m80,000
+   [2m [0m  Tokens count the last 100 turns; earlier ones were not kept.
+   [2m [0m  [2mSession time: [0m5s
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                                  [2mFake Large with a 1M context window[0m

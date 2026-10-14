@@ -1,0 +1,4 @@
+120: alternate=0 cursor=1 command=zsh; stty -g matches exactly; raw stream leaves alternate screen and restores cursor.
+80: alternate=0 cursor=1 command=zsh; stty -g matches exactly; raw stream leaves alternate screen and restores cursor.
+The isolated tmux server and both QA scratch config/state/work directories were removed.
+Final ps inspection: no fake-agent, QA TUI/headless, isolated tmux, or check/test process remained.

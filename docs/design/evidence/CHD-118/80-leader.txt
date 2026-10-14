@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake ✻                              /tmp/chord-qa.3sRI/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl+x …  c new · n next · p previous · 1–9 go to · esc never mind

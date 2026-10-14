@@ -1,0 +1,40 @@
+ parser · fake · Fake Small · opened by main 6s ago
+
+ ← @main
+   task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Search(tokenize in src/parse)
+      Read(src/parse/tokenize.ts)
+      Edit(src/parse/tokenize.ts) · waiting for permission
+
+ ⏺ It is running; I will check its report when it lands.
+
+
+
+
+
+
+
+
+ ✺ Waiting for permission… (7s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Fix the tokenizer) · fake asks                                                                                 │
+│ Edit src/parse/tokenize.ts                                                                                           │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back                                          Fake Small
+    main    fake · Fake Large with a 1M context window
+  ❯ parser  fake · Fake Small                           ● permission 5s

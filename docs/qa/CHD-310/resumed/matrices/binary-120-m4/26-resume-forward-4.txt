@@ -1,0 +1,40 @@
+   │     {                                                                                                   │
+   │       "name": "autohand",                                                                               │
+   │       "note": "models and modes not read yet; list_agents with agent \"autohand\" reads them"           │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "claude",                                                                                 │
+   │       "note": "models and modes not read yet; list_agents with agent \"claude\" reads them"             │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "cline",                                                                                  │
+   │       "note": "models and modes not read yet; list_agents with agent \"cline\" reads them"              │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "codebuddy-code",                                                                         │
+   │       "note": "models and modes not read yet; list_agents with agent \"codebuddy-code\" reads them"     │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "codex",                                                                                  │
+   │       "note": "models and modes not read yet; list_agents with agent \"codex\" reads them"              │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "deepagents",                                                                             │
+   │       "note": "models and modes not read yet; list_agents with agent \"deepagents\" reads them"         │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "dimcode",                                                                                │
+   │       "note": "models and modes not read yet; list_agents with agent \"dimcode\" reads them"            │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "dirac",                                                                                  │
+   │       "note": "models and modes not read yet; list_agents with agent \"dirac\" reads them"              │
+   │     },                                                                                                  │
+   │     {                                                                                                   │
+   │       "name": "factory-droid",                                                                          │
+ ── ↓ 173 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 3% context used

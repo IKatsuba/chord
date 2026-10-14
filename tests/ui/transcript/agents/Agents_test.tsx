@@ -1,0 +1,174 @@
+import { expect, test } from 'bun:test';
+import { draw } from '../../harness.tsx';
+import stripAnsi from 'strip-ansi';
+import type { Subagent } from '../../../../src/session/transcript/types.ts';
+import { Agents } from '../../../../src/ui/transcript/agents/Agents.tsx';
+import {
+  asked,
+  CTRL_O,
+  ESC,
+  send,
+  until,
+  withWindow,
+} from '../../app/render.tsx';
+
+test("subagents draw under the turn: one group, a child's permission named, their endings, and one still running after it", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'subagent');
+      await window.shows('⏺ Running 2 agents… (ctrl+o to expand)');
+      await asked(window);
+
+      let frame = window.frame();
+
+      expect(frame).toContain('Agent(Find the session layer) asks');
+      expect(frame).toContain(
+        '│  ⎿  Write(notes/routing.md) · waiting for permission',
+      );
+      await window.press('1');
+      await window.shows('⏺ 2 agents ended · 1 failed (ctrl+o to expand)');
+      await window.shows('1 agent still running');
+
+      frame = window.frame();
+
+      expect(frame).toContain(
+        '├─ Agent(Find the session layer) · 5 tool uses · ',
+      );
+      expect(frame).toContain('│  ⎿  Done');
+      expect(frame).toContain(
+        '└─ Agent(Find where tool calls are drawn on screen and how they fold)',
+      );
+      expect(frame).toContain('   ⎿  Failed');
+      // Spawned after the parent spoke, the third is a block of its own.
+      expect(frame).toContain('⏺ Agent(Run the whole test suite)');
+      // A child's words wait for ctrl+o; folded, they never read as the parent's.
+      expect(
+        !frame.includes('Could not read the component'),
+        'a child spoke',
+      ).toBeTruthy();
+      await window.shows('⎿  Done (1 tool use · ');
+      await until(
+        'the status line to let the agent go',
+        () => !window.frame().includes('still running'),
+      );
+      await window.press(CTRL_O);
+      await window.shows('Find where chord hands each session/update');
+
+      frame = window.frame();
+
+      expect(frame).toContain('Could not read the component.');
+      expect(frame).toContain('⎿  Error: File is too large to read whole.');
+      // Two levels open; the grandchild stays folded.
+      expect(frame).toContain('⏺ Agent(Read the transport tests)');
+      expect(frame).toContain('⎿  Done (2 tool uses');
+      expect(
+        !frame.includes('Nothing it did not open'),
+        'a grandchild opened',
+      ).toBeTruthy();
+      expect(
+        !frame.includes('(ctrl+o to expand)'),
+        'the open view names ctrl+o',
+      ).toBeTruthy();
+    },
+    { rows: 80, columns: 120 },
+  ));
+
+test("Esc cancels a turn's subagents with it", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'subagent');
+      await window.shows('⏺ Running 2 agents…');
+      await window.press(ESC);
+      await window.shows('Interrupted by user');
+      await window.shows('Cancelled');
+      expect(
+        !window.frame().includes('Running 2'),
+        'a cancelled child runs on',
+      ).toBeTruthy();
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+test('a call a subagent left unfinished waits on nothing once it has ended', async () => {
+  const shown = async (state: Subagent['state']) => {
+    const drawn = await draw(
+      <Agents
+        agents={[
+          {
+            id: 's1',
+            title: 'Fix the tokenizer',
+            state,
+            entries: [
+              {
+                kind: 'tool',
+                turnId: 't',
+                call: { id: 'c', title: 'Edit', status: 'pending' },
+              },
+            ],
+            plan: [],
+          },
+        ]}
+        turn={{ status: 'idle' }}
+        agent='fake'
+        open
+        width={80}
+      />,
+    );
+    const frame = stripAnsi(drawn.frame());
+
+    await drawn.unmount();
+
+    return frame;
+  };
+
+  expect(await shown('running')).toContain('Waiting…');
+  expect(
+    !(await shown('cancelled')).includes('Waiting…'),
+    'an ended call waits',
+  ).toBeTruthy();
+  expect(await shown('cancelled')).toContain('⏺ Edit');
+});
+
+test('a task whose record has gone says so where its work would be, only when open', async () => {
+  const shown = async (open: boolean) => {
+    const drawn = await draw(
+      <Agents
+        agents={[
+          {
+            id: 's1',
+            title: 'Fix the tokenizer',
+            description: 'taskchild',
+            state: 'cancelled',
+            entries: [],
+            plan: [],
+            startedAt: 0,
+            endedAt: 9_000,
+            task: {
+              name: 'Fix the tokenizer',
+              runtime: 'fake',
+              workLost: true,
+            },
+          },
+        ]}
+        turn={{ status: 'idle' }}
+        agent='fake'
+        open={open}
+        width={80}
+      />,
+    );
+    const frame = stripAnsi(drawn.frame());
+
+    await drawn.unmount();
+
+    return frame;
+  };
+
+  expect(await shown(true)).toContain(
+    "⎿  taskchild\n     Its work was not kept: the task's record is gone.\n  ⎿  Cancelled (9s)",
+  );
+  expect(
+    !(await shown(false)).includes('not kept'),
+    'a folded block says it',
+  ).toBeTruthy();
+  expect(await shown(false)).toContain('⎿  Cancelled (9s)');
+});

@@ -1,0 +1,11 @@
+qa> chord fake --agent-command "$FAKE" -p mode > /tmp/chd108-qa/03-project-mode.stdout 2> /tmp/chd108-qa/03-project-mode
+.stderr; echo $? > /tmp/chd108-qa/03-project-mode.exit; printf "stdout:\n"; cat /tmp/chd108-qa/03-project-mode.stdout; p
+rintf "stderr:\n"; cat /tmp/chd108-qa/03-project-mode.stderr; printf "echo \$? (saved immediately):\n"; cat /tmp/chd108-
+qa/03-project-mode.exit; echo CAPTURE_DONE
+stdout:
+Mode: plan.
+stderr:
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

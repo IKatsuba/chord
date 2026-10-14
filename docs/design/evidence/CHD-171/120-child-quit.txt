@@ -1,0 +1,2 @@
+Resume this session with:
+chord fake --agent-command 'deno run --quiet --allow-env --allow-net=127.0.0.1 --config '\''<repo>/deno.json'\'' '\''<repo>/tests/fixtures/fake_agent/main.ts'\''' --resume 2efb743f-c67a-4b54-942a-ac300c68c20e

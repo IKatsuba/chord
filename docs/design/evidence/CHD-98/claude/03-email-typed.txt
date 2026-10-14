@@ -1,0 +1,24 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  MCP server “ref” requests your input
+
+  Set up the deploy target
+
+    ⚠ Project name: ab
+        Lowercase, dashes allowed
+        Must be at least 3 characters
+  ❯ ⚠ Contact email: notanemail
+        Must be a valid email address, e.g. user@example.com
+    ✔ Replicas: 2
+
+      Traffic share: not set
+
+    ✔ Public: ☐
+        Reachable from the internet
+
+    * Region: not set
+
+      Tags: not set
+
+    Accept    Decline
+
+  Esc to cancel · ↑/↓ to navigate · Backspace to unset

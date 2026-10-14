@@ -1,0 +1,40 @@
+[38;2;255;255;255m [1m[39mtester[0;2m · fake · Fake Small · bugfix's member · opened by @bugfix 10s ago[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39mbugfix's instructions for tester · 29 lines[0m[38;2;255;255;255m
+   [2m[39mYou are tester, a member of team bugfix, opened by its lead, bugfix. You work in [0m[38;2;255;255;255m
+   [2m[39m/tmp/chd310-closure/m45/binary-120-m5/work, beside the team's other members: there are no worktrees.[0m[38;2;255;255;255m
+
+   [2m[39mYour tools on chord's server: send_message {to, text} reaches your lead, bugfix, and coder, the team's other members[0m[38;2;255;255;255m
+   [2m[39m while they are open, by name and directly: the lead does not see those. spawn_task and list_agents start task [0m[38;2;255;255;255m
+   [2m[39magents for one-off jobs. You open no long-lived agents.[0m[38;2;255;255;255m
+
+   [2m[39mYour role: Writes the failing test, then proves the fix[0m[38;2;255;255;255m
+
+   [2m[39mYour instructions:[0m[38;2;255;255;255m
+   [2m[39mWrite the smallest test that fails because of the bug, not for any[0m[38;2;255;255;255m
+   [2m[39mother reason, and run it to show that.[0m[38;2;255;255;255m
+
+   [2m[39mThe members:[0m[38;2;255;255;255m
+   [2m[39m- tester: Writes the failing test, then proves the fix (fake · fake-small · acceptEdits)[0m[38;2;255;255;255m
+   [2m[39m- coder: Writes the fix, in the files the lead names (fake · fake-large · plan)[0m[38;2;255;255;255m
+
+   [2m[39mHow the team works:[0m[38;2;255;255;255m
+   [2m[39m# How bugfix works[0m[38;2;255;255;255m
+
+   [2m[39m1. The lead reads the job and names who may edit which files.[0m[38;2;255;255;255m
+   [2m[39m2. tester writes a test that fails for the bug's own reason, in `tests/`.[0m[38;2;255;255;255m
+   [2m[39m3. coder fixes the code so that test passes, and never edits `tests/`.[0m[38;2;255;255;255m
+
+   [2m[39m## Who edits what[0m[38;2;255;255;255m
+
+   [2m[39m- One writer per file at a time; a member asks a file's owner directly.[0m[38;2;255;255;255m
+ [2m[39m── ↓ 29 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m[38;2;255;255;255m
+
+[2m[39m╭─[0;1m tester[0;2m · bugfix ────────────────────────────────────────────────────────────────────────────────────────────────────╮
+[0m[38;5;244m│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m⏵⏵ accept edits on[0m [2m(shift+tab to cycle)[0m[38;2;255;255;255m                                                 [2m[39mFake Small · 2% context used[0m[38;2;255;255;255m
+  [2m[39m [0m main     [2m  fake · Fake Large with a 1M context window       [0m[38;2;255;255;255m
+  [39m  bugfix   [2m  team · fake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+  [39m  [2m├─ [0;1mtester[0;2m  fake · Fake Small                                [0m[38;2;255;255;255m
+  [39m  [2m└─ [0mcoder [2m  fake · Fake Large with a 1M context window       [0m  ✓ replied 9s ago[38;2;255;255;255m

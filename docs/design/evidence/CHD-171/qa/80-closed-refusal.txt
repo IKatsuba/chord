@@ -1,0 +1,24 @@
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Cancelled (1s)
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ⏺ The agent exited.
+
+ ⏺ parser (fake) and docs (fake) were open when this session was left and are
+   not reopened · /resume lists them
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  parser was closed when this session was left; open_agent starts another
+
+ → @parser
+   ⎿  parser was closed when this session was left; open_agent starts another
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

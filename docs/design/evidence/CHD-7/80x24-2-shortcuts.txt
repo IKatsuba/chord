@@ -1,0 +1,24 @@
+ chord   fake · /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.kCt6EGwx0Q
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  enter to send                 1–9 to answer a permission
+  esc to interrupt              ↑ ↓ or j k to move between answers
+  ctrl + o for verbose output   enter to pick the highlighted answer
+  ctrl + c to clear input       esc to reject a permission
+  ctrl + c twice to quit        ? for shortcuts
+  ctrl + d to quit              esc to close shortcuts

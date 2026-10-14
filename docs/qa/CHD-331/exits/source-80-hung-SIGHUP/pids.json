@@ -1,0 +1,27 @@
+{
+  "app": 7248,
+  "fakes": [
+    7258
+  ],
+  "owned": [
+    7248,
+    7258
+  ],
+  "groups": [
+    7258
+  ],
+  "rows": [
+    [
+      "7258",
+      "7248",
+      "7258",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "7248",
+      "7241",
+      "7241",
+      "bun /tmp/chd331-qa/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/source-80-hung-SIGHUP/work"
+    ]
+  ]
+}

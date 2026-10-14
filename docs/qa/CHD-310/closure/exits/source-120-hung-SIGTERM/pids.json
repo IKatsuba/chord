@@ -1,0 +1,27 @@
+{
+  "app": 337,
+  "fakes": [
+    351
+  ],
+  "owned": [
+    337,
+    351
+  ],
+  "groups": [
+    351
+  ],
+  "rows": [
+    [
+      "351",
+      "337",
+      "351",
+      "bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "337",
+      "330",
+      "330",
+      "bun /tmp/chd310-closure/forced/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd310-closure/forced/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd310-closure/forced/source-120-hung-SIGTERM/work"
+    ]
+  ]
+}

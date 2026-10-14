@@ -1,0 +1,70 @@
+[
+  {
+    "name": "120-normal",
+    "elapsedMs": 717,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      70023,
+      70088
+    ],
+    "agentPids": [
+      70088
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "120-binary",
+    "elapsedMs": 715,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      71115,
+      71385
+    ],
+    "agentPids": [
+      71385
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "80-normal",
+    "elapsedMs": 719,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      72408,
+      72432
+    ],
+    "agentPids": [
+      72432
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  },
+  {
+    "name": "80-binary",
+    "elapsedMs": 728,
+    "flags": "alternate=0 cursor=1",
+    "ownedPids": [
+      73194,
+      73266
+    ],
+    "agentPids": [
+      73266
+    ],
+    "survivors": [],
+    "descendantsAfter": [],
+    "sttyEqual": true,
+    "canonical": true,
+    "echo": true
+  }
+]

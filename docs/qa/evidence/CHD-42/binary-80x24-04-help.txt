@@ -1,0 +1,24 @@
+ chord             fake · /private/tmp/chd81-binary-80x24-cd0d7e84b6e1d7ed/work
+
+ ⏺ Hello from the fake agent.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  enter to send                         esc to close files
+  \ + enter for a newline               ! for bash mode
+  shift + enter for a newline           backspace to leave bash mode
+  ↑ ↓ for earlier prompts               esc to stop a command
+  ctrl + r to search prompts            esc to interrupt
+  tab enter to take a match             shift + tab to cycle modes
+  esc to cancel a search                ctrl + o for verbose output
+  pgup pgdn to scroll                   ctrl + c to clear input
+  shift + ↑ ↓ to scroll a line          ctrl + c twice to quit
+  home end for the top and the bottom   ctrl + d to quit
+  / for commands                        1–9 to pick a choice
+  ↑ ↓ to pick a command                 ↑ ↓ or j k to move between choices
+  tab to complete a command             enter to pick the highlighted choice
+  esc to close commands                 esc to reject a permission
+  @ for files                           esc to close a picker
+  ↑ ↓ to pick a file                    ? for shortcuts
+  tab enter to add a file               esc to close shortcuts

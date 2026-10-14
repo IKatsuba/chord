@@ -1,0 +1,24 @@
+qa$ /tmp/chd175-qa/binary.sh --resume
+qa$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

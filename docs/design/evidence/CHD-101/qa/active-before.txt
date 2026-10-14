@@ -1,0 +1,40 @@
+ chord                                                                   fake · /private/tmp/chd101-qa.Hd9bih/u/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › /echo active unchanged
+
+ ⏺ active unchanged
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   608cdb21-5a47-40df-bc27-db7cd9f254fe
+      Directory: /private/tmp/chd101-qa.Hd9bih/u/src/app
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

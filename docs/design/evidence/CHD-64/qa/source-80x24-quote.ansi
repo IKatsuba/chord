@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chd64-qa/work[0m
+
+   [2m│[0m A closed agent counts as gone only once its exit is seen:
+   [2m│[0m [2m┌ ts ──────────────────────────────────────────────────────┐[0m
+   [2m│[0m [2m│[0m [38;2;163;94;232mawait[39m session.[38;2;47;138;216mclose[39m(); [38;2;125;133;144m// resolves once the exit is seen[39m [2m│[0m
+   [2m│[0m [2m└──────────────────────────────────────────────────────────┘[0m
+
+   [2m┌───────────────┬───────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                         [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼───────────────────────────────┼────────────────────┤[0m
+   [2m│[0m [38;2;87;105;247msession.ts[39m    [2m│[0m opening, prompting            [2m│[0m [38;2;87;105;247msession_test.ts[39m    [2m│[0m
+   [2m│[0m               [2m│[0m and closing a session         [2m│[0m                    [2m│[0m
+   [2m│[0m [38;2;87;105;247mprocesses.ts[39m  [2m│[0m the promise that a closed     [2m│[0m [38;2;87;105;247mprocesses_test.ts[39m  [2m│[0m
+   [2m│[0m               [2m│[0m agent is gone                 [2m│[0m                    [2m│[0m
+   [2m│[0m [38;2;87;105;247mtranscript.ts[39m [2m│[0m the reducer from events       [2m│[0m [38;2;87;105;247mtranscript_test.ts[39m [2m│[0m
+   [2m│[0m               [2m│[0m to what is drawn              [2m│[0m                    [2m│[0m
+   [2m└───────────────┴───────────────────────────────┴────────────────────┘[0m
+
+ [2m── ↓ 33 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

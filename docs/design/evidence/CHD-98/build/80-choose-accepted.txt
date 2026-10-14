@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.r8fe
+
+
+
+
+
+
+
+
+
+
+
+ › choose
+
+ ⏺ fake asked: Pick a zone
+   ⎿  Answered · 1 field
+
+ ⏺ Elicitation answer: accept
+   {"zone":"zone-10"}
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

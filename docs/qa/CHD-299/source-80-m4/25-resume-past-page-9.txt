@@ -1,0 +1,24 @@
+   │       "name": "kilo",                                                    │
+   │       "note": "models and modes not read yet; list_agents with agent \"k │
+   │ ilo\" reads them"                                                        │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "minimax-code",                                            │
+   │       "note": "models and modes not read yet; list_agents with agent \"m │
+   │ inimax-code\" reads them"                                                │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "minion-code",                                             │
+   │       "note": "models and modes not read yet; list_agents with agent \"m │
+   │ inion-code\" reads them"                                                 │
+   │     },                                                                   │
+   │     {                                                                    │
+   │       "name": "nova",                                                    │
+   │       "note": "models and modes not read yet; list_agents with agent \"n │
+   │ ova\" reads them"                                                        │
+ ── ↓ 154 lines below · end to jump to the bottom ─────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 3% context used

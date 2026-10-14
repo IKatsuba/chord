@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.GcKn
+
+   │ A closed agent counts as gone only once its exit is seen:
+   │ ┌ ts ──────────────────────────────────────────────────────┐
+   │ │ await session.close(); // resolves once the exit is seen │
+   │ └──────────────────────────────────────────────────────────┘
+
+   ┌───────────────┬───────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                         │ Tested by          │
+   ├───────────────┼───────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting            │ session_test.ts    │
+   │               │ and closing a session         │                    │
+   │ processes.ts  │ the promise that a closed     │ processes_test.ts  │
+   │               │ agent is gone                 │                    │
+   │ transcript.ts │ the reducer from events       │ transcript_test.ts │
+   │               │ to what is drawn              │                    │
+   └───────────────┴───────────────────────────────┴────────────────────┘
+
+ ── ↓ 33 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

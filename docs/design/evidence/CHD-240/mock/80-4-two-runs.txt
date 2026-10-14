@@ -1,0 +1,24 @@
+ ← @bugfix 2 · claude
+   On it. bugfix works in src/parse/tokenize.ts and its test; I told its lead
+   we keep to src/parse/date.ts and tests/parse/date_test.ts. tester is
+   writing the failing test.
+
+ ⏺ Both runs have started, each in its own files. You can look in on either
+   with ↓.
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester · bugfix 2 needs your permission · ctrl+x a        Opus · 88% left
+    main         claude · Opus
+    bugfix       team · claude · 4 agents  ✻ coder: working 1m
+    bugfix 2     team · claude · 4 agents  ● tester: permission 5s

@@ -1,0 +1,24 @@
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd261-qa/failure-project
+ █▀     ? for shortcuts · /help
+
+ › propose
+
+ ⏺ Tool(mcp__chord__propose_team)
+   ⎿  Error: MCP error -32602: Input validation error: Invalid arguments for t…
+
+ ⏺ Team(main)
+   ⎿  the name main is taken
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

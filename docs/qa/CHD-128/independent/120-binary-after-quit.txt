@@ -1,0 +1,22 @@
+Resume this session with:
+chord fake --agent-command /tmp/chd128-independent-86b3e29bbbd49264/120-binary/agent.sh --resume 488a8d2b-c419-4ae3-b498
+-4585a76a2a90
+CHORD_EXIT=0
+speed 9600 baud; 40 rows; 120 columns;
+lflags: icanon isig iexten echo echoe -echok echoke -echonl echoctl
+	-echoprt -altwerase -noflsh -tostop -flusho -pendin -nokerninfo
+	-extproc
+iflags: -istrip icrnl -inlcr -igncr ixon -ixoff ixany imaxbel iutf8
+	-ignbrk brkint -inpck -ignpar -parmrk
+oflags: opost onlcr -oxtabs -onocr -onlret
+cflags: cread cs8 -parenb -parodd hupcl -clocal -cstopb -crtscts -dsrflow
+	-dtrflow -mdmbuf
+cchars: discard = ^O; dsusp = ^Y; eof = ^D; eol = <undef>;
+	eol2 = <undef>; erase = ^?; intr = ^C; kill = ^U; lnext = ^V;
+	min = 1; quit = ^\; reprint = ^R; start = ^Q; status = ^T;
+	stop = ^S; susp = ^Z; time = 0; werase = ^W;
+
+The default interactive shell is now zsh.
+To update your account to use zsh, please run `chsh -s /bin/zsh`.
+For more details, please visit https://support.apple.com/kb/HT208050.
+$

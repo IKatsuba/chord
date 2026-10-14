@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                                        [2mfake · /tmp/chord-qa.nbmf[0m
+
+
+
+
+
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m tools
+
+ [32m⏺[39m [1mRead[0m(README.md)
+   [2m⎿[0m  [2m# chord[0m
+
+ ⏺ Read it.
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:   [0m$0.0250
+   [2m [0m  [2mTokens in:    [0m2,000
+   [2m [0m  [2mTokens out:   [0m400
+   [2m [0m  [2mCache read:   [0m1,600
+   [2m [0m  [2mSession time: [0m13s
+
+ [2m›[0m /context
+   [2m⎿[0m  [2mUsed: [0m4,000 of 1,000,000 tokens (1%)
+   [2m [0m  [2mFree: [0m996,000 tokens (99%)
+
+ [2m›[0m /status
+   [2m⎿[0m  [2mAgent:     [0mfake
+   [2m [0m  [2mModel:     [0mFake Large with a 1M context window
+   [2m [0m  [2mMode:      [0mDefault
+   [2m [0m  [2mSession:   [0m38629c00-fd84-44c1-adf8-6aa33c47e0af
+   [2m [0m  [2mDirectory: [0m/tmp/chord-qa.nbmf
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

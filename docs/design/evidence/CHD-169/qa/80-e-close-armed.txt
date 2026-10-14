@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                                   /tmp/chd169-qa/work
+   ⎿  2 open · 1 fake, 2 fake (you)
+
+ ⏺ Agent(Fix the tokenizer) · fakx · fake-small
+   ⎿  No agent named fakx; chord knows fake, agoragentic-acp, auggie, autohand…
+
+ ⏺ chord knows no fakx.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Search(tokenize in src/parse)
+      Read(src/parse/tokenize.ts)
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ✺ Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 fake has 1 task agent running · ctrl+x k again to stop it and close

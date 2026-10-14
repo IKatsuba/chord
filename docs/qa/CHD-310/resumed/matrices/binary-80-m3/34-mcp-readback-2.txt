@@ -1,0 +1,24 @@
+      ok | 2 passed
+      FAILED | 1 failed
+      Exit code 1
+
+ ⏺ The tests failed.
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed
+   ├─ Agent(Find the session layer) · 5 tool uses · 3s
+   │  ⎿  Find where chord hands each session/update to its listeners and say
+   │     which file owns the routing. Report paths and line numbers.
+   │
+   │     ∴ Thinking…
+   │       Looking for where updates are routed.
+   │
+ ── ↓ 82 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 2% context used

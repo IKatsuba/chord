@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake                            /tmp/chd170-qa.5NGLNs/work
+
+ ← @main
+   I changed how a string at the end of a line is read. Run the parser tests
+   now and tell me only what fails.
+
+ ⏺ Received the message from main.
+
+ ← @main
+   The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Received the message from main.
+
+ › /echo person to parser
+
+ ⏺ person to parser
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go  Fake Small · 96% context left
+    main    fake · Fake Large with a 1M context window  ✓ replied 1m ago
+    parser  fake · Fake Small
+    docs    fake · Fake Large with a 1M context window  ● permission 1m 41s

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.ODML
+ ▀▀     ? for shortcuts · /help
+
+ › /team show dev
+   ⎿  dev · .chord/teams/dev.md
+      Builds and reviews changes on the dev branch
+
+      lead   fake  —  Splits the job, says who edits which files, reports to main
+      coder  fake  —  Writes the change
+
+      Build it, then review it.
+      … +9 lines (ctrl+o to expand)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

@@ -1,0 +1,24 @@
+ chord             fake · /private/tmp/chd81-binary-80x24-cd0d7e84b6e1d7ed/work
+     whoever picks the work up next starts from a build that runs.
+
+   Then build the binary with:
+
+   ┌ sh ─────────────────────────────────────────────────┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ › edit
+
+ ⏺ Edit(src/greeting.ts)
+
+ ⏺ Edited.
+
+ › error
+
+ ⏺ About to fail.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                   Fake Small

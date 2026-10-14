@@ -1,0 +1,24 @@
+ [1mchor[0;2m…· /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/chord-qa.ofox6ids/work[0m
+
+
+
+
+ ! sleep 143
+   [2m⎿[0m  [2mStopped by the user[0m
+
+ [2m›[0m text
+
+ ⏺ Received sleep 143:
+
+   Hello, world. This reply came in chunks.
+
+ [2m›[0m error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 99% context left[0m

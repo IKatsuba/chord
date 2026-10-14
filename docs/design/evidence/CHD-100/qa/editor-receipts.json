@@ -1,0 +1,24 @@
+{
+  "accept120": [
+    "text\n",
+    "text\n"
+  ],
+  "accept80": [
+    "text\n"
+  ],
+  "lf-null": [
+    "abcd\n",
+    "one\ntwo\n"
+  ],
+  "chat-chord": [
+    "abcd\n",
+    "abcd\n"
+  ],
+  "autocomplete-chord": [
+    "/mod\n",
+    ""
+  ],
+  "newline-toggle": [
+    "a\n\n"
+  ]
+}

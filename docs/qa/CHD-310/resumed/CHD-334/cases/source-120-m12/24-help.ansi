@@ -1,0 +1,40 @@
+[38;2;255;255;255m
+   [39mHello, world. This reply came in chunks.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/config[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mEffort set to High[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/cost[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mTotal cost:   [0m$0.1500[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mTokens in:    [0m12,000[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mTokens out:   [0m2,400[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mCache read:   [0m9,600[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSession time: [0m45s[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/context[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mUsed: [0m24,000 of 200,000 tokens (12%)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mFree: [0m176,000 tokens (88%)[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/status[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mAgent:     [0mfake[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mModel:     [0mFake Small[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mMode:      [0mAccept edits[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSession:   [0m94ca5576-12c0-4738-9049-48966a9c75fe[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mDirectory: [0m/tmp/chd334-qa/exits/source-120-m12/work[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39menter to send[0m[38;2;255;255;255m                           [2m[39m/ for commands[0m[38;2;255;255;255m                       [2m[39mctrl + d or ctrl + c twice to quit[0m[38;2;255;255;255m
+  [2m[39m\ + enter for a newline[0m[38;2;255;255;255m                 [2m[39m↑ ↓ to pick a command[0m[38;2;255;255;255m                [2m[39mctrl + x then a key for sessions[0m[38;2;255;255;255m
+  [2m[39mshift + enter for a newline[0m[38;2;255;255;255m             [2m[39mtab to complete a command[0m[38;2;255;255;255m            [2m[39m1–9 to pick a choice[0m[38;2;255;255;255m
+  [2m[39mctrl + g to edit in $EDITOR[0m[38;2;255;255;255m             [2m[39m@ for files[0m[38;2;255;255;255m                          [2m[39m↑ ↓ or j k to move between choices[0m[38;2;255;255;255m
+  [2m[39mctrl + v to paste an image[0m[38;2;255;255;255m              [2m[39m↑ ↓ to pick a file[0m[38;2;255;255;255m                   [2m[39menter to pick the highlighted choice[0m[38;2;255;255;255m
+  [2m[39m↑ ↓ for prompts, agents and monitors[0m[38;2;255;255;255m    [2m[39mtab enter to add a file[0m[38;2;255;255;255m              [2m[39mesc to reject a permission[0m[38;2;255;255;255m
+  [2m[39mx to close an agent or stop a monitor[0m[38;2;255;255;255m   [2m[39mesc to close commands or files[0m[38;2;255;255;255m       [2m[39mesc to close a picker[0m[38;2;255;255;255m
+  [2m[39mctrl + r to search prompts[0m[38;2;255;255;255m              [2m[39m! for bash mode[0m[38;2;255;255;255m                      [2m[39mctrl + a to show all directories[0m[38;2;255;255;255m
+  [2m[39mtab enter to take a match[0m[38;2;255;255;255m               [2m[39mbackspace to leave bash mode[0m[38;2;255;255;255m         [2m[39mtab ↑ ↓ space to fill in a form[0m[38;2;255;255;255m
+  [2m[39mesc to cancel a search[0m[38;2;255;255;255m                  [2m[39mesc to interrupt or stop a command[0m[38;2;255;255;255m   [2m[39mctrl + c to stop the turn and its form[0m[38;2;255;255;255m
+  [2m[39mpgup pgdn or wheel to scroll[0m[38;2;255;255;255m            [2m[39mshift + tab to cycle modes[0m[38;2;255;255;255m           [2m[39m/vim for vim mode[0m[38;2;255;255;255m
+  [2m[39mshift + ↑ ↓ to scroll a line[0m[38;2;255;255;255m            [2m[39mctrl + o for verbose output[0m[38;2;255;255;255m          [2m[39m? for shortcuts[0m[38;2;255;255;255m
+  [2m[39mhome end for the top and the bottom[0m[38;2;255;255;255m     [2m[39mctrl + c to clear input[0m[38;2;255;255;255m              [2m[39mesc to close shortcuts[0m[38;2;255;255;255m

@@ -1,0 +1,24 @@
+ [1mchord[0m   [2m1 fake[0m   [1;7m 2 fake [0m                        [2m/tmp/chd300/binary-80-m3/work[0m
+ █▄     [1mchord[0;2m v0.0.0
+[0m ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m/tmp/chd300/binary-80-m3/work[0m
+ █▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m second session prompt
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mResume a session[0m                                                             [2m│
+│[0m [2mfake's earlier sessions and saved windows in this directory.[0m                 [2m│
+│[0m                                                                              [2m│
+│[0m ❯ 1. just now  open in 1  [Image #1]                                         [2m│
+│[0m                                                                              [2m│
+│[0m [2mEnter to resume · Ctrl+a for all directories · Esc to close[0m                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

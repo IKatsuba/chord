@@ -1,0 +1,5 @@
+window=0 command=zsh cursor=1 alternate=0
+window=1 command=zsh cursor=1 alternate=0
+window=2 command=zsh cursor=1 alternate=0
+window=3 command=zsh cursor=1 alternate=0
+window=4 command=zsh cursor=1 alternate=0

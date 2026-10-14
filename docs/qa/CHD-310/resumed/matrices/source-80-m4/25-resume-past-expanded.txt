@@ -1,0 +1,24 @@
+ ← dev server errors · monitor · stopped
+   ⎿  The person stopped it after 4s.
+
+ ⏺ Received the message from dev server errors · monitor · stopped.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ......................................
+   ⎿  Interrupted by user
+
+ ⏺ docs (fake) was open when this session was left and is not reopened ·
+   /resume lists it
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 3% context used

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › calls
+
+ ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';
+      import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)
+
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls dra…
+   ⎿  ok | 1 passed | 0 failed (12ms)
+
+ ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+ › long
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+   2. Line 2 of 200, streamed one at a time.
+   3. Line 3 of 200, streamed one at a time.
+   4. Line 4 of 200, streamed one at a time.
+   5. Line 5 of 200, streamed one at a time.
+   6. Line 6 of 200, streamed one at a time.
+   7. Line 7 of 200, streamed one at a time.
+   8. Line 8 of 200, streamed one at a time.
+   9. Line 9 of 200, streamed one at a time.
+   10. Line 10 of 200, streamed one at a time.
+   11. Line 11 of 200, streamed one at a time.
+ ── ↓ new output · 34 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

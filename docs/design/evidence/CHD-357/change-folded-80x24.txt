@@ -1,0 +1,24 @@
+   ⎿  Fixes a bug end to end: a failing test first, then the fix, then a
+      review of the diff.
+
+         lead      c…  high   default                            Splits the …
+      ~  tester    c…  high   bypassPermissions was acceptEdits  Writes the …
+      ~  coder     c…  xhigh  auto                               Writes the …
+      ~  reviewer  c…  —      read-only was plan                 Reads the d…
+      … +43 lines (ctrl+o to expand)
+
+ ✶ Waiting for you… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                         │
+│                                                                              │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                          │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

@@ -1,0 +1,40 @@
+      ☒ Write the change
+      ☒ Run the tests
+
+ › mode
+
+ ⏺ Mode: acceptEdits.
+
+ › /greet QA
+
+ ⏺ Hello from the fake agent.
+
+ › @example.ts
+
+ ⏺ Received a link: example.ts, file:///tmp/chd310-final/exits/binary-120-m12/work/example.ts
+
+   Hello, world. This reply came in chunks.
+
+ ! printf qa-shell
+   ⎿  qa-shell                3 done.
+
+ › text
+
+ ⏺ Received printf qa-shell: qa-shell
+
+   Hello, world. This reply came in chunks.
+
+ › /config
+   ⎿  Effort set to High
+                                       ow                       created)rge wit                                xt used
+ › /cost
+   ⎿  Total cost:   $0.1500
+      Tokens in:    12,000                                              eak det                                    [Box
+      Tokens out:   2,400
+      Cache read:   9,600                                               o [BoxR                     ners is 10. Use emi
+      Session time: 45s
+(n                         ceededWarning:                              leak det                               d to [BoxR
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│P›                                detecte                          ed to [BoxR                 isteners is 10. Use emi│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)                                                Fake Small · 12% context used

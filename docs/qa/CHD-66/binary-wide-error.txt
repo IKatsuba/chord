@@ -1,0 +1,40 @@
+ chord                                                                                      fake · /tmp/chd66-qa.uf7EKT
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 4s
+
+ › /context
+   ⎿  Used: 4,000 of 1,000,000 tokens (1%)
+      Free: 996,000 tokens (99%)
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   65cbfe55-e3bc-4925-a8d9-a5f74fa8df30
+      Directory: /tmp/chd66-qa.uf7EKT
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

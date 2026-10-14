@@ -1,0 +1,24 @@
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  Issue 214: a string at the end of a line loses its closing quote.
+      readString in src/parse/tokenize.ts stops at the newline before it
+      consumes the quote. Add a test that fails for that reason, fix it, and
+      … +1 line (ctrl+o to expand)
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+ ← @bugfix · fake
+   On it. tester is writing a failing test in tests/parse/tokenize_test.ts;
+   coder waits for it and will edit src/parse/tokenize.ts only. I will report
+   when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main    fake
+    bugfix  team · fake  ✓ replied 15s ago
+    tester  fake         ● permission 13s
+    coder   fake         ✓ replied 14s ago

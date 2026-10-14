@@ -1,0 +1,24 @@
+/tmp/chd310-final/forced/source-80-monitor-overlap/run.sh: line 9: 57575 Termina
+ted: 15          bun /tmp/chd310-final/forced/repo/src/main.tsx fake --agent-com
+mand 'env -u BUN_OPTIONS bun /tmp/chd310-final/forced/repo/tests/fixtures/fake_a
+gent/main.ts' -C /tmp/chd310-final/forced/source-80-monitor-overlap/work 2> /tmp
+/chd310-final/forced/source-80-monitor-overlap/stderr
+
+QA_DONE code=143
+sh-3.2$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

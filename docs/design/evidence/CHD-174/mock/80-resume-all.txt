@@ -1,0 +1,24 @@
+ chord                                                        claude · ~/src/app
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ claude's earlier sessions and saved windows in every directory.              │
+│                                                                              │
+│ ❯   1.  10 minutes ago  ~/src/app                   ▣ 3 sessions · claude, … │
+│     2.  10 minutes ago  ~/src/app                   fix the failing date te… │
+│     3.  11 minutes ago  ~/src/app                   why does resume lose th… │
+│     4.  40 minutes ago  ~/src/app                   tidy the README's insta… │
+│     5.  yesterday       ~/src/app +1                ▣ 2 sessions · claude, … │
+│   ↓ 6.  yesterday       ~/src/api                   rename the health route… │
+│     … +7 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for this directory · Esc to close                   │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Claude Opus · 100% context left

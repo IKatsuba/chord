@@ -1,0 +1,40 @@
+ [1mchord[0m                                                                      [2mfake · /tmp/chd87-qa/behavior/no-color/work[0m
+
+ [2m›[0m markdown
+
+ ⏺ [1;4mReading the session layer[0m
+
+   The [1msession layer[0m wraps [3macpx[0m so the interface never touches a process. Start with src/session/session.ts, then see
+   the [4mACP spec[0;2m (https://agentclientprotocol.com)[0m for the wire format.
+
+   [1mWhat it does[0m
+
+   [2m-[0m opens one persistent session per chord session
+   [2m-[0m starts turns with startTurn and cancels them
+     [2m1.[0m a cancel stops the turn at once
+     [2m2.[0m the agent is told with session/cancel
+   [2m-[0m closes the agent and waits until its exit is seen
+
+   [2m│[0m A closed agent counts as gone only once its exit is seen:
+   [2m│[0m [2m┌ ts ──────────────────────────────────────────────────────┐[0m
+   [2m│[0m [2m│[0m await session.close(); // resolves once the exit is seen [2m│[0m
+   [2m│[0m [2m└──────────────────────────────────────────────────────────┘[0m
+
+   [2m┌───────────────┬────────────────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                                  [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼────────────────────────────────────────┼────────────────────┤[0m
+   [2m│[0m session.ts    [2m│[0m opening, prompting and closing         [2m│[0m session_test.ts    [2m│[0m
+   [2m│[0m               [2m│[0m a session                              [2m│[0m                    [2m│[0m
+   [2m│[0m processes.ts  [2m│[0m the promise that a closed agent is     [2m│[0m processes_test.ts  [2m│[0m
+   [2m│[0m               [2m│[0m gone                                   [2m│[0m                    [2m│[0m
+   [2m│[0m transcript.ts [2m│[0m the reducer from events to what is     [2m│[0m transcript_test.ts [2m│[0m
+   [2m│[0m               [2m│[0m drawn                                  [2m│[0m                    [2m│[0m
+   [2m└───────────────┴────────────────────────────────────────┴────────────────────┘[0m
+
+   [2m┌ ts ──────────────────────────────────────────────────────────┐[0m
+ [2m── ↓ 22 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                               [2mFake Large with a 1M context window · 99% context left[0m

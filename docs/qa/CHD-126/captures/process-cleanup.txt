@@ -1,0 +1,3 @@
+Owned roots observed: 17
+Owned process IDs observed across snapshots: 56
+Remaining owned processes: 0

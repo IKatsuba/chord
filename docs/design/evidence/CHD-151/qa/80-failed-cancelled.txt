@@ -1,0 +1,24 @@
+ chord                                               fake · /tmp/chd151-qa/work
+
+
+
+
+
+
+
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed, 1 cancelled (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 3 tool uses · 6s
+   │  ⎿  Cancelled
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Failed
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

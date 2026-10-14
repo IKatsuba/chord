@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake    3 fake2                   /tmp/chord-qa.L11u/other
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /status
+   ⎿  Agent:     fake2
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   9495241a-5003-4e2a-a887-a20544f4e32c
+      Directory: /tmp/chord-qa.L11u/other
+      Sessions:  3 open
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

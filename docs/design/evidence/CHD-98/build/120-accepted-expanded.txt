@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.pUsJ
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Answered · 7 fields
+      Project name   web-app
+      Contact email  ops@example.io
+      Replicas       3
+      Traffic share  0.25
+      Public         Yes
+      Region         United States
+      Tags           web, worker
+
+ ⏺ Elicitation answer: accept
+   {"name":"web-app","email":"ops@example.io","replicas":3,"ratio":0.25,"public":true,"region":"us","tags":["web","work
+   er"]}
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

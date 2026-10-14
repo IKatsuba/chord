@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.7b6e
+   19. Line 19 of 200, streamed one at a time.
+
+ › /resume
+   ⎿  A turn is running. Wait for it to end, or press Esc to interrupt it, then
+       /resume.
+
+ ⏺ 20. Line 20 of 200, streamed one at a time.
+   21. Line 21 of 200, streamed one at a time.
+   22. Line 22 of 200, streamed one at a time.
+   23. Line 23 of 200, streamed one at a time.
+   24. Line 24 of 200, streamed one at a time.
+   25. Line 25 of 200, streamed one at a time.
+   26. Line 26 of 200, streamed one at a time.
+   27. Line 27 of 200, streamed one at a time.
+   28. Line 28 of 200, streamed one at a time.
+   29. Line 29 of 200, streamed one at a time.
+
+ ✶ Working… (3s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

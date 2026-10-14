@@ -1,0 +1,24 @@
+ chord                                               fake · /tmp/chd151-qa/work
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 17s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › subagentupdate
+
+ ⏺ Agent(Summarise the README)
+   ⎿  Done (1 tool use · 1s)
+
+ ⏺ It says chord is a terminal client for ACP agents.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Press ctrl+c again to quit    Fake Large with a 1M context window · 99% left

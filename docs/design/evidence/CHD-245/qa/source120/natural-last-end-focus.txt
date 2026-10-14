@@ -1,0 +1,40 @@
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')"; echo "  …
+      m1 · times out after 10m
+
+ ⏺ I will hear from the dev server when it errs.
+
+ ← dev server errors · monitor
+   ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+       at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ ← dev server errors · monitor · stopped
+   The person stopped it after 3s.
+
+ ⏺ Received the message from dev server errors · monitor · stopped.
+
+ › monitorexit
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 1; echo "✓ lint in 41s"; echo "X test (ubuntu-latest) in 3m 12s"; echo "Run 4812 (ci.yml) failed: 1 of 3…
+      m2 · times out after 10m
+
+ ⏺ I will hear when the CI run ends.
+
+ ← CI run 4812 · monitor · exit code 1
+   ✓ lint in 41s
+   X test (ubuntu-latest) in 3m 12s
+   Run 4812 (ci.yml) failed: 1 of 3 jobs failed
+   Exited with code 1 after 1s.
+
+ ⏺ Received the message from CI run 4812 · monitor · exit code 1.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 98% context left

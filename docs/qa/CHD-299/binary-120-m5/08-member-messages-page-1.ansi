@@ -1,0 +1,40 @@
+ [1mtester[0;2m · fake · Fake Small · bugfix's member · opened by @bugfix 10s ago[0m
+
+ [2m⏺[0m [2mbugfix's instructions for tester · 29 lines[0m
+   [2mYou are tester, a member of team bugfix, opened by its lead, bugfix. You work in /tmp/chd299/binary-120-m5/work, [0m
+   [2mbeside the team's other members: there are no worktrees.[0m
+
+   [2mYour tools on chord's server: send_message {to, text} reaches your lead, bugfix, and coder, the team's other members[0m
+   [2m while they are open, by name and directly: the lead does not see those. spawn_task and list_agents start task [0m
+   [2magents for one-off jobs. You open no long-lived agents.[0m
+
+   [2mYour role: Writes the failing test, then proves the fix[0m
+
+   [2mYour instructions:[0m
+   [2mWrite the smallest test that fails because of the bug, not for any[0m
+   [2mother reason, and run it to show that.[0m
+
+   [2mThe members:[0m
+   [2m- tester: Writes the failing test, then proves the fix (fake · fake-small · acceptEdits)[0m
+   [2m- coder: Writes the fix, in the files the lead names (fake · fake-large · plan)[0m
+
+   [2mHow the team works:[0m
+   [2m# How bugfix works[0m
+
+   [2m1. The lead reads the job and names who may edit which files.[0m
+   [2m2. tester writes a test that fails for the bug's own reason, in `tests/`.[0m
+   [2m3. coder fixes the code so that test passes, and never edits `tests/`.[0m
+
+   [2m## Who edits what[0m
+
+   [2m- One writer per file at a time; a member asks a file's owner directly.[0m
+ [2m── ↓ 29 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m
+
+[2m╭─[0;1m tester[0;2m · bugfix ────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m⏵⏵ accept edits on[0m [2m(shift+tab to cycle)[0m                                                 [2mFake Small · 2% context used[0m
+    main     [2m  fake · Fake Large with a 1M context window       [0m
+    bugfix   [2m  team · fake · Fake Large with a 1M context window[0m
+    [2m├─ [0;1mtester[0;2m  fake · Fake Small                                [0m
+    [2m└─ [0mcoder [2m  fake · Fake Large with a 1M context window       [0m  ✓ replied 10s ago

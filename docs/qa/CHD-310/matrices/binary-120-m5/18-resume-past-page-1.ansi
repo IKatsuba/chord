@@ -1,0 +1,40 @@
+[38;2;255;255;255m [39m█▄  [38;2;255;255;255m   [1m[39mchord[0;2m v0.0.0[0m[38;2;255;255;255m
+ [39m▀██▄[38;2;255;255;255m   [2m[39mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m/tmp/chd310/m45/binary-120-m5/work[0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+        [2m[39mresumed · just now · On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for …[0m[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@bugfix[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39msrc/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix · fake.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39m@bugfix 2[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39msrc/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix 2 · fake.[38;2;255;255;255m
+
+ [2m[39m←[0m[38;2;255;255;255m [1m[39mchord[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThe person closed team bugfix 2: its lead (fake · fake-large, id f6da3760) and its members tester and coder. It[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mtakes no more messages; run_team starts it again.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from chord.[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39mteam bugfix (3 agents) was open when this session was left and is not reopened · /resume lists them · /team run [0m[38;2;255;255;255m
+   [2m[39mbugfix starts the team again[0m[38;2;255;255;255m
+
+
+
+
+
+
+
+
+
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                                [2m[39mFake Large with a 1M context window · 1% context used[0m[38;2;255;255;255m

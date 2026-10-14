@@ -1,0 +1,24 @@
+ chord                                                 fake · /tmp/chord-qa.cmp
+
+
+
+
+
+
+
+
+
+
+
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

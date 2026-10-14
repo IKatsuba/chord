@@ -1,0 +1,203 @@
+=== baseline 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 6s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 0s
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 0s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the answer.
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== source 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 6s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 0s
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 0s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the answer.
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== binary 120x40 ===
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd311-qa/work
+ █▀     ? for shortcuts · /help
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 6s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 0s
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 0s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the answer.
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used
+
+=== baseline 80x24 ===
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 6s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 0s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the answer.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+
+=== source 80x24 ===
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 6s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 0s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the answer.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used
+
+=== binary 80x24 ===
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 6s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold)
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 0s)
+
+ ⏺ It is running; I will say when it ends.
+
+ › thought
+
+ ∴ Thinking…
+
+ ⏺ Here is the answer.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

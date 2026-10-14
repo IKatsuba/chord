@@ -1,0 +1,24 @@
+ chord   1 codex    2   3   4   5   6   7                             ~/src/app
+        resumed · 7 minutes ago · saved prompt 5
+
+ › saved prompt 5
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ codex's earlier sessions and saved windows in this directory.                │
+│                                                                              │
+│ ❯   1.  just now                   ▣ 5 sessions, 2 open · claude ×3, codex … │
+│     2.  just now                   saved prompt 2                            │
+│     3.  just now                   ▣ 3 sessions · claude, codex, claude · s… │
+│     4.  4 minutes ago              ▣ 9 sessions, 4 open · codex ×3, gemini … │
+│     5.  7 minutes ago              ▣ 2 sessions, all open · codex, claude ·… │
+│   ↓ 6.  10 minutes ago  open in 4  saved prompt 8                            │
+│     … +4 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.1YDH
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ⏺ fake did not start: it cannot resume session no-such-session: Resource not
+   found: no-such-session
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

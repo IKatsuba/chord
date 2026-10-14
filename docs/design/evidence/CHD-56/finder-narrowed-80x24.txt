@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.c48w
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › explain @stt                                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  src/ui/state.ts
+  …/components/deeply/nested/directory/SomeComponentWithAVeryLongName.test.tsx
+  docs/meeting notes.md

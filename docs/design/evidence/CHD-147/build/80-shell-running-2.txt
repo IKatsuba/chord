@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.2RRa
+
+
+
+
+
+
+
+
+
+
+ › shell
+
+ ⏺ Run(deno task test)
+   ⎿  Task test deno test
+      running 3 tests
+      1/3
+
+ ✶ Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

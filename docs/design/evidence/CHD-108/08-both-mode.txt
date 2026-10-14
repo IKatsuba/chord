@@ -1,0 +1,11 @@
+qa> chord fake --agent-command "$FAKE" -p mode --permission-mode acceptEdits --dangerously-skip-permissions > /tmp/chd10
+8-qa/08-both-mode.stdout 2> /tmp/chd108-qa/08-both-mode.stderr; echo $? > /tmp/chd108-qa/08-both-mode.exit; printf "stdo
+ut:\n"; cat /tmp/chd108-qa/08-both-mode.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/08-both-mode.stderr; printf "echo
+ \$? (saved immediately):\n"; cat /tmp/chd108-qa/08-both-mode.exit; echo CAPTURE_DONE
+stdout:
+Mode: acceptEdits.
+stderr:
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

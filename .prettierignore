@@ -1,0 +1,7 @@
+# Build output, worktrees, docs, markdown and the team fixtures stay as written.
+dist/
+npm/
+docs/
+tests/fixtures/teams/
+*.md
+.claude/worktrees/

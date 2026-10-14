@@ -1,0 +1,5 @@
+Sampled owned PIDs: 62065, 62067, 62396, 62397, 62398, 63094, 63104, 66596, 66601, 66602
+Final ps: none present
+Source and compiled: alternate_on=0, cursor_flag=1; stty before/after identical.
+Owned tmux server killed.
+No new orphan fake-agent PID since source startup.

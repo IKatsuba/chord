@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake2                                             /private/tmp/chd173-qa-425601bd6783698a/120/proj
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /private/tmp/chd173-qa-425601bd6783698a/120/proj
+ █▀     ? for shortcuts · /help
+        resumed · just now · text
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  Not reopened: fake tab b84af4cc, its record is gone                              Fake Large with a 1M context window

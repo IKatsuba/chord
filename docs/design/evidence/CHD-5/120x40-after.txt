@@ -1,0 +1,40 @@
+ chord                                                                                           fake · /tmp/chord-demo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › permission
+   ⎿  Allowed Write notes.txt · Always allow
+
+ ⏺ Permission: always.
+
+ › permission
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+

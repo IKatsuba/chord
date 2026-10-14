@@ -1,0 +1,40 @@
+ chord                                                                                        fake · /tmp/chord-qa.Xk2p
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › form
+
+ ✺ Waiting for your input… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                                                                  │
+│ Set up the deploy target                                                                                             │
+│                                                                                                                      │
+│ ❯ ⚠ Project name   ab█                                                                                               │
+│                    At least 3 characters                                                                             │
+│   ⚠ Contact email  ops@                                                                                              │
+│                    Not an email address, such as name@example.com                                                    │
+│   ⚠ Replicas       12                                                                                                │
+│                    A whole number from 1 to 9                                                                        │
+│   ✔ Traffic share  0.25                                                                                              │
+│   ✔ Public         ☒ Yes                                                                                             │
+│   ⚠ Region         not set                                                                                           │
+│                    Required                                                                                          │
+│     Tags           not set                                                                                           │
+│                                                                                                                      │
+│   Accept   Decline     4 fields to fix                                                                               │
+│                                                                                                                      │
+│ Type to fill in · ↑↓ to move · Enter for the next · Esc to cancel                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                 Fake Large with a 1M context window · 99% context left

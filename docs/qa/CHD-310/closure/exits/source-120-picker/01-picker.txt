@@ -1,0 +1,40 @@
+ chord                                                          fake · /tmp/chd310-closure/exits/source-120-picker/work
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ Pick one of fake's earlier sessions, or a saved window, to open.                                                     │
+│                                                                                                                      │
+│ No earlier sessions or windows in this directory.                                                                    │
+│                                                                                                                      │
+│ Ctrl+a for all directories · Esc to quit                                                                             │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

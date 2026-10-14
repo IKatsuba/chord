@@ -1,0 +1,49 @@
+{
+  "expected_markers": {
+    "01-text": "Hello, world. This reply came in chunks.",
+    "02-thought-expanded": "Considering the question.",
+    "01-tools": "Read(README.md)",
+    "02-edit-expanded": "Updated src/greeting.ts",
+    "04-markdown-complete": "That is the whole loop.",
+    "06-denied": "Permission: deny.",
+    "07-multiline": "second line",
+    "09-search": "search prompts: first",
+    "11-plan-done": "Run the tests",
+    "13-mode": "accept edits on",
+    "14-agent-mode": "Mode: acceptEdits.",
+    "15-model-picker": "Fake Small",
+    "16-model-set": "Fake Small",
+    "18-agent-command": "Hello from the fake agent.",
+    "21-resource-received": "Received a link: example.ts",
+    "23-bash-context": "Received printf qa-shell: qa-shell",
+    "26-effort-set": "Effort set to High",
+    "24-cost": "Total cost:",
+    "24-context": "Used:",
+    "24-status": "Session:",
+    "28-queue-returned": "\u203a queued QA",
+    "29-scrolled": "new output",
+    "31-scrolled-resize": "new output"
+  },
+  "results": [
+    {
+      "case": "binary-120-m12",
+      "functional_markers": 23,
+      "passed": true
+    },
+    {
+      "case": "binary-80-m12",
+      "functional_markers": 23,
+      "passed": true
+    },
+    {
+      "case": "source-120-m12",
+      "functional_markers": 23,
+      "passed": true
+    },
+    {
+      "case": "source-80-m12",
+      "functional_markers": 23,
+      "passed": true
+    }
+  ]
+}

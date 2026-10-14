@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake    3 fake2                                                     /tmp/chd172-final.XDzrEf/other
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Small
+ ▄██▀   /tmp/chd172-final.XDzrEf/other
+ █▀     ? for shortcuts · /help
+        resumed · 1 minute ago · tools
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+ › error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+ › slow
+
+ ⏺ Working.............
+   ⎿  Interrupted by user
+
+ › mode
+
+ ⏺ Mode: plan.
+
+ ! pwd
+   ⎿  /private/tmp/chd172-final.XDzrEf/other
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                                                    Fake Small · 99% context left

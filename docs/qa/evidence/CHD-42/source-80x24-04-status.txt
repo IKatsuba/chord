@@ -1,0 +1,24 @@
+ chord             fake · /private/tmp/chd81-source-80x24-aa25aa8ca589562e/work
+
+
+
+
+
+
+
+
+ › /greet day
+
+ ⏺ Hello from the fake agent.
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Plan
+      Session:   3a02fece-942a-4eba-87d1-4a88deeaea17
+      Directory: /private/tmp/chd81-source-80x24-aa25aa8ca589562e/work
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · 99% context left

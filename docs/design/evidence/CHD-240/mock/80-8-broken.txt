@@ -1,0 +1,24 @@
+ › /team run triage the flaky test in tests/net
+   ⎿  ~/.config/chord/teams/triage.md is not a team chord can run:
+      members.1.agent: required
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                      Opus · 91% context left

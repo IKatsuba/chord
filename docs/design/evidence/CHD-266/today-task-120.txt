@@ -1,0 +1,40 @@
+      m1 · times out after 10m
+
+ ⏺ I will hear when the CI run ends.
+
+ ← CI run 4812 · monitor · exit code 1
+   ✓ lint in 41s
+   X test (ubuntu-latest) in 3m 12s
+   Run 4812 (ci.yml) failed: 1 of 3 jobs failed
+   Exited with code 1 after 1s.
+
+ ⏺ Received the message from CI run 4812 · monitor · exit code 1.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Search(tokenize in src/parse)
+      Read(src/parse/tokenize.ts)
+      Edit(src/parse/tokenize.ts) · waiting for permission
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ✸ Waiting for permission… (9s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Fix the tokenizer) · fake asks                                                                                 │
+│ Edit src/parse/tokenize.ts                                                                                           │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                               Fake Large with a 1M context window · 99% context left

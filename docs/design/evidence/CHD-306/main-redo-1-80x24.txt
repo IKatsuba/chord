@@ -1,0 +1,25 @@
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.tHF9
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › one two                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                                           Fake Large with a 1M context window
+cursor 78,23 visible=0

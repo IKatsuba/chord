@@ -1,0 +1,24 @@
+   Hello, world. This reply came in chunks.
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mTheme[0m                                                                        [2m│
+│[0m [2mNO_COLOR is set, so chord draws no colour.[0m                                   [2m│
+│[0m                                                                              [2m│
+│[0m   1. Auto (dark: the terminal did not say)                                   [2m│
+│[0m   2. Dark ✔                                                                  [2m│
+│[0m ❯ 3. Light                                                                   [2m│
+│[0m   4. Dark, colour-blind friendly                                             [2m│
+│[0m   5. Light, colour-blind friendly                                            [2m│
+│[0m   6. Dark, the terminal's 16 colours                                         [2m│
+│[0m   7. Light, the terminal's 16 colours                                        [2m│
+│[0m                                                                              [2m│
+│[0m  [2m1[0m   function greet(name) {                                                  [2m│
+│[0m  [2m2[0m -   return "hello " + name;                                               [2m│
+│[0m  [2m2[0m +   return `hello, ${name}`;                                              [2m│
+│[0m                                                                              [2m│
+│[0m [2m↑↓ to preview · Enter to keep · Esc to go back to Dark[0m                       [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m        [2mFake Large with a 1M context window · 1% context used[0m

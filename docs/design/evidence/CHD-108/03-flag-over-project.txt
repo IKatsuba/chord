@@ -1,0 +1,11 @@
+qa> chord fake --agent-command "$FAKE" -p mode --permission-mode acceptEdits > /tmp/chd108-qa/03-flag-over-project.stdou
+t 2> /tmp/chd108-qa/03-flag-over-project.stderr; echo $? > /tmp/chd108-qa/03-flag-over-project.exit; printf "stdout:\n";
+ cat /tmp/chd108-qa/03-flag-over-project.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/03-flag-over-project.stderr; pri
+ntf "echo \$? (saved immediately):\n"; cat /tmp/chd108-qa/03-flag-over-project.exit; echo CAPTURE_DONE
+stdout:
+Mode: acceptEdits.
+stderr:
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

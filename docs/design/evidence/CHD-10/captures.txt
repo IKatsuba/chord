@@ -1,0 +1,137 @@
+# CHD-10 evidence — e800a2f, fake agent, prompt 'markdown'. Captured by chd-designer.
+
+## 1. 120x40, top of the reply (Home)
+ chord                                                                                                 fake · /tmp/demo
+
+ › markdown
+
+ ⏺ Reading the session layer
+
+   The session layer wraps acpx so the interface never touches a process. Start with src/session/session.ts, then see
+   the ACP spec (https://agentclientprotocol.com) for the wire format.
+
+   What it does
+
+   - opens one persistent session per chord session
+   - starts turns with startTurn and cancels them
+     1. a cancel stops the turn at once
+     2. the agent is told with session/cancel
+   - closes the agent and waits until its exit is seen
+
+   │ A closed agent counts as gone only once its exit is seen.
+
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                                  │ Tested by          │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │
+   │               │ a session                              │                    │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │               │ gone                                   │                    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │               │ drawn                                  │                    │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘
+
+   ┌ ts ──────────────────────────────────────────────────────────┐
+   │ const session = await openSession({ agent: 'claude', cwd }); │
+   │ const turn = session.prompt('hello');                        │
+   │ await turn.result;                                           │
+ ── ↓ 7 lines below · end to jump to the bottom ───────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+
+## 1b. 120x40, finished reply, bottom
+ chord                                                                                                 fake · /tmp/demo
+   the ACP spec (https://agentclientprotocol.com) for the wire format.
+
+   What it does
+
+   - opens one persistent session per chord session
+   - starts turns with startTurn and cancels them
+     1. a cancel stops the turn at once
+     2. the agent is told with session/cancel
+   - closes the agent and waits until its exit is seen
+
+   │ A closed agent counts as gone only once its exit is seen.
+
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                                  │ Tested by          │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │
+   │               │ a session                              │                    │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │               │ gone                                   │                    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │               │ drawn                                  │                    │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘
+
+   ┌ ts ──────────────────────────────────────────────────────────┐
+   │ const session = await openSession({ agent: 'claude', cwd }); │
+   │ const turn = session.prompt('hello');                        │
+   │ await turn.result;                                           │
+   └──────────────────────────────────────────────────────────────┘
+
+   That is the whole loop. Check it with:
+
+   ┌ sh ─────────────┐
+   │ deno task check │
+   └─────────────────┘
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+
+## 2. 80x24, same session resized, bottom
+ chord                                                         fake · /tmp/demo
+   │               │ and closing a session         │                    │
+   │ processes.ts  │ the promise that a closed     │ processes_test.ts  │
+   │               │ agent is gone                 │                    │
+   │ transcript.ts │ the reducer from events       │ transcript_test.ts │
+   │               │ to what is drawn              │                    │
+   └───────────────┴───────────────────────────────┴────────────────────┘
+
+   ┌ ts ──────────────────────────────────────────────────────────┐
+   │ const session = await openSession({ agent: 'claude', cwd }); │
+   │ const turn = session.prompt('hello');                        │
+   │ await turn.result;                                           │
+   └──────────────────────────────────────────────────────────────┘
+
+   That is the whole loop. Check it with:
+
+   ┌ sh ─────────────┐
+   │ deno task check │
+   └─────────────────┘
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+
+## 3. 80x24, fresh session, CHORD_FAKE_STEP_MS=150, ts fence open after one line
+ chord                                                         fake · /tmp/demo
+   │ A closed agent counts as gone only once its exit is seen.
+
+   ┌───────────────┬───────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                         │ Tested by          │
+   ├───────────────┼───────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting            │ session_test.ts    │
+   │               │ and closing a session         │                    │
+   │ processes.ts  │ the promise that a closed     │ processes_test.ts  │
+   │               │ agent is gone                 │                    │
+   │ transcript.ts │ the reducer from events       │ transcript_test.ts │
+   │               │ to what is drawn              │                    │
+   └───────────────┴───────────────────────────────┴────────────────────┘
+
+   ┌ ts ──────────────────────────────────────────────────────────┐
+   │ const session = await openSession({ agent: 'claude', cwd }); │
+   └──────────────────────────────────────────────────────────────┘
+
+ ✺ Working… (3s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

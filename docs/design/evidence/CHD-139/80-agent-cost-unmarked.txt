@@ -1,0 +1,24 @@
+ chord                                                fake · /tmp/chord-qa.7BUR
+
+
+
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0125
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 8s
+
+ › /context
+   ⎿  Used: 2,000 of 1,000,000 tokens (1%)
+      Free: 998,000 tokens (99%)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · 99% context left

@@ -1,0 +1,40 @@
+ chord   1 claude    2 claude    3 claude    4 claude    5 claude    6 claude    7 claude                     ~/src/app
+ ▀▄     chord v0.0.0
+ ▀▀▀▄   claude · Fake Large with a 1M context window
+ ▄▀▀▀   ~/src/app
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  That window needs 3 tabs and 2 are free · close 1 with ctrl+x k, then /resume again    Fake Large with a… · 99% left

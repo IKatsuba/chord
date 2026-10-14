@@ -1,0 +1,43 @@
+{
+  "app": 6917,
+  "fakes": [
+    6930
+  ],
+  "owned": [
+    6917,
+    6930,
+    6964,
+    6967
+  ],
+  "groups": [
+    6930,
+    6964,
+    6967
+  ],
+  "rows": [
+    [
+      "6930",
+      "6917",
+      "6930",
+      "bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts"
+    ],
+    [
+      "6964",
+      "6917",
+      "6964",
+      "sleep 600"
+    ],
+    [
+      "6967",
+      "6917",
+      "6967",
+      "sleep 600"
+    ],
+    [
+      "6917",
+      "6910",
+      "6910",
+      "bun /tmp/chd331-qa/repo/src/main.tsx fake --agent-command env -u BUN_OPTIONS bun /tmp/chd331-qa/repo/tests/fixtures/fake_agent/main.ts -C /tmp/chd331-qa/source-80-monitor-overlap/work"
+    ]
+  ]
+}

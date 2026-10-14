@@ -1,0 +1,40 @@
+   [2m [0m  [2m1.[0m The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      [2m… +29 lines (ctrl+o to expand)[0m
+   [2m [0m  [38;2;78;186;101mSaved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job[39m
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix and the bug, or just tell me to hand one
+   to bugfix.
+
+ [2m›[0m put the reviewer on codex too, and let the tester run the suite without asking
+
+ ⏺ The reviewer on codex too, read-only, and tester in bypassPermissions, so it runs the suite without asking.
+
+ [2m⏺[0m [1mTeam[0m(bugfix)[2m · change[0m
+   [2m⎿[0m  [2mFixes a bug end to end: a failing test first, then the fix, then a review of the diff.[0m
+
+   [2m [0m     lead      claude · opus          default                            Splits the job, says who edits which fi…
+   [2m [0m  ~  tester    claude · sonnet        [38;2;255;193;7mbypassPermissions[2m[39m was acceptEdits[0m  Writes the failing test, then proves th…
+   [2m [0m     coder     codex · gpt-5.3-codex  auto                               Writes the fix, in the files the lead n…
+   [2m [0m  ~  reviewer  codex · gpt-5.3-codex  read-only[2m was plan[0m                 Reads the diff and edits nothing
+   [2m [0m  [2mbugfix.md's body · 1 addition, 1 removal[0m
+      [2m6[0m   [38;2;180;188;255m4.[39m reviewer reads the diff and edits nothing. If it finds a problem, the lead hands it back to coder.
+      [2m[48;2;74;31;39m7[0m[48;2;74;31;39m [38;2;255;142;142m-[38;2;228;228;228m [38;2;180;188;255m5.[38;2;228;228;228m tester runs the whole suite once more, and the lead reports to main.[39m                                      [49m
+      [2m[48;2;31;59;36m7[0m[48;2;31;59;36m [38;2;134;224;138m+[38;2;228;228;228m [38;2;180;188;255m5.[38;2;228;228;228m tester runs the whole suite once more, without asking, and the lead reports to main.[39m                      [49m
+      [2m8[0m
+      [2m… +16 lines (ctrl+o to expand)[0m
+
+ [38;2;215;119;87m✶[39m [38;2;215;119;87mWaiting for you…[39m [2m(3s)[0m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mReplace team bugfix?[0m                                                                                                 [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [38;2;177;185;249m1. Yes, in .chord/teams/bugfix.md[39m                                                                                  [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 2. No, tell fake what to change                                                                                    [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2mEsc to tell fake what to change[0m                                                                                      [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+[2m[39m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                [2mFake Large with a 1M context window · 1% context used[0m

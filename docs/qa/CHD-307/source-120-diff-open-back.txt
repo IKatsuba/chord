@@ -1,0 +1,40 @@
+   15. Line 15 of 200, streamed one at a time.
+   16. Line 16 of 200, streamed one at a time.
+   17. Line 17 of 200, streamed one at a time.
+   18. Line 18 of 200, streamed one at a time.
+   19. Line 19 of 200, streamed one at a time.
+   20. Line 20 of 200, streamed one at a time.
+   21. Line 21 of 200, streamed one at a time.
+   22. Line 22 of 200, streamed one at a time.
+   23. Line 23 of 200, streamed one at a time.
+   24. Line 24 of 200, streamed one at a time.
+   25. Line 25 of 200, streamed one at a time.
+   26. Line 26 of 200, streamed one at a time.
+   27. Line 27 of 200, streamed one at a time.
+   28. Line 28 of 200, streamed one at a time.
+   29. Line 29 of 200, streamed one at a time.
+   30. Line 30 of 200, streamed one at a time.
+   31. Line 31 of 200, streamed one at a time.
+   32. Line 32 of 200, streamed one at a time.
+   33. Line 33 of 200, streamed one at a time.
+   34. Line 34 of 200, streamed one at a time.
+   ⎿  Interrupted by user
+
+ › rewrite
+
+ ⏺ Edit(src/table.ts)
+   ⎿  Updated src/table.ts with 9 additions and 11 removals
+       3     { id: 2, name: 'row 2' },
+       4     { id: 3, name: 'row 3' },
+       5     { id: 4, name: 'row 4' },
+       6 -   { id: 5, name: 'row 5' },
+       7 -   { id: 6, name: 'row 6' },
+       8 -   { id: 7, name: 'row 7' },
+       9 -   { id: 8, name: 'row 8' },
+      10 -   { id: 9, name: 'row 9' },
+ ── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                Fake Large with a 1M context window · 1% context used

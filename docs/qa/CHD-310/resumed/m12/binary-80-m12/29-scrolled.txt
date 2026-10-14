@@ -1,0 +1,24 @@
+      Mode:      Accept edits
+      Session:   22c9a453-4c7b-45a0-824c-9d2b0372cda2
+      Directory: /tmp/chd310-final/exits/binary-80-m12/work
+
+ › slow
+
+ ⏺ Working.....................................................................
+   .........
+   ⎿  Interrupted by user
+
+ › long
+c
+╭⏺ 1. Line 1 of 200, streamed one at a time.                                   ╮
+│  2. Line 2 of 200, streamed one at a time.                                ory
+l  3. Line 3 of 200, streamed one at a time.                                   0
+.  4. Line 4 of 200, streamed one at a time.
+"── ↓ new output · 17 lines below · end to jump to the bottom ─────────────────e
+n                                                                         limit"
+(✸ Working… (6s · esc to interrupt)                                      ak dete
+ct                         dded to [BoxRen
+╭──────────────────────────────────────────────────────────────────────────────╮
+│P›                 er memory leak detecte               steners added to [BoxR│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · 12% context used

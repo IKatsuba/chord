@@ -1,0 +1,40 @@
+ chord                                                                                         fake · /tmp/chord-qa.cmp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › form
+
+ ✺ Waiting for your input… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                                                                  │
+│ Set up the deploy target                                                                                             │
+│                                                                                                                      │
+│ ❯ * Project name                                                                                                     │
+│                    Lowercase, dashes allowed                                                                         │
+│     Contact email  not set                                                                                           │
+│   ✔ Replicas       2                                                                                                 │
+│     Traffic share  not set                                                                                           │
+│   ✔ Public         ☐ No                                                                                              │
+│   * Region         not set                                                                                           │
+│     Tags           not set                                                                                           │
+│                                                                                                                      │
+│   Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ Type to fill in · ↑↓ to move · Enter for the next · Esc to cancel                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

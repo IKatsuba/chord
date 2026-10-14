@@ -1,0 +1,24 @@
+   ⎿  dev · .chord/teams/dev.md
+      Builds and reviews changes on the dev branch
+
+      lead   fake  —  Splits the job, says who edits which files, reports to…
+      coder  fake  —  Writes the change
+
+      lead's instructions
+      Ты ведущий команды `dev`: читай задачу через `quarry task read`, решай,
+      кто что делает, и держи правило: сначала библиотека, потом свой код.
+      Отчитывайся в задаче, а не в чате, через `task_comment`, и закрывай
+      только то, что проверено `bun run check` и глазами в tmux.
+
+      coder's instructions
+      Пиши изменение в файлах, которые назвал ведущий; перед передачей
+      запускай `bun run check` и прикладывай снимок экрана из `tmux
+      capture-pane -p`. Никогда не делай `git push` и не публикуй в npm — это
+      делает владелец.
+
+      Build it, then review it.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                          Fake Large with a 1M context window

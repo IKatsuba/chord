@@ -1,0 +1,24 @@
+ [1mchord[0m                                                [2mfake · /tmp/chord-qa.BGgP[0m
+
+
+
+
+
+
+
+ [2m›[0m subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ [38;2;215;119;87m⏺[39m Running 2 agents…[2m (ctrl+o to expand)[0m
+   [2m├─[0m [1mAgent[0m(Find the session layer)[2m · 3 tool uses[0m
+   [2m│[0m  [2m⎿[0m  [1mAgent[0m(Read the transport tests)
+   [2m└─[0m [1mAgent[0m(Find where tool calls are drawn on screen and how they fold)
+      [2m⎿[0m  [1mRead[0m(src/ui/App.tsx)
+
+ [38;2;215;119;87m✺[39m [38;2;215;119;87mWorking…[39m [2m(4s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                          [2mFake Large with a 1M context window[0m

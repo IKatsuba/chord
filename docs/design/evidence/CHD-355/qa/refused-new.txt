@@ -1,0 +1,24 @@
+chord   1 fake    2 fake                       /tmp/chd355-qa-1i0j6hi4/refused
+ █▄     chord v0.0.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chd355-qa-1i0j6hi4/refused
+ █▀     ? for shortcuts · /help
+
+ ⏺ Could not start on high effort, set in .chord/settings.json: The fake agent
+   holds its effort.
+
+ › effort
+
+ ⏺ Effort: medium.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts        Fake Large with a 1M context window · 1% context used

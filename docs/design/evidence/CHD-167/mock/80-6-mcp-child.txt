@@ -1,0 +1,24 @@
+ chord                                                       claude · ~/src/app
+
+ ✉ main
+   I changed how a string at the end of a line is read. Run the parser tests
+   now and tell me only what fails.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord passed these to parser when the session started. ACP does not          │
+│ say whether parser connected to them.                                        │
+│                                                                              │
+│ Name    Transport  Command or URL                      Defined in            │
+│ chord   http       http://127.0.0.1:52817/mcp          chord itself          │
+│ github  http       https://api.githubcopilot.com/mcp/  .mcp.json             │
+│                                                                              │
+│ chord's server gives parser send_message, to main only.                      │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                             gpt-5.3-codex · 97% context left

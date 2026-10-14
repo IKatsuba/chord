@@ -1,0 +1,24 @@
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › first line
+   second line
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › plan
+
+ ⏺ Planned.
+
+ ✹ Working… (0s · esc to interrupt)
+  ⎿  ☒ Read the code
+     ◐ Write the change
+     ☐ Run the tests
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Press ctrl+c again to quit

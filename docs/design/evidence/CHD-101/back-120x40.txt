@@ -1,0 +1,40 @@
+ chord                                                                      fake · /private/tmp/chord-qa.9eDA/u/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ Open one of fake's earlier sessions in this directory here.                                                          │
+│                                                                                                                      │
+│ ❯ 1. 3 hours ago  /echo why does resume lose the plan?                                                               │
+│   2. 2 days ago   /echo fix the failing date test in the parser                                                      │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                  Fake Large with a 1M context window

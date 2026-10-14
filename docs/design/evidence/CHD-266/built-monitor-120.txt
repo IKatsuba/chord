@@ -1,0 +1,40 @@
+ ← Fix the tokenizer · fake · report
+   ⎿  The tokenizer dropped a closing quote when a string ended the line. Fixed in src/parse/tokenize.ts, with two
+      cases added to tests/parse/tokenize_test.ts. deno task test passes.
+
+ ⏺ Received the message from Fix the tokenizer · fake · report.
+
+ › agentexit
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  crash
+
+ ⏺ Waiting on parser.
+
+ ← chord
+   ⎿  parser's agent exited: fatal: out of memory reading tests/parse/fixtures/huge.json. open_agent opens it again.
+
+ ⏺ Received the message from chord.
+
+ › monitorexit
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 1; echo "✓ lint in 41s"; echo "X test (ubuntu-latest) in 3m 12s"; echo "Run 4812 (ci.yml) failed: 1 of 3…
+      m1 · times out after 10m
+
+ ⏺ I will hear when the CI run ends.
+
+ ← CI run 4812 · monitor · exit code 1
+   ⎿  ✓ lint in 41s
+      X test (ubuntu-latest) in 3m 12s
+      Run 4812 (ci.yml) failed: 1 of 3 jobs failed
+      Exited with code 1 after 1s.
+
+ ⏺ Received the message from CI run 4812 · monitor · exit code 1.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ✗ parser failed · ctrl+x a to go · ? for shortcuts             Fake Large with a 1M context window · 2% context used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✗ failed

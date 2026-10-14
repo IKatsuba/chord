@@ -1,0 +1,181 @@
+/**
+ * What a turn asks the person: a permission, waited on in the turn's status,
+ * and a form or link, waited on beside it; each answer leaves its record.
+ */
+import { changeSubagent, findSubagent } from './subagents.ts';
+import { isCurrent, taskWaits } from './turn.ts';
+import type {
+  ElicitationAnswer,
+  ElicitationWait,
+  Entry,
+  PermissionAnswer,
+  PermissionWait,
+  Transcript,
+} from './types.ts';
+
+export function permissionRequested(
+  state: Transcript,
+  turnId: string,
+  permission: PermissionWait,
+  at = 0,
+): Transcript {
+  const { turn } = state;
+
+  // A task agent outlives the turn that started it, and may ask between
+  // turns; the session waits on the person until it is answered.
+  if (turn.status === 'idle' && taskWaits(state, [permission]).length > 0) {
+    return {
+      ...state,
+      turn: {
+        status: 'awaiting_permission',
+        turnId,
+        since: at,
+        permissions: [permission],
+        between: true,
+      },
+    };
+  }
+
+  if (
+    turn.status === 'awaiting_permission' &&
+    turn.between &&
+    taskWaits(state, [permission]).length > 0 &&
+    !turn.permissions.some((wait) => wait.id === permission.id)
+  ) {
+    return {
+      ...state,
+      turn: { ...turn, permissions: [...turn.permissions, permission] },
+    };
+  }
+
+  if (!isCurrent(turn, turnId) || turn.status === 'cancelling') {
+    return state;
+  }
+
+  const waiting = turn.status === 'awaiting_permission' ? turn.permissions : [];
+
+  if (waiting.some((wait) => wait.id === permission.id)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    turn: {
+      status: 'awaiting_permission',
+      turnId,
+      since: turn.since,
+      permissions: [...waiting, permission],
+    },
+  };
+}
+
+export function permissionSettled(
+  state: Transcript,
+  turnId: string,
+  id: string,
+  answer: PermissionAnswer,
+): Transcript {
+  const { turn } = state;
+
+  // Found by its id alone: a task agent's request may have been asked in an
+  // earlier turn than the one it is answered in.
+  if (turn.status !== 'awaiting_permission') {
+    return state;
+  }
+
+  const wait = turn.permissions.find((candidate) => candidate.id === id);
+
+  if (!wait) {
+    return state;
+  }
+
+  const permissions = turn.permissions.filter((other) => other !== wait);
+  const option =
+    answer.type === 'chosen'
+      ? wait.options.find((candidate) => candidate.optionId === answer.optionId)
+      : undefined;
+  // chord's own question is answered on the call that asked it.
+  const entry: Entry | undefined =
+    answer.type === 'withdrawn' || wait.save !== undefined
+      ? undefined
+      : {
+          kind: 'permission',
+          turnId,
+          ...(wait.title === undefined ? {} : { title: wait.title }),
+          ...(option === undefined ? {} : { option }),
+        };
+  // A subagent's answer is part of its work, not its parent's.
+  const asker = wait.subagentId;
+  const entries =
+    entry === undefined
+      ? state.entries
+      : asker !== undefined && findSubagent(state.entries, asker)
+        ? changeSubagent(state.entries, asker, (subagent) => ({
+            ...subagent,
+            entries: [...subagent.entries, entry],
+          }))
+        : [...state.entries, entry];
+
+  return {
+    ...state,
+    entries,
+    turn:
+      permissions.length > 0
+        ? { ...turn, permissions }
+        : turn.between
+          ? { status: 'idle' }
+          : { status: 'working', turnId: turn.turnId, since: turn.since },
+  };
+}
+
+export function elicitationRequested(
+  state: Transcript,
+  turnId: string,
+  elicitation: ElicitationWait,
+): Transcript {
+  const { turn } = state;
+
+  const outside = elicitation.subagentId !== undefined;
+
+  if (
+    (!outside && (!isCurrent(turn, turnId) || turn.status === 'cancelling')) ||
+    state.asking.some((wait) => wait.id === elicitation.id)
+  ) {
+    return state;
+  }
+
+  return { ...state, asking: [...state.asking, elicitation] };
+}
+
+/** The person's answer to a form or link, or its withdrawal, as a record. */
+export function elicitationSettled(
+  state: Transcript,
+  turnId: string,
+  id: string,
+  answer: ElicitationAnswer,
+): Transcript {
+  const wait = state.asking.find((candidate) => candidate.id === id);
+
+  if (
+    !wait ||
+    (wait.subagentId === undefined && !isCurrent(state.turn, turnId))
+  ) {
+    return state;
+  }
+
+  const entry: Entry = {
+    kind: 'elicitation',
+    turnId,
+    wait,
+    outcome: answer.type === 'withdrawn' ? 'cancelled' : answer.type,
+    ...(answer.type === 'accepted' && answer.content !== undefined
+      ? { content: answer.content }
+      : {}),
+  };
+
+  return {
+    ...state,
+    entries: [...state.entries, entry],
+    asking: state.asking.filter((other) => other !== wait),
+  };
+}

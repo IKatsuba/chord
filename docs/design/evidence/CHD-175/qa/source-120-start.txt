@@ -1,0 +1,40 @@
+ chord                                                                                               claude · ~/src/app
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ Pick one of claude's earlier sessions, or a saved window, to open.                                                   │
+│                                                                                                                      │
+│ ❯   1.  6 minutes ago   ▣ 7 sessions · codex ×3, gemini ×2, claude ×2 · saved prompt 5                               │
+│     2.  7 minutes ago   ▣ 7 sessions · codex ×3, gemini ×2, claude ×2 · saved prompt 5                               │
+│     3.  8 minutes ago   ▣ 7 sessions · codex ×3, gemini ×2, claude ×2 · saved prompt 5                               │
+│     4.  10 minutes ago  ▣ 3 sessions · claude, codex, claude · saved prompt 2                                        │
+│     5.  10 minutes ago  ▣ 5 sessions · claude ×3, codex ×2 · saved prompt 5                                          │
+│     6.  11 minutes ago  saved prompt 1                                                                               │
+│     7.  12 minutes ago  ▣ 9 sessions · codex ×3, gemini ×3, claude ×3 · saved prompt 11                              │
+│     8.  14 minutes ago  saved prompt 4                                                                               │
+│     9.  15 minutes ago  ▣ 2 sessions · codex, claude · saved prompt 5                                                │
+│   ↓ 10. 17 minutes ago  saved prompt 7                                                                               │
+│     … +3 more                                                                                                        │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to quit                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

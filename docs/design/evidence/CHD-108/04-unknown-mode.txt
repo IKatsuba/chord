@@ -1,0 +1,13 @@
+qa> chord fake --agent-command "$FAKE" -p permission --permission-mode nosuch > /tmp/chd108-qa/04-unknown-mode.stdout 2>
+ /tmp/chd108-qa/04-unknown-mode.stderr; echo $? > /tmp/chd108-qa/04-unknown-mode.exit; printf "stdout:\n"; cat /tmp/chd1
+08-qa/04-unknown-mode.stdout; printf "stderr:\n"; cat /tmp/chd108-qa/04-unknown-mode.stderr; printf "echo \$? (saved imm
+ediately):\n"; cat /tmp/chd108-qa/04-unknown-mode.exit; echo CAPTURE_DONE
+stdout:
+Permission: deny.
+stderr:
+chord: could not start in nosuch mode, set by --permission-mode: the agent offers default, acceptEdits, plan
+chord: refused Write notes.txt: -p cannot ask for permission.
+echo $? (saved immediately):
+0
+CAPTURE_DONE
+qa>

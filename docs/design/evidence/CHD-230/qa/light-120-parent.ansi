@@ -1,0 +1,40 @@
+ [38;2;29;150;93m[48;2;27;145;91m▀[38;2;26;142;90m[49m▄[39m     [1mchord[0;2m v0.0.0[0m
+ [38;2;25;140;90m▀[38;2;24;137;89m[48;2;22;132;87m▀[38;2;23;134;88m[48;2;21;129;86m▀[38;2;21;127;85m[49m▄[39m   [2mfake · Fake Large with a 1M context window[0m
+ [38;2;20;125;85m▄[38;2;21;127;86m[48;2;19;121;85m▀[38;2;20;124;85m[48;2;18;117;85m▀[38;2;18;120;85m[49m▀[39m   [2m/tmp/chd230-qa/work[0m
+ [38;2;18;118;85m[48;2;16;111;86m▀[38;2;17;114;86m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m agents
+
+ ⏺ I will open parser on the tests and docs on the README.
+
+ [38;2;44;122;57m⏺[39m [1mOpen[0m(parser)[2m · fake · fake-small[0m
+   [2m⎿[0m  [2magentchild[0m
+
+ [38;2;44;122;57m⏺[39m [1mOpen[0m(docs)[2m · fake[0m
+   [2m⎿[0m  [2mpermission[0m
+
+ [38;2;10;91;196m→[39m [1m[38;2;10;91;196mparser[0;2m · queued[0m
+   [2m⎿[0m  [2mI changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.[0m
+
+ [38;2;10;91;196m→[39m [1m[38;2;10;91;196mparser[0;2m · queued[0m
+   [2m⎿[0m  [2mThe printer is fixed too; run the whole parser suite once more.[0m
+
+ ⏺ Waiting on parser.
+
+ [38;2;10;91;196m←[39m [1m[38;2;10;91;196mparser[0;2m · fake[0m
+   Ran deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ [38;2;10;91;196m←[39m [1m[38;2;10;91;196mparser[0;2m · fake[0m
+   All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;138;90;0m● docs needs your permission · ctrl+x a to go[39m [2m·[0m [2m? for shortcuts[0m       [2mFake Large with a 1M context window · 99% left[0m
+  [38;2;74;90;224m  [1m[39mmain  [0;2m  fake · Fake Large with a 1M context window[0m
+  [38;2;74;90;224m  [38;2;10;91;196mparser[2m[39m  fake · Fake Small                         [0m[38;2;44;122;57m  ✓ replied 26s ago[39m
+  [38;2;74;90;224m  [38;2;122;63;214mdocs  [2m[39m  fake · Fake Large with a 1M context window[0m[38;2;138;90;0m  ● permission 26s[39m

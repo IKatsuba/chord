@@ -1,4 +1,7 @@
-# chord
+# The chord guide
+
+Everything chord does, flag by flag and key by key. The
+[README](../README.md) is the short tour.
 
 A full-screen terminal client for coding agents that speak the
 [Agent Client Protocol](https://agentclientprotocol.com) — Claude Code, Codex,
@@ -6,11 +9,6 @@ Gemini CLI, Cursor, fx, OpenCode and the rest — with everything people reach f
 in Claude Code's own interface: permission modes, slash commands, `@` file
 mentions, `!` bash mode, plans, diffs, history, resume, and a keyboard for all
 of it.
-
-> **Status: pre-alpha.** You can send prompts, read the replies as plain
-> text, and answer the agent's permission requests and forms; tool calls and
-> the rest are on their way.
-> `docs/FEATURES.md` is the map of what is coming and in which order.
 
 ## Why
 
@@ -582,10 +580,10 @@ Chrome's DevTools. `docs/memory.md` has how, and the long-run memory check
 
 ## Licence
 
-chord's code is [MIT](LICENSE).
+chord's code is [MIT](../LICENSE).
 
 The Chorded name and the chevron mark, which chord draws at the top of a
 session (`scripts/mark.svg`, and `src/ui/header/mark.ts` generated from it), are
 trademarks of Igor Katsuba. The MIT licence does not cover them: a fork may
 keep the code, but should take the mark out and draw its own. See
-[TRADEMARKS.md](TRADEMARKS.md).
+[TRADEMARKS.md](../TRADEMARKS.md).

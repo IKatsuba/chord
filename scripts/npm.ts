@@ -61,6 +61,8 @@ const common = {
   version,
   license: 'MIT',
   repository: { type: 'git', url: 'git+https://github.com/IKatsuba/chord.git' },
+  homepage: 'https://github.com/IKatsuba/chord#readme',
+  bugs: { url: 'https://github.com/IKatsuba/chord/issues' },
 };
 
 const missing = [];
@@ -117,6 +119,16 @@ await writeJson(join(main, 'package.json'), {
   name: `${SCOPE}/chord`,
   ...common,
   description: 'A full-screen terminal client for ACP coding agents.',
+  keywords: [
+    'acp',
+    'agent-client-protocol',
+    'claude-code',
+    'codex',
+    'gemini-cli',
+    'coding-agent',
+    'terminal',
+    'tui',
+  ],
   bin: { chord: 'bin/chord.js' },
   files: ['bin/'],
   optionalDependencies: Object.fromEntries(

@@ -6,9 +6,10 @@ working in this repository. It is binding.
 ## What this is
 
 chord is a full-screen terminal client for coding agents that speak the Agent
-Client Protocol. `README.md` is the pitch, `docs/FEATURES.md` is the map of what
-gets built and in which order, `docs/decisions.md` is why the stack is what it
-is. Read all three before the first change.
+Client Protocol. `README.md` is the pitch, `docs/guide.md` the whole of what it
+does, `docs/FEATURES.md` is the map of what gets built and in which order,
+`docs/decisions.md` is why the stack is what it is. Read the README,
+`FEATURES.md` and `decisions.md` before the first change.
 
 The repository is public-ready from the first commit: everything in it — code,
 comments, docs, commit messages, test names — is in English, and nothing in it
@@ -60,6 +61,7 @@ bun run npm                 # lay out npm/ from dist/
 scripts/release.sh --dry-run  # the owner's release, short of publishing
 bun run registry            # refetch the ACP Registry into src/registry.ts
 bun run mark                # rasterise scripts/mark.svg into src/ui/header/mark.ts
+bun run screenshots         # retake docs/images/ from chord on the fake agent
 ```
 
 ## Layout
@@ -1055,8 +1057,16 @@ module's tests are follows from where it is.
   chord in tmux on the fake's `soak` team for minutes, its memory sampled,
   snapshots by `SIGUSR2`, the first and the last compared through memlab
   (`docs/memory.md`).
-- `docs/` — features, decisions, `memory.md` (snapshots and the memory
-  check).
+  `screenshots.ts` takes the README's screenshots: chord from source in
+  tmux on the fake agent, in a home of its own where the settings name it
+  `claude` and `codex`, each shot's scenario from `CHORD_FAKE_SCENARIO`
+  under a person's prompt, the screen read back with `capture-pane -e`
+  and drawn in a terminal window in Chrome (puppeteer-core, ansi_up) into
+  `docs/images/`.
+- `docs/` — features, decisions, `guide.md` (everything chord does, flag
+  by flag and key by key, which the README links to), `memory.md`
+  (snapshots and the memory check), and `images/`, the README's
+  screenshots.
 
 ## How code is written
 

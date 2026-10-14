@@ -1,0 +1,38 @@
+name: Bug report
+description: Something chord does wrong.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what chord did instead.
+    validations:
+      required: true
+  - type: textarea
+    id: screen
+    attributes:
+      label: The screen
+      description: A copy of the screen as text, or a screenshot. In tmux, `tmux capture-pane -p` prints it.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: chord's version
+      description: '`chord --version`'
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Agent
+      description: The agent you ran, as `chord agents` names it, and its version if you know it.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: OS and terminal
+      placeholder: macOS 15, Ghostty 1.2
+    validations:
+      required: true

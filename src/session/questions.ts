@@ -119,7 +119,12 @@ export function text(value: unknown): string | undefined {
   return typeof value === 'string' && value !== '' ? value : undefined;
 }
 
-/** A property's titled options, and whether it takes several. */
+/**
+ * A property's titled options, and whether it takes several: a string's
+ * `oneOf` or an array's `anyOf`, each option a `const`. Anything else, such
+ * as a plain `enum` or no options at all, is none, as the readers take only
+ * the shapes the adapters send.
+ */
 export function choices(
   property: Property,
 ): { options: QuestionOption[]; multiSelect: boolean } | undefined {
@@ -127,10 +132,10 @@ export function choices(
   const list = multiSelect
     ? recordOf(property.items).anyOf
     : property.type === 'string'
-      ? (property.oneOf ?? [])
+      ? property.oneOf
       : undefined;
 
-  if (!Array.isArray(list)) {
+  if (!Array.isArray(list) || list.length === 0) {
     return undefined;
   }
 

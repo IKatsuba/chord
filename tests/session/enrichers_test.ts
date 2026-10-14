@@ -1002,3 +1002,64 @@ test('a form with a field no question has a place for gets no questions', () => 
     questionsIn({ ...DROID_QUESTIONS, message: 'Answer these.' }),
   ).toBeUndefined();
 });
+
+test('a second own answer for one question, or options as a plain enum, get no questions', () => {
+  const withFields = (
+    form: QuestionForm,
+    properties: Record<string, unknown>,
+  ): QuestionForm => ({
+    ...form,
+    requestedSchema: {
+      ...form.requestedSchema,
+      properties: { ...form.requestedSchema.properties, ...properties },
+    } as QuestionForm['requestedSchema'],
+  });
+
+  // codex: two notes for `next`.
+  expect(
+    questionsIn(
+      withFields(CODEX_QUESTIONS, {
+        next_note1: {
+          type: 'string',
+          _meta: { codex: { questionId: 'next', role: 'user_note' } },
+        },
+      }),
+    ),
+  ).toBeUndefined();
+  // dimcode: two custom answers for `deploy`.
+  expect(
+    questionsIn(
+      withFields(DIMCODE_QUESTIONS, {
+        __custom_1: {
+          type: 'string',
+          _meta: { lody: { elicitation: { customAnswerFor: 'deploy' } } },
+        },
+      }),
+    ),
+  ).toBeUndefined();
+  // codex and factory-droid: options as an `enum`, not `oneOf`.
+  expect(
+    questionsIn(
+      withFields(CODEX_QUESTIONS, {
+        size: {
+          type: 'string',
+          title: 'How big?',
+          enum: ['small', 'large'],
+          _meta: { codex: { isOther: false, isSecret: false } },
+        },
+      }),
+    ),
+  ).toBeUndefined();
+  expect(
+    questionsIn(
+      withFields(DROID_QUESTIONS, {
+        question_3: {
+          type: 'string',
+          title: 'Size',
+          description: 'How big?',
+          enum: ['option_0', 'option_1'],
+        },
+      }),
+    ),
+  ).toBeUndefined();
+});

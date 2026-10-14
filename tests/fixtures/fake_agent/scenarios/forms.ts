@@ -52,10 +52,99 @@ function ask(form: QuestionForm): Play {
     await elicit(turn, { ...form, sessionId: turn.sessionId });
 }
 
+/** Each of claude's questions by its field, with its text. */
+function claudeQuestions(form: QuestionForm): [string, string][] {
+  const properties = Object.entries(form.requestedSchema.properties ?? {});
+
+  return properties
+    .filter(([key]) => /^question_\d+$/.test(key))
+    .map(([key, property]) => [
+      key,
+      (property as { description?: string }).description ?? form.message,
+    ]);
+}
+
+/**
+ * Asks claude's questions as claude-agent-acp 0.87.0 does: AskUserQuestion's
+ * tool call first, titled `Asking for your input`, or by the question when
+ * there is one, its questions as its content; then the form, under that call;
+ * then the call's result, the tool's text for what was answered, or its
+ * failure when the person cancelled; then what came back, as `elicit` says.
+ */
+function askClaude(form: QuestionForm): Play {
+  return async (turn) => {
+    const toolCallId = turn.callId('ask');
+    const questions = claudeQuestions(form);
+    const [lone] = questions;
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title:
+        questions.length === 1 && lone !== undefined
+          ? lone[1]
+          : 'Asking for your input',
+      kind: 'other',
+      status: 'pending',
+      rawInput: {
+        questions: questions.map(([, text]) => ({ question: text })),
+      },
+      content: questions.map(([, text]) => ({
+        type: 'content',
+        content: { type: 'text', text },
+      })),
+    });
+
+    const answer = await turn.client.request('elicitation/create', {
+      ...form,
+      sessionId: turn.sessionId,
+      toolCallId,
+    });
+
+    if (turn.signal.aborted) {
+      return 'cancelled';
+    }
+
+    const content = new Map<string, unknown>(
+      Object.entries(answer.action === 'accept' ? (answer.content ?? {}) : {}),
+    );
+    const answered = questions.flatMap(([key, text]) => {
+      const value = content.get(key);
+
+      return value === undefined
+        ? []
+        : [
+            `"${text}"="${Array.isArray(value) ? value.join(', ') : String(value)}"`,
+          ];
+    });
+
+    const result =
+      answer.action === 'cancel'
+        ? 'Tool use aborted'
+        : `User has answered your questions: ${answered.join(', ')}. You can now continue with the user's answers in mind.`;
+
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: answer.action === 'cancel' ? 'failed' : 'completed',
+      content: [{ type: 'content', content: { type: 'text', text: result } }],
+    });
+
+    const echoed =
+      answer.action === 'accept' && answer.content
+        ? `  \n${JSON.stringify(answer.content)}`
+        : '';
+
+    await turn.say(`Elicitation answer: ${answer.action}${echoed}`);
+
+    return 'end_turn';
+  };
+}
+
 export const FORMS = {
   // Each adapter's question form, as `tests/fixtures/questions.ts` has it.
-  askclaude: ask(CLAUDE_QUESTIONS),
-  askclaudeone: ask(CLAUDE_QUESTION),
+  askclaude: askClaude(CLAUDE_QUESTIONS),
+  askclaudeone: askClaude(CLAUDE_QUESTION),
   askcodex: ask(CODEX_QUESTIONS),
   askdroid: ask(DROID_QUESTIONS),
   askopencode: ask(OPENCODE_QUESTIONS),

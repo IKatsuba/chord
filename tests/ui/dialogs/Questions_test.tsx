@@ -132,7 +132,10 @@ test('a form with no questions read in it keeps the field table', () =>
 test('a Note placeholder too long for 80 columns is cut at its end', () =>
   withWindow(
     async (window) => {
-      await send(window, 'askclaude');
+      // Typed rather than sent: at 80x24 the call and the box push the
+      // prompt's row off screen before it could be waited for.
+      await window.type('askclaude');
+      await window.press('\r');
       await inputAsked(window, 'fake asks you 2 questions');
 
       const note = window
@@ -170,7 +173,7 @@ test('an answered box leaves a row per question under the turn, saying who asked
       await window.press(TAB);
       await window.press(DOWN);
       await window.press('\r');
-      await window.shows('⎿  fake asked · Language, Checks · Skipped');
+      await window.shows('⎿  Language, Checks · Skipped');
 
       await send(window, 'askdroid');
       await inputAsked(window, 'fake asks you 3 questions');
@@ -300,6 +303,31 @@ test("an option's description longer than an 80x24 box is cut, and the hint stay
   expect(frame).toContain('Esc to cancel');
   expect(frame).toContain('╰');
 });
+
+test("claude's AskUserQuestion call draws the box's record in place of its own lines", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'askclaude');
+      await inputAsked(window, 'fake asks you 2 questions');
+      await window.press('1');
+      await window.press('\r');
+      await window.press('\r');
+      await window.shows('Elicitation answer: accept');
+
+      const lines = window.frame().split('\n');
+      const call = lines.findIndex((line) =>
+        line.includes('Asking(for your input)'),
+      );
+
+      expect(lines[call + 1]).toContain(
+        '⎿  Language  Deno (TypeScript) (Recommended)',
+      );
+      expect(lines[call + 2]).toContain('Checks    skipped');
+      expect(window.frame()).not.toContain('User has answered your questions');
+      expect(window.frame()).not.toContain('fake asked ·');
+    },
+    { rows: 40, columns: 120 },
+  ));
 
 describe('CHD-1 tester: question box lifecycle', () => {
   test('pasted digits do not pick, while notes and secret text reach the agent through their own fields', () =>

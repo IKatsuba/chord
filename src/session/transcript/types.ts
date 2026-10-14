@@ -42,6 +42,11 @@ export interface ToolCall {
    * to be that one; its headline and lines are read from this, not the title.
    */
   readonly chord?: ChordCall;
+  /**
+   * The questions the call asked were answered in chord's question box,
+   * whose record under the call stands in for its own lines while folded.
+   */
+  readonly asked?: true;
 }
 
 /** The tools chord's own MCP server offers. */

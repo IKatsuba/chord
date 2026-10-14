@@ -589,6 +589,11 @@ export type ElicitationWait = {
   readonly toolCallId?: string;
   /** The task agent that asks, when the session's own agent does not. */
   readonly subagentId?: string;
+  /**
+   * When chord got the request, epoch milliseconds, which the agent's own
+   * wait for an answer counts from.
+   */
+  readonly at?: number;
 } & (
   | {
       readonly mode: 'form';

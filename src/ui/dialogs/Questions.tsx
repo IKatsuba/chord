@@ -7,7 +7,7 @@ import type { ElicitationReply } from '../../session/elicitations.ts';
 import type { Question, Questions } from '../../session/questions.ts';
 import type { ElicitationWait } from '../../session/transcript/types.ts';
 import { paint, useColours } from '../app/context.ts';
-import { usePress } from '../app/input.ts';
+import { usePasted, usePress } from '../app/input.ts';
 import { borderOf } from '../pickers/Pickers.tsx';
 import { BLOCK } from '../prompt/Prompt.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
@@ -21,8 +21,10 @@ import {
   askHeading,
   askHint,
   askKey,
+  askPaste,
   type AskState,
   blockers,
+  capLines,
   clock,
   expiresIn,
   headerOf,
@@ -70,12 +72,15 @@ export function QuestionBox({
   onFill?: (state: AskState) => void;
   onAnswer: (response: ElicitationReply) => void;
 }) {
-  const [state, setState] = useState(() => filled ?? openAsk(questions, now()));
+  const [state, setState] = useState(() => filled ?? openAsk(questions));
   // Keys that land in one tick each see the one before.
   const latest = useRef(state);
   const colours = useColours();
   const inner = Math.max(width - 4, 10);
   const [time, setTime] = useState(now);
+  // A request drawn with no time of its own counts from when it was first
+  // drawn.
+  const [shownAt] = useState(now);
 
   useEffect(() => {
     if (questions.expiresInMs === undefined) {
@@ -86,6 +91,20 @@ export function QuestionBox({
 
     return () => clearInterval(timer);
   }, [questions.expiresInMs, now]);
+
+  usePasted(
+    (text) => {
+      const next = askPaste(questions, latest.current, text);
+
+      latest.current = next;
+
+      setState(next);
+      onFill?.(next);
+
+      return true;
+    },
+    { isActive: active },
+  );
 
   usePress(
     (input, key) => {
@@ -103,7 +122,7 @@ export function QuestionBox({
     { isActive: active },
   );
 
-  const left = expiresIn(questions, state, time);
+  const left = expiresIn(questions, wait.at ?? shownAt, time);
   const problems = blockers(questions, wait.schema, state);
   const heading = askHeading(agent, questions);
   const countdown =
@@ -305,12 +324,17 @@ function QuestionStep({
         ),
       });
 
+      // An option's title and the two rows that count what is cut off
+      // always fit beside its description.
       for (const part of option.description === undefined
         ? []
-        : wrapAnsi(option.description, Math.max(width - indent, 10), {
-            hard: true,
-            trim: false,
-          }).split('\n')) {
+        : capLines(
+            wrapAnsi(option.description, Math.max(width - indent, 10), {
+              hard: true,
+              trim: false,
+            }).split('\n'),
+            Math.max(limit, 6) - 3,
+          )) {
         lines.push({
           row: index,
           node: (

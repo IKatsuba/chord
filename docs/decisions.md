@@ -6368,3 +6368,29 @@ every 140 ms, then a rest (`status.ts`'s `spinnerMarks`). On the
 16-colour theme, whose mark has no gradient, they take its one tone and
 all but the lit one are dim. A running call's `⏺` blinks in the accent,
 now close to a finished one's green; the blink tells them apart.
+
+## 2026-10-15 — CHD-1: the question box's steps and window are chord's own (owner)
+
+The question box (layout A) draws a row of steps and one question's
+options with their descriptions, bounded to the rows the window leaves it.
+OpenTUI 0.6.0 has a widget for each, and each was tried before chord's own
+were kept:
+
+- **`<tab-select>` for the steps.** Every tab is one fixed `tabWidth`, so a
+  longer header is cut (`* ◉ Next st…`); it draws an underline row under
+  the selected tab; a tab's name is one plain string in one colour, so the
+  `*` in `warning`, the `◉` in `permission` and the `✔` in `success` cannot
+  sit in one chip; and the selection is its own background, moved by its
+  own ← and → while it is focused. Layout A's row cannot be drawn with it,
+  so the steps are one `<text>` of spans, and ← → and Tab are the box's.
+- **`<scrollbox>` for the options.** It bounds the box, and
+  `scrollChildIntoView` keeps the `❯` row in view without taking the keys.
+  But `maxHeight` does not shrink for short content, so the box would set
+  its height itself; `scrollChildIntoView` does nothing before the frame
+  is laid out; it scrolls by line, so the top edge can start inside an
+  option, its description without its title; and it has no count of what
+  is cut off, only its scrollbar. The owner chose whole rows and `↑ N more`
+  / `↓ N more` (`windowOf` in `dialogs/questions.ts`), with a description
+  too tall for the box cut to the room left and ended in `…`.
+- **The option list** is the pickers' numbered list on `<box>`, as "OpenTUI
+  part 2: The pickers" settled against `<select>`.

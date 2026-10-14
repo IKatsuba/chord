@@ -1,4 +1,11 @@
 import { expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
+import { enricherRelay } from '../../../src/session/enrich.ts';
+import { ENRICHERS } from '../../../src/session/enrichers.ts';
+import { type Questions, questionsOf } from '../../../src/session/questions.ts';
+import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
+import { CODEX_QUESTIONS } from '../../fixtures/questions.ts';
+import { draw } from '../harness.tsx';
 import {
   DOWN,
   ESC,
@@ -154,3 +161,115 @@ test("a box withdrawn as the agent's wait runs out reads Timed out", () =>
     await window.shows('⎿  fake asked · Timed out');
     await window.shows('Elicitation answer: timed out');
   }));
+
+test('a bracketed paste goes into the text row, a secret as dots', () =>
+  withWindow(async (window) => {
+    await send(window, 'askcodex');
+    await inputAsked(window, 'fake asks you 2 questions');
+    // On an option row it picks nothing.
+    await window.paste('2');
+    await window.press(TAB);
+    await window.paste('sk-1');
+    await window.shows('❯ ••••');
+    await window.press(TAB);
+    await window.shows('Token      ••••');
+    expect(window.frame()).toContain('Next step  no answer yet');
+  }));
+
+test('the countdown runs from when the request came, not from when the box is drawn, and goes on as it is drawn again', async () => {
+  const { questions } = askedCodex();
+  const box = (now: number) => (
+    <QuestionBox
+      wait={{
+        id: 'e1',
+        mode: 'form',
+        message: 'Codex needs your input to continue.',
+        schema: { type: 'object', properties: {} },
+        questions,
+        at: 1_000,
+      }}
+      questions={questions}
+      agent='codex'
+      windowRows={24}
+      width={80}
+      active={false}
+      now={() => now}
+      onAnswer={() => {}}
+    />
+  );
+
+  for (const [now, left] of [
+    [1_000 + 60_000, 'answers itself in 4:00'],
+    // Switched away and back two minutes later: drawn afresh.
+    [1_000 + 180_000, 'answers itself in 2:00'],
+  ] as const) {
+    const drawn = await draw(box(now), { columns: 80, rows: 24 });
+
+    expect(drawn.frame()).toContain(left);
+    await drawn.unmount();
+  }
+});
+
+/** codex's questions as the enrichers read them. */
+function askedCodex(): { questions: Questions } {
+  const [message] = enricherRelay(ENRICHERS).fromAgent({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'elicitation/create',
+    params: { ...CODEX_QUESTIONS, sessionId: 's' },
+  });
+
+  assert(message !== undefined && 'params' in message);
+
+  const questions = questionsOf(message.params as typeof CODEX_QUESTIONS);
+
+  assert(questions !== undefined);
+
+  return { questions };
+}
+
+test("an option's description longer than an 80x24 box is cut, and the hint stays on screen", async () => {
+  const long = Array.from({ length: 60 }, (_, index) => `word${index}`).join(
+    ' ',
+  );
+  const questions: Questions = {
+    agent: 'claude',
+    questions: [
+      {
+        id: 'q',
+        text: 'Which one?',
+        options: [
+          { value: 'a', title: 'First', description: long.repeat(4) },
+          { value: 'b', title: 'Second' },
+        ],
+        multiSelect: false,
+        required: false,
+      },
+    ],
+  };
+  const drawn = await draw(
+    <QuestionBox
+      wait={{
+        id: 'e1',
+        mode: 'form',
+        message: 'Which one?',
+        schema: { type: 'object', properties: {} },
+      }}
+      questions={questions}
+      agent='claude'
+      windowRows={24}
+      width={80}
+      active={false}
+      onAnswer={() => {}}
+    />,
+    { columns: 80, rows: 24 },
+  );
+  const frame = drawn.frame();
+
+  await drawn.unmount();
+  expect(frame).toContain('❯ 1. First');
+  expect(frame).toContain('…');
+  expect(frame).toContain('↓ 1 more');
+  expect(frame).toContain('Esc to cancel');
+  expect(frame).toContain('╰');
+});

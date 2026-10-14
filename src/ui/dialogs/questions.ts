@@ -26,8 +26,6 @@ export interface AskState {
   /** The row the `❯` is on within the step. */
   readonly row: number;
   readonly answers: Readonly<Record<string, QuestionAnswer>>;
-  /** When the box opened, for the time an agent waits before it answers. */
-  readonly openedAt: number;
 }
 
 /** One row a question step's `❯` moves through. */
@@ -119,8 +117,8 @@ export function blockers(
 }
 
 /** The box as it opens: the first question, on its picked or first row. */
-export function openAsk(questions: Questions, now: number): AskState {
-  return enter({ step: 0, row: 0, answers: {}, openedAt: now }, questions, 0);
+export function openAsk(questions: Questions): AskState {
+  return enter({ step: 0, row: 0, answers: {} }, questions, 0);
 }
 
 /** The row `❯` takes on entering a step: Send where it can go, else Skip. */
@@ -362,19 +360,6 @@ export function askKey(
       return go(state.step + 1);
     }
 
-    // Space ticks or unticks a multi-select's own option while nothing is
-    // typed in it, as on any other of its rows; then it is a space.
-    if (
-      input === ' ' &&
-      question.multiSelect &&
-      ownIsOption(question) &&
-      answer.own === ''
-    ) {
-      return {
-        state: setAnswer(state, question, { ownChosen: !answer.ownChosen }),
-      };
-    }
-
     const own = edited(answer.own, input, key);
 
     return {
@@ -447,12 +432,9 @@ export function askHint(
   const row = rowsOf(question)[state.row];
 
   if (row?.kind === 'text' || (row?.kind === 'own' && ownIsOption(question))) {
-    const toggle =
-      row.kind === 'own' && question.multiSelect ? 'Space to toggle · ' : '';
-
     return pickHint(
-      `Type your answer · ${toggle}Enter for the next · ←→ or Tab for the questions · Esc to cancel`,
-      `${toggle === '' ? 'Type your answer' : 'Type'} · ${toggle}Enter for the next · ←→ questions · Esc to cancel`,
+      'Type your answer · Enter for the next · ←→ or Tab for the questions · Esc to cancel',
+      'Type your answer · Enter for the next · ←→ questions · Esc to cancel',
     );
   }
 
@@ -496,12 +478,41 @@ export function askHeading(agent: string, questions: Questions): string {
 /** `answers itself in 4:32`: what is left of the agent's wait, if it has one. */
 export function expiresIn(
   questions: Questions,
-  state: AskState,
+  askedAt: number,
   now: number,
 ): number | undefined {
   return questions.expiresInMs === undefined
     ? undefined
-    : Math.max(state.openedAt + questions.expiresInMs - now, 0);
+    : Math.max(askedAt + questions.expiresInMs - now, 0);
+}
+
+/**
+ * A bracketed paste into the row the `❯` is on, when it takes text: as
+ * typed there, a line break a space; anywhere else it does nothing, so a
+ * pasted digit never picks an option.
+ */
+export function askPaste(
+  questions: Questions,
+  state: AskState,
+  text: string,
+): AskState {
+  const question = questions.questions[state.step];
+  const row = question === undefined ? undefined : rowsOf(question)[state.row];
+  const pasted = text.replaceAll(/\r\n|\r|\n/g, ' ');
+
+  if (question === undefined || pasted === '') {
+    return state;
+  }
+
+  const answer = answerTo(state, question);
+
+  if (row?.kind === 'text') {
+    return setAnswer(state, question, { text: answer.text + pasted });
+  }
+
+  return row?.kind === 'own'
+    ? typeOwn(state, question, answer.own + pasted)
+    : state;
 }
 
 export function clock(ms: number): string {
@@ -596,6 +607,15 @@ export function windowOf(
     }
   }
 
+  // A focused row taller than the room is cut at its end: the box never
+  // takes more than its rows.
+  while (
+    end - top + (top > 0 ? 1 : 0) + (end < count ? 1 : 0) > limit &&
+    end > top + 1
+  ) {
+    end--;
+  }
+
   const shown = new Set(rowOfLine.slice(top, end));
   const above = new Set(
     rowOfLine
@@ -607,6 +627,22 @@ export function windowOf(
   ).size;
 
   return { top, end, above, below };
+}
+
+/**
+ * At most `most` of an option's description lines, the last of them ending
+ * in `…` where more were cut, so its title and the rows around it keep their
+ * place in the box.
+ */
+export function capLines(lines: readonly string[], most: number): string[] {
+  if (lines.length <= most) {
+    return [...lines];
+  }
+
+  const kept = lines.slice(0, Math.max(most, 1));
+  const last = kept.at(-1) ?? '';
+
+  return [...kept.slice(0, -1), `${last.replace(/\s*\S?$/, '')}…`];
 }
 
 /** One question's row in an answered box's record. */

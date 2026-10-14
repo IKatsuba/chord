@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.D0ug
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+   ⎿  fake asked · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askdroid
+
+   ⎿  fake asked · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                           / for commands                       ctrl + d or ctrl + c twice to quit
+  \ + enter for a newline                 ↑ ↓ to pick a command                ctrl + x then a key for sessions
+  shift + enter for a newline             tab to complete a command            1–9 to pick a choice
+  ctrl + g to edit in $EDITOR             @ for files                          ↑ ↓ or j k to move between choices
+  ctrl + v to paste an image              ↑ ↓ to pick a file                   enter to pick the highlighted choice
+  ↑ ↓ for prompts, agents and monitors    tab enter to add a file              esc to reject a permission
+  x to close an agent or stop a monitor   esc to close commands or files       esc to close a picker
+  ctrl + r to search prompts              ! for bash mode                      ctrl + a to show all directories
+  tab enter to take a match               backspace to leave bash mode         tab ← → ↑ ↓ space to answer forms
+  esc to cancel a search                  esc to interrupt or stop a command   ctrl + c to stop the turn and its form
+  pgup pgdn or wheel to scroll            shift + tab to cycle modes           /vim for vim mode
+  shift + ↑ ↓ to scroll a line            ctrl + o for verbose output          ? for shortcuts
+  home end for the top and the bottom     ctrl + c to clear input              esc to close shortcuts

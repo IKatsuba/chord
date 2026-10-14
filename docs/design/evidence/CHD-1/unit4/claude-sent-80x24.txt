@@ -1,0 +1,24 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.VNmq
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+ ⏺ fake asked: Please answer the following questions.
+   ⎿  Answered · 3 fields
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno (TypeScript)
+   (Recommended)","question_1":["Types","Tests"],"question_1_custom":"also
+   fmt"}
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

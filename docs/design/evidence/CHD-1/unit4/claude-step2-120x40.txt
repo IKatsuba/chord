@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.1VWJ
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (16s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                                                            │
+│                                                                                                                      │
+│ ← ✔ Language   ◉ Checks   ○ Submit →                                                                                 │
+│                                                                                                                      │
+│ Which checks should run before a commit? (pick any)                                                                  │
+│                                                                                                                      │
+│ ❯ [ ] 1. Types                                                                                                       │
+│   [ ] 2. Lint                                                                                                        │
+│   [ ] 3. Tests                                                                                                       │
+│                                                                                                                      │
+│   Note  Type your own answer to add to your selection above (optional).                                              │
+│                                                                                                                      │
+│ Space to toggle · Enter for the next · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.VNmq
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+
+ ››› Waiting for your input… (16s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                    │
+│                                                                              │
+│ ← ✔ Language   ✔ Checks   ◉ Submit →                                         │
+│                                                                              │
+│ Language  Deno (TypeScript) (Recommended)                                    │
+│ Checks    Types, Tests · also fmt                                            │
+│                                                                              │
+│ ❯ 1. Send the answers                                                        │
+│   2. Skip these questions                                                    │
+│                                                                              │
+│ Enter to choose · ←→ questions · Esc to cancel                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

@@ -1,0 +1,40 @@
+ › askclaude
+
+ ⏺ fake asked: Please answer the following questions.
+   ⎿  Answered · 3 fields
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno (TypeScript) (Recommended)","question_1":["Types","Tests"],"question_1_custom":"also fmt"}
+
+ › askcodex
+
+ ⏺ fake asked: Codex needs your input to continue.
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askdroid
+
+ ⏺ fake asked: Droid needs your answers to continue.
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askdimcode
+
+ ››› Waiting for your input… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you a question                                                                                             │
+│                                                                                                                      │
+│ ← ◉ Deploy   ○ Submit →                                                                                              │
+│                                                                                                                      │
+│ Where should it deploy?                                                                                              │
+│                                                                                                                      │
+│   1. Staging                                                                                                         │
+│   2. Production                                                                                                      │
+│ ❯ 3. Your own answer: my own                                                                                         │
+│                                                                                                                      │
+│ Type your answer · Enter for the next · ←→ or Tab for the questions · Esc to cancel                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -161,8 +161,8 @@ with `chord --agent-command "my-agent --acp"`.
 ## Contributing
 
 Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) has
-how to run chord from source against its scripted test agent, the one check
-every change passes, and how the code is written. Found a security issue?
+how to run chord from source against its scripted test agent, choose checks
+for a change, and follow the code conventions. Found a security issue?
 See [SECURITY.md](SECURITY.md).
 
 The screenshots above are chord itself, run against that test agent and

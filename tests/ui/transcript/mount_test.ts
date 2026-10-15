@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { Entry, Subagent } from '../../../src/session/transcript/types.ts';
 import {
   backfilled,
@@ -168,4 +168,49 @@ test('a selection holds the mounted entries while the view follows, until it goe
   const cleared = { ...longer, selection: { kind: 'none' } };
 
   expect(heldMount(longer, cleared, false)).toBeUndefined();
+});
+
+describe('tester: selection mount retention', () => {
+  test('drag, release and pending copy retain the same entry as 600 arrive', () => {
+    let state: Mounting = mounting(replies(100), FOLLOWING);
+
+    for (const [index, kind] of ['dragging', 'shown', 'copying'].entries()) {
+      const next: Mounting = {
+        ...state,
+        transcript: { entries: replies(100 + index * 300) },
+        selection: { kind },
+      };
+
+      state = {
+        ...mounting(
+          next.transcript.entries,
+          next.scroll,
+          heldMount(state, next, false),
+        ),
+        selection: { kind },
+      };
+
+      expect(firstMounted(state)).toBe(60);
+    }
+
+    const cleared = { ...state, selection: { kind: 'none' } };
+    const released = mounting(
+      cleared.transcript.entries,
+      cleared.scroll,
+      heldMount(state, cleared, false),
+    );
+
+    expect(firstMounted(released)).toBe(660);
+  });
+
+  test('clearing the selection still retains a view scrolled back', () => {
+    const selected = {
+      ...mounting(replies(200), BACK, 80),
+      selection: { kind: 'shown' },
+    };
+
+    expect(
+      heldMount(selected, { ...selected, selection: { kind: 'none' } }, false),
+    ).toBe(80);
+  });
 });

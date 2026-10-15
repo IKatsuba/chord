@@ -1,5 +1,5 @@
 /** Messages between agents on screen: `←` for what came in, `→` for what went. */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
 import { draw } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
@@ -397,4 +397,70 @@ test('a long line of an event wraps after its own indent, with no space left at 
       width: 14,
     }).lines,
   ).toStrictEqual(['ERROR one two', 'three', '    at four', 'five six']);
+});
+
+describe('CHD-385 tester: outgoing recipients at 80 columns', () => {
+  const name = 'sssssssssssssss';
+
+  for (const expanded of [false, true]) {
+    test(`the long recipient and queued marker fit, expanded=${expanded}`, async () => {
+      const entry = childSent(name, 'completed', { queued: true });
+      const drawn = await draw(
+        <TranscriptEntry
+          entry={entry}
+          turn={{ status: 'idle' }}
+          agent='fake'
+          expanded={expanded}
+          width={80}
+        />,
+        { columns: 80, rows: 24 },
+      );
+
+      try {
+        const shown = stripAnsi(drawn.frame());
+
+        expect(shown).toContain('→ to @sssssssssssssss · queued');
+        expect(shown).not.toContain('Message(');
+        expect(shown).not.toContain('@@');
+        expect(shown.split('\n').every((row) => row.length <= 80)).toBe(true);
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+
+  test('the served recipient wins over the requested alias in every call state', async () => {
+    for (const status of ['pending', 'in_progress', 'completed', 'failed']) {
+      const shown = await frame(
+        sent(
+          {
+            input: { to: 'requested-alias', text: 'The answer is ready.' },
+            answer: { to: name },
+            ...(status === 'failed' ? { error: 'The recipient closed.' } : {}),
+          },
+          status,
+        ),
+      );
+
+      expect(shown).toContain('→ to @sssssssssssssss');
+      expect(shown).not.toContain('@requested-alias');
+      expect(shown).not.toContain('queued');
+    }
+  });
+
+  test('a refused call keeps to dim and the recipient coloured in both themes', async () => {
+    for (const theme of ['dark', 'light'] as const) {
+      const shown = await painted(
+        sent({ error: 'parser is closed; it takes no more messages' }),
+        theme,
+        false,
+      );
+
+      expect(shown).toContain(RED[theme]);
+      expect(shown).toContain('\x1b[2mto ');
+      expect(shown).toContain('\x1b[38;2;0;255;0m@parser');
+      expect(stripAnsi(shown)).toContain('→ to @parser');
+      expect(stripAnsi(shown)).toContain('parser is closed');
+    }
+  });
 });

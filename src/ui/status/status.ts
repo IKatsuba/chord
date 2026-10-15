@@ -35,6 +35,8 @@ export type StatusTone =
   | 'low'
   | 'bash'
   | 'failed'
+  /** A copy that failed, which keeps its selection for another try. */
+  | 'error'
   /** A session behind waits on a permission or form. */
   | 'waits'
   /** A session behind failed. */
@@ -94,6 +96,8 @@ export interface StatusFacts {
    * as a warning rather than dim like a hint or progress.
    */
   readonly failed?: boolean | undefined;
+  /** The notice is a failure in the error colour, as a copy's is. */
+  readonly error?: boolean | undefined;
   /**
    * A key hint, for when no mode is shown. It goes only once the right side
    * has shortened as far as it can short of dropping the model.
@@ -369,7 +373,7 @@ function waitingSides(facts: StatusFacts): LeftSide[] {
  */
 function unmarkedSides(facts: StatusFacts): LeftSide[] {
   if (facts.notice) {
-    const tone = facts.failed ? 'failed' : 'plain';
+    const tone = facts.error ? 'error' : facts.failed ? 'failed' : 'plain';
 
     return [{ parts: [{ text: facts.notice, tone }], cut: true }];
   }

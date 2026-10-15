@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { modelName } from '../../session/models.ts';
 import { runningSubagents } from '../../session/subagents.ts';
 import type { TurnState } from '../../session/transcript/types.ts';
+import { copyNote } from '../app/selection.ts';
 import type { AppState } from '../app/state.ts';
 import { SPINNER_STEPS, spinnerMarks, workingLine } from './status.ts';
 import { useColours, useHintKey } from '../app/context.ts';
@@ -111,6 +112,7 @@ function statusColour(tone: StatusTone, colours: Palette): string | undefined {
     case 'waits':
       return colours.warning;
     case 'ended':
+    case 'error':
       return colours.error;
   }
 }
@@ -121,7 +123,7 @@ export function StatusLine({
   effort,
   waits,
   armed,
-  selectHint,
+  copyOnSelect = true,
   draft,
   width,
   hint,
@@ -133,8 +135,8 @@ export function StatusLine({
   waits: WaitsNotice | undefined;
   /** What an armed close or quit waits on the second press for. */
   armed: string | undefined;
-  /** How to select text, said for a while after a drag. */
-  selectHint?: string | undefined;
+  /** Release copies a selection; without, the line says the copy key. */
+  copyOnSelect?: boolean | undefined;
   draft: string;
   /** Cells inside the line's padding. */
   width: number;
@@ -146,24 +148,29 @@ export function StatusLine({
   const failure = state.editorFailed ?? state.pasteFailed ?? state.keysFailed;
   const helpKey = hintKey(state.keys, 'help:toggle');
   const cycleKey = hintKey(state.keys, 'chat:cycleMode');
+  const copied = state.copied && copyNote(state.copied.result);
   const notice =
     armed ??
     (connection.status === 'closing'
       ? `Stopping ${agent}…`
       : (failure ??
-        selectHint ??
+        copied ??
         state.sessionsNote ??
         (connection.status === 'starting' ? `Starting ${agent}…` : undefined)));
   // A question waiting on a second press stands alone, so the sessions it
-  // names are never cut for the model beside them; so does the drag's hint,
+  // names are never cut for the model beside them; so does a copy's note,
   // which nothing may cut at 80 columns.
   const alone =
-    armed !== undefined || (selectHint !== undefined && notice === selectHint);
+    armed !== undefined || (copied !== undefined && notice === copied);
   const { left, right } = statusLine(
     {
       model: alone ? undefined : modelName(state.models),
       effort: alone ? undefined : effort,
       failed: notice !== undefined && notice === failure,
+      error:
+        copied !== undefined &&
+        notice === copied &&
+        state.copied?.result.kind === 'failed',
       mode: transcript.mode,
       modeName: state.modes.find((mode) => mode.id === transcript.mode)?.name,
       usage: alone ? undefined : transcript.usage,
@@ -173,6 +180,10 @@ export function StatusLine({
       // line says so, in place of Claude Code's pointer to its panel.
       hint:
         hint ??
+        // With no copy on release, the copy key takes the shortcuts' place.
+        (!copyOnSelect && state.selection?.kind === 'shown'
+          ? 'ctrl + c to copy'
+          : undefined) ??
         (transcript.turn.status === 'idle'
           ? stillRunning(runningSubagents(transcript))
           : undefined) ??

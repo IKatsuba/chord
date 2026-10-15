@@ -122,21 +122,6 @@ test('no key does anything once the window is closing', () => {
   expect(keyCommand('', escape, closing, '')).toStrictEqual(undefined);
 });
 
-test('a drag says how to select until its time is up, another starting it again', () => {
-  const once = after({ type: 'dragged' });
-  const twice = reduceApp(once, { type: 'dragged' });
-
-  expect(once.selectHint).toStrictEqual(1);
-  expect(twice.selectHint).toStrictEqual(2);
-  // The first drag's time running out leaves the second's hint.
-  expect(reduceApp(twice, { type: 'select_hint_gone', hint: 1 })).toStrictEqual(
-    twice,
-  );
-  expect(
-    reduceApp(twice, { type: 'select_hint_gone', hint: 2 }).selectHint,
-  ).toStrictEqual(undefined);
-});
-
 const MODELS = {
   available: [
     { id: 'fake-large', name: 'Fake Large' },
@@ -480,4 +465,78 @@ test('a session is left to resume once a prompt or a message went to it', () => 
       ]),
     ),
   ).toStrictEqual('s1');
+});
+
+test("a selection's life: a press holds the view, release shows it, a copy notes it (CHD-172)", () => {
+  const pressed = reduceApp(ready, { type: 'selection_started' });
+
+  expect(pressed.selection).toStrictEqual({
+    kind: 'dragging',
+    wasFollowing: true,
+    moved: false,
+  });
+  // A scroll that moves nothing, as on a transcript that fits, is no move.
+  expect(
+    reduceApp(pressed, { type: 'scrolled', step: 'line_up' }).selection,
+  ).toStrictEqual(pressed.selection);
+
+  const shown = reduceApp(pressed, { type: 'selection_released', text: 'hi' });
+
+  expect(shown.selection).toStrictEqual({ kind: 'shown' });
+  expect(shown.scroll.following).toBe(true);
+  expect(shown.scroll.held).toBeUndefined();
+
+  const copying = reduceApp(shown, { type: 'copy_started' });
+  const noted = reduceApp(copying, {
+    type: 'copy_noted',
+    result: { kind: 'copied', chars: 2 },
+    auto: true,
+  });
+
+  expect(noted.selection).toStrictEqual({ kind: 'shown' });
+  expect(noted.copied?.auto).toBe(true);
+
+  // Release's selection goes with its note.
+  const gone = reduceApp(noted, { type: 'copied_gone', id: noted.copied!.id });
+
+  expect(gone.selection).toBeUndefined();
+  expect(gone.copied).toBeUndefined();
+
+  // The copy key's goes as soon as it has copied; a failure's stays.
+  const keyed = reduceApp(reduceApp(shown, { type: 'copy_started' }), {
+    type: 'copy_noted',
+    result: { kind: 'copied', chars: 2 },
+    auto: false,
+  });
+
+  expect(keyed.selection).toBeUndefined();
+
+  const failed = reduceApp(reduceApp(shown, { type: 'copy_started' }), {
+    type: 'copy_noted',
+    result: { kind: 'failed', reason: 'no' },
+    auto: true,
+  });
+
+  expect(failed.selection).toStrictEqual({ kind: 'shown' });
+  // Cleared, the failure's note goes with it.
+  expect(reduceApp(failed, { type: 'selection_gone' }).copied).toBeUndefined();
+});
+
+test('a tab switched, ctrl+o and the editor clear a selection (CHD-172)', () => {
+  const shown = { ...ready, selection: { kind: 'shown' } } as const;
+
+  expect(
+    reduceApp(shown, { type: 'expanded_toggled' }).selection,
+  ).toBeUndefined();
+  expect(reduceApp(shown, { type: 'editor_opened' }).selection).toBeUndefined();
+
+  const two = reduceWindowed(
+    reduceWindowed(windowed(shown, 1), { type: 'session_opened', key: 2 }),
+    { type: 'selection_started' },
+  );
+
+  expect(two.window.selection?.kind).toBe('dragging');
+  expect(
+    reduceWindowed(two, { type: 'session_shown', key: 1 }).window.selection,
+  ).toBeUndefined();
 });

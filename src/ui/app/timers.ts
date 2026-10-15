@@ -1,13 +1,14 @@
 /**
- * What runs out on its own: an armed quit or close, the status line's hint
- * after a drag, and a chord's first keys waiting for the next.
+ * What runs out on its own: an armed quit or close, the status line's note
+ * of a copy, which takes release's selection with it, and a chord's first
+ * keys waiting for the next.
  */
 import { type Dispatch, useEffect } from 'react';
 import { CHORD_WAIT_MS } from '../shortcuts/bindings.ts';
 import {
   type AppState,
+  COPIED_NOTE_MS,
   QUIT_WINDOW_MS,
-  SELECT_HINT_MS,
   type WindowedAction,
 } from './state.ts';
 
@@ -32,12 +33,14 @@ export function useTimers(
     dispatch({ type: 'quit_disarmed' }),
   );
 
-  const hint = state.selectHint;
+  const copied = state.copied;
 
+  // A failure stays until a key clears the selection it would copy again.
   useLapse(
-    hint,
-    SELECT_HINT_MS,
-    () => hint !== undefined && dispatch({ type: 'select_hint_gone', hint }),
+    copied?.result.kind === 'failed' ? undefined : copied?.id,
+    COPIED_NOTE_MS,
+    () =>
+      copied !== undefined && dispatch({ type: 'copied_gone', id: copied.id }),
   );
   useLapse(state.closeArmed, QUIT_WINDOW_MS, () =>
     dispatch({ type: 'close_disarmed' }),

@@ -24,6 +24,7 @@ import {
   keybindingsNotice,
   readKeybindings,
 } from '../../../src/ui/shortcuts/bindings.ts';
+import type { Copy } from '../../../src/ui/app/selection.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { draw } from '../harness.tsx';
@@ -119,7 +120,9 @@ export async function withWindow(
     teams,
     readRecords,
     log,
-    selectHint,
+    copy = copiedStub,
+    copyOnSelect,
+    mouse = true,
   }: {
     rows?: number;
     columns?: number;
@@ -162,8 +165,14 @@ export async function withWindow(
      * the window on the alternate screen.
      */
     log?: string[];
-    /** What the status line says after a drag; none, so a drag says nothing. */
-    selectHint?: string;
+    /**
+     * The clipboard's write, never the system's: by default every copy is
+     * written, and nothing is kept.
+     */
+    copy?: Copy;
+    copyOnSelect?: boolean;
+    /** `"mouse": false`: the terminal is not asked for it, and nothing copies. */
+    mouse?: boolean;
   } = {},
 ) {
   const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
@@ -209,7 +218,8 @@ export async function withWindow(
       {...(startupOf ? { startupOf } : {})}
       {...(readRecords ? { readRecords } : {})}
       splash={splash}
-      selectHint={selectHint}
+      {...(mouse ? { copy } : {})}
+      {...(copyOnSelect === undefined ? {} : { copyOnSelect })}
       open={async (options) => {
         session = await openSession(options);
 
@@ -227,7 +237,7 @@ export async function withWindow(
       }}
     />,
     { rows, columns },
-    log === undefined ? undefined : { log },
+    log === undefined && mouse ? undefined : { log: log ?? [], mouse },
   );
 
   const frame = app.frame;
@@ -294,6 +304,13 @@ export async function send(window: Window, prompt: string): Promise<void> {
   await window.press('\r');
   await window.shows(`› ${prompt}`);
 }
+
+/** A clipboard that writes every copy, as the host's does, and keeps none. */
+export const copiedStub: Copy = () =>
+  Promise.resolve({
+    host: { status: 'written' },
+    terminal: { status: 'not-attempted', capability: 'unknown' },
+  });
 
 /** An SGR mouse report of the left button at the 0-based cell `x`, `y`. */
 export const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>

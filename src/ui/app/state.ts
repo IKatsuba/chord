@@ -78,7 +78,15 @@ import { mine, started } from '../prompt/queue.ts';
 import type { Search } from '../prompt/search.ts';
 import { vimKeyNames, vimTakes, vimTakesCharacter } from '../prompt/vim.ts';
 import { backfilled, heldMount } from '../transcript/mount.ts';
-import type { Selection } from './selection.ts';
+import {
+  copyable,
+  type CopyResult,
+  NO_SELECTION,
+  pressed,
+  released,
+  scrolled,
+  type Selection,
+} from './selection.ts';
 import {
   reduceScroll,
   type Scroll,
@@ -189,16 +197,21 @@ export interface WindowState
    */
   readonly sessionsNote?: string;
   /**
-   * A drag the terminal did not select for: the status line says how to
-   * select, for a few seconds. Counts the drags, so another one starts the
-   * time again.
-   */
-  readonly selectHint?: number;
-  /**
    * OpenTUI's selection as chord follows it (`selection.ts`): the window's,
    * whichever session is in front; none until a drag.
    */
   readonly selection?: Selection;
+  /** What the status line says of the last copy, for a while. */
+  readonly copied?: Copied;
+}
+
+/** A copy's note on the status line. */
+export interface Copied {
+  /** Counts the notes, so a newer one's time starts again. */
+  readonly id: number;
+  readonly result: CopyResult;
+  /** Release copied it, rather than the copy key. */
+  readonly auto: boolean;
 }
 
 /** The window as the session in front fills it: what is drawn, and keys read. */
@@ -253,10 +266,21 @@ export type AppAction =
    * older chunk mounts.
    */
   | { readonly type: 'backfilled'; readonly from: number }
-  /** The left button was let go on another cell than it went down on. */
-  | { readonly type: 'dragged' }
-  /** The drag `hint` counted has been said long enough. */
-  | { readonly type: 'select_hint_gone'; readonly hint: number };
+  /** A press on a selectable text started a drag (`selection.ts`). */
+  | { readonly type: 'selection_started' }
+  /** The drag ended with `text` selected, none for a click. */
+  | { readonly type: 'selection_released'; readonly text: string }
+  /** The selection went: OpenTUI's own clear seen, or one of chord's. */
+  | { readonly type: 'selection_gone' }
+  | { readonly type: 'copy_started' }
+  /** The latest copy came back. */
+  | {
+      readonly type: 'copy_noted';
+      readonly result: CopyResult;
+      readonly auto: boolean;
+    }
+  /** The note `id` has been said long enough. */
+  | { readonly type: 'copied_gone'; readonly id: number };
 
 export const initialAppState: AppState = {
   connection: { status: 'starting' },
@@ -290,8 +314,28 @@ export function resumableSession(
 /** How long the first ctrl+c waits for the second, as in Claude Code. */
 export const QUIT_WINDOW_MS = 2000;
 
-/** How long the status line says how to select text after a drag. */
-export const SELECT_HINT_MS = 3000;
+/** How long the status line says what a copy did (owner, CHD-172). */
+export const COPIED_NOTE_MS = 3000;
+
+/**
+ * The selection gone, and with it a failed copy's note, which says how to
+ * try again on a selection there is no more.
+ */
+function withoutSelection(state: AppState): AppState {
+  if (state.selection === undefined && state.copied?.result.kind !== 'failed') {
+    return state;
+  }
+
+  const { selection: _, ...rest } = state;
+
+  if (rest.copied?.result.kind === 'failed') {
+    const { copied: __, ...left } = rest;
+
+    return left;
+  }
+
+  return rest;
+}
 
 /**
  * `/team`'s `› /team` row stands for its picker while it is open, as the
@@ -310,7 +354,7 @@ function listedGone(before: AppState, after: AppState): AppState {
 }
 
 export function reduceApp(state: AppState, action: AppAction): AppState {
-  const after = reduceStep(state, action);
+  const after = moved(state, reduceStep(state, action), action);
   const mounted = heldMount(
     state,
     after,
@@ -328,6 +372,15 @@ export function reduceApp(state: AppState, action: AppAction): AppState {
   }
 
   return { ...after, mounted };
+}
+
+/** A scroll while the button is down: the view stays where it was left. */
+function moved(before: AppState, after: AppState, action: AppAction) {
+  return action.type === 'scrolled' &&
+    after.scroll !== before.scroll &&
+    after.selection?.kind === 'dragging'
+    ? { ...after, selection: scrolled(after.selection) }
+    : after;
 }
 
 function reduceStep(state: AppState, action: AppAction): AppState {
@@ -377,6 +430,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'keys_pending':
       return reduceShortcuts(state, action) as AppState;
     case 'expanded_toggled':
+      // Rewrapped, its cells would hold other characters.
+      return reduceView(withoutSelection(state), action) as AppState;
     case 'scroll_measured':
     case 'scrolled':
     case 'scroll_held':
@@ -629,8 +684,11 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'draft_edited':
       return withoutFailure(reducePrompt(state, action) as AppState);
     case 'editor_opened':
-      // The panel would cover the draft that comes back.
-      return withoutFailure(state.help ? { ...state, help: false } : state);
+      // The panel would cover the draft that comes back, and the terminal
+      // is handed over with nothing selected.
+      return withoutSelection(
+        withoutFailure(state.help ? { ...state, help: false } : state),
+      );
     case 'searched': {
       if (action.search === undefined) {
         const { search: _, ...rest } = state;
@@ -651,16 +709,65 @@ function reduceStep(state: AppState, action: AppAction): AppState {
 
       return mounted === undefined ? state : { ...state, mounted };
     }
-    case 'dragged':
-      return { ...state, selectHint: (state.selectHint ?? 0) + 1 };
-    case 'select_hint_gone': {
-      if (state.selectHint !== action.hint) {
+    case 'selection_started': {
+      // A new drag replaces a failed copy's selection, and its note.
+      const left = withoutSelection(state);
+
+      return reduceApp(
+        { ...left, selection: pressed(state.scroll.following) },
+        { type: 'scroll_held' },
+      );
+    }
+    case 'selection_released': {
+      const { selection, follow } = released(
+        state.selection ?? NO_SELECTION,
+        action.text,
+      );
+      // The view is the person's again, followed where the press found it so.
+      const free = reduceApp(state, { type: 'scroll_released' });
+      const left =
+        selection.kind === 'none'
+          ? withoutSelection(free)
+          : { ...free, selection };
+
+      return follow
+        ? reduceApp(left, { type: 'scrolled', step: 'bottom' })
+        : left;
+    }
+    case 'selection_gone':
+      return withoutSelection(state);
+    case 'copy_started':
+      return state.selection === undefined || !copyable(state.selection)
+        ? state
+        : { ...state, selection: { kind: 'copying' } };
+    case 'copy_noted': {
+      if (state.selection?.kind !== 'copying') {
         return state;
       }
 
-      const { selectHint: _, ...rest } = state;
+      const shown: AppState = { ...state, selection: { kind: 'shown' } };
+      const copied = {
+        id: (state.copied?.id ?? 0) + 1,
+        result: action.result,
+        auto: action.auto,
+      };
 
-      return rest;
+      // The copy key's selection has done its work; release's stays for
+      // the note's time, and a failure's for the copy key to try again.
+      return action.auto || action.result.kind === 'failed'
+        ? { ...shown, copied }
+        : { ...withoutSelection(state), copied };
+    }
+    case 'copied_gone': {
+      if (state.copied?.id !== action.id) {
+        return state;
+      }
+
+      const { copied, ...rest } = state;
+
+      return copied.auto && copied.result.kind !== 'failed'
+        ? withoutSelection(rest)
+        : rest;
     }
     default: {
       const transcript = reduceTranscript(state.transcript, action);
@@ -812,8 +919,9 @@ export function reduceWindowed(
 ): WindowedState {
   switch (action.type) {
     case 'session_opened': {
-      // It comes forward as a switch does, so a note of the sessions goes.
-      const { sessionsNote: _, ...window } = state.window;
+      // It comes forward as a switch does, so a note of the sessions goes,
+      // and the selection with what drew it.
+      const { sessionsNote: _, selection: __, ...window } = state.window;
 
       return {
         ...state,
@@ -832,7 +940,7 @@ export function reduceWindowed(
         return state;
       }
 
-      const { sessionsNote: _, ...window } = state.window;
+      const { sessionsNote: _, selection: __, ...window } = state.window;
 
       return { ...state, window, front: action.key };
     }

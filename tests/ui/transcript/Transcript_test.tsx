@@ -487,6 +487,7 @@ test('a drag selects what the agent wrote, and none of the furniture beside it (
           'Edited.',
         ].join('\n'),
       );
+
       // Painted in the `selection` role, Claude Code's slate even with no
       // colour; the harness writes escapes only while chalk has colour.
       const level = chalk.level;

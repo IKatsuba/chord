@@ -237,7 +237,7 @@ both.
 | `theme`                        | chord's colours, as `/theme` chooses them; user's file only | `/theme`     |
 | `editorMode`                   | `vim` for vim mode in the prompt, as `/vim` leaves it; user's file only | `/vim` |
 | `mouse`                        | `false` leaves the mouse to the terminal; user's file only |                     |
-| `copyOnSelect`                 | `false` keeps a drag's selection until ctrl+c copies it (on by default); user's file only |                     |
+| `copyOnSelect`                 | `false` leaves a drag's selection for ctrl+c to copy (on by default); user's file only |                     |
 | `mcpServers`                   | MCP servers handed to the agent, as `.mcp.json` writes them |             |
 
 When a turn ends, a permission is asked or the agent asks you to fill in a form
@@ -260,9 +260,9 @@ way.
 
 chord reads the mouse, so the wheel and the trackpad scroll the
 transcript, and a drag selects text. Release copies it, through the
-system clipboard, or OSC 52 over SSH. `"copyOnSelect": false` keeps the
-selection until ctrl+c copies it. To use your terminal's own selection
-instead, hold its modifier while you drag: option in iTerm2, fn in
+system clipboard, or OSC 52 over SSH; the highlight stays until a key or
+a click. `"copyOnSelect": false` leaves the copy to ctrl+c. To use your
+terminal's own selection instead, hold its modifier while you drag: option in iTerm2, fn in
 Terminal.app, shift in most others. Inside tmux, the wheel and drags
 reach chord only with `set -g mouse on`, and over SSH a copy reaches
 your clipboard only with `set -g allow-passthrough on`. `"mouse": false`,

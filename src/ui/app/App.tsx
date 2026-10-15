@@ -1122,7 +1122,6 @@ export function App({
                     // do; its rows show what waits.
                     waits={state.agentsFocus ? undefined : waits}
                     armed={armed}
-                    copyOnSelect={copyOnSelect}
                     draft={draft}
                     width={columns - 4}
                     {...(state.agentsFocus

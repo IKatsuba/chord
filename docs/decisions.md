@@ -6554,10 +6554,13 @@ renderer's methods to invent those events was ruled out.
   chord does not use ("OpenTUI part 4"), and doing it in chord would be
   writing around the library (owner, 2026-10-15). Plain scrolling keeps a
   selection.
-- **How long it lives.** With `copyOnSelect` on, the highlight goes with
-  the copied note, after 3 s. With it off, it stays until a key, a click,
-  a new drag, a tab switch, `/clear`, ctrl+o, a resize or a copy (owner,
-  2026-10-15).
+- **How long it lives.** A selection stays until a key, a click, a new
+  drag, a tab switch, `/clear`, ctrl+o, a resize or the copy key's copy,
+  with `copyOnSelect` on or off; on, the copied note goes after 3 s and
+  the highlight stays, as Claude Code's does, with `ctrl + c to copy` in
+  the note's place. The owner first chose that the highlight go with the
+  note, then revised it (2026-10-15): a selection that vanishes by itself
+  reads as a fault, and what it holds is bounded by the next key or click.
 - **A selection of nothing.** A selected text unmounted outside the held
   window, such as a plan step the agent drops, leaves OpenTUI holding a
   selection with no text: `hasSelection` stays true. chord would go on
@@ -6579,7 +6582,8 @@ renderer's methods to invent those events was ruled out.
   arrives meanwhile costs about six renderables and 50 KB of heap: 3,645
   renderables and 58 MB after 600 entries, against 257 and 34 MB on the
   tail. The owner chose (2026-10-15) no limit: a shown selection holds the
-  mounted entries until it is cleared, as scrolling back does, and with
-  `copyOnSelect` on the 3 s lifetime bounds it. A cap that clears the
-  selection past some number of entries, and no hold after the release,
-  were the other options.
+  mounted entries until it is cleared, as scrolling back does, with
+  `copyOnSelect` on as well since the owner's revision of 2026-10-15: the
+  next key or click clears it. A cap that clears the selection past some
+  number of entries, and no hold after the release, were the other
+  options.

@@ -1,7 +1,7 @@
 /**
  * What runs out on its own: an armed quit or close, the status line's note
- * of a copy, which takes release's selection with it, and a chord's first
- * keys waiting for the next.
+ * of a copy, which leaves the selection it copied standing, and a chord's
+ * first keys waiting for the next.
  */
 import { type Dispatch, useEffect } from 'react';
 import { CHORD_WAIT_MS } from '../shortcuts/bindings.ts';

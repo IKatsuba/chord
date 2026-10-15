@@ -101,6 +101,11 @@ export type Press = Required<Omit<KeyPress, 'base'>> & Pick<KeyPress, 'base'>;
 
 /** What a key press asks the window to do; text editing is the input's. */
 export type KeyCommand =
+  /**
+   * ctrl+c, or a key bound to `selection:copy`, while a selection is shown:
+   * copy it, and nothing else.
+   */
+  | 'copy_selection'
   | 'interrupt'
   /** Esc while the agent asks permission: reject it, the turn goes on. */
   | 'reject_permission'

@@ -260,6 +260,43 @@ test('scrolling to the bottom during a drag keeps the view held, not following (
   ).toBe(true);
 });
 
+test('a press at the bottom draws no rule until output goes below it (CHD-397)', () => {
+  const held = reduceScroll(
+    { ...initialScroll, content: 100, view: 20 },
+    { type: 'scroll_held' },
+  );
+
+  expect(rowsBelow(held)).toBeUndefined();
+  expect(indicator(held, 80, 'end')).toStrictEqual([]);
+
+  const short = reduceScroll(
+    { ...initialScroll, content: 10, view: 20 },
+    { type: 'scroll_held' },
+  );
+
+  expect(rowsBelow(short)).toBeUndefined();
+  expect(indicator(short, 80, 'end')).toStrictEqual([]);
+
+  // 30 rows arrive under the press: 30 below, and the row the rule covers.
+  const grown = reduceScroll(held, measured(130, 20));
+
+  expect(rowsBelow(grown)).toBe(31);
+  expect(rule(grown, 40)).toStartWith('── ↓ 31 lines below');
+});
+
+test('a view scrolled back to the bottom with no press keeps its rule (CHD-397)', () => {
+  const back: Scroll = {
+    ...initialScroll,
+    content: 100,
+    view: 20,
+    following: false,
+    top: 80,
+  };
+
+  expect(rowsBelow(back)).toBe(1);
+  expect(rule(back, 40)).toStartWith('── ↓ 1 line below');
+});
+
 describe('tester: held view resizing', () => {
   test('a drag remains held through narrow, zero-row and restored layouts', () => {
     let state = reduceScroll(tall, { type: 'scroll_held' });

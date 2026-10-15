@@ -743,3 +743,24 @@ test('chord agents marks each own CLI by PATH and lists a settings name', async 
   expect(line('mine') ?? '').toMatch(/settings +'.*fake_agent\/main\.ts'$/);
   expect(line('claude') ?? '').toMatch(/npx +npx -y /);
 });
+
+test('a form is declined, and stderr names each question it asked', async () => {
+  expect(await headless('askcodex')).toStrictEqual({
+    code: 0,
+    stdout: 'Elicitation answer: decline\n',
+    stderr:
+      'chord: fake asked: What would you like to focus on next? — skipped (no one to answer under -p)\n' +
+      'chord: fake asked: Paste the API token for the staging deploy. — skipped (no one to answer under -p)\n',
+  });
+  // A form chord reads no questions in is named by its message.
+  expect(await headless('form')).toStrictEqual({
+    code: 0,
+    stdout: 'Elicitation answer: decline\n',
+    stderr:
+      'chord: fake asked: Set up the deploy target — skipped (no one to answer under -p)\n',
+  });
+  // A link nobody can open is cancelled, as before.
+  expect((await headless('link')).stdout).toStrictEqual(
+    'Elicitation answer: cancel\n',
+  );
+});

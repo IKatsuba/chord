@@ -86,8 +86,8 @@ module's tests are follows from where it is.
     `-p`, reads piped stdin and hands over to `headless.ts` instead.
   - `headless.ts` — `chord -p`: the prompt with piped input joined to it,
     the reply as stdout carries it, the `--output-format json` object, the
-    stderr lines for a refused effort or mode and each permission refused or allowed,
-    and the exit code; no OpenTUI.
+    stderr lines for a refused effort or mode, each permission refused or allowed
+    and each question of a form skipped, and the exit code; no OpenTUI.
   - `agents.ts` — the agents chord starts by name: `registry.ts`'s,
     `claude` and `codex` for the registry's `claude-acp` and `codex-acp`,
     each started as `npx -y <package>@<version> <args…>` or
@@ -313,7 +313,8 @@ module's tests are follows from where it is.
   - `oneshot.ts` — `-p`'s one turn in a session of its own, on the
     starting effort and in the starting mode when the agent takes them,
     every permission refused or,
-    under `--dangerously-skip-permissions`, allowed, with the turn's tokens
+    under `--dangerously-skip-permissions`, allowed, every form declined and
+    every link cancelled, with the turn's tokens
     and the last cost the agent reported, or chord's estimate of it.
   - `starting.ts` — asks for a starting model, effort or mode and words a
     refusal,

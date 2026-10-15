@@ -6,6 +6,7 @@ import type {
 } from '@agentclientprotocol/sdk';
 import { type OneshotOutcome, runOneshot } from './session/oneshot.ts';
 import type { StartingValue } from './session/starting.ts';
+import type { ElicitationWait } from './session/transcript/types.ts';
 import type { TokenUsage } from './session/usage.ts';
 
 /** What `--output-format` takes. */
@@ -163,6 +164,26 @@ export function refusalLine(toolCall: ToolCallUpdate): string {
   }: -p cannot ask for permission.\n`;
 }
 
+/**
+ * What stderr says of a form nobody was there to fill in, a line per
+ * question chord read in it, or one for the form.
+ */
+export function skippedLines(
+  agent: string,
+  form: Extract<ElicitationWait, { mode: 'form' }>,
+): string {
+  const asked = form.questions?.questions.map(({ text }) => text) ?? [
+    form.message,
+  ];
+
+  return asked
+    .map(
+      (text) =>
+        `chord: ${agent} asked: ${text} — skipped (no one to answer under -p)\n`,
+    )
+    .join('');
+}
+
 /** What stderr says of a permission `--dangerously-skip-permissions` allowed. */
 export function allowedLine(toolCall: ToolCallUpdate): string {
   return `chord: allowed ${toolCall.title ?? toolCall.toolCallId}.\n`;
@@ -275,6 +296,7 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
       allowAll: options.allowAll === true,
       onRefused: (toolCall) => stderr(refusalLine(toolCall)),
       onAllowed: (toolCall) => stderr(allowedLine(toolCall)),
+      onDeclined: (form) => stderr(skippedLines(options.agent, form)),
     });
   } catch (error) {
     await stderr(

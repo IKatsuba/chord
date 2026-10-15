@@ -12,7 +12,7 @@ import {
   type StartingAsk,
   type StartingValue,
 } from './starting.ts';
-import type { TurnResult } from './transcript/types.ts';
+import type { ElicitationWait, TurnResult } from './transcript/types.ts';
 import type { TokenUsage } from './usage.ts';
 
 export interface OneshotOptions {
@@ -49,6 +49,10 @@ export interface OneshotOptions {
   onRefused(toolCall: ToolCallUpdate): void | Promise<void>;
   /** A permission the agent asked for, already allowed under `allowAll`. */
   onAllowed?(toolCall: ToolCallUpdate): void | Promise<void>;
+  /** A form the agent asked the person to fill in, already declined. */
+  onDeclined?(
+    form: Extract<ElicitationWait, { mode: 'form' }>,
+  ): void | Promise<void>;
 }
 
 /** How a one-shot turn ended, read after its agent has exited. */
@@ -67,7 +71,8 @@ export interface OneshotOutcome {
 /**
  * Plays one prompt in a session of its own, and ends the agent once the turn
  * is over. Nobody is there to answer a permission, so every one is refused,
- * or under `allowAll` allowed; a form or link is cancelled. Rejects only when
+ * or under `allowAll` allowed; a form is declined, which an agent reads as
+ * its questions skipped and goes on, and a link is cancelled. Rejects only when
  * the agent cannot be started; a turn that fails comes back as a failed
  * `result`.
  */
@@ -102,6 +107,17 @@ export async function runOneshot(
         await options.onAllowed?.(request.toolCall);
         request.resolve(allow.optionId);
       }
+    });
+
+    session.elicitations.subscribe(async (request) => {
+      if (request.wait.mode !== 'form') {
+        request.answer({ action: 'cancel' });
+
+        return;
+      }
+
+      await options.onDeclined?.(request.wait);
+      request.answer({ action: 'decline' });
     });
 
     const { effort, mode } = options;

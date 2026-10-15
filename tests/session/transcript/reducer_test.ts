@@ -97,7 +97,11 @@ describe("the transcript of each of the fake agent's scenarios", () => {
         text: 'Hello, world. This reply came in chunks.',
       },
     ]);
-    expect(seen[0]?.turn).toStrictEqual({
+    // An update the agent sent before this first play listened is handed
+    // to it ahead of the prompt, so the turn is read where the prompt is.
+    expect(
+      seen[actions.findIndex((action) => action.type === 'prompt')]?.turn,
+    ).toStrictEqual({
       status: 'working',
       turnId: actions[0]!.turnId,
       since: at(actions, 'prompt'),

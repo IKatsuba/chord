@@ -1269,6 +1269,45 @@ test('a clipboard image read while another tab comes forward goes into its own d
   );
 });
 
+test('a pasted image path read while another tab comes forward goes into its own draft (CHD-128)', () => {
+  const reader = heldReader();
+
+  return withWindow(
+    async (window) => {
+      await connected(window);
+      await window.paste("'/shots/a.png'");
+      await until('the read', () => reader.waiting.length === 1);
+      await leader(window, 'c');
+      await until('the second agent', () => window.pids.length === 2);
+      await ready(window);
+      await window.type('tab two draft');
+      await window.shows('› tab two draft');
+      reader.waiting[0]?.();
+      // The finish has no mark of its own on tab 2; a pause lets it land.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(promptRow(window)).toContain('› tab two draft');
+      expect(window.frame()).not.toContain('[Image #');
+      await leader(window, '1');
+      await window.shows('› [Image #1]');
+      expect(window.frame()).not.toContain('/shots/a.png');
+      await window.press('\r');
+      await window.shows(RECEIVED);
+      await leader(window, '2');
+      await window.shows('› tab two draft');
+      expect(window.frame()).not.toContain('Received an image');
+      expect(window.frame()).not.toContain('[Image #');
+      // A draft left in the box would take ctrl+d as a key, not a quit.
+      await window.press(CTRL_C);
+      await until(
+        'the draft to clear',
+        () => !window.frame().includes('tab two draft'),
+      );
+      await quitAll(window);
+    },
+    { columns: 120, rows: 40, readImage: reader.readImage },
+  );
+});
+
 test('a recalled prompt sends its image again', () =>
   withWindow(
     async (window) => {

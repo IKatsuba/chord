@@ -182,3 +182,19 @@ test('an anchor is the entry a row falls in, and how far in', () => {
   expect(topOf({ entry: 2, within: 2 }, relaid)).toStrictEqual(7);
   expect(topOf({ entry: 3, within: 0 }, relaid)).toStrictEqual(undefined);
 });
+
+test('a drag holds a following view where it is, and the bottom follows again (CHD-172)', () => {
+  const following: Scroll = { ...initialScroll, content: 100, view: 20 };
+  const held = reduceScroll(following, { type: 'scroll_held' });
+
+  expect(held).toStrictEqual({ ...following, following: false, top: 80 });
+  // New output measured under the drag leaves the view where it was.
+  expect(reduceScroll(held, measured(130, 20)).top).toBe(80);
+  expect(after(held, 'bottom').following).toBe(true);
+  // A view scrolled back, or one that fits, is left as it is.
+  expect(reduceScroll(held, { type: 'scroll_held' })).toBe(held);
+
+  const short: Scroll = { ...initialScroll, content: 10, view: 20 };
+
+  expect(reduceScroll(short, { type: 'scroll_held' })).toBe(short);
+});

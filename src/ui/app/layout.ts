@@ -100,6 +100,15 @@ export function useMeasured(
         front,
         first,
       } = latest.current;
+      // A drag's focus is a screen cell: once the text under it has moved,
+      // OpenTUI reads that cell again only on the next motion, so it is
+      // asked to now (CHD-172).
+      const reselect = () => {
+        if (latest.current.state.selection?.kind === 'dragging') {
+          renderer.requestSelectionUpdate();
+        }
+      };
+
       const whole = content.current.getLayout();
       const view =
         viewport.current.getLayout().height +
@@ -167,6 +176,8 @@ export function useMeasured(
       // already, where a prop React sets would wait for the next frame.
       if (top !== scroll.top) {
         content.current.translateY = -top;
+
+        reselect();
       }
 
       if (
@@ -198,10 +209,15 @@ export function useMeasured(
   const shift = state.scroll.following ? 0 : -state.scroll.top;
 
   useLayoutEffect(() => {
-    if (content.current) {
+    if (content.current && content.current.translateY !== shift) {
       content.current.translateY = shift;
+
+      // As above: a wheel step during a drag extends the selection.
+      if (latest.current.state.selection?.kind === 'dragging') {
+        renderer.requestSelectionUpdate();
+      }
     }
-  }, [shift]);
+  }, [shift, renderer]);
 
   const place = useCallback(
     (index: number) =>

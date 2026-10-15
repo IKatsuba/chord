@@ -40,7 +40,8 @@ export function reduceView(state: ViewState, action: ViewAction): ViewState {
     case 'expanded_toggled':
       return { ...state, expanded: !state.expanded };
     case 'scroll_measured':
-    case 'scrolled': {
+    case 'scrolled':
+    case 'scroll_held': {
       const scroll = reduceScroll(state.scroll, action);
 
       return scroll === state.scroll ? state : { ...state, scroll };

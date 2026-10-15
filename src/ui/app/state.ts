@@ -78,6 +78,7 @@ import { mine, started } from '../prompt/queue.ts';
 import type { Search } from '../prompt/search.ts';
 import { vimKeyNames, vimTakes, vimTakesCharacter } from '../prompt/vim.ts';
 import { backfilled, heldMount } from '../transcript/mount.ts';
+import type { Selection } from './selection.ts';
 import {
   reduceScroll,
   type Scroll,
@@ -193,6 +194,11 @@ export interface WindowState
    * time again.
    */
   readonly selectHint?: number;
+  /**
+   * OpenTUI's selection as chord follows it (`selection.ts`): the window's,
+   * whichever session is in front; none until a drag.
+   */
+  readonly selection?: Selection;
 }
 
 /** The window as the session in front fills it: what is drawn, and keys read. */
@@ -373,6 +379,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'expanded_toggled':
     case 'scroll_measured':
     case 'scrolled':
+    case 'scroll_held':
       return reduceView(state, action) as AppState;
     case 'form_filled':
     case 'questions_answered':

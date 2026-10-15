@@ -28,6 +28,17 @@ export interface Mounting {
    * does not unmount what is on screen; none while following.
    */
   readonly mounted?: number;
+  /**
+   * The window's selection: one dragged or shown holds the mounted entries
+   * as scrolling back does, so the text it covers is not unmounted under it
+   * when the view follows again (CHD-172).
+   */
+  readonly selection?: { readonly kind: string };
+}
+
+/** Whether a selection holds the mounted entries where they are. */
+function selecting(state: Mounting): boolean {
+  return state.selection !== undefined && state.selection.kind !== 'none';
 }
 
 /**
@@ -96,15 +107,16 @@ export function firstMounted(state: Mounting): number {
 
 /**
  * The entry held as the first mounted once `after` follows from `before`:
- * none while following, the very first for home, which goes to the top, and
- * the tail's first as the view leaves the bottom, held from then on.
+ * none while following with no selection, the very first for home, which
+ * goes to the top, and the tail's first as the view leaves the bottom or a
+ * selection starts, held from then on.
  */
 export function heldMount(
   before: Mounting,
   after: Mounting,
   home: boolean,
 ): number | undefined {
-  if (after.scroll.following) {
+  if (after.scroll.following && !selecting(after)) {
     return undefined;
   }
 

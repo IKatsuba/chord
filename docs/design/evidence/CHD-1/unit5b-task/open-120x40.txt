@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.hY0j
+ ▀▀     ? for shortcuts · /help
+
+ › taskask
+
+ ⏺ Asking(for your input)
+   ⎿  The parent's own call.
+
+ ⏺ Agent(Ask the person) · fake · fake-small
+   ⎿  Asking(for your input)
+
+ ⏺ It is asking; I will read its report when it lands.
+
+
+
+
+
+
+
+ ››› Waiting for your input… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                                                            │
+│                                                                                                                      │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                                                                 │
+│                                                                                                                      │
+│ Which language should helper scripts use?                                                                            │
+│                                                                                                                      │
+│ ❯ 1. Deno (TypeScript) (Recommended)                                                                                 │
+│      Runs from source with inline npm: and jsr: imports, no package manager                                          │
+│   2. Python                                                                                                          │
+│      Only where a library has no JS or TS equivalent                                                                 │
+│                                                                                                                      │
+│   Note  Type your own answer, or add a note to the option you chose above (optional).                                │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

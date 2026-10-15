@@ -1,0 +1,24 @@
+[38;2;255;255;255m [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mAgent[0m(Ask the person)[2m · fake · fake-small[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39maskclaude[38;2;255;255;255m
+
+      [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mAsking[0m(for your input)[38;2;255;255;255m
+        [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mUser has answered your questions... with the user's answers in mind.[0m[38;2;255;255;255m
+        [2m[39m⎿[0m[38;2;255;255;255m  [39mLanguage[38;2;255;255;255m  [39mDeno (TypeScript) (Recommended)[38;2;255;255;255m
+           [39mChecks[38;2;255;255;255m    [39mskipped[38;2;255;255;255m
+
+      [39m⏺[38;2;255;255;255m [39mElicitation answer: accept[38;2;255;255;255m
+        [39m{"question_0":"Deno (TypeScript) (Recommended)"}[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mDone (1 tool use · 4s)[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mIt is asking; I will read its report when it lands.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [1m[39mAsk the person[0;2m · fake · report[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mElicitation answer: accept[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m{"question_0":"Deno (TypeScript) (Recommended)"}[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from Ask the person · fake · report.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m

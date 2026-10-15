@@ -1,0 +1,24 @@
+ ⏺ Agent(Ask the person) · fake · fake-small
+   ⎿  askclaude
+
+      ⏺ Asking(for your input)
+        ⎿  User has answered your questions... with the user's answers in mind.
+        ⎿  Language  Deno (TypeScript) (Recommended)
+           Checks    skipped
+
+      ⏺ Elicitation answer: accept
+        {"question_0":"Deno (TypeScript) (Recommended)"}
+   ⎿  Done (1 tool use · 4s)
+
+ ⏺ It is asking; I will read its report when it lands.
+
+ ← Ask the person · fake · report
+   ⎿  Elicitation answer: accept
+      {"question_0":"Deno (TypeScript) (Recommended)"}
+
+ ⏺ Received the message from Ask the person · fake · report.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

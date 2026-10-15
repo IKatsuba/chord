@@ -40,7 +40,12 @@ export type ScrollAction =
       /** The row to keep at the top, once a relayout has moved it. */
       readonly top?: number;
     }
-  | { readonly type: 'scrolled'; readonly step: ScrollStep };
+  | { readonly type: 'scrolled'; readonly step: ScrollStep }
+  /**
+   * A drag began: a following view stays where it is, so new output goes
+   * below it rather than moving the text under the pointer (CHD-172).
+   */
+  | { readonly type: 'scroll_held' };
 
 /** The furthest the view goes down: its bottom on the transcript's. */
 function bottomTop({ content, view }: Scroll): number {
@@ -90,6 +95,10 @@ export function reduceScroll(scroll: Scroll, action: ScrollAction): Scroll {
     }
     case 'scrolled':
       return scrolled(scroll, action.step);
+    case 'scroll_held':
+      return scroll.following && !fits(scroll)
+        ? { ...scroll, following: false, top: bottomTop(scroll), news: false }
+        : scroll;
   }
 }
 

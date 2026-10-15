@@ -146,3 +146,26 @@ test('a backfill mounts the chunk above, once for the window it was asked from',
   expect(backfilled(mounting(entries, BACK, 0), 0)).toBeUndefined();
   expect(backfilled(mounting(entries, FOLLOWING), 160)).toBeUndefined();
 });
+
+test('a selection holds the mounted entries while the view follows, until it goes (CHD-172)', () => {
+  const entries = replies(200);
+  const shown = { kind: 'shown' } as const;
+  const before = mounting(entries, FOLLOWING);
+  const held = heldMount(before, { ...before, selection: shown }, false);
+
+  expect(held).toBe(160);
+
+  // A hundred and fifty more arrive under it: nothing above unmounts.
+  const longer = {
+    ...mounting([...entries, ...replies(150)], FOLLOWING, held),
+    selection: shown,
+  };
+
+  expect(heldMount(longer, longer, false)).toBe(160);
+  expect(firstMounted(longer)).toBe(160);
+
+  // Cleared, the tail alone is mounted again.
+  const cleared = { ...longer, selection: { kind: 'none' } };
+
+  expect(heldMount(longer, cleared, false)).toBeUndefined();
+});

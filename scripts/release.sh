@@ -1,7 +1,8 @@
 #!/bin/bash
 # The release, on the owner's Mac, not in CI: build every binary, sign the
 # macOS ones and the native libraries they embed, self-test, notarise, pack,
-# verify the installed copies, and publish to npm.
+# verify the installed copies, and publish to npm: the platform packages,
+# then, once npm answers for each, the main one.
 #   scripts/release.sh            everything, publishing last
 #   scripts/release.sh --dry-run  everything up to `npm publish`, then stop;
 #                                 it still submits to Apple for notarisation
@@ -23,16 +24,28 @@ esac
 cd "$root"
 out="$root/dist/release"
 
+publish_one() {
+	if published "$1" "$version"; then
+		printf 'already published: @chorded/%s@%s\n' "$1" "$version"
+		return
+	fi
+	tarball="$out/tgz/chorded-$1-$version.tgz"
+	[ -f "$tarball" ] || die "no $tarball to publish; nothing of this run is left to resume from"
+	npm publish --access public "$tarball" || die "npm publish of $tarball failed"
+}
+
+# The main package only once every platform package answers at the version:
+# published while one is still in npm's validation, it installs with no
+# binary, and `chord upgrade` prunes the old one on the way.
 publish_missing() {
-	for name in "${PACKAGES[@]}"; do
-		if published "$name" "$version"; then
-			printf 'already published: @chorded/%s@%s\n' "$name" "$version"
-			continue
-		fi
-		tarball="$out/tgz/chorded-$name-$version.tgz"
-		[ -f "$tarball" ] || die "no $tarball to publish; nothing of this run is left to resume from"
-		npm publish --access public "$tarball" || die "npm publish of $tarball failed"
+	for name in "${PLATFORMS[@]}"; do
+		publish_one "$name"
 	done
+	for name in "${PLATFORMS[@]}"; do
+		wait_published "$name" "$version" ||
+			die "@chorded/$name@$version did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun scripts/release.sh once \`npm view @chorded/$name@$version version\` answers, and it resumes from there"
+	done
+	publish_one chord
 }
 
 # 1–3. A clean tree, the version not yet published (or a run stopped between
@@ -95,6 +108,9 @@ if $dry_run; then
 	exit 0
 fi
 
-# 11. The platform packages, then the main one. Never unpublish.
+# 11. The platform packages, a bounded wait until npm answers for each at
+#     the version, then the main one, whose exact-version
+#     optionalDependencies must resolve. A timeout stops before the main
+#     one. Never unpublish.
 publish_missing
 printf '%s\n' "$version"

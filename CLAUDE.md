@@ -1062,7 +1062,10 @@ module's tests are follows from where it is.
   `natives.sh` (the macOS native libraries signed by the team before the
   build), `sign.sh` (`macos/chord.entitlements`), `selftest.sh` (a
   binary on the fake agent: `--version`, `-p`, and the window in tmux
-  with ctrl+v), `notarise.sh` and `packages.sh`. `targets.ts` is the one list of
+  with ctrl+v), `notarise.sh` and `packages.sh`; it publishes the platform
+  packages, waits until npm answers for each, then `@chorded/chord`, and
+  `tests/scripts/release_test.ts` runs that on its resume path with npm
+  faked. `targets.ts` is the one list of
   release platforms: macOS and Linux, arm64 and x64 (Windows is not a target
   for now). `registry.ts` fetches the ACP Registry and writes
   `src/registry.ts`, refusing a package at anything but an exact version

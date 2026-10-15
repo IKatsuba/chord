@@ -9,7 +9,8 @@ die() {
 
 # The packages, in the order they are published: the platform packages,
 # then the main one, whose exact-version optionalDependencies must resolve.
-PACKAGES=(chord-darwin-arm64 chord-darwin-x64 chord-linux-arm64 chord-linux-x64 chord)
+PLATFORMS=(chord-darwin-arm64 chord-darwin-x64 chord-linux-arm64 chord-linux-x64)
+PACKAGES=("${PLATFORMS[@]}" chord)
 
 # The one Developer ID Application identity of the team, found by team in the
 # login keychain so a renewed certificate is picked up; none or several stop.
@@ -40,4 +41,20 @@ published() {
 	rm -f "$errors"
 	case "$diagnostics" in *"code E404"*) return 1 ;; esac
 	die "npm view @chorded/$1@$2 failed: $diagnostics"
+}
+
+# Waits until @chorded/NAME answers npm view at VERSION: npm can hold a
+# package it accepted in validation for minutes, and a main package published
+# in that window installs with no binary, as board's 1.0.0 did. 60 attempts
+# 15 seconds apart, a guess at how long validation takes; each miss is said on
+# stderr, and it returns 1 when they run out. A registry failure other than a
+# 404 still stops, as in published.
+wait_published() {
+	local attempt
+	for ((attempt = 1; attempt <= 60; attempt++)); do
+		published "$1" "$2" && return 0
+		printf 'release: waiting for @chorded/%s@%s to answer npm view (%d/60)\n' "$1" "$2" "$attempt" >&2
+		[ "$attempt" = 60 ] || sleep 15
+	done
+	return 1
 }

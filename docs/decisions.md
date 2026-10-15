@@ -6356,6 +6356,21 @@ signed: there is nothing to sign them with. CI keeps running the checks.
   Mac's view of Apple's ticket service, which said no for about 8 minutes
   after 0.54.0's binaries were accepted and their tickets were online, and
   stopped the dry run.
+- **`@chorded/chord` is published only once every platform package answers
+  `npm view` at the version** (CHD-388, board's fix for its 1.0.0). npm can
+  hold a package it accepted in validation for minutes, and treats a
+  missing exact-version optional dependency as no error: a main package
+  published in that window installs with no binary, and `chord upgrade`,
+  which prunes the old platform package, leaves a `chord` that cannot run
+  and so cannot upgrade itself. The fix is in the release, not in `chord
+  upgrade`: after the four platform packages, on a fresh run and a resumed
+  one, each is asked up to 60 times 15 s apart, each miss said on stderr; a
+  timeout stops before the main package and names the one that did not
+  answer, and a rerun resumes from there. The bound is a guess: how long
+  validation takes is not known. Any npm failure other than a 404 still
+  stops at once. `tests/scripts/release_test.ts` runs the resume path with
+  npm, sleep and plutil faked on PATH; the fresh path builds everything, so
+  it shares the same `publish_missing` untested.
 
 ## 2026-10-14 — The working line in Chorded's colours (owner)
 

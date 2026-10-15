@@ -28,8 +28,7 @@ version=$(plutil -extract version raw package.json) ||
 	die "package.json has no version"
 published chord "$version" && die "@chorded/chord@$version is on npm already"
 mode=fresh
-for name in "${PACKAGES[@]}"; do
-	[ "$name" = chord ] && continue
+for name in "${PLATFORMS[@]}"; do
 	if published "$name" "$version"; then
 		$dry_run && die "--dry-run does not resume a stopped publish: @chorded/$name@$version is published"
 		mode=resume

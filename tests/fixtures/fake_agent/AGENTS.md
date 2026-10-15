@@ -119,8 +119,9 @@
   change to it; `--no-modes` or `CHORD_FAKE_NO_MODES=1` offers no modes and
   refuses `session/set_mode`. `--hang <step>` or `CHORD_FAKE_HANG=<step>`
   wedges it: `start` never answers `initialize`, `config` never answers a
-  config, mode or model change, `turn` never ends a prompt, cancelled or not; it then
-  ignores SIGTERM and outlives its stdin, so only SIGKILL ends it. It
+  config, mode or model change, `turn` never ends a prompt, cancelled or not.
+  It ignores SIGTERM and stdin closing, but exits on SIGKILL or parent loss.
+  It also exits when started under PID 1, even if that parent is alive. It
   switches its model, mode and effort through
   `session/set_config_option` and answers `session/set_mode` as Claude's
   adapter does, or, with `--silent-set-mode` or

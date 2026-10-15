@@ -106,9 +106,11 @@ async function mouseModes(mouse: boolean): Promise<string[]> {
 
   await drawn.unmount();
 
-  return [...log.join('').matchAll(/\x1b\[\?(100[0-6])h/g)].map(
-    (match) => match[1]!,
-  );
+  return log
+    .join('')
+    .split('\x1b[?')
+    .slice(1)
+    .flatMap((mode) => /^(100[0-6])h/.exec(mode)?.[1] ?? []);
 }
 
 test('the mouse is asked for with 1000, 1002 and 1006, no hover motion (CHD-172)', async () => {

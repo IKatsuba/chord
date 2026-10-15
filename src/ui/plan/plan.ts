@@ -20,6 +20,24 @@ export type PlanRow =
   /** Entries past the last row that fits. */
   | { readonly kind: 'more'; readonly count: number };
 
+/**
+ * React's key for each of `contents`, a plan's steps: the step's own words,
+ * counted where two say the same, as ACP's plan entries carry no id. A key
+ * by place would hand a removed step's renderable, and the selection on it,
+ * to the step drawn after it (CHD-172).
+ */
+export function entryKeys(contents: readonly string[]): string[] {
+  const seen = new Map<string, number>();
+
+  return contents.map((content) => {
+    const count = seen.get(content) ?? 0;
+
+    seen.set(content, count + 1);
+
+    return `${count} ${content}`;
+  });
+}
+
 /** The line a plan hangs from between turns, when no spinner is there. */
 export function planSummary(plan: readonly PlanEntry[]): string {
   const done = plan.filter((entry) => entry.status === 'completed').length;

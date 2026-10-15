@@ -58,6 +58,29 @@ export const PLANS = {
     return 'end_turn';
   },
 
+  // A plan whose first step goes mid-turn, a second after it is drawn, so
+  // a selection on that step can be seen not to pass to the next.
+  async planshrink(turn) {
+    const entry = (content: string, index: number): acp.PlanEntry => ({
+      content,
+      priority: PRIORITIES[index] ?? 'low',
+      status: index === 0 ? 'in_progress' : 'pending',
+    });
+    const steps = ['Read the code', 'Write the change', 'Run the tests'];
+
+    await turn.send({ sessionUpdate: 'plan', entries: steps.map(entry) });
+    await turn.say('Planned.');
+    await pause(turn.signal, STEP_MS * 200);
+    await turn.send({
+      sessionUpdate: 'plan',
+      entries: steps.slice(1).map(entry),
+    });
+    await turn.say(' Dropped a step.');
+    await pause(turn.signal, STEP_MS * 200);
+
+    return 'end_turn';
+  },
+
   // Codex's proposed plan: whole markdown each time, rewritten from the
   // start, then a file plan beside it, then the markdown one withdrawn.
   async proposal(turn) {

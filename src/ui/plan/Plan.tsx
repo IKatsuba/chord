@@ -4,7 +4,13 @@ import { useSelectable } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, FILL, TEXT } from '../theme/text.ts';
 import { Gutter } from '../transcript/tools/Tool.tsx';
-import { PLAN_MARKS, planRows, planSummary } from './plan.ts';
+import {
+  entryKeys,
+  PLAN_MARKS,
+  type PlanRow,
+  planRows,
+  planSummary,
+} from './plan.ts';
 
 /**
  * The agent's plan above the prompt: `☒` done and struck through, `◐` under
@@ -21,6 +27,9 @@ export function Plan({
   limit: number;
   running: boolean;
 }) {
+  const rows = planRows(plan, limit);
+  const keys = rowKeys(rows);
+
   return (
     <box paddingLeft={2} {...(running ? {} : { marginTop: 1 })} flexShrink={0}>
       {!running && (
@@ -28,8 +37,8 @@ export function Plan({
           {planSummary(plan)}
         </text>
       )}
-      {planRows(plan, limit).map((row, index) => (
-        <box key={index} flexDirection='row'>
+      {rows.map((row, index) => (
+        <box key={keys[index]!} flexDirection='row'>
           <Gutter width={3} dimColor>
             {index === 0 ? '⎿' : ' '}
           </Gutter>
@@ -48,8 +57,21 @@ export function Plan({
   );
 }
 
+/** Each row's key: an entry's by its words, a fold's by what it folds. */
+function rowKeys(rows: readonly PlanRow[]): string[] {
+  const keys = entryKeys(
+    rows.map((row) => (row.kind === 'entry' ? row.entry.content : '')),
+  );
+
+  return rows.map((row, index) =>
+    row.kind === 'entry' ? keys[index]! : row.kind,
+  );
+}
+
 /** A finished plan in the transcript, whole and dim: a record, not news. */
 export function PlanRecord({ entries }: { entries: readonly PlanEntry[] }) {
+  const keys = entryKeys(entries.map(({ content }) => content));
+
   return (
     <box marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
@@ -59,7 +81,7 @@ export function PlanRecord({ entries }: { entries: readonly PlanEntry[] }) {
         </text>
       </box>
       {entries.map((entry, index) => (
-        <box key={index} flexDirection='row' paddingLeft={2}>
+        <box key={keys[index]!} flexDirection='row' paddingLeft={2}>
           <Gutter width={3} dimColor>
             {index === 0 ? '⎿' : ' '}
           </Gutter>

@@ -233,6 +233,7 @@ const SCENARIOS = [
   'graphemes',
   'permission',
   'plan',
+  'planshrink',
   'proposal',
   'shell',
   'shellcut',

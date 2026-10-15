@@ -897,7 +897,7 @@ module's tests are follows from where it is.
   table spread from a module per family under `scenarios/`: `text.ts`
   (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `unordered`, `edit`, `rewrite`),
-  `permissions.ts` (`permission`, `twins`, `mcpask`), `plans.ts` (`plan`,
+  `permissions.ts` (`permission`, `twins`, `mcpask`), `plans.ts` (`plan`, `planshrink`,
   `proposal`), `forms.ts` (`form`, `link`), `shell.ts` (`shell`,
   `shellcut`, `bash`), `compaction.ts` (`compact`, `codexcompact`,
   `compactfail`), `modes.ts` (`status`, `exitplan`, `mode`, `lock`),

@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { PlanEntry } from '@agentclientprotocol/sdk';
 import {
+  entryKeys,
   planRowLimit,
   planRows,
   planSummary,
@@ -80,4 +81,10 @@ test('a tall plan with nothing finished folds its end', () => {
   expect(
     rows(plan('in_progress', 'pending', 'pending', 'pending'), 3),
   ).toStrictEqual(['Step 1', 'Step 2', '+2 more']);
+});
+
+test('a plan step is keyed by its words, a repeated one counted (CHD-172)', () => {
+  expect(entryKeys(['a', 'b', 'a'])).toStrictEqual(['0 a', '0 b', '1 a']);
+  // A step removed leaves the others their keys.
+  expect(entryKeys(['b', 'a'])).toStrictEqual(['0 b', '0 a']);
 });

@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
-import { ESC, send, until, withWindow } from '../app/render.tsx';
+import stripAnsi from 'strip-ansi';
+import { ESC, left, send, until, withWindow } from '../app/render.tsx';
 
 test('the plan is a list above the prompt while the turn runs', () =>
   withWindow(async (window) => {
@@ -80,3 +81,25 @@ test('an interrupted plan hangs from a line of its own', () =>
     );
     expect(at('☐ Run the tests') < at('╭'), 'above the prompt').toBeTruthy();
   }));
+
+test('a step removed under a selection does not hand it to the step drawn in its place (CHD-172)', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'planshrink');
+      await window.shows('◐ Read the code');
+
+      const rows = stripAnsi(window.frame()).split('\n');
+      const y = rows.findIndex((row) => row.includes('◐ Read the code'));
+      const x = rows[y]!.indexOf('Read the code');
+
+      await window.press(left(x, y, 'down'));
+      await window.press(left(x + 'Read the code'.length - 1, y, 'drag'));
+      await window.press(left(x + 'Read the code'.length - 1, y, 'up'));
+      expect(window.selected()).toStrictEqual('Read the code');
+
+      await window.shows('Dropped a step.');
+      // Its text has gone; none of the step now first is selected.
+      expect(window.selected()).not.toContain('Write');
+    },
+    { copyOnSelect: false },
+  ));

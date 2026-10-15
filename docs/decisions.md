@@ -6446,7 +6446,9 @@ the same (`docs/design/CHD-172.md`).
   the textarea's shift+←/→ selection is off (owner, 2026-10-15). Content
   changing inside a selected text keeps the cells and changes what they
   hold. chord neither re-anchors nor clears on it, and a copy copies what
-  is highlighted at the moment of the copy.
+  is highlighted at the moment of the copy, except where nothing at all is
+  left selected, which clears it (the lifecycle entry below, owner,
+  2026-10-15).
 
 ## 2026-10-15 — CHD-172: the mouse modes are 1000, 1002 and 1006
 
@@ -6556,6 +6558,21 @@ renderer's methods to invent those events was ruled out.
   the copied note, after 3 s. With it off, it stays until a key, a click,
   a new drag, a tab switch, `/clear`, ctrl+o, a resize or a copy (owner,
   2026-10-15).
+- **A selection of nothing.** A selected text unmounted outside the held
+  window, such as a plan step the agent drops, leaves OpenTUI holding a
+  selection with no text: `hasSelection` stays true. chord would go on
+  saying `ctrl + c to copy`, and ctrl+c would copy nothing instead of
+  stopping the turn. The owner chose (2026-10-15) to clear it: while a
+  selection is shown, the `frame` watcher also reads
+  `getSelection()?.getSelectedText()`, and when it is empty calls
+  `clearSelection()` and goes to none. Leaving it, or only letting ctrl+c
+  fall through, were the other options.
+- **The draft's cursor after a drag.** A drag over the draft leaves the
+  textarea's cursor where OpenTUI puts it, on the drag's last cell, so a
+  key typed after a left-to-right drag goes in before the last highlighted
+  character. chord takes that as it is (owner, 2026-10-15); moving the
+  cursor itself would write around the library. Asked upstream in
+  [opentui#1686](https://github.com/anomalyco/opentui/issues/1686).
 - **What it holds.** While a selection is shown, the transcript's mounted
   window is held, as CHD-327 D holds it while scrolled back, so a
   selection is not emptied by its entry leaving the tail. Each entry that

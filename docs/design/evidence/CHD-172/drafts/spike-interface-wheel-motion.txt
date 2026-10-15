@@ -1,0 +1,22 @@
+# then one motion report to (30,13): the selection is recomputed and collapses to one row; released there
+# capture-pane -e, rows 9-15 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+   [2m[39m161.[0m Line 161 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m162.[0m Line 162 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m163.[0m Line 163 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m164.[0m Line 164 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m1[48;5;66m65.[0m[48;5;66m Line 165 of 200, strea[49mmed one at a time.[38;2;255;255;255m
+   [2m[39m166.[0m Line 166 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m167.[0m Line 167 of 200, streamed one at a time.[38;2;255;255;255m
+
+# rendered
+ 9|   161. Line 161 of 200, streamed one at a time.
+10|   162. Line 162 of 200, streamed one at a time.
+11|   163. Line 163 of 200, streamed one at a time.
+12|   164. Line 164 of 200, streamed one at a time.
+13|   1⟦65.⟧⟦ Line 165 of 200, strea⟧med one at a time.
+14|   166. Line 166 of 200, streamed one at a time.
+15|   167. Line 167 of 200, streamed one at a time.
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"65. Line 165 of 200, strea"

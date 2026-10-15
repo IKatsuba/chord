@@ -6409,3 +6409,160 @@ were kept:
   too tall for the box cut to the room left and ended in `…`.
 - **The option list** is the pickers' numbered list on `<box>`, as "OpenTUI
   part 2: The pickers" settled against `<select>`.
+
+## 2026-10-15 — CHD-172: chord's selection is OpenTUI's, as it is (owner)
+
+With the mouse read (CHD-31), a plain drag selected nothing, and chord drew
+nothing: every text was `selectable: false` ("OpenTUI part 5", The drag).
+Claude Code draws its own selection and copies it, and the owner asked for
+the same (`docs/design/CHD-172.md`).
+
+- **Options.** (a) OpenTUI 0.6.0's own selection: the renderer's
+  `Selection`, `selectable` and `selectionBg` per text and on the textarea,
+  and `getSelectedText()`. (b) A selection of chord's own over the cells
+  it draws. (c) Keep the terminal's bypass modifier and a better hint.
+- **Tried.** (a) ran in scratch copies of the tree on the fake agent,
+  through tmux and through `harness.tsx`
+  (`docs/design/evidence/CHD-172/drafts/`). It paints `48;5;66` exactly,
+  live, and gives a word on a double click and a line on a triple. It
+  costs nothing per frame. It holds its anchor relative to the
+  renderable and its focus on a screen cell, so a scroll or a box growing
+  below carries the highlight with its text. It joins its own soft wraps.
+  It glues two renderables on one row with no gap, copies chord's own
+  markdown wrapping as the screen's rows, and turns default-foreground
+  text black when no `selectionBg` is given.
+- **Choice: (a), as it is.** What the agent or the person wrote is
+  selectable. chord's furniture (gutters, the mark, diff line numbers,
+  the fold marker, borders, the status line, lists, boxes) is not, which
+  is also what keeps the glue out of a copy. A `selection` palette role
+  gives every theme a colour: 66 on dark, 152 on light, and a slate
+  under `NO_COLOR` and the 16-colour theme too (owner, 2026-10-15).
+- **Consequences.** A reply copies with chord's wrapping, borders and
+  indents. The owner took that as it is (2026-10-15) and filed CHD-396 for
+  letting OpenTUI wrap replies; unwrapping the copied text in chord would
+  rewrite the library's output. The draft is selectable. A key or a paste
+  clears the selection through `renderer.clearSelection()` before the
+  textarea hears it, so OpenTUI's editor never replaces selected text, and
+  the textarea's shift+←/→ selection is off (owner, 2026-10-15). Content
+  changing inside a selected text keeps the cells and changes what they
+  hold. chord neither re-anchors nor clears on it, and a copy copies what
+  is highlighted at the moment of the copy.
+
+## 2026-10-15 — CHD-172: the mouse modes are 1000, 1002 and 1006
+
+CHD-31 asked for 1000 and said the selection task would move to 1002.
+OpenTUI's renderer already writes `?1000h ?1002h ?1003h ?1006h`, with
+`enableMouseMovement` at its default.
+
+- **Options.** Keep 1003, or set `enableMouseMovement: false`, OpenTUI's
+  documented option, for `?1000h ?1002h ?1006h`.
+- **Choice: `enableMouseMovement: false`.** Nothing in chord reads hover
+  motion. A hover report cost about 15 µs and no frame, so this is
+  tidiness, not speed. A drag reports motion under 1002, which is all a
+  selection needs. `"mouse": false` still writes no mode.
+
+## 2026-10-15 — CHD-172: the copy goes through OpenTUI's clipboard service (owner)
+
+The task asked for "OSC 52, pbcopy where OSC 52 is refused".
+
+- **Tried.** OpenTUI 0.6.0's `createHostClipboard` writes the system
+  clipboard through `libopentui`: NSPasteboard on macOS, X11 and Wayland
+  on Linux. It worked from source, compiled, and inside tmux, with a typed
+  result, a timeout and an abort. `createRendererClipboardAdapter` writes
+  OSC 52 and can only say `attempted`. A terminal that drops OSC 52
+  answers nothing, so a refusal is never seen. `createClipboard` puts the
+  two together, with a policy per write. `@mariozechner/clipboard`'s
+  `setText` and `pbcopy` both worked. Inside tmux, OpenTUI's OSC 52 is
+  wrapped in DCS passthrough, which tmux drops unless `allow-passthrough`
+  is on.
+- **Options.** (a) `best-available`: the host locally, OSC 52 when the host
+  fails or is unsupported, OSC 52 alone over SSH. (b) `all-available`:
+  both locally. (c) OSC 52 only.
+- **Choice: (a)** (owner, 2026-10-15). The task's order cannot be built,
+  because no refusal is seen, so the owner changed it to fit the library.
+  There is no pbcopy: OpenTUI's native write does the same in process,
+  on Linux too. `@mariozechner/clipboard` stays for ctrl+v's images.
+- **The note.** `copied N chars to clipboard` when the host wrote it.
+  `sent N chars to the terminal's clipboard` when only OSC 52 went,
+  because nobody can know it arrived (owner, 2026-10-15). N counts
+  graphemes. A failure says `could not copy: <reason> · ctrl + c to try
+  again` and keeps the selection.
+- **Kept as OpenTUI does.** There is no OSC 52 after a host timeout, and no
+  OSC 52 cap of chord's own; the service's 8 MiB bound stands.
+- **Consequences.** `main.tsx` builds the service with the host's
+  `timeoutMs` (1,000 ms, chord's constant) and hands `App` one `copy(text,
+  signal)` prop. A generation and a bound of chord's (`timeoutMs + 200`)
+  drop superseded and late results. Disposal on the renderer's `destroy`
+  is raced against 100 ms, and quit never waits on a copy. A host that
+  ignores the abort leaves `dispose()` pending for ever. Tests get the prop
+  only, and a guard test fails on `createHostClipboard` or `pbcopy` under
+  `tests/`: `testRender`'s renderer is local, so a test that built the real
+  service would write the person's clipboard. A spike in this design did
+  that once, and lost an image the owner had copied. Whether a Linux
+  clipboard survives chord's exit without a clipboard manager is
+  unverified.
+
+## 2026-10-15 — CHD-172: `copyOnSelect` and the copy key (owner)
+
+- **The setting.** `copyOnSelect`, boolean, default `true`, user's file
+  only, read at start, as Claude Code names it (owner, 2026-10-15). The
+  file is its only toggle: Claude Code's note says `disable auto-copy in
+  /config`, but chord's `/config` lists the agent's options, so the note
+  names nothing. A `/vim`-like command and chord's own rows in `/config`
+  were the other options.
+- **The key.** cmd+c never reaches a terminal program on macOS.
+  ctrl+shift+c arrives as ctrl+c without the kitty protocol, and several
+  Linux terminals keep it for their own copy. The options were ctrl+c while
+  a selection is shown, ctrl+shift+c alone, and a leader key. The owner
+  chose (2026-10-15) ctrl+c while a selection is shown, as a widget key
+  (ctrl+c stays reserved), plus a rebindable `selection:copy` on
+  ctrl+shift+c, in a new `Selection` context heard before every other.
+  With a selection shown, ctrl+c copies even with a permission or a form
+  open, and the highlight is what says so. A chord's first key keeps the
+  selection, so a rebound `ctrl+x y` copies. Every other key clears it
+  first and then does what it does, Esc included.
+- **The panel.** `ctrl + c to copy`, computed with `keys.ts`'s own layout:
+  2 × 20 at 80 columns and 3 × 14 at 120 for the default and any single
+  rebound key or chord. The entry names only the first bound key, as two
+  long ones drop 80 columns to one column of 40 rows. The bypass modifier
+  gets no line (a 21st row at 80×24). `selectHint` and its timer go, and
+  the README and the guide keep the modifier.
+
+## 2026-10-15 — CHD-172: a selection's lifecycle, through public API (owner)
+
+OpenTUI emits `selection` only when a drag finishes. It emits nothing at
+the start, nothing when it clears a selection itself (a press elsewhere, a
+textarea edit), and nothing when a selected renderable goes. Wrapping the
+renderer's methods to invent those events was ruled out.
+
+- **Choice.** chord reads the start from its own `onMouse` press
+  (`getSelection()?.isStart`), the end from the `selection` event, and
+  OpenTUI's own clears from `renderer.hasSelection` on the renderer's
+  `frame` event. That last one is seen one frame late, which is accepted.
+  chord's own clears (a tab switch, `/clear`, ctrl+o, a resize, a key)
+  call `clearSelection()` themselves. A window test with a stubbed copy
+  proves the mapping (`spike-runtime-lifecycle.txt`). An event on a clear,
+  asked for upstream in
+  [opentui#1685](https://github.com/anomalyco/opentui/issues/1685), would
+  replace the `frame` read once OpenTUI has it.
+- **The view.** Following stops at the press and comes back at the release
+  unless the person scrolled during the drag. A wheel step during a drag
+  extends the selection (`requestSelectionUpdate()`). There is no
+  autoscroll at the edges: OpenTUI has it only in `<scrollbox>`, which
+  chord does not use ("OpenTUI part 4"), and doing it in chord would be
+  writing around the library (owner, 2026-10-15). Plain scrolling keeps a
+  selection.
+- **How long it lives.** With `copyOnSelect` on, the highlight goes with
+  the copied note, after 3 s. With it off, it stays until a key, a click,
+  a new drag, a tab switch, `/clear`, ctrl+o, a resize or a copy (owner,
+  2026-10-15).
+- **What it holds.** While a selection is shown, the transcript's mounted
+  window is held, as CHD-327 D holds it while scrolled back, so a
+  selection is not emptied by its entry leaving the tail. Each entry that
+  arrives meanwhile costs about six renderables and 50 KB of heap: 3,645
+  renderables and 58 MB after 600 entries, against 257 and 34 MB on the
+  tail. The owner chose (2026-10-15) no limit: a shown selection holds the
+  mounted entries until it is cleared, as scrolling back does, and with
+  `copyOnSelect` on the 3 s lifetime bounds it. A cap that clears the
+  selection past some number of entries, and no hold after the release,
+  were the other options.

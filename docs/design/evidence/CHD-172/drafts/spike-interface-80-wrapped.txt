@@ -1,0 +1,57 @@
+# 80x24, markdown scenario: drag held (8,11) to (38,12) over a list item chord'\''s markdown wrapped at 80
+# capture-pane -e, rows 1-24 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+[38;2;255;255;255m   [2m[39m│[0m [38;2;215;166;255mconst[39m turn = session.[38;2;140;200;255mprompt[39m([38;2;242;211;138m'hello'[39m);                        [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m [38;2;215;166;255mawait[39m turn.[38;2;245;163;199mresult[39m;                                           [2m│[0m[38;2;255;255;255m
+   [2m[39m└──────────────────────────────────────────────────────────────┘[0m[38;2;255;255;255m
+
+   [39mThat is the whole loop. To land a change:[38;2;255;255;255m
+
+   [2m[39m1.[0m Run the checks:[38;2;255;255;255m
+   [39m  [2m┌ sh ─────────────┐[0m[38;2;255;255;255m
+   [39m  [2m│[0m deno task check [2m│[0m[38;2;255;255;255m
+   [39m  [2m└─────────────────┘[0m[38;2;255;255;255m
+   [2m[39m2.[0m C[48;5;66mommit on [38;2;177;185;249mmain[39m once every check has passed and the tree is clean, so[38;2;255;255;255m[49m
+   [39m[48;5;66m  whoever picks the work up next st[49marts from a build that runs.[38;2;255;255;255m
+
+   [39mThen build the binary with:[38;2;255;255;255m
+
+   [2m[39m┌ sh ─────────────────────────────────────────────────┐[0m[38;2;255;255;255m
+   [2m[39m│[0m deno task compile --all                             [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m [38;2;215;166;255mfor[39m bin [38;2;215;166;255min[39m dist/*/chord; [38;2;215;166;255mdo[39m [38;2;127;224;232mecho[39m [38;2;242;211;138m"built [38;2;245;163;199m$bin[38;2;242;211;138m"[39m; [38;2;215;166;255mdone[39m [2m│[0m[38;2;255;255;255m
+   [2m[39m└─────────────────────────────────────────────────────┘[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m
+
+# rendered
+ 1|   │ const turn = session.prompt('hello');                        │
+ 2|   │ await turn.result;                                           │
+ 3|   └──────────────────────────────────────────────────────────────┘
+ 4|
+ 5|   That is the whole loop. To land a change:
+ 6|
+ 7|   1. Run the checks:
+ 8|     ┌ sh ─────────────┐
+ 9|     │ deno task check │
+10|     └─────────────────┘
+11|   2. C⟦ommit on main once every check has passed and the tree is clean, so⟧
+12|   ⟦  whoever picks the work up next st⟧arts from a build that runs.
+13|
+14|   Then build the binary with:
+15|
+16|   ┌ sh ─────────────────────────────────────────────────┐
+17|   │ deno task compile --all                             │
+18|   │ for bin in dist/*/chord; do echo "built $bin"; done │
+19|   └─────────────────────────────────────────────────────┘
+20|
+21|╭──────────────────────────────────────────────────────────────────────────────╮
+22|│ ›                                                                            │
+23|╰──────────────────────────────────────────────────────────────────────────────╯
+24|  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"ommit on main once every check has passed and the tree is clean, so
+  whoever picks the work up next st"

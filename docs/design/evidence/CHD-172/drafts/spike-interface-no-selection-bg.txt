@@ -1,0 +1,9 @@
+# 80x24: selectable on with no selectionBg: OpenTUI swaps colours; default-foreground text becomes fg 0;0;0 on the default background
+# capture-pane -e, rows 2-3 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+ [38;2;105;238;172m▀[38;2;99;237;171m[48;2;87;234;168m▀[38;2;92;236;170m[48;2;81;233;167m▀[38;2;74;232;166m[49m▄[38;2;255;255;255m   [2m[38;2;0;0;0mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [38;2;70;231;165m▄[38;2;75;232;166m[48;2;64;227;165m▀[38;2;69;230;165m[48;2;59;223;164m▀[38;2;63;226;165m[49m▀[38;2;255;255;255m   [2m[38;2;0;0;0m/private/tmp/chd172-if[39mace.QvZA[0m[38;2;255;255;255m
+
+# rendered
+ 2| ▀▀▀▄   fake · Fake Large with a 1M context window
+ 3| ▄▀▀▀   /private/tmp/chd172-iface.QvZA

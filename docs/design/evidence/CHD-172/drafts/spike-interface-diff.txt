@@ -1,0 +1,28 @@
+# 120x40, edit scenario: drag (2,8) to (30,14) over an Edit call and its diff, released
+# capture-pane -e, rows 8-14 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+ [38;2;78;186;101m[48;5;66m⏺[38;2;255;255;255m[49m [1m[39m[48;5;66mEdit[0m[48;5;66m(src/greeting.ts)[38;2;255;255;255m[49m
+   [2m[39m[48;5;66m⎿[0m[38;2;255;255;255m  [2m[39m[48;5;66mUpdated src/greeting.ts with 2 additions and 1 removal[0m[38;2;255;255;255m
+      [2m[39m[48;5;66m1[0m[38;2;255;255;255m[48;2;31;59;36m [38;2;134;224;138m[48;5;66m+[38;2;228;228;228m [38;2;143;150;160m/** Greets someone by name. */[38;2;255;255;255m[48;2;31;59;36m                                                                               [49m
+      [2m[39m[48;5;66m2[0m[38;2;255;255;255m [39m[48;5;66m  [38;2;215;166;255mexport[39m [38;2;215;166;255mfunction[39m [38;2;140;200;255mgreet[39m(name: [38;2;127;224;232mstring[39m): [38;2;127;224;232mstring[39m {[38;2;255;255;255m[49m
+      [2m[39m[48;5;66m2[0m[38;2;255;255;255m[48;2;74;31;39m [38;2;255;142;142m[48;5;66m-[38;2;228;228;228m   [38;2;215;166;255mreturn[38;2;228;228;228m [38;2;242;211;138m"hello "[38;2;228;228;228m + name;[38;2;255;255;255m[48;2;74;31;39m                                                                                    [49m
+      [2m[39m[48;5;66m3[0m[38;2;255;255;255m[48;2;31;59;36m [38;2;134;224;138m[48;5;66m+[38;2;228;228;228m   [38;2;215;166;255mreturn[38;2;228;228;228m [38;2;242;211;138m`hello, ${name}`[38;2;228;228;228m;[38;2;255;255;255m[48;2;31;59;36m                                                                                   [49m
+      [2m[39m[48;5;66m4[0m[38;2;255;255;255m [39m[48;5;66m  }[38;2;255;255;255m[49m
+
+# rendered
+ 8| ⟦⏺⟧ ⟦Edit⟧⟦(src/greeting.ts)⟧
+ 9|   ⟦⎿⟧  ⟦Updated src/greeting.ts with 2 additions and 1 removal⟧
+10|      ⟦1⟧ ⟦+ /** Greets someone by name. */                                                                               ⟧
+11|      ⟦2⟧ ⟦  export function greet(name: string): string {⟧
+12|      ⟦2⟧ ⟦-   return "hello " + name;                                                                                    ⟧
+13|      ⟦3⟧ ⟦+   return `hello, ${name}`;                                                                                   ⟧
+14|      ⟦4⟧ ⟦  }⟧
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"⏺Edit(src/greeting.ts)
+⎿Updated src/greeting.ts with 2 additions and 1 removal
+1+ /** Greets someone by name. */
+2  export function greet(name: string): string {
+2-   return \"hello \" + name;
+3+   return `hello, ${name}`;
+4  }"

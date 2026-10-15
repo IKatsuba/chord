@@ -1,0 +1,11 @@
+# A selection held while 600 entries stream in (manysteps, a scratch fake scenario), 120x40; first block: selection kept but the mount window not pinned (today's tail), second: pinned while the selection is non-empty. Frames are OpenTUI's getStats over each interval.
+  at release: renderables 43, JSC heap 25.4 MB, objects 218257, frames 8, avg 0.0 ms, p95 undefined ms, first entry mounted? true
+  after 150 entries: renderables 261, JSC heap 31.3 MB, objects 260744, frames 80, avg 2.2 ms, p95 4.8 ms, first entry mounted? false
+  after 300 entries: renderables 261, JSC heap 32.4 MB, objects 284438, frames 55, avg 0.6 ms, p95 1.1 ms, first entry mounted? false
+  after 600 entries: renderables 257, JSC heap 34.4 MB, objects 328897, frames 99, avg 1.0 ms, p95 3.1 ms, first entry mounted? false
+  pgup 53 ms, end 53 ms (harness waits included)
+  at release: renderables 43, JSC heap 30.5 MB, objects 224301, frames 8, avg 0.0 ms, p95 undefined ms, first entry mounted? true
+  after 150 entries: renderables 1153, JSC heap 37.6 MB, objects 328044, frames 85, avg 1.5 ms, p95 3.7 ms, first entry mounted? true
+  after 300 entries: renderables 2065, JSC heap 43.0 MB, objects 406068, frames 52, avg 4.6 ms, p95 20.3 ms, first entry mounted? true
+  after 600 entries: renderables 3645, JSC heap 58.3 MB, objects 599900, frames 97, avg 3.9 ms, p95 8.4 ms, first entry mounted? true
+  pgup 56 ms, end 54 ms (harness waits included)

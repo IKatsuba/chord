@@ -1,0 +1,77 @@
+# Lifecycle: every selection transition through public hooks (onMouse on chord's outer box, the renderer's 'selection' event, its 'frame' event, the textarea's onContentChange), chord at 80x24 on the fake agent, the copy a stub
+== press on a text
+mouse down b0 at 4,12 target=TextRenderable2 | start,dragging:""
+frame event: selection none -> empty
+== motion x3
+mouse drag b0 at 8,12 target=TextRenderable2 | dragging:"5. Li"
+mouse drag b0 at 12,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 2"
+mouse drag b0 at 20,14 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 of 200, streamed one at a time.\n27. Line 27 of 200"
+frame event: selection empty -> text
+== release
+mouse up b0 at 20,14 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 of 200, streamed one at a time.\n27. Line 27 of 200"
+selection event | done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 of 200, streamed one at a time.\n27. Line 27 of 200"
+   (after release: done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 of 200, streamed one at a time.\n27. Line 27 of 200")
+== empty click on a text
+mouse down b0 at 30,12 target=TextRenderable2 | start,dragging:""
+mouse up b0 at 30,12 target=TextRenderable2 | start,dragging:""
+selection event | start,done:""
+frame event: selection text -> empty
+   (after empty click: start,done:"")
+== drag again, then a press on the gutter (column 0, not a text)
+mouse down b0 at 4,12 target=TextRenderable2 | start,dragging:""
+mouse drag b0 at 10,12 target=TextRenderable2 | dragging:"5. Line"
+mouse drag b0 at 15,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+mouse up b0 at 15,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+selection event | done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+frame event: selection empty -> text
+mouse down b0 at 0,12 target=BoxRenderable2 | done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+frame event: selection text -> none
+   (right after gutter press: none(has=false))
+mouse up b0 at 0,12 target=BoxRenderable2 | none(has=false)
+   (after gutter release: none(has=false))
+== drag, then type a character
+mouse down b0 at 4,12 target=TextRenderable2 | start,dragging:""
+mouse drag b0 at 10,12 target=TextRenderable2 | dragging:"5. Line"
+mouse drag b0 at 15,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+mouse up b0 at 15,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+selection event | done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+frame event: selection none -> text
+textarea content change | done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+frame event: selection text -> none
+   (after typing x: none(has=false))
+== drag, then a key that edits nothing (pgup)
+mouse down b0 at 4,12 target=TextRenderable2 | start,dragging:""
+mouse drag b0 at 10,12 target=TextRenderable2 | dragging:"5. Line"
+mouse drag b0 at 15,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+mouse up b0 at 15,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+selection event | done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+frame event: selection none -> text
+   (after pgup: done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o")
+== drag, then /clear
+mouse down b0 at 4,12 target=TextRenderable2 | start,dragging:""
+mouse drag b0 at 10,12 target=TextRenderable2 | dragging:"5. Line"
+mouse drag b0 at 15,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+mouse up b0 at 15,13 target=TextRenderable2 | dragging:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+selection event | done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+   (before /clear: done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o")
+textarea content change | done:"5. Line 25 of 200, streamed one at a time.\n26. Line 26 o"
+frame event: selection text -> none
+   (after /clear: none(has=false))
+== drag, then a new tab and back
+mouse down b0 at 3,7 target=TextRenderable2 | start,dragging:""
+mouse drag b0 at 10,7 target=TextRenderable2 | dragging:"Hello, w"
+mouse drag b0 at 20,7 target=TextRenderable2 | dragging:"Hello, world. This"
+mouse up b0 at 20,7 target=TextRenderable2 | dragging:"Hello, world. This"
+selection event | done:"Hello, world. This"
+frame event: selection none -> text
+   (before new tab: done:"Hello, world. This")
+frame event: selection text -> none
+   (after ctrl+x c: none(has=false))
+   (back on tab 1: none(has=false))
+copies: ["5. Line 25 of 200, streamed one at a time.\n26. Line 26 of 200, streamed one at a time.\n27. Line 27 of 200","5. Line 25 of 200, streamed one at a time.\n26. Line 26 o","5. Line 25 of 200, s
+notes: ["copied 105 (written)","copied 56 (written)","copied 56 (written)","copied 56 (written)","copied 56 (written)","copied 18 (written)"]
+
+ 1 pass
+ 0 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [11.81s]

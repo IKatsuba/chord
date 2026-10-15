@@ -1,0 +1,30 @@
+[plain] osc52_support=unknown remote=true multiplexer=none
+  copyToClipboardOSC52(5 chars) -> true; bytes written 17; OSC52 seqs 1; dcs-wrapped false; payload b64 len 8; head "\u001b]52;c;eHh4eHg=\u001b\\"
+  copyToClipboardOSC52(100000 chars) -> true; bytes written 133345; OSC52 seqs 1; dcs-wrapped false; payload b64 len 133336; head "\u001b]52;c;eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+  copyToClipboardOSC52(1000000 chars) -> true; bytes written 1333345; OSC52 seqs 1; dcs-wrapped false; payload b64 len 1333336; head "\u001b]52;c;eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+  service best-available, host failed: host=not-attempted terminal=attempted in 23 ms; OSC52 written 1
+  service best-available, host timed-out: host=not-attempted terminal=attempted in 22 ms; OSC52 written 1
+  service best-available, host unsupported: host=not-attempted terminal=attempted in 21 ms; OSC52 written 1
+  service best-available, host hang: host=not-attempted terminal=attempted in 21 ms; OSC52 written 1
+  over maxWriteBytes: rejects RangeError: writeText exceeds the configured 10 byte limit
+  empty text: rejects writeText requires non-empty text
+[TMUX set] osc52_support=unknown remote=true multiplexer=none
+  copyToClipboardOSC52(5 chars) -> true; bytes written 17; OSC52 seqs 1; dcs-wrapped false; payload b64 len 8; head "\u001b]52;c;eHh4eHg=\u001b\\"
+  copyToClipboardOSC52(100000 chars) -> true; bytes written 133345; OSC52 seqs 1; dcs-wrapped false; payload b64 len 133336; head "\u001b]52;c;eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+  copyToClipboardOSC52(1000000 chars) -> true; bytes written 1333345; OSC52 seqs 1; dcs-wrapped false; payload b64 len 1333336; head "\u001b]52;c;eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+  service best-available, host failed: host=not-attempted terminal=attempted in 22 ms; OSC52 written 1
+  service best-available, host timed-out: host=not-attempted terminal=attempted in 21 ms; OSC52 written 1
+  service best-available, host unsupported: host=not-attempted terminal=attempted in 21 ms; OSC52 written 1
+  service best-available, host hang: host=not-attempted terminal=attempted in 22 ms; OSC52 written 1
+  over maxWriteBytes: rejects RangeError: writeText exceeds the configured 10 byte limit
+  empty text: rejects writeText requires non-empty text
+[SSH_TTY set] osc52_support=unknown remote=true multiplexer=none
+  copyToClipboardOSC52(5 chars) -> true; bytes written 17; OSC52 seqs 1; dcs-wrapped false; payload b64 len 8; head "\u001b]52;c;eHh4eHg=\u001b\\"
+  copyToClipboardOSC52(100000 chars) -> true; bytes written 133345; OSC52 seqs 1; dcs-wrapped false; payload b64 len 133336; head "\u001b]52;c;eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+  copyToClipboardOSC52(1000000 chars) -> true; bytes written 1333345; OSC52 seqs 1; dcs-wrapped false; payload b64 len 1333336; head "\u001b]52;c;eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4e"
+  service best-available, host failed: host=not-attempted terminal=attempted in 22 ms; OSC52 written 1
+  service best-available, host timed-out: host=not-attempted terminal=attempted in 22 ms; OSC52 written 1
+  service best-available, host unsupported: host=not-attempted terminal=attempted in 22 ms; OSC52 written 1
+  service best-available, host hang: host=not-attempted terminal=attempted in 22 ms; OSC52 written 1
+  over maxWriteBytes: rejects RangeError: writeText exceeds the configured 10 byte limit
+  empty text: rejects writeText requires non-empty text

@@ -1,0 +1,31 @@
+# window spikes, chord at 80x24 on the fake agent, TEXT.selectable flipped to true in a scratch worktree
+selected: ""
+selected: ""
+B before wheel: "5. Line 35 of 200, streamed one at a time.\n36. Line 36 of 200, streamed one at a time.\n37. Line"
+B after 3 wheel-up, no motion: "5. Line 35 of 200, streamed one at a time.\n36. Line 36 of 200, streamed one at a time.\n37. Line"
+B after a motion at the same cell: "e 34 of 200, streamed one at a time.\n35"
+selected: "e 34 of 200, streamed one at a time.\n35"
+selected: "e 34 of 200, streamed one at a time.\n35"
+selected: "e 23 of 200, streamed one at a time.\n24. Line 24 of 200, streamed one at a time.\n25. Line 25 of 200, streamed one at a time.\n26. Line 26 of 200, streamed one at a time.\n27. Line 27 of 200, streamed one at a time.\n28. Line 28 of 200, streamed one at a time.\n29. Line 29 of 200, streamed one at a time.\n30. Line 30 of 200, streamed one at a time.\n31. Line 31 of 200, streamed one at a time.\n32. Line 32 of 200, streamed one at a time.\n33. Line 33 of 200, streamed one at a time.\n34. Line 34 of 200, streamed one at a time.\n35"
+selected: "5. Line 35 of 200, streamed one at a time.\n36. Line 36 of 200, streamed one at a time.\n37. Line 37 of 200, streamed one at a time.\n38. Line 38 of 200, streamed one at a time.\n39. Line 39 of 200, streamed one at a time.\n40. Line 40 of 200, streamed one at a time."
+C released at last row: "5. Line 35 of 200, streamed one at a time.\n36. Line 36 of 200, streamed one at a time.\n37. Line 37 of 200, streamed one at a time.\n38. Line 38 of 200, streamed one at a time.\n39. Line 39 of 200, streamed one at a time.\n40. Line 40 of 200, streamed one at a time."
+C from prompt box up: ""
+D just released: "8. Line 18 of 200, streamed one at a time.\n19. Line 19 of 200"
+selected: "8. Line 18 of 200, streamed one at a time.\n19. Line 19 of 200"
+D2 held: "8. Line 18 of 200, streamed one at a time.\n19. Line 19 of 200"
+D2 held 10 lines later, no motion: "8. Line 18 of 200, streamed one at a time.\n19. Line 19 of 200"
+D2 then a motion: "8. Line 18 of 200, streamed one at a time.\n19. Line 19 of 200, streamed one at a time.\n20. Line 20 of 200, streamed one at a time.\n21. Line 21 of 200, streamed one at a time.\n22. Line 22 of 200, streamed one at a time.\n23. Line 23 of 200, streamed one at a time.\n24. Line 24 of 200, streamed one at a time.\n25. Line 25 of 200, streamed one at a time.\n26. Line 26 of 200, streamed one at a time.\n27. Line 27 of 200, streamed one at a time.\n28. Line 28 of 200, streamed one at a time.\n29. Line 29 of 200"
+selected: "8. Line 18 of 200, streamed one at a time.\n19. Line 19 of 200, streamed one at a time.\n20. Line 20 of 200, streamed one at a time.\n21. Line 21 of 200, streamed one at a time.\n22. Line 22 of 200, streamed one at a time.\n23. Line 23 of 200, streamed one at a time.\n24. Line 24 of 200, streamed one at a time.\n25. Line 25 of 200, streamed one at a time.\n26. Line 26 of 200, streamed one at a time.\n27. Line 27 of 200, streamed one at a time.\n28. Line 28 of 200, streamed one at a time.\n29. Line 29 of 200"
+F click selected: ""
+F double click selected: "35. Line 35 of 200, streamed one at a time."
+F triple click selected: "35. Line 35 of 200, streamed one at a time."
+F highlight rows: ["   3\u001b[38;2;0;0;0m5. Line 35 of 200, streamed one at a time.\u001b[0m","   \u001b[38;2;0;0;0m36. Line 36 of 200\u001b[0m, streamed one at a time."]
+F after 4 pgup, selected: "5. Line 35 of 200, streamed one at a time.\n36. Line 36 of 200" mounted: true
+F back at the end, highlight rows: ["   3\u001b[38;2;0;0;0m5. Line 35 of 200, streamed one at a time.\u001b[0m","   \u001b[38;2;0;0;0m36. Line 36 of 200\u001b[0m, streamed one at a time."]
+F after typing x, selected: ""
+F after ctrl+o, selected: ""
+F after a click elsewhere: ""
+E selected: "Read(step-148.ts)" mounted: true
+E after 150 more entries; step-148 mounted: false selected: ""
+E scrolled back, selected: "Read(step-117.ts)"
+E after End (window back to the tail), selected: "Read(step-117.ts)"

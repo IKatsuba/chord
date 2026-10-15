@@ -1,0 +1,12 @@
+# 80x24: a long prompt wrapped by OpenTUI itself (wrapMode word): drag (60,6) to (12,7)
+# capture-pane -e, rows 6-7 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+ [2m[39m›[0m[38;2;255;255;255m [39mthis prompt is long enough that it wraps past the edge o[48;5;66mf an eighty column [38;2;255;255;255m[49m
+   [39m[48;5;66mterminal [49mwindow at a word[38;2;255;255;255m
+
+# rendered
+ 6| › this prompt is long enough that it wraps past the edge o⟦f an eighty column ⟧
+ 7|   ⟦terminal ⟧window at a word
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"f an eighty column terminal "

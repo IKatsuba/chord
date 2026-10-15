@@ -1,0 +1,4 @@
+# 80x24: selectionBg RGBA.defaultForeground(), selectionFg RGBA.defaultBackground(), drag held (9,2) to (30,3): the selected cells come out as SGR 39/49, so nothing shows
+
+ [38;2;105;238;172m▀[38;2;99;237;171m[48;2;87;234;168m▀[38;2;92;236;170m[48;2;81;233;167m▀[38;2;74;232;166m[49m▄[38;2;255;255;255m   [2m[39mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [38;2;70;231;165m▄[38;2;75;232;166m[48;2;64;227;165m▀[38;2;69;230;165m[48;2;59;223;164m▀[38;2;63;226;165m[49m▀[38;2;255;255;255m   [2m[39m/private/tmp/chd172-iface.QvZA[0m[38;2;255;255;255m

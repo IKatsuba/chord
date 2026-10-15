@@ -1,0 +1,635 @@
+===== src/ui/app/probe.ts
+// Scratch probe for CHD-172's runtime spike; never in the tree.
+import type { CliRenderer } from '@opentui/core';
+export const probe = (globalThis as any).__probe ??= { log: [] as string[], renderer: undefined as CliRenderer | undefined, copies: [] as string[], notes: [] as string[], impl: undefined as undefined | ((t: string, s: AbortSignal) => Promise<string>) };
+export function state(r: CliRenderer | undefined): string {
+  const s = r?.getSelection();
+  if (!s) return `none(has=${r?.hasSelection})`;
+  return `${s.isStart ? 'start,' : ''}${s.isDragging ? 'dragging' : 'done'}:${JSON.stringify(s.getSelectedText())}`;
+}
+export function note(what: string) { probe.log.push(`${what} | ${state(probe.renderer)}`); }
+let generation = 0;
+let inFlight: AbortController | undefined;
+export function copy(text: string) {
+  inFlight?.abort();
+  const mine = ++generation;
+  const ac = new AbortController();
+  inFlight = ac;
+  probe.copies.push(text);
+  const raw = probe.impl ? probe.impl(text, ac.signal) : Promise.resolve('written');
+  let settled = false;
+  const p = Promise.race([raw, new Promise<string>((res) => setTimeout(() => res('chord-bound-timeout'), 1200))]);
+  raw.then((r) => { if (settled) probe.log.push(`late result dropped after the bound: ${r}`); });
+  p.then((r) => { settled = true; return r; }).then((r) => { if (mine === generation && !ac.signal.aborted) probe.notes.push(`copied ${text.length} (${r})`); else probe.log.push(`late result dropped: ${r} for gen ${mine}`); },
+         (e) => { if (mine === generation) probe.notes.push(`failed ${e}`); });
+}
+export function disposeCopies() { inFlight?.abort(); generation++; }
+let last = '';
+export function watchFrames(r: CliRenderer) {
+  if ((r as any).__watched) return;
+  (r as any).__watched = true;
+  r.on('destroy', () => { probe.log.push('renderer destroy: copies disposed'); disposeCopies(); });
+  r.on('frame', () => {
+    const s = r.getSelection();
+    const now = s === null ? 'none' : s.getSelectedText() === '' ? 'empty' : 'text';
+    if (now !== 'text') hold.on = false;
+    if (now !== last) { probe.log.push(`frame event: selection ${last || '?'} -> ${now}`); last = now; }
+  });
+}
+export const hold = { on: false, at: undefined as number | undefined, enabled: true };
+export function pinned(first: number): number {
+  if (!hold.on || !hold.enabled) { hold.at = undefined; return first; }
+  hold.at ??= first;
+  return Math.min(hold.at, first);
+}
+===== spike/svc.ts
+// No real clipboard: the host is a stub, the terminal adapter records instead of writing.
+import { createClipboard } from '@opentui/core';
+
+const osc: string[] = [];
+const terminal = {
+  remote: false,
+  writeText: (t: string) => {
+    osc.push(t);
+    return { status: 'attempted', capability: 'unknown' } as const;
+  },
+  clear: () => ({ status: 'attempted', capability: 'unknown' }) as const,
+};
+type Mode =
+  | 'written'
+  | 'failed'
+  | 'unsupported'
+  | 'timed-out'
+  | 'hang-honours-abort'
+  | 'hang-ignores-abort'
+  | 'slow-200ms';
+const stub = (mode: Mode): any => ({
+  maxWriteBytes: 8 << 20,
+  read: async () => ({ status: 'unsupported' }),
+  writeText: (_t: string, o: { signal?: AbortSignal }) => {
+    if (mode === 'hang-ignores-abort') return new Promise(() => {});
+    if (mode === 'hang-honours-abort')
+      return new Promise((res) =>
+        o.signal?.addEventListener('abort', () => res({ status: 'cancelled' })),
+      );
+    if (mode === 'slow-200ms')
+      return new Promise((res) => setTimeout(() => res({ status: 'written' }), 200));
+    return Promise.resolve(
+      mode === 'failed' ? { status: 'failed', error: new Error('no provider') } : { status: mode },
+    );
+  },
+  clear: async () => ({ status: 'unsupported' }),
+  dispose: async () => {},
+});
+const race = <T>(p: Promise<T>, ms: number) =>
+  Promise.race([
+    p.then((v) => ({ v })),
+    new Promise<{ timeout: true }>((r) => setTimeout(() => r({ timeout: true }), ms)),
+  ]);
+
+for (const mode of [
+  'written',
+  'failed',
+  'unsupported',
+  'timed-out',
+  'hang-honours-abort',
+  'hang-ignores-abort',
+] as Mode[]) {
+  osc.length = 0;
+  const svc = createClipboard({ host: stub(mode), terminal });
+  const ac = new AbortController();
+  setTimeout(() => ac.abort(), 300);
+  const t0 = performance.now();
+  const r = await race(svc.writeText('hello', { destination: 'best-available', signal: ac.signal }), 1000);
+  console.log(
+    `local, host ${mode}: ${'timeout' in r ? 'still pending at 1000 ms (abort at 300 ms did not settle it)' : `host=${r.v.host.status} terminal=${r.v.terminal.status}`} after ${(performance.now() - t0).toFixed(0)} ms; OSC 52 fallback written: ${osc.length}`,
+  );
+  const d0 = performance.now();
+  const d = await race(svc.dispose(), 1000);
+  console.log(`   dispose: ${'timeout' in d ? 'still pending at 1000 ms' : 'settled'} after ${(performance.now() - d0).toFixed(0)} ms`);
+}
+
+{
+  osc.length = 0;
+  const svc = createClipboard({ host: stub('slow-200ms'), terminal });
+  const a = new AbortController();
+  const first = svc.writeText('first', { destination: 'best-available', signal: a.signal });
+  a.abort();
+  const second = svc.writeText('second', { destination: 'best-available' });
+  const [r1, r2] = await Promise.all([first, second]);
+  console.log(
+    `superseded (first aborted at once, host ignores the signal for 200 ms): first host=${r1.host.status} terminal=${r1.terminal.status}; second host=${r2.host.status}; OSC 52 written ${osc.length}`,
+  );
+}
+{
+  const svc = createClipboard({ host: stub('hang-honours-abort'), terminal });
+  const p = svc.writeText('x', { destination: 'best-available' });
+  const d0 = performance.now();
+  await svc.dispose();
+  const r = await p;
+  console.log(`pending at dispose (host honours abort): dispose ${(performance.now() - d0).toFixed(0)} ms; the write settled host=${r.host.status}`);
+  try {
+    await svc.writeText('y', { destination: 'best-available' });
+  } catch (e) {
+    console.log(`   a write after dispose rejects: ${(e as Error).message}`);
+  }
+}
+{
+  osc.length = 0;
+  const svc = createClipboard({ host: stub('written'), terminal: { ...terminal, remote: true } });
+  const r = await svc.writeText('x', { destination: 'best-available' });
+  console.log(`remote adapter, for contrast: host=${r.host.status} terminal=${r.terminal.status}`);
+}
+process.exit(0);
+===== tests/ui/spike_life_test.tsx
+import { test } from 'bun:test';
+import { leader, until, withWindow, type Window } from './app/render.tsx';
+import { probe, state } from '../../src/ui/app/probe.ts';
+
+const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+const rowOf = (w: Window, s: string) => w.frame().split('\n').findIndex((l) => l.includes(s));
+const go = async (w: Window, p: string) => { await w.type(p); await w.press('\r'); };
+const pause = (ms = 450) => new Promise((r) => setTimeout(r, ms)); // past the 400 ms multi-click window
+const step = (label: string) => probe.log.push(`== ${label}`);
+const now = (label: string) => probe.log.push(`   (${label}: ${state(probe.renderer)})`);
+
+test('lifecycle: every transition, in order, through public hooks', () =>
+  withWindow(async (w) => {
+    await go(w, 'long');
+    await w.shows('30. Line 30 of 200');
+    await w.press('\x1b');
+    await until('end', () => !w.frame().includes('Working'), 10_000);
+    const y = rowOf(w, 'Line 25 of');
+    probe.log.length = 0;
+
+    step('press on a text');
+    await w.press(left(4, y, 'down'));
+    step('motion x3');
+    await w.press(left(8, y, 'drag') + left(12, y + 1, 'drag') + left(20, y + 2, 'drag'));
+    step('release');
+    await w.press(left(20, y + 2, 'up'));
+    now('after release');
+    await pause();
+
+    step('empty click on a text');
+    await w.press(left(30, y, 'down') + left(30, y, 'up'));
+    now('after empty click');
+    await pause();
+
+    step('drag again, then a press on the gutter (column 0, not a text)');
+    await w.press(left(4, y, 'down') + left(10, y, 'drag') + left(15, y + 1, 'drag') + left(15, y + 1, 'up'));
+    await pause();
+    await w.press(left(0, y, 'down'));
+    now('right after gutter press');
+    await w.press(left(0, y, 'up'));
+    now('after gutter release');
+    await pause();
+
+    step('drag, then type a character');
+    await w.press(left(4, y, 'down') + left(10, y, 'drag') + left(15, y + 1, 'drag') + left(15, y + 1, 'up'));
+    await pause();
+    await w.type('x');
+    now('after typing x');
+    await w.press('\x7f');
+    await pause();
+
+    step('drag, then a key that edits nothing (pgup)');
+    await w.press(left(4, y, 'down') + left(10, y, 'drag') + left(15, y + 1, 'drag') + left(15, y + 1, 'up'));
+    await pause();
+    await w.press('\x1b[5~');
+    now('after pgup');
+    await w.press('\x1b[F');
+    await pause();
+
+    step('drag, then /clear');
+    const y2 = rowOf(w, 'Line 25 of');
+    await w.press(left(4, y2, 'down') + left(10, y2, 'drag') + left(15, y2 + 1, 'drag') + left(15, y2 + 1, 'up'));
+    await pause();
+    now('before /clear');
+    await go(w, '/clear');
+    await pause(300);
+    now('after /clear');
+
+    step('drag, then a new tab and back');
+    await go(w, 'text');
+    await until('reply', () => !w.frame().includes('Working') && w.frame().includes('⏺'), 10_000);
+    const y3 = w.frame().split('\n').findIndex((l) => l.includes('⏺'));
+    await w.press(left(3, y3, 'down') + left(10, y3, 'drag') + left(20, y3, 'drag') + left(20, y3, 'up'));
+    await pause();
+    now('before new tab');
+    await leader(w, 'c');
+    await pause(1500);
+    now('after ctrl+x c');
+    await leader(w, '1');
+    await pause(500);
+    now('back on tab 1');
+
+    console.log(probe.log.join('\n'));
+    console.log('copies:', JSON.stringify(probe.copies));
+    console.log('notes:', JSON.stringify(probe.notes));
+  }, { columns: 80, rows: 24 }), 60_000);
+===== tests/ui/spike_mut_test.tsx
+import { test } from 'bun:test';
+import chalk from 'chalk';
+import { until, withWindow, type Window } from './app/render.tsx';
+import { probe } from '../../src/ui/app/probe.ts';
+
+const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+const rowOf = (w: Window, s: string) => w.frame().split('\n').findIndex((l) => l.includes(s));
+const go = async (w: Window, p: string) => { await w.type(p); await w.press('\r'); };
+const pause = (ms = 450) => new Promise((r) => setTimeout(r, ms));
+// The highlighted cells: OpenTUI's default selection paints fg 0;0;0.
+function lit(w: Window): string[] {
+  chalk.level = 3;
+  const rows = w.frame().split('\n');
+  chalk.level = 0;
+  const out: string[] = [];
+  rows.forEach((row, i) => {
+    const hits = [...row.matchAll(/\x1b\[38;2;0;0;0m([^\x1b]*)/g)].map((m) => m[1]);
+    if (hits.length) out.push(`row ${i}: ${JSON.stringify(hits.join('|'))}`);
+  });
+  return out;
+}
+const report = (label: string, w: Window) => console.log(`${label}\n  selected: ${JSON.stringify(w.selected())}\n  lit: ${lit(w).join('\n       ')}`);
+const select = (w: Window, x0: number, y0: number, x1: number, y1: number, release = true) =>
+  w.press(left(x0, y0, 'down') + left(x0 + 1, y0, 'drag') + (y1 > y0 ? left(x1, y0 + 1, 'drag') : '') + left(x1, y1, 'drag') + (release ? left(x1, y1, 'up') : ''));
+
+test('M1 a reply that rewraps as it grows, and a table that widens', () =>
+  withWindow(async (w) => {
+    await go(w, 'rewrap');
+    await w.shows('supercal');
+    const y = rowOf(w, 'supercal');
+    await select(w, 3, y - 1, 79, y);
+    report('M1 released over the last two rows, before the long word lands', w);
+    await w.shows('expialidocious');
+    report('M1 after the word wrapped', w);
+    await w.shows('│ 2');
+    await pause(100);
+    const t = w.frame().split('\n').findIndex((l) => l.includes('│ 2'));
+    console.log('table row', t, JSON.stringify(w.frame().split('\n').slice(t - 3, t + 2)));
+    await select(w, 3, t - 2, 30, t, false);
+    report('M1 held over the table, before it widens', w);
+    await w.shows('much wider');
+    await pause(100);
+    report('M1 held, after it widened, no motion', w);
+    await w.press(left(30, t, 'drag') + left(30, t, 'up'));
+    report('M1 then a motion and release', w);
+  }, { columns: 80, rows: 24 }), 60_000);
+
+test('M2 a tool whose output grows and folds', () =>
+  withWindow(async (w) => {
+    await go(w, 'shell');
+    await until('output', () => /⎿/.test(w.frame()), 10_000);
+    await pause(700);
+    const y = w.frame().split('\n').findIndex((l) => l.includes('⎿'));
+    console.log('M2 frame:\n' + w.frame().split('\n').slice(y - 2, y + 6).join('\n'));
+    await select(w, 6, y, 40, y + 2);
+    report('M2 released over the output', w);
+    await until('turn end', () => !w.frame().includes('Working'), 15_000);
+    console.log('M2 frame after:\n' + w.frame().split('\n').slice(y - 2, y + 8).join('\n'));
+    report('M2 after more output, the exit and the fold', w);
+  }, { columns: 80, rows: 24 }), 60_000);
+
+test('M3 a plan rewritten', () =>
+  withWindow(async (w) => {
+    await go(w, 'proposal');
+    await w.shows('Read the code');
+    const y = rowOf(w, 'Read the code');
+    await select(w, 3, y, 30, y);
+    report('M3 released over the draft', w);
+    await w.shows('Inspect the code');
+    report('M3 after its rewrite', w);
+    await w.shows('Write the change');
+    report('M3 after it grew', w);
+    await w.shows('Draft dropped');
+    report('M3 after the draft was removed', w);
+  }, { columns: 80, rows: 24 }), 60_000);
+
+test('M4 a permission box takes rows under a released and a held selection', () =>
+  withWindow(async (w) => {
+    await go(w, 'text');
+    await w.shows('came in chunks');
+    await until('end', () => !w.frame().includes('Working'), 10_000);
+    await go(w, 'boxlater');
+    await w.shows('Before the box comes up.');
+    let y = rowOf(w, 'came in chunks');
+    await select(w, 3, y, 40, y);
+    report(`M4 released over a reply at row ${y}`, w);
+    await w.shows('Do you want to proceed?');
+    await pause(300);
+    report(`M4 with the box up; the reply is now at row ${rowOf(w, 'came in chunks')}`, w);
+    await w.press('1');
+    await until('end', () => !w.frame().includes('Working'), 10_000);
+    await go(w, 'boxlater');
+    await w.shows('Before the box comes up.');
+    await pause(200);
+    y = rowOf(w, 'came in chunks');
+    await select(w, 3, y, 40, y, false);
+    report(`M4 held over a reply at row ${y}`, w);
+    await w.shows('Do you want to proceed?');
+    await pause(300);
+    report(`M4 held, box up, no motion; reply at row ${rowOf(w, 'came in chunks')}`, w);
+    await w.press(left(40, y, 'drag') + left(40, y, 'up'));
+    report('M4 then a motion at the same cell and release', w);
+  }, { columns: 80, rows: 30 }), 90_000);
+===== tests/ui/spike_grow_test.tsx
+import { test } from 'bun:test';
+import { heapStats } from 'bun:jsc';
+import type { BaseRenderable } from '@opentui/core';
+import { until, withWindow, type Window } from './app/render.tsx';
+import { hold, probe } from '../../src/ui/app/probe.ts';
+
+const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+const rowOf = (w: Window, s: string) => w.frame().split('\n').findIndex((l) => l.includes(s));
+const count = (n: BaseRenderable): number => 1 + n.getChildren().reduce((s, c) => s + count(c), 0);
+function measure(label: string, w: Window) {
+  const st = probe.renderer!.getStats();
+  const frames = `frames ${st.frameCount}, avg ${st.averageFrameTime.toFixed(1)} ms, p95 ${[...st.frameTimes].sort((a, b) => a - b)[Math.floor(st.frameTimes.length * 0.95)]?.toFixed(1)} ms`;
+  probe.renderer!.resetStats();
+  probe.renderer!.setGatherStats(true);
+  Bun.gc(true);
+  const h = heapStats();
+  console.log(`${label}: renderables ${count(probe.renderer!.root)}, JSC heap ${(h.heapSize / 1e6).toFixed(1)} MB, objects ${h.objectCount}, $1, ${frames}, first entry mounted? ${w.mounted('Select me while')}`);
+}
+
+for (const held of [false, true]) {
+  test(`grow while a selection is ${held ? 'held (mount pinned)' : 'kept, mount not pinned'}`, () =>
+    withWindow(async (w) => {
+      hold.enabled = held;
+      await w.type('manysteps'); await w.press('\r');
+      await w.shows('Select me while');
+      const y = rowOf(w, 'Select me while');
+      await w.press(left(3, y, 'down') + left(10, y, 'drag') + left(20, y, 'drag') + left(20, y, 'up'));
+      measure('  at release', w);
+      for (const n of [150, 300, 600]) {
+        await until(`step ${n}`, () => w.mounted(`many-${n}.ts`), 30_000);
+        await new Promise((r) => setTimeout(r, 200));
+        measure(`  after ${n} entries`, w);
+      }
+      await until('end', () => !w.frame().includes('Working'), 30_000);
+      const t0 = performance.now();
+      await w.press('\x1b[5~');
+      const pg = performance.now() - t0;
+      const t1 = performance.now();
+      await w.press('\x1b[F');
+      console.log(`  pgup ${pg.toFixed(0)} ms, end ${(performance.now() - t1).toFixed(0)} ms (harness waits included)`);
+    }, { columns: 120, rows: 40 }), 120_000);
+}
+===== tests/ui/spike_copy_test.tsx
+import { test } from 'bun:test';
+import { until, withWindow, type Window } from './app/render.tsx';
+import { probe } from '../../src/ui/app/probe.ts';
+
+const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+const rowOf = (w: Window, s: string) => w.frame().split('\n').findIndex((l) => l.includes(s));
+const pause = (ms = 450) => new Promise((r) => setTimeout(r, ms));
+const drag = (w: Window, y: number, x1: number, x0 = 3) =>
+  w.press(left(x0, y, 'down') + left(5, y, 'drag') + left(x1, y, 'drag') + left(x1, y, 'up'));
+async function ready(w: Window) {
+  await w.type('text'); await w.press('\r');
+  await w.shows('came in chunks');
+  await until('end', () => !w.frame().includes('Working'), 10_000);
+  return rowOf(w, 'came in chunks');
+}
+const reset = () => { probe.log.length = 0; probe.copies.length = 0; probe.notes.length = 0; };
+
+test('a copy superseded by another: only the latest is noted', () =>
+  withWindow(async (w) => {
+    const y = await ready(w);
+    reset();
+    let n = 0;
+    probe.impl = () => { const delay = n++ === 0 ? 400 : 50; return new Promise((r) => setTimeout(() => r(`written after ${delay} ms`), delay)); };
+    const t0 = performance.now();
+    await drag(w, y, 12);
+    await pause(100);
+    await drag(w, y, 30, 8);
+    await pause(800);
+    console.log(`superseded: second release at ${(performance.now() - t0).toFixed(0)} ms after the first began`);
+    console.log('superseded: copies', JSON.stringify(probe.copies), 'notes', JSON.stringify(probe.notes), 'log', JSON.stringify(probe.log.filter((l) => l.includes('dropped'))));
+  }, { columns: 80, rows: 24 }), 30_000);
+
+test('a late result past chord\'s bound is dropped; the bound says the copy failed', () =>
+  withWindow(async (w) => {
+    const y = await ready(w);
+    reset();
+    probe.impl = () => new Promise((r) => setTimeout(() => r('written after 2000 ms'), 2000));
+    await drag(w, y, 20);
+    await pause(1400);
+    console.log('late: notes at 1.4 s', JSON.stringify(probe.notes));
+    await pause(1000);
+    console.log('late: notes at 2.4 s', JSON.stringify(probe.notes), 'log', JSON.stringify(probe.log.filter((l) => l.includes('dropped'))));
+  }, { columns: 80, rows: 24 }), 30_000);
+
+let ended = 0;
+test('a copy pending at quit, from a host that ignores abort, does not hold the quit', async () => {
+  await withWindow(async (w) => {
+    const y = await ready(w);
+    reset();
+    probe.impl = () => new Promise(() => {});
+    await drag(w, y, 20);
+    await pause(100);
+    console.log('pending at quit: copies', probe.copies.length, 'notes', JSON.stringify(probe.notes));
+    ended = performance.now();
+  }, { columns: 80, rows: 24 });
+  console.log(`pending at quit: withWindow's teardown (unmount, agent stopped, pids proven gone) took ${(performance.now() - ended).toFixed(0)} ms; log ${JSON.stringify(probe.log.filter((l) => l.includes('destroy') || l.includes('dropped')))}; notes after ${JSON.stringify(probe.notes)}`);
+  await pause(1500);
+  console.log(`pending at quit, 1.5 s later: notes ${JSON.stringify(probe.notes)}`);
+}, 30_000);
+===== git diff (scratch changes to src/ and the fake agent)
+diff --git a/src/ui/app/App.tsx b/src/ui/app/App.tsx
+index 65191c43..c4fc2b0a 100644
+--- a/src/ui/app/App.tsx
++++ b/src/ui/app/App.tsx
+@@ -1,4 +1,5 @@
+-import { useTerminalDimensions } from '@opentui/react';
++import { useTerminalDimensions, useSelectionHandler } from '@opentui/react';
++import { note as probeNote, copy as probeCopy, hold as probeHold, pinned as probePinned } from './probe.ts';
+ import process from 'node:process';
+ import manifest from '../../../package.json' with { type: 'json' };
+ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+@@ -692,13 +693,18 @@ export function App({
+ 
+   // Only the tail's entries are mounted, from the tail's first or the one
+   // held while scrolled back; it costs only the tail to find.
+-  const first = firstMounted(state);
++  const first = probePinned(firstMounted(state));
+   const { viewport, content, place, measure } = useMeasured(
+     state,
+     all.front,
+     first,
+     dispatch,
+   );
++  useSelectionHandler((selection) => {
++    const text = selection.getSelectedText();
++    probeNote('selection event');
++    if (text !== '') { probeCopy(text); probeHold.on = true; }
++  });
+   const mouse = useMouse({
+     // Wherever the pointer is, as the line keys scroll.
+     onWheel: (step) =>
+diff --git a/src/ui/app/input.ts b/src/ui/app/input.ts
+index 30c939a4..d945c44c 100644
+--- a/src/ui/app/input.ts
++++ b/src/ui/app/input.ts
+@@ -10,6 +10,8 @@ import { type RefObject, useLayoutEffect, useMemo, useRef } from 'react';
+ import { alone, pressOf } from '../shortcuts/press.ts';
+ import type { Press } from '../shortcuts/state.ts';
+ import { type Pointer, pointed } from './drag.ts';
++import { useRenderer } from '@opentui/react';
++import { note, probe, watchFrames } from './probe.ts';
+ 
+ /**
+  * Every press the window and its widgets answer, as chord's own `Press`,
+@@ -132,6 +134,9 @@ export function useMouse({
+   const wheel = useRef(onWheel);
+   const drag = useRef(onDrag);
+   const pointer = useRef<Pointer>({});
++  const renderer = useRenderer();
++  probe.renderer = renderer;
++  watchFrames(renderer);
+ 
+   wheel.current = onWheel;
+   drag.current = onDrag;
+@@ -149,6 +154,7 @@ export function useMouse({
+   // Every press and release under the box bubbles up to it.
+   const onMouse = useMemo(
+     () => (event: MouseEvent) => {
++      if (event.type !== 'move' && event.type !== 'over' && event.type !== 'out') note(`mouse ${event.type} b${event.button} at ${event.x},${event.y} target=${event.target?.constructor.name}`);
+       const read = pointed(pointer.current, event);
+ 
+       pointer.current = read.pointer;
+@@ -162,6 +168,6 @@ export function useMouse({
+ 
+   return {
+     ...(onWheel === undefined ? {} : { onMouseScroll }),
+-    ...(onDrag === undefined ? {} : { onMouse }),
++    onMouse,
+   };
+ }
+diff --git a/src/ui/prompt/TextArea.tsx b/src/ui/prompt/TextArea.tsx
+index fc2bbf9f..fa53bd9d 100644
+--- a/src/ui/prompt/TextArea.tsx
++++ b/src/ui/prompt/TextArea.tsx
+@@ -15,6 +15,7 @@ import {
+ import { type TextareaProps, useRenderer } from '@opentui/react';
+ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+ import { drawn } from '../app/input.ts';
++import { note as probeNote } from '../app/probe.ts';
+ 
+ export type { KeyBinding as TextAreaKey, TextareaRenderable };
+ 
+@@ -127,9 +128,7 @@ export function TextArea({
+       selectable={false}
+       {...rest}
+       {...(onSubmit && { onSubmit: () => void drawn(onSubmit) })}
+-      {...(onContentChange && {
+-        onContentChange: (event) => void drawn(() => onContentChange(event)),
+-      })}
++      onContentChange={(event) => { probeNote('textarea content change'); if (onContentChange) void drawn(() => onContentChange(event)); }}
+       {...(onCursorChange && {
+         onCursorChange: (event) => void drawn(() => onCursorChange(event)),
+       })}
+diff --git a/src/ui/theme/text.ts b/src/ui/theme/text.ts
+index 395b20b7..2d978d4a 100644
+--- a/src/ui/theme/text.ts
++++ b/src/ui/theme/text.ts
+@@ -69,7 +69,7 @@ export function fg(name: string | undefined): { fg?: RGBA } {
+  */
+ export const TEXT = {
+   fg: RGBA.defaultForeground(),
+-  selectable: false,
++  selectable: true,
+ } as const;
+ 
+ /**
+diff --git a/tests/fixtures/fake_agent/main.ts b/tests/fixtures/fake_agent/main.ts
+index 7bd3b0c6..c4b1af9a 100644
+--- a/tests/fixtures/fake_agent/main.ts
++++ b/tests/fixtures/fake_agent/main.ts
+@@ -230,6 +230,9 @@ const SCENARIOS = [
+   'rewrite',
+   'markdown',
+   'graphemes',
++  'rewrap',
++  'boxlater',
++  'manysteps',
+   'permission',
+   'plan',
+   'proposal',
+diff --git a/tests/fixtures/fake_agent/scenarios/permissions.ts b/tests/fixtures/fake_agent/scenarios/permissions.ts
+index db2c2b63..9095611b 100644
+--- a/tests/fixtures/fake_agent/scenarios/permissions.ts
++++ b/tests/fixtures/fake_agent/scenarios/permissions.ts
+@@ -3,7 +3,7 @@
+  * and an MCP call asked for by its name and arguments alone.
+  */
+ import * as acp from '@agentclientprotocol/sdk';
+-import { type Play, type Turn } from '../turn.ts';
++import { pause, type Play, type Turn } from '../turn.ts';
+ 
+ /**
+  * Asks for permission to write a file with `options`, and says which option
+@@ -53,6 +53,15 @@ async function askPermission(
+ }
+ 
+ export const PERMISSIONS = {
++  async boxlater(turn) {
++    await turn.say('Before the box comes up.');
++    await pause(turn.signal, 2000);
++    return await askPermission(turn, [
++      { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
++      { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
++    ]);
++  },
++
+   async permission(turn) {
+     return await askPermission(turn, [
+       { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+diff --git a/tests/fixtures/fake_agent/scenarios/text.ts b/tests/fixtures/fake_agent/scenarios/text.ts
+index 377973d9..ae0e82c7 100644
+--- a/tests/fixtures/fake_agent/scenarios/text.ts
++++ b/tests/fixtures/fake_agent/scenarios/text.ts
+@@ -86,6 +86,17 @@ export const TEXT = {
+     return 'end_turn';
+   },
+ 
++  async rewrap(turn) {
++    const words = 'The selection rides on cells, so a paragraph that rewraps under it shows other words in the same highlighted cells while it streams'.split(' ');
++    for (const w of words) { await turn.say(w + ' '); }
++    await turn.say('supercal');
++    await pause(turn.signal, 1500);
++    await turn.say('ifragilisticexpialidocious and more words after it.\n\n| a | b |\n| - | - |\n| 1 | 2 |\n');
++    await pause(turn.signal, 1500);
++    await turn.say('| a much wider cell than before | 3 |\n\nDone.');
++    return 'end_turn';
++  },
++
+   async slow(turn) {
+     await turn.say('Working');
+ 
+diff --git a/tests/fixtures/fake_agent/scenarios/tools.ts b/tests/fixtures/fake_agent/scenarios/tools.ts
+index 472888d5..242ab922 100644
+--- a/tests/fixtures/fake_agent/scenarios/tools.ts
++++ b/tests/fixtures/fake_agent/scenarios/tools.ts
+@@ -29,6 +29,17 @@ export const TOOLS = {
+     return 'end_turn';
+   },
+ 
++  async manysteps(turn) {
++    await turn.say('Select me while the steps wait.');
++    await pause(turn.signal, 1500);
++    for (let step = 1; step <= 600; step++) {
++      await turn.send({ sessionUpdate: 'tool_call', toolCallId: turn.callId('read'), title: `Read many-${step}.ts`, kind: 'read', status: 'completed' });
++      if (step % 10 === 0) await pause(turn.signal, 5);
++    }
++    await turn.say('600 steps read.');
++    return 'end_turn';
++  },
++
+   async tools(turn) {
+     const read = turn.callId('read');
+ 

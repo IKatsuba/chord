@@ -1,0 +1,21 @@
+# 120x40, empty session: drag held from (2,1) to (30,4) over the header and its mark
+# capture-pane -e, rows 1-5 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+[38;2;255;255;255m [38;2;128;243;177m[48;5;66m▀[38;2;110;239;173m▄[39m  [38;2;255;255;255m[49m   [1m[39m[48;5;66mchord[0;2m[48;5;66m v0.54.1[0m[38;2;255;255;255m
+ [38;2;105;238;172m[48;5;66m▀[38;2;99;237;171m▀[38;2;92;236;170m▀[38;2;74;232;166m▄[38;2;255;255;255m[49m   [2m[39m[48;5;66mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [38;2;70;231;165m[48;5;66m▄[38;2;75;232;166m▀[38;2;69;230;165m▀[38;2;63;226;165m▀[38;2;255;255;255m[49m   [2m[39m[48;5;66m/private/tmp/chd172-iface.QvZA[0m[38;2;255;255;255m
+ [38;2;60;224;164m[48;5;66m▀[38;2;54;220;164m▀[39m  [38;2;255;255;255m[49m   [2m[39m[48;5;66m? for shortcuts · /hel[49mp[0m[38;2;255;255;255m
+
+
+# rendered
+ 1| ⟦▀▄  ⟧   ⟦chord⟧⟦ v0.54.1⟧
+ 2| ⟦▀▀▀▄⟧   ⟦fake · Fake Large with a 1M context window⟧
+ 3| ⟦▄▀▀▀⟧   ⟦/private/tmp/chd172-iface.QvZA⟧
+ 4| ⟦▀▀  ⟧   ⟦? for shortcuts · /hel⟧p
+ 5|
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"▀▄  chord v0.54.1
+▀▀▀▄fake · Fake Large with a 1M context window
+▄▀▀▀/private/tmp/chd172-iface.QvZA
+▀▀  ? for shortcuts · /hel"

@@ -493,6 +493,14 @@ export function useSelection({
     const read = () => {
       if (!renderer.hasSelection) {
         dispatch({ type: 'selection_gone' });
+      } else if (
+        // Its text gone, a plan step unmounted under it, OpenTUI still
+        // holds a selection of nothing (owner, 2026-10-15).
+        latest.current.selection?.kind === 'shown' &&
+        renderer.getSelection()?.getSelectedText() === ''
+      ) {
+        renderer.clearSelection();
+        dispatch({ type: 'selection_gone' });
       }
     };
 

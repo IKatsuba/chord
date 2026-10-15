@@ -2285,3 +2285,28 @@ test('a resize clears a selection, as its text rewraps (CHD-172)', () =>
     },
     { copyOnSelect: false },
   ));
+
+test("a selection whose text has gone is cleared, and ctrl+c is the window's again (CHD-172)", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'planshrink');
+      await window.shows('◐ Read the code');
+      await dragOver(window, 'Read the code');
+      await window.shows('ctrl + c to copy');
+      await window.shows('Dropped a step.');
+      // The step and its text went with the drop, and the hint with them.
+      await until(
+        'the hint to go',
+        () => !window.frame().includes('ctrl + c to copy'),
+      );
+      expect(window.selected()).toStrictEqual('');
+
+      // During the turn, as with no selection ever made: quit, armed.
+      await window.press(CTRL_C);
+      await window.shows('again to');
+    },
+    {
+      copyOnSelect: false,
+      agentCommand: fakeAgentCommand(undefined, '--step-ms', '20'),
+    },
+  ));

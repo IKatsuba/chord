@@ -125,9 +125,19 @@ export function reduceScroll(scroll: Scroll, action: ScrollAction): Scroll {
   }
 }
 
+/**
+ * The bottom: followed, or while a drag holds the view, its last row with
+ * nothing more following, until the release.
+ */
+function atBottom(scroll: Scroll): Scroll {
+  return scroll.held
+    ? { ...scroll, following: false, top: bottomTop(scroll), news: false }
+    : following(scroll);
+}
+
 function scrolled(scroll: Scroll, step: ScrollStep): Scroll {
   if (step === 'bottom') {
-    return following(scroll);
+    return atBottom(scroll);
   }
 
   // Nothing to scroll: no indicator, and nothing moves.
@@ -151,7 +161,7 @@ function scrolled(scroll: Scroll, step: ScrollStep): Scroll {
       return scroll;
     }
 
-    return to >= bottom ? following(scroll) : { ...scroll, top: to };
+    return to >= bottom ? atBottom(scroll) : { ...scroll, top: to };
   }
 
   if (to === from && !scroll.following) {

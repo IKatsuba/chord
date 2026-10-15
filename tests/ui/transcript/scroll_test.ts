@@ -234,3 +234,28 @@ test('a drag holds a view that fits too, as it grows past it and shrinks back (C
     false,
   );
 });
+
+test('scrolling to the bottom during a drag keeps the view held, not following (CHD-172)', () => {
+  const held = reduceScroll(
+    { ...initialScroll, content: 100, view: 20 },
+    { type: 'scroll_held' },
+  );
+
+  for (const step of ['line_down', 'page_down', 'bottom'] as const) {
+    const moved = after(held, step);
+
+    expect(moved.following, step).toBe(false);
+    expect(moved.top, step).toBe(80);
+    // New output goes below it, as before the step.
+    expect(reduceScroll(moved, measured(130, 20)).top, step).toBe(80);
+  }
+
+  const up = after(held, 'page_up', 'bottom');
+
+  expect(up.following).toBe(false);
+  expect(up.top).toBe(80);
+  // Released, the bottom follows again.
+  expect(
+    after(reduceScroll(up, { type: 'scroll_released' }), 'bottom').following,
+  ).toBe(true);
+});

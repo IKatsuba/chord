@@ -1036,6 +1036,36 @@ test("a question form's questions and answer are recorded once answered, and a r
     ]);
   }));
 
+test("a form no adapter's marks read is recorded answered, with none of its values", () =>
+  withPlace(async (place) => {
+    const id = await recordSession({
+      stateDir: place.stateDir,
+      cwd: place.dir,
+      command: place.command,
+      prompts: ['form'],
+      answer: { action: 'accept', content: { name: 'sk-generic' } },
+    });
+    const entries = await only(place);
+    const answered = entries.find((entry) => entry.type === 'answered');
+
+    expect(answered).toMatchObject({ answer: { type: 'accepted' } });
+    expect(
+      entries.some(
+        (entry) =>
+          entry.type !== 'update' &&
+          JSON.stringify(entry).includes('sk-generic'),
+      ),
+    ).toStrictEqual(false);
+
+    const entry = (await reopened(place, id)).transcript.entries.find(
+      (each) => each.kind === 'elicitation',
+    );
+
+    assert(entry?.kind === 'elicitation');
+    expect(entry.outcome).toStrictEqual('accepted');
+    expect(entry.content).toBeUndefined();
+  }));
+
 test('a record kept before forms were recorded draws as it did, with no form', () => {
   const entries = parseRecord(
     [
@@ -1369,11 +1399,9 @@ describe('CHD-1 tester: question record replay', () => {
         expect(replayForms.length).toBe(2);
 
         expect(rootForms.length).toBe(1);
-        expect(rootForms[0]?.content).toStrictEqual({
-          name: 'parent-app',
-          region: 'eu',
-          replicas: 2,
-        });
+        // A generic form's values are not kept, so none comes back.
+        expect(rootForms[0]?.outcome).toBe('accepted');
+        expect(rootForms[0]?.content).toBeUndefined();
         expect(childForms.length).toBe(1);
         expect(childForms[0]?.outcome).toBe('accepted');
         expect(childForms[0]?.content).toStrictEqual({

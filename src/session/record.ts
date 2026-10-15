@@ -1085,10 +1085,15 @@ export class FileRecording implements Recording {
         answer.type === 'accepted' &&
         answer.content !== undefined &&
         wait.mode === 'form'
-          ? {
-              type: 'accepted',
-              content: withoutSecrets(wait.questions, answer.content),
-            }
+          ? // A form no adapter's marks read can ask for anything, a token
+            // among it, with nothing to say which value is one: none of its
+            // values reaches the file.
+            wait.questions === undefined
+            ? { type: 'accepted' }
+            : {
+                type: 'accepted',
+                content: withoutSecrets(wait.questions, answer.content),
+              }
           : answer,
     };
   }

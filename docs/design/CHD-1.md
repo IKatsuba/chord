@@ -622,7 +622,9 @@ and `minItems` and codex's `required`.
 - **The record** reads each question's header and the picked option's
   *title* (droid's const is an id), then the own text after ` · `, as in
   the record mock above. An older record has no `questions` and draws as
-  today.
+  today. A form no adapter's marks read keeps none of its values in the
+  file, as nothing says which of them is a token or a password: reopened,
+  it reads accepted, with no values.
 
 ### Outside the forms (the owner's choices, 2026-10-14)
 

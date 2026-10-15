@@ -4,7 +4,11 @@
  * out. What the window asks of it besides drawing, quitting, giving the
  * terminal up for a while and bytes of chord's own, are hooks here.
  */
-import { type CliRenderer, createCliRenderer } from '@opentui/core';
+import {
+  type CliRenderer,
+  type CliRendererConfig,
+  createCliRenderer,
+} from '@opentui/core';
 import { createRoot, useRenderer } from '@opentui/react';
 import {
   createContext,
@@ -108,6 +112,27 @@ const SIGNALS: readonly NodeJS.Signals[] = [
 ];
 
 /**
+ * How chord's renderer takes the terminal, apart from the terminal itself,
+ * so a test terminal is taken the same way.
+ */
+export function terminalOptions({
+  mouse,
+}: {
+  mouse: boolean;
+}): CliRendererConfig {
+  return {
+    exitOnCtrlC: false,
+    exitSignals: [],
+    useMouse: mouse,
+    // Nothing reads hover motion: a drag reports its motion under 1002, so
+    // 1000, 1002 and 1006 are all a selection needs (CHD-172).
+    enableMouseMovement: false,
+    consoleMode: 'disabled',
+    openConsoleOnError: false,
+  };
+}
+
+/**
  * Takes the terminal: the alternate screen, raw keys, the mouse unless
  * `mouse` is off, the kitty keyboard protocol where the terminal speaks it.
  * The terminal is given back on every way out: a quit through `render`, a
@@ -120,13 +145,7 @@ export async function openTerminal({
 }: {
   mouse: boolean;
 }): Promise<Terminal> {
-  const renderer = await createCliRenderer({
-    exitOnCtrlC: false,
-    exitSignals: [],
-    useMouse: mouse,
-    consoleMode: 'disabled',
-    openConsoleOnError: false,
-  });
+  const renderer = await createCliRenderer(terminalOptions({ mouse }));
 
   if (taken === undefined) {
     giveBackOnEveryExit();

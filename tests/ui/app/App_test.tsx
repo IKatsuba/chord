@@ -1979,6 +1979,39 @@ async function dragOver(window: Window, text: string): Promise<void> {
 }
 
 const REPLY = 'This reply came in chunks.';
+
+describe('tester: held rule on a tall transcript (CHD-397)', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`a completed tall reply stays uncovered during a press at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'long');
+          await window.shows('200. Line 200');
+          await until(
+            'the turn to end',
+            () => !window.frame().includes('Working'),
+          );
+
+          const { x, y } = cellsOf(window, '200. Line 200');
+
+          await window.press(left(x, y, 'down'));
+          expect(window.frame()).not.toContain('below');
+          await window.press(left(x, y, 'up'));
+          expect(window.frame()).not.toContain('below');
+        },
+        {
+          columns,
+          rows,
+          copy: copiedStub,
+          agentCommand: fakeAgentCommand(undefined, '--step-ms', '1'),
+        },
+      ));
+  }
+});
+
 const NOT_ATTEMPTED = {
   status: 'not-attempted',
   capability: 'unknown',

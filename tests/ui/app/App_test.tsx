@@ -2498,3 +2498,82 @@ describe('tester: selection window boundaries', () => {
     );
   });
 });
+
+describe('tester: selection after the auto-copy note', () => {
+  test('a narrow draft keeps its highlight after the note, then a typed key clears it and the hint', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('keep this draft');
+        await dragOver(window, 'this');
+        await window.shows('copied 4 chars to clipboard');
+        await window.shows('ctrl + c to copy');
+        expect(window.selected()).toBe('this');
+        await window.type('!');
+        await until(
+          'the key to clear the selection',
+          () =>
+            window.selected() === '' &&
+            !statusRow(window).includes('ctrl + c to copy'),
+        );
+        expect(promptRow(window)).toContain('keep thi!s draft');
+        expect(copies.map(({ text }) => text)).toStrictEqual(['this']);
+      },
+      { copy, columns: 80, rows: 24 },
+    );
+  });
+
+  test('an auto-copied selection holds its mounted text beyond the note under 150 new entries', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'text');
+        await window.shows(REPLY);
+        await send(window, 'stepslater');
+        await dragOver(window, REPLY);
+        await window.shows('copied 26 chars to clipboard');
+        await window.shows('ctrl + c to copy');
+        await until('the last call', () => window.mounted('step-150.ts'));
+        expect(window.mounted(REPLY)).toBe(true);
+        expect(window.selected()).toBe(REPLY);
+        await window.press(CTRL_C);
+        await until(
+          'the retained text to copy again',
+          () => copies.length === 2,
+        );
+        expect(copies.map(({ text }) => text)).toStrictEqual([REPLY, REPLY]);
+        expect(window.selected()).toBe('');
+      },
+      { copy, agentCommand: fakeAgentCommand(undefined, '--step-ms', '20') },
+    );
+  });
+
+  test('an auto-copy failure keeps its note and selection beyond a successful note lifetime', () => {
+    const { copies, copy } = clipboard(() =>
+      Promise.reject(new Error('test clipboard unavailable')),
+    );
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'text');
+        await window.shows(REPLY);
+        await dragOver(window, REPLY);
+        await window.shows('could not copy: test clipboard unavailable');
+        // A failure has no expiry event to await; observe beyond the 3 s bound.
+        await new Promise((resolve) => setTimeout(resolve, 3_200));
+        expect(statusRow(window)).toContain(
+          'could not copy: test clipboard unavailable',
+        );
+        expect(window.selected()).toBe(REPLY);
+        await window.press(CTRL_C);
+        await window.shows('copied 26 chars to clipboard');
+        expect(copies.map(({ text }) => text)).toStrictEqual([REPLY, REPLY]);
+        expect(window.selected()).toBe('');
+      },
+      { copy },
+    );
+  });
+});

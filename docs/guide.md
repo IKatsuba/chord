@@ -186,7 +186,12 @@ or panel still closes on the first Esc.
 `-p` draws no window: it sends one prompt, with anything piped in after it
 on a line of its own, writes the reply to stdout as it streams, and exits 0
 when the agent ends its turn, or 1 with the error on stderr. Nobody is there
-to answer a permission, so each one is refused and stderr says so.
+to answer a permission, so each one is refused and stderr says so. Nor
+is anybody there to answer an agent's questions: each form is skipped
+(declined), which an agent reads as its questions left unanswered and goes
+on, with a `chord: <agent> asked: <question> — skipped (no one to answer
+under -p)` line on stderr for each question, or for the form; a link to
+open is cancelled.
 `--permission-mode`, or `permissionMode` in the settings files, starts the
 turn in that mode, and `--effort`, or `effort`, on that effort; one the
 agent does not take is a `chord: could not start in <mode> mode, …` or

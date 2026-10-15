@@ -754,6 +754,33 @@ function tagged(tag: string): Promise<number[]> {
   });
 }
 
+/**
+ * Waits until `check` holds, failing once `ms` pass without it, so a test
+ * that cleans up after itself gets to.
+ */
+async function until(what: string, check: () => Promise<boolean>, ms: number) {
+  const deadline = Date.now() + ms;
+
+  while (!(await check())) {
+    if (Date.now() > deadline) {
+      throw new Error(`no ${what} within ${ms} ms`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+/** Kills every process whose command line holds `tag`, one a test owns. */
+async function killTagged(tag: string) {
+  for (const pid of await tagged(tag)) {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      // Gone between the look and the kill.
+    }
+  }
+}
+
 test('closing is bounded and kills an agent that never answers a config change', () =>
   closesWedged('config', (agent, sessionId) => {
     agent
@@ -806,11 +833,29 @@ test('a wedged fake agent goes when the process that started it is killed', asyn
     { stdio: ['ignore', 'pipe', 'inherit'] },
   );
 
-  await new Promise((resolve) => starter.stdout.once('data', resolve));
-  starter.kill('SIGKILL');
+  let ready = false;
 
-  while ((await tagged(tag)).length > 0) {
-    await new Promise((resolve) => setTimeout(resolve, 50));
+  starter.stdout.once('data', () => (ready = true));
+
+  try {
+    await until(
+      'answer to initialize',
+      () => {
+        assert.equal(starter.exitCode, null, 'the starter ended');
+
+        return Promise.resolve(ready);
+      },
+      10_000,
+    );
+    starter.kill('SIGKILL');
+    await until(
+      'end of the orphaned fake',
+      async () => (await tagged(tag)).length === 0,
+      5000,
+    );
+  } finally {
+    starter.kill('SIGKILL');
+    await killTagged(tag);
   }
 });
 
@@ -826,18 +871,26 @@ test('an open given up while the agent never answers initialize leaves nothing r
     ...REFUSE,
   });
 
-  while ((await tagged(tag)).length === 0) {
-    await new Promise((resolve) => setTimeout(resolve, 50));
+  try {
+    await until(
+      'agent started',
+      async () => (await tagged(tag)).length > 0,
+      10_000,
+    );
+
+    const started = Date.now();
+
+    stop.abort(new Error('given up'));
+    await expect(opening).rejects.toThrow(Error);
+    await expect(opening).rejects.toThrow('given up');
+    expect(
+      Date.now() - started < 5000,
+      'the open did not give up in time',
+    ).toBeTruthy();
+    expect(await tagged(tag)).toStrictEqual([]);
+  } finally {
+    // Whatever failed above, the open is given up and its agent stopped.
+    stop.abort(new Error('given up'));
+    await opening.catch(() => {});
   }
-
-  const started = Date.now();
-
-  stop.abort(new Error('given up'));
-  await expect(opening).rejects.toThrow(Error);
-  await expect(opening).rejects.toThrow('given up');
-  expect(
-    Date.now() - started < 5000,
-    'the open did not give up in time',
-  ).toBeTruthy();
-  expect(await tagged(tag)).toStrictEqual([]);
 });

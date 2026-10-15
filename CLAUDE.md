@@ -930,7 +930,8 @@ module's tests are follows from where it is.
   JSON; `chordcalls` makes the same calls as tool calls, titled as Claude's
   adapter titles them, then a `spawn_task` on a runtime chord does not
   know; `task` starts `taskchild` as a task agent on the fake runtime and
-  works on a while; `taskchild` makes two calls, asks permission to edit,
+  works on a while, and `taskask` one whose job is `askclaude`, after a
+  call of its own that, played first, shares the task's call id `ask-1`; `taskchild` makes two calls, asks permission to edit,
   messages its parent through `send_message`, runs the tests and reports;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
   long-lived on the fake runtime, and messages `parser` twice;

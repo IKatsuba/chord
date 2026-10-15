@@ -203,6 +203,8 @@ export interface WindowState
   readonly selection?: Selection;
   /** What the status line says of the last copy, for a while. */
   readonly copied?: Copied;
+  /** The notes said so far, so each note's time is its own. */
+  readonly notes?: number;
 }
 
 /** A copy's note on the status line. */
@@ -319,22 +321,33 @@ export const COPIED_NOTE_MS = 3000;
 
 /**
  * The selection gone, and with it a failed copy's note, which says how to
- * try again on a selection there is no more.
+ * try again on a selection there is no more. One gone mid-drag, which no
+ * release will end, lets go of the view as a release would.
  */
 function withoutSelection(state: AppState): AppState {
-  if (state.selection === undefined && state.copied?.result.kind !== 'failed') {
+  if (
+    state.selection === undefined &&
+    state.copied?.result.kind !== 'failed' &&
+    !state.scroll.held
+  ) {
     return state;
   }
 
-  const { selection: _, ...rest } = state;
+  const { selection, ...rest } = state;
+  const { copied, ...uncopied } = rest;
+  const left = copied?.result.kind === 'failed' ? uncopied : rest;
 
-  if (rest.copied?.result.kind === 'failed') {
-    const { copied: __, ...left } = rest;
-
+  if (!left.scroll.held) {
     return left;
   }
 
-  return rest;
+  const freed = reduceApp(left, { type: 'scroll_released' });
+
+  return selection?.kind === 'dragging' &&
+    selection.wasFollowing &&
+    !selection.moved
+    ? reduceApp(freed, { type: 'scrolled', step: 'bottom' })
+    : freed;
 }
 
 /**
@@ -710,11 +723,12 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       return mounted === undefined ? state : { ...state, mounted };
     }
     case 'selection_started': {
-      // A new drag replaces a failed copy's selection, and its note.
-      const left = withoutSelection(state);
+      // A new drag replaces the selection there was and any note of its
+      // copy, whose time running out must not clear this one.
+      const { copied: _, ...left } = withoutSelection(state);
 
       return reduceApp(
-        { ...left, selection: pressed(state.scroll.following) },
+        { ...left, selection: pressed(left.scroll.following) },
         { type: 'scroll_held' },
       );
     }
@@ -747,7 +761,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
 
       const shown: AppState = { ...state, selection: { kind: 'shown' } };
       const copied = {
-        id: (state.copied?.id ?? 0) + 1,
+        id: (state.notes ?? 0) + 1,
         result: action.result,
         auto: action.auto,
       };
@@ -755,8 +769,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // The copy key's selection has done its work; release's stays for
       // the note's time, and a failure's for the copy key to try again.
       return action.auto || action.result.kind === 'failed'
-        ? { ...shown, copied }
-        : { ...withoutSelection(state), copied };
+        ? { ...shown, copied, notes: copied.id }
+        : { ...withoutSelection(state), copied, notes: copied.id };
     }
     case 'copied_gone': {
       if (state.copied?.id !== action.id) {
@@ -921,12 +935,13 @@ export function reduceWindowed(
     case 'session_opened': {
       // It comes forward as a switch does, so a note of the sessions goes,
       // and the selection with what drew it.
-      const { sessionsNote: _, selection: __, ...window } = state.window;
+      const left = letGo(state);
+      const { sessionsNote: _, selection: __, ...window } = left.window;
 
       return {
-        ...state,
+        ...left,
         window,
-        sessions: { ...state.sessions, [action.key]: initialSession },
+        sessions: { ...left.sessions, [action.key]: initialSession },
         front: action.key,
       };
     }
@@ -940,9 +955,10 @@ export function reduceWindowed(
         return state;
       }
 
-      const { sessionsNote: _, selection: __, ...window } = state.window;
+      const left = letGo(state);
+      const { sessionsNote: _, selection: __, ...window } = left.window;
 
-      return { ...state, window, front: action.key };
+      return { ...left, window, front: action.key };
     }
     case 'session_closed': {
       const { [action.key]: _, ...sessions } = state.sessions;
@@ -959,6 +975,16 @@ export function reduceWindowed(
     default:
       return reduceIn(state, state.front, action);
   }
+}
+
+/**
+ * The session in front let go of its selection before another comes
+ * forward: a drag cut short frees the view it held there.
+ */
+function letGo(state: WindowedState): WindowedState {
+  return state.window.selection === undefined
+    ? state
+    : reduceIn(state, state.front, { type: 'selection_gone' });
 }
 
 /**

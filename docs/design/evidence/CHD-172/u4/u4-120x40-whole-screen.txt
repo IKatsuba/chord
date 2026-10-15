@@ -1,0 +1,40 @@
+ ▀▀▀▄   ⟦fake · Fake Large with a 1M context window⟧
+ ▄▀▀▀   ⟦/tmp/chord-qa.Xr1B⟧
+ ▀▀     ⟦? for shortcuts · /help⟧
+
+ › ⟦edit⟧
+
+ ⏺ ⟦Edit⟧⟦(src/greeting.ts)⟧
+   ⎿  ⟦Updated src/greeting.ts with 2 additions and 1 removal⟧
+      1 + ⟦/** Greets someone by name. */⟧
+      2   ⟦export function greet(name: string): string {⟧
+      2 - ⟦  return "hello " + name;⟧
+      3 + ⟦  return `hello, ${name}`;⟧
+      4   ⟦}⟧
+
+ ⏺ ⟦Edited.⟧
+
+ › ⟦shell⟧
+
+ ⏺ ⟦Run⟧⟦(deno task test)⟧
+   ⎿  ⟦3/3⟧
+      ⟦ok | 2 passed⟧
+      ⟦FAILED | 1 failed⟧
+      … +2 lines (ctrl+o to expand)
+      Exit code 1
+
+ ⏺ ⟦The tests failed.⟧
+
+ › ⟦plan⟧
+
+ ⏺ ⟦Planned. Step 2 done. Step 3 done.⟧
+
+ ⏺ Plan
+   ⎿  ☒ ⟦Read the code⟧
+      ☒ ⟦Write the change⟧
+      ☒ ⟦Run the tests⟧
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › ⟦a draft I am sti⟧ll typing                                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  shift + drag to select text

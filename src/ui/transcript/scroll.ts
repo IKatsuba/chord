@@ -19,6 +19,11 @@ export interface Scroll {
   readonly top: number;
   /** Output arrived since the view left the bottom. */
   readonly news: boolean;
+  /**
+   * A drag holds the view where it is, even over a transcript that fits,
+   * so the text under the pointer never moves until the release (CHD-172).
+   */
+  readonly held?: true;
 }
 
 export const initialScroll: Scroll = {
@@ -45,7 +50,9 @@ export type ScrollAction =
    * A drag began: a following view stays where it is, so new output goes
    * below it rather than moving the text under the pointer (CHD-172).
    */
-  | { readonly type: 'scroll_held' };
+  | { readonly type: 'scroll_held' }
+  /** The drag ended: the view is the person's to move again. */
+  | { readonly type: 'scroll_released' };
 
 /** The furthest the view goes down: its bottom on the transcript's. */
 function bottomTop({ content, view }: Scroll): number {
@@ -81,7 +88,7 @@ export function reduceScroll(scroll: Scroll, action: ScrollAction): Scroll {
 
       const next = { ...scroll, content: action.content, view: action.view };
 
-      if (fits(next)) {
+      if (fits(next) && !next.held) {
         return following(next);
       }
 
@@ -96,9 +103,25 @@ export function reduceScroll(scroll: Scroll, action: ScrollAction): Scroll {
     case 'scrolled':
       return scrolled(scroll, action.step);
     case 'scroll_held':
-      return scroll.following && !fits(scroll)
-        ? { ...scroll, following: false, top: bottomTop(scroll), news: false }
-        : scroll;
+      return scroll.following
+        ? {
+            ...scroll,
+            following: false,
+            top: bottomTop(scroll),
+            news: false,
+            held: true,
+          }
+        : { ...scroll, held: true };
+    case 'scroll_released': {
+      if (!scroll.held) {
+        return scroll;
+      }
+
+      const { held: _, ...released } = scroll;
+
+      // Left over a transcript that fits, it follows as one always does.
+      return fits(released) ? following(released) : released;
+    }
   }
 }
 

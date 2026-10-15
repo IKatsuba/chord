@@ -187,14 +187,50 @@ test('a drag holds a following view where it is, and the bottom follows again (C
   const following: Scroll = { ...initialScroll, content: 100, view: 20 };
   const held = reduceScroll(following, { type: 'scroll_held' });
 
-  expect(held).toStrictEqual({ ...following, following: false, top: 80 });
+  expect(held).toStrictEqual({
+    ...following,
+    following: false,
+    top: 80,
+    held: true,
+  });
   // New output measured under the drag leaves the view where it was.
   expect(reduceScroll(held, measured(130, 20)).top).toBe(80);
-  expect(after(held, 'bottom').following).toBe(true);
-  // A view scrolled back, or one that fits, is left as it is.
-  expect(reduceScroll(held, { type: 'scroll_held' })).toBe(held);
+  // A view scrolled back is held where it is.
+  expect(reduceScroll(held, { type: 'scroll_held' })).toStrictEqual(held);
 
+  const released = reduceScroll(held, { type: 'scroll_released' });
+
+  expect(released.held).toBeUndefined();
+  expect(after(released, 'bottom').following).toBe(true);
+});
+
+test('a drag holds a view that fits too, as it grows past it and shrinks back (CHD-172)', () => {
   const short: Scroll = { ...initialScroll, content: 10, view: 20 };
+  const held = reduceScroll(short, { type: 'scroll_held' });
 
-  expect(reduceScroll(short, { type: 'scroll_held' })).toBe(short);
+  expect(held).toStrictEqual({ ...short, following: false, held: true });
+
+  // Output grows past the view while the button is down: nothing moves.
+  const grown = reduceScroll(held, measured(40, 20));
+
+  expect(grown.following).toBe(false);
+  expect(grown.top).toBe(0);
+
+  // Shrunk to fit and grown again, it is still held at its row.
+  const shrunk = reduceScroll(grown, measured(15, 20));
+
+  expect(shrunk.following).toBe(false);
+  expect(reduceScroll(shrunk, measured(60, 20))).toStrictEqual({
+    ...shrunk,
+    content: 60,
+  });
+
+  // Released over a transcript that fits, it follows; one that does not
+  // stays until the person or release's rule moves it.
+  expect(reduceScroll(shrunk, { type: 'scroll_released' }).following).toBe(
+    true,
+  );
+  expect(reduceScroll(grown, { type: 'scroll_released' }).following).toBe(
+    false,
+  );
 });

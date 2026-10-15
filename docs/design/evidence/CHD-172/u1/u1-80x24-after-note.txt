@@ -1,0 +1,24 @@
+ ▀▄     chord v0.54.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.sZLNzrw0jE
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl + c to copy      Fake Large with a 1M context window · medium · 1% used

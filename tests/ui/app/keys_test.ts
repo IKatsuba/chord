@@ -224,3 +224,28 @@ test('an armed close of a child is taken back by any other key', () => {
     { type: 'dispatch', action: { type: 'agent_close_disarmed' } },
   ]);
 });
+
+test('a selection shown is cleared first by a key, kept by a scroll key and copied by ctrl+c (CHD-172)', () => {
+  const shown = { ...busy, selection: { kind: 'shown' } } as const;
+  const plain = { ctrl: false, escape: false };
+
+  expect(keySteps('c', ctrl, context(shown))).toStrictEqual([
+    { type: 'copy_selection' },
+  ]);
+  // Esc clears it, and interrupts on the same press.
+  expect(keySteps('', escape, context(shown))).toStrictEqual([
+    { type: 'clear_selection' },
+    ...keySteps('', escape, context(busy)),
+  ]);
+  // A letter the textarea types: cleared before the textarea hears it.
+  expect(keySteps('a', plain, context(shown))).toStrictEqual([
+    { type: 'clear_selection' },
+  ]);
+  expect(
+    keySteps('', { ...plain, pageUp: true }, context(shown)),
+  ).toStrictEqual(keySteps('', { ...plain, pageUp: true }, context(busy)));
+  // A chord's first key keeps it, for a copy key rebound to a chord.
+  expect(keySteps('x', ctrl, context(shown))[0]).not.toStrictEqual({
+    type: 'clear_selection',
+  });
+});

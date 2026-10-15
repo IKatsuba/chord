@@ -11,7 +11,8 @@ import type { KeyPress } from './state.ts';
 
 /**
  * Where an action applies, by Claude Code's names for its contexts, and
- * chord's `Agents` for the list of a session's agents, which it has not.
+ * chord's `Agents` for the list of a session's agents and `Selection` for a
+ * selection shown, which it has not.
  */
 export const CONTEXTS = [
   'Global',
@@ -23,6 +24,7 @@ export const CONTEXTS = [
   'Select',
   'Scroll',
   'Agents',
+  'Selection',
 ] as const;
 
 export type Context = (typeof CONTEXTS)[number];
@@ -104,6 +106,10 @@ export const ACTIONS = {
   'scroll:lineDown': { context: 'Scroll', keys: ['shift+down'] },
   'scroll:top': { context: 'Scroll', keys: ['home', 'shift+home'] },
   'scroll:bottom': { context: 'Scroll', keys: ['end', 'shift+end'] },
+  // Live only while a selection is shown, and heard before every other
+  // context then. Without kitty's protocol it arrives as ctrl+c, which
+  // copies a selection shown anyway (CHD-172).
+  'selection:copy': { context: 'Selection', keys: ['ctrl+shift+c'] },
 } as const satisfies Record<string, ActionSpec>;
 
 export type Action = keyof typeof ACTIONS;

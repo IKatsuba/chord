@@ -1118,6 +1118,13 @@ export function pendingBindings(
   );
 }
 
+/** Whether a selection is on screen, being copied or not. */
+export function selectionShown(state: AppState): boolean {
+  return (
+    state.selection?.kind === 'shown' || state.selection?.kind === 'copying'
+  );
+}
+
 /** What `pressed`, the keys of a chord so far and this one, asks for. */
 function boundCommand(
   input: string,
@@ -1135,6 +1142,17 @@ function boundCommand(
   const textareaDid = (action: Action) =>
     !translated && textareaDoes(pressed, action);
   const session = sessionCommand(on);
+
+  // A selection shown takes its copy key first, and ctrl+c with no chord
+  // begun, in front of every context: the highlight says what ctrl+c does.
+  if (selectionShown(state)) {
+    if (
+      on('selection:copy') ||
+      (state.pendingKeys === undefined && key.ctrl && input === 'c')
+    ) {
+      return 'copy_selection';
+    }
+  }
 
   // The window's sessions come first, over a form, a permission and every
   // list, so that a digit after the leader never picks a choice.

@@ -71,6 +71,11 @@ export interface Shortcut {
    */
   readonly also?: string;
   /**
+   * Only the first key bound is named, where two long ones beside `also`
+   * would widen the panel's column past 80 columns' two.
+   */
+  readonly first?: boolean;
+  /**
    * The line stands for its actions' chords after one leader key; an action
    * bound to keys that do not start with it gets a line of its own.
    */
@@ -239,6 +244,18 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: ['scroll_top', 'scroll_bottom'],
     presses: ['home', 'end', 'shift + home', 'shift + end'],
     actions: ['scroll:top', 'scroll:bottom'],
+  },
+  // ctrl+c copies while a selection is shown, as the widget's key, and the
+  // copy key does too; the default, ctrl+shift+c, arrives as ctrl+c without
+  // kitty's protocol, so the line names ctrl+c alone (CHD-172).
+  {
+    key: 'ctrl + c',
+    does: 'to copy',
+    commands: ['copy_selection'],
+    presses: ['ctrl + c'],
+    actions: ['selection:copy'],
+    also: 'ctrl + c',
+    first: true,
   },
   // Typing it opens the list; it is the draft's, so no key command answers.
   { key: '/', does: 'for commands', commands: [] },
@@ -476,7 +493,9 @@ export function shortcuts(keymap: Keymap = DEFAULT_KEYMAP): Shortcut[] {
     const key = actions
       // Two keys an action at most, so a line still fits a column.
       .flatMap((action) =>
-        keysOf(keymap, action).slice(0, 2).map(sequencePanel),
+        keysOf(keymap, action)
+          .slice(0, shortcut.first ? 1 : 2)
+          .map(sequencePanel),
       )
       .filter((name, index, all) => all.indexOf(name) === index)
       .join(' ');

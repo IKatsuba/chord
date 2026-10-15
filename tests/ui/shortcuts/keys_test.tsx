@@ -18,12 +18,14 @@ import {
   type Keystroke,
   keystrokeOf,
   parseSequence,
+  readKeybindings,
   type Sequence,
 } from '../../../src/ui/shortcuts/bindings.ts';
 import {
   columnCount,
   inColumns,
   shortcutLine,
+  shortcuts,
   SHORTCUTS,
 } from '../../../src/ui/shortcuts/keys.ts';
 import { type Cursor, textareaDoes } from '../../../src/ui/prompt/prompt.ts';
@@ -287,6 +289,20 @@ const STATES: Record<string, AppState> = {
     { type: 'model_picker_opened' },
   ),
 };
+
+/** `state` with a selection shown over it, as a drag leaves one. */
+function selected(state: AppState): AppState {
+  return { ...state, selection: { kind: 'shown' } };
+}
+
+// Spread in after the table, so each is built from the state it shows over.
+Object.assign(STATES, {
+  selected: selected(STATES.ready!),
+  'selected, busy': selected(STATES.busy!),
+  'selected, asked': selected(STATES.asked!),
+  'selected, form': selected(STATES.form!),
+  'selected, leader': selected(STATES.leader!),
+});
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 const PRINTABLE = Array.from({ length: 95 }, (_, i) =>
@@ -1587,4 +1603,134 @@ test('every key as an escape code is the same key it was as bytes', async () => 
   } finally {
     await app.unmount();
   }
+});
+
+const CTRL_C: KeyPress = { ctrl: true, escape: false };
+
+test('ctrl+c copies a selection shown in front of every context (CHD-172)', () => {
+  const contexts: Record<string, AppState> = {
+    ready: STATES.ready!,
+    busy: STATES.busy!,
+    armed: STATES.armed!,
+    permission: STATES.asked!,
+    form: STATES.form!,
+    search: STATES.search!,
+    picker: STATES.picker!,
+    'sessions picker': STATES['sessions picker']!,
+    help: STATES.help!,
+    agents: { ...STATES.busy!, agentsFocus: true },
+  };
+
+  for (const [name, state] of Object.entries(contexts)) {
+    for (const draft of ['', 'draft']) {
+      expect(
+        keyCommand('c', CTRL_C, selected(state), draft),
+        `${name}, draft "${draft}"`,
+      ).toStrictEqual('copy_selection');
+    }
+  }
+
+  // Being copied, it is still shown: a second copy is the hook's to ignore.
+  expect(
+    keyCommand(
+      'c',
+      CTRL_C,
+      { ...STATES.ready!, selection: { kind: 'copying' } },
+      '',
+    ),
+  ).toStrictEqual('copy_selection');
+  // Once it has gone, ctrl+c does what it did before.
+  expect(keyCommand('c', CTRL_C, STATES.form!, '')).toStrictEqual('interrupt');
+  expect(
+    keyCommand(
+      'c',
+      CTRL_C,
+      { ...STATES.ready!, selection: { kind: 'none' } },
+      '',
+    ),
+  ).toStrictEqual('arm_quit');
+});
+
+test('a chord begun keeps ctrl+c from copying (CHD-172)', () => {
+  expect(
+    keyCommand('c', CTRL_C, STATES['selected, leader']!, ''),
+  ).not.toStrictEqual('copy_selection');
+});
+
+test('selection:copy copies on its own key, and only with a selection shown (CHD-172)', () => {
+  const ctrlShiftC: KeyPress = { ctrl: true, shift: true, escape: false };
+
+  expect(
+    keyCommand('c', ctrlShiftC, STATES['selected, form']!, ''),
+  ).toStrictEqual('copy_selection');
+  expect(keyCommand('c', ctrlShiftC, STATES.ready!, 'draft')).not.toStrictEqual(
+    'copy_selection',
+  );
+});
+
+test('a copy key rebound to a chord waits for its second key and copies (CHD-172)', () => {
+  const { keymap, problems } = readKeybindings(
+    JSON.stringify({
+      bindings: [
+        { context: 'Selection', bindings: { 'ctrl+x y': 'selection:copy' } },
+      ],
+    }),
+  );
+
+  expect(problems).toStrictEqual([]);
+
+  const state = selected({ ...STATES.ready!, keys: keymap });
+  const x: KeyPress = { ctrl: true, escape: false };
+
+  expect(keyCommand('x', x, state, '')).toStrictEqual('key_pending');
+
+  const pending = { ...state, pendingKeys: sequence('ctrl+x') };
+
+  expect(
+    keyCommand('y', { ctrl: false, escape: false }, pending, ''),
+  ).toStrictEqual('copy_selection');
+  // With no selection the chord is not live: ctrl+x waits for the sessions'.
+  expect(
+    keyCommand(
+      'y',
+      { ctrl: false, escape: false },
+      {
+        ...pending,
+        selection: { kind: 'none' },
+      },
+      '',
+    ),
+  ).not.toStrictEqual('copy_selection');
+});
+
+test("the panel says ctrl + c to copy, and a rebound key's first, or ctrl + c (CHD-172)", () => {
+  const line = (keymap = DEFAULT_KEYMAP) =>
+    shortcuts(keymap).find((shortcut) => shortcut.does === 'to copy')!.key;
+
+  expect(line()).toStrictEqual('ctrl + c');
+
+  const { keymap } = readKeybindings(
+    JSON.stringify({
+      bindings: [
+        {
+          context: 'Selection',
+          bindings: {
+            'ctrl+shift+c': null,
+            'ctrl+x y': 'selection:copy',
+            'ctrl+shift+y': 'selection:copy',
+          },
+        },
+      ],
+    }),
+  );
+
+  expect(line(keymap)).toStrictEqual('ctrl + x y or ctrl + c');
+
+  // The panel is still two columns of twenty at 80 and three of fourteen at 120.
+  const lines = shortcuts(keymap).map(shortcutLine);
+
+  expect(columnCount(lines, 80)).toStrictEqual(2);
+  expect(Math.ceil(lines.length / 2)).toStrictEqual(20);
+  expect(columnCount(lines, 120)).toStrictEqual(3);
+  expect(Math.ceil(lines.length / 3)).toStrictEqual(14);
 });

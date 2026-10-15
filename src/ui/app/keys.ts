@@ -50,6 +50,7 @@ import {
   canSend,
   keyAnswer,
   modeAfter,
+  selectionShown,
   takesImagePaste,
 } from './state.ts';
 
@@ -107,7 +108,11 @@ export type Step =
   | { readonly type: 'open_editor' }
   /** A quiet one says nothing when the clipboard holds no image. */
   | { readonly type: 'paste_image'; readonly quiet?: boolean }
-  | { readonly type: 'quit' };
+  | { readonly type: 'quit' }
+  /** The selection shown, copied. */
+  | { readonly type: 'copy_selection' }
+  /** The selection cleared, before the key or the paste does its own. */
+  | { readonly type: 'clear_selection' };
 
 /** What vim's keys work on, kept ahead of the render. */
 export interface Typed {
@@ -392,7 +397,16 @@ export function keySteps(
   // something; text goes on being typed as `input`.
   const { command, input: read } = keyAnswer(input, key, state, draft, cursor);
   const stroke = keystrokeOf(read, key);
-  const steps: Step[] = [];
+  // A key clears a selection before it does its own, so the textarea never
+  // replaces selected text; the copy, a chord's first keys and the
+  // transcript's scrolling keep it (CHD-172).
+  const steps: Step[] =
+    selectionShown(state) &&
+    command !== 'copy_selection' &&
+    command !== 'key_pending' &&
+    !command?.startsWith('scroll_')
+      ? [{ type: 'clear_selection' }]
+      : [];
 
   // A key bound to one of chord's actions that would also type, such as
   // `?`, or ctrl+j where it is no line break: the input hears it too, and
@@ -446,6 +460,8 @@ function commandSteps(
   const menuRows = menuRowLimit(rows);
 
   switch (command) {
+    case 'copy_selection':
+      return [{ type: 'copy_selection' }];
     case 'new_session':
       return [{ type: 'open_session' }];
     case 'next_session':

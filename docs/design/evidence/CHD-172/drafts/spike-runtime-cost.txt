@@ -1,0 +1,6 @@
+hover motion: 2000 reports, 9 ms wall, cpu 30 ms, frames 0
+selecting drag: 2000 reports, cpu 208 ms, frames 1, selected 1541 chars
+n=400 selectable=false: frame 1.09 ms; 'selection' events after click 0 (text ""), after drag 0 (0 chars)
+n=400 selectable=true: frame 0.90 ms; 'selection' events after click 1 (text ""), after drag 2 (2793 chars)
+n=4000 selectable=false: frame 9.62 ms; 'selection' events after click 0 (text ""), after drag 0 (0 chars)
+n=4000 selectable=true: frame 9.75 ms; 'selection' events after click 1 (text ""), after drag 2 (31503 chars)

@@ -1,0 +1,25 @@
+# OpenTUI's createClipboard with an explicitly local terminal adapter (remote: false) that records instead of writing, and a stub host; no real clipboard
+local, host written: host=written terminal=not-attempted after 0 ms; OSC 52 fallback written: 0
+   dispose: settled after 0 ms
+local, host failed: host=failed terminal=attempted after 0 ms; OSC 52 fallback written: 1
+   dispose: settled after 0 ms
+local, host unsupported: host=unsupported terminal=attempted after 0 ms; OSC 52 fallback written: 1
+   dispose: settled after 0 ms
+local, host timed-out: host=timed-out terminal=not-attempted after 0 ms; OSC 52 fallback written: 0
+   dispose: settled after 0 ms
+local, host hang-honours-abort: host=cancelled terminal=not-attempted after 301 ms; OSC 52 fallback written: 0
+   dispose: settled after 0 ms
+local, host hang-ignores-abort: still pending at 1000 ms (abort at 300 ms did not settle it) after 1023 ms; OSC 52 fallback written: 0
+   dispose: still pending at 1000 ms after 1002 ms
+superseded (first aborted at once, host ignores the signal for 200 ms): first host=written terminal=not-attempted; second host=written; OSC 52 written 0
+pending at dispose (host honours abort): dispose 0 ms; the write settled host=cancelled
+   a write after dispose rejects: Clipboard service is disposed
+remote adapter, for contrast: host=not-attempted terminal=attempted
+
+# Window: the copy through a stub (probe.impl), with chord's 1.2 s bound and a generation counter, prototyped in the scratch tree
+late: notes at 1.4 s ["copied 18 (chord-bound-timeout)"]
+late: notes at 2.4 s ["copied 18 (chord-bound-timeout)"] log ["late result dropped after the bound: written after 2000 ms"]
+pending at quit: copies 1 notes []
+pending at quit: withWindow's teardown (unmount, agent stopped, pids proven gone) took 34 ms; log ["renderer destroy: copies disposed"]; notes after []
+pending at quit, 1.5 s later: notes []
+superseded: copies ["Hello, wor",", world. This reply cam"] notes ["copied 23 (written after 50 ms)"] log ["late result dropped: written after 400 ms for gen 1"]

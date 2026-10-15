@@ -1,0 +1,22 @@
+# the same 1.5 s later, the button still held: the rows moved up and the highlight is gone; on release the text was of rows that had scrolled away
+# capture-pane -e, rows 9-13 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+   [2m[39m111.[0m Line 111 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m112.[0m Line 112 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m113.[0m Line 113 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m114.[0m Line 114 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m115.[0m Line 115 of 200, streamed one at a time.[38;2;255;255;255m
+
+# rendered
+ 9|   111. Line 111 of 200, streamed one at a time.
+10|   112. Line 112 of 200, streamed one at a time.
+11|   113. Line 113 of 200, streamed one at a time.
+12|   114. Line 114 of 200, streamed one at a time.
+13|   115. Line 115 of 200, streamed one at a time.
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"3. Line 93 of 200, streamed one at a time.
+94. Line 94 of 200, streamed one at a time.
+95. Line 95 of 200, streamed one at a time.
+96. Line 96 of 200, streamed one at a time.
+97. Line 97 of 200, streame"

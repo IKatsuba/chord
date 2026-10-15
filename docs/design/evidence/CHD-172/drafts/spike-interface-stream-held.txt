@@ -1,0 +1,15 @@
+# 120x40, long scenario streaming and following: drag held (5,10) to (30,12)
+# capture-pane -e, rows 9-13 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+   [2m[39m[48;5;66m96.[0m[48;5;66m Line 96 of 200, streamed one at a time.[38;2;255;255;255m[49m
+   [2m[39m[48;5;66m97.[0m[48;5;66m Line 97 of 200, streame[49md one at a time.[38;2;255;255;255m
+   [2m[39m98.[0m Line 98 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m99.[0m Line 99 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m100.[0m Line 100 of 200, streamed one at a time.[38;2;255;255;255m
+
+# rendered
+ 9|   ⟦96.⟧⟦ Line 96 of 200, streamed one at a time.⟧
+10|   ⟦97.⟧⟦ Line 97 of 200, streame⟧d one at a time.
+11|   98. Line 98 of 200, streamed one at a time.
+12|   99. Line 99 of 200, streamed one at a time.
+13|   100. Line 100 of 200, streamed one at a time.

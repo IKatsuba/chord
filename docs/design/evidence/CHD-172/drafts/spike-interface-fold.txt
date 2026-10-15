@@ -1,0 +1,30 @@
+# 120x40, shell scenario: drag (2,20) to (25,27) over a folded terminal and the reply after it, released
+# capture-pane -e, rows 20-27 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+ [38;2;255;107;128m[48;5;66m⏺[38;2;255;255;255m[49m [1m[39m[48;5;66mRun[0m[48;5;66m(deno task test)[38;2;255;255;255m[49m
+   [2m[39m[48;5;66m⎿[0m[38;2;255;255;255m  [2m[39m[48;5;66m3/3[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m [0m[38;2;255;255;255m  [2m[39m[48;5;66mok | 2 passed[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m [0m[38;2;255;255;255m  [2m[39m[48;5;66mFAILED | 1 failed[0m[38;2;255;255;255m
+      [2m[39m[48;5;66m… +2 lines (ctrl+o to expand)[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m [0m[38;2;255;255;255m  [38;2;255;107;128m[48;5;66mExit code 1[38;2;255;255;255m[49m
+
+ [39m[48;5;66m⏺[38;2;255;255;255m[49m [39m[48;5;66mThe tests failed.[38;2;255;255;255m[49m
+
+# rendered
+20| ⟦⏺⟧ ⟦Run⟧⟦(deno task test)⟧
+21|   ⟦⎿⟧  ⟦3/3⟧
+22|   ⟦ ⟧  ⟦ok | 2 passed⟧
+23|   ⟦ ⟧  ⟦FAILED | 1 failed⟧
+24|      ⟦… +2 lines (ctrl+o to expand)⟧
+25|   ⟦ ⟧  ⟦Exit code 1⟧
+26|
+27| ⟦⏺⟧ ⟦The tests failed.⟧
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"⏺Run(deno task test)
+⎿3/3
+ ok | 2 passed
+ FAILED | 1 failed
+… +2 lines (ctrl+o to expand)
+ Exit code 1
+⏺The tests failed."

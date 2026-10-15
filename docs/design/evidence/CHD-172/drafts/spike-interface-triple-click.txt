@@ -1,0 +1,11 @@
+# 120x40: a triple click on (15,12) selects the line; each single click before it emitted a selection event with empty text
+# capture-pane -e, rows 12-12 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+   [2m[39m[48;5;66m164.[0m[48;5;66m Line 164 of 200, streamed one at a time.[38;2;255;255;255m[49m
+
+# rendered
+12|   ⟦164.⟧⟦ Line 164 of 200, streamed one at a time.⟧
+
+# renderer.getSelection().getSelectedText() on release, JSON
+""
+"164. Line 164 of 200, streamed one at a time."

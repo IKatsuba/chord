@@ -1,0 +1,10 @@
+# 120x40: a double click on (15,11) selects the word
+# capture-pane -e, rows 11-11 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+   [2m[39m163.[0m Line [48;5;66m163[49m of 200, streamed one at a time.[38;2;255;255;255m
+
+# rendered
+11|   163. Line ⟦163⟧ of 200, streamed one at a time.
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"163"

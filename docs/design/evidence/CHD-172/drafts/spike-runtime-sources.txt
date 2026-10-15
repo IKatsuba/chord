@@ -1,0 +1,350 @@
+===== cost.tsx
+import { testRender } from '@opentui/react/test-utils';
+import { useState, useEffect } from 'react';
+
+let bump: () => void = () => {};
+function App({ selectable, n }: { selectable: boolean; n: number }) {
+  const [t, setT] = useState(0);
+  useEffect(() => { bump = () => setT((x) => x + 1); }, []);
+  return (
+    <box flexDirection="column">
+      <text selectable={selectable}>{`tick ${t}`}</text>
+      {Array.from({ length: n }, (_, i) => (
+        <text key={i} selectable={selectable}>{`row ${i} `.repeat(12)}</text>
+      ))}
+    </box>
+  );
+}
+for (const n of [400]) for (const selectable of [false, true]) {
+  const setup = await testRender(<App selectable={selectable} n={n} />, { width: 120, height: 40 });
+  await setup.renderOnce();
+  const t0 = performance.now();
+  for (let i = 0; i < 50; i++) { bump(); await setup.renderOnce(); }
+  const frame = (performance.now() - t0) / 50;
+  // events
+  let events = 0, lastText = '';
+  setup.renderer.on('selection', (s: any) => { events++; lastText = s.getSelectedText(); });
+  const m = setup.mockMouse;
+  await m.click(5, 5);
+  const afterClick = events, clickText = lastText;
+  await m.drag(5, 5, 30, 8);
+  console.log(`n=${n} selectable=${selectable}: frame ${frame.toFixed(2)} ms; 'selection' events after click ${afterClick} (text ${JSON.stringify(clickText)}), after drag ${events} (${lastText.length} chars, ${lastText.split("\n").length} lines: ${JSON.stringify(lastText.split("\n").map(l=>l.slice(0,12)).slice(0,6))}…)`);
+  setup.renderer.destroy();
+}
+process.exit(0);
+===== modes.ts
+import { Readable, Writable } from 'node:stream';
+import { createCliRenderer } from '@opentui/core';
+
+async function capture(label: string, opts: Record<string, unknown>) {
+  const log: string[] = [];
+  const stdin = Object.assign(new Readable({ read() {} }), { isTTY: true, setRawMode() { return stdin; } });
+  const stdout = Object.assign(new Writable({ write(c, _e, d) { log.push(String(c)); d(); } }),
+    { isTTY: true, columns: 80, rows: 24, getColorDepth: () => 24 });
+  const r = await createCliRenderer({ stdin: stdin as any, stdout: stdout as any, exitOnCtrlC: false, exitSignals: [], consoleMode: 'disabled', openConsoleOnError: false, ...opts });
+  await new Promise((res) => setTimeout(res, 150));
+  const start = log.join('');
+  log.length = 0;
+  r.destroy();
+  await r.closed.catch(() => {});
+  const end = log.join('');
+  const modes = (s: string) => [...s.matchAll(/\x1b\[\?([0-9;]+)([hl])/g)].map((m) => `?${m[1]}${m[2]}`).join(' ');
+  console.log(`${label}\n  start: ${modes(start)}\n  end:   ${modes(end)}`);
+}
+await capture('chord today (useMouse: true, enableMouseMovement default)', { useMouse: true });
+await capture('useMouse: true, enableMouseMovement: false', { useMouse: true, enableMouseMovement: false });
+await capture('useMouse: false ("mouse": false)', { useMouse: false });
+process.exit(0);
+===== motion.tsx
+import { testRender } from '@opentui/react/test-utils';
+
+function App() {
+  return (
+    <box flexDirection="column">
+      {Array.from({ length: 40 }, (_, i) => (
+        <text key={i} selectable>{`row ${i} `.repeat(10)}</text>
+      ))}
+    </box>
+  );
+}
+const setup = await testRender(<App />, { width: 120, height: 40 });
+await setup.renderOnce();
+let frames = 0;
+setup.renderer.on('frame', () => frames++);
+const stdin = setup.renderer.stdin;
+const N = 2000;
+const t0 = performance.now();
+const c0 = process.cpuUsage();
+for (let i = 0; i < N; i++) {
+  const x = (i % 118) + 1, y = (i % 38) + 1;
+  stdin.emit('data', Buffer.from(`\x1b[<35;${x};${y}M`)); // motion, no button (1003)
+}
+await new Promise((r) => setTimeout(r, 300));
+const c = process.cpuUsage(c0);
+console.log(`hover motion: ${N} reports, ${(performance.now() - t0 - 300).toFixed(0)} ms wall, cpu ${((c.user + c.system) / 1000).toFixed(0)} ms, frames ${frames}`);
+frames = 0;
+const c1 = process.cpuUsage();
+stdin.emit('data', Buffer.from(`\x1b[<0;2;2M`));
+for (let i = 0; i < N; i++) {
+  const x = (i % 118) + 1, y = (i % 38) + 1;
+  stdin.emit('data', Buffer.from(`\x1b[<32;${x};${y}M`)); // drag motion
+}
+stdin.emit('data', Buffer.from(`\x1b[<0;60;30m`));
+await new Promise((r) => setTimeout(r, 300));
+const d = process.cpuUsage(c1);
+console.log(`selecting drag: ${N} reports, cpu ${((d.user + d.system) / 1000).toFixed(0)} ms, frames ${frames}, selected ${setup.renderer.getSelection()?.getSelectedText().length} chars`);
+setup.renderer.destroy();
+process.exit(0);
+===== osc52.ts
+// Every write goes to a fake stdout: the real clipboard is never touched.
+import { Readable, Writable } from 'node:stream';
+import { createCliRenderer, createClipboard, createRendererClipboardAdapter, TextRenderable } from '@opentui/core';
+
+async function open(env: Record<string, string | undefined>) {
+  const saved = { ...process.env };
+  Object.assign(process.env, env);
+  for (const [k, v] of Object.entries(env)) if (v === undefined) delete process.env[k];
+  const log: string[] = [];
+  const stdin = Object.assign(new Readable({ read() {} }), { isTTY: true, setRawMode() { return stdin; } });
+  const stdout = Object.assign(new Writable({ write(c, _e, d) { log.push(String(c)); d(); } }),
+    { isTTY: true, columns: 80, rows: 24, getColorDepth: () => 24 });
+  const r = await createCliRenderer({ stdin: stdin as any, stdout: stdout as any, exitOnCtrlC: false, exitSignals: [], consoleMode: 'disabled', openConsoleOnError: false, useMouse: true });
+  process.env = saved;
+  await new Promise((res) => setTimeout(res, 150));
+  log.length = 0;
+  return { r, log, stdin };
+}
+const osc = (s: string) => [...s.matchAll(/(\x1bP[^\x1b]*)?\x1b\]52;([^;]*);([^\x07\x1b]*)(\x07|\x1b\\)/g)];
+
+for (const [label, env] of [
+  ['plain', { TMUX: undefined, SSH_TTY: undefined, TERM_PROGRAM: 'iTerm.app' }],
+  ['TMUX set', { TMUX: '/tmp/tmux-1/default,1,0', TERM_PROGRAM: 'tmux', SSH_TTY: undefined }],
+  ['SSH_TTY set', { SSH_TTY: '/dev/ttys001', TMUX: undefined, TERM_PROGRAM: 'iTerm.app' }],
+] as const) {
+  const { r, log } = await open(env as any);
+  const caps = r.capabilities as any;
+  console.log(`[${label}] osc52_support=${caps?.osc52_support} remote=${caps?.remote} multiplexer=${caps?.multiplexer}`);
+  for (const size of [5, 100_000, 1_000_000]) {
+    log.length = 0;
+    const ok = r.copyToClipboardOSC52('x'.repeat(size));
+    await r.idle();
+    await new Promise((res) => setTimeout(res, 30));
+    const out = log.join('');
+    const m = osc(out);
+    console.log(`  copyToClipboardOSC52(${size} chars) -> ${ok}; bytes written ${out.length}; OSC52 seqs ${m.length}; dcs-wrapped ${m.some((x) => x[1])}; payload b64 len ${m[0]?.[3].length ?? 0}; head ${JSON.stringify(out.slice(0, 40))}`);
+  }
+  // The service with a stub host that fails / times out / hangs: no real clipboard.
+  const term = createRendererClipboardAdapter(r as any);
+  for (const status of ['failed', 'timed-out', 'unsupported', 'hang'] as const) {
+    log.length = 0;
+    const host: any = {
+      maxWriteBytes: 8 << 20,
+      read: async () => ({ status: 'unsupported' }),
+      writeText: (_t: string, o: any) => status === 'hang'
+        ? new Promise((res) => o?.signal?.addEventListener('abort', () => res({ status: 'cancelled' })))
+        : Promise.resolve(status === 'failed' ? { status, error: new Error('no pbcopy') } : { status }),
+      clear: async () => ({ status: 'unsupported' }), dispose: async () => {},
+    };
+    const svc = createClipboard({ host, terminal: term });
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 200);
+    const t0 = performance.now();
+    const res = await svc.writeText('hello', { destination: 'best-available', signal: ac.signal });
+    clearTimeout(t);
+    await r.idle(); await new Promise((res) => setTimeout(res, 20));
+    console.log(`  service best-available, host ${status}: host=${res.host.status} terminal=${res.terminal.status} in ${(performance.now() - t0).toFixed(0)} ms; OSC52 written ${osc(log.join('')).length}`);
+  }
+  try { await createClipboard({ host: { maxWriteBytes: 10, writeText: async () => ({ status: 'written' }) } as any, terminal: term }).writeText('x'.repeat(11), { destination: 'best-available' }); }
+  catch (e) { console.log(`  over maxWriteBytes: rejects ${(e as Error).constructor.name}: ${(e as Error).message}`); }
+  try { await createClipboard({ host: { maxWriteBytes: 10 } as any, terminal: term }).writeText('', { destination: 'best-available' }); }
+  catch (e) { console.log(`  empty text: rejects ${(e as Error).message}`); }
+  r.destroy(); await r.closed.catch(() => {});
+}
+process.exit(0);
+===== spike_sel2_test.tsx
+import { test } from 'bun:test';
+import chalk from 'chalk';
+import { until, withWindow, type Window } from './app/render.tsx';
+
+const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+const rowOf = (w: Window, s: string) => w.frame().split('\n').findIndex((l) => l.includes(s));
+const go = async (w: Window, p: string) => { await w.type(p); await w.press('\r'); };
+
+test('E a selected entry unmounted by the moving tail', () =>
+  withWindow(async (w) => {
+    await go(w, 'steps');
+    await w.shows('Step 3');
+    const y = rowOf(w, 'Step 2');
+    console.log('E row', y, JSON.stringify(w.frame().split('\n')[y]));
+    await w.press(left(3, y, 'down') + left(30, y + 1, 'drag') + left(30, y + 1, 'up'));
+    const sel = w.selected();
+    console.log('E selected:', JSON.stringify(sel));
+    await until('the end', () => !w.frame().includes('Working'), 20_000);
+    console.log('E after 150 steps, mounted(Step 2 text)?', w.mounted(sel.slice(0, 8)), 'selected:', JSON.stringify(w.selected()));
+  }, { columns: 80, rows: 24 }), 40_000);
+
+test('F a selection scrolled out of view (culled) and back; click; double click; highlight', () =>
+  withWindow(async (w) => {
+    await go(w, 'long');
+    await w.shows('40. Line 40 of 200');
+    await w.press('\x1b');
+    await until('end', () => !w.frame().includes('Working'), 10_000);
+    const y = rowOf(w, 'Line 35 of');
+    // A plain click
+    await w.press(left(8, y, 'down') + left(8, y, 'up'));
+    console.log('F click selected:', JSON.stringify(w.selected()));
+    // double click (two downs quickly)
+    await w.press(left(8, y, 'down') + left(8, y, 'up') + left(8, y, 'down') + left(8, y, 'up'));
+    console.log('F double click selected:', JSON.stringify(w.selected()));
+    await w.press(left(8, y, 'down') + left(8, y, 'up'));
+    console.log('F triple click selected:', JSON.stringify(w.selected()));
+    await w.press(left(4, y, 'down') + left(20, y + 1, 'drag') + left(20, y + 1, 'up'));
+    chalk.level = 3;
+    const hl = w.frame().split('\n').slice(y, y + 2);
+    console.log('F highlight rows:', JSON.stringify(hl));
+    chalk.level = 0;
+    for (let i = 0; i < 4; i++) await w.press('\x1b[5~');
+    console.log('F after 4 pgup, selected:', JSON.stringify(w.selected()), 'mounted:', w.mounted('Line 35 of'));
+    await w.press('\x1b[F');
+    await new Promise((r) => setTimeout(r, 200));
+    chalk.level = 3;
+    const y2 = rowOf(w, 'Line 35 of');
+    console.log('F back at the end, highlight rows:', JSON.stringify(w.frame().split('\n').slice(y2, y2 + 2)));
+    chalk.level = 0;
+    // a key typed with a selection
+    await w.type('x');
+    console.log('F after typing x, selected:', JSON.stringify(w.selected()));
+    // ctrl+o
+    await w.press('\x0f');
+    console.log('F after ctrl+o, selected:', JSON.stringify(w.selected()));
+    // a click elsewhere
+    await w.press(left(8, 2, 'down') + left(8, 2, 'up'));
+    console.log('F after a click elsewhere:', JSON.stringify(w.selected()));
+  }, { columns: 80, rows: 24 }), 40_000);
+===== spike_sel3_test.tsx
+import { test } from 'bun:test';
+import { until, withWindow, type Window } from './app/render.tsx';
+
+const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+const rowOf = (w: Window, s: string) => w.frame().split('\n').findIndex((l) => l.includes(s));
+const go = async (w: Window, p: string) => { await w.type(p); await w.press('\r'); };
+
+test('E a selected entry unmounted by the moving tail', () =>
+  withWindow(async (w) => {
+    await go(w, 'steps');
+    await w.shows('150 steps read.');
+    await until('end', () => !w.frame().includes('Working'), 10_000);
+    const y = rowOf(w, 'step-148.ts');
+    await w.press(left(3, y, 'down') + left(30, y + 1, 'drag') + left(30, y + 1, 'up'));
+    const sel = w.selected();
+    console.log('E selected:', JSON.stringify(sel), 'mounted:', w.mounted('step-148.ts'));
+    await go(w, 'steps');
+    await until('second', () => w.frame().split('150 steps read.').length > 1 && !w.frame().includes('Working'), 20_000);
+    await new Promise((r) => setTimeout(r, 300));
+    console.log('E after 150 more entries; step-148 mounted:', w.mounted('Read step-148.ts'), 'selected:', JSON.stringify(w.selected()));
+    // pgup with a selection held while scrolled back: drag over an entry, then End
+    for (let i = 0; i < 3; i++) await w.press('\x1b[5~');
+    const y2 = w.frame().split('\n').findIndex((l) => l.includes('step-'));
+    await w.press(left(3, y2, 'down') + left(30, y2 + 1, 'drag') + left(30, y2 + 1, 'up'));
+    console.log('E scrolled back, selected:', JSON.stringify(w.selected()));
+    await w.press('\x1b[F');
+    await new Promise((r) => setTimeout(r, 300));
+    console.log('E after End (window back to the tail), selected:', JSON.stringify(w.selected()));
+  }, { columns: 80, rows: 24 }), 60_000);
+===== spike_sel_test.tsx
+import { test } from 'bun:test';
+import chalk from 'chalk';
+import { until, withWindow, type Window } from './app/render.tsx';
+
+const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+const wheel = (up: boolean, x = 10, y = 10) => `\x1b[<${up ? 64 : 65};${x + 1};${y + 1}M`;
+const rowOf = (w: Window, s: string) => w.frame().split('\n').findIndex((l) => l.includes(s));
+const show = (label: string, w: Window) =>
+  console.log(`--- ${label}\nselected: ${JSON.stringify(w.selected())}\nframe:\n${w.frame()}\n`);
+
+test('A basic drag over a reply, wrapped, with highlight', () =>
+  withWindow(async (w) => {
+    await w.type('markdown'); await w.press('\r');
+    await until('done', () => !w.frame().includes('Working') && w.frame().includes('›'), 10_000);
+    chalk.level = 3;
+    await new Promise((r) => setTimeout(r, 300));
+    const rows = w.frame().split('\n');
+    const y0 = Math.max(0, rows.length - 16);
+    await w.press(left(2, y0, 'down'));
+    await w.press(left(40, y0 + 3, 'drag'));
+    show('A mid-drag', w);
+    await w.press(left(40, y0 + 3, 'up'));
+    show('A released', w);
+    chalk.level = 0;
+  }, { columns: 80, rows: 24 }), 30_000);
+
+test('B wheel while the button is held', () =>
+  withWindow(async (w) => {
+    await w.type('long'); await w.press('\r');
+    await w.shows('40. Line 40 of 200');
+    await w.press('\x1b');
+    await until('end', () => !w.frame().includes('Working'), 10_000);
+    const y = rowOf(w, 'Line 35 of');
+    await w.press(left(4, y, 'down'));
+    await w.press(left(10, y + 2, 'drag'));
+    console.log('B before wheel:', JSON.stringify(w.selected()));
+    await w.press(wheel(true) + wheel(true) + wheel(true));
+    console.log('B after 3 wheel-up, no motion:', JSON.stringify(w.selected()));
+    await w.press(left(10, y + 2, 'drag'));
+    console.log('B after a motion at the same cell:', JSON.stringify(w.selected()));
+    await w.press(left(10, y + 2, 'up'));
+    show('B released', w);
+    await w.press(wheel(false) + wheel(false));
+    show('B after release, wheel down 2', w);
+  }, { columns: 80, rows: 24 }), 30_000);
+
+test('C drag past the edges', () =>
+  withWindow(async (w) => {
+    await w.type('long'); await w.press('\r');
+    await w.shows('40. Line 40 of 200');
+    await w.press('\x1b');
+    await until('end', () => !w.frame().includes('Working'), 10_000);
+    const y = rowOf(w, 'Line 35 of');
+    await w.press(left(4, y, 'down'));
+    await w.press(left(10, 0, 'drag'));
+    show('C dragged to row 0', w);
+    await w.press(left(10, 23, 'drag'));
+    show('C dragged to the last row', w);
+    await w.press(left(79, 23, 'up'));
+    console.log('C released at last row:', JSON.stringify(w.selected()));
+    // Starting in the prompt box, ending in the transcript
+    const p = rowOf(w, '│ ›');
+    await w.press(left(2, p, 'down') + left(10, p - 3, 'drag') + left(10, p - 3, 'up'));
+    console.log('C from prompt box up:', JSON.stringify(w.selected()));
+  }, { columns: 80, rows: 24 }), 30_000);
+
+test('D streaming under a selection', () =>
+  withWindow(async (w) => {
+    await w.type('long'); await w.press('\r');
+    await w.shows('20. Line 20 of 200');
+    const y = rowOf(w, 'Line 18 of');
+    await w.press(left(4, y, 'down') + left(20, y + 1, 'drag') + left(20, y + 1, 'up'));
+    console.log('D just released:', JSON.stringify(w.selected()));
+    await w.shows('30. Line 30 of 200');
+    show('D 10 lines later', w);
+    await w.press('\x1b');
+  }, { columns: 80, rows: 24, }), 30_000);
+
+test('D2 streaming under a held drag (button down)', () =>
+  withWindow(async (w) => {
+    await w.type('long'); await w.press('\r');
+    await w.shows('20. Line 20 of 200');
+    const y = rowOf(w, 'Line 18 of');
+    await w.press(left(4, y, 'down') + left(20, y + 1, 'drag'));
+    console.log('D2 held:', JSON.stringify(w.selected()));
+    await w.shows('30. Line 30 of 200');
+    console.log('D2 held 10 lines later, no motion:', JSON.stringify(w.selected()));
+    await w.press(left(20, y + 1, 'drag'));
+    console.log('D2 then a motion:', JSON.stringify(w.selected()));
+    await w.press(left(20, y + 1, 'up'));
+    show('D2 released', w);
+    await w.press('\x1b');
+  }, { columns: 80, rows: 24 }), 30_000);

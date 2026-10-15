@@ -1,0 +1,66 @@
+# Mutations under a selection (rewrap and boxlater are scratch-only fake scenarios; lit = cells painted with OpenTUI's selection colour)
+M1 released over the last two rows, before the long word lands
+  selected: "The selection rides on cells, so a paragraph that rewraps under it shows\nother words in the same highlighted cells while it streams supercal"
+  lit: row 7: "The selection rides on cells, so a paragraph that rewraps under it shows"
+       row 8: "other words in the same highlighted cells while it streams supercal"
+M1 after the word wrapped
+  selected: "The selection rides on cells, so a paragraph that rewraps under it shows\nother words in the same highlighted cells while it streams"
+  lit: row 7: "The selection rides on cells, so a paragraph that rewraps under it shows"
+       row 8: "other words in the same highlighted cells while it streams"
+table row 14 ["   ┌────┬────┐","   │ a  │ b  │","   ├────┼────┤","   │ 1  │ 2  │","   └────┴────┘"]
+M1 held over the table, before it widens
+  selected: "│ a  │ b  │\n├────┼────┤\n│ 1  │ 2  │"
+  lit: row 12: "│ a  │ b  │"
+       row 13: "├────┼────┤"
+       row 14: "│ 1  │ 2  │"
+M1 held, after it widened, no motion
+  selected: "│ a                             │ b  │\n├───────────────────────────────┼────┤\n│ 1                         "
+  lit: row 12: "│ a                             │ b  │"
+       row 13: "├───────────────────────────────┼────┤"
+       row 14: "│ 1                         "
+M1 then a motion and release
+  selected: "│ a                             │ b  │\n├───────────────────────────────┼────┤\n│ 1                         "
+  lit: row 12: "│ a                             │ b  │"
+       row 13: "├───────────────────────────────┼────┤"
+       row 14: "│ 1                         "
+M2 frame:
+   ⎿  Task test deno test
+M2 released over the output
+  selected: "Task test deno test"
+  lit: row 8: "Task test deno test"
+M2 frame after:
+   ⎿  3/3
+      ok | 2 passed
+      FAILED | 1 failed
+      … +2 lines (ctrl+o to expand)
+      Exit code 1
+M2 after more output, the exit and the fold
+  selected: "3/3"
+  lit: row 8: "3/3"
+M3 released over the draft
+  selected: "1. Read the code"
+  lit: row 9: "1. Read the code"
+M3 after its rewrite
+  selected: "1. Inspect the code"
+  lit: row 9: "1. Inspect the code"
+M3 after it grew
+  selected: "1. Inspect the code"
+  lit: row 9: "1. Inspect the code"
+M3 after the draft was removed
+  selected: "file:///plans/proposal.md"
+  lit: row 9: "file:///plans/proposal.md"
+M4 released over a reply at row 7
+  selected: "Hello, world. This reply came in chunk"
+  lit: row 7: "Hello, world. This reply came in chunk"
+M4 with the box up; the reply is now at row 5
+  selected: "Hello, world. This reply came in chunk"
+  lit: row 5: "Hello, world. This reply came in chunk"
+M4 held over a reply at row 7
+  selected: "Hello, world. This reply came in chunk"
+  lit: row 7: "Hello, world. This reply came in chunk"
+M4 held, box up, no motion; reply at row -1
+  selected: "Hello, world. This reply came in chunk"
+  lit: 
+M4 then a motion at the same cell and release
+  selected: "Hello, world. This reply came in chunks."
+  lit: 

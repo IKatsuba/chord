@@ -1,0 +1,49 @@
+# 120x40, markdown scenario: drag held from (6,7) to (30,17) over a table and a code block
+# capture-pane -e, rows 4-19 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+   [2m[39m┌───────────────┬────────────────────────────────────────┬────────────────────┐[0m[38;2;255;255;255m
+   [2m[39m│[0;1m Module        [0;2m│[0;1m Holds                                  [0;2m│[0;1m Tested by          [0;2m│[0m[38;2;255;255;255m
+   [2m[39m├───────────────┼────────────────────────────────────────┼────────────────────┤[0m[38;2;255;255;255m
+   [2m[39m│[0m [38;2;177;185;249m[48;5;66msession.ts[39m    [2m│[0m[48;5;66m opening, prompting and closing         [2m│[0m[48;5;66m [38;2;177;185;249msession_test.ts[39m    [2m│[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m│[0m[48;5;66m               [2m│[0m[48;5;66m a session                              [2m│[0m[48;5;66m                    [2m│[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m│[0m[48;5;66m [38;2;177;185;249mprocesses.ts[39m  [2m│[0m[48;5;66m the promise that a closed agent is     [2m│[0m[48;5;66m [38;2;177;185;249mprocesses_test.ts[39m  [2m│[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m│[0m[48;5;66m               [2m│[0m[48;5;66m gone                                   [2m│[0m[48;5;66m                    [2m│[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m│[0m[48;5;66m [38;2;177;185;249mtranscript.ts[39m [2m│[0m[48;5;66m the reducer from events to what is     [2m│[0m[48;5;66m [38;2;177;185;249mtranscript_test.ts[39m [2m│[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m│[0m[48;5;66m               [2m│[0m[48;5;66m drawn                                  [2m│[0m[48;5;66m                    [2m│[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m└───────────────┴────────────────────────────────────────┴────────────────────┘[0m[38;2;255;255;255m
+
+   [2m[39m[48;5;66m┌ ts ──────────────────────────────────────────────────────────┐[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m│[0m[48;5;66m [38;2;215;166;255mconst[39m session = [38;2;215;166;255mawait[39m [38;2;140;200;255mopenSession[39m({ [38;2;245;163;199magent[39m: [38;2;242;211;138m'claude'[39m, cwd }); [2m│[0m[38;2;255;255;255m
+   [2m[39m[48;5;66m│[0m[48;5;66m [38;2;215;166;255mconst[39m turn = session.[38;2;140;200;255mprom[49mpt[39m([38;2;242;211;138m'hello'[39m);                        [2m│[0m[38;2;255;255;255m
+   [2m[39m│[0m [38;2;215;166;255mawait[39m turn.[38;2;245;163;199mresult[39m;                                           [2m│[0m[38;2;255;255;255m
+   [2m[39m└──────────────────────────────────────────────────────────────┘[0m[38;2;255;255;255m
+
+# rendered
+ 4|   ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+ 5|   │ Module        │ Holds                                  │ Tested by          │
+ 6|   ├───────────────┼────────────────────────────────────────┼────────────────────┤
+ 7|   │ ⟦session.ts    │⟧⟦ opening, prompting and closing         │⟧⟦ session_test.ts    │⟧
+ 8|   ⟦│⟧⟦               │⟧⟦ a session                              │⟧⟦                    │⟧
+ 9|   ⟦│⟧⟦ processes.ts  │⟧⟦ the promise that a closed agent is     │⟧⟦ processes_test.ts  │⟧
+10|   ⟦│⟧⟦               │⟧⟦ gone                                   │⟧⟦                    │⟧
+11|   ⟦│⟧⟦ transcript.ts │⟧⟦ the reducer from events to what is     │⟧⟦ transcript_test.ts │⟧
+12|   ⟦│⟧⟦               │⟧⟦ drawn                                  │⟧⟦                    │⟧
+13|   ⟦└───────────────┴────────────────────────────────────────┴────────────────────┘⟧
+14|
+15|   ⟦┌ ts ──────────────────────────────────────────────────────────┐⟧
+16|   ⟦│⟧⟦ const session = await openSession({ agent: 'claude', cwd }); │⟧
+17|   ⟦│⟧⟦ const turn = session.prom⟧pt('hello');                        │
+18|   │ await turn.result;                                           │
+19|   └──────────────────────────────────────────────────────────────┘
+
+# renderer.getSelection().getSelectedText() on release, JSON
+"session.ts    │ opening, prompting and closing         │ session_test.ts    │
+│               │ a session                              │                    │
+│ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+│               │ gone                                   │                    │
+│ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+│               │ drawn                                  │                    │
+└───────────────┴────────────────────────────────────────┴────────────────────┘
+┌ ts ──────────────────────────────────────────────────────────┐
+│ const session = await openSession({ agent: 'claude', cwd }); │
+│ const turn = session.prom"

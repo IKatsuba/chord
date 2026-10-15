@@ -1,0 +1,10 @@
+# 120x40: drag held (52,40) to (90,40) over the status line; on release CHD-31'\''s hint replaced the line and the selection'\''s text came out empty
+# capture-pane -e, rows 40-40 (raw, then with the 48;5;66 cells between ⟦ ⟧)
+
+[38;2;255;255;255m                                                 [2m[39mFa[48;5;66mke Large with a 1M context window · med[49mium effort · 1% context used[0m[38;2;255;255;255m
+
+# rendered
+40|                                                 Fa⟦ke Large with a 1M context window · med⟧ium effort · 1% context used
+
+# renderer.getSelection().getSelectedText() on release, JSON
+""

@@ -1,0 +1,3 @@
+# Claude Code 2.1.300, 120x40, draft typed (no prompt sent), drag held from (5,37) to (15,37); session killed with the button still down so nothing was copied
+
+[39m❯ a [48;5;66mdraft I am [49mstill typing

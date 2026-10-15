@@ -1,4 +1,5 @@
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useMemo } from 'react';
+import type { RGBA } from '@opentui/core';
 import {
   type Action,
   DEFAULT_KEYMAP,
@@ -8,6 +9,7 @@ import {
 import { highlighting } from '../transcript/highlight.ts';
 import { type Palette, paletteOf } from '../theme/theme.ts';
 import { capital } from '../shortcuts/state.ts';
+import { colour } from '../theme/text.ts';
 
 /** Whether this terminal takes colour, decided once, as chalk decides it. */
 export const COLOUR = highlighting();
@@ -20,6 +22,25 @@ export const Colours = createContext<Palette>(paletteOf('dark', COLOUR));
 
 export function useColours(): Palette {
   return useContext(Colours);
+}
+
+/**
+ * What a `<text>` the agent or the person wrote takes on top of `TEXT`,
+ * `FILL` or `CUT`: selectable, painted in the palette's `selection` role
+ * where a drag covers it. A reply, a prompt, a message, a thought, a tool's
+ * output, a diff's code, the header's lines and the draft take it; chord's
+ * furniture does not (`theme/text.ts`'s `TEXT` says why).
+ */
+export function useSelectable(): {
+  readonly selectable: true;
+  readonly selectionBg: RGBA;
+} {
+  const { selection } = useColours();
+
+  return useMemo(
+    () => ({ selectable: true, selectionBg: colour(selection) }),
+    [selection],
+  );
 }
 
 /**

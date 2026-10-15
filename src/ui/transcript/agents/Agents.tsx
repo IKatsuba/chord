@@ -5,7 +5,12 @@ import type {
   Subagent,
   TurnState,
 } from '../../../session/transcript/types.ts';
-import { AgentColours, useColours, useHintKey } from '../../app/context.ts';
+import {
+  AgentColours,
+  useColours,
+  useHintKey,
+  useSelectable,
+} from '../../app/context.ts';
 import type { ArrowTone } from '../message.ts';
 import { PlanRecord } from '../../plan/Plan.tsx';
 import { Ansi } from '../../theme/Ansi.tsx';
@@ -177,12 +182,13 @@ function AgentBlock({
   const key = useHintKey('app:toggleTranscript');
   const ended = endedLine(subagent);
   const colours = useHeadlineColours();
+  const selectable = useSelectable();
 
   return (
     <box marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
         <ToolMarker tone={agentTone(subagent.state)} />
-        <text {...CUT}>
+        <text {...CUT} {...selectable}>
           {headlineText(blockHeadline(subagent, width), colours)}
         </text>
       </box>
@@ -228,10 +234,11 @@ function AgentBlock({
 /** What a subagent was asked to do, in full, under its `⎿`. */
 function Task({ subagent }: { subagent: Subagent }) {
   const task = subagent.description?.trim();
+  const selectable = useSelectable();
 
   return task ? (
     <Under first>
-      <text {...FILL}>
+      <text {...FILL} {...selectable}>
         <Ansi text={task} />
       </text>
     </Under>

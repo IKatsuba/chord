@@ -1,9 +1,12 @@
 import { expect, test } from 'bun:test';
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { COMPACT_ERROR } from '../../fixtures/compactions.ts';
 import {
   CTRL_O,
   END,
   leader,
+  left,
   ready,
   send,
   until,
@@ -450,3 +453,51 @@ test('a compaction reads as compacting, then compacted with its summary behind c
     await send(window, 'compactfail');
     await window.shows(`⎿  Compaction failed: ${COMPACT_ERROR}`);
   }));
+
+test('a drag selects what the agent wrote, and none of the furniture beside it (CHD-172)', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'edit');
+      await window.shows('⏺ Edited.');
+
+      const rows = stripAnsi(window.frame()).split('\n');
+      const from = rows.findIndex((row) => row.includes('⏺ Edit(src'));
+      const to = rows.findIndex((row) => row.includes('⏺ Edited.'));
+
+      // From the call's name, past the `⎿`, the diff's numbers and signs,
+      // to the end of the reply, a report a row as a terminal sends them.
+      await window.press(left(rows[from]!.indexOf('Edit('), from, 'down'));
+
+      for (let y = from + 1; y < to; y++) {
+        await window.press(left(3, y, 'drag'));
+      }
+
+      await window.press(left(20, to, 'drag'));
+      await window.press(left(20, to, 'up'));
+
+      expect(window.selected()).toStrictEqual(
+        [
+          'Edit(src/greeting.ts)',
+          'Updated src/greeting.ts with 2 additions and 1 removal',
+          '/** Greets someone by name. */',
+          'export function greet(name: string): string {',
+          '  return "hello " + name;',
+          '  return `hello, ${name}`;',
+          '}',
+          'Edited.',
+        ].join('\n'),
+      );
+      // Painted in the `selection` role, Claude Code's slate even with no
+      // colour; the harness writes escapes only while chalk has colour.
+      const level = chalk.level;
+
+      chalk.level = 3;
+
+      try {
+        expect(window.frame()).toContain('\x1b[48;5;66m');
+      } finally {
+        chalk.level = level;
+      }
+    },
+    { columns: 100, rows: 30 },
+  ));

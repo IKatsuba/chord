@@ -1,7 +1,8 @@
 import type { PlanEntry } from '@agentclientprotocol/sdk';
 import { TextAttributes } from '@opentui/core';
+import { useSelectable } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
-import { CUT, DIM, FILL } from '../theme/text.ts';
+import { CUT, DIM, FILL, TEXT } from '../theme/text.ts';
 import { Gutter } from '../transcript/tools/Tool.tsx';
 import { PLAN_MARKS, planRows, planSummary } from './plan.ts';
 
@@ -83,31 +84,46 @@ function PlanEntry({
   dim?: boolean;
 }) {
   const mark = PLAN_MARKS[entry.status];
+  const selectable = useSelectable();
+  // The mark is chord's, so a copy takes the step's own words alone.
+  const marked = (attributes: number) => (
+    <text {...TEXT} attributes={attributes}>
+      {`${mark} `}
+    </text>
+  );
 
   switch (entry.status) {
     case 'completed':
       return (
-        <text {...CUT} attributes={DIM}>
-          {mark}{' '}
-          <span attributes={TextAttributes.STRIKETHROUGH}>
-            <Ansi text={entry.content} />
-          </span>
-        </text>
+        <>
+          {marked(DIM)}
+          <text {...CUT} {...selectable} attributes={DIM}>
+            <span attributes={TextAttributes.STRIKETHROUGH}>
+              <Ansi text={entry.content} />
+            </span>
+          </text>
+        </>
       );
-    case 'in_progress':
+    case 'in_progress': {
+      const attributes = (running ? TextAttributes.BOLD : 0) | (dim ? DIM : 0);
+
       return (
-        <text
-          {...CUT}
-          attributes={(running ? TextAttributes.BOLD : 0) | (dim ? DIM : 0)}
-        >
-          {mark} <Ansi text={entry.content} />
-        </text>
+        <>
+          {marked(attributes)}
+          <text {...CUT} {...selectable} attributes={attributes}>
+            <Ansi text={entry.content} />
+          </text>
+        </>
       );
+    }
     case 'pending':
       return (
-        <text {...CUT} attributes={dim ? DIM : 0}>
-          {mark} <Ansi text={entry.content} />
-        </text>
+        <>
+          {marked(dim ? DIM : 0)}
+          <text {...CUT} {...selectable} attributes={dim ? DIM : 0}>
+            <Ansi text={entry.content} />
+          </text>
+        </>
       );
   }
 }

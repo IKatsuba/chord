@@ -213,3 +213,13 @@ test("every theme gives a session's agents six colours, and no colour leaves the
   expect(agentColour(PLAIN, 0)).toStrictEqual(undefined);
   expect(agentColour(PALETTES.dark, undefined)).toStrictEqual(undefined);
 });
+
+test('every theme paints a selection, plain included: slate on dark, pale on light (CHD-172)', () => {
+  expect(PALETTES.dark.selection).toStrictEqual('ansi256(66)');
+  expect(PALETTES['dark-daltonized'].selection).toStrictEqual('ansi256(66)');
+  expect(PALETTES['dark-ansi'].selection).toStrictEqual('ansi256(66)');
+  expect(PALETTES.light.selection).toStrictEqual('ansi256(152)');
+  expect(PALETTES['light-daltonized'].selection).toStrictEqual('ansi256(152)');
+  expect(PALETTES['light-ansi'].selection).toStrictEqual('ansi256(152)');
+  expect(paletteOf('light', false).selection).toStrictEqual('ansi256(66)');
+});

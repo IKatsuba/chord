@@ -1553,3 +1553,15 @@ describe('CHD-385 tester: incoming queue headers', () => {
     }
   });
 });
+
+test('shift+← selects nothing in the draft, which only a drag selects (CHD-172)', () =>
+  withWindow(async (window) => {
+    await ready(window);
+    await window.type('abc');
+    await window.shows('› abc');
+    await window.press('\x1b[1;2D');
+    await window.type('x');
+    // Nothing was selected for the key to replace.
+    await window.shows('› abcx');
+    expect(window.selected()).toStrictEqual('');
+  }));

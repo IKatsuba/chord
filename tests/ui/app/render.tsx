@@ -295,6 +295,10 @@ export async function send(window: Window, prompt: string): Promise<void> {
   await window.shows(`› ${prompt}`);
 }
 
+/** An SGR mouse report of the left button at the 0-based cell `x`, `y`. */
+export const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
+  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
+
 /** The window's last row: the status line, or what stands in its place. */
 export function statusRow(window: Window): string {
   return window.frame().split('\n').at(-1) ?? '';

@@ -237,7 +237,7 @@ both.
 | `theme`                        | chord's colours, as `/theme` chooses them; user's file only | `/theme`     |
 | `editorMode`                   | `vim` for vim mode in the prompt, as `/vim` leaves it; user's file only | `/vim` |
 | `mouse`                        | `false` leaves the mouse to the terminal; user's file only |                     |
-| `copyOnSelect`                 | `false` keeps a drag's selection until ctrl+c copies it; user's file only | `true` |
+| `copyOnSelect`                 | `false` keeps a drag's selection until ctrl+c copies it (on by default); user's file only |                     |
 | `mcpServers`                   | MCP servers handed to the agent, as `.mcp.json` writes them |             |
 
 When a turn ends, a permission is asked or the agent asks you to fill in a form

@@ -42,7 +42,7 @@ owner's consent.
 bun install                 # the dependencies, as bun.lock pins them
 bun run chord [agent]       # run from source
 bun run chord:fake          # run from source against the fake agent in tests/fixtures/
-bun run check               # types, lint, fmt, tests — passes before every commit
+bun run check               # full validation: types, lint, fmt and all tests
 bun run check:static        # tsc, ESLint, Prettier and lint/'s own test; check runs it too
 bun run test                # tests only
 bun test ./tests/shell_test.ts -t 'a stop'   # one file, the tests whose names match
@@ -1091,7 +1091,7 @@ module's tests are follows from where it is.
 ## How code is written
 
 - **Bun runs chord.** chord runs from source and is tested on Bun, and
-  `bun run check` is the check: `tsc`, ESLint, `prettier --check` and
+  `bun run check` is the full check: `tsc`, ESLint, `prettier --check` and
   `bun test`. Tests are `test`, `describe`, `expect` and the fake timers
   of `bun:test`. Bun's `expect` narrows no type, so where a check must
   narrow one for the lines after it, the test asserts with `node:assert`'s
@@ -1129,6 +1129,28 @@ module's tests are follows from where it is.
   permission prompt widgets act on; a widget-owned key needs its test too.
 - **Commit messages carry no trailers** — nothing after the body. Conventional
   prefixes (`feat:`, `fix:`, `docs:`, `chore:`) with a scope where it helps.
+
+## Choosing checks for a change
+
+Run checks that match the changed files and the behavior they can affect.
+A full `bun run check` is not required before every commit.
+
+- For prose-only documentation, repository metadata or agent instructions,
+  review the diff and check formatting of the changed files. Check links or
+  rendering when the change affects them. Do not run application tests,
+  type checking or the full lint suite for these changes. Executable
+  examples, configuration and scripts need checks for their behavior.
+- For code changes, run the relevant tests and static checks for the affected
+  code. For interface changes, also check the behavior and layout by hand
+  where automated checks do not cover them.
+- Use the full `bun run check` for changes with broad impact, such as shared
+  runtime behavior, dependencies or build and test configuration, or when
+  targeted checks leave a concrete concern unresolved. Do not broaden or
+  repeat checks without a reason tied to the change or a failure.
+
+Report what was run, what passed or failed, and what was not checked. CI may
+still run the full suite; that does not require repeating it locally for
+an unrelated change.
 
 ## Checking the interface by hand
 

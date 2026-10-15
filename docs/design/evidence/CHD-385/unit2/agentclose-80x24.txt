@@ -1,0 +1,24 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.OVS8
+ ▀▀     ? for shortcuts · /help
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  No agent parser is open in this session; list_sessions names them
+
+ → to @parser
+   ⎿  No agent parser is open in this session; list_sessions names them
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

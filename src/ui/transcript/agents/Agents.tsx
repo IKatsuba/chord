@@ -268,6 +268,7 @@ function AgentGroup({
   const colours = useHeadlineColours();
   const { error } = colours;
   const waits = waitsOf(turn);
+  const selectable = useSelectable();
 
   return (
     <box marginTop={1} flexShrink={0}>
@@ -294,12 +295,15 @@ function AgentGroup({
               <Gutter width={3} dimColor>
                 {last ? '└─' : '├─'}
               </Gutter>
-              <text {...CUT}>
+              {/* The agent's title, as a lone block's; its counts are chord's. */}
+              <text {...CUT} {...selectable}>
                 {headlineText(row.headline, colours)}
-                {row.counts !== undefined && (
-                  <span attributes={DIM}>{row.counts}</span>
-                )}
               </text>
+              {row.counts !== undefined && (
+                <text {...CUT} attributes={DIM}>
+                  {row.counts}
+                </text>
+              )}
             </box>
             <box
               marginLeft={2}

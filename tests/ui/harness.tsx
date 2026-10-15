@@ -6,7 +6,7 @@
  * docs/decisions.md, under "Moving to OpenTUI").
  */
 import { Readable, Writable } from 'node:stream';
-import type { ReactNode } from 'react';
+import { act, type ReactNode } from 'react';
 import {
   type BaseRenderable,
   type CapturedSpan,
@@ -90,24 +90,29 @@ export async function draw(
 
   const frames: string[] = [];
   const written: string[] = [];
-  const setup = await testRender(
-    <Exits exit={() => void unmount()}>
-      <Output write={(bytes) => void written.push(bytes)}>{node}</Output>
-    </Exits>,
-    // ctrl+c is a key, as chord's own renderer takes it, and the test's
-    // process signals are the test runner's.
-    {
-      width: columns,
-      height: rows,
-      exitOnCtrlC: false,
-      exitSignals: [],
-      ...(logged === undefined
-        ? {}
-        : {
-            ...terminalOptions({ mouse: logged.mouse ?? true }),
-            ...loggedTerminal(logged.log, columns, rows),
-          }),
-    },
+  // testRender marks the test an act() one, and what the first render set
+  // off (an effect's promise, a session's first answer) runs before the
+  // await below returns, so the mount and its aftermath are enclosed.
+  const setup = await act(() =>
+    testRender(
+      <Exits exit={() => void unmount()}>
+        <Output write={(bytes) => void written.push(bytes)}>{node}</Output>
+      </Exits>,
+      // ctrl+c is a key, as chord's own renderer takes it, and the test's
+      // process signals are the test runner's.
+      {
+        width: columns,
+        height: rows,
+        exitOnCtrlC: false,
+        exitSignals: [],
+        ...(logged === undefined
+          ? {}
+          : {
+              ...terminalOptions({ mouse: logged.mouse ?? true }),
+              ...loggedTerminal(logged.log, columns, rows),
+            }),
+      },
+    ),
   );
 
   // The window updates on its own as the agent replies and its timers run,

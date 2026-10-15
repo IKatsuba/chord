@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { ClipboardWriteResult } from '@opentui/core';
 import {
   COPY_BOUND_MS,
@@ -244,5 +244,71 @@ test('a copy that throws is said as a failure', async () => {
   expect(await window.start('abc')).toStrictEqual({
     kind: 'failed',
     reason: 'closed',
+  });
+});
+
+describe('tester: selection copy races and failures', () => {
+  test('a synchronous clipboard failure becomes a retryable result', async () => {
+    const { timers, pending } = handTimers();
+    const window = copies(
+      () => {
+        throw new Error('clipboard closed');
+      },
+      COPY_BOUND_MS,
+      timers,
+    );
+
+    expect(await window.start('hello')).toStrictEqual({
+      kind: 'failed',
+      reason: 'clipboard closed',
+    });
+    expect(pending()).toBe(0);
+  });
+
+  test('an older completion cannot detach the newer abort controller', async () => {
+    const { timers, pending } = handTimers();
+    const first = Promise.withResolvers<ClipboardWriteResult>();
+    const second = Promise.withResolvers<ClipboardWriteResult>();
+    const signals: AbortSignal[] = [];
+    const window = copies(
+      (_text, signal) => {
+        signals.push(signal);
+
+        return signals.length === 1 ? first.promise : second.promise;
+      },
+      COPY_BOUND_MS,
+      timers,
+    );
+    const old = window.start('old');
+    const current = window.start('current');
+
+    first.resolve(WRITTEN);
+    expect(await old).toBeUndefined();
+    expect(pending()).toBe(1);
+
+    window.dispose();
+    expect(signals[1]!.aborted).toBe(true);
+    second.reject(new Error('late failure'));
+    expect(await current).toBeUndefined();
+    expect(pending()).toBe(0);
+  });
+
+  test('disposal with a host that never answers settles silently at the bound', async () => {
+    const { timers, fire, pending } = handTimers();
+    const window = copies(() => new Promise(() => {}), COPY_BOUND_MS, timers);
+    const copying = window.start('held');
+
+    window.dispose();
+    fire();
+
+    expect(await copying).toBeUndefined();
+    expect(pending()).toBe(0);
+  });
+
+  test('emoji joins, flags and CRLF count as graphemes in the result', () => {
+    expect(copyResult('👨‍👩‍👧‍👦🇪🇸\r\né', WRITTEN)).toStrictEqual({
+      kind: 'copied',
+      chars: 4,
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -763,4 +763,93 @@ test('a form is declined, and stderr names each question it asked', async () => 
   expect((await headless('link')).stdout).toStrictEqual(
     'Elicitation answer: cancel\n',
   );
+});
+
+describe('CHD-1 tester: headless question diagnostics', () => {
+  const cases: [string, string[]][] = [
+    [
+      'askclaude',
+      [
+        'Which language should helper scripts use?',
+        'Which checks should run before a commit?',
+      ],
+    ],
+    ['askclaudeone', ['Which language should helper scripts use?']],
+    [
+      'askcodex',
+      [
+        'What would you like to focus on next?',
+        'Paste the API token for the staging deploy.',
+      ],
+    ],
+    [
+      'askcodexwait',
+      [
+        'What would you like to focus on next?',
+        'Paste the API token for the staging deploy.',
+      ],
+    ],
+    [
+      'askdroid',
+      [
+        'Where should uploads be kept?',
+        'Which formats should be accepted?',
+        'What should the bucket be called?',
+      ],
+    ],
+    ['askopencode', ['Where should the new tests go?']],
+    ['askdimcode', ['Where should it deploy?']],
+    ['form', ['Set up the deploy target']],
+  ];
+
+  for (const [scenario, questions] of cases) {
+    test(`${scenario}: decline continues in text and JSON while stderr names every skipped question`, async () => {
+      const expected = questions
+        .map(
+          (question) =>
+            `chord: fake asked: ${question} — skipped (no one to answer under -p)\n`,
+        )
+        .join('');
+
+      for (const format of ['text', 'json'] as const) {
+        const result = await headless(scenario, format);
+
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe(expected);
+
+        if (format === 'text') {
+          expect(result.stdout).toBe('Elicitation answer: decline\n');
+        } else {
+          const lines = result.stdout.trimEnd().split('\n');
+          const parsed = JSON.parse(lines[0] ?? 'null');
+
+          expect(lines.length).toBe(1);
+          expect(parsed).toMatchObject({
+            type: 'result',
+            is_error: false,
+            result: 'Elicitation answer: decline',
+            stop_reason: 'end_turn',
+          });
+          expect(parsed.session_id).toMatch(/^[0-9a-f-]{36}$/);
+          expect(parsed).not.toHaveProperty('questions');
+        }
+      }
+    });
+  }
+
+  test('allow-all still skips questions, while links stay cancelled without skipped-question diagnostics', async () => {
+    const plain = await headless('askclaude');
+    const allowed = await headless('askclaude', 'text', { allowAll: true });
+
+    expect(allowed).toStrictEqual(plain);
+
+    const link = await headless('link', 'json');
+
+    expect(link.code).toBe(0);
+    expect(JSON.parse(link.stdout)).toMatchObject({
+      result: 'Elicitation answer: cancel',
+      is_error: false,
+    });
+    expect(link.stderr).toBe('');
+  });
 });

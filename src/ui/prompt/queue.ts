@@ -34,8 +34,15 @@ export interface Queued {
 
 export type QueueRow =
   | { readonly kind: 'prompt'; readonly text: string }
-  /** A message, drawn after `←`. */
-  | { readonly kind: 'message'; readonly text: string }
+  /**
+   * A message, drawn after `←`: its header whole, then its text, which
+   * alone is cut to the width.
+   */
+  | {
+      readonly kind: 'message';
+      readonly header: string;
+      readonly text: string;
+    }
   /** Prompts past the last row that fits. */
   | { readonly kind: 'more'; readonly count: number };
 
@@ -77,10 +84,7 @@ export function queueRowLimit(rows: number): number {
 export function queueRows(queue: readonly Queued[], limit: number): QueueRow[] {
   const rows = queue.map(({ text, from, afterAnswer }): QueueRow => {
     if (from !== undefined) {
-      return {
-        kind: 'message',
-        text: queuedMessage(from, text, afterAnswer),
-      };
+      return { kind: 'message', ...queuedMessage(from, text, afterAnswer) };
     }
 
     const [first = '', ...rest] = text.split('\n');

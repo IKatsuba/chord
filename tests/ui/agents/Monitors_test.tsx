@@ -46,7 +46,7 @@ test("a monitor's event is a message row of its lines as printed, and the runnin
 
     const frame = window.frame();
 
-    expect(frame).toContain('← dev server errors · monitor\n');
+    expect(frame).toContain('← from dev server errors · monitor\n');
     // Verbatim: the indented trace line is its own line, as printed.
     expect(frame).toContain(
       "   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')\n" +
@@ -75,7 +75,7 @@ test('x stops the focused monitor at once: its row goes, its agent is told, and 
     await window.press(DOWN);
     await window.shows('❯ CI run 4812');
     await window.press('x');
-    await window.shows('← CI run 4812 · monitor · stopped');
+    await window.shows('← from CI run 4812 · monitor · stopped');
     await window.shows('The person stopped it after');
     await window.shows(
       'Received the message from CI run 4812 · monitor · stopped.',
@@ -85,7 +85,7 @@ test('x stops the focused monitor at once: its row goes, its agent is told, and 
 
     // The last one stopped, the list goes and the box has the keys again.
     await window.press('x');
-    await window.shows('← dev server errors · monitor · stopped');
+    await window.shows('← from dev server errors · monitor · stopped');
     await until(
       'the list gone',
       () => !window.frame().includes('dev server errors  $'),
@@ -123,7 +123,7 @@ test("a resumed session draws its monitors' event rows again and names those it 
       'dev server errors and CI run 4812 were running when this session was ' +
         'left and are not restarted',
     );
-    expect(window.frame()).toContain('← dev server errors · monitor\n');
+    expect(window.frame()).toContain('← from dev server errors · monitor\n');
     expect(window.frame()).toContain(
       '       at validate (src/routes/login.tsx:41:22)\n',
     );

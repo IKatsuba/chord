@@ -10,6 +10,7 @@ import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CHILD_MESSAGES,
   CRASH_WORDS,
+  DOCS_MESSAGE,
   MAIN_MESSAGES,
 } from '../../fixtures/fake_agent/scenarios/agents.ts';
 import { TASK_REPORT } from '../../fixtures/fake_agent/scenarios/tasks.ts';
@@ -79,7 +80,7 @@ test('a long-lived agent opens in the list under the prompt and trades two messa
     expect(frame).toContain('    parser  fake · Fake Small');
     expect(frame).toContain('→ @parser');
     expect(frame).toContain(MAIN_MESSAGES[0]);
-    expect(count(window, '← @parser · fake')).toStrictEqual(2);
+    expect(count(window, '← from @parser · fake')).toStrictEqual(2);
 
     // ↓ into the list and ↓ again picks parser, whose chat fills the window.
     await window.press(DOWN);
@@ -87,7 +88,7 @@ test('a long-lived agent opens in the list under the prompt and trades two messa
     await window.press(DOWN);
     await window.shows('parser · fake · Fake Small · opened by main');
     await window.shows('╭─ parser ─');
-    await window.shows('← @main');
+    await window.shows('← from @main');
     await window.shows(MAIN_MESSAGES[1]);
     expect(window.frame()).toContain('→ @main');
     expect(!window.frame().includes('Waiting on parser.')).toBeTruthy();
@@ -162,7 +163,7 @@ test('x closes the picked child, once more while it waits, and chord tells the p
     await window.press('x');
     await window.shows('docs waits for your permission · x again to stop it');
     await window.press('x');
-    await window.shows('← chord');
+    await window.shows('← from chord');
     await window.shows('The person closed docs (fake, id ');
     await window.shows('It takes no more messages; open_agent starts another.');
     await window.shows('Received the message from chord.');
@@ -202,7 +203,7 @@ test("a child starts a task agent of its own, drawn in the child's turn, which r
     await window.shows('Agent(Fix the tokenizer) · fake · fake-small');
     await window.shows('Agent(Fix the tokenizer) · fake asks');
     await window.press('1');
-    await window.shows('← Fix the tokenizer · fake · report');
+    await window.shows('← from Fix the tokenizer · fake · report');
     await window.shows('Done (5 tool uses');
     await window.shows(
       'Received the message from Fix the tokenizer · fake · report.',
@@ -232,13 +233,13 @@ test("a child's agent that exits tells the parent with a message from chord, its
     await ready(window);
     await send(window, 'agentexit');
     await window.shows('Waiting on parser.');
-    await window.shows('← chord');
+    await window.shows('← from chord');
     await window.shows(
       `parser's agent exited: ${CRASH_WORDS}. open_agent opens it again.`,
     );
     // The message starts the parent's turn, as every message does.
     await window.shows('Received the message from chord.');
-    expect(count(window, '← chord')).toStrictEqual(1);
+    expect(count(window, '← from chord')).toStrictEqual(1);
   }));
 
 test("a child's turn that fails tells the parent, and the child stays open", () =>
@@ -280,6 +281,41 @@ test('ctrl+x a picks the child that waits, and its permission box opens there', 
     await window.press('1');
     await window.shows('Permission: allow.');
   }));
+
+test("a queued message's row keeps its header whole on a narrow window and cuts only its text", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'agentsheld');
+        await window.shows('● docs needs your permission');
+        await leader(window, 'a');
+        await window.shows('docs asks');
+        await window.shows('← from @main · after your answer: ');
+
+        const row = window
+          .frame()
+          .split('\n')
+          .find((line) => line.includes('after your answer'))!;
+
+        // The text, not the header, gives way to the width.
+        expect(row).toContain('...');
+        expect(row).not.toContain(DOCS_MESSAGE);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        server,
+        runtimes: ['fake'],
+        rows: 40,
+        columns: 60,
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
 
 test('/clear with a child picked is refused, and on main it closes the children with the session', () =>
   withAgents(async (window) => {
@@ -392,8 +428,8 @@ const resumedFromRecord = (legacy: boolean) => () =>
     // Both of parser's messages, read back from the record, not sent again.
     await window.shows(CHILD_MESSAGES[1]);
     expect(window.frame()).toContain('→ @parser');
-    expect(count(window, '← @parser · fake')).toStrictEqual(2);
-    expect(!window.frame().includes('← parser')).toBeTruthy();
+    expect(count(window, '← from @parser · fake')).toStrictEqual(2);
+    expect(!window.frame().includes('← from parser')).toBeTruthy();
     await window.shows(LEFT_OPEN);
     // Not reopened: no list under the prompt.
     expect(!window.frame().includes('    main    fake')).toBeTruthy();
@@ -403,7 +439,7 @@ test('a parent the agent loads is drawn from its record, naming the children lef
   withAgents(async (window) => {
     await leftAndResumed(window);
     await window.shows(LEFT_OPEN);
-    expect(count(window, '← @parser · fake')).toStrictEqual(2);
+    expect(count(window, '← from @parser · fake')).toStrictEqual(2);
     expect(!window.frame().includes('Read(README.md)')).toBeTruthy();
 
     await send(window, 'agentclose');

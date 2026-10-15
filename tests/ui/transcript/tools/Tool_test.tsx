@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
 import { draw } from '../../harness.tsx';
 import stringWidth from 'string-width';
@@ -334,4 +334,70 @@ test('a command of many lines leaves the transcript under it in reach', async ()
   expect(whole).toContain('  ## 39. A decision');
   expect(whole).toContain('  EOF)');
   expect(whole).toContain('the reply after them');
+});
+
+describe('CHD-1 tester: original question result visibility', () => {
+  for (const columns of [80, 120]) {
+    test(`expanded question result restores every original line at ${columns} columns`, async () => {
+      const result =
+        'User has answered your questions: "Which language should helper scripts use?"="Python", "Which checks should run before a commit?"="Types, Tests". You can now continue with the user\'s answers in mind.';
+      const continuation = [
+        'Language: Python',
+        'Checks: Types, Tests',
+        'Note: keep portable',
+        'Answers complete',
+      ];
+      const entry = {
+        kind: 'tool' as const,
+        turnId: 't',
+        call: {
+          id: 'ask-1',
+          title: 'Asking for your input',
+          status: 'completed' as const,
+          asked: true as const,
+          content: [
+            {
+              type: 'content' as const,
+              content: {
+                type: 'text' as const,
+                text: [result, ...continuation].join('\n'),
+              },
+            },
+          ],
+        },
+      };
+      const turn: TurnState = { status: 'idle' };
+
+      for (const expanded of [false, true]) {
+        const rendered = await draw(
+          <TranscriptEntry
+            entry={entry}
+            turn={turn}
+            agent='fake'
+            expanded={expanded}
+            width={columns - 2}
+          />,
+          { columns, rows: 24 },
+        );
+
+        try {
+          const frame = stripAnsi(rendered.frame());
+
+          if (expanded) {
+            // Existing tool lines stay cut at the terminal width, even expanded.
+            expect(frame).toContain('User has answered your questions');
+
+            for (const line of continuation) {
+              expect(frame).toContain(line);
+            }
+          } else {
+            expect(frame).not.toContain('User has answered');
+            expect(frame).not.toContain('Types, Tests');
+          }
+        } finally {
+          await rendered.unmount();
+        }
+      }
+    });
+  }
 });

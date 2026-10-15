@@ -1392,3 +1392,217 @@ describe('CHD-1 tester: question record replay', () => {
       }
     }));
 });
+
+describe('CHD-1 tester: task question tool association', () => {
+  const waitFor = async (check: () => boolean) => {
+    const deadline = Date.now() + 10_000;
+
+    while (!check()) {
+      if (Date.now() > deadline) {
+        throw new Error('timed out waiting for Claude task');
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  };
+
+  for (const action of ['accept', 'cancel'] as const) {
+    test(`${action}: a Claude task and parent with colliding call IDs retain both associations live and after reopen`, () =>
+      withPlace(async (place) => {
+        const events: ConversationEvent[] = [];
+        const failures: string[] = [];
+        const parentRecord = new FileRecording(place.stateDir, (message) =>
+          failures.push(message),
+        );
+        const parent = new Conversation(
+          () => open(place, place.command),
+          (event) => events.push(event),
+          Date.now,
+          {},
+          parentRecord,
+        );
+        let parentId: string | undefined;
+        let child: Conversation | undefined;
+        let childRecord: FileRecording | undefined;
+
+        try {
+          parent.start();
+          await waitFor(() =>
+            events.some((event) => event.type === 'connected'),
+          );
+
+          const connected = events.find((event) => event.type === 'connected');
+
+          assert(connected?.type === 'connected');
+
+          parentId = connected.sessionId;
+
+          parent.send('askclaude');
+          await waitFor(() =>
+            events.some((event) => event.type === 'elicitation_requested'),
+          );
+
+          const rootAsk = events.find(
+            (event) => event.type === 'elicitation_requested',
+          );
+          const task = new TaskAgent(
+            {
+              id: 'question-task',
+              name: 'Question child',
+              runtime: 'fake',
+              prompt: 'askclaude',
+            },
+            parent.taskParent('question-task'),
+            Date.now,
+          );
+
+          assert(rootAsk?.type === 'elicitation_requested');
+
+          childRecord = new FileRecording(
+            place.stateDir,
+            (message) => failures.push(message),
+            Date.now,
+            {
+              parent: () => parentId,
+              name: 'Question child',
+              task: task.id,
+            },
+          );
+          child = new Conversation(
+            () => open(place, place.command),
+            (event) => task.heard(event),
+            Date.now,
+            {},
+            childRecord,
+          );
+
+          parent.adopt(task, child);
+          await waitFor(() =>
+            events.some(
+              (event) =>
+                event.type === 'elicitation_requested' &&
+                event.elicitation.subagentId === task.id,
+            ),
+          );
+
+          const childAsk = events.find(
+            (event) =>
+              event.type === 'elicitation_requested' &&
+              event.elicitation.subagentId === task.id,
+          );
+
+          assert(childAsk?.type === 'elicitation_requested');
+          parent.answer(childAsk.elicitation.id, {
+            action,
+            content: {
+              question_0: 'Python',
+              question_1: ['Tests'],
+            },
+          });
+          await waitFor(() => !task.running);
+          parent.answer(rootAsk.elicitation.id, {
+            action: 'accept',
+            content: {
+              question_0: 'Deno (TypeScript) (Recommended)',
+              question_1: ['Types'],
+            },
+          });
+          await waitFor(() => events.some((event) => event.type === 'result'));
+        } finally {
+          await parent.close();
+          await child?.close();
+        }
+
+        expect(failures).toStrictEqual([]);
+        assert(
+          parentId !== undefined &&
+            parentRecord.path !== undefined &&
+            childRecord?.path !== undefined,
+        );
+
+        const parentLines = await readPast(parentRecord.path);
+
+        expect(
+          parentLines.filter((entry) => entry.type === 'asked'),
+        ).toHaveLength(2);
+
+        const resumed = await open(place, place.resuming, {
+          sessionId: parentId,
+          cwd: place.dir,
+          record: parentRecord.path,
+        });
+
+        try {
+          const transcript = resumed
+            .history()
+            .filter(
+              (action): action is TranscriptAction => action.type !== 'usage',
+            )
+            .reduce(reduceTranscript, emptyTranscript);
+          const taskEntry = transcript.entries.find(
+            (entry) =>
+              entry.kind === 'subagent' &&
+              entry.subagent.id === 'question-task',
+          );
+
+          assert(taskEntry?.kind === 'subagent');
+
+          const live = events.reduce(reduceApp, initialAppState).transcript;
+
+          for (const state of [live, transcript]) {
+            const main = state.entries.find((entry) => entry.kind === 'tool');
+            const task = state.entries.find(
+              (entry) => entry.kind === 'subagent',
+            );
+
+            assert(main?.kind === 'tool' && task?.kind === 'subagent');
+
+            const childCall = task.subagent.entries.find(
+              (entry) => entry.kind === 'tool',
+            );
+
+            assert(childCall?.kind === 'tool');
+            expect(main.call.id).toBe('ask-1');
+            expect(childCall.call.id).toBe('ask-1');
+            expect(main.call.asked).toBe(true);
+            expect(childCall.call.asked).toBe(true);
+            expect(main.call.status).toBe('completed');
+            expect(childCall.call.status).toBe(
+              action === 'accept' ? 'completed' : 'failed',
+            );
+
+            const answers = state.entries.filter(
+              (entry) => entry.kind === 'elicitation',
+            );
+
+            expect(answers).toHaveLength(2);
+            expect(
+              answers.map((entry) => ({
+                owner: entry.wait.subagentId,
+                content: entry.content,
+              })),
+            ).toEqual([
+              {
+                owner: 'question-task',
+                content:
+                  action === 'accept'
+                    ? { question_0: 'Python', question_1: ['Tests'] }
+                    : undefined,
+              },
+              {
+                owner: undefined,
+                content: {
+                  question_0: 'Deno (TypeScript) (Recommended)',
+                  question_1: ['Types'],
+                },
+              },
+            ]);
+          }
+
+          expect(transcript.asking).toStrictEqual([]);
+        } finally {
+          await resumed.close();
+        }
+      }));
+  }
+});

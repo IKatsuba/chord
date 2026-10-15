@@ -37,7 +37,7 @@ export const EDITOR_MODES = ['normal', 'vim'] as const;
 export type EditorMode = (typeof EDITOR_MODES)[number];
 
 /** The keys read only from the user's file, which is the one chord writes. */
-const USER_ONLY = ['theme', 'editorMode', 'mouse'] as const;
+const USER_ONLY = ['theme', 'editorMode', 'mouse', 'copyOnSelect'] as const;
 
 /** One settings file, as written. */
 const SettingsFile = z
@@ -73,6 +73,12 @@ const SettingsFile = z
      * as it is about a person's terminal and hands, not a project.
      */
     mouse: z.boolean(),
+    /**
+     * `false` keeps a drag's selection until ctrl+c copies it, rather than
+     * copying it on release; named as Claude Code names its key, and read only
+     * from the user's file, as `mouse` is.
+     */
+    copyOnSelect: z.boolean(),
   })
   .partial();
 
@@ -291,6 +297,10 @@ export function mergeSettings(...layers: readonly Settings[]): Settings {
       merged.mouse = layer.mouse;
     }
 
+    if (layer.copyOnSelect !== undefined) {
+      merged.copyOnSelect = layer.copyOnSelect;
+    }
+
     if (layer.mcpServers !== undefined) {
       merged.mcpServers = { ...merged.mcpServers, ...layer.mcpServers };
     }
@@ -315,8 +325,7 @@ export interface SettingsLayer {
 /**
  * Reads the user's file, then the project's, which overrides it. A file that
  * is not there is no problem: most people have neither. A `theme`, an
- * `editorMode` or a `mouse` in the
- * project's file is a problem and is left out; `home` shows the user's file
+ * `editorMode`, a `mouse` or a `copyOnSelect` in the project's file is a problem and is left out; `home` shows the user's file
  * from `~` in what it says.
  */
 export async function loadSettings(where: {

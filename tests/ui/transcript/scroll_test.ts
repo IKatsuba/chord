@@ -319,3 +319,35 @@ describe('tester: held view resizing', () => {
     ).toBe(true);
   });
 });
+
+describe('tester: held rule boundaries (CHD-397)', () => {
+  test('growth that still fits has no rule, and the first overflow counts the covered row', () => {
+    let state = reduceScroll(
+      { ...initialScroll, content: 10, view: 20 },
+      { type: 'scroll_held' },
+    );
+
+    for (const content of [19, 20]) {
+      state = reduceScroll(state, measured(content, 20));
+
+      expect(rowsBelow(state)).toBeUndefined();
+      expect(indicator({ ...state, news: true }, 80, 'end')).toStrictEqual([]);
+    }
+
+    state = reduceScroll(state, measured(21, 20));
+
+    expect(rowsBelow(state)).toBe(2);
+    expect(rule(state, 80)).toContain('2 lines below');
+    expect(rowsBelow(reduceScroll(state, measured(20, 20)))).toBeUndefined();
+  });
+
+  test('moving up during a press shows the count and returning to the bottom hides it', () => {
+    const held = reduceScroll(tall, { type: 'scroll_held' });
+    const back = after(held, 'line_up');
+
+    expect(rowsBelow(back)).toBe(2);
+    expect(rule(back, 80)).toContain('2 lines below');
+    expect(rowsBelow(after(back, 'line_down'))).toBeUndefined();
+    expect(rowsBelow(after(back, 'bottom'))).toBeUndefined();
+  });
+});

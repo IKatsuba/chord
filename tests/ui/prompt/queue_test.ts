@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   queueRowLimit,
   queueRows,
@@ -75,4 +75,51 @@ test("a message held for the person's answer says so in its header, ahead of the
     },
     { kind: 'message', header: 'from @main: ', text: 'Done.' },
   ]);
+});
+
+describe('CHD-385 tester: queued sender identity', () => {
+  test('task, monitor and reachable senders retain their own name forms', () => {
+    expect(
+      queueRows(
+        [
+          {
+            turnId: 'task',
+            from: { name: 'parser', runtime: 'fake', note: 'failed' },
+            text: 'The agent exited.',
+          },
+          {
+            turnId: 'agent',
+            from: { name: 'parser', runtime: 'fake', reachable: true },
+            text: 'An answer arrived late.',
+            afterAnswer: true,
+          },
+          {
+            turnId: 'monitor',
+            from: {
+              name: 'CI',
+              monitor: { id: 'm1', end: { kind: 'stopped' } },
+            },
+            text: 'Stopped.\nNo more events.',
+          },
+        ],
+        4,
+      ),
+    ).toStrictEqual([
+      {
+        kind: 'message',
+        header: 'from parser · fake · failed: ',
+        text: 'The agent exited.',
+      },
+      {
+        kind: 'message',
+        header: 'from @parser · fake · after your answer: ',
+        text: 'An answer arrived late.',
+      },
+      {
+        kind: 'message',
+        header: 'from CI · monitor · stopped: ',
+        text: 'Stopped. …',
+      },
+    ]);
+  });
 });

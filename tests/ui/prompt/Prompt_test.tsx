@@ -1,5 +1,9 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
+import stringWidth from 'string-width';
+import { Queue } from '../../../src/ui/prompt/Prompt.tsx';
+import { draw } from '../harness.tsx';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ClipboardReader } from '../../../src/images.ts';
@@ -1458,3 +1462,94 @@ test('a prompt edited and sent from normal mode reaches the agent', () =>
     },
     { vim: true },
   ));
+
+describe('CHD-385 tester: incoming queue headers', () => {
+  const from = {
+    name: 'sssssssssssssss',
+    runtime: 'fake',
+    reachable: true,
+  } as const;
+  const text =
+    'When the README section is finished, add the new flag to docs/FEATURES.md.';
+
+  test('the 80-column cut preserves the held header and both ends of the text', async () => {
+    const drawn = await draw(
+      <Queue
+        queue={[{ turnId: 'held', from, text, afterAnswer: true }]}
+        limit={4}
+      />,
+      { columns: 80, rows: 24 },
+    );
+
+    try {
+      const row = stripAnsi(drawn.frame()).trim();
+
+      expect(row).toStartWith(
+        '← from @sssssssssssssss · fake · after your answer: When',
+      );
+      expect(row).toContain('...');
+      expect(row).toEndWith('FEATURES.md.');
+      expect(stringWidth(row)).toBeLessThanOrEqual(78);
+
+      await drawn.resize({ columns: 120, rows: 40 });
+
+      expect(stripAnsi(drawn.frame())).toContain(
+        '← from @sssssssssssssss · fake · after your answer: ',
+      );
+    } finally {
+      await drawn.unmount();
+    }
+  });
+
+  test('empty and multiline messages keep distinct headers beside a queued prompt', async () => {
+    const drawn = await draw(
+      <Queue
+        queue={[
+          { turnId: 'empty', from, text: '' },
+          {
+            turnId: 'lines',
+            from: { name: 'chord' },
+            text: 'first line\nsecond line',
+            afterAnswer: true,
+          },
+          { turnId: 'person', text: 'person queued this' },
+        ]}
+        limit={4}
+      />,
+      { columns: 80, rows: 24 },
+    );
+
+    try {
+      const shown = stripAnsi(drawn.frame());
+
+      expect(shown).toContain('← from @sssssssssssssss · fake:');
+      expect(shown).toContain('← from chord · after your answer: first line …');
+      expect(shown).not.toContain('second line');
+      expect(shown).toContain('› person queued this');
+      expect(shown.split('\n')).toHaveLength(3);
+    } finally {
+      await drawn.unmount();
+    }
+  });
+
+  test('below the header width the sender survives and the body gives way', async () => {
+    const drawn = await draw(
+      <Queue
+        queue={[{ turnId: 'held', from, text, afterAnswer: true }]}
+        limit={4}
+      />,
+      { columns: 32, rows: 24 },
+    );
+
+    try {
+      const shown = stripAnsi(drawn.frame());
+
+      expect(shown).toContain('← from @sssssssssssssss');
+      expect(shown).not.toContain('When');
+      expect(shown.split('\n')).toHaveLength(1);
+      expect(stringWidth(shown)).toBeLessThanOrEqual(32);
+    } finally {
+      await drawn.unmount();
+    }
+  });
+});

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   anchorAt,
   indicator,
@@ -258,4 +258,27 @@ test('scrolling to the bottom during a drag keeps the view held, not following (
   expect(
     after(reduceScroll(up, { type: 'scroll_released' }), 'bottom').following,
   ).toBe(true);
+});
+
+describe('tester: held view resizing', () => {
+  test('a drag remains held through narrow, zero-row and restored layouts', () => {
+    let state = reduceScroll(tall, { type: 'scroll_held' });
+
+    for (const view of [18, 0, 33, 200, 18]) {
+      state = reduceScroll(state, measured(100, view));
+
+      expect(state.held).toBe(true);
+      expect(state.following).toBe(false);
+      expect(state.top).toBeGreaterThanOrEqual(0);
+
+      state = after(state, 'bottom');
+
+      expect(state.following).toBe(false);
+    }
+
+    expect(
+      after(reduceScroll(state, { type: 'scroll_released' }), 'bottom')
+        .following,
+    ).toBe(true);
+  });
 });

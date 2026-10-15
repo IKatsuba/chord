@@ -1,0 +1,40 @@
+   57. Line 57 of 200, streamed one at a time.
+   58. Line 58 of 200, streamed one at a time.
+   59. Line 59 of 200, streamed one at a time.
+   60. Line 60 of 200, streamed one at a time.
+   61. Line 61 of 200, streamed one at a time.
+   62. Line 62 of 200, streamed one at a time.
+   63. Line 63 of 200, streamed one at a time.
+   64. Line 64 of 200, streamed one at a time.
+   65. Line 65 of 200, streamed one at a time.
+   66. Line 66 of 200, streamed one at a time.
+   67. Line 67 of 200, streamed one at a time.
+   68. Line 68 of 200, streamed one at a time.
+   69. Line 69 of 200, streamed one at a time.
+   70. Line 70 of 200, streamed one at a time.
+   71. Line 71 of 200, streamed one at a time.
+   72. Line 72 of 200, streamed one at a time.
+   73. Line 73 of 200, streamed one at a time.
+   74. Line 74 of 200, streamed one at a time.
+   75. Line 75 of 200, streamed one at a time.
+   76. Line 76 of 200, streamed one at a time.
+   77. Line 77 of 200, streamed one at a time.
+   78. Line 78 of 200, streamed one at a time.
+   79. Line 79 of 200, streamed one at a time.
+   80. Line 80 of 200, streamed one at a time.
+   ⟦81.⟧⟦ Line 81 of 200, streamed one at a time.⟧
+   ⟦82.⟧⟦ Line 82 of 200, streame⟧d one at a time.
+   83. Line 83 of 200, streamed one at a time.
+   84. Line 84 of 200, streamed one at a time.
+   85. Line 85 of 200, streamed one at a time.
+   86. Line 86 of 200, streamed one at a time.
+   87. Line 87 of 200, streamed one at a time.
+   88. Line 88 of 200, streamed one at a time.
+ ── ↓ new output · 23 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────
+
+ ››› Working… (11s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

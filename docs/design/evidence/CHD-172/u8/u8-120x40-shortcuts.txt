@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.h1bq
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                           / for commands                       ctrl + x then a key for sessions
+  \ + enter for a newline                 ↑ ↓ to pick a command                1–9 to pick a choice
+  shift + enter for a newline             tab to complete a command            ↑ ↓ or j k to move between choices
+  ctrl + g to edit in $EDITOR             @ for files                          enter to pick the highlighted choice
+  ctrl + v to paste an image              ↑ ↓ to pick a file                   esc to reject a permission
+  ↑ ↓ for prompts, agents and monitors    tab enter to add a file              esc to close a picker
+  x to close an agent or stop a monitor   esc to close commands or files       ctrl + a to show all directories
+  ctrl + r to search prompts              ! for bash mode                      tab ← → ↑ ↓ space to answer forms
+  tab enter to take a match               backspace to leave bash mode         ctrl + c to stop the turn and its form
+  esc to cancel a search                  esc to interrupt or stop a command   /vim for vim mode
+  pgup pgdn or wheel to scroll            shift + tab to cycle modes           ? for shortcuts
+  shift + ↑ ↓ to scroll a line            ctrl + o for verbose output          esc to close shortcuts
+  home end for the top and the bottom     ctrl + c to clear input
+  ctrl + c to copy                        ctrl + d or ctrl + c twice to quit

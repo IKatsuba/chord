@@ -160,19 +160,37 @@ function askedIn(
   entries: readonly Entry[],
   wait: ElicitationWait,
 ): readonly Entry[] {
-  const index =
-    wait.mode === 'form' &&
-    wait.questions !== undefined &&
-    wait.toolCallId !== undefined
-      ? entries.findLastIndex(
-          (entry) => entry.kind === 'tool' && entry.call.id === wait.toolCallId,
-        )
-      : -1;
-  const found = entries[index];
+  const id =
+    wait.mode === 'form' && wait.questions !== undefined
+      ? wait.toolCallId
+      : undefined;
 
-  return found?.kind === 'tool'
-    ? entries.with(index, { ...found, call: { ...found.call, asked: true } })
-    : entries;
+  if (id === undefined) {
+    return entries;
+  }
+
+  const mark = (list: readonly Entry[]): readonly Entry[] => {
+    const index = list.findLastIndex(
+      (entry) => entry.kind === 'tool' && entry.call.id === id,
+    );
+    const found = list[index];
+
+    return found?.kind === 'tool'
+      ? list.with(index, { ...found, call: { ...found.call, asked: true } })
+      : list;
+  };
+
+  // A task's question is its own call's, among its own work: a call of the
+  // session's with the same id is another.
+  return wait.subagentId === undefined
+    ? mark(entries)
+    : changeSubagent(entries, wait.subagentId, (subagent) => {
+        const marked = mark(subagent.entries);
+
+        return marked === subagent.entries
+          ? subagent
+          : { ...subagent, entries: marked };
+      });
 }
 
 /** The person's answer to a form or link, or its withdrawal, as a record. */

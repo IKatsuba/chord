@@ -133,3 +133,51 @@ test('a box of questions answered out of a tool call marks that call as asked; a
   ).toMatchObject({ call: { asked: true } });
   expect(settled(false)).not.toMatchObject({ call: { asked: true } });
 });
+
+test("a task's box of questions marks its own call, never a call of the session's with the same id", () => {
+  const tool = (subagentId?: string): TranscriptAction => ({
+    type: 'update',
+    turnId: 't1',
+    update: {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'ask-1',
+      title: 'Asking for your input',
+      kind: 'other',
+      status: 'pending',
+    },
+    ...(subagentId === undefined ? {} : { subagentId }),
+  });
+  const transcript = fold([
+    { type: 'prompt', turnId: 't1', text: 'task', at: 0 },
+    tool(),
+    {
+      type: 'update',
+      turnId: 't1',
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'task-1',
+        title: 'Ask',
+        state: { state: 'running' },
+      },
+    },
+    tool('task-1'),
+    {
+      type: 'elicitation_requested',
+      turnId: 't1',
+      elicitation: {
+        ...FORM_WAIT,
+        toolCallId: 'ask-1',
+        subagentId: 'task-1',
+        questions: { agent: 'claude', questions: [] },
+      },
+    },
+  ]);
+  const own = transcript.entries.find((entry) => entry.kind === 'tool');
+  const task = transcript.entries.find((entry) => entry.kind === 'subagent');
+
+  expect(own).not.toMatchObject({ call: { asked: true } });
+  expect(
+    task?.kind === 'subagent' &&
+      task.subagent.entries.find((entry) => entry.kind === 'tool'),
+  ).toMatchObject({ call: { id: 'ask-1', asked: true } });
+});

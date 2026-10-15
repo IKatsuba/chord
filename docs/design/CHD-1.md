@@ -246,8 +246,10 @@ codex, `codex-options-80x24.txt` and `codex-filled-80x24.txt`:
   **Skip** is the form's Decline (claude reads it as skipped).
 - **The record in the transcript** says what was asked and what was
   answered, one row per question. For claude it stands in for the
-  adapter's cut result line under `Asking(…)`, which ctrl+o still shows
-  whole. For codex it is the only trace of the question:
+  adapter's cut result line under `Asking(…)`. ctrl+o restores every line
+  of the adapter's result, each cut at the width as every tool's output
+  already is. Wrapping them is a follow-up outside this slice. For codex
+  the record is the only trace of the question:
 
 ```
  ⏺ Asking(for your input)

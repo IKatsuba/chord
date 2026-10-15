@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.h1bq
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ ⟦Hello, world. This reply came i⟧n chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ctrl + c to copy                               Fake Large with a 1M context window · medium effort · 1% context used

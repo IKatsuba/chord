@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.h1bq
+ ▀▀     ? for shortcuts · /help
+
+ › planshrink
+
+ ⏺ Planned.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (6s · esc to interrupt)
+  ⎿  ◐ ⟦Read the code⟧
+     ☐ Write the change
+     ☐ Run the tests
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ctrl + c to copy                                                 Fake Large with a 1M context window · medium effort

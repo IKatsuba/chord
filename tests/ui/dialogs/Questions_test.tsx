@@ -1,3 +1,6 @@
+import { serveChord } from '../../../src/server/server.ts';
+import { openSession } from '../../../src/session/session.ts';
+import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -24,6 +27,7 @@ import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
 import { CODEX_QUESTIONS, DROID_QUESTIONS } from '../../fixtures/questions.ts';
 import { draw } from '../harness.tsx';
 import {
+  CTRL_O,
   DOWN,
   ESC,
   inputAsked,
@@ -721,3 +725,157 @@ test("claude's lone question reads Asking(<the question>) while its box is open 
     },
     { rows: 40, columns: 120 },
   ));
+
+describe('CHD-1 tester: task question collision in the window', () => {
+  for (const action of ['accept', 'cancel'] as const) {
+    test(`${action}: taskask keeps the parent call and nests one question record live and reopened`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'taskask');
+            await inputAsked(window, 'fake asks you 2 questions');
+            expect(window.frame()).toContain("The parent's own call.");
+
+            if (action === 'accept') {
+              await window.press('2');
+              await window.press(' ');
+              await window.press('\r');
+              await window.press('\r');
+            } else {
+              await window.press(ESC);
+            }
+
+            await window.shows(
+              'It is asking; I will read its report when it lands.',
+            );
+            await window.shows('Done');
+            expect(window.frame()).not.toContain(
+              'User has answered your questions',
+            );
+            expect(window.frame()).toContain("The parent's own call.");
+            await window.press(CTRL_O);
+            await window.shows(
+              action === 'accept'
+                ? 'Language  Python'
+                : 'Language, Checks · Cancelled',
+            );
+
+            const live = window.frame();
+
+            expect(
+              live.split(
+                action === 'accept'
+                  ? 'Language  Python'
+                  : 'Language, Checks · Cancelled',
+              ),
+            ).toHaveLength(2);
+            expect(live).toContain(
+              action === 'accept'
+                ? 'User has answered your questions'
+                : 'Tool use aborted',
+            );
+            expect(live).toContain("The parent's own call.");
+
+            const records = await readRecords(join(window.dir, 'state'));
+            const parent = records.find(
+              (record) => record.parent === undefined,
+            );
+
+            assert(parent !== undefined);
+
+            const resumed = await openSession({
+              agent: 'fake',
+              cwd: window.dir,
+              agentCommand: fakeAgentCommand(undefined, '--resume-only'),
+              resume: {
+                sessionId: parent.sessionId,
+                cwd: window.dir,
+                record: parent.path,
+              },
+            });
+
+            try {
+              const transcript = resumed
+                .history()
+                .filter(
+                  (event): event is TranscriptAction => event.type !== 'usage',
+                )
+                .reduce(reduceTranscript, emptyTranscript);
+              const rootCall = transcript.entries.find(
+                (entry) => entry.kind === 'tool' && entry.call.id === 'ask-1',
+              );
+              const task = transcript.entries.find(
+                (entry) => entry.kind === 'subagent',
+              );
+
+              assert(rootCall?.kind === 'tool' && task?.kind === 'subagent');
+              expect(rootCall.call.asked).toBeUndefined();
+              expect(
+                task.subagent.entries.filter(
+                  (entry) => entry.kind === 'elicitation',
+                ),
+              ).toHaveLength(1);
+              expect(
+                transcript.entries.filter(
+                  (entry) => entry.kind === 'elicitation',
+                ),
+              ).toHaveLength(0);
+
+              for (const expanded of [false, true]) {
+                const rendered = await draw(
+                  <box>
+                    {transcript.entries.map((entry, index) => (
+                      <TranscriptEntry
+                        key={index}
+                        entry={entry}
+                        turn={transcript.turn}
+                        agent='fake'
+                        expanded={expanded}
+                        width={118}
+                      />
+                    ))}
+                  </box>,
+                  { columns: 120, rows: 80 },
+                );
+
+                try {
+                  const frame = rendered.frame();
+
+                  expect(frame).toContain("The parent's own call.");
+
+                  if (expanded) {
+                    expect(
+                      frame.split(
+                        action === 'accept'
+                          ? 'Language  Python'
+                          : 'Language, Checks · Cancelled',
+                      ),
+                    ).toHaveLength(2);
+                    expect(frame).toContain(
+                      action === 'accept'
+                        ? 'User has answered your questions'
+                        : 'Tool use aborted',
+                    );
+                  } else {
+                    expect(frame).not.toContain(
+                      'User has answered your questions',
+                    );
+                  }
+                } finally {
+                  await rendered.unmount();
+                }
+              }
+            } finally {
+              await resumed.close();
+            }
+          },
+          { server, runtimes: ['fake'], rows: 80, columns: 120 },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

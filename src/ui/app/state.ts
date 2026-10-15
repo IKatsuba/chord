@@ -1033,6 +1033,24 @@ function pressCommand(
   }
 
   const stroke = keystrokeOf(input, key);
+
+  // The copy key is heard before every context, a form's and the search
+  // line's typing included, as a chord begun on it is (CHD-172).
+  if (stroke !== undefined && selectionShown(state)) {
+    const keys = [...(state.pendingKeys ?? []), stroke];
+    const copying = state.keys.bindings
+      .filter(({ action }) => action === 'selection:copy')
+      .map((binding) => binding.keys);
+
+    if (bound(state.keys, 'selection:copy', keys)) {
+      return 'copy_selection';
+    }
+
+    if (startsChord(copying, keys)) {
+      return 'key_pending';
+    }
+  }
+
   // A form and the search line take what types, whatever is bound to it, as
   // Claude Code's text fields do; a chord already begun still finishes. A
   // form waits while the list of agents has the keys.

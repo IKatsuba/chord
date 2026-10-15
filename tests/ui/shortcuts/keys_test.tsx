@@ -1734,3 +1734,46 @@ test("the panel says ctrl + c to copy, and a rebound key's first, or ctrl + c (C
   expect(columnCount(lines, 120)).toStrictEqual(3);
   expect(Math.ceil(lines.length / 3)).toStrictEqual(14);
 });
+
+test('a copy key that types, or begins a chord that does, beats a form and the search line (CHD-172)', () => {
+  const { keymap, problems } = readKeybindings(
+    JSON.stringify({
+      bindings: [
+        {
+          context: 'Selection',
+          bindings: { y: 'selection:copy', 'g u': 'selection:copy' },
+        },
+      ],
+    }),
+  );
+  const plain: KeyPress = { ctrl: false, escape: false };
+
+  expect(problems).toStrictEqual([]);
+
+  for (const [name, state] of [
+    ['form', STATES.form!],
+    ['search', STATES.search!],
+  ] as const) {
+    const shown = selected({ ...state, keys: keymap });
+
+    expect(keyCommand('y', plain, shown, ''), name).toStrictEqual(
+      'copy_selection',
+    );
+    expect(keyCommand('g', plain, shown, ''), name).toStrictEqual(
+      'key_pending',
+    );
+    expect(
+      keyCommand('u', plain, { ...shown, pendingKeys: sequence('g') }, ''),
+      name,
+    ).toStrictEqual('copy_selection');
+    // With no selection the field types them, as before.
+    expect(
+      keyCommand('y', plain, { ...state, keys: keymap }, ''),
+      name,
+    ).toBeUndefined();
+    expect(
+      keyCommand('g', plain, { ...state, keys: keymap }, ''),
+      name,
+    ).not.toStrictEqual('key_pending');
+  }
+});

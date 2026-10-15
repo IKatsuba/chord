@@ -1571,11 +1571,22 @@ describe('CHD-1 tester: task question tool association', () => {
               action === 'accept' ? 'completed' : 'failed',
             );
 
-            const answers = state.entries.filter(
+            const answers = [...task.subagent.entries, ...state.entries].filter(
               (entry) => entry.kind === 'elicitation',
             );
 
             expect(answers).toHaveLength(2);
+            expect(
+              task.subagent.entries.filter(
+                (entry) => entry.kind === 'elicitation',
+              ),
+            ).toHaveLength(1);
+            expect(
+              state.entries.filter((entry) => entry.kind === 'elicitation'),
+            ).toHaveLength(1);
+            expect(task.subagent.entries.indexOf(answers[0]!)).toBeGreaterThan(
+              task.subagent.entries.indexOf(childCall),
+            );
             expect(
               answers.map((entry) => ({
                 owner: entry.wait.subagentId,

@@ -624,6 +624,40 @@ test("the mouse is read from the user's file, never the project's", async () => 
   );
 });
 
+test("copyOnSelect is read from the user's file, never the project's", async () => {
+  await place(
+    {
+      user: '{ "copyOnSelect": false }',
+      project: '{ "copyOnSelect": true }',
+    },
+    async (where) => {
+      const { settings, problems } = await loadSettings({
+        ...where,
+        home: join(where.configHome, '..'),
+      });
+      const [, project] = settingsFiles(where);
+
+      expect(settings.copyOnSelect).toStrictEqual(false);
+      expect(problems).toStrictEqual([
+        {
+          file: project!,
+          message:
+            '"copyOnSelect" is read only from ~/config/chord/settings.json, ignored',
+        },
+      ]);
+    },
+  );
+});
+
+test("a project's copyOnSelect alone leaves it unset, so a copy on release", async () => {
+  await place({ project: '{ "copyOnSelect": false }' }, async (where) => {
+    const { settings, problems } = await loadSettings(where);
+
+    expect(settings.copyOnSelect).toStrictEqual(undefined);
+    expect(problems.length).toStrictEqual(1);
+  });
+});
+
 test('a directory is shortened against the home directory alone, and the home path is never shown', () => {
   expect(homePath(join('/h', 'src', 'app'), '/h')).toStrictEqual(
     join('~', 'src', 'app'),

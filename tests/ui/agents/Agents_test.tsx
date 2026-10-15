@@ -4,6 +4,7 @@
  * closed.
  */
 import { expect, setSystemTime, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -472,8 +473,16 @@ test('/resume marks a live child open in its tab, and picking it goes there with
     await window.type('/resume');
     await window.press('\r');
     await window.shows('Resume a session');
-    await window.shows('❯ 1. just now  open in 1  parser · agentchild');
-    await window.press('\r');
+    await window.shows('just now  open in 1  parser · agentchild');
+
+    // docs, open in tab 1 too, was last used about when parser was, so
+    // either can be first; parser is picked by its number.
+    const row = /(\d)\. just now {2}open in 1 {2}parser · agentchild/.exec(
+      window.frame(),
+    );
+
+    assert(row);
+    await window.press(row[1]!);
     // Tab 1 in front, on parser, the same conversation the list names.
     await window.shows('parser · fake · Fake Small · opened by main');
     await window.shows('╭─ parser ─');

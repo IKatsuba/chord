@@ -560,8 +560,8 @@ module's tests are follows from where it is.
   selection followed through public API and copied (`useSelection`). `commands.ts` runs chord's own slash
   commands, `/team`'s forms among them, and saves `/theme`'s and `/vim`'s
   choice; `timers.ts` runs out
-  an armed quit or close, a copy's note, which takes release's selection
-  with it, and a chord's first keys.
+  an armed quit or close, a copy's note, which leaves release's selection
+  standing, and a chord's first keys.
   `selection.ts` is a selection's lifecycle, pure: a press, a scroll while
   the button is down, the release and whether the view follows again, and
   a copy, from OpenTUI's clipboard result to the status line's note, one

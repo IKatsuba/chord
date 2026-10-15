@@ -380,6 +380,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'scroll_measured':
     case 'scrolled':
     case 'scroll_held':
+    case 'scroll_released':
       return reduceView(state, action) as AppState;
     case 'form_filled':
     case 'questions_answered':

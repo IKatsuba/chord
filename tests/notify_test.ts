@@ -134,12 +134,10 @@ test('the environment says the terminal and whether tmux is between', () => {
     env({
       TERM_PROGRAM: 'iTerm.app',
       TERM: 'xterm-256color',
-      LC_TERMINAL: 'iTerm2',
     }),
   ).toStrictEqual({
     termProgram: 'iTerm.app',
     term: 'xterm-256color',
-    lcTerminal: 'iTerm2',
     tmux: false,
   });
   expect(env({ TMUX: '/tmp/tmux-1/default,1,0' }).tmux).toStrictEqual(true);

@@ -103,9 +103,11 @@ import {
   useFiles,
   useImages,
   useNotify,
+  useSelection,
   useShell,
 } from './terminal.ts';
-import { useMouse, usePress } from './input.ts';
+import type { Copy } from './selection.ts';
+import { useMouse, usePasted, usePress } from './input.ts';
 import { Clip } from './Clip.tsx';
 import { useMeasured } from './layout.ts';
 import { useTimers } from './timers.ts';
@@ -266,11 +268,12 @@ export interface AppProps {
   /** What was wrong in the keybindings file, for the status line to say. */
   keysFailed?: string | undefined;
   /**
-   * What the status line says after a drag, how to select text past chord's
-   * reading of the mouse; none when chord leaves the mouse to the terminal,
-   * and in tests unless one asks.
+   * Writes a selection to the clipboard: `main.tsx`'s through OpenTUI's
+   * clipboard service, a test's stub, or none, which copies nothing.
    */
-  selectHint?: string | undefined;
+  copy?: Copy | undefined;
+  /** Release copies a selection; `false` leaves it to the copy key. */
+  copyOnSelect?: boolean | undefined;
   /**
    * Whether the startup splash holds the screen until the first session is
    * up; `main.tsx` asks for it on a terminal, and tests leave it off.
@@ -337,7 +340,8 @@ export function App({
   })),
   keymap = DEFAULT_KEYMAP,
   keysFailed,
-  selectHint,
+  copy,
+  copyOnSelect = true,
   splash = false,
 }: AppProps) {
   const { width: columns, height: rows } = useTerminalDimensions();
@@ -555,6 +559,18 @@ export function App({
     sessions: { ...sessions, front: all.front },
   });
   const editDraft = useEditor(editor, dispatch, showDraft);
+  const selection = useSelection({
+    state,
+    dispatch,
+    copy,
+    copyOnSelect,
+    size: `${columns}x${rows}`,
+  });
+
+  // A paste clears a selection first, so the textarea never puts it in
+  // place of selected text.
+  usePasted(() => selection.clear());
+
   const commands = useCommands(
     {
       agent: frontAgent,
@@ -656,6 +672,10 @@ export function App({
         return void editDraft(draft);
       case 'paste_image':
         return void images.paste(step.quiet);
+      case 'copy_selection':
+        return selection.copy();
+      case 'clear_selection':
+        return selection.clear();
       case 'quit':
         return sessions.askQuit();
     }
@@ -706,10 +726,7 @@ export function App({
         type: 'wheeled',
         step: step === 'up' ? 'line_up' : 'line_down',
       }),
-    onDrag:
-      selectHint === undefined
-        ? undefined
-        : () => dispatch({ type: 'dragged' }),
+    onPress: () => selection.pressed(),
   });
 
   const { waits, armed, strip } = sessions.lines(columns);
@@ -1105,9 +1122,7 @@ export function App({
                     // do; its rows show what waits.
                     waits={state.agentsFocus ? undefined : waits}
                     armed={armed}
-                    selectHint={
-                      state.selectHint === undefined ? undefined : selectHint
-                    }
+                    copyOnSelect={copyOnSelect}
                     draft={draft}
                     width={columns - 4}
                     {...(state.agentsFocus

@@ -20,8 +20,6 @@ export type NotifChannel = (typeof NOTIF_CHANNELS)[number];
 export interface TerminalEnv {
   readonly termProgram?: string | undefined;
   readonly term?: string | undefined;
-  /** iTerm2 sets it as well as `TERM_PROGRAM`, and ssh and tmux pass it on. */
-  readonly lcTerminal?: string | undefined;
   /** Inside tmux, which swallows an OSC it does not know. */
   readonly tmux: boolean;
 }
@@ -32,7 +30,6 @@ export function terminalEnv(
   return {
     termProgram: get('TERM_PROGRAM'),
     term: get('TERM'),
-    lcTerminal: get('LC_TERMINAL'),
     tmux: (get('TMUX') ?? '') !== '',
   };
 }

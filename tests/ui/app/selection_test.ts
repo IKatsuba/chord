@@ -1,18 +1,27 @@
 import { describe, expect, test } from 'bun:test';
-import type { ClipboardWriteResult } from '@opentui/core';
+import {
+  type ClipboardWriteResult,
+  createClipboard,
+  type HostClipboardService,
+  type HostClipboardWriteResult,
+  type TerminalClipboardAdapter,
+} from '@opentui/core';
 import {
   COPY_BOUND_MS,
   COPY_TIMEOUT_MS,
+  type Copy,
   copies,
   copyable,
   copyNote,
   copyRejected,
   copyResult,
+  disposed,
   graphemes,
   NO_SELECTION,
   pressed,
   released,
   scrolled,
+  serviceCopy,
 } from '../../../src/ui/app/selection.ts';
 
 const ATTEMPTED = { status: 'attempted', capability: 'supported' } as const;
@@ -245,6 +254,74 @@ test('a copy that throws is said as a failure', async () => {
     kind: 'failed',
     reason: 'closed',
   });
+});
+
+/**
+ * OpenTUI's own service on a host that is a stub and a terminal that keeps
+ * what it is sent: the one test of chord's wiring, which never reaches the
+ * system's clipboard (docs/design/CHD-172.md, "Tests").
+ */
+function service(
+  host: HostClipboardWriteResult,
+  remote = false,
+): { copy: Copy; sent: string[]; dispose: () => Promise<void> } {
+  const sent: string[] = [];
+  const stub = {
+    maxWriteBytes: 8,
+    read: () => Promise.resolve({ status: 'unsupported' } as const),
+    writeText: () => Promise.resolve(host),
+    clear: () => Promise.resolve({ status: 'unsupported' } as const),
+    dispose: () => new Promise<void>(() => {}),
+  } satisfies HostClipboardService;
+  const terminal: TerminalClipboardAdapter = {
+    remote,
+    writeText: (text) => {
+      sent.push(text);
+
+      return { status: 'attempted', capability: 'supported' };
+    },
+    clear: () => ({ status: 'attempted', capability: 'supported' }),
+  };
+  const real = createClipboard({ host: stub, terminal });
+
+  return { copy: serviceCopy(real), sent, dispose: () => disposed(real, 100) };
+}
+
+test("chord's copy through OpenTUI's service: the host first, OSC 52 where it fails or over SSH", async () => {
+  const say = async (wiring: ReturnType<typeof service>, text = 'héllo') => {
+    const copy = copies(wiring.copy);
+
+    return copyNote((await copy.start(text))!);
+  };
+
+  const written = service({ status: 'written' });
+
+  expect(await say(written)).toBe('copied 5 chars to clipboard');
+  expect(written.sent).toStrictEqual([]);
+
+  const failed = service({ status: 'failed', error: new Error('no') });
+
+  expect(await say(failed)).toBe("sent 5 chars to the terminal's clipboard");
+  expect(failed.sent).toStrictEqual(['héllo']);
+
+  const remote = service({ status: 'written' }, true);
+
+  expect(await say(remote)).toBe("sent 5 chars to the terminal's clipboard");
+  expect(remote.sent).toStrictEqual(['héllo']);
+
+  // Past the host's bound on what it writes, nothing is written at all.
+  const large = service({ status: 'written' });
+
+  expect(await say(large, 'more than eight bytes')).toBe(
+    'could not copy: too large to copy · ctrl + c to try again',
+  );
+  expect(large.sent).toStrictEqual([]);
+
+  // A host whose dispose never settles holds quitting a moment, no more.
+  const started = Date.now();
+
+  await written.dispose();
+  expect(Date.now() - started).toBeLessThan(1_000);
 });
 
 describe('tester: selection copy races and failures', () => {

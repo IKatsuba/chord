@@ -4,7 +4,7 @@
  * copy, from OpenTUI's clipboard service's result to the status line's note
  * (docs/design/CHD-172.md, "The lifecycle" and "The clipboard").
  */
-import type { ClipboardWriteResult } from '@opentui/core';
+import type { ClipboardService, ClipboardWriteResult } from '@opentui/core';
 
 /**
  * Where a selection stands. While the button is down chord keeps whether
@@ -155,6 +155,27 @@ export function copyNote(result: CopyResult): string {
     case 'failed':
       return `could not copy: ${result.reason} · ctrl + c to try again`;
   }
+}
+
+/**
+ * A copy through OpenTUI's clipboard service, `best-available`: the
+ * system clipboard where the host writes it, OSC 52 where it fails or over
+ * SSH (owner, CHD-172).
+ */
+export function serviceCopy(service: ClipboardService): Copy {
+  return (text, signal) =>
+    service.writeText(text, { destination: 'best-available', signal });
+}
+
+/**
+ * The service disposed, waiting at most `ms`: a host that ignores its
+ * abort leaves `dispose()` pending for ever, and quitting waits on no copy.
+ */
+export function disposed(service: ClipboardService, ms: number): Promise<void> {
+  return Promise.race([
+    service.dispose().catch(() => {}),
+    new Promise<void>((resolve) => setTimeout(resolve, ms).unref()),
+  ]);
 }
 
 /** The write a copy goes through: `main.tsx`'s, a test's stub otherwise. */

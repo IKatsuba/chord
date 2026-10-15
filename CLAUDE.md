@@ -548,20 +548,24 @@ module's tests are follows from where it is.
   base-layout key included), each bracketed paste (`usePasted`), a key or
   paste a listener claims kept from the textarea, a listener turned on
   hearing the next press and not the one that turned it on, what each sets
-  off drawn before the next is read, and a wheel step or a drag anywhere
-  over the window (`useMouse`). `Clip.tsx` is a clipping `<box>` that draws
+  off drawn before the next is read, and a wheel step or the left
+  button's press anywhere over the window (`useMouse`). `Clip.tsx` is a clipping `<box>` that draws
   nothing while it is laid out to no rows, as OpenTUI draws every box at
   least a row high; `layout.ts` reads the transcript's boxes after each
   frame for the scroll and moves the view in the frame that laid it out.
   `terminal.ts` is the other side effects as hooks: the bytes that tell the
   terminal chord waits, ctrl+g's editor, the clipboard ctrl+v and an empty
   paste read (the latter quietly) and the image files a draft names, bash
-  mode's commands, a link opened, and the files `@` walks. `commands.ts` runs chord's own slash
+  mode's commands, a link opened, the files `@` walks, and OpenTUI's
+  selection followed through public API and copied (`useSelection`). `commands.ts` runs chord's own slash
   commands, `/team`'s forms among them, and saves `/theme`'s and `/vim`'s
   choice; `timers.ts` runs out
-  an armed quit or close, the drag's hint and a chord's first keys.
-  `drag.ts` is what makes a drag, the left button let go on another cell
-  than it went down on, and the modifier its hint names for the terminal.
+  an armed quit or close, a copy's note, which takes release's selection
+  with it, and a chord's first keys.
+  `selection.ts` is a selection's lifecycle, pure: a press, a scroll while
+  the button is down, the release and whether the view follows again, and
+  a copy, from OpenTUI's clipboard result to the status line's note, one
+  at a time, within chord's bound.
   `layout.ts` measures the transcript in each frame OpenTUI lays out, for
   the scroll, and holds the view on the entry at its top while scrolled
   back, moving it in that same frame, which is also what keeps the view
@@ -578,7 +582,7 @@ module's tests are follows from where it is.
   feature's slice from its folder's `state.ts` put together, with what more
   than one feature writes (the connection, the transcript, the agent's
   models, options and modes, the armed quit and close, the note of the
-  sessions, the drag's hint, `/clear`, quitting, and an update's effect on
+  sessions, the selection and a copy's note, `/clear`, quitting, and an update's effect on
   the scroll, the queue, the held output and the search), and what each key
   asks for, read across them all. It is split in
   two. Each session's own (the connection, the agent's id for the session,
@@ -892,7 +896,7 @@ module's tests are follows from where it is.
   sessions listed, loaded and resumed, and a turn's usage; it plays one
   table spread from a module per family under `scenarios/`: `text.ts`
   (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
-  `tools.ts` (`tools`, `steps`, `calls`, `unordered`, `edit`, `rewrite`),
+  `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `unordered`, `edit`, `rewrite`),
   `permissions.ts` (`permission`, `twins`, `mcpask`), `plans.ts` (`plan`,
   `proposal`), `forms.ts` (`form`, `link`), `shell.ts` (`shell`,
   `shellcut`, `bash`), `compaction.ts` (`compact`, `codexcompact`,
@@ -904,14 +908,14 @@ module's tests are follows from where it is.
   its call ids, `client.ts` what the client declared at `initialize`, and
   `sessions.ts` each session's directory, MCP servers, model, mode and
   effort with the config options that offer them.
-  A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `calls`,
+  A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `stepslater`, `calls`,
   `unordered`, `edit`, `rewrite`, `markdown`, `permission`, `plan`, `proposal`,
   `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
   `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
   `mode`, `late`, `twins`, `mcpask`, `unknown`, `subagent`, `subagentupdate`,
   `chordtools`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
-  its mounted tail in one turn; `form` asks for a form with a field of each kind and
+  its mounted tail in one turn, and `stepslater` the same after a second; `form` asks for a form with a field of each kind and
   `link` for a link to open (`tests/fixtures/forms.ts`), `askclaude`,
   `askclaudeone`, `askcodex`, `askdroid`, `askopencode` and `askdimcode`
   each adapter's question form (`tests/fixtures/questions.ts`), claude's

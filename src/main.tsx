@@ -1,4 +1,10 @@
 import { ValidationError } from '@cliffy/command';
+import {
+  CliRenderEvents,
+  createClipboard,
+  createHostClipboard,
+  createRendererClipboardAdapter,
+} from '@opentui/core';
 import process from 'node:process';
 import { text as readText } from 'node:stream/consumers';
 import type { Writable } from 'node:stream';
@@ -23,7 +29,12 @@ import {
 import { joinPiped, runHeadless } from './headless.ts';
 import { loadMcpServers } from './mcp.ts';
 import { terminalEnv } from './notify.ts';
-import { selectHint } from './ui/app/drag.ts';
+import {
+  type Copy,
+  COPY_TIMEOUT_MS,
+  disposed,
+  serviceCopy,
+} from './ui/app/selection.ts';
 import {
   earlierSessions,
   latestSession,
@@ -517,6 +528,9 @@ const cli = chordCommand().action(async (options, named) => {
   terminal ??= await terminalSetup();
 
   const { found } = terminal;
+  // With the mouse the terminal's, chord selects nothing to copy.
+  const clipboard =
+    loaded.settings.mouse === false ? undefined : copier(terminal.renderer);
   const starting = (value: Sourced | undefined) =>
     value === undefined
       ? undefined
@@ -550,9 +564,8 @@ const cli = chordCommand().action(async (options, named) => {
         channel: channel ?? 'auto',
         env,
       }}
-      {...(loaded.settings.mouse === false
-        ? {}
-        : { selectHint: selectHint(env) })}
+      copy={clipboard?.copy}
+      copyOnSelect={loaded.settings.copyOnSelect !== false}
       theme={loaded.settings.theme}
       vim={loaded.settings.editorMode === 'vim'}
       mcpServers={first.mcpServers}
@@ -591,6 +604,7 @@ const cli = chordCommand().action(async (options, named) => {
 
   await app.waitUntilExit();
   await server.close();
+  await clipboard?.disposed();
 
   // A window opened from a record rewrites it, so quitting it again leaves
   // no copy.
@@ -659,6 +673,33 @@ cli
   });
 
 cli.command('upgrade', upgradeCommand(realpathSync(execPath()), process.env));
+
+/**
+ * The window's one clipboard service, OpenTUI's: the system clipboard
+ * through its native host, OSC 52 where that fails or over SSH (owner,
+ * CHD-172), and the copy `App` writes through. It is disposed as the
+ * renderer is destroyed, which every way out reaches; a host that ignores
+ * the abort leaves its dispose pending for ever, so the wait is bounded.
+ */
+function copier(renderer: Terminal['renderer']): {
+  copy: Copy;
+  disposed: () => Promise<void>;
+} {
+  const service = createClipboard({
+    host: createHostClipboard({ timeoutMs: COPY_TIMEOUT_MS }),
+    terminal: createRendererClipboardAdapter(renderer),
+  });
+  let disposing: Promise<void> | undefined;
+
+  renderer.once(CliRenderEvents.DESTROY, () => {
+    disposing = disposed(service, 100);
+  });
+
+  return {
+    copy: serviceCopy(service),
+    disposed: () => disposing ?? Promise.resolve(),
+  };
+}
 
 if (import.meta.main) {
   await cli.parse(process.argv.slice(2));

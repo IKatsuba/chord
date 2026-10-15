@@ -10,23 +10,33 @@ import { pause, type Play } from '../turn.ts';
 /** Calls in a `steps` turn, each an entry of the transcript. */
 const STEPS = 150;
 
+// A long transcript in one turn: a call an entry, each named by its
+// number, done, so a test reads which are mounted.
+const steps: Play = async (turn) => {
+  for (let step = 1; step <= STEPS; step++) {
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId: turn.callId('read'),
+      title: `Read step-${step}.ts`,
+      kind: 'read',
+      status: 'completed',
+    });
+  }
+
+  await turn.say(`${STEPS} steps read.`);
+
+  return 'end_turn';
+};
+
 export const TOOLS = {
-  // A long transcript in one turn: a call an entry, each named by its
-  // number, done, so a test reads which are mounted.
-  async steps(turn) {
-    for (let step = 1; step <= STEPS; step++) {
-      await turn.send({
-        sessionUpdate: 'tool_call',
-        toolCallId: turn.callId('read'),
-        title: `Read step-${step}.ts`,
-        kind: 'read',
-        status: 'completed',
-      });
-    }
+  steps,
 
-    await turn.say(`${STEPS} steps read.`);
+  // The same calls after a second's pause, for a drag to start before
+  // them with no key pressed, which would clear it.
+  async stepslater(turn) {
+    await pause(turn.signal, STEP_MS * 200);
 
-    return 'end_turn';
+    return steps(turn);
   },
 
   async tools(turn) {

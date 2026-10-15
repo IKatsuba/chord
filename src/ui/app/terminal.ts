@@ -1,10 +1,18 @@
 /**
  * What the window does past its own state, as hooks: the terminal told chord
  * waits, ctrl+g's editor, ctrl+v's clipboard and the image files a draft
- * names, bash mode's commands, the links an agent asks to open, and the
- * files `@` offers.
+ * names, bash mode's commands, the links an agent asks to open, the files
+ * `@` offers, and OpenTUI's selection followed and copied.
  */
-import { type Dispatch, useEffect, useRef } from 'react';
+import { CliRenderEvents } from '@opentui/core';
+import { useRenderer, useSelectionHandler } from '@opentui/react';
+import {
+  type Dispatch,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { type EditorEnd, editorRefused } from '../../editor.ts';
 import type { ClipboardReader, ImageFileReader } from '../../images.ts';
 import type { LinkOpener } from '../../links.ts';
@@ -24,6 +32,7 @@ import {
 } from '../prompt/images.ts';
 import { type Cursor, endOf, unholdable } from '../prompt/prompt.ts';
 import { useApp, useStdout } from './renderer.tsx';
+import { type Copy, copies } from './selection.ts';
 import type { AppAction, AppState, WindowedAction } from './state.ts';
 
 /**
@@ -404,4 +413,150 @@ export function useFiles(
       current = false;
     };
   }, [mentioning, cwd]);
+}
+
+/** What the window does to OpenTUI's selection, past following it. */
+export interface SelectionHandle {
+  /** The left button went down: a drag may have started. */
+  pressed(): void;
+  /** The selection shown, copied; nothing while one is out. */
+  copy(): void;
+  /** chord's own clear, before a key or a paste does its own. */
+  clear(): void;
+}
+
+/**
+ * OpenTUI's selection as the window follows it, through public API alone
+ * (docs/design/CHD-172.md, "The lifecycle"): a drag's start read off the
+ * press, its end off the renderer's `selection` event, OpenTUI's own clears
+ * off the `frame` after them while one is held, and chord's state of none
+ * made OpenTUI's too. Release copies when `copyOnSelect` is on; `copy` is
+ * `main.tsx`'s write, or nothing at all.
+ */
+export function useSelection({
+  state,
+  dispatch,
+  copy,
+  copyOnSelect,
+  size,
+}: {
+  state: AppState;
+  dispatch: Dispatch<WindowedAction>;
+  copy: Copy | undefined;
+  copyOnSelect: boolean;
+  /** The terminal's size: a resize rewraps what was selected. */
+  size: string;
+}): SelectionHandle {
+  const renderer = useRenderer();
+  const latest = useRef(state);
+  const window = useMemo(() => copy && copies(copy), [copy]);
+  const held = state.selection !== undefined && state.selection.kind !== 'none';
+
+  latest.current = state;
+
+  // The copy of what is highlighted now, captured before anything moves it.
+  const start = (auto: boolean) => {
+    const text = renderer.getSelection()?.getSelectedText() ?? '';
+
+    if (window === undefined || text === '') {
+      return;
+    }
+
+    dispatch({ type: 'copy_started' });
+    // A copy superseded or disposed says nothing: the one after it will.
+    void window
+      .start(text)
+      .then(
+        (result) =>
+          result !== undefined &&
+          dispatch({ type: 'copy_noted', result, auto }),
+      );
+  };
+
+  useSelectionHandler((selection) => {
+    const text = selection.getSelectedText();
+
+    dispatch({ type: 'selection_released', text });
+
+    if (text !== '' && copyOnSelect) {
+      start(true);
+    }
+  });
+
+  // OpenTUI says nothing when it clears a selection itself, so a frame
+  // after it is read, and only while chord holds one.
+  useEffect(() => {
+    if (!held) {
+      return;
+    }
+
+    const read = () => {
+      if (!renderer.hasSelection) {
+        dispatch({ type: 'selection_gone' });
+      }
+    };
+
+    renderer.on(CliRenderEvents.FRAME, read);
+
+    return () => {
+      renderer.off(CliRenderEvents.FRAME, read);
+    };
+  }, [held, renderer, dispatch]);
+
+  // chord's state of none is OpenTUI's too: a tab switched, `/clear`, ctrl+o,
+  // the copy key's work done, release's note gone.
+  useLayoutEffect(() => {
+    if (!held && renderer.hasSelection) {
+      renderer.clearSelection();
+    }
+  }, [held, renderer]);
+
+  const resized = useRef(size);
+
+  useLayoutEffect(() => {
+    if (resized.current !== size) {
+      resized.current = size;
+
+      if (latest.current.selection !== undefined) {
+        renderer.clearSelection();
+        dispatch({ type: 'selection_gone' });
+      }
+    }
+  }, [size, renderer, dispatch]);
+
+  // Every way out reaches `destroy`; a copy still out says nothing after.
+  useEffect(() => {
+    if (window === undefined) {
+      return;
+    }
+
+    const dispose = () => window.dispose();
+
+    renderer.on(CliRenderEvents.DESTROY, dispose);
+
+    return () => {
+      renderer.off(CliRenderEvents.DESTROY, dispose);
+    };
+  }, [window, renderer]);
+
+  return {
+    pressed() {
+      const selection = renderer.getSelection();
+
+      if (selection?.isStart && selection.isDragging) {
+        dispatch({ type: 'selection_started' });
+      }
+    },
+    copy() {
+      if (latest.current.selection?.kind === 'shown') {
+        start(false);
+      }
+    },
+    clear() {
+      if (latest.current.selection !== undefined) {
+        renderer.clearSelection();
+        dispatch({ type: 'selection_gone' });
+      }
+    },
+  };
 }

@@ -1,15 +1,14 @@
 /**
  * What the person does to the window, as hooks on OpenTUI's: each press as
  * chord's own `Press` (`usePress`), each bracketed paste (`usePasted`), and a
- * wheel step or a drag anywhere over the window (`useMouse`). What each sets
- * off is drawn before the next is read.
+ * wheel step or the left button's press anywhere over the window
+ * (`useMouse`). What each sets off is drawn before the next is read.
  */
 import type { MouseEvent, PasteEvent } from '@opentui/core';
 import { flushSync, useKeyboard, usePaste } from '@opentui/react';
 import { type RefObject, useLayoutEffect, useMemo, useRef } from 'react';
 import { alone, pressOf } from '../shortcuts/press.ts';
 import type { Press } from '../shortcuts/state.ts';
-import { type Pointer, pointed } from './drag.ts';
 
 /**
  * Every press the window and its widgets answer, as chord's own `Press`,
@@ -114,27 +113,25 @@ export function drawn(run: () => boolean | void): boolean {
 /**
  * A `<box>`'s mouse props for a step of the wheel up or down anywhere over
  * it, which reaches the box under the pointer and bubbles up, and for the
- * left button let go on another cell than it went down on, both over it,
- * whether or not OpenTUI selected text for it. Either left out hears
- * nothing.
+ * left button going down over it, which OpenTUI has already read for a
+ * selection. Either left out hears nothing.
  */
 export function useMouse({
   onWheel,
-  onDrag,
+  onPress,
 }: {
   onWheel?: ((step: 'up' | 'down') => void) | undefined;
-  onDrag?: (() => void) | undefined;
+  onPress?: (() => void) | undefined;
 }): {
   onMouseScroll?: (event: MouseEvent) => void;
   onMouse?: (event: MouseEvent) => void;
 } {
   // The latest listeners, behind functions that stay the same.
   const wheel = useRef(onWheel);
-  const drag = useRef(onDrag);
-  const pointer = useRef<Pointer>({});
+  const press = useRef(onPress);
 
   wheel.current = onWheel;
-  drag.current = onDrag;
+  press.current = onPress;
 
   const onMouseScroll = useMemo(
     () => (event: MouseEvent) => {
@@ -146,15 +143,11 @@ export function useMouse({
     },
     [],
   );
-  // Every press and release under the box bubbles up to it.
+  // Every press under the box bubbles up to it.
   const onMouse = useMemo(
     () => (event: MouseEvent) => {
-      const read = pointed(pointer.current, event);
-
-      pointer.current = read.pointer;
-
-      if (read.dragged) {
-        drawn(() => drag.current?.());
+      if (event.type === 'down' && event.button === 0) {
+        drawn(() => press.current?.());
       }
     },
     [],
@@ -162,6 +155,6 @@ export function useMouse({
 
   return {
     ...(onWheel === undefined ? {} : { onMouseScroll }),
-    ...(onDrag === undefined ? {} : { onMouse }),
+    ...(onPress === undefined ? {} : { onMouse }),
   };
 }

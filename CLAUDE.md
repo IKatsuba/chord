@@ -663,7 +663,7 @@ module's tests are follows from where it is.
   other entries hang theirs from. `tools.ts` is what
   a tool call reads as: its `Read(path)` headline, its status, its `⎿` lines;
   `chord.ts` is what chord's own calls read as, from what chord served:
-  `List agents(codex)`, `List sessions`, `→ @main · queued`, a
+  `List agents(codex)`, `List sessions`, `→ to @main · queued`, a
   refused `Agent(name) · runtime`, and what was said or answered;
   `proposal.ts` is `propose_team`'s `Team(bugfix) · proposal` or `· change`:
   its agents as a table (@cliffy/table) cut to the width, an effort

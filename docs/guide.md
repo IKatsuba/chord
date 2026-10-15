@@ -393,7 +393,7 @@ message to an agent that is working goes into its turn at once, where its
 runtime takes that (Claude's and Codex's adapters advertise ACP's
 `_session/steering`), and draws there, among the turn's calls; while the
 turn waits on your answer to a permission, form or link, it waits under the
-working line as `← @main · after your answer: …` and goes in once you
+working line as `← from @main · after your answer: …` and goes in once you
 answer. A runtime without steering takes it as the next turn, as the queue
 under the working line shows. Should the message reach the agent just as
 its turn ended, and the agent start a turn of its own with it, as Codex's
@@ -406,7 +406,7 @@ its permission box opens there. `x` in the list closes the picked child, a
 second time while it works or waits, and chord tells the parent so;
 `close_agent` closes one from the parent, and a message to a closed one is
 refused. A child whose agent exits, or whose turn fails, is news to its
-parent too: a `← chord` message, a turn of the parent's, says
+parent too: a `← from chord` message, a turn of the parent's, says
 `parser's agent exited: <the end of its stderr>. open_agent opens it
 again.`, or that its turn failed and why, so a parent waiting on a report
 does not wait for ever. A session holds eight children at most, a team's
@@ -474,7 +474,7 @@ team's name is completed after `show`, `run` and `stop`.
 
 `monitor` runs a command in the background for the agent that asks, a
 session's or a long-lived child's, and each batch of lines it prints reaches
-that agent later as a message: a turn of its own, drawn `← dev server errors
+that agent later as a message: a turn of its own, drawn `← from dev server errors
 · monitor` with the lines as printed, folded after six. Its end is one more,
 `· exit code 1`, `· timed out`, `· flooded` or `· stopped`, with chord's
 sentence last. While one runs it is a row in the list under the prompt, after
@@ -500,10 +500,10 @@ its agents were open (`team bugfix (4 agents)`), and the line ends with
 the last but the working tree and what main was told. `/resume` lists its
 lead and members like any child. A task agent gets no command on quit.
 chord's own calls draw as `List agents`, `List sessions`, `Open(parser)`
-and `Close(parser)`, and a message sent as `→ @main` or `→ @parser`, never as
+and `Close(parser)`, and a message sent as `→ to @main` or `→ to @parser`, never as
 their MCP names. A name after an arrow takes `@` where `send_message` reaches
 it, `main` and a long-lived child; a task, named by its title, and chord's
-own `← chord` stay bare. `/mcp` lists chord's server first,
+own `← from chord` stay bare. `/mcp` lists chord's server first,
 and says what it gives the agent, or that the agent does not take HTTP and
 got none. `-p` gets no such server.
 

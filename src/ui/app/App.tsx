@@ -218,6 +218,11 @@ export interface AppProps {
    */
   onQuit?: (sessions: readonly ResumableTab[], front: number) => void;
   /**
+   * Hears that the window has its first session up and takes a prompt,
+   * which comes a render after the session opens.
+   */
+  onReady?: () => void;
+  /**
    * How the terminal is told chord waits on the person; none by default, and
    * `main.tsx` passes the settings' channel.
    */
@@ -320,6 +325,7 @@ export function App({
   readImage = readImageFile,
   home = process.env['HOME'],
   onQuit,
+  onReady,
   notifications,
   theme = 'auto',
   background = NO_BACKGROUND,
@@ -447,6 +453,10 @@ export function App({
       state.connection.status === 'failed'
     ) {
       setSplashLeft(true);
+    }
+
+    if (state.connection.status === 'ready') {
+      onReady?.();
     }
   }, [state.connection.status]);
 

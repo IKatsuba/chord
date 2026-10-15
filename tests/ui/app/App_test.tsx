@@ -92,6 +92,31 @@ test("the transcript opens with the header: chord's version, the agent and its m
     ).toBeTruthy();
   }));
 
+test("a test's first prompt goes once the window has its session, with a notice where Starting would be", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('Hello, world. This reply came in chunks.');
+    },
+    {
+      columns: 120,
+      // A keybindings problem says so in the status line in place of
+      // `Starting fake…`, while the window is a while from taking the
+      // session the test already sees.
+      keybindings: JSON.stringify({
+        bindings: [
+          {
+            context: 'Chat',
+            bindings: {
+              'ctrl+o': 'chat:externalEditor',
+            },
+          },
+        ],
+      }),
+      heldOpen: new Promise((resolve) => setTimeout(resolve, 500)),
+    },
+  ));
+
 test('a warning chord was started with is in the transcript before anything else', () =>
   withWindow(
     async (window) => {

@@ -273,6 +273,12 @@ export async function withWindow(
 
   try {
     await until('the session', () => session !== undefined);
+    // The window takes it a render later: until then Enter keeps the draft,
+    // and a test's first prompt would stay unsent.
+    await until(
+      'the window to take the session',
+      () => !statusRow(window).includes('Starting '),
+    );
     await body(window);
   } finally {
     await app.unmount();
@@ -299,10 +305,26 @@ export async function asked(window: Window): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 150));
 }
 
+/**
+ * Types `prompt` and submits it, waiting until the box holds the draft and
+ * then until Enter has taken it out. Its row in the transcript is no proof:
+ * a reply can scroll it away before a wait sees it, and the box's own row
+ * reads `› ${prompt}` before the Enter is handled.
+ */
 export async function send(window: Window, prompt: string): Promise<void> {
+  // The box's first row, which a long draft fills to its edge.
+  const head = prompt.split('\n')[0]!.slice(0, 20);
+  const drafted = () => promptRow(window)?.includes(head) ?? false;
+  const failed = (error: Error) => {
+    throw new Error(`${error.message}; the screen:\n${window.frame()}`);
+  };
+
   await window.type(prompt);
+  await until(`"${head}" in the prompt box`, drafted).catch(failed);
   await window.press('\r');
-  await window.shows(`› ${prompt}`);
+  await until(`"${head}" to leave the prompt box`, () => !drafted()).catch(
+    failed,
+  );
 }
 
 /** A clipboard that writes every copy, as the host's does, and keeps none. */

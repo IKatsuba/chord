@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import stripAnsi from 'strip-ansi';
 import { ESC, left, send, until, withWindow } from '../app/render.tsx';
 
@@ -103,3 +103,34 @@ test('a step removed under a selection does not hand it to the step drawn in its
     },
     { copyOnSelect: false },
   ));
+
+describe('tester: selected plan entry identity', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`a surviving entry keeps its selection when the preceding step is removed at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'planshrink');
+          await window.shows('☐ Write the change');
+
+          const lines = stripAnsi(window.frame()).split('\n');
+          const y = lines.findIndex((line) =>
+            line.includes('Write the change'),
+          );
+          const x = lines[y]!.indexOf('Write the change');
+          const end = x + 'Write the change'.length - 1;
+
+          await window.press(left(x, y, 'down'));
+          await window.press(left(end, y, 'drag'));
+          await window.press(left(end, y, 'up'));
+          expect(window.selected()).toBe('Write the change');
+
+          await window.shows('Dropped a step.');
+          expect(window.selected()).toBe('Write the change');
+        },
+        { columns, rows, copyOnSelect: false },
+      ));
+  }
+});

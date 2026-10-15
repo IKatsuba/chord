@@ -75,7 +75,7 @@ async function ran(window: Window): Promise<void> {
   await ready(window);
   await send(window, `/team run bugfix ${JOB}`);
   await window.shows('Team(bugfix) · fake · fake-large');
-  await window.shows('← @bugfix · fake');
+  await window.shows('← from @bugfix · fake');
   await window.shows('● tester needs your permission');
   await window.shows('└─ coder ');
 }
@@ -263,7 +263,7 @@ test("/team show gives a message that came after an agent's last call as its lat
       await send(window, '/team show bugfix');
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      return coder().includes('← @tester · fake');
+      return coder().includes('← from @tester · fake');
     });
 
     expect(!coder().includes('→ @tester')).toBeTruthy();

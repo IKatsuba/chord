@@ -169,11 +169,14 @@ export function headlineText({
   return sent ? `→ @${name}` : arg === undefined ? name : `${name}(${arg})`;
 }
 
-/** An incoming message's headline, as its row's header: `← @tester · claude`. */
+/**
+ * An incoming message's headline, as its row's header:
+ * `← from @tester · claude`.
+ */
 export function messageHeadline(from: MessageFrom): string {
-  const { name, rest } = messageHeader(from);
+  const { word, name, rest } = messageHeader(from);
 
-  return `← ${name}${rest}`;
+  return `← ${word}${name}${rest}`;
 }
 
 /** The first unit of an elapsed time: `41s`, `6m`. */

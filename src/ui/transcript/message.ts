@@ -17,14 +17,23 @@ import type { Tone } from './tools/tools.ts';
 /** How many lines of a message show before it folds. */
 export const MESSAGE_LINES = 6;
 
-/** The header after `←`: the sender bold, `@` and all, then the rest dim. */
+/**
+ * The header after `←`: `from`, dim, so the row reads as one that came in
+ * whichever way the arrow is remembered, then the sender bold, `@` and all,
+ * then the rest dim.
+ */
 export function messageHeader(from: MessageFrom): {
+  readonly word: string;
   readonly name: string;
   readonly rest: string;
 } {
   const whole = fromLine(from);
 
-  return { name: senderName(from), rest: whole.slice(from.name.length) };
+  return {
+    word: 'from ',
+    name: senderName(from),
+    rest: whole.slice(from.name.length),
+  };
 }
 
 /**
@@ -160,21 +169,23 @@ export function wrapLine(line: string, width: number): string[] {
 }
 
 /**
- * A queued message's row after its `←`: `@parser · codex: ` and its first
- * line, which the row is cut to the width after. One held for the person's
- * answer says so in its header, where the cut never reaches.
+ * A queued message's row after its `←`: its header, `from @parser · codex: `,
+ * and its first line apart, as the row draws the header whole and cuts only
+ * the text to the width, so a long name never cuts away why it waits. One
+ * held for the person's answer says so in its header.
  */
 export function queuedMessage(
   from: MessageFrom,
   text: string,
   afterAnswer = false,
-): string {
+): { readonly header: string; readonly text: string } {
   const [first = '', ...rest] = text.split('\n');
-  const { name, rest: after } = messageHeader(from);
+  const { word, name, rest: after } = messageHeader(from);
 
-  return `${name}${after}${afterAnswer ? ' · after your answer' : ''}: ${
-    rest.length > 0 ? `${first} …` : first
-  }`;
+  return {
+    header: `${word}${name}${after}${afterAnswer ? ' · after your answer' : ''}: `,
+    text: rest.length > 0 ? `${first} …` : first,
+  };
 }
 
 /**

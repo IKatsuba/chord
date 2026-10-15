@@ -346,7 +346,7 @@ test("/team show's running form reads the lead's runtime from the lead, though a
 
   expect(lines.map(({ text }) => text)).toStrictEqual([
     'lead  claude · opus    default  idle',
-    'lead  claude · sonnet  plan     idle  ← @tester · claude',
+    'lead  claude · sonnet  plan     idle  ← from @tester · claude',
   ]);
 });
 
@@ -362,7 +362,7 @@ test("/team show's running form has the file's efforts as a column, which gives 
       lead: true as const,
       open: true,
       state: { glyph: '✓', words: 'replied 6s ago', tone: 'dim' as const },
-      latest: '← @tester · claude',
+      latest: '← from @tester · claude',
     },
     {
       name: 'tester',
@@ -379,7 +379,7 @@ test("/team show's running form has the file's efforts as a column, which gives 
   const wide = runningTable(team, agents, 114);
 
   expect(wide.map(({ text }) => text)).toStrictEqual([
-    'lead    claude · opus          high  default      ✓ replied 6s ago  ← @tester · claude',
+    'lead    claude · opus          high  default      ✓ replied 6s ago  ← from @tester · claude',
     'tester  claude · sonnet        low   acceptEdits  ● permission 5s   Bash(deno task test tests/parse)',
     'coder   codex · gpt-5.3-codex  —     auto         not opened',
   ]);

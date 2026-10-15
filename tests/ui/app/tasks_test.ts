@@ -82,7 +82,11 @@ test('a queued message is a row of its own after ←, and Esc never takes it int
 
   expect(queueRows(queue, 4)).toStrictEqual([
     { kind: 'prompt', text: 'and keep the old name' },
-    { kind: 'message', text: 'parser · codex: Ran the tests. …' },
+    {
+      kind: 'message',
+      header: 'from parser · codex: ',
+      text: 'Ran the tests. …',
+    },
   ]);
   expect(restoredDraft(queue, 'typed')).toStrictEqual(
     'and keep the old name\ntyped',

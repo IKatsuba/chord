@@ -61,7 +61,7 @@ async function started(window: Window): Promise<void> {
   await ready(window);
   await send(window, 'team');
   await window.shows('Team(bugfix) · fake · fake-large');
-  await window.shows('← @bugfix · fake');
+  await window.shows('← from @bugfix · fake');
   await window.shows('● tester needs your permission');
   await window.shows('└─ coder ');
 }
@@ -91,11 +91,11 @@ test("the lead's transcript has its instructions as one line, its Open rows with
     await window.shows('bugfix · team · fake · Fake Large');
     await window.shows('opened by @main');
     await window.shows("⏺ bugfix's instructions for the lead · ");
-    await window.shows('← @main');
+    await window.shows('← from @main');
     await window.shows('Open(tester) · fake · fake-small · acceptEdits');
     await window.shows('Open(coder) · fake · fake-large · plan');
     await window.shows('→ @main');
-    await window.shows('← @tester · fake');
+    await window.shows('← from @tester · fake');
     await window.shows('╭─ bugfix ─');
 
     const frame = window.frame();
@@ -127,7 +127,7 @@ test("a member picked has its run in its box's title, its instructions folded, t
     await window.shows("tester · fake · Fake Small · bugfix's member");
     await window.shows('opened by @bugfix');
     await window.shows("⏺ bugfix's instructions for tester · ");
-    await window.shows('← @bugfix');
+    await window.shows('← from @bugfix');
     expect(window.frame()).toContain(TESTER_PROMPT.slice(0, 60));
   }));
 
@@ -139,7 +139,7 @@ test('members message each other by name, directly', () =>
     await window.press(DOWN);
     await window.press(DOWN);
     await window.shows('╭─ coder · bugfix ─');
-    await window.shows('← @tester · fake');
+    await window.shows('← from @tester · fake');
     await window.shows(TESTER_TO_CODER.slice(0, 60));
     await window.shows('→ @tester');
   }));
@@ -149,15 +149,15 @@ test("a second run of a running team is 'bugfix 2', and its lead reaches the fir
     await started(window);
     await send(window, 'team2');
     await window.shows('Team(bugfix 2) · fake · fake-large');
-    await window.shows('← @bugfix 2 · fake');
+    await window.shows('← from @bugfix 2 · fake');
     await window.shows('    bugfix 2   team · fake');
-    expect(count(window, '← @bugfix · fake')).toStrictEqual(1);
+    expect(count(window, '← from @bugfix · fake')).toStrictEqual(1);
 
     // bugfix heard from bugfix 2 directly.
     await window.press(DOWN);
     await window.press(DOWN);
     await window.shows('╭─ bugfix ─');
-    await window.shows('← @bugfix 2 · fake');
+    await window.shows('← from @bugfix 2 · fake');
     await window.shows('Which files do you hold?');
   }));
 
@@ -173,7 +173,7 @@ test('x on the lead closes its members with it, and chord tells main which', () 
       'bugfix and its 2 members are working · x again to stop them and close',
     );
     await window.press('x');
-    await window.shows('← chord');
+    await window.shows('← from chord');
     await window.shows('The person closed team bugfix: its lead (fake');
     await window.shows('and its members tester and coder.');
     await window.shows('run_team starts it again.');

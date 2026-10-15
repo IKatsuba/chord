@@ -68,7 +68,11 @@ test("a message held for the person's answer says so in its header, ahead of the
       5,
     ),
   ).toStrictEqual([
-    { kind: 'message', text: '@main · after your answer: Then the docs.' },
-    { kind: 'message', text: '@main: Done.' },
+    {
+      kind: 'message',
+      header: 'from @main · after your answer: ',
+      text: 'Then the docs.',
+    },
+    { kind: 'message', header: 'from @main: ', text: 'Done.' },
   ]);
 });

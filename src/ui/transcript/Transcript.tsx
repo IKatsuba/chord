@@ -276,7 +276,7 @@ function Message({
 }) {
   const colours = useColours();
   const sender = useAgentColour(from.name);
-  const { name, rest } = messageHeader(from);
+  const { word, name, rest } = messageHeader(from);
   const monitor = from.monitor !== undefined;
   const blocks = useMemo(
     () =>
@@ -306,6 +306,7 @@ function Message({
       <box flexDirection='row'>
         <Arrow glyph='←' tone={inArrow(from)} colour={sender} />
         <text {...CUT}>
+          <span attributes={DIM}>{word}</span>
           <span attributes={TextAttributes.BOLD} {...fg(sender)}>
             <Ansi text={name} />
           </span>

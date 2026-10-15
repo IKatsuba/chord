@@ -56,37 +56,37 @@ const sent = (chord: Partial<ChordCall>, status = 'completed'): Entry => ({
   },
 });
 
-test('a message that came in is ←, its sender and what it said', async () => {
+test('a message that came in is ← from, its sender and what it said', async () => {
   expect(
     await frame(
       came({ name: 'Fix the tokenizer', runtime: 'codex', note: 'report' }),
     ),
-  ).toContain('← Fix the tokenizer · codex · report\n  ⎿  Fixed.');
+  ).toContain('← from Fix the tokenizer · codex · report\n  ⎿  Fixed.');
   expect(
     await frame(
       came({ name: 'Fix the tokenizer', runtime: 'codex', note: 'failed' }),
     ),
-  ).toContain('← Fix the tokenizer · codex · failed');
+  ).toContain('← from Fix the tokenizer · codex · failed');
   expect(
     await frame(came({ name: 'parser', runtime: 'codex', reachable: true })),
-  ).toContain('← @parser · codex');
+  ).toContain('← from @parser · codex');
   expect(await frame(came({ name: 'main', reachable: true }))).toContain(
-    '← @main',
+    '← from @main',
   );
-  expect(await frame(came({ name: 'chord' }))).toContain('← chord');
+  expect(await frame(came({ name: 'chord' }))).toContain('← from chord');
 });
 
 test('@ goes on a sender send_message reaches, told by who sent it, not its name', async () => {
   // A task titled as an agent is named is still a task.
   expect(await frame(came({ name: 'parser', runtime: 'codex' }))).toContain(
-    '← parser · codex',
+    '← from parser · codex',
   );
   expect(
     queuedMessage({ name: 'docs', runtime: 'claude', reachable: true }, 'Hi'),
-  ).toContain('@docs · claude: Hi');
-  expect(queuedMessage({ name: 'Fix it', runtime: 'codex' }, 'Hi')).toContain(
-    'Fix it · codex: Hi',
-  );
+  ).toStrictEqual({ header: 'from @docs · claude: ', text: 'Hi' });
+  expect(
+    queuedMessage({ name: 'Fix it', runtime: 'codex' }, 'Hi'),
+  ).toStrictEqual({ header: 'from Fix it · codex: ', text: 'Hi' });
 });
 
 test('a message sent is → and its recipient, not a call, queued or refused', async () => {
@@ -172,7 +172,7 @@ for (const theme of ['dark', 'light'] as const) {
       false,
     );
 
-    expect(stripAnsi(body)).toContain('← @main\n  ⎿  Do not hand back.');
+    expect(stripAnsi(body)).toContain('← from @main\n  ⎿  Do not hand back.');
     expect(body).toContain('\x1b[2mDo not hand back.');
 
     const failed = await painted(
@@ -290,13 +290,16 @@ const event = (end?: MonitorEnd, text = 'a *b* _c_\n    at x (y.ts:1:2)') =>
     text,
   );
 
-test("a monitor's event is ← its description · monitor, its lines as printed, not markdown", async () => {
+test("a monitor's event is ← from its description · monitor, its lines as printed, not markdown", async () => {
   expect(await frame(event())).toContain(
-    '← dev server errors · monitor\n  ⎿  a *b* _c_\n         at x (y.ts:1:2)',
+    '← from dev server errors · monitor\n  ⎿  a *b* _c_\n         at x (y.ts:1:2)',
   );
   expect(
     queuedMessage({ name: 'dev server errors', monitor: { id: 'm1' } }, 'WARN'),
-  ).toContain('dev server errors · monitor: WARN');
+  ).toStrictEqual({
+    header: 'from dev server errors · monitor: ',
+    text: 'WARN',
+  });
 });
 
 test("a monitor's escapes in its description colour its header, the rest go", async () => {
@@ -324,7 +327,7 @@ test("a monitor's escapes in its description colour its header, the rest go", as
 
     await drawn.unmount();
     expect(shown).toContain('\x1b[31m');
-    expect(stripAnsi(shown)).toContain('← red errors · monitor');
+    expect(stripAnsi(shown)).toContain('← from red errors · monitor');
     expect(stripAnsi(shown)).not.toMatch(/\[\d*[mK]/);
   } finally {
     chalk.level = level;
@@ -341,7 +344,7 @@ test("a monitor's end says it in the header, its lines first and chord's sentenc
   );
 
   expect(shown).toContain(
-    '← dev server errors · monitor · exit code 1\n  ⎿  line 1\n',
+    '← from dev server errors · monitor · exit code 1\n  ⎿  line 1\n',
   );
   expect(shown).toContain(
     '     line 6\n     … +3 lines (ctrl+o to expand)\n     Exited with code 1 after 6m 3s.',

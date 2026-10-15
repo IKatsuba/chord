@@ -537,9 +537,17 @@ export function Queue({
   return (
     <box paddingX={1} flexShrink={0}>
       {queueRows(queue, limit).map((row, index) => (
-        <box key={index} flexDirection='row'>
+        // A header wider than the window is cut at its end, as any row is.
+        <box key={index} flexDirection='row' overflow='hidden'>
           <Gutter dimColor>{row.kind === 'message' ? '←' : '›'}</Gutter>
-          <text {...CUT} attributes={DIM}>
+          {row.kind === 'message' && (
+            // Whole, so the cut lands in the text after it: a long name
+            // would otherwise take why the message waits with it.
+            <text {...TEXT} wrapMode='none' flexShrink={0} attributes={DIM}>
+              <Ansi text={row.header} />
+            </text>
+          )}
+          <text {...CUT} flexShrink={1} attributes={DIM}>
             {row.kind === 'more' ? (
               `… +${row.count} more`
             ) : (

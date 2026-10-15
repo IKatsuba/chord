@@ -1667,11 +1667,11 @@ test("a task agent works nested in its parent's turn, asks the person in the par
         await window.shows('Agent(Fix the tokenizer) · fake asks');
         await window.shows('· waiting for permission');
         await window.press('\r');
-        await window.shows('← Fix the tokenizer · fake');
+        await window.shows('← from Fix the tokenizer · fake');
         await window.shows(
           'Received the message from Fix the tokenizer · fake.',
         );
-        await window.shows('← Fix the tokenizer · fake · report');
+        await window.shows('← from Fix the tokenizer · fake · report');
         await window.shows('Done (5 tool uses');
         await window.shows(
           'Received the message from Fix the tokenizer · fake · report.',
@@ -1862,7 +1862,7 @@ test('a task agent whose turn fails reports as failed, with the error', async ()
         await send(window, 'task');
         await window.shows('Agent(Fix the tokenizer) · fake asks');
         await window.press('2');
-        await window.shows('← Fix the tokenizer · fake · failed');
+        await window.shows('← from Fix the tokenizer · fake · failed');
         await window.shows('was denied, so the tokenizer is not fixed.');
         expect(!window.frame().includes('· report')).toBeTruthy();
       },
@@ -1957,7 +1957,7 @@ test('Esc stops a running task agent, which sends no report, takes the queued pr
         await send(window, 'task');
         await window.shows('Agent(Fix the tokenizer) · fake asks');
         await window.press('\r');
-        await window.shows('← Fix the tokenizer · fake:');
+        await window.shows('← from Fix the tokenizer · fake:');
         await send(window, 'text');
         await window.press(ESC);
         await window.shows('Cancelled (');

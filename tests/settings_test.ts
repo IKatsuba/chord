@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { readdirSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -8,6 +8,7 @@ import {
   homePath,
   knownAgents,
   loadSettings,
+  mergeSettings,
   parseSettings,
   problemLine,
   problemNote,
@@ -21,6 +22,49 @@ import {
   startupOf,
   unseenProblems,
 } from '../src/settings.ts';
+
+describe('tester: copyOnSelect settings edges', () => {
+  test('invalid booleans are reported without losing valid settings', () => {
+    for (const copyOnSelect of ['false', 0, null, {}, []]) {
+      const { settings, problems } = parseSettings(
+        'settings.json',
+        JSON.stringify({ copyOnSelect, agent: 'fake' }),
+      );
+
+      expect(settings).toStrictEqual({ agent: 'fake' });
+      expect(problems).toHaveLength(1);
+      expect(problems[0]!.message).toContain('copyOnSelect');
+    }
+  });
+
+  test('merging preserves false through absent values and later overrides', () => {
+    expect(mergeSettings({ copyOnSelect: false }, {}).copyOnSelect).toBe(false);
+    expect(
+      mergeSettings({ copyOnSelect: true }, { copyOnSelect: false })
+        .copyOnSelect,
+    ).toBe(false);
+    expect(
+      mergeSettings({ copyOnSelect: false }, { copyOnSelect: true })
+        .copyOnSelect,
+    ).toBe(true);
+  });
+
+  test('saving other preferences keeps auto-copy disabled', async () => {
+    await place({ user: '{ "copyOnSelect": false }' }, async (where) => {
+      const [user] = settingsFiles(where);
+
+      await saveTheme(user!, 'light');
+      await saveEditorMode(user!, 'vim');
+
+      const { settings, problems } = await loadSettings(where);
+
+      expect(problems).toStrictEqual([]);
+      expect(settings.copyOnSelect).toBe(false);
+      expect(settings.theme).toBe('light');
+      expect(settings.editorMode).toBe('vim');
+    });
+  });
+});
 
 /**
  * A config home and a project, both temporary, with the files given written

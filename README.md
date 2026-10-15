@@ -17,11 +17,15 @@
   <img src="docs/images/team.png" alt="chord handing an issue to a team: a lead, a tester on Claude and a coder on Codex, each with its state in the list under the prompt" width="900">
 </p>
 
-Claude Code's terminal interface is the best one there is for working with a
-coding agent, and it only talks to Claude. chord is that interface for any
-agent that speaks the [Agent Client Protocol](https://agentclientprotocol.com):
-the same transcript, diffs, permission prompts, slash commands, `@` mentions
-and plans, on whichever agent you start, and more than one of them at once.
+chord brings Claude Code, Codex, Gemini CLI and other coding agents into one
+terminal interface: the same transcript, diffs, permission prompts, slash
+commands, `@` mentions and plans. It connects to agents through the
+[Agent Client Protocol](https://agentclientprotocol.com).
+
+Run agents side by side or give a task to a team. For example, have Codex
+write a fix and Claude review it, each with its own model and role. Agents
+exchange messages, permission requests come to you, and a saved team can
+take on your next task.
 
 ```sh
 npm install -g @chorded/chord

@@ -27,7 +27,8 @@ bun run chord         # chord against your real default agent
 
 The test agent in `tests/fixtures/fake_agent/` plays a scenario for a prompt
 that names one: type `edit`, `permission`, `plan`, `subagent` or `team` to see
-each part of the interface work. `CLAUDE.md` lists them all.
+each part of the interface work.
+`tests/fixtures/fake_agent/AGENTS.md` lists them all.
 
 ## Before you open a pull request
 
@@ -36,7 +37,7 @@ bun run check         # types, lint, formatting and every test
 ```
 
 This is the full check, and CI runs it. Locally, choose checks that match
-what changed, following [CLAUDE.md](CLAUDE.md#choosing-checks-for-a-change).
+what changed, following [AGENTS.md](AGENTS.md#choosing-checks-for-a-change).
 For prose-only changes, review the diff and check formatting of the changed
 files; application tests are not needed. For code, run relevant tests and
 static checks, using the full suite when the impact is broad. State which
@@ -56,7 +57,7 @@ fixes most lint and formatting issues.
   `chore:`) and carry no trailers.
 - Everything in the repository is in English and names no private path.
 
-`CLAUDE.md` is how the code is written, for people and coding agents alike,
+`AGENTS.md` is how the code is written, for people and coding agents alike,
 and `docs/decisions.md` is why the stack is what it is. Read them before a
 larger change, or open an issue first to talk it through.
 

@@ -6587,3 +6587,45 @@ renderer's methods to invent those events was ruled out.
   next key or click clears it. A cap that clears the selection past some
   number of entries, and no hold after the release, were the other
   options.
+
+## 2026-10-16 — AGENTS.md replaces CLAUDE.md (CHD-400)
+
+`CLAUDE.md` had grown to 1,174 lines, 1,030 of them Layout, and its map of
+the code was out of step. `AGENTS.md` now holds the binding guidance for
+people and coding agents: the one rule, commands, conventions and checks.
+Folder `AGENTS.md` files keep the rules that belong to `src/`,
+`src/platform/`, `src/session/` (also covering `src/acp/`), `src/ui/`,
+`tests/` and `scripts/`. The fake agent's scenario catalogue moves unchanged
+to `tests/fixtures/fake_agent/AGENTS.md`; the rest of Layout is dropped.
+
+- **Codex.** [Instruction discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+  reads one file per directory, preferring `AGENTS.override.md` to
+  `AGENTS.md`, from the project root down to the working directory, root
+  first. It reads nothing below that directory. `project_doc_max_bytes`
+  bounds the total (32 KiB by default; the root file is about 8 KB). The
+  root therefore tells agents to read the rules for the folder they change.
+- **Claude Code.** From v2.1.277, its built-in plugin reads every `AGENTS.md`
+  from the working directory up at start and expands `@imports`, only when
+  no `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` is in that
+  directory or above. A user-level `CLAUDE.md` does not block it.
+  `CLAUDE.md` is removed so that fallback applies. A nested `AGENTS.md`
+  loads only when the Read tool reads a file in its folder, and only if
+  that folder has no `CLAUDE.md`; unlike a nested `CLAUDE.md`, edits and
+  writes do not load it ([memory docs](https://code.claude.com/docs/en/memory)).
+- **When support is unavailable.** Before v2.1.277, with the plugin
+  disabled, sometimes in the first session after an upgrade, and before
+  v2.1.281 on Bedrock or with telemetry off, Claude Code reads `CLAUDE.md`
+  alone. The memory docs prescribe a `CLAUDE.md` with `@AGENTS.md`, or a
+  symlink. Neither is added: removing `CLAUDE.md` is the owner's choice.
+- **Claude Code subagents.** They inherit the main session's instruction
+  files, `AGENTS.md` included. The built-in Explore and Plan agents, and
+  a subagent defined with `omitClaudeMd`, start without them
+  ([subagent startup](https://code.claude.com/docs/en/sub-agents)).
+- **chord's agents.** The pinned `claude-agent-acp` 0.87.0 starts Claude
+  with `settingSources` user, project and local; chord overrides none.
+  `codex-acp` starts Codex core in the session's directory for its own
+  discovery. Tabs, `spawn_task` tasks, `open_agent` children, team leads
+  and members all get the tab's directory in `session/new`, so each
+  discovers the same instruction chain. chord relies on each adapter for
+  project-instruction discovery; team prompts also tell agents to read
+  `AGENTS.md`.

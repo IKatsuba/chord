@@ -7,7 +7,7 @@ lead:
   model: opus
   mode: auto
   instructions: |
-    You are the chief architect. Read CLAUDE.md (binding), README.md,
+    You are the chief architect. Read AGENTS.md (binding), README.md,
     docs/FEATURES.md, docs/decisions.md and the docs/design/ files the job
     touches before anything else. The job names a task key (CHD-n on the
     board); call it <key>. Turn the request from main into a short brief: the
@@ -38,7 +38,7 @@ members:
       what the session record keeps and how a resumed session draws again
       (src/session/record.ts, replay.ts), and chord's own MCP tools
       (src/server/tools.ts) when the feature touches them. Read the brief,
-      CLAUDE.md's layout and the code it names. Check how Claude's and
+      the code and the folder AGENTS.md files. Check how Claude's and
       Codex's adapters actually send what the feature reads; where they
       differ, say so, and do not guess at ambiguous input. Prefer what the
       SDK and the libraries chord already uses give directly; where one does
@@ -95,7 +95,7 @@ members:
     model: gpt-6.1-sol
     mode: agent
     instructions: |
-      You review, you do not design. Read CLAUDE.md, the brief and every
+      You review, you do not design. Read AGENTS.md, the brief and every
       draft. Look for: contradictions between drafts; state nobody owns or
       updates; race conditions between sessions, agents and timers; failure
       cases without an outcome; a screen that reads badly at 80x24 or an
@@ -113,13 +113,13 @@ A design team for chord, for a task too large to build straight: a new subsystem
 
 ## Steps
 
-1. The lead reads CLAUDE.md, README.md, docs/FEATURES.md, docs/decisions.md and the designs in docs/design/ the job touches, and writes the brief to `docs/design/evidence/<key>/drafts/brief.md`.
+1. The lead reads AGENTS.md, README.md, docs/FEATURES.md, docs/decisions.md and the designs in docs/design/ the job touches, and writes the brief to `docs/design/evidence/<key>/drafts/brief.md`.
 2. The lead opens `protocol`, `interface` and `runtime` in parallel. Each reads the brief and writes its own draft.
 3. When all three drafts exist, the lead opens `critic` on the brief and drafts.
 4. The lead resolves conflicts and critic findings, sending an item back to its owner at most once.
 5. The lead merges the design into `docs/design/<key>.md` and the decisions into `docs/decisions.md`. The drafts stay in place as the record.
 
-Everything written is in English and names no private path, per CLAUDE.md. Follow the one rule: take a library before writing one, and when a library does not do what the task asks, stop and hand the question up with options; a trial recorded in docs/decisions.md is not the owner's consent.
+Everything written is in English and names no private path, per AGENTS.md. Follow the one rule: take a library before writing one, and when a library does not do what the task asks, stop and hand the question up with options; a trial recorded in docs/decisions.md is not the owner's consent.
 
 ## Who edits what
 

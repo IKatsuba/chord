@@ -567,7 +567,7 @@ bun run compile       # this machine's binary into dist/
 bun run registry      # refetch the ACP Registry's agents into src/registry.ts
 ```
 
-`CLAUDE.md` is how the code is written and is binding for people and agents
+`AGENTS.md` is how the code is written and is binding for people and agents
 alike. `docs/decisions.md` records why the stack is what it is.
 
 A chord that has grown large: `kill -USR2 <pid>` writes a heap snapshot of

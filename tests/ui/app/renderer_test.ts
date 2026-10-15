@@ -1,9 +1,11 @@
 import { expect, test } from 'bun:test';
+import { createElement } from 'react';
 import {
   closeOnForcedExit,
   dieBySignal,
   leave,
 } from '../../../src/ui/app/renderer.tsx';
+import { draw } from '../harness.tsx';
 import { until } from './render.tsx';
 
 test('a forced exit waits for every close still asked for, a failed one too, and forgets them (CHD-331)', async () => {
@@ -88,4 +90,33 @@ test('a signal during a forced exit is held until the closes settle, then the fi
     slow.resolve();
     off();
   }
+});
+
+/** The mouse modes a terminal was told to turn on, in the order told. */
+async function mouseModes(mouse: boolean): Promise<string[]> {
+  const log: string[] = [];
+  const drawn = await draw(
+    createElement('text', null, 'hi'),
+    {},
+    {
+      log,
+      mouse,
+    },
+  );
+
+  await drawn.unmount();
+
+  return [...log.join('').matchAll(/\x1b\[\?(100[0-6])h/g)].map(
+    (match) => match[1]!,
+  );
+}
+
+test('the mouse is asked for with 1000, 1002 and 1006, no hover motion (CHD-172)', async () => {
+  expect(new Set(await mouseModes(true))).toStrictEqual(
+    new Set(['1000', '1002', '1006']),
+  );
+});
+
+test('"mouse": false asks for no mouse mode (CHD-172)', async () => {
+  expect(await mouseModes(false)).toStrictEqual([]);
 });

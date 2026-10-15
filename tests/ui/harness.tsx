@@ -17,7 +17,7 @@ import {
 } from '@opentui/core';
 import { testRender } from '@opentui/react/test-utils';
 import chalk from 'chalk';
-import { Exits, Output } from '../../src/ui/app/renderer.tsx';
+import { Exits, Output, terminalOptions } from '../../src/ui/app/renderer.tsx';
 
 /** The terminal's size in cells; a side left out stays as it was. */
 export interface Size {
@@ -28,10 +28,13 @@ export interface Size {
 /**
  * A terminal that keeps a log of what it is told, in order: each write to
  * its stdout as text, and `raw on` and `raw off` as raw mode is turned on
- * and off. The window is on the alternate screen there, as on chord's own.
+ * and off. The window is on the alternate screen there, as on chord's own,
+ * taken with chord's own options.
  */
 export interface Logged {
   readonly log: string[];
+  /** Whether the terminal is asked for the mouse, as `"mouse"` says; yes. */
+  readonly mouse?: boolean;
 }
 
 /** What is drawn, and the terminal it is drawn in. */
@@ -100,7 +103,10 @@ export async function draw(
       exitSignals: [],
       ...(logged === undefined
         ? {}
-        : loggedTerminal(logged.log, columns, rows)),
+        : {
+            ...terminalOptions({ mouse: logged.mouse ?? true }),
+            ...loggedTerminal(logged.log, columns, rows),
+          }),
     },
   );
 

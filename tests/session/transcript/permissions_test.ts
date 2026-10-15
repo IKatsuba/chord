@@ -181,3 +181,57 @@ test("a task's box of questions marks its own call, never a call of the session'
       task.subagent.entries.find((entry) => entry.kind === 'tool'),
   ).toMatchObject({ call: { id: 'ask-1', asked: true } });
 });
+
+test("a task's box of questions is recorded under its call among the task's work, not the session's", () => {
+  const transcript = fold([
+    { type: 'prompt', turnId: 't1', text: 'taskask', at: 0 },
+    {
+      type: 'update',
+      turnId: 't1',
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'task-1',
+        title: 'Ask',
+        state: { state: 'running' },
+      },
+    },
+    {
+      type: 'update',
+      turnId: 't1',
+      subagentId: 'task-1',
+      update: {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'ask-1',
+        title: 'Asking for your input',
+        kind: 'other',
+        status: 'pending',
+      },
+    },
+    {
+      type: 'elicitation_requested',
+      turnId: 't1',
+      elicitation: {
+        ...FORM_WAIT,
+        toolCallId: 'ask-1',
+        subagentId: 'task-1',
+        questions: { agent: 'claude', questions: [] },
+      },
+    },
+    {
+      type: 'elicitation_settled',
+      turnId: 't1',
+      id: 'e1',
+      answer: { type: 'declined' },
+    },
+  ]);
+  const task = transcript.entries.find((entry) => entry.kind === 'subagent');
+
+  expect(transcript.entries.map((entry) => entry.kind)).toStrictEqual([
+    'user',
+    'subagent',
+  ]);
+  expect(
+    task?.kind === 'subagent' &&
+      task.subagent.entries.map((entry) => entry.kind),
+  ).toStrictEqual(['tool', 'elicitation']);
+});

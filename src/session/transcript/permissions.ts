@@ -219,9 +219,23 @@ export function elicitationSettled(
       : {}),
   };
 
+  const marked = askedIn(state.entries, wait);
+  // A task's box of questions out of its own call is recorded under that
+  // call, among the task's work, as the call is.
+  const inTask =
+    wait.subagentId !== undefined &&
+    wait.mode === 'form' &&
+    wait.questions !== undefined &&
+    wait.toolCallId !== undefined
+      ? changeSubagent(marked, wait.subagentId, (subagent) => ({
+          ...subagent,
+          entries: [...subagent.entries, entry],
+        }))
+      : marked;
+
   return {
     ...state,
-    entries: [...askedIn(state.entries, wait), entry],
+    entries: inTask === marked ? [...marked, entry] : inTask,
     asking: state.asking.filter((other) => other !== wait),
   };
 }

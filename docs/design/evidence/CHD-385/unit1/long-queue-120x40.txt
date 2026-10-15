@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.tDE0
+ ▀▀     ? for shortcuts · /help
+
+ › long
+
+ › /team run sssssssssssssss Fix the parser bug
+
+ ⏺ Team(sssssssssssssss) · fake · fake-large
+   ⎿  Fix the parser bug
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (3s · esc to interrupt)
+ ← from @sssssssssssssss · fake: On it. tester is writing a failing test i...n the test fails for the bug's own reason.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    main             fake · Fake Large with a 1M context window · medium         ✻ working 3s
+    sssssssssssssss  team · fake · Fake Large with a 1M context window · medium  ✓ replied 2s ago
+    ├─ tester        fake · Fake Small · medium                                  ← message from @sssssssssssssss
+    └─ coder         fake · Fake Large with a 1M context window · medium         ← message from @sssssssssssssss

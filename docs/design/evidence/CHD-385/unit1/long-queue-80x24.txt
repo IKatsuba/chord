@@ -1,0 +1,24 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.P7MN
+ ▀▀     ? for shortcuts · /help
+
+ › long
+
+ › /team run sssssssssssssss Fix the parser bug
+
+ ⏺ Team(sssssssssssssss) · fake · fake-large
+   ⎿  Fix the parser bug
+
+ ⏺ 1. Line 1 of 200, streamed one at a time.
+
+ ››› Working… (3s · esc to interrupt)
+ ← from @sssssssssssssss · fake: On it. tester is writ... the bug's own reason.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    main             fake         ✻ working 4s
+    sssssssssssssss  team · fake  ✓ replied 3s ago
+    ├─ tester        fake         ← message from @sssssssssssssss
+    └─ coder         fake         ← message from @sssssssssssssss

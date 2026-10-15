@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.CjlM
+ ▀▀     ? for shortcuts · /help
+        resumed · just now · agentclose
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  No agent parser is open in this session; list_sessions names them
+
+ → to @parser
+   ⎿  No agent parser is open in this session; list_sessions names them
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

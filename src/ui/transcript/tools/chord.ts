@@ -26,8 +26,8 @@ function text(value: unknown): string | undefined {
 }
 
 /**
- * `List agents(codex)`, `→ main · queued`, `Agent(name) · codex`; a message's
- * recipient bare, as its colour is looked up by, and drawn `@main`.
+ * `List agents(codex)`, `→ to @main · queued`, `Agent(name) · codex`; a
+ * message's recipient bare, as its colour is looked up by, and drawn `@main`.
  */
 export function chordHeadline(call: ChordCall): Headline {
   const input = record(call.input);

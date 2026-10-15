@@ -266,7 +266,7 @@ test("/team show gives a message that came after an agent's last call as its lat
       return coder().includes('← from @tester · fake');
     });
 
-    expect(!coder().includes('→ @tester')).toBeTruthy();
+    expect(!coder().includes('→ to @tester')).toBeTruthy();
   }));
 
 test("/team stop closes the run and its members at once, and main hears it after the command's line", () =>

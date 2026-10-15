@@ -303,7 +303,7 @@ test("/team show's running form gives each agent its file's mode, its state and 
   const lines = runningTable(BUGFIX, run.agents, 200);
 
   expect(lines.map(({ text }) => text)).toStrictEqual([
-    'lead      claude · opus          default      ✻ working 8s      → @coder',
+    'lead      claude · opus          default      ✻ working 8s      → to @coder',
     'tester    claude · sonnet        acceptEdits  ● permission 12s  ' +
       'Bash(deno task test tests/parse)',
     'coder     codex · gpt-5.3-codex  auto         idle',

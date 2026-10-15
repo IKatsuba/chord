@@ -100,6 +100,7 @@ export function Tool({
           <ToolMarker tone={tone} />
         )}
         <text {...CUT}>
+          {sent && <span attributes={DIM}>to </span>}
           <span
             attributes={TextAttributes.BOLD}
             {...fg(sent ? recipient : undefined)}

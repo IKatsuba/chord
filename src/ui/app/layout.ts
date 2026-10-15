@@ -16,6 +16,7 @@ import {
   type Anchor,
   anchorAt,
   type Placed,
+  rowsBelow,
   topOf,
 } from '../transcript/scroll.ts';
 import type { AppState, WindowedAction } from './state.ts';
@@ -112,8 +113,9 @@ export function useMeasured(
       const whole = content.current.getLayout();
       const view =
         viewport.current.getLayout().height +
-        // The indicator's row is the transcript's while it is drawn.
-        (scroll.following ? 0 : 1);
+        // The indicator's row is the transcript's while it is drawn, and
+        // a press held at the bottom draws none (CHD-397).
+        (rowsBelow(scroll) === undefined ? 0 : 1);
 
       if (
         scroll.following ||

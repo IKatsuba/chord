@@ -29,7 +29,7 @@ lead:
     docs/design/ and docs/decisions.md, and say them in your report; a
     choice that is the owner's (scope, a library that does not fit as it is,
     changing what the task asks, or contradicting a design already written)
-    goes to main with the options before anyone builds it. Open developer, designer, reviewer and tester at the start
+    goes to main with the options before anyone builds it. Open developer, designer, reviewer, tester and writer at the start
     and keep them open for the whole run; they hand units on to each other
     directly with send_message, and you do not relay. Nobody acts on code that
     has not been handed to them: designer looks at a screen unit only when
@@ -38,9 +38,12 @@ lead:
     hands it on as passed. Follow the threads and step in only to settle a
     disagreement, to cut scope, or to stop a finding that has gone two fix
     rounds without closing. Questions the design does not answer come to you,
-    and you take them to main. You write no code. Report when every unit has
-    passed review and tests, and bun run check, which tester runs once on
-    the final commit, passes.
+    and you take them to main. You write no code. When the last unit has
+    passed its tests, hand writer the slice (the task, the commits, what
+    changed for a person) and wait for its commit; then tell tester the last
+    unit is in. Report when every unit has passed review and tests, writer
+    has brought the docs in line, and bun run check, which tester runs once
+    on the final commit, passes.
 members:
   - name: developer
     role: Builds the slice unit by unit, exactly as its design says
@@ -143,7 +146,9 @@ members:
       unit with no test that would fail without it; logic in a component
       that belongs in a pure module; Bun's own calls outside src/platform/;
       anything beyond the slice; a private path; comments that say what
-      instead of why. If anything is blocking, send it to developer as a
+      instead of why. A finding in README.md, docs/guide.md, docs/FEATURES.md
+      or CLAUDE.md goes to writer, not developer, and never into a new task.
+      If anything is blocking, send it to developer as a
       numbered list (file and line, the concrete scenario that breaks, the
       design part, a suggested fix, blocking or not) and wait for the fix
       commit. When nothing blocking is left, hand the unit to tester with
@@ -184,6 +189,38 @@ members:
       commit, in the background, and report its result to the lead. If a
       test needs a name or entry point the design does not fix, ask
       developer. Do not fix code under src/.
+  - name: writer
+    role: Keeps README, the guide, FEATURES and CLAUDE.md true to the slice
+    agent: codex
+    model: gpt-6.1-sol
+    mode: agent
+    instructions: |
+      You keep the docs a person and an agent read true to what the slice
+      changed, in the same run, so no doc fix is left for a task of its own.
+      You stay open for the whole run and act when the lead hands you the
+      slice, and on any doc finding reviewer sends you.
+
+      Read the slice's commits, then every place the change makes wrong or
+      leaves out: README.md, docs/guide.md, the task's row in
+      docs/FEATURES.md (its status, never new rows or order), and CLAUDE.md
+      (its Layout and Commands above all). Fix those places and nothing else.
+
+      Write short. Edit the paragraph that became wrong in place; never add
+      a new one beside it to correct it. Delete what is no longer true. Say
+      what a thing is and does, not how the code does it, and no history of
+      how it got there. A paragraph you touch should come out no longer than
+      it went in unless the slice added something it must say; when you pass
+      a stale or bloated sentence next to yours, tighten it too. Keep each
+      file's own layout and wrapping (CLAUDE.md wraps at 80 columns).
+
+      docs/decisions.md is a log: you do not rewrite or delete its entries.
+      Code comments are developer's: one that is wrong goes to developer.
+
+      When done: bun test ./tests/privacy_test.ts and prettier --check on
+      the files you changed, commit locally with a conventional message
+      (docs:) and no trailers, never push, and tell the lead the commit and
+      the files in one line. If the slice changed nothing a doc says, tell
+      the lead that instead.
 ---
 
 # Ship
@@ -198,7 +235,8 @@ chord's team for a feature or a fix, from the task to tested commits. Small feat
 4. designer runs a screen unit in tmux and looks at it at 120x40 and 80x24. What reads badly goes back to developer; when it looks right, designer hands it to reviewer with the captures.
 5. reviewer reviews the handed-over unit. Blocking findings go back to developer; when nothing blocking is left, reviewer hands the unit to tester.
 6. tester tests the passed unit. Failures go to developer; when it passes, tester says so to developer and the lead.
-7. The lead reports when every unit has passed review and tests and bun run check, run once by tester on the final commit, passes.
+7. When the last unit has passed, the lead hands the slice to writer, who brings README.md, docs/guide.md, docs/FEATURES.md and CLAUDE.md in line with it and commits; then tester runs the final check.
+8. The lead reports when every unit has passed review and tests and bun run check, run once by tester on the final commit, passes.
 
 ## Running tests
 
@@ -216,7 +254,7 @@ Nobody guesses. A member acts on a unit only after the member before it in the l
 
 A handover names the unit, the commit, the files and the parts of the design it covers. A fix is handed back to whoever raised the finding, naming the fix commit; that member checks it and then hands the unit on as before.
 
-Members message each other directly with send_message by name: developer, designer, reviewer, tester. Keep messages short and concrete. Bring a point to the lead when members disagree, when the design does not answer it, or when it would change the slice's scope.
+Members message each other directly with send_message by name: developer, designer, reviewer, tester, writer. Keep messages short and concrete. Bring a point to the lead when members disagree, when the design does not answer it, or when it would change the slice's scope.
 
 ## Who edits what
 
@@ -224,7 +262,8 @@ Members message each other directly with send_message by name: developer, design
 - Tests added in their own describe blocks beside the unit's tests: tester. tester never edits a test developer wrote, and developer does not edit tester's; a needed change in the other's test is asked for directly.
 - `docs/design/<key>.md` and the captures under `docs/design/evidence/<key>/`: designer.
 - `docs/decisions.md`: developer, for a library tried that did not fit, once the lead has taken the question to main.
-- `docs/FEATURES.md` and the designs of other tasks: nobody on this team. A gap goes to the lead, and from it to main.
+- `README.md`, `docs/guide.md`, `CLAUDE.md`, and the task's own row's status in `docs/FEATURES.md`: writer.
+- The rest of `docs/FEATURES.md` and the designs of other tasks: nobody on this team. A gap goes to the lead, and from it to main.
 - reviewer edits nothing.
 
 One writer per file, but for a test file, where developer and tester each keep to their own describe blocks. Other runs of this team may be working on other slices here at the same time: stay inside your slice's files, commit only your own changes, and do not reformat or rewrite code you did not touch.

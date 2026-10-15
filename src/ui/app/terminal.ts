@@ -512,7 +512,7 @@ export function useSelection({
   }, [held, renderer, dispatch]);
 
   // chord's state of none is OpenTUI's too: a tab switched, `/clear`, ctrl+o,
-  // the copy key's work done, release's note gone.
+  // the copy key's work done.
   useLayoutEffect(() => {
     if (!held && renderer.hasSelection) {
       renderer.clearSelection();

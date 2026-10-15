@@ -496,10 +496,10 @@ test("a selection's life: a press holds the view, release shows it, a copy notes
   expect(noted.selection).toStrictEqual({ kind: 'shown' });
   expect(noted.copied?.auto).toBe(true);
 
-  // Release's selection goes with its note.
+  // The note goes; release's selection stays until something clears it.
   const gone = reduceApp(noted, { type: 'copied_gone', id: noted.copied!.id });
 
-  expect(gone.selection).toBeUndefined();
+  expect(gone.selection).toStrictEqual({ kind: 'shown' });
   expect(gone.copied).toBeUndefined();
 
   // The copy key's goes as soon as it has copied; a failure's stays.

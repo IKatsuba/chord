@@ -766,8 +766,9 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         auto: action.auto,
       };
 
-      // The copy key's selection has done its work; release's stays for
-      // the note's time, and a failure's for the copy key to try again.
+      // The copy key's selection has done its work; release's stays
+      // after its note goes, until a key or a click clears it, as Claude
+      // Code's does, and a failure's for the copy key to try again.
       return action.auto || action.result.kind === 'failed'
         ? { ...shown, copied, notes: copied.id }
         : { ...withoutSelection(state), copied, notes: copied.id };
@@ -777,11 +778,9 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         return state;
       }
 
-      const { copied, ...rest } = state;
+      const { copied: _, ...rest } = state;
 
-      return copied.auto && copied.result.kind !== 'failed'
-        ? withoutSelection(rest)
-        : rest;
+      return rest;
     }
     default: {
       const transcript = reduceTranscript(state.transcript, action);

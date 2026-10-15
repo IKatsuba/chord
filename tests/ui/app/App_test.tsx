@@ -2000,7 +2000,7 @@ const answered = (result: ClipboardWriteResult) => () =>
   Promise.resolve(result);
 
 describe('a selection (CHD-172)', () => {
-  test('a drag highlights, release copies and says so alone, and both go after 3 s', () => {
+  test('a drag highlights, release copies and says so alone, and the note goes after 3 s while the highlight stays for ctrl+c', () => {
     const { copies, copy } = clipboard();
 
     return withWindow(
@@ -2029,8 +2029,15 @@ describe('a selection (CHD-172)', () => {
           () => !window.frame().includes('copied 26'),
           5_000,
         );
+        expect(window.selected()).toStrictEqual(REPLY);
+        // The selection's hint stands in the note's place, the model back.
+        await window.shows('ctrl + c to copy');
+        expect(statusRow(window)).toContain('Fake Large');
+
+        await window.press(CTRL_C);
+        await until('the copy key to copy', () => copies.length === 2);
+        expect(copies.map(({ text }) => text)).toStrictEqual([REPLY, REPLY]);
         expect(window.selected()).toStrictEqual('');
-        await window.shows('Fake Large');
       },
       { copy },
     );

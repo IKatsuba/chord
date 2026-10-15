@@ -123,7 +123,6 @@ export function StatusLine({
   effort,
   waits,
   armed,
-  copyOnSelect = true,
   draft,
   width,
   hint,
@@ -135,8 +134,6 @@ export function StatusLine({
   waits: WaitsNotice | undefined;
   /** What an armed close or quit waits on the second press for. */
   armed: string | undefined;
-  /** Release copies a selection; without, the line says the copy key. */
-  copyOnSelect?: boolean | undefined;
   draft: string;
   /** Cells inside the line's padding. */
   width: number;
@@ -180,10 +177,9 @@ export function StatusLine({
       // line says so, in place of Claude Code's pointer to its panel.
       hint:
         hint ??
-        // With no copy on release, the copy key takes the shortcuts' place.
-        (!copyOnSelect && state.selection?.kind === 'shown'
-          ? 'ctrl + c to copy'
-          : undefined) ??
+        // A selection shown, copied or not, keeps the copy key in the
+        // shortcuts' place until something clears it.
+        (state.selection?.kind === 'shown' ? 'ctrl + c to copy' : undefined) ??
         (transcript.turn.status === 'idle'
           ? stillRunning(runningSubagents(transcript))
           : undefined) ??

@@ -2243,6 +2243,22 @@ describe('a selection (CHD-172)', () => {
       { copyOnSelect: false },
     ));
 
+  test('a press with no output under it draws no rule, held or released (CHD-397)', () =>
+    withWindow(async (window) => {
+      await send(window, 'text');
+      await window.shows(REPLY);
+      await until('the turn to end', () => !window.frame().includes('Working'));
+
+      const { y, end } = cellsOf(window, REPLY);
+
+      await pressOn(window, REPLY);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(window.frame()).not.toContain('below');
+      await window.press(left(end, y, 'up'));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(window.frame()).not.toContain('below');
+    }));
+
   test('a selection held keeps its text mounted under 150 more entries', () =>
     withWindow(
       async (window) => {

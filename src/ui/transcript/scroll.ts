@@ -173,10 +173,11 @@ function scrolled(scroll: Scroll, step: ScrollStep): Scroll {
 
 /**
  * Rows below the view while scrolled back, counting the row the indicator
- * covers; nothing while following.
+ * covers; nothing while following, nor while a press holds the view at the
+ * bottom, where nothing is below until output arrives under it (CHD-397).
  */
 export function rowsBelow(scroll: Scroll): number | undefined {
-  if (scroll.following) {
+  if (scroll.following || (scroll.held && scroll.top >= bottomTop(scroll))) {
     return undefined;
   }
 

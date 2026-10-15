@@ -163,6 +163,19 @@ export type Copy = (
   signal: AbortSignal,
 ) => Promise<ClipboardWriteResult>;
 
+/** `copy`'s write, a throw before it returns as much a failure as a rejection. */
+function written(
+  copy: Copy,
+  text: string,
+  signal: AbortSignal,
+): Promise<ClipboardWriteResult> {
+  try {
+    return copy(text, signal);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+}
+
 /** The copies a window makes, one at a time. */
 export interface Copies {
   /**
@@ -217,8 +230,8 @@ export function copies(
 
       try {
         const result = await Promise.race([
-          copy(text, abort.signal).then(
-            (written) => copyResult(text, written),
+          written(copy, text, abort.signal).then(
+            (result) => copyResult(text, result),
             copyRejected,
           ),
           late,

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   changeSteps,
   emptyPasteSteps,
@@ -12,6 +12,7 @@ import {
 import { type AppAction, reduceApp } from '../../../src/ui/app/state.ts';
 import { emptyHistory, recorded } from '../../../src/ui/prompt/history.ts';
 import { endOf, START } from '../../../src/ui/prompt/prompt.ts';
+import { readKeybindings } from '../../../src/ui/shortcuts/bindings.ts';
 import { busy, ctrl, escape, ready } from './states.ts';
 
 function context(state = ready, more: Partial<KeyContext> = {}): KeyContext {
@@ -247,5 +248,90 @@ test('a selection shown is cleared first by a key, kept by a scroll key and copi
   // A chord's first key keeps it, for a copy key rebound to a chord.
   expect(keySteps('x', ctrl, context(shown))[0]).not.toStrictEqual({
     type: 'clear_selection',
+  });
+});
+
+describe('tester: selection dispatch precedence', () => {
+  test('a copy chord consumes its typed suffix and preserves the draft', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          { context: 'Selection', bindings: { 'ctrl+x y': 'selection:copy' } },
+        ],
+      }),
+    );
+    const shown = {
+      ...typing('keep this draft'),
+      keys: keymap,
+      selection: { kind: 'shown' },
+    } as const;
+    const prefix = keySteps('x', ctrl, context(shown));
+    let pending = shown;
+
+    for (const step of prefix) {
+      if (step.type === 'dispatch') {
+        pending = reduceApp(pending, step.action) as typeof shown;
+      }
+    }
+
+    const suffix = keySteps(
+      'y',
+      { ctrl: false, escape: false },
+      context(pending),
+    );
+
+    expect(problems).toStrictEqual([]);
+    expect(prefix.some((step) => step.type === 'clear_selection')).toBe(false);
+    expect(suffix).toContainEqual({ type: 'copy_selection' });
+    expect(suffix).toContainEqual({
+      type: 'show_draft',
+      text: 'keep this draft',
+      cursor: endOf('keep this draft'),
+    });
+    expect(suffix.some((step) => step.type === 'open_session')).toBe(false);
+    expect(suffix.some((step) => step.type === 'clear_selection')).toBe(false);
+  });
+
+  test('a chord miss clears the selection before discarding the prefix', () => {
+    const shown = { ...ready, selection: { kind: 'shown' } } as const;
+    const prefix = keySteps('x', ctrl, context(shown));
+    let pending = shown;
+
+    for (const step of prefix) {
+      if (step.type === 'dispatch') {
+        pending = reduceApp(pending, step.action) as typeof shown;
+      }
+    }
+
+    const miss = keySteps(
+      'z',
+      { ctrl: false, escape: false },
+      context(pending),
+    );
+
+    expect(miss[0]).toStrictEqual({ type: 'clear_selection' });
+    expect(miss).toContainEqual(dispatched({ type: 'keys_pending' }));
+    expect(miss.some((step) => step.type === 'copy_selection')).toBe(false);
+  });
+
+  test('scrolling preserves a selection while a copy is pending', () => {
+    const copying = { ...ready, selection: { kind: 'copying' } } as const;
+
+    for (const key of [
+      { pageUp: true },
+      { pageDown: true },
+      { home: true },
+      { end: true },
+      { upArrow: true, shift: true },
+      { downArrow: true, shift: true },
+    ]) {
+      const steps = keySteps(
+        '',
+        { ctrl: false, escape: false, ...key },
+        context(copying),
+      );
+
+      expect(steps.some((step) => step.type === 'clear_selection')).toBe(false);
+    }
   });
 });

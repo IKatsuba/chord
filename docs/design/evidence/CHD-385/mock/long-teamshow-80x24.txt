@@ -1,0 +1,24 @@
+
+ ← from @sssssssssssssss · fake
+   ⎿  On it. tester is writing a failing test
+      in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails
+      for the bug's own reason.
+
+ ⏺ Received the message from sssssssssssssss · fake.
+
+ › /team show sssssssssssssss
+   ⎿  sssssssssssssss · .chord/teams/sssssssssssssss.md · working 5s on "Fi…"
+
+      lead    fake · fake-large  default ... ✓ replied 4s ago                 …
+      tester  fake · fake-small  acceptEd... ← message from @sssssssssssssss  …
+      coder   fake · fake-large  plan    ... ← message from @sssssssssssssss  …
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main             fake
+    sssssssssssssss  team · fake  ✓ replied 8s ago
+    ├─ tester        fake         ← message from @sssssssssssssss
+    └─ coder         fake         ← message from @sssssssssssssss

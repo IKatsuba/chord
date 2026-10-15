@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { draw } from '../../harness.tsx';
 import stripAnsi from 'strip-ansi';
 import type { Subagent } from '../../../../src/session/transcript/types.ts';
@@ -171,4 +171,37 @@ test('a task whose record has gone says so where its work would be, only when op
     'a folded block says it',
   ).toBeTruthy();
   expect(await shown(false)).toContain('⎿  Cancelled (9s)');
+});
+
+describe('tester: selectable group titles', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`a group title selects without its tree or counts at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'subagent');
+          await asked(window);
+
+          const lines = stripAnsi(window.frame()).split('\n');
+          const y = lines.findIndex((line) =>
+            line.includes('├─ Agent(Find the session layer)'),
+          );
+
+          expect(y).toBeGreaterThanOrEqual(0);
+          expect(lines[y]).toContain('tool use');
+
+          const mouse = (button: number, x: number, release = false) =>
+            `\x1b[<${button};${x + 1};${y + 1}${release ? 'm' : 'M'}`;
+
+          await window.press(mouse(0, lines[y]!.indexOf('Agent(')));
+          await window.press(mouse(32, columns - 1));
+          await window.press(mouse(0, columns - 1, true));
+
+          expect(window.selected()).toBe('Agent(Find the session layer)');
+        },
+        { columns, rows },
+      ));
+  }
 });

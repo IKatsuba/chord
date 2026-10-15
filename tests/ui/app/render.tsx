@@ -114,6 +114,7 @@ export async function withWindow(
     home,
     shell,
     heldClose,
+    heldOpen,
     onQuit,
     startupOf,
     splash,
@@ -151,6 +152,11 @@ export async function withWindow(
     shell?: (command: string, options: ShellOptions) => ShellProcess;
     /** Settles before the session's close begins, to hold a quit midway. */
     heldClose?: Promise<void>;
+    /**
+     * Settles before the window is handed the session it opened, which the
+     * test already sees, to hold the window's start midway.
+     */
+    heldOpen?: Promise<void>;
     onQuit?: (tabs: readonly ResumableTab[]) => void;
     /** How each agent `/new` names starts, as `main.tsx` works it out. */
     startupOf?: (agent: string) => SessionStart | undefined;
@@ -183,6 +189,7 @@ export async function withWindow(
   }
 
   let session: Session | undefined;
+  let up = false;
   // Every one opened, a task agent's among them, each closed at the end.
   const opened: Session[] = [];
   const pids: number[] = [];
@@ -215,6 +222,7 @@ export async function withWindow(
       keysFailed={keys && keybindingsNotice('keybindings.json', keys.problems)}
       {...(shell ? { shell } : {})}
       {...(onQuit ? { onQuit } : {})}
+      onReady={() => (up = true)}
       {...(startupOf ? { startupOf } : {})}
       {...(readRecords ? { readRecords } : {})}
       splash={splash}
@@ -232,6 +240,7 @@ export async function withWindow(
         }
 
         pids.push(...session.agentPids);
+        await heldOpen;
 
         return session;
       }}
@@ -273,12 +282,9 @@ export async function withWindow(
 
   try {
     await until('the session', () => session !== undefined);
-    // The window takes it a render later: until then Enter keeps the draft,
-    // and a test's first prompt would stay unsent.
-    await until(
-      'the window to take the session',
-      () => !statusRow(window).includes('Starting '),
-    );
+    // The window takes it later: until then Enter keeps the draft, and a
+    // test's first prompt would stay unsent.
+    await until('the window to take the session', () => up);
     await body(window);
   } finally {
     await app.unmount();

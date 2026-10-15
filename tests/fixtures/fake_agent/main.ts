@@ -83,7 +83,8 @@
  * answering, as an agent that has wedged: `start` never answers `initialize`,
  * `config` never answers `session/set_config_option`, `session/set_mode` or
  * `session/set_model`, and `turn` never ends a prompt, cancelled or not. It then also ignores
- * SIGTERM and outlives its stdin, so only SIGKILL ends it.
+ * SIGTERM and outlives its stdin, so only SIGKILL ends it, or its parent
+ * going: a test run killed mid-test must not leave it behind.
  *
  * `compact` compacts the context as Claude's adapter does: to a client that
  * declares `clientCapabilities.session.compaction`, a `compaction_update` in
@@ -333,8 +334,17 @@ function never(): Promise<never> {
 if (HANG !== undefined) {
   process.on('SIGTERM', () => {});
 
-  // A wedged agent does not notice its client leaving.
-  setInterval(() => {}, 60_000);
+  // A wedged agent does not notice its client leaving, but its own parent
+  // dying leaves nobody to send the SIGKILL: it is in a group of its own, so
+  // a killed test run or chord takes nothing of it along. A parent that died
+  // before this line ran has already handed it to init, pid 1.
+  const parent = process.ppid;
+
+  setInterval(() => {
+    if (parent === 1 || process.ppid !== parent) {
+      process.exit(1);
+    }
+  }, 200);
 }
 
 function promptText(prompt: acp.ContentBlock[]): string {

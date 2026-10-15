@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -740,11 +740,17 @@ async function closesWedged(
 
 /** The pids of every process whose command line holds `tag`. */
 function tagged(tag: string): Promise<number[]> {
-  // pgrep exits 1 when nothing matches, which is an answer too.
-  return new Promise((resolve) => {
-    execFile('pgrep', ['-f', tag], (_error, stdout) =>
-      resolve(stdout.split('\n').filter(Boolean).map(Number)),
-    );
+  return new Promise((resolve, reject) => {
+    execFile('pgrep', ['-f', tag], (error, stdout) => {
+      // pgrep exits 1 when nothing matches, which is an answer too; any
+      // other failure, such as a sandbox denying it, would read as nothing
+      // running and leave a wait on it spinning.
+      if (error && error.code !== 1) {
+        reject(error);
+      } else {
+        resolve(stdout.split('\n').filter(Boolean).map(Number));
+      }
+    });
   });
 }
 
@@ -771,6 +777,42 @@ test("a request's signal stops the wait on an agent that never answers", () =>
     await expect(asked).rejects.toThrow(Error);
     await expect(asked).rejects.toThrow('given up');
   }));
+
+test('a wedged fake agent goes when the process that started it is killed', async () => {
+  const tag = `chord-wedged-${crypto.randomUUID()}`;
+  const command = fakeAgentCommand(undefined, '--hang', 'config', tag);
+  // A stand-in for a test run killed mid-test: it starts the fake in a group
+  // of its own, as chord does, says so once the fake has answered
+  // `initialize`, so it is past reading who its parent is, and then dies
+  // without closing it.
+  const starter = spawn(
+    process.execPath,
+    [
+      '-e',
+      `const [program, ...args] = ${JSON.stringify(command)};
+      const fake = require('node:child_process').spawn(program, args, {
+        detached: true,
+        stdio: ['pipe', 'pipe', 'ignore'],
+      });
+      fake.stdout.once('data', () => process.stdout.write('ready\\n'));
+      fake.stdin.write(JSON.stringify({
+        jsonrpc: '2.0',
+        id: 0,
+        method: 'initialize',
+        params: { protocolVersion: 1 },
+      }) + '\\n');
+      setInterval(() => {}, 1000);`,
+    ],
+    { stdio: ['ignore', 'pipe', 'inherit'] },
+  );
+
+  await new Promise((resolve) => starter.stdout.once('data', resolve));
+  starter.kill('SIGKILL');
+
+  while ((await tagged(tag)).length > 0) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+});
 
 test('an open given up while the agent never answers initialize leaves nothing running', async () => {
   const tag = `chord-wedged-${crypto.randomUUID()}`;

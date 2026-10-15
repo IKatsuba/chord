@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   mkdir,
   mkdtemp,
@@ -82,4 +82,27 @@ test('nothing under tests/ can write the real clipboard', async () => {
     'a test names a clipboard writer; give it the `copy` prop or a stub ' +
       'host instead (docs/design/CHD-172.md, "Tests")',
   ).toStrictEqual([]);
+});
+
+describe('tester: clipboard guard path and byte coverage', () => {
+  test('only the root guard is exempt, including hidden and binary files', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-'));
+
+    try {
+      const nested = join(root, '.fixtures', 'nested');
+
+      await mkdir(nested, { recursive: true });
+      await writeFile(join(root, self), 'createHostClipboard');
+      await writeFile(join(nested, self), 'createHostClipboard');
+      await writeFile(join(nested, 'payload'), Buffer.from('\0pbcopy\0'));
+      await writeFile(join(root, 'safe.ts'), 'createClipboard({ host: stub })');
+
+      expect(await clipboardWriting(root)).toStrictEqual([
+        join('.fixtures', 'nested', self),
+        join('.fixtures', 'nested', 'payload'),
+      ]);
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  });
 });

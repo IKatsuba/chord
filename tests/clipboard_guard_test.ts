@@ -45,7 +45,9 @@ async function clipboardWriting(root: string): Promise<string[]> {
 
     const bytes = await readFile(path);
 
-    if (!bytes.includes(0) && clipboardWriters.test(bytes.toString())) {
+    // Every file, binary or not: a NUL in a comment would otherwise hide a
+    // call, and the names are ASCII whatever the rest of the bytes are.
+    if (clipboardWriters.test(bytes.toString('latin1'))) {
       found.push(name);
     }
   }
@@ -61,10 +63,12 @@ test('a file naming a clipboard writer is found, tracked or not', async () => {
     await writeFile(join(root, 'ui', 'a_test.ts'), 'createHostClipboard()');
     await writeFile(join(root, 'b_test.ts'), "spawn('pbcopy')");
     await writeFile(join(root, 'c_test.ts'), 'createClipboard({ host })');
+    await writeFile(join(root, 'd_test.ts'), '// \0\ncreateHostClipboard()');
     await writeFile(join(root, self), 'pbcopy');
 
     expect(await clipboardWriting(root)).toStrictEqual([
       'b_test.ts',
+      'd_test.ts',
       join('ui', 'a_test.ts'),
     ]);
   } finally {

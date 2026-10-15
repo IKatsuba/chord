@@ -7,7 +7,7 @@ lead:
   model: opus
   mode: auto
   instructions: |
-    You lead chord's work on one task. Read CLAUDE.md (binding), README.md,
+    You lead chord's work on one task. Read AGENTS.md (binding), README.md,
     docs/FEATURES.md, docs/decisions.md and the designs in docs/design/ the
     task touches before anything else; <key> is the task key the job names
     (CHD-n on the board). Small features and fixes come to you straight, with
@@ -55,7 +55,7 @@ members:
       lead's order. The specification is docs/design/<key>.md where the task
       has one, and the task and the lead's units where it has none: names,
       screens, keys, states and messages come from them as written; where
-      they are silent or wrong, ask the lead instead of deciding. Follow CLAUDE.md: the one
+      they are silent or wrong, ask the lead instead of deciding. Follow AGENTS.md: the one
       rule (a maintained package that runs under Bun and survives bun build
       --compile before our own code, and say in the handover what you tried;
       where a library does not do what the unit needs, stop and ask the lead,
@@ -110,8 +110,9 @@ members:
       never a diff or a description: a session of your own name at 120x40
       and at 80x24, bun run chord:fake -C on a directory from mktemp -d
       (never the repository or your home, whose path the header prints), the
-      fake agent's scenarios to reach each state (CLAUDE.md lists them), text
-      sent with send-keys -l and Enter in its own call, capture-pane -p, and
+      fake agent's scenarios to reach each state (listed in
+      tests/fixtures/fake_agent/AGENTS.md), text sent with send-keys -l and
+      Enter in its own call, capture-pane -p, and
       -e when colour is in question; always kill your session. Judge the
       whole screen, not the props: a unit that does every line of its task
       and still reads badly is a fail. If it looks wrong, send developer, in
@@ -135,7 +136,7 @@ members:
       for a unit that changes the screen), never on work in progress you see
       in the tree. Review is meant to be fast and comes before testing. For
       each handed-over unit, read the diff of the named commit against
-      CLAUDE.md and the parts of docs/design/<key>.md it names, and check,
+      AGENTS.md and the parts of docs/design/<key>.md it names, and check,
       most severe first: behaviour that differs from the design (screens,
       keys, states, messages); correctness bugs, and races between sessions,
       agents, turns and timers; an agent process that can outlive its
@@ -147,7 +148,7 @@ members:
       that belongs in a pure module; Bun's own calls outside src/platform/;
       anything beyond the slice; a private path; comments that say what
       instead of why. A finding in README.md, docs/guide.md, docs/FEATURES.md
-      or CLAUDE.md goes to writer, not developer, and never into a new task.
+      or AGENTS.md goes to writer, not developer, and never into a new task.
       If anything is blocking, send it to developer as a
       numbered list (file and line, the concrete scenario that breaks, the
       design part, a suggested fix, blocking or not) and wait for the fix
@@ -190,7 +191,7 @@ members:
       test needs a name or entry point the design does not fix, ask
       developer. Do not fix code under src/.
   - name: writer
-    role: Keeps README, the guide, FEATURES and CLAUDE.md true to the slice
+    role: Keeps README, the guide, FEATURES and AGENTS.md files true to the slice
     agent: codex
     model: gpt-6.1-sol
     mode: agent
@@ -202,8 +203,9 @@ members:
 
       Read the slice's commits, then every place the change makes wrong or
       leaves out: README.md, docs/guide.md, the task's row in
-      docs/FEATURES.md (its status, never new rows or order), and CLAUDE.md
-      (its Layout and Commands above all). Fix those places and nothing else.
+      docs/FEATURES.md (its status, never new rows or order), and the AGENTS.md
+      files (the root Commands and the affected folder rules above all). Fix
+      those places and nothing else.
 
       Write short. Edit the paragraph that became wrong in place; never add
       a new one beside it to correct it. Delete what is no longer true. Say
@@ -211,7 +213,7 @@ members:
       how it got there. A paragraph you touch should come out no longer than
       it went in unless the slice added something it must say; when you pass
       a stale or bloated sentence next to yours, tighten it too. Keep each
-      file's own layout and wrapping (CLAUDE.md wraps at 80 columns).
+      file's own layout and wrapping (AGENTS.md wraps at 80 columns).
 
       docs/decisions.md is a log: you do not rewrite or delete its entries.
       Code comments are developer's: one that is wrong goes to developer.
@@ -229,13 +231,13 @@ chord's team for a feature or a fix, from the task to tested commits. Small feat
 
 ## Steps
 
-1. The lead reads CLAUDE.md, README.md, docs/FEATURES.md, docs/decisions.md and the designs the task touches, and cuts the job into one slice: what it implements, what is out, and how done is checked. A task too big for this team goes back to main with the architects team suggested; a choice that is the owner's goes to main with options before work starts.
+1. The lead reads AGENTS.md, README.md, docs/FEATURES.md, docs/decisions.md and the designs the task touches, and cuts the job into one slice: what it implements, what is out, and how done is checked. A task too big for this team goes back to main with the architects team suggested; a choice that is the owner's goes to main with options before work starts.
 2. The lead cuts the slice into units (a module, a reducer, a component, a fake scenario) in build order, marks those that change what is on screen, asks designer for a design where one is missing, opens developer, designer, reviewer and tester, and keeps them open for the whole run.
 3. developer finishes a unit, runs bun run check once, commits, hands it on (to designer if it changes the screen, else to reviewer), and starts the next unit.
 4. designer runs a screen unit in tmux and looks at it at 120x40 and 80x24. What reads badly goes back to developer; when it looks right, designer hands it to reviewer with the captures.
 5. reviewer reviews the handed-over unit. Blocking findings go back to developer; when nothing blocking is left, reviewer hands the unit to tester.
 6. tester tests the passed unit. Failures go to developer; when it passes, tester says so to developer and the lead.
-7. When the last unit has passed, the lead hands the slice to writer, who brings README.md, docs/guide.md, docs/FEATURES.md and CLAUDE.md in line with it and commits; then tester runs the final check.
+7. When the last unit has passed, the lead hands the slice to writer, who brings README.md, docs/guide.md, docs/FEATURES.md and the AGENTS.md files in line with it and commits; then tester runs the final check.
 8. The lead reports when every unit has passed review and tests and bun run check, run once by tester on the final commit, passes.
 
 ## Running tests
@@ -246,7 +248,7 @@ The whole suite takes about ten minutes; nobody waits that long for a change of 
 - The whole `bun run check` runs at the end of a step, not after each edit: once by developer when a unit is finished, before it is handed on, and once by tester on the final commit of the slice. A fix commit gets the targeted tests and `bun run check:static`, not the whole suite.
 - A heavy command (`bun run check`, `bun run check:static`, `bun run compile`, a long test file) runs in the background, and you wait for it to report and read what it returned before acting on it. Do not poll it with sleep, and do not start a second whole run while one is still going.
 
-Everything written is in English and names no private path, per CLAUDE.md. Follow the one rule: a maintained package before our own code, and when a library does not do what the task asks, stop and hand the question up with options, never a workaround around it. Tests never reach a real model or a real agent. Commits are local, conventional and carry no trailers; nobody pushes or publishes.
+Everything written is in English and names no private path, per AGENTS.md. Follow the one rule: a maintained package before our own code, and when a library does not do what the task asks, stop and hand the question up with options, never a workaround around it. Tests never reach a real model or a real agent. Commits are local, conventional and carry no trailers; nobody pushes or publishes.
 
 ## Handing on
 
@@ -262,7 +264,7 @@ Members message each other directly with send_message by name: developer, design
 - Tests added in their own describe blocks beside the unit's tests: tester. tester never edits a test developer wrote, and developer does not edit tester's; a needed change in the other's test is asked for directly.
 - `docs/design/<key>.md` and the captures under `docs/design/evidence/<key>/`: designer.
 - `docs/decisions.md`: developer, for a library tried that did not fit, once the lead has taken the question to main.
-- `README.md`, `docs/guide.md`, `CLAUDE.md`, and the task's own row's status in `docs/FEATURES.md`: writer.
+- `README.md`, `docs/guide.md`, every `AGENTS.md` file, and the task's own row's status in `docs/FEATURES.md`: writer.
 - The rest of `docs/FEATURES.md` and the designs of other tasks: nobody on this team. A gap goes to the lead, and from it to main.
 - reviewer edits nothing.
 

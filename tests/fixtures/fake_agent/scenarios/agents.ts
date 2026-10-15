@@ -42,7 +42,7 @@ export const MAIN_MESSAGES = [
  * the child's view has a body that folds and has weight and code in it.
  */
 export const LONG_INSTRUCTION = [
-  'Read CLAUDE.md and docs/FEATURES.md before you start. Then:',
+  'Read AGENTS.md and docs/FEATURES.md before you start. Then:',
   '',
   '1. Fix the tokenizer so a string at the end of a line keeps its closing ' +
     'quote.',

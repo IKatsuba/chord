@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { createElement } from 'react';
 import {
   closeOnForcedExit,
@@ -121,4 +121,24 @@ test('the mouse is asked for with 1000, 1002 and 1006, no hover motion (CHD-172)
 
 test('"mouse": false asks for no mouse mode (CHD-172)', async () => {
   expect(await mouseModes(false)).toStrictEqual([]);
+});
+
+describe('tester: mouse mode restoration', () => {
+  test('destroy disables each requested mouse mode', async () => {
+    const log: string[] = [];
+    const drawn = await draw(createElement('text', null, 'inert'), {}, { log });
+
+    await drawn.unmount();
+
+    const written = log.join('');
+
+    for (const mode of ['1000', '1002', '1006']) {
+      expect(written).toContain(`\x1b[?${mode}h`);
+      expect(written.lastIndexOf(`\x1b[?${mode}l`)).toBeGreaterThan(
+        written.lastIndexOf(`\x1b[?${mode}h`),
+      );
+    }
+
+    expect(written).not.toContain('\x1b[?1003h');
+  });
 });

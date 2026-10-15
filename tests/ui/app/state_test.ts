@@ -540,3 +540,77 @@ test('a tab switched, ctrl+o and the editor clear a selection (CHD-172)', () => 
     reduceWindowed(two, { type: 'session_shown', key: 1 }).window.selection,
   ).toBeUndefined();
 });
+
+test("a new drag takes the last copy's note with it, so its time ends nothing of the drag's (CHD-172)", () => {
+  const shown = reduceApp(reduceApp(ready, { type: 'selection_started' }), {
+    type: 'selection_released',
+    text: 'a',
+  });
+  const noted = reduceApp(reduceApp(shown, { type: 'copy_started' }), {
+    type: 'copy_noted',
+    result: { kind: 'copied', chars: 1 },
+    auto: true,
+  });
+  const first = noted.copied!.id;
+  const dragging = reduceApp(noted, { type: 'selection_started' });
+
+  expect(dragging.copied).toBeUndefined();
+  // The first note's time runs out under the new drag: nothing happens.
+  expect(
+    reduceApp(dragging, { type: 'copied_gone', id: first }).selection,
+  ).toStrictEqual(dragging.selection);
+
+  // The new drag's own note is counted on from the first.
+  const second = reduceApp(
+    reduceApp(reduceApp(dragging, { type: 'selection_released', text: 'b' }), {
+      type: 'copy_started',
+    }),
+    {
+      type: 'copy_noted',
+      result: { kind: 'copied', chars: 1 },
+      auto: true,
+    },
+  );
+
+  expect(second.copied!.id).not.toBe(first);
+  expect(
+    reduceApp(second, { type: 'copied_gone', id: first }).copied,
+  ).toStrictEqual(second.copied);
+});
+
+test('a selection cleared mid-drag lets go of the view, here and on a tab switch (CHD-172)', () => {
+  const tall = reduceApp(ready, {
+    type: 'scroll_measured',
+    content: 100,
+    view: 20,
+  });
+  const dragging = reduceApp(tall, { type: 'selection_started' });
+
+  expect(dragging.scroll.held).toBe(true);
+  expect(dragging.scroll.following).toBe(false);
+
+  // A resize or ctrl+o: no release will come.
+  const gone = reduceApp(dragging, { type: 'selection_gone' });
+
+  expect(gone.scroll.held).toBeUndefined();
+  expect(gone.scroll.following).toBe(true);
+  expect(
+    reduceApp(dragging, { type: 'expanded_toggled' }).scroll.held,
+  ).toBeUndefined();
+
+  // Moved during the drag, the view stays where the person left it.
+  const moved = reduceApp(dragging, { type: 'scrolled', step: 'page_up' });
+  const left = reduceApp(moved, { type: 'selection_gone' });
+
+  expect(left.scroll.held).toBeUndefined();
+  expect(left.scroll.following).toBe(false);
+
+  // A tab switched mid-drag frees the view of the tab it leaves.
+  const two = reduceWindowed(
+    reduceWindowed(windowed(tall, 1), { type: 'selection_started' }),
+    { type: 'session_opened', key: 2 },
+  );
+
+  expect(two.sessions[1]!.scroll.held).toBeUndefined();
+  expect(two.sessions[1]!.scroll.following).toBe(true);
+});

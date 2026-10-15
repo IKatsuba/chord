@@ -2310,3 +2310,23 @@ test("a selection whose text has gone is cleared, and ctrl+c is the window's aga
       agentCommand: fakeAgentCommand(undefined, '--step-ms', '20'),
     },
   ));
+
+test('a resize mid-drag lets go of the view, which follows again (CHD-172)', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'long');
+      await window.shows('20. Line 20');
+
+      const lines = stripAnsi(window.frame()).match(/\d+\. Line \d+ of/g)!;
+
+      await pressOn(window, lines.at(-1)!);
+      await window.shows('new output');
+      await window.resize({ columns: 90 });
+      await until(
+        'the view to follow again',
+        () => !window.frame().includes('new output'),
+      );
+      expect(window.selected()).toStrictEqual('');
+    },
+    { copyOnSelect: false },
+  ));

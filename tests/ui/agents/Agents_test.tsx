@@ -78,7 +78,7 @@ test('a long-lived agent opens in the list under the prompt and trades two messa
     expect(!frame.includes(' 1 fake ')).toBeTruthy();
     expect(frame).toContain('    main    fake ·');
     expect(frame).toContain('    parser  fake · Fake Small');
-    expect(frame).toContain('→ @parser');
+    expect(frame).toContain('→ to @parser');
     expect(frame).toContain(MAIN_MESSAGES[0]);
     expect(count(window, '← from @parser · fake')).toStrictEqual(2);
 
@@ -90,7 +90,7 @@ test('a long-lived agent opens in the list under the prompt and trades two messa
     await window.shows('╭─ parser ─');
     await window.shows('← from @main');
     await window.shows(MAIN_MESSAGES[1]);
-    expect(window.frame()).toContain('→ @main');
+    expect(window.frame()).toContain('→ to @main');
     expect(!window.frame().includes('Waiting on parser.')).toBeTruthy();
 
     // Enter goes back to the box, and what is typed goes to parser.
@@ -427,7 +427,7 @@ const resumedFromRecord = (legacy: boolean) => () =>
     await leftAndResumed(window, legacy);
     // Both of parser's messages, read back from the record, not sent again.
     await window.shows(CHILD_MESSAGES[1]);
-    expect(window.frame()).toContain('→ @parser');
+    expect(window.frame()).toContain('→ to @parser');
     expect(count(window, '← from @parser · fake')).toStrictEqual(2);
     expect(!window.frame().includes('← from parser')).toBeTruthy();
     await window.shows(LEFT_OPEN);

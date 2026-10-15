@@ -93,7 +93,7 @@ function sameAgents(
 
 /**
  * `Read(src/main.tsx)`, its name bold, as a call's headline is drawn; a
- * message sent, `→ @main`, its arrow drawn as `arrow` says and both in the
+ * message sent, `→ to @main`, its arrow drawn as `arrow` says and both in the
  * recipient's colour, as the row it opens to. A function rather than a
  * component, so the line's `<text>` holds every run and cuts them as one.
  */
@@ -115,6 +115,7 @@ function headlineText(
           >
             →
           </span>{' '}
+          <span attributes={DIM}>to </span>
         </>
       )}
       <span

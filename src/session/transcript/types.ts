@@ -514,7 +514,7 @@ export interface TeamAgentShown {
   };
   /**
    * Its latest call's or incoming message's headline, as its transcript
-   * draws it: `Edit(src/a.ts)`, `→ @coder`, `← @tester · claude`.
+   * draws it: `Edit(src/a.ts)`, `→ to @coder`, `← from @tester · claude`.
    */
   readonly latest?: string;
 }

@@ -94,7 +94,7 @@ test("the lead's transcript has its instructions as one line, its Open rows with
     await window.shows('← from @main');
     await window.shows('Open(tester) · fake · fake-small · acceptEdits');
     await window.shows('Open(coder) · fake · fake-large · plan');
-    await window.shows('→ @main');
+    await window.shows('→ to @main');
     await window.shows('← from @tester · fake');
     await window.shows('╭─ bugfix ─');
 
@@ -117,7 +117,7 @@ test("a member picked has its run in its box's title, its instructions folded, t
 
     const frame = window.frame();
 
-    expect(frame).toContain('→ @coder');
+    expect(frame).toContain('→ to @coder');
     expect(frame).toContain('Bash(deno task test tests/parse)');
     expect(frame).toContain('⏵⏵ accept edits on');
 
@@ -141,7 +141,7 @@ test('members message each other by name, directly', () =>
     await window.shows('╭─ coder · bugfix ─');
     await window.shows('← from @tester · fake');
     await window.shows(TESTER_TO_CODER.slice(0, 60));
-    await window.shows('→ @tester');
+    await window.shows('→ to @tester');
   }));
 
 test("a second run of a running team is 'bugfix 2', and its lead reaches the first run's", () =>

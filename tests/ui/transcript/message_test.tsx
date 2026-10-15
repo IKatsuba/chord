@@ -89,10 +89,12 @@ test('@ goes on a sender send_message reaches, told by who sent it, not its name
   ).toStrictEqual({ header: 'from Fix it · codex: ', text: 'Hi' });
 });
 
-test('a message sent is → and its recipient, not a call, queued or refused', async () => {
+test('a message sent is → to and its recipient, not a call, queued or refused', async () => {
   const delivered = await frame(sent({ queued: true }));
 
-  expect(delivered).toContain('→ @parser · queued\n  ⎿  Run the parser tests.');
+  expect(delivered).toContain(
+    '→ to @parser · queued\n  ⎿  Run the parser tests.',
+  );
   expect(
     !delivered.includes('⏺'),
     'a sent message is drawn as a call',
@@ -101,17 +103,17 @@ test('a message sent is → and its recipient, not a call, queued or refused', a
     !delivered.includes('Message('),
     'a sent message is drawn as a call',
   ).toBeTruthy();
-  expect(await frame(sent({}, 'in_progress'))).toContain('→ @parser\n');
+  expect(await frame(sent({}, 'in_progress'))).toContain('→ to @parser\n');
   expect(
     await frame(sent({ error: 'parser is closed; it takes no more messages' })),
-  ).toContain('→ @parser\n  ⎿  parser is closed; it takes no more messages');
+  ).toContain('→ to @parser\n  ⎿  parser is closed; it takes no more messages');
   // A child's, inside its task block, goes to main.
   expect(
     await frame(sent({ input: { text: 'Found it' }, queued: true })),
-  ).toContain('→ @main · queued');
+  ).toContain('→ to @main · queued');
 });
 
-test("a child's message inside its task block is → @main, not Message(main)", async () => {
+test("a child's message inside its task block is → to @main, not Message(main)", async () => {
   const shown = await frame({
     kind: 'subagent',
     turnId: 't',
@@ -125,7 +127,7 @@ test("a child's message inside its task block is → @main, not Message(main)", 
     },
   });
 
-  expect(shown).toContain('⎿  → @main · queued');
+  expect(shown).toContain('⎿  → to @main · queued');
   expect(!shown.includes('Message('), 'the old call is drawn').toBeTruthy();
 });
 
@@ -227,6 +229,16 @@ const childSent = (
   },
 });
 
+test("from and to are dim, the name after them the agent's", async () => {
+  expect(
+    await painted(came({ name: 'parser', reachable: true }), 'dark', false),
+  ).toContain('\x1b[2mfrom ');
+  expect(await painted(sent({}), 'dark', false)).toContain('\x1b[2mto ');
+  expect(
+    await painted(childSent('main', 'completed'), 'dark', false),
+  ).toContain('\x1b[2mto ');
+});
+
 const DIM = '\x1b[2m→';
 const RED = { dark: '\x1b[38;2;255;107;128m→', light: '\x1b[38;2;196;22;42m→' };
 
@@ -261,7 +273,7 @@ for (const theme of ['dark', 'light'] as const) {
         expanded,
       );
 
-      expect(stripAnsi(delivered)).toContain('→ @main');
+      expect(stripAnsi(delivered)).toContain('→ to @main');
       expect(!delivered.includes(DIM), 'a delivered arrow is dim').toBeTruthy();
       expect(
         !delivered.includes(RED[theme]),

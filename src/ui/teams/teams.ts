@@ -156,7 +156,7 @@ export interface TeamListing {
   readonly dirs: { readonly project: string; readonly user?: string };
 }
 
-/** A call's headline as one line: `Edit(src/a.ts)`, `→ @coder`. */
+/** A call's headline as one line: `Edit(src/a.ts)`, `→ to @coder`. */
 export function headlineText({
   name,
   arg,
@@ -166,7 +166,7 @@ export function headlineText({
   arg?: string;
   sent?: true;
 }): string {
-  return sent ? `→ @${name}` : arg === undefined ? name : `${name}(${arg})`;
+  return sent ? `→ to @${name}` : arg === undefined ? name : `${name}(${arg})`;
 }
 
 /**

@@ -1815,7 +1815,7 @@ test("a task's message that goes as its parent's next turn after the task has en
           'Received the message from Fix the tokenizer · fake.',
         );
         await window.press(CTRL_O);
-        await window.shows('→ @main · queued');
+        await window.shows('→ to @main · queued');
 
         const stateDir = join(window.dir, 'state');
         let parent: SessionRecord | undefined;

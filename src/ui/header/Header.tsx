@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { TextAttributes } from '@opentui/core';
 import { useMemo } from 'react';
-import { useColours } from '../app/context.ts';
+import { useColours, useSelectable } from '../app/context.ts';
 import { colour as rgba, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import {
   type HeaderFacts,
@@ -33,6 +33,7 @@ export function Header({
   // nearest 256 colour is looked up once per half cell, not on each.
   const painted = useMemo(() => markRows(MARK, colour), [colour]);
   const lines = headerLines(facts, textWidth(columns), Date.now());
+  const selectable = useSelectable();
 
   return (
     <box flexDirection='row' flexShrink={0}>
@@ -55,7 +56,7 @@ export function Header({
       </box>
       <box flexShrink={1}>
         {lines.map((line, index) => (
-          <text key={index} {...CUT}>
+          <text key={index} {...CUT} {...selectable}>
             {line.map((part, at) => (
               <span key={at} attributes={part.bold ? TextAttributes.BOLD : DIM}>
                 {part.text}

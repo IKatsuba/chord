@@ -7,6 +7,7 @@ import {
   useAgentColour,
   useColours,
   useHintKey,
+  useSelectable,
 } from '../../app/context.ts';
 import { Ansi } from '../../theme/Ansi.tsx';
 import { colour, CUT, DIM, fg, FILL, TEXT } from '../../theme/text.ts';
@@ -72,6 +73,7 @@ export function Tool({
   const live = toneOf(call);
   const tone = ended && live === 'running' ? 'pending' : live;
   const colours = useColours();
+  const selectable = useSelectable();
   const proposal =
     call.chord === undefined ? undefined : proposalOf(call.chord);
   const { lines, hidden, terminals, diffs } = summary(
@@ -99,7 +101,7 @@ export function Tool({
         ) : (
           <ToolMarker tone={tone} />
         )}
-        <text {...CUT}>
+        <text {...CUT} {...selectable}>
           {sent && <span attributes={DIM}>to </span>}
           <span
             attributes={TextAttributes.BOLD}
@@ -127,7 +129,7 @@ export function Tool({
       </box>
       {shown.map((line, index) => (
         <box key={index} paddingLeft={2}>
-          <text {...CUT}>
+          <text {...CUT} {...selectable}>
             <Ansi text={`${line}${index === shown.length - 1 ? ')' : ''}`} />
           </text>
         </box>
@@ -144,6 +146,7 @@ export function Tool({
           <Under key={index} first={index === 0}>
             <text
               {...CUT}
+              {...selectable}
               {...(tone === 'failed' ? fg(colours.error) : { attributes: DIM })}
             >
               <Ansi text={line} />
@@ -332,12 +335,13 @@ function TerminalOutput({
   first: boolean;
 }) {
   const { error } = useColours();
+  const selectable = useSelectable();
 
   return (
     <>
       {view.lines.map((line, index) => (
         <Under key={index} first={first && index === 0}>
-          <text {...CUT} attributes={DIM}>
+          <text {...CUT} {...selectable} attributes={DIM}>
             {line}
           </text>
         </Under>
@@ -411,10 +415,12 @@ function Diff({
   /** In place of `Updated …`, for a change not written yet. */
   headline?: string;
 }) {
+  const selectable = useSelectable();
+
   return (
     <>
       <Under first={first}>
-        <text {...CUT} attributes={DIM}>
+        <text {...CUT} {...selectable} attributes={DIM}>
           {headline}
         </text>
       </Under>
@@ -437,6 +443,7 @@ function Diff({
 export function DiffRows({ view }: { view: DiffView }) {
   const { diff } = useColours();
   const { tint } = diff;
+  const selectable = useSelectable();
 
   return view.rows.map((row, index) => (
     <box key={index} flexDirection='row'>
@@ -455,12 +462,17 @@ export function DiffRows({ view }: { view: DiffView }) {
           <Gutter width={view.numberWidth + 1} dimColor>
             {String(row.number).padStart(view.numberWidth)}
           </Gutter>
-          <text {...CUT} {...(row.kind === 'context' ? {} : fg(tint.text))}>
-            {row.kind === 'context' ? (
-              DIFF_MARKS.context
-            ) : (
-              <span {...fg(diff[row.kind])}>{DIFF_MARKS[row.kind]}</span>
-            )}{' '}
+          <text
+            {...TEXT}
+            {...(row.kind === 'context' ? {} : fg(diff[row.kind]))}
+          >
+            {`${DIFF_MARKS[row.kind]} `}
+          </text>
+          <text
+            {...CUT}
+            {...selectable}
+            {...(row.kind === 'context' ? {} : fg(tint.text))}
+          >
             <Ansi text={row.code ?? row.text} />
           </text>
         </box>
@@ -470,20 +482,19 @@ export function DiffRows({ view }: { view: DiffView }) {
             {String(row.number).padStart(view.numberWidth)}
           </Gutter>
           <text
-            {...CUT}
+            {...TEXT}
             {...(row.kind === 'context' ? {} : fg(diff[row.kind]))}
           >
-            {row.kind === 'context' ? (
-              <>
-                {`${DIFF_MARKS.context} `}
-                <Ansi text={row.code ?? row.text} />
-              </>
-            ) : (
-              <>
-                {`${DIFF_MARKS[row.kind]} `}
-                <Ansi text={row.text} />
-              </>
-            )}
+            {`${DIFF_MARKS[row.kind]} `}
+          </text>
+          <text
+            {...CUT}
+            {...selectable}
+            {...(row.kind === 'context' ? {} : fg(diff[row.kind]))}
+          >
+            <Ansi
+              text={row.kind === 'context' ? (row.code ?? row.text) : row.text}
+            />
           </text>
         </>
       )}

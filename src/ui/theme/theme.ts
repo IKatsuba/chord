@@ -97,6 +97,12 @@ export interface Palette {
   /** The startup header's mark. */
   readonly mark?: MarkTones;
   /**
+   * The background of the cells a drag selects. Every theme has one, plain
+   * included: without it OpenTUI swaps a text's colours, and the terminal's
+   * own foreground swapped draws nothing (CHD-172).
+   */
+  readonly selection: string;
+  /**
    * Code's tokens on the terminal's background and on a diff's tint; none
    * where code is not coloured.
    */
@@ -149,6 +155,9 @@ const LIGHT_ON_TINT: Tones = {
   meta: '#4248b5',
 };
 
+/** The selection's background on a dark terminal, and where colour is off. */
+const SLATE = 'ansi256(66)';
+
 const DARK: Palette = {
   accent: '#47e7a5',
   permission: '#b1b9f9',
@@ -164,6 +173,8 @@ const DARK: Palette = {
   // Lighter than the accent, so a name never sinks into the border.
   agents: ['#6cb6ff', '#c49cff', '#56d4dd', '#7ccf7f', '#e8c95a', '#f59ac6'],
   mark: { stops: ['#89f5b3', '#47e7a5', '#15c7a2'], tone: 'greenBright' },
+  // Claude Code's slate, `48;5;66`.
+  selection: SLATE,
   code: { terminal: DARK_CODE, tint: DARK_CODE },
   diff: {
     added: '#86e08a',
@@ -189,6 +200,7 @@ const LIGHT: Palette = {
   // 3.6:1 or more on white; the middle is Chorded's own colour for the mark
   // on a light background.
   mark: { stops: ['#1e9a5e', '#147d55', '#0a5e57'], tone: 'green' },
+  selection: 'ansi256(152)',
   code: { terminal: LIGHT_CODE, tint: LIGHT_ON_TINT },
   // CHD-70: pale washes, where the dark theme's tints are blocks on white.
   diff: {
@@ -220,6 +232,8 @@ function sixteen(bright: boolean): Palette {
     success: tone('green'),
     agents: ['blue', 'magenta', 'cyan', 'green', 'yellow', 'red'].map(tone),
     mark: { tone: tone('green') },
+    // A slate still, where the sixteen have none that reads under text.
+    selection: bright ? SLATE : 'ansi256(152)',
     code: {
       terminal: {
         keyword: tone('magenta'),
@@ -261,8 +275,11 @@ export const PALETTES: Record<ThemeName, Palette> = {
   'light-ansi': sixteen(false),
 };
 
-/** What NO_COLOR, or a terminal that takes no colour, leaves: nothing. */
-export const PLAIN: Palette = { diff: {} };
+/**
+ * What NO_COLOR, or a terminal that takes no colour, leaves: nothing but the
+ * selection, which would not show at all without one.
+ */
+export const PLAIN: Palette = { selection: SLATE, diff: {} };
 
 /** A child's colour, by its place among the session's children. */
 export function agentColour(

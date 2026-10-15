@@ -14,6 +14,7 @@ import {
 } from '@opentui/core';
 import { type TextareaProps, useRenderer } from '@opentui/react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useSelectable } from '../app/context.ts';
 import { drawn } from '../app/input.ts';
 
 export type { KeyBinding as TextAreaKey, TextareaRenderable };
@@ -93,6 +94,7 @@ export function TextArea({
 }: TextareaProps) {
   const own = useRef<TextareaRenderable | null>(null);
   const ink = useInk();
+  const selectable = useSelectable();
 
   // A box given the keys by a key's own work takes the next key, not that
   // one: OpenTUI asks the focused widget after every listener, and the
@@ -123,8 +125,10 @@ export function TextArea({
       // OpenTUI sends its cursor colour whatever it is told, a default one as
       // its white, which a light terminal's background all but hides.
       cursorColor={ink.foreground}
-      // As a text's: a drag over the draft is the terminal's to select.
-      selectable={false}
+      // The person's own words, which a drag selects as it does a reply. A
+      // key or a paste clears the selection before the textarea hears it,
+      // so nothing selected is replaced (CHD-172).
+      {...selectable}
       {...rest}
       {...(onSubmit && { onSubmit: () => void drawn(onSubmit) })}
       {...(onContentChange && {

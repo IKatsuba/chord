@@ -63,9 +63,14 @@ export function fg(name: string | undefined): { fg?: RGBA } {
 
 /**
  * Every `<text>`'s: the terminal's own foreground, where OpenTUI's is a hard
- * white, and no selection of OpenTUI's, as a drag is the terminal's own
- * selection, with the modifier the status line names; OpenTUI's would
- * highlight text it never copies. It wraps at words, OpenTUI's default.
+ * white, and not selectable. It wraps at words, OpenTUI's default.
+ *
+ * Not selectable is for chord's furniture: gutters, the mark, line numbers,
+ * the fold marker, the status line, lists and boxes. A drag that crosses it
+ * copies none of it, and two renderables on a row are glued with no gap in
+ * a copy, which is why a gutter must not come along (CHD-172). What the
+ * agent or the person wrote adds `app/context.ts`'s `useSelectable()`
+ * on top, so a new text is furniture until someone decides otherwise.
  */
 export const TEXT = {
   fg: RGBA.defaultForeground(),

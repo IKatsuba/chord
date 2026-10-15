@@ -15,6 +15,7 @@ import {
   useAgentColour,
   useColours,
   useHintKey,
+  useSelectable,
 } from '../app/context.ts';
 import { leftOpenLine } from '../agents/agents.ts';
 import { leftRunningLine } from '../../session/monitors.ts';
@@ -101,12 +102,16 @@ export const TranscriptEntry = memo(function TranscriptEntry({
   /** Cells beside the gutter. */
   width: number;
 }) {
+  const selectable = useSelectable();
+
   switch (entry.kind) {
     case 'user':
       return (
         <box flexDirection='row' marginTop={1} flexShrink={0}>
           <Gutter dimColor>›</Gutter>
-          <text {...FILL}>{entry.text}</text>
+          <text {...FILL} {...selectable}>
+            {entry.text}
+          </text>
         </box>
       );
     case 'message':
@@ -300,6 +305,7 @@ function Message({
         expanded,
       );
   const failed = from.note === 'failed';
+  const selectable = useSelectable();
 
   return (
     <box marginTop={1} flexShrink={0}>
@@ -319,6 +325,7 @@ function Message({
         <Under key={index} first={index === 0}>
           <text
             {...FILL}
+            {...selectable}
             {...(failed ? fg(colours.error) : { attributes: DIM })}
           >
             <Ansi text={line === '' ? ' ' : line} />
@@ -421,16 +428,23 @@ function Shell({ run, expanded }: { run: ShellRun; expanded: boolean }) {
     useHintKey('chat:cancel'),
   );
   const { bash, error } = useColours();
+  const selectable = useSelectable();
 
   return (
     <box marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
         <Gutter {...paint(bash)}>!</Gutter>
-        <text {...CUT}>{run.command}</text>
+        <text {...CUT} {...selectable}>
+          {run.command}
+        </text>
       </box>
       {lines.map((line, index) => (
         <Under key={index} first={index === 0}>
-          <text {...CUT} {...(line.stream === 'stderr' ? fg(error) : {})}>
+          <text
+            {...CUT}
+            {...selectable}
+            {...(line.stream === 'stderr' ? fg(error) : {})}
+          >
             {line.text}
           </text>
         </Under>
@@ -459,6 +473,7 @@ function Reply({ text, width }: { text: string; width: number }) {
     () => markdown(stripAnsi(text), width, undefined, colours),
     [text, width, colours],
   );
+  const selectable = useSelectable();
 
   return (
     <box gap={1} flexGrow={1}>
@@ -472,12 +487,12 @@ function Reply({ text, width }: { text: string; width: number }) {
             borderColor={DIM_BORDER}
             paddingLeft={QUOTE_INSET - 1}
           >
-            <text {...FILL}>
+            <text {...FILL} {...selectable}>
               <Ansi text={block.text} />
             </text>
           </box>
         ) : (
-          <text key={index} {...TEXT}>
+          <text key={index} {...TEXT} {...selectable}>
             <Ansi text={block.text} />
           </text>
         ),
@@ -545,6 +560,7 @@ function TeamPartLine({
   expanded: boolean;
 }) {
   const key = useHintKey('app:toggleTranscript');
+  const selectable = useSelectable();
 
   return (
     <box marginTop={1} flexShrink={0}>
@@ -556,7 +572,7 @@ function TeamPartLine({
       </box>
       {expanded && (
         <box flexDirection='row' paddingLeft={2}>
-          <text {...FILL} attributes={DIM}>
+          <text {...FILL} {...selectable} attributes={DIM}>
             <Ansi text={part.text} />
           </text>
         </box>
@@ -570,6 +586,8 @@ function TeamPartLine({
  * Code it names no key; the shortcuts panel does.
  */
 function Thought({ text, expanded }: { text: string; expanded: boolean }) {
+  const selectable = useSelectable();
+
   return (
     <box marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
@@ -580,7 +598,11 @@ function Thought({ text, expanded }: { text: string; expanded: boolean }) {
       </box>
       {expanded && (
         <box flexDirection='row' paddingLeft={2}>
-          <text {...FILL} attributes={DIM | TextAttributes.ITALIC}>
+          <text
+            {...FILL}
+            {...selectable}
+            attributes={DIM | TextAttributes.ITALIC}
+          >
             <Ansi text={text.trim()} />
           </text>
         </box>

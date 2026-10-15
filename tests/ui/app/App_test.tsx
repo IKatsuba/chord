@@ -32,6 +32,7 @@ import {
   inputAsked,
   isAlive,
   leader,
+  left,
   promptRow,
   quitAll,
   ready,
@@ -101,10 +102,6 @@ test('a warning chord was started with is in the transcript before anything else
     { warnings: ['.chord/settings.json: unknown key "theme", ignored'] },
   ));
 
-/** An SGR mouse report of the left button at the 0-based cell `x`, `y`. */
-const left = (x: number, y: number, how: 'down' | 'drag' | 'up') =>
-  `\x1b[<${how === 'drag' ? 32 : 0};${x + 1};${y + 1}${how === 'up' ? 'm' : 'M'}`;
-
 test('a drag says how to select text, standing alone, for a while', () =>
   withWindow(
     async (window) => {
@@ -125,8 +122,6 @@ test('a drag says how to select text, standing alone, for a while', () =>
 
       expect(status.trim()).toStrictEqual('option + drag to select text');
       expect(window.frame()).toContain('│ › a draft');
-      // The terminal selects, not OpenTUI, which would copy nothing.
-      expect(window.selected()).toStrictEqual('');
       await until(
         'the hint to go',
         () => !window.frame().includes('to select text'),

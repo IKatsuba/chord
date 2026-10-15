@@ -153,10 +153,11 @@ export async function withWindow(
     /** Settles before the session's close begins, to hold a quit midway. */
     heldClose?: Promise<void>;
     /**
-     * Settles before the window is handed the session it opened, which the
-     * test already sees, to hold the window's start midway.
+     * Called once the session has opened, which the test then sees, and
+     * settles before the window is handed it, to hold the window's start
+     * midway; it is given the screen to look at meanwhile.
      */
-    heldOpen?: Promise<void>;
+    heldOpen?: (frame: () => string) => Promise<void>;
     onQuit?: (tabs: readonly ResumableTab[]) => void;
     /** How each agent `/new` names starts, as `main.tsx` works it out. */
     startupOf?: (agent: string) => SessionStart | undefined;
@@ -190,6 +191,8 @@ export async function withWindow(
 
   let session: Session | undefined;
   let up = false;
+  // The screen, once drawn, for a held open to look at.
+  const screen: { frame?: () => string } = {};
   // Every one opened, a task agent's among them, each closed at the end.
   const opened: Session[] = [];
   const pids: number[] = [];
@@ -240,7 +243,7 @@ export async function withWindow(
         }
 
         pids.push(...session.agentPids);
-        await heldOpen;
+        await heldOpen?.(() => screen.frame?.() ?? '');
 
         return session;
       }}
@@ -250,6 +253,9 @@ export async function withWindow(
   );
 
   const frame = app.frame;
+
+  screen.frame = frame;
+
   // The settle's time runs from the write, not from the frame it draws:
   // Ink draws in the microtask after a write, which takes tens of ms here,
   // and a test catching a short-lived line (`Working…`) depends on that.

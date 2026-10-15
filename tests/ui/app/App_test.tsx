@@ -92,30 +92,55 @@ test("the transcript opens with the header: chord's version, the agent and its m
     ).toBeTruthy();
   }));
 
-test("a test's first prompt goes once the window has its session, with a notice where Starting would be", () =>
-  withWindow(
+test("a test's first prompt goes once the window has its session, with a notice where Starting would be", async () => {
+  let opened!: (frame: () => string) => void;
+  const held = new Promise<() => string>((resolve) => (opened = resolve));
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => (release = resolve));
+  let began = false;
+  const running = withWindow(
     async (window) => {
+      began = true;
+
       await send(window, 'text');
       await window.shows('Hello, world. This reply came in chunks.');
     },
     {
       columns: 120,
       // A keybindings problem says so in the status line in place of
-      // `Starting fake…`, while the window is a while from taking the
-      // session the test already sees.
+      // `Starting fake…`.
       keybindings: JSON.stringify({
         bindings: [
-          {
-            context: 'Chat',
-            bindings: {
-              'ctrl+o': 'chat:externalEditor',
-            },
-          },
+          { context: 'Chat', bindings: { 'ctrl+o': 'chat:externalEditor' } },
         ],
       }),
-      heldOpen: new Promise((resolve) => setTimeout(resolve, 500)),
+      heldOpen: (frame) => {
+        opened(frame);
+
+        return gate;
+      },
     },
-  ));
+  );
+
+  try {
+    // The session is open and the test's to see, the window not yet on it,
+    // with nothing on screen to say it is still starting.
+    const frame = await held;
+
+    await until('the notice in the status line', () =>
+      frame().includes('keybindings.json'),
+    );
+    // A timer of until's 20 ms, set after withWindow's own look was, fires
+    // after it: by then that look has seen the notice and answered.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(began, 'the test began before the window had its session').toBe(
+      false,
+    );
+  } finally {
+    release();
+    await running;
+  }
+});
 
 test('a warning chord was started with is in the transcript before anything else', () =>
   withWindow(

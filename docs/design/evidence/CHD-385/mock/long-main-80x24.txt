@@ -1,0 +1,24 @@
+ ▄▀▀▀   /tmp/chord-qa.kw7r
+ ▀▀     ? for shortcuts · /help
+
+ › /team run sssssssssssssss Fix the parser bug
+
+ ⏺ Team(sssssssssssssss) · fake · fake-large
+   ⎿  Fix the parser bug
+
+ ← from @sssssssssssssss · fake
+   ⎿  On it. tester is writing a failing test
+      in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails
+      for the bug's own reason.
+
+ ⏺ Received the message from sssssssssssssss · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main             fake
+    sssssssssssssss  team · fake  ✓ replied 12s ago
+    ├─ tester        fake         ● permission 10s
+    └─ coder         fake         ✓ replied 11s ago

@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 8s ago
+
+ ← from @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (8s)
+ ← from @main · after your answer: When the README section is done, add the new flag to docs/FEATURES.md.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ docs asks                                                                                                            │
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    main  fake · Fake Large with a 1M context window · medium
+    docs  fake · Fake Large with a 1M context window · medium  ● permission 7s

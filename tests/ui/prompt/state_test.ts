@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   type AppAction,
   type AppState,
@@ -233,6 +233,66 @@ const withFiles = reduceApp(ready, {
 
 const finderFiles = (state: AppState, draft: string) =>
   fileFinder(state, draft, [0, draft.length])?.files;
+
+describe('CHD-398 finder cache invalidation', () => {
+  test('a new walk replaces matching paths while the query stays unchanged', () => {
+    const old = reduceApp(ready, {
+      type: 'files_listed',
+      files: ['old/state.ts', 'README.md'],
+    });
+
+    expect(finderFiles(old, '@state')).toStrictEqual(['old/state.ts']);
+
+    const refreshed = reduceApp(old, {
+      type: 'files_listed',
+      files: ['new/state.ts', 'README.md'],
+    });
+
+    expect(finderFiles(refreshed, '@state')).toStrictEqual(['new/state.ts']);
+    expect(finderFiles(refreshed, '@state')).toBe(
+      finderFiles(refreshed, '@state'),
+    );
+    expect(finderFiles(old, '@state')).toStrictEqual(['old/state.ts']);
+  });
+
+  test('empty and missing matches do not survive a new walk or query', () => {
+    const before = reduceApp(ready, {
+      type: 'files_listed',
+      files: [],
+    });
+
+    expect(finderFiles(before, '@state')).toBeUndefined();
+
+    const listed = reduceApp(before, {
+      type: 'files_listed',
+      files: ['state.ts', 'README.md'],
+    });
+
+    expect(finderFiles(listed, '@state')).toStrictEqual(['state.ts']);
+    expect(finderFiles(listed, '@missing')).toBeUndefined();
+    expect(finderFiles(listed, '@')).toStrictEqual(['state.ts', 'README.md']);
+    expect(finderFiles(listed, '@state')).toStrictEqual(['state.ts']);
+    expect(
+      finderFiles(reduceApp(listed, { type: 'files_listed', files: [] }), '@'),
+    ).toBeUndefined();
+  });
+
+  test('interleaved sessions keep their own paths for the same query', () => {
+    const first = reduceApp(ready, {
+      type: 'files_listed',
+      files: ['first/state.ts'],
+    });
+    const second = reduceApp(ready, {
+      type: 'files_listed',
+      files: ['second/state.ts'],
+    });
+
+    for (let call = 0; call < 3; call++) {
+      expect(finderFiles(first, '@state')).toStrictEqual(['first/state.ts']);
+      expect(finderFiles(second, '@state')).toStrictEqual(['second/state.ts']);
+    }
+  });
+});
 
 test('an @ opens the finder on the files, and typing narrows it', () => {
   expect(finderFiles(withFiles, 'see @')).toStrictEqual(withFiles.files);

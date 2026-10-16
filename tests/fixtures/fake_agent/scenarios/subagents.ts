@@ -272,6 +272,76 @@ async function findToolDrawing(child: Turn, open: Children): Promise<void> {
   await finish(child.sessionId, open, 'failed');
 }
 
+/** The plan the parent of `subagentstates` works through. */
+function parentPlan(done: number): Update {
+  const steps = [
+    'Plan the change',
+    'Read the session layer',
+    'Write the design',
+  ];
+
+  return {
+    sessionUpdate: 'plan',
+    entries: steps.map((content, index) => ({
+      content,
+      priority: 'medium',
+      status:
+        index < done ? 'completed' : index === done ? 'in_progress' : 'pending',
+    })),
+  };
+}
+
+/**
+ * The lone subagent of `subagentstates`: a plan of its own, which never shows
+ * above the prompt, then five calls, more than a running block shows, held on
+ * the last so the fold can be seen.
+ */
+async function readSessionLayer(child: Turn, open: Children): Promise<void> {
+  await child.send(childPlan(0));
+
+  for (const [name, title, path] of [
+    ['search', 'Search sessionUpdate in src', undefined],
+    ['read', 'Read src/acp/connection.ts', 'src/acp/connection.ts'],
+    ['read', 'Read src/session/session.ts', 'src/session/session.ts'],
+    ['read', 'Read src/session/conversation.ts', 'src/session/conversation.ts'],
+    ['read', 'Read src/session/enrichers.ts', 'src/session/enrichers.ts'],
+  ] as const) {
+    await call(
+      child,
+      name,
+      {
+        title,
+        kind: name,
+        ...(path === undefined ? {} : { locations: [{ path }] }),
+      },
+      'completed',
+    );
+  }
+
+  await pause(child.signal, SUBAGENT_AFTER_MS);
+  await child.say('Routing lives in src/acp/connection.ts.');
+  await finish(child.sessionId, open, 'completed');
+}
+
+/** One of the pair of `subagentstates`, whose calls all succeed. */
+async function readAll(
+  child: Turn,
+  open: Children,
+  paths: readonly string[],
+): Promise<void> {
+  for (const path of paths) {
+    await call(
+      child,
+      'read',
+      { title: `Read ${path}`, kind: 'read', locations: [{ path }] },
+      'completed',
+    );
+  }
+
+  await child.say('Read.');
+  await finish(child.sessionId, open, 'completed');
+}
+
 export const SUBAGENTS = {
   // Subagents as Claude's and Codex's adapters send them to a client that
   // takes them: two spawned back to back, one with a plan, calls, a subagent
@@ -357,6 +427,82 @@ export const SUBAGENTS = {
           // The client went before the subagent ended.
         }
       }, SUBAGENT_AFTER_MS);
+
+      return 'end_turn';
+    } catch (error) {
+      for (const child of [...open.keys()].toReversed()) {
+        await finish(child, open, 'cancelled');
+      }
+
+      throw error;
+    }
+  },
+
+  // The states `subagent` never reaches: the parent's own plan beside a lone
+  // subagent whose calls outrun its fold, then a pair the parent waits on
+  // with a call of its own, as Codex's adapter does, both finishing.
+  async subagentstates(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const open: Children = new Map();
+
+    try {
+      await turn.send(parentPlan(1));
+      await readSessionLayer(
+        await spawn(
+          turn,
+          open,
+          'Find the session layer',
+          'Find where chord hands each session/update to its listeners.',
+        ),
+        open,
+      );
+      await turn.send(parentPlan(2));
+      await turn.say('Routing is in src/acp/connection.ts. Now both sides.');
+
+      const explorer = await spawn(
+        turn,
+        open,
+        'explorer',
+        'Find where chord routes session/update.',
+      );
+      const worker = await spawn(
+        turn,
+        open,
+        'worker',
+        'Find where tool calls are drawn on screen.',
+      );
+      const wait = turn.callId('wait');
+
+      await turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId: wait,
+        title: 'Wait explorer, worker',
+        kind: 'other',
+        status: 'in_progress',
+      });
+      await Promise.all([
+        readAll(explorer, open, [
+          'src/acp/connection.ts',
+          'src/session/session.ts',
+          'src/session/conversation.ts',
+        ]),
+        readAll(worker, open, ['src/ui/transcript/tools/Tool.tsx']),
+      ]);
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: wait,
+        status: 'completed',
+      });
+      await turn.send(parentPlan(3));
+      await turn.say(
+        'Both sides found: routing is in src/acp/connection.ts, ',
+        'drawing is Tool in src/ui/transcript/tools/Tool.tsx.',
+      );
 
       return 'end_turn';
     } catch (error) {

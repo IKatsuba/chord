@@ -21,8 +21,8 @@ You need [Bun](https://bun.sh) 1.4.2 or newer.
 ```sh
 git clone https://github.com/IKatsuba/chord && cd chord
 bun install
-bun run chord:fake    # chord against the scripted test agent, no account needed
-bun run chord         # chord against your real default agent
+bun chord:fake    # chord against the scripted test agent, no account needed
+bun chord         # chord against your real default agent
 ```
 
 The test agent in `tests/fixtures/fake_agent/` plays a scenario for a prompt
@@ -33,7 +33,7 @@ each part of the interface work.
 ## Before you open a pull request
 
 ```sh
-bun run check         # types, lint, formatting and every test
+bun check         # types, lint, formatting and every test
 ```
 
 This is the full check, and CI runs it. Locally, choose checks that match
@@ -41,7 +41,7 @@ what changed, following [AGENTS.md](AGENTS.md#choosing-checks-for-a-change).
 For prose-only changes, review the diff and check formatting of the changed
 files; application tests are not needed. For code, run relevant tests and
 static checks, using the full suite when the impact is broad. State which
-checks you ran in the pull request. `bun run lint --fix` then `bun run fmt`
+checks you ran in the pull request. `bun lint --fix` then `bun fmt`
 fixes most lint and formatting issues.
 
 - Keep a pull request to one change. For behavior changes, add a test that

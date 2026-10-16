@@ -292,6 +292,33 @@ describe('a selection (CHD-172)', () => {
       expect(window.frame()).not.toContain('below');
     }));
 
+  test('a click on a reply taller than the view selects and copies nothing (CHD-410)', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdown');
+        await window.shows('echo "built $bin"');
+        await until(
+          'the turn to end',
+          () => !window.frame().includes('Working'),
+        );
+
+        const line = 'That is the whole loop.';
+        const { x, y } = cellsOf(window, line);
+
+        await window.press(left(x + 5, y, 'down'));
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        expect(window.selected()).toBe('');
+        await window.press(left(x + 5, y, 'up'));
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        expect(window.selected()).toBe('');
+        expect(copies).toStrictEqual([]);
+      },
+      { copy },
+    );
+  });
+
   test('a selection held keeps its text mounted under 150 more entries', () =>
     withWindow(
       async (window) => {

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                           home end for the top and the bottom   ctrl + x then a key for sessions
+  \ + enter for a newline                 ctrl + c to copy                      1–9 to pick a choice
+  shift + enter for a newline             / @ for commands or files             ↑ ↓ or j k to move between choices
+  ctrl + g to edit in $EDITOR             ↑ ↓ to pick a command or file         enter to pick the highlighted choice
+  ctrl + v to paste an image              tab to complete a command             esc to reject a permission
+  alt + ← → to move by word               tab enter to add a file               esc to close a picker
+  cmd + ← → to line start or end          esc to close commands or files        ctrl + a to show all directories
+  ↑ ↓ for prompts, agents and monitors    ! for bash mode                       tab ← → ↑ ↓ space to answer forms
+  x to close an agent or stop a monitor   backspace to leave bash mode          ctrl + c to stop the turn and its form
+  ctrl + r to search prompts              esc to interrupt or stop a command    /vim for vim mode
+  tab enter to take a match               shift + tab to cycle modes            ? for shortcuts
+  esc to cancel a search                  ctrl + o for verbose output           esc to close shortcuts
+  pgup pgdn or wheel to scroll            ctrl + c to clear input
+  shift + ↑ ↓ to scroll a line            ctrl + d or ctrl + c twice to quit

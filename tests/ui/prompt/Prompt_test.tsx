@@ -1604,3 +1604,223 @@ test('shift+← selects nothing in the draft, which only a drag selects (CHD-172
     await window.shows('› abcx');
     expect(window.selected()).toStrictEqual('');
   }));
+
+describe('option and cmd with ← and → (CHD-386)', () => {
+  const CTRL_A = '\x01';
+  const CTRL_E = '\x05';
+
+  /** The box's text after `keys`, with an X typed where they left the cursor. */
+  async function landed(window: Window, keys: readonly string[]) {
+    await ready(window);
+    await window.type('one two three');
+    await window.shows('› one two three');
+
+    for (const key of keys) {
+      await window.press(key);
+    }
+
+    await window.type('X');
+    await until('the X typed', () => promptRow(window)?.includes('X') === true);
+
+    return promptRow(window);
+  }
+
+  for (const [name, keys, expected] of [
+    ['option+← as CSI 1;3D', ['\x1b[1;3D'], 'one two Xthree'],
+    ['option+← as ESC b', ['\x1bb'], 'one two Xthree'],
+    ['option+→ as CSI 1;3C', [CTRL_A, '\x1b[1;3C'], 'one Xtwo three'],
+    ['option+→ as ESC f', [CTRL_A, '\x1bf'], 'one Xtwo three'],
+    ['kitty option+→ as CSI 102;3u', [CTRL_A, '\x1b[102;3u'], 'one Xtwo three'],
+    ['kitty option+← as CSI 98;3u', ['\x1b[98;3u'], 'one two Xthree'],
+    ['cmd+← as CSI 1;9D', ['\x1b[1;9D'], 'Xone two three'],
+    ['cmd+→ as CSI 1;9C', [CTRL_A, '\x1b[1;9C'], 'one two threeX'],
+    ['cmd+← as ctrl+a', [CTRL_A], 'Xone two three'],
+    ['cmd+→ as ctrl+e', [CTRL_A, CTRL_E], 'one two threeX'],
+  ] as const) {
+    test(`${name} moves the cursor`, () =>
+      withWindow(async (window) => {
+        expect(await landed(window, keys)).toContain(`› ${expected}`);
+      }));
+  }
+});
+
+test("a keybinding on option+← takes it from the textarea's word move (CHD-386)", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('one two three');
+      await window.shows('› one two three');
+      await window.press('\x1b[1;3D');
+      await window.type('X');
+      await until('the draft on two lines', () => {
+        const lines = window.frame().split('\n');
+        const first = lines.findIndex((line) =>
+          line.includes('› one two three'),
+        );
+
+        return first >= 0 && lines[first + 1]!.includes('X');
+      });
+    },
+    {
+      keybindings: JSON.stringify({
+        bindings: [
+          { context: 'Chat', bindings: { 'alt+left': 'chat:newline' } },
+        ],
+      }),
+    },
+  ));
+
+describe('CHD-386 tester: cursor move boundaries', () => {
+  test('a cancelled turn and another session keep independent editable drafts', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await window.type('one two');
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+        await window.press('\x1b[1;3D');
+        await window.type('X');
+        await window.shows('› one Xtwo');
+        await leader(window, 'c');
+        await until('the second agent', () => window.pids.length === 2);
+        await ready(window);
+        await window.type('other draft');
+        await window.press('\x1b[1;9D');
+        await window.type('Y');
+        await window.shows('› Yother draft');
+        await leader(window, '1');
+        await window.shows('› one Xtwo');
+        await leader(window, '2');
+        await window.shows('› Yother draft');
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('cmd arrows stay on the current hard line in a multiline draft', () => {
+    const drafts: string[] = [];
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await window.paste('first line\nsecond line\nthird line');
+        await window.press(UP);
+        await window.press('\x1b[1;9D');
+        await window.type('X');
+        await window.press('\x1b[1;9C');
+        await window.type('Y');
+        await window.press(CTRL_G);
+        expect(drafts).toStrictEqual(['first line\nXsecond lineY\nthird line']);
+      },
+      {
+        columns: 80,
+        rows: 24,
+        editor: (draft) => {
+          drafts.push(draft);
+
+          return Promise.resolve({ text: draft });
+        },
+      },
+    );
+  });
+
+  test('shift with alt arrows leaves selection and the cursor alone', () =>
+    withWindow(async (window) => {
+      await ready(window);
+      await window.type('one two');
+      await window.press('\x1b[1;4D');
+      await window.press('\x1b[1;4C');
+      await window.type('X');
+      await window.shows('› one twoX');
+      expect(window.selected()).toStrictEqual('');
+    }));
+
+  for (const [context, action] of [
+    ['Chat', 'chat:newline'],
+    ['Global', 'app:toggleTranscript'],
+  ] as const) {
+    test(`${context} chord prefix takes alt+left before the word move`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await window.type('one two');
+          await window.press('\x1b[1;3D');
+          // A wrong continuation drops the chord without moving the cursor.
+          await window.press('z');
+          await window.type('X');
+          await window.shows('› one twoX');
+        },
+        {
+          keybindings: JSON.stringify({
+            bindings: [{ context, bindings: { 'alt+left q': action } }],
+          }),
+        },
+      ));
+  }
+
+  test('a Global single binding takes cmd+left before the line move', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('one two');
+        await window.press('\x1b[1;9D');
+        await window.type('X');
+        await window.shows('› one twoX');
+      },
+      {
+        keybindings: JSON.stringify({
+          bindings: [
+            {
+              context: 'Global',
+              bindings: { 'cmd+left': 'app:toggleTranscript' },
+            },
+          ],
+        }),
+      },
+    ));
+
+  test('vim normal mode keeps its own arrow movement for modified arrows', () =>
+    withWindow(
+      async (window) => {
+        await window.shows('-- INSERT --');
+        await window.type('one two');
+        await window.press(ESC);
+        await window.shows('-- NORMAL --');
+        await window.press('\x1b[1;3D');
+        await window.press('\x1b[1;9D');
+        await window.press('a');
+        await window.shows('-- INSERT --');
+        await window.type('X');
+        // Vim names both presses Left, so these move two characters.
+        await window.shows('› one tXwo');
+      },
+      { vim: true },
+    ));
+
+  test('cmd arrows use the wrapped visual line at 80 columns', () => {
+    const drafts: string[] = [];
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type(`${'a'.repeat(74)} tail`);
+        await window.press('\x1b[1;9D');
+        await window.type('X');
+        await window.press('\x1b[1;9C');
+        await window.type('Y');
+        await window.press(CTRL_G);
+        // OpenTUI wraps before the space; it belongs to the second row.
+        expect(drafts).toStrictEqual([`${'a'.repeat(74)}X tailY`]);
+      },
+      {
+        columns: 80,
+        rows: 24,
+        editor: (draft) => {
+          drafts.push(draft);
+
+          return Promise.resolve({ text: draft });
+        },
+      },
+    );
+  });
+});

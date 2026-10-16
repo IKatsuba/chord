@@ -137,6 +137,8 @@ Inside the window:
 | `/`               | slash commands, chord's and the agent's      |
 | `@`               | mention a file                               |
 | `!`               | run a shell command, its output for the agent |
+| `alt+←` / `alt+→` | move by word in the prompt                    |
+| `cmd+←` / `cmd+→` | line start/end, where the terminal passes it  |
 | `shift+tab`       | cycle the permission mode                    |
 | `ctrl+o`          | expand tool calls and subagents              |
 | `ctrl+x c` / `/new codex` | open another session as a tab        |

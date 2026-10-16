@@ -136,6 +136,25 @@ anywhere around them: `chord codex -r <id> -r <id>`. As the id is optional,
 a word after `--resume` that names one of chord's own flags (`model`, `c`)
 is not read as an id.
 
+In the prompt, option+←/→ (alt+←/→) moves by word; cmd+←/→ moves to the
+current displayed line's start or end, including when text wraps. alt+b/f
+also moves by word, and ctrl+a/e goes to the line's start or end. `?` on
+an empty prompt lists the arrow shortcuts. In vim mode these editing keys
+apply in insert mode.
+
+cmd+arrows work only where the terminal passes them to chord:
+
+- **Ghostty:** its macOS defaults send word moves for option+arrows and
+  line moves for cmd+arrows.
+- **iTerm2:** its default profile sends option+arrows, but uses cmd+arrows
+  to switch tabs. The **Natural Text Editing** key preset maps cmd+←/→
+  to ctrl+a/e. Keep **Treat Option as Alt** on (the default); off,
+  option+arrows act as cmd+arrows and move to the line's ends.
+- **Terminal.app:** option+arrows move by word; cmd+arrows send nothing
+  to chord. Use ctrl+a/e for the line's ends.
+- **tmux:** option+arrows work, but tmux has no super/cmd modifier. Use
+  ctrl+a/e for line moves, or a terminal preset that sends those keys.
+
 ctrl+g opens the prompt in your editor (`$VISUAL`, then `$EDITOR`, then
 `vi`), run through your shell; what it saves comes back as the prompt when
 it exits. An editor that exits with an error or is killed leaves the

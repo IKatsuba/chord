@@ -104,7 +104,9 @@ export async function runRelease(
 
   if (dryRun) {
     release.out(
-      `dry run: @chorded/chord ${version} is packed in ${tarballs(release)}, not published`,
+      has('pack')
+        ? `dry run: @chorded/chord ${version} is packed in ${tarballs(release)}, not published`
+        : `dry run: @chorded/chord ${version}, ran ${stages.join(', ')}; not published`,
     );
   }
 }

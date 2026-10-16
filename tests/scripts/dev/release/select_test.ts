@@ -106,3 +106,9 @@ describe('refused', () => {
     );
   });
 });
+
+test('--dry-run refuses publish anywhere in --only', () => {
+  expect(() =>
+    selectStages({ dryRun: true, only: ['pack', 'publish'] }),
+  ).toThrow(ValidationError);
+});

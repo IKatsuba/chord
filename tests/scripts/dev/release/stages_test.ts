@@ -203,11 +203,11 @@ test('the credentials and the identity are asked only for the stages that need t
   ]);
 });
 
-test('a dry run says what it packed, and publishes nothing', async () => {
-  await released({ dryRun: true, only: ['install'] });
+test('a dry run that did not pack says what it ran, and publishes nothing', async () => {
+  await released({ dryRun: true, only: ['install', 'check'] });
 
   expect(at.out.at(-1)).toBe(
-    `dry run: @chorded/chord ${VERSION} is packed in ${join(at.root, 'dist', 'release', 'tgz')}, not published`,
+    `dry run: @chorded/chord ${VERSION}, ran install, check; not published`,
   );
   expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
 });

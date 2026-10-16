@@ -44,10 +44,11 @@ bun run chord [agent]       # run from source
 bun run chord:fake          # run from source against the fake agent in tests/fixtures/
 bun run check               # full validation: types, lint, fmt and all tests
 bun run check:static        # tsc, ESLint, Prettier and lint/'s own test; check runs it too
-bun run test                # tests only
+bun run test                # tests only, a worker per core
+bun run test:timings        # the same, then tests/timings.json rewritten; rerun after a slow file is added or split
 bun test --isolate --timeout=60000 ./tests/x_test.ts -t '…' # matching tests
-bun test --isolate --timeout=60000 --changed ./tests/ # uncommitted changes
-bun test --isolate --timeout=60000 --changed=<commit> ./tests/ # since a commit
+bun test --parallel --timeout=60000 --changed ./tests/ # uncommitted changes
+bun test --parallel --timeout=60000 --changed=<commit> ./tests/ # since a commit
 bun run lint --fix          # what ESLint can fix, then bun run fmt lays it out
 ```
 

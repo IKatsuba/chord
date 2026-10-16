@@ -6705,3 +6705,27 @@ whoami, pack, init, install, publish) goes through one helper in
 `scripts/dev/release/lib.ts`: it runs the first `node` on PATH whose
 realpath is not Bun's own executable, on the first such `npm`'s realpath
 (npm's script), and dies when either is missing.
+
+## 2026-10-16 — The suite runs on `bun test --parallel`
+
+`bun run test` ran every file in one process, one after another, and took
+about 12 minutes: the files' times add up to some 13. Bun 1.4 has
+`--parallel`, a worker process per core that takes the next file as it
+finishes one, and it implies `--isolate`, so each file still starts with a
+fresh global. On 12 cores the suite passes in about 72 s, four runs in a row
+without a failure.
+
+`--timings=tests/timings.json` hands the workers the slowest files first, so
+a 60 s file does not start last and set the end of the run. `bun run
+test:timings` rewrites the file from a run; a file it does not list is not
+put first, so it is rerun after a slow file is added or split. A run on
+fewer cores is bound by the total rather than by the slowest file, and
+gains less.
+
+`tests/ui/app/App_test.tsx` alone took 113 s, longer than the rest of the
+suite on 12 workers. Its tests moved, unchanged, into files of 20–30 s each:
+`Tasks_test.tsx`, `Held_test.tsx`, `Selection_test.tsx` and
+`SelectionEdges_test.tsx`, with the selection tests' helpers in
+`selecting.ts`. The fixed waits the window tests take (`settle`'s 50 ms
+after each key, `asked`'s 150 ms) are the next cost, and are left as they
+are.

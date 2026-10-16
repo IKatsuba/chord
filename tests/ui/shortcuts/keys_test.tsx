@@ -790,7 +790,21 @@ async function promptBox(walking: boolean) {
   return { app, did };
 }
 
-test('every key the prompt sends, breaks or walks on is in the panel', async () => {
+/**
+ * option and cmd with ← and →, in the forms terminals send them, which the
+ * prompt's textarea moves its cursor on (CHD-386). ← and → alone, ctrl+a and
+ * ctrl+e move it too, and the panel leaves them out, as Claude Code does.
+ */
+const MOVES: { name: string; sequence: string }[] = [
+  { name: 'alt + ←', sequence: '\x1b[1;3D' },
+  { name: 'alt + →', sequence: '\x1b[1;3C' },
+  { name: 'alt + b', sequence: '\x1bb' },
+  { name: 'alt + f', sequence: '\x1bf' },
+  { name: 'cmd + ←', sequence: '\x1b[1;9D' },
+  { name: 'cmd + →', sequence: '\x1b[1;9C' },
+];
+
+test('every key the prompt sends, breaks, walks or moves by word or line on is in the panel', async () => {
   const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
   const answered = new Set<string>();
 
@@ -818,6 +832,47 @@ test('every key the prompt sends, breaks or walks on is in the panel', async () 
           `${name} in the prompt is not listed`,
         ).toBeTruthy();
       }
+    } finally {
+      await app.unmount();
+    }
+  }
+
+  // Each from the middle of a draft of words, in a box of its own, so that
+  // every move has somewhere to go.
+  for (const { name, sequence } of MOVES) {
+    const moves: Cursor[] = [];
+    const app = await harness.draw(
+      <PromptInput
+        value='one two three'
+        cursor={[0, 5]}
+        rows={5}
+        walking={false}
+        focus
+        onChange={() => {}}
+        onCursorChange={(cursor) => moves.push(cursor)}
+        onSubmit={() => {}}
+        onOlder={() => {}}
+        onNewer={() => {}}
+      />,
+    );
+
+    try {
+      await settle();
+
+      moves.length = 0;
+
+      await app.write(sequence);
+      await settle();
+
+      if (moves.every(([, column]) => column === 5)) {
+        continue;
+      }
+
+      answered.add(name);
+      expect(
+        SHORTCUTS.some((shortcut) => shortcut.prompt?.includes(name)),
+        `${name} in the prompt is not listed`,
+      ).toBeTruthy();
     } finally {
       await app.unmount();
     }

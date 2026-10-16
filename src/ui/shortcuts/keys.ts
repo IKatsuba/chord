@@ -53,7 +53,8 @@ export interface Shortcut {
   readonly questions?: readonly string[];
   /**
    * The presses the prompt's textarea sends the draft on, breaks its line on,
-   * or walks history on, named the same way. Typing and editing the draft
+   * walks history on, or moves its cursor by word or to the line's ends on
+   * with option or cmd, named the same way. Typing and editing the draft
    * (ctrl+a, ctrl+e, ctrl+k, ctrl+u, ctrl+w, ctrl+z, ctrl+y) are not listed,
    * as in Claude Code.
    */
@@ -180,6 +181,21 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: ['paste_image'],
     actions: ['chat:imagePaste'],
   },
+  // The textarea's own moves, which macOS users reach for with option and
+  // cmd (CHD-386); alt+b and alt+f are option+← and → as some terminals send
+  // them. ctrl+a and ctrl+e stay off the panel, readline's as in Claude Code.
+  {
+    key: 'alt + ← →',
+    does: 'to move by word',
+    commands: [],
+    prompt: ['alt + ←', 'alt + →', 'alt + b', 'alt + f'],
+  },
+  {
+    key: 'cmd + ← →',
+    does: 'to line start or end',
+    commands: [],
+    prompt: ['cmd + ←', 'cmd + →'],
+  },
   // ↓ past the newest prompt, on an empty draft, goes into the list under
   // the prompt of the session's agents, while a child is open, and the
   // monitors they run; there ↑ ↓ or j k move, enter and esc go back, which
@@ -257,12 +273,14 @@ export const SHORTCUTS: readonly Shortcut[] = [
     also: 'ctrl + c',
     first: true,
   },
-  // Typing it opens the list; it is the draft's, so no key command answers.
-  { key: '/', does: 'for commands', commands: [] },
+  // Typing either opens its list; it is the draft's, so no key command
+  // answers. The commands and the files share their lines so the panel fits
+  // 80x24 (CHD-386).
+  { key: '/ @', does: 'for commands or files', commands: [] },
   {
     key: '↑ ↓',
-    does: 'to pick a command',
-    commands: ['menu_up', 'menu_down'],
+    does: 'to pick a command or file',
+    commands: ['menu_up', 'menu_down', 'finder_up', 'finder_down'],
     presses: ['↑', '↓'],
     actions: ['autocomplete:previous', 'autocomplete:next'],
   },
@@ -271,15 +289,6 @@ export const SHORTCUTS: readonly Shortcut[] = [
     does: 'to complete a command',
     commands: ['complete_command'],
     actions: ['autocomplete:accept'],
-  },
-  // Typing it opens the finder; it is the draft's, so no key command answers.
-  { key: '@', does: 'for files', commands: [] },
-  {
-    key: '↑ ↓',
-    does: 'to pick a file',
-    commands: ['finder_up', 'finder_down'],
-    presses: ['↑', '↓'],
-    actions: ['autocomplete:previous', 'autocomplete:next'],
   },
   // Enter picks too, through the prompt's own submit.
   {

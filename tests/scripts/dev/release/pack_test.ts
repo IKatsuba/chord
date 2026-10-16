@@ -1,6 +1,12 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join } from 'node:path';
 import { PACKAGES, ReleaseError } from '../../../../scripts/dev/release/lib.ts';
 import { pack } from '../../../../scripts/dev/release/pack.ts';
 import { checkSum } from '../../../../scripts/dev/release/sums.ts';
@@ -121,4 +127,70 @@ test('an installed copy npm quarantined stops the packing, before the self-test'
     /^npm quarantined \S+\/node_modules\/@chorded\/chord-darwin-arm64\/bin\/chord$/,
   );
   expect(tested).toStrictEqual([]);
+});
+
+describe('tester: package verification failures', () => {
+  function sumsWritten(): boolean {
+    return existsSync(join(at.root, 'dist', 'release', 'tgz', 'SHA256SUMS'));
+  }
+
+  test('a failed layout never packs or records publishable sums', async () => {
+    at.fake('bun', 'exit 2\n');
+    at.fake('npm', 'echo "$*" >>"$ROOT/npm.log"\n');
+
+    await expect(packing()).rejects.toThrow(
+      new ReleaseError('laying out npm/ failed'),
+    );
+    expect(existsSync(join(at.root, 'npm.log'))).toBeFalse();
+    expect(tested).toEqual([]);
+    expect(sumsWritten()).toBeFalse();
+  });
+
+  test('a failed npm pack stops before installed-copy self-tests and sums', async () => {
+    at.fake('npm', 'exit 2\n');
+
+    await expect(packing()).rejects.toThrow(
+      new ReleaseError(`npm pack of ${PACKAGES[0]} failed`),
+    );
+    expect(tested).toEqual([]);
+    expect(sumsWritten()).toBeFalse();
+  });
+
+  test('changed installed bytes stop before self-tests and sums', async () => {
+    const npm = readFileSync(join(at.bin, 'npm'), 'utf8');
+
+    at.fake(
+      'npm',
+      npm.replace(
+        '\n\tdone',
+        '\n\t\techo changed >"node_modules/@chorded/$name/bin/chord"\n\tdone',
+      ),
+    );
+
+    await expect(packing()).rejects.toThrow(
+      /the installed .* differs from .*dist\/bun-darwin-arm64\/chord/,
+    );
+    expect(tested).toEqual([]);
+    expect(sumsWritten()).toBeFalse();
+  });
+
+  test('a failed installed-copy self-test removes its scratch and records no sums', async () => {
+    const failure = new Error('fixture self-test failed');
+    let project: string | undefined;
+
+    await expect(
+      pack(
+        { ...at.release, env: { ...at.release.env, ROOT: at.root } },
+        (_release, binary) => {
+          project = dirname(dirname(dirname(binary)));
+
+          return Promise.reject(failure);
+        },
+      ),
+    ).rejects.toBe(failure);
+    expect(project).toBeDefined();
+    expect(existsSync(project!)).toBeFalse();
+    expect(sumsWritten()).toBeFalse();
+    expect(at.out).toEqual([]);
+  });
 });

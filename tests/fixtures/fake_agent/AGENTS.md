@@ -64,7 +64,8 @@
   leads which files they hold and reports to main, `teamtester` writes a
   test, reports to its lead, messages `coder` directly and asks the person
   to run the suite, and `teamcoder` messages `tester`; `propose`, or the
-  prompt `/team new` sends, proposes `bugfix` on claude and codex through
+  prompt `/team new` sends, behind any notes chord held for
+  main's next prompt, proposes `bugfix` on claude and codex through
   `propose_team` and says where it was saved, and the next prompt after a
   proposal, whatever it says, is `proposeagain`: the same team with the
   reviewer on codex and tester in `bypassPermissions`; `soak` hands

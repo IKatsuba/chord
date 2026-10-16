@@ -312,6 +312,20 @@ test('/team new goes to main, which proposes through propose_team, and a change 
     { teams: {}, runtimes: ['fake', 'claude', 'codex'] },
   ));
 
+test("/team new after a stopped run proposes against the saved team, its prompt led by the run's held note (CHD-278)", () =>
+  withTeams(
+    async (window) => {
+      await ran(window);
+      await send(window, '/team stop bugfix');
+      await window.shows('The person closed team bugfix: its lead (fake');
+      await send(window, '/team new a team that fixes bugs, a test first');
+      await window.shows('Team(bugfix) · change');
+      await window.shows('Replace team bugfix?');
+      expect(window.frame()).not.toContain('Hello, world');
+    },
+    { runtimes: ['fake', 'claude', 'codex'] },
+  ));
+
 test('/team with a child picked talks to main, and says so on the status line once', () =>
   withTeams(async (window) => {
     await ran(window);

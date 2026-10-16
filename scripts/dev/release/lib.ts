@@ -200,3 +200,17 @@ export async function waitPublished(
 
   return false;
 }
+
+/** Runs `work`, and a death in it as `release: …` on stderr, exit 1. */
+export async function dying(work: () => Promise<void>): Promise<void> {
+  try {
+    await work();
+  } catch (error) {
+    if (!(error instanceof ReleaseError)) {
+      throw error;
+    }
+
+    process.stderr.write(`release: ${error.message}\n`);
+    process.exit(1);
+  }
+}

@@ -338,3 +338,69 @@ describe('release', () => {
     await expect(parsed(['release', ...argv])).rejects.toThrow(ValidationError);
   });
 });
+
+describe('tester: release parsing boundaries', () => {
+  test('conflicts are refused with the arguments in either order', async () => {
+    for (const pair of [
+      [
+        ['--only', 'publish'],
+        ['--skip', 'check'],
+      ],
+      [
+        ['--only', 'pack'],
+        ['--from', 'sign'],
+      ],
+      [
+        ['--only', 'pack'],
+        ['--to', 'pack'],
+      ],
+      [['--package', 'chord'], ['--dry-run']],
+    ]) {
+      for (const parts of [pair, [...pair].reverse()]) {
+        await expect(parsed(['release', ...parts.flat()])).rejects.toThrow(
+          ValidationError,
+        );
+      }
+    }
+  });
+
+  test('publish is refused anywhere in a dry-run only list', async () => {
+    for (const stages of [
+      'pack,publish',
+      'publish,pack',
+      'check,publish,pack',
+    ]) {
+      await expect(
+        parsed(['release', '--dry-run', '--only', stages]),
+      ).rejects.toThrow(ValidationError);
+    }
+  });
+
+  test('missing values and invalid list elements never run an action', async () => {
+    for (const argv of [
+      ['--skip'],
+      ['--only'],
+      ['--from'],
+      ['--to'],
+      ['--package'],
+      ['--to', 'build'],
+      ['--skip', 'check,unknown'],
+    ]) {
+      await expect(parsed(['release', ...argv])).rejects.toThrow(
+        ValidationError,
+      );
+    }
+  });
+
+  test('a package cannot survive a selection that removes publish', async () => {
+    for (const argv of [
+      ['--skip', 'publish'],
+      ['--only', 'check'],
+      ['--from', 'install', '--to', 'pack'],
+    ]) {
+      await expect(
+        parsed(['release', ...argv, '--package', 'chord-linux-arm64']),
+      ).rejects.toThrow(ValidationError);
+    }
+  });
+});

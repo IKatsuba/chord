@@ -112,3 +112,27 @@ test('--dry-run refuses publish anywhere in --only', () => {
     selectStages({ dryRun: true, only: ['pack', 'publish'] }),
   ).toThrow(ValidationError);
 });
+
+describe('tester: stage selection boundaries', () => {
+  test('equal range endpoints select exactly one stage', () => {
+    for (const stage of STAGES) {
+      expect(selectStages({ from: stage, to: stage })).toStrictEqual([stage]);
+    }
+  });
+
+  test('duplicate stages are run once in release order', () => {
+    expect(
+      selectStages({ only: ['publish', 'check', 'publish', 'check'] }),
+    ).toStrictEqual(['check', 'publish']);
+    expect(selectStages({ skip: ['check', 'check'] })).toStrictEqual(
+      STAGES.filter((stage) => stage !== 'check'),
+    );
+  });
+
+  test('removing every selected stage refuses the run', () => {
+    expect(() => selectStages({ skip: STAGES })).toThrow(ValidationError);
+    expect(() =>
+      selectStages({ dryRun: true, from: 'publish', to: 'publish' }),
+    ).toThrow(ValidationError);
+  });
+});

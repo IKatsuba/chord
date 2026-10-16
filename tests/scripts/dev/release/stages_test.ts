@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
@@ -264,4 +264,87 @@ test('--package publishes the one package, and prints no version while others ar
   expect(existsSync(join(at.place, 'published', 'chord'))).toBeFalse();
   expect(at.out).not.toContain(VERSION);
   expect(at.err.at(-1)).toStartWith('not tagged: ');
+});
+
+describe('tester: release orchestration boundaries', () => {
+  test('natives alone refuses an unsupported host before preflight', async () => {
+    expect(
+      await died(
+        released(
+          { only: ['natives'] },
+          {},
+          { platform: 'linux', arch: 'arm64' },
+        ),
+      ),
+    ).toBe(
+      'natives, sign and notarise run only on an arm64 Mac; this is linux-arm64',
+    );
+    expect(ran()).toEqual([]);
+  });
+
+  test('preflight guards check, compile, pack and publish selected alone', async () => {
+    writeFileSync(join(at.root, 'untracked-fixture'), '');
+
+    for (const stage of ['check', 'compile', 'pack', 'publish'] as const) {
+      expect(await died(released({ only: [stage] }))).toBe(
+        'the tree is not clean:\n?? untracked-fixture',
+      );
+    }
+
+    expect(ran()).toEqual([]);
+  });
+
+  test('a failed stage stops later stages and suppresses the dry-run summary', async () => {
+    at.fake(
+      'bun',
+      `echo "bun $*" >>"$STATE/ran.log"
+if [ "$1 $2" = 'run check' ]; then exit 2; fi
+`,
+    );
+
+    expect(
+      await died(
+        released({ dryRun: true, only: ['install', 'check', 'compile'] }),
+      ),
+    ).toBe('bun run check failed');
+    expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
+      'bun install --frozen-lockfile',
+      'bun run check',
+    ]);
+    expect(at.out).toEqual([]);
+  });
+
+  test('credential failure retains stdout and stderr before any stage runs', async () => {
+    at.fake(
+      'xcrun',
+      "echo 'fixture credential output'\necho 'fixture credential error' >&2\nexit 2\n",
+    );
+
+    expect(await died(released({ only: ['install', 'notarise'] }))).toBe(
+      'xcrun notarytool history --keychain-profile roost-notary failed: fixture credential output\nfixture credential error',
+    );
+    expect(ran().some((line) => line.startsWith('bun '))).toBeFalse();
+    expect(at.out).toEqual([]);
+  });
+
+  test('a failed tag never prints the final version or pushes', async () => {
+    packed();
+    at.fake(
+      'git',
+      `echo "git $*" >>"$STATE/ran.log"
+case "$1" in
+symbolic-ref) echo main ;;
+rev-parse) echo fixture-commit ;;
+tag) if [ "$2" = '-a' ]; then echo 'fixture tag denied' >&2; exit 2; fi ;;
+esac
+`,
+    );
+
+    expect(await died(released({ only: ['publish'] }))).toBe(
+      `git tag -a v${VERSION} failed: fixture tag denied`,
+    );
+    expect(existsSync(join(at.place, 'published', 'chord'))).toBeTrue();
+    expect(at.out).not.toContain(VERSION);
+    expect(ran().some((line) => line.startsWith('git push'))).toBeFalse();
+  });
 });

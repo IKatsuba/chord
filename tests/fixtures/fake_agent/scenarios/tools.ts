@@ -55,7 +55,7 @@ const ONE_LINE =
 /** Lines of the `headlines` scenario's longest command. */
 const LONG_COMMAND = 300;
 
-/** A heredoc of `LONG_COMMAND` lines, its first and last numbered. */
+/** A heredoc of `LONG_COMMAND` lines: its opener, numbered lines, `EOF`. */
 const LONG = [
   "cat > lines.txt <<'EOF'",
   ...Array.from(

@@ -1,0 +1,40 @@
+   west, and forecasters warned that scattered thunderstorms could arrive late in the evening" | tr a-z A-Z | wc -c)
+   ⎿  309
+
+ ⏺ Done.
+
+ › headlines
+
+ ⏺ Bash(cat >> notes.md <<'EOF'
+   ## Decisions
+
+   The headline shows the whole command:
+
+   - every line of a heredoc
+   - wrapped to the width
+   - with no ctrl+o
+
+   ### Left
+
+   1. a cap, if ever
+   EOF)
+   ⎿  (no output)
+
+ ⏺ Bash(cd apps/editor && grep -rn "headline" src/ui/transcript/tools/ --include="*.ts" --include="*.tsx" | grep -v
+   "_test" | sort | uniq -c | sort -rn | head -20; git log --oneline -n 5 -- src/ui/transcript/tools/)
+   ⎿       12 src/ui/transcript/tools/tools.ts
+
+ ⏺ Tool(mcp__chord__send_message)
+   ⎿  Delivered to reviewer.
+
+ ⏺ Bash(cat > lines.txt <<'EOF'
+   line 1 of the long command
+   line 2 of the long command
+   line 3 of the long command
+   line 4 of the long command
+ ── ↓ 298 lines below · end to jump to the bottom ─────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

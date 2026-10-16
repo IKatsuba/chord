@@ -1,0 +1,40 @@
+   line 268 of the long command
+   line 269 of the long command
+   line 270 of the long command
+   line 271 of the long command
+   line 272 of the long command
+   line 273 of the long command
+   line 274 of the long command
+   line 275 of the long command
+   line 276 of the long command
+   line 277 of the long command
+   line 278 of the long command
+   line 279 of the long command
+   line 280 of the long command
+   line 281 of the long command
+   line 282 of the long command
+   line 283 of the long command
+   line 284 of the long command
+   line 285 of the long command
+   line 286 of the long command
+   line 287 of the long command
+   line 288 of the long command
+   line 289 of the long command
+   line 290 of the long command
+   line 291 of the long command
+   line 292 of the long command
+   line 293 of the long command
+   line 294 of the long command
+   line 295 of the long command
+   line 296 of the long command
+   line 297 of the long command
+   line 298 of the long command
+   EOF)
+   ⎿  (no output)
+
+ ⏺ Four calls with long headlines.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

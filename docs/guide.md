@@ -560,9 +560,9 @@ adapter or CLI, it does not sign you in to anybody.
 ## Development
 
 ```sh
-bun install           # the dependencies
-bun run chord         # run from source
-bun run check         # full validation: types, lint, format, tests
+bun install       # the dependencies
+bun chord         # run from source
+bun check         # full validation: types, lint, format, tests
 bun dev compile   # this machine's binary into dist/
 bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
 ```

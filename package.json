@@ -10,7 +10,7 @@
   "scripts": {
     "chord": "bun --define process.env.NODE_ENV:'\"production\"' src/main.tsx",
     "chord:fake": "bun --define process.env.NODE_ENV:'\"production\"' src/main.tsx fake --agent-command \"bun '$PWD/tests/fixtures/fake_agent/main.ts'\"",
-    "check": "bun run check:static && bun run test",
+    "check": "bun check:static && bun run test",
     "check:static": "tsc && eslint . && prettier --check . && bun test lint/",
     "test": "bun test --parallel --timeout=60000 --timings=tests/timings.json ./tests/",
     "test:timings": "bun run test --update-timings",

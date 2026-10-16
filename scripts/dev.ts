@@ -62,7 +62,7 @@ const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs 
 
 Stages:
   install    bun install --frozen-lockfile
-  check      bun run check
+  check      bun check
   natives    every platform's packages installed; the macOS native libraries signed
   compile    bun dev compile --all; each binary's kind checked with file(1)
   sign       both macOS binaries signed, verified and their entitlements compared

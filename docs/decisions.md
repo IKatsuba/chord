@@ -4261,7 +4261,7 @@ side by side, `check` runs both.
 1. **Bun beside Deno** (invisible): `package.json`, `bun.lock`,
    `bunfig.toml`, `tsconfig.json` and the dprint and ESLint configs, with
    `lint/style.ts` ported to the ESLint plugin and its test. `deno task
-   check` still runs the Deno suite and also runs `bun run check:static`
+   check` still runs the Deno suite and also runs `bun check:static`
    (tsc, ESLint, dprint) on the same tree.
 2. **A thin platform layer** (invisible): `src/platform/` with the few
    things that are not plain `node:` calls: spawning in a process group,
@@ -4276,7 +4276,7 @@ side by side, `check` runs both.
    fake agent starts under `process.execPath`. The privacy test lists
    tracked files through `node:child_process`. The platform layer moves to
    Bun (`Bun.serve` with `idleTimeout: 0`). From this part, `check` is
-   `bun run check`.
+   `bun check`.
 4. **Compile and release** (visible: the binary is what a person runs):
    `scripts/compile.ts` on `bun build --compile` for every target in
    `scripts/targets.ts` (the `deno` field becomes `bun`), and `install`,
@@ -4406,7 +4406,7 @@ Each part keeps `check` green at every commit.
      part. The fake agent starts under `process.execPath`, the privacy test
      lists tracked files through `node:child_process`, and the platform
      layer moves to Bun (`Bun.serve` with `idleTimeout: 0`). From here
-     `check` is `bun run check`. CLAUDE.md's "Commands" and "How code is
+     `check` is `bun check`. CLAUDE.md's "Commands" and "How code is
      written" and the chord-tui skill's commands are rewritten here,
      because this part flips the runtime.
    - 3b: `@std/assert` becomes `expect`, and `FakeTime` becomes
@@ -4423,7 +4423,7 @@ Each part keeps `check` green at every commit.
 
 CHD-287, the first part of the two "Moving to Bun" entries above. chord
 still runs and is tested on Deno; Bun brings `tsc`, ESLint and the
-formatter, and `deno task check` calls `bun run check:static` after the Deno
+formatter, and `deno task check` calls `bun check:static` after the Deno
 suite. Tried with Bun 1.4.2 and Deno 2.9.7 on macOS arm64.
 
 - **`package.json` and `bun.lock`.** Every `npm:` import in `deno.json` is a
@@ -4663,7 +4663,7 @@ run, so the Deno suite still guards the tree.
 ## 2026-10-10 — Bun part 3a: the runtime flips
 
 CHD-290, part 3a of the two "Moving to Bun" entries above. chord runs from
-source and is tested on Bun, and `bun run check` is the check: `tsc`,
+source and is tested on Bun, and `bun check` is the check: `tsc`,
 ESLint, `prettier --check`, `lint/`'s tests and `bun test` over `tests/`.
 The Deno suite left it; `deno.json` keeps only the helper scripts' tasks,
 which part 4 moves. Tried with Bun 1.4.2 and Deno 2.9.7 on macOS arm64.
@@ -4724,7 +4724,7 @@ which part 4 moves. Tried with Bun 1.4.2 and Deno 2.9.7 on macOS arm64.
 - **The binary until part 4.** `deno compile` still builds it, now with
   `--no-check`: Deno's checker knows no `Bun` global and stopped at
   `src/platform/serve.ts` with TS2868, failing CI's compile step, and the
-  types are tsc's job in `bun run check` anyway. Deno has no `Bun.serve`: the
+  types are tsc's job in `bun check` anyway. Deno has no `Bun.serve`: the
   window stops at start with `Bun is not defined`, while `-p`, which starts
   no server, still runs. Part 4 builds it with `bun build --compile`.
 
@@ -4787,7 +4787,7 @@ change.
   code and our manifests: Cliffy stays, so its transitive entries stay in
   both locks until CHD-293 removes `deno.lock`, and the history and evidence
   are left as the record.
-- **Counts.** `bun run check` runs 1,508 tests across 109 files, as part 3a
+- **Counts.** `bun check` runs 1,508 tests across 109 files, as part 3a
   did.
 
 ## 2026-10-10 — Bun part 4: the binary on `bun build --compile`
@@ -4868,7 +4868,7 @@ binary, is unchanged.
   `tsconfig.json`'s `types`. `tsc` passes without them, because nothing in
   the tree uses a `Deno` type any more.
 - **`// @ts-types` comments.** Ten imports carried Deno's directive that
-  points an import at other types. `tsc` ignores it, so `bun run check` has
+  points an import at other types. `tsc` ignores it, so `bun check` has
   typed those imports from each package's own types since part 1. The
   directives went, and so did `src/ui/transcript/emphasize.d.ts`, which only
   such a directive used. `convert-layout.d.ts` stays: `tsconfig.json`'s
@@ -4883,7 +4883,7 @@ binary, is unchanged.
   chord's contributors. A few comments say what Deno did when the code was
   written (`src/main.tsx`'s `stdin.resume()`, `src/server/server.ts`'s body
   read, `src/teams.ts`'s BOM, the origin of the lint rules).
-- **Checked.** `bun run check` passes in a clean clone with no `deno` on
+- **Checked.** `bun check` passes in a clean clone with no `deno` on
   `PATH`.
 
 ## 2026-10-10 — Moving to OpenTUI: the plan, the parts, and the owner's open choices
@@ -4912,7 +4912,7 @@ side (each keeps its own reconciler), but only one of them can draw. So:
   files.
 - The flip and the parts that restore what it loses run on one local
   branch, `opentui`, cut from `main` once the seams are in. Every commit on
-  the branch keeps `bun run check` green. A test whose behaviour a part
+  the branch keeps `bun check` green. A test whose behaviour a part
   knowingly drops is marked `test.todo` with the part that restores it in
   its name, so the losses are counted, not forgotten. The branch is merged
   into `main` by fast-forward only when no such `todo` is left and the whole
@@ -5078,7 +5078,7 @@ Each part is one task, and each waits for the one before it.
 
 1. **The seams, on Ink** (invisible; `main`). As above. Proves: the
    components and the window tests each reach Ink through one module;
-   `bun run check` green with the same test count.
+   `bun check` green with the same test count.
 2. **The flip** (visible; the branch). OpenTUI 0.5.17 pinned exactly; Ink,
    ink-select-input, ink-spinner, react-ink-textarea, ink-testing-library
    and is-term-dark leave `package.json`; the bridge; the window tests on
@@ -5117,7 +5117,7 @@ Each part is one task, and each waits for the one before it.
    from source.
 7. **The whole acceptance** (QA; the branch). CHD-299's and CHD-300's
    matrices, every row, from source and from the binary, at 120×40 and
-   80×24 on the fake agent; the exit paths; `bun run check` green. Then the
+   80×24 on the fake agent; the exit paths; `bun check` green. Then the
    lead merges the branch into `main`.
 8. **The bridge goes** (invisible; `main`). The components onto `<box>`,
    `<text>`, `<span>` and OpenTUI's hooks, folder by folder in two tasks,
@@ -5976,7 +5976,7 @@ imported, since the agents and commands chord starts would inherit it.
 and quits with code 0, and from source chord still does not exit after
 quit, as before this change; for DevTools, `bun src/main.tsx` keeps
 the development build. `scripts/memory.ts` runs the source as
-`bun run chord` does, and `--development` (in place of `--production`)
+`bun chord` does, and `--development` (in place of `--production`)
 measures the development build.
 
 
@@ -6317,7 +6317,7 @@ No library was needed: the column, the cuts and the break before `was` are
 
 The release is `scripts/release.sh`, ported from board's: on the owner's
 arm64 Mac, not in CI, it checks a clean tree, a version npm does not have
-and the owner's npm login, runs `bun run check`, builds every target in
+and the owner's npm login, runs `bun check`, builds every target in
 `scripts/targets.ts`, signs the two macOS binaries with the team's
 Developer ID (hardened runtime, `allow-jit` alone), self-tests them,
 notarises them as one zip, lays out and packs the five packages, installs

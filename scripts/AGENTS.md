@@ -9,6 +9,6 @@
 - Release stages live in `dev/release/`. Select them with `--skip`, `--only`,
   `--from` and `--to`; preflight always runs. `--package` selects a publish.
 - `targets.ts` is the one list of release platforms.
-- `bun dev memory` is too slow for `bun run check` (`docs/memory.md`).
+- `bun dev memory` is too slow for `bun check` (`docs/memory.md`).
 - Scripts run on Bun; no `npx`. The release runs npm on node through
   `dev/release/lib.ts` (the owner's exception in `docs/decisions.md`).

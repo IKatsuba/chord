@@ -18,6 +18,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     mark: record('mark'),
     screenshots: record('screenshots'),
     memory: record('memory'),
+    selftest: record('selftest'),
   };
 
   await devCommand(actions).noExit().throwErrors().parse(argv);
@@ -193,5 +194,28 @@ describe('tester: migrated command boundaries', () => {
     await expect(
       devCommand(actions).noExit().throwErrors().parse(['mark']),
     ).rejects.toBe(failure);
+  });
+});
+
+describe('selftest', () => {
+  test('takes the binary, natively by default', async () => {
+    expect(
+      await parsed(['selftest', 'dist/bun-darwin-arm64/chord']),
+    ).toStrictEqual([['selftest', 'dist/bun-darwin-arm64/chord', undefined]]);
+  });
+
+  test('--arch runs it under another architecture', async () => {
+    expect(
+      await parsed([
+        'selftest',
+        'dist/bun-darwin-x64/chord',
+        '--arch',
+        'x86_64',
+      ]),
+    ).toStrictEqual([['selftest', 'dist/bun-darwin-x64/chord', 'x86_64']]);
+  });
+
+  test('needs a binary', async () => {
+    await expect(parsed(['selftest'])).rejects.toThrow(ValidationError);
   });
 });

@@ -21,6 +21,7 @@ export interface DevActions {
   mark(): void | Promise<void>;
   screenshots(names: readonly string[]): void | Promise<void>;
   memory(options: MemoryOptions): void | Promise<void>;
+  selftest(binary: string, arch: string | undefined): void | Promise<void>;
 }
 
 const RUN: DevActions = {
@@ -32,6 +33,12 @@ const RUN: DevActions = {
   screenshots: async (names) =>
     (await import('./dev/screenshots.ts')).screenshots(names),
   memory: async (options) => (await import('./dev/memory.ts')).memory(options),
+  selftest: async (binary, arch) => {
+    const { dying, release } = await import('./dev/release/lib.ts');
+    const { selftest } = await import('./dev/release/selftest.ts');
+
+    await dying(() => selftest(release(), binary, arch));
+  },
 };
 
 /** `bun run dev`'s commands, declared, each running through `actions`. */
@@ -113,6 +120,23 @@ export function devCommand(actions: DevActions = RUN) {
             default: false,
           })
           .action((options) => actions.memory(options)),
+      )
+      .command(
+        'selftest',
+        new Command()
+          .description(
+            "What the release's self-test does: --version must say package.json's version, -p must answer, and the window must open, answer a prompt and read the clipboard in a tmux of its own.",
+          )
+          .arguments('<binary:string>')
+          .option(
+            '--arch <arch:string>',
+            'Run it all under `arch -<arch>` (x86_64: Rosetta).',
+          )
+          .example(
+            'The x64 binary under Rosetta',
+            'bun run dev selftest dist/bun-darwin-x64/chord --arch x86_64',
+          )
+          .action(({ arch }, binary) => actions.selftest(binary, arch)),
       )
       // Back to the root, so what a caller chains on applies to the whole tree.
       .reset()

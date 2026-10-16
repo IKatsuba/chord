@@ -64,8 +64,8 @@ larger change, or open an issue first to talk it through.
 ## Screenshots
 
 The README's screenshots are taken from chord itself, on the test agent, by
-`bun run screenshots` (tmux and Chrome). Run it after a change to what they
-show, and commit the images with the change.
+`bun run dev screenshots` (tmux and Chrome). Retake what a change moves and
+commit the images with it.
 
 ## Code of conduct
 

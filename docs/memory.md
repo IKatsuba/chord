@@ -17,7 +17,7 @@ pid and the time:
 - `chord-<pid>-<time>.heapsnapshot` — the heap, in V8's format
   (`Bun.generateHeapSnapshot('v8')`). Chrome's DevTools open it: Memory,
   Load, then the file. Two of them compare there (Comparison), or with
-  memlab, as `scripts/memory.ts` does.
+  memlab, as `bun run dev memory` does.
 - `chord-<pid>-<time>.json` — taken right after it: the process's memory
   (`rss`, `heapUsed`, `external`) and JSC's own counts from `bun:jsc`'s
   `heapStats()`, among them every object type's count. A look at it needs
@@ -36,10 +36,10 @@ under `tag 240`.
 ## The long-run check
 
 ```sh
-bun scripts/memory.ts                       # 10 minutes from source
-bun scripts/memory.ts --minutes 30 --snapshots 6
-bun scripts/memory.ts --binary dist/bun-darwin-arm64/chord
-bun scripts/memory.ts --development         # React's development build
+bun run dev memory                      # 10 minutes from source
+bun run dev memory --minutes 30 --snapshots 6
+bun run dev memory --binary dist/bun-darwin-arm64/chord
+bun run dev memory --development         # React's development build
 ```
 
 It runs chord in a tmux session of its own on the fake agent, in a
@@ -80,7 +80,8 @@ has no path from a root in the snapshot; memlab shows those without one.
 
 Three 8-minute runs side by side on an M-series Mac, 120×40, the fake at its
 default pace: from source, from source with `NODE_ENV=production`, and a
-binary from `bun run compile`. Each streamed about 4.2 MB of session records.
+binary from `bun run dev compile`. Each streamed about 4.2 MB of session
+records.
 
 | run             | footprint at 1 min → 8 min | JSC heap at 1 → 8 min | `Error` objects | `performance` |
 | --------------- | -------------------------- | --------------------- | --------------- | ------------- |
@@ -144,7 +145,7 @@ Memory grows without bound in all three, and the growth has three holders:
 
 ## After CHD-344 (2026-10-12)
 
-`bun run chord`, `bun run chord:fake` and `bun run compile` now define
+`bun run chord`, `bun run chord:fake` and `bun run dev compile` now define
 `process.env.NODE_ENV` as `"production"` (Bun's `--define`), so React loads
 its production build from source and in the binary. Two 8-minute runs side
 by side, as above:

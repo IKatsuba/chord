@@ -73,7 +73,7 @@
   `bugfix` the job `soaklead`, whose lead opens `tester` and `coder` on
   `soakturn` and sends main `soakturn`, and each `soakturn` streams a
   30-line reply and a call, then sends `soakturn` back to its sender, so
-  the four take turns until chord quits (`scripts/memory.ts`); a
+  the four take turns until chord quits (`bun run dev memory`); a
   prompt that is a wrapped message is answered with who it was from, or,
   when what it says is a scenario's name, plays that scenario, as a child's
   first prompt is its parent's message; and `--no-http` or `CHORD_FAKE_NO_HTTP=1` leaves HTTP out of its

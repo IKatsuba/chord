@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -136,4 +136,31 @@ test('a picked path reads back as the one mention it is', () => {
 
     expect(mentionsIn(text)).toStrictEqual([path]);
   }
+});
+
+describe('the finder matches once per files and query', () => {
+  const files = ['src/main.ts', 'src/ui/App.tsx', 'README.md'];
+
+  test('the same files array and query give back the same result', () => {
+    const first = matchFiles(files, 'src');
+
+    expect(matchFiles(files, 'src')).toBe(first);
+    expect(matchFiles(files, '')).toBe(matchFiles(files, ''));
+  });
+
+  test('a new query or a new files array is matched again', () => {
+    const first = matchFiles(files, 'src');
+    const other = matchFiles(files, 'app');
+
+    expect(other).not.toBe(first);
+    expect(other).toStrictEqual(['src/ui/App.tsx']);
+
+    const again = matchFiles([...files], 'app');
+
+    expect(again).not.toBe(other);
+    expect(again).toStrictEqual(other);
+    // Back to a query matched before scores it again, as before the change.
+    expect(matchFiles(files, 'src')).not.toBe(first);
+    expect(matchFiles(files, 'src')).toStrictEqual(first);
+  });
 });

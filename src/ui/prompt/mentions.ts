@@ -43,22 +43,50 @@ export function mentionAt(
 const MATCH_LIMIT = 100;
 
 /**
+ * The last files list matched, the Fzf built over it and the last query's
+ * result. Every key typed after an `@` asks for the same match several
+ * times, and on a large tree each build and each scoring blocks the window.
+ */
+let last:
+  | {
+      readonly files: readonly string[];
+      readonly fzf: Fzf<readonly string[]> | undefined;
+      readonly query: string;
+      readonly matched: readonly string[];
+    }
+  | undefined;
+
+/**
  * The files `query` matches, best first, by fzf's scoring: the letters in
  * order anywhere in the path, the shorter path first on a tie, whatever the
- * case. The files in their order for an empty query.
+ * case. The files in their order for an empty query. The same files array
+ * and query give back the same result without scoring again.
  */
-export function matchFiles(files: readonly string[], query: string): string[] {
-  if (query === '') {
-    return files.slice(0, MATCH_LIMIT);
+export function matchFiles(
+  files: readonly string[],
+  query: string,
+): readonly string[] {
+  if (last?.files === files && last.query === query) {
+    return last.matched;
   }
 
-  return new Fzf(files, {
-    casing: 'case-insensitive',
-    limit: MATCH_LIMIT,
-    tiebreakers: [byLengthAsc],
-  })
-    .find(query)
-    .map(({ item }) => item);
+  let fzf = last?.files === files ? last.fzf : undefined;
+  let matched: readonly string[];
+
+  if (query === '') {
+    matched = files.slice(0, MATCH_LIMIT);
+  } else {
+    fzf ??= new Fzf(files, {
+      casing: 'case-insensitive',
+      limit: MATCH_LIMIT,
+      tiebreakers: [byLengthAsc],
+    });
+    matched = fzf.find(query).map(({ item }) => item);
+  }
+
+  last = { files, fzf, query, matched };
+
+  return matched;
 }
 
 /**

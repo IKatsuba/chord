@@ -234,6 +234,7 @@ const SCENARIOS = [
   'unordered',
   'edit',
   'rewrite',
+  'headlines',
   'markdown',
   'graphemes',
   'permission',

@@ -16,7 +16,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { die, PACKAGES, type Release, run } from './lib.ts';
+import { die, npm, PACKAGES, type Release, run } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 import { tarballs } from './publish.ts';
 import { selftest } from './selftest.ts';
@@ -63,7 +63,7 @@ async function packages(
 
   for (const name of PACKAGES) {
     if (
-      run(release, 'npm', ['pack', '--pack-destination', join(out, 'tgz')], {
+      npm(release, ['pack', '--pack-destination', join(out, 'tgz')], {
         ...quiet,
         cwd: join(release.root, 'npm', name),
       }).status !== 0
@@ -77,8 +77,8 @@ async function packages(
     join(out, 'tgz', `chorded-${name}-${version}.tgz`);
   const scratch = mkdtempSync(join(tmpdir(), 'chord-packages-'));
   const install = (cwd: string, args: string[], output: SpawnSyncOptions) =>
-    run(release, 'npm', ['init', '-y'], { ...quiet, cwd }).status === 0 &&
-    run(release, 'npm', ['install', '--no-audit', '--no-fund', ...args], {
+    npm(release, ['init', '-y'], { ...quiet, cwd }).status === 0 &&
+    npm(release, ['install', '--no-audit', '--no-fund', ...args], {
       ...output,
       cwd,
     }).status === 0;

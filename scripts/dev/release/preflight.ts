@@ -8,7 +8,15 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { die, PLATFORMS, published, type Release, run, said } from './lib.ts';
+import {
+  die,
+  npm,
+  PLATFORMS,
+  published,
+  type Release,
+  run,
+  said,
+} from './lib.ts';
 
 /** What preflight found: a fresh version, or a stopped publish to finish. */
 export interface Preflight {
@@ -73,7 +81,7 @@ export function preflight(
   }
 
   // 3. The owner's own npm login, before anything is built or published.
-  const who = run(release, 'npm', ['whoami']);
+  const who = npm(release, ['whoami']);
 
   if (who.status !== 0) {
     die(`npm whoami failed: ${said(who.stdout + who.stderr)}`);

@@ -6629,3 +6629,36 @@ to `tests/fixtures/fake_agent/AGENTS.md`; the rest of Layout is dropped.
   discovers the same instruction chain. chord relies on each adapter for
   project-instruction discovery; team prompts also tell agents to read
   `AGENTS.md`.
+
+## 2026-10-16 — CHD-395: the release runs npm on node, past Bun's (owner)
+
+`bunfig.toml`'s `[run] bun = true` makes every package.json script run on
+Bun even where a bin asks for node: under `bun run`, Bun puts a `node` that
+is itself first on PATH, and every child's `#!/usr/bin/env node` finds it.
+`bun run dev release` is such a script, so its npm ran on Bun. npm 11.6.2
+fails there: the dry run's pack stage stopped at the scratch `npm init -y`
+with `mod.require is not a function`, and npm's log showed Bun as its
+runtime. `scripts/release.sh`, started by bash, had run npm on the user's
+node. Bun 1.4.3 has `--bun` to force the shim, and no flag that turns it off
+for a single script.
+
+The options put to the owner:
+
+- **(a)** The CLI strips Bun's node-symlink directory from PATH for its
+  child processes, so npm finds the user's node as `release.sh`'s did. This
+  edits the environment Bun set up, which is a workaround.
+- **(b)** The entry point is `bun scripts/dev.ts <command>`, not a
+  package.json script: a file run directly gets no node shim. This uses Bun
+  as it is, but changes the agreed `bun run dev` shape.
+- **(c)** Turn off `[run] bun = true`. Every package.json script (tsc,
+  eslint, prettier) would then run on the user's node, against its stated
+  reason.
+- **(d)** The CLI runs npm as `node <npm>`, with the real node found past
+  Bun's on PATH. This is (a) by other means.
+
+The owner chose (d), consenting to it as a workaround, so that `bun run dev`
+stays and `bunfig.toml` is untouched. Every npm call of the release (view,
+whoami, pack, init, install, publish) goes through one helper in
+`scripts/dev/release/lib.ts`: it runs the first `node` on PATH whose
+realpath is not Bun's own executable, on the first such `npm`'s realpath
+(npm's script), and dies when either is missing.

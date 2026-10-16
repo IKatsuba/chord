@@ -2,8 +2,9 @@
  * Shared by the release's stages: every check dies with what it read.
  */
 import { spawnSync, type SpawnSyncOptions } from 'node:child_process';
+import { accessSync, constants, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 /**
@@ -75,6 +76,54 @@ export function run(
   };
 }
 
+/**
+ * Runs npm with `args` on node, as `<node> <npm's script>`. Under `bun run
+ * dev`, bunfig.toml's `[run] bun = true` puts Bun first on PATH as `node`,
+ * and npm on Bun fails (docs/decisions.md, 2026-10-16), so npm's own
+ * `#!/usr/bin/env node` cannot be trusted to find node.
+ */
+export function npm(
+  release: Release,
+  args: readonly string[],
+  options: SpawnSyncOptions = {},
+): Ran {
+  return run(
+    release,
+    notBun(release, 'node'),
+    [notBun(release, 'npm'), ...args],
+    options,
+  );
+}
+
+/** The first `name` on PATH that is not Bun itself, by its realpath. */
+function notBun(release: Release, name: string): string {
+  const bun = realpathSync(process.execPath);
+
+  for (const dir of (release.env['PATH'] ?? '').split(delimiter)) {
+    if (dir === '') {
+      continue;
+    }
+
+    const path = join(dir, name);
+
+    try {
+      accessSync(path, constants.X_OK);
+
+      const real = realpathSync(path);
+
+      if (statSync(real).isFile() && real !== bun) {
+        return real;
+      }
+    } catch {
+      // Not there, or not runnable: the next directory.
+    }
+  }
+
+  die(
+    `no ${name} other than Bun's on PATH; npm runs on node (bun run dev puts Bun first as node, docs/decisions.md)`,
+  );
+}
+
 /** A command's output as `$(…)` gives it: trailing newlines cut. */
 export function said(text: string): string {
   return text.replace(/\n+$/, '');
@@ -140,11 +189,7 @@ export function published(
   version: string,
 ): boolean {
   // Only stdout is the answer; npm's warnings go to stderr.
-  const view = run(release, 'npm', [
-    'view',
-    `@chorded/${name}@${version}`,
-    'version',
-  ]);
+  const view = npm(release, ['view', `@chorded/${name}@${version}`, 'version']);
 
   if (view.status === 0) {
     const answer = said(view.stdout);

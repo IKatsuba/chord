@@ -15,6 +15,7 @@ import {
   inArrow,
   monitorMessage,
   queuedMessage,
+  wrapLine,
 } from '../../../src/ui/transcript/message.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
 
@@ -463,4 +464,14 @@ describe('CHD-385 tester: outgoing recipients at 80 columns', () => {
       expect(stripAnsi(shown)).toContain('parser is closed');
     }
   });
+});
+
+test('a line indented past the width keeps as much indent as leaves room for its text, no row wider', () => {
+  const rows = wrapLine(`${' '.repeat(80)}two words`, 76);
+
+  // Its text has the cell the indent left on every row, as wrapLine gives
+  // each row the first one's room.
+  expect(rows).toStrictEqual([`${' '.repeat(75)}t`, ...'wowords']);
+  expect(rows.every((row) => row.length <= 76)).toBeTruthy();
+  expect(wrapLine('  indented', 76)).toStrictEqual(['  indented']);
 });

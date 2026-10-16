@@ -158,12 +158,20 @@ export function monitorMessage(
     : { ...folded, sentence: wrapLine(sentence, width).join('\n') };
 }
 
-/** A line wrapped to `width`, its indent kept on its first row. */
+/**
+ * A line wrapped to `width`, its indent kept on its first row: as much of it
+ * as leaves a cell for the text, so no row is wider than `width`.
+ */
 export function wrapLine(line: string, width: number): string[] {
-  const indent = /^\s*/.exec(line)![0];
+  let indent = /^\s*/.exec(line)![0];
+
+  while (indent !== '' && stringWidth(indent) > width - 1) {
+    indent = indent.slice(0, -1);
+  }
+
   const room = Math.max(1, width - stringWidth(indent));
 
-  return wrapAnsi(line.slice(indent.length), room, { hard: true, trim: true })
+  return wrapAnsi(line.trimStart(), room, { hard: true, trim: true })
     .split('\n')
     .map((row, index) => (index === 0 ? indent + row : row));
 }

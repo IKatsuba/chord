@@ -40,13 +40,17 @@ describe('releaseVersion', () => {
     expect(releaseVersion('0.55.0', bump)).toBe(next);
   });
 
+  test("package.json's own version is package.json's", () => {
+    expect(releaseVersion('0.55.0', '0.55.0')).toBe('0.55.0');
+  });
+
   test('an exact version above it is taken', () => {
     expect(releaseVersion('0.55.0', '0.55.1')).toBe('0.55.1');
     expect(releaseVersion('0.55.0', '2.0.0')).toBe('2.0.0');
   });
 
   test.each([
-    ['the same version', '0.55.0', '0.55.0'],
+    ["a pre-release package.json's own", '0.56.0-rc.1', '0.56.0-rc.1'],
     ['a version below', '0.55.0', '0.54.9'],
     ['a pre-release', '0.55.0', '0.56.0-rc.1'],
     ['a bump of a pre-release', '0.56.0-rc.1', 'patch'],

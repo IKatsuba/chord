@@ -1,6 +1,7 @@
 /**
  * The version `bun dev release [version]` releases (CHD-412): package.json's
- * when none is given, else an exact version or a bump of package.json's.
+ * when none is given or the one given is it, else an exact version above it
+ * or a bump of it.
  * Pre-releases are refused: chord publishes none, and a bump of one would
  * not say which release it means.
  */
@@ -58,6 +59,11 @@ export function releaseVersion(
   if (isBump(wanted)) {
     // Never null: `current` is a valid version.
     return inc(current, wanted === 'fix' ? 'patch' : wanted) ?? current;
+  }
+
+  // package.json's own, so a rerun after a failed publish can name it.
+  if (wanted === current) {
+    return current;
   }
 
   if (!gt(wanted, current)) {

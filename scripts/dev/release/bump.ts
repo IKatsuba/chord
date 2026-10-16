@@ -53,12 +53,8 @@ export function commitVersion(release: Release, version: string): string {
   return said(head.stdout);
 }
 
-/** The signals a held version commit is dropped on, with the status each exits with. */
-const SIGNALS = [
-  ['SIGINT', 130],
-  ['SIGTERM', 143],
-  ['SIGHUP', 129],
-] as const;
+/** The signals a held version commit is dropped on. */
+const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const;
 
 /** A local version commit, dropped once, or kept once pushed. */
 export interface Held {
@@ -70,35 +66,36 @@ export interface Held {
 
 /**
  * Holds the version commit made on `head`: a signal while it is held drops
- * it, then exits with the signal's status.
+ * it, then raises the signal again once its listener is gone, as
+ * selftest's cleanup does: every other listener (selftest's tmux server)
+ * still runs, and the run ends by the signal, its status 128 + its number.
  */
 export function holdVersion(release: Release, head: string): Held {
   let held = true;
-  const handlers = SIGNALS.map(([signal, status]) => {
-    const handler = () => {
-      try {
-        if (held) {
-          dropVersion(release, head);
-        }
-      } catch (error) {
-        release.err(`release: ${(error as Error).message}`);
-      } finally {
-        process.exit(status);
-      }
-    };
-
-    process.on(signal, handler);
-
-    return [signal, handler] as const;
-  });
-
   const done = () => {
     held = false;
 
-    for (const [signal, handler] of handlers) {
-      process.off(signal, handler);
+    for (const signal of SIGNALS) {
+      process.removeListener(signal, onSignal);
     }
   };
+
+  const onSignal = (signal: NodeJS.Signals) => {
+    try {
+      if (held) {
+        dropVersion(release, head);
+      }
+    } catch (error) {
+      release.err(`release: ${(error as Error).message}`);
+    }
+
+    done();
+    process.kill(process.pid, signal);
+  };
+
+  for (const signal of SIGNALS) {
+    process.on(signal, onSignal);
+  }
 
   return {
     drop: () => {
@@ -110,7 +107,7 @@ export function holdVersion(release: Release, head: string): Held {
 
       // The handlers outlive the drop by a turn of the event loop: Ctrl+C
       // during a stage's child is handled only once the stage has failed
-      // and the commit is dropped, and must still exit with its status.
+      // and the commit is dropped, and must still end the run by it.
       setImmediate(done);
       dropVersion(release, head);
     },

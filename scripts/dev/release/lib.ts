@@ -257,7 +257,7 @@ export async function dying(work: () => Promise<void>): Promise<void> {
 
     process.stderr.write(`release: ${error.message}\n`);
     // A turn of the event loop first, so a signal that failed the stage
-    // exits with its own status (`holdVersion`).
+    // ends the run by itself (`holdVersion`).
     await new Promise((resolve) => setImmediate(resolve));
     process.exit(1);
   }

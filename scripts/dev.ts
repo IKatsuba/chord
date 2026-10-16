@@ -80,9 +80,9 @@ const RUN: DevActions = {
   },
 };
 
-const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs every stage in order, step for step as scripts/release.sh did, and the last line it prints is the published version.
+const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs every stage in order, step for step as scripts/release.sh did, and the last line it prints is the published version. Preflight runs on every run, whatever is skipped. If a run stopped between publishes, the next run resumes it: it publishes what is missing from the tarballs already packed and builds nothing. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
 
-The version is package.json's, or the one given: an exact version above it, or major, minor, patch or fix (patch) to bump it; pre-releases are refused. Given one, the release checks it, writes it into package.json and commits that alone as "chore: chord v<version>" before any stage. A run that publishes pushes the commit to origin's main first, and it stays there if a later stage fails: rerun with no version, or that one; if the push fails, the commit is dropped and the release stops. A dry run, or a run without publish, drops the commit at the end and pushes nothing. A stopped publish resumes only package.json's version. Preflight runs on every run, whatever is skipped. If a run stopped between publishes, the next run resumes it: it publishes what is missing from the tarballs already packed and builds nothing. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
+The version is package.json's, or the one given: package.json's own, an exact version above it, or major, minor, patch or fix (patch) to bump it. Pre-releases are refused, and a new version needs the compile stage. Given a new one, the release checks it, writes it into package.json and commits that alone as "chore: chord v<version>" before any stage. A run that publishes pushes the commit to origin's main first, and it stays there if a later stage fails: rerun with no version, or that one. If the push fails, the commit is dropped and the release stops. A dry run, or a run without publish, drops the commit at the end and pushes nothing. Until the commit is pushed or dropped, Ctrl+C, SIGTERM and SIGHUP drop it too; a run killed otherwise may leave it, to be dropped with git reset --keep HEAD~1. A stopped publish resumes only package.json's version.
 
 Stages:
   install    bun install --frozen-lockfile
@@ -325,7 +325,7 @@ export function devCommand(actions: DevActions = RUN) {
             'bun dev release --only publish --package chord-linux-x64',
           )
           .action((options, version) =>
-            actions.release(selectStages(options, version), options, version),
+            actions.release(selectStages(options), options, version),
           ),
       )
       // Back to the root, so what a caller chains on applies to the whole tree.

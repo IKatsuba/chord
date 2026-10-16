@@ -6788,5 +6788,15 @@ Without one, the release is package.json's version, as before.
 - **Any other run drops its commit.** A dry run, or a run without publish,
   makes the same commit locally, runs its stages on it, and drops it at the
   end (`git reset --keep`), on a failure too, pushing nothing.
-- **A stopped publish resumes package.json's version only**, and a version
-  with `--only publish` is refused when the options are parsed.
+- **A new version needs the compile stage.** The version enters the binary
+  at compile, so a run whose stages leave it out (`--only publish`,
+  `--only check,pack,publish`, `--from pack`, `--skip compile`) would pack
+  or publish what was built at package.json's version; it is refused before
+  preflight. package.json's own version is fine with any stages.
+- **A signal drops an unpushed commit.** While a local version commit is
+  held (a dry run, a run without publish, or a real run before its push
+  succeeds), SIGINT, SIGTERM and SIGHUP drop it and the release exits with
+  130, 143 or 129. Once pushed there is nothing to drop. SIGKILL cannot be
+  caught: a killed run may leave the commit, dropped with
+  `git reset --keep HEAD~1`, as the release's help says.
+- **A stopped publish resumes package.json's version only.**

@@ -518,13 +518,11 @@ describe('release [version]', () => {
     },
   );
 
-  test('refuses a version with --only publish', async () => {
-    await expect(
-      parsed(['release', 'patch', '--only', 'publish']),
-    ).rejects.toThrow(ValidationError);
-    expect((await parsed(['release', '--only', 'publish']))[0]?.[1]).toEqual([
-      'publish',
-    ]);
+  test('is parsed whatever the stages; the release judges it', async () => {
+    const [call] = await parsed(['release', 'patch', '--only', 'publish']);
+
+    expect(call?.[1]).toEqual(['publish']);
+    expect(call?.[3]).toBe('patch');
   });
 });
 

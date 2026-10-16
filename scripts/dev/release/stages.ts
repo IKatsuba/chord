@@ -9,7 +9,7 @@
  */
 import { join } from 'node:path';
 import { check, compile, install, natives } from './build.ts';
-import { commitVersion, dropVersion, pushVersion } from './bump.ts';
+import { commitVersion, holdVersion, pushVersion } from './bump.ts';
 import { die, identity, type Package, type Release, run, said } from './lib.ts';
 import { notarise, PROFILE } from './notarise.ts';
 import { pack } from './pack.ts';
@@ -52,10 +52,20 @@ export async function runRelease(
   // publishes to resume), and the owner's npm login; for a run that
   // publishes, main level with origin's and no tag yet.
   const current = packageVersion(release);
+  const next = target(current, wanted);
+
+  // The version enters the binary at compile: a run without it would pack
+  // or publish what was built at package.json's.
+  if (next !== current && !has('compile')) {
+    die(
+      `a new version needs the compile stage: ${next} is not package.json's ${current}`,
+    );
+  }
+
   const { mode, version } = preflight(release, {
     dryRun,
     publish: has('publish'),
-    version: target(current, wanted),
+    version: next,
   });
 
   // A run stopped between publishes is finished from the packages it built,
@@ -115,12 +125,14 @@ export async function runRelease(
   // A new version is written and committed before any stage reads it; a
   // run that publishes keeps the commit on origin once pushed, any other
   // drops it.
-  const head =
-    version === current ? undefined : commitVersion(release, version);
+  const held =
+    version === current
+      ? undefined
+      : holdVersion(release, commitVersion(release, version));
 
   try {
-    if (head !== undefined && has('publish')) {
-      pushVersion(release, version, head);
+    if (held !== undefined && has('publish')) {
+      pushVersion(release, version, held);
     }
 
     for (const stage of stages) {
@@ -135,9 +147,8 @@ export async function runRelease(
       );
     }
   } finally {
-    if (head !== undefined && !has('publish')) {
-      dropVersion(release, head);
-    }
+    // Kept once pushed, so only an unpushed commit is dropped.
+    held?.drop();
   }
 }
 

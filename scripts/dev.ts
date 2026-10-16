@@ -1,7 +1,7 @@
 /**
  * chord's own tooling as one command, run from the tree:
  *
- *   bun run dev <command>   see `bun run dev --help`
+ *   bun dev <command>   see `bun dev --help`
  */
 import { Command, EnumType } from '@cliffy/command';
 import process from 'node:process';
@@ -17,7 +17,7 @@ import {
 
 /**
  * What each command does once its arguments are parsed. Apart from the
- * declarations, so a test parses argv through the very tree `bun run dev`
+ * declarations, so a test parses argv through the very tree `bun dev`
  * runs on with nothing run; each module is imported only when its command
  * runs, so parsing loads none of them.
  */
@@ -64,18 +64,18 @@ Stages:
   install    bun install --frozen-lockfile
   check      bun run check
   natives    every platform's packages installed; the macOS native libraries signed
-  compile    bun run dev compile --all; each binary's kind checked with file(1)
+  compile    bun dev compile --all; each binary's kind checked with file(1)
   sign       both macOS binaries signed, verified and their entitlements compared
   selftest   each macOS binary run on the fake agent, the window in tmux (the x64 one under Rosetta)
   notarise   one zip submitted to Apple; each binary's cdhash found in Apple's log
   pack       the five packages laid out and packed, their sha256 recorded, the tarballs installed and checked
   publish    the four platform packages, a wait until npm answers for each, then @chorded/chord, then the tag`;
 
-/** `bun run dev`'s commands, declared, each running through `actions`. */
+/** `bun dev`'s commands, declared, each running through `actions`. */
 export function devCommand(actions: DevActions = RUN) {
   return (
     new Command()
-      .name('bun run dev')
+      .name('bun dev')
       .description("chord's build, release and maintenance tools.")
       .action(function () {
         this.showHelp();
@@ -164,7 +164,7 @@ export function devCommand(actions: DevActions = RUN) {
           )
           .example(
             'The x64 binary under Rosetta',
-            'bun run dev selftest dist/bun-darwin-x64/chord --arch x86_64',
+            'bun dev selftest dist/bun-darwin-x64/chord --arch x86_64',
           )
           .action(({ arch }, binary) => actions.selftest(binary, arch)),
       )
@@ -194,30 +194,27 @@ export function devCommand(actions: DevActions = RUN) {
             'Publish only this package: chord-darwin-arm64, chord-darwin-x64, chord-linux-arm64, chord-linux-x64 or chord.',
             { conflicts: ['dry-run'] },
           )
-          .example('the whole release', 'bun run dev release')
-          .example(
-            'everything up to npm publish',
-            'bun run dev release --dry-run',
-          )
+          .example('the whole release', 'bun dev release')
+          .example('everything up to npm publish', 'bun dev release --dry-run')
           .example(
             'no Apple submission',
-            'bun run dev release --dry-run --skip notarise',
+            'bun dev release --dry-run --skip notarise',
           )
           .example(
             'without the checks and tests',
-            'bun run dev release --skip install,check',
+            'bun dev release --skip install,check',
           )
           .example(
             "publish a dry run's tarballs",
-            'bun run dev release --only publish',
+            'bun dev release --only publish',
           )
           .example(
             'rerun from the self-test',
-            'bun run dev release --from selftest',
+            'bun dev release --from selftest',
           )
           .example(
             'one package',
-            'bun run dev release --only publish --package chord-linux-x64',
+            'bun dev release --only publish --package chord-linux-x64',
           )
           .action((options) => actions.release(selectStages(options), options)),
       )

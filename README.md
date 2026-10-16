@@ -114,7 +114,7 @@ To build from source, with [Bun](https://bun.sh) 1.4.2 or newer:
 ```sh
 git clone https://github.com/IKatsuba/chord && cd chord
 bun install
-bun run dev compile --install   # into ~/.local/bin/chord
+bun dev compile --install   # into ~/.local/bin/chord
 ```
 
 ## Use
@@ -166,7 +166,7 @@ for a change, and follow the code conventions. Found a security issue?
 See [SECURITY.md](SECURITY.md).
 
 The screenshots above are chord itself, run against that test agent and
-captured by `bun run dev screenshots`.
+captured by `bun dev screenshots`.
 
 ## Licence
 

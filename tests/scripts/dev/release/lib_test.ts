@@ -45,7 +45,7 @@ test("dies when the only node on PATH is Bun's", () => {
 
   expect(() => npm(on([bunNode]), ['whoami'])).toThrow(
     new ReleaseError(
-      "no node other than Bun's on PATH; npm runs on node (bun run dev puts Bun first as node, docs/decisions.md)",
+      "no node other than Bun's on PATH; npm runs on node (bun dev puts Bun first as node, docs/decisions.md)",
     ),
   );
 });
@@ -55,7 +55,7 @@ test('dies when no npm is on PATH', () => {
 
   expect(() => npm(on([bunNode, at.bin]), ['whoami'])).toThrow(
     new ReleaseError(
-      "no npm other than Bun's on PATH; npm runs on node (bun run dev puts Bun first as node, docs/decisions.md)",
+      "no npm other than Bun's on PATH; npm runs on node (bun dev puts Bun first as node, docs/decisions.md)",
     ),
   );
 });

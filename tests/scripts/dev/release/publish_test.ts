@@ -267,7 +267,7 @@ describe('a resumed release', () => {
     writeFileSync(join(state, 'late', 'chord-linux-x64'), '1000');
 
     expect(await died(release)).toStartWith(
-      `@chorded/chord-linux-x64@${VERSION} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun run dev release\` once`,
+      `@chorded/chord-linux-x64@${VERSION} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun dev release\` once`,
     );
     expect(err.at(-1)).toContain('(60/60)');
     // No sleep after the last miss.

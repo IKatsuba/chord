@@ -5,10 +5,10 @@
  * Too slow for `bun run check`, whose tests must end in seconds: memory that
  * grows only shows over minutes.
  *
- *   bun run dev memory                        10 minutes from source
- *   bun run dev memory --minutes 30 --snapshots 6
- *   bun run dev memory --binary dist/bun-darwin-arm64/chord
- *   bun run dev memory --development          React's development build
+ *   bun dev memory                        10 minutes from source
+ *   bun dev memory --minutes 30 --snapshots 6
+ *   bun dev memory --binary dist/bun-darwin-arm64/chord
+ *   bun dev memory --development          React's development build
  *
  * chord runs in a tmux session of its own, 120×40, in a temporary directory
  * that holds the fake team `bugfix`, chord's state and an empty home and
@@ -45,7 +45,7 @@ import { getFullHeapFromFile } from '@memlab/heap-analysis';
 import { quote } from 'shell-quote';
 import type { HeapStats } from '../../src/platform/heap.ts';
 
-/** `bun run dev memory`'s options. */
+/** `bun dev memory`'s options. */
 export interface MemoryOptions {
   readonly minutes: number;
   readonly sampleSeconds: number;

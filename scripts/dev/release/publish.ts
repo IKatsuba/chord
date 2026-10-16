@@ -95,7 +95,7 @@ export async function publish(
     for (const name of PLATFORMS) {
       if (!(await waitPublished(release, name, version))) {
         die(
-          `@chorded/${name}@${version} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun run dev release\` once \`npm view @chorded/${name}@${version} version\` answers, and it resumes from there`,
+          `@chorded/${name}@${version} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun dev release\` once \`npm view @chorded/${name}@${version} version\` answers, and it resumes from there`,
         );
       }
     }

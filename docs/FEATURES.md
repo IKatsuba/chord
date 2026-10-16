@@ -18,7 +18,7 @@ agent and chord passes it through untouched.
 | ------------------------------ | ---------- | --------------------------------------- |
 | Full-screen window             | client     | OpenTUI (React), alternate screen, fixed layout |
 | `chord <agent>`, `chord agents` | client     | the ACP Registry's npx and uvx agents, frozen in `src/registry.ts`; agents' own CLIs in `src/clis.ts`, marked by whether PATH has them; names the settings files alone define |
-| Standalone binary, npm shim    | client     | `bun build --compile`, `bun run dev npm` |
+| Standalone binary, npm shim    | client     | `bun build --compile`, `bun dev npm` |
 
 ## M1 — talk to an agent (the MVP)
 

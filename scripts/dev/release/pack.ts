@@ -1,6 +1,6 @@
 /**
  * Lays out the five npm packages from the signed binaries in dist/
- * (`bun run dev npm`), packs them, installs the tarballs in scratch projects,
+ * (`bun dev npm`), packs them, installs the tarballs in scratch projects,
  * and checks the installed copies as a user gets them: the same bytes as
  * built, a macOS one still verifying and not quarantined, and the arm64 one
  * self-tested through the shim, the x64 one under Rosetta. The tarballs then

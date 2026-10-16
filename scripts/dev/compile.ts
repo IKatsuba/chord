@@ -1,9 +1,9 @@
 /**
  * Compile chord into standalone binaries with `bun build --compile`.
  *
- *   bun run dev compile             this machine's target, into dist/<target>/
- *   bun run dev compile --all       every target in scripts/targets.ts
- *   bun run dev compile --install   this machine's target, into ~/.local/bin/chord
+ *   bun dev compile             this machine's target, into dist/<target>/
+ *   bun dev compile --all       every target in scripts/targets.ts
+ *   bun dev compile --install   this machine's target, into ~/.local/bin/chord
  */
 import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import manifest from '../../package.json' with { type: 'json' };
 import { TARGETS } from '../targets.ts';
 
-/** `bun run dev compile`'s options. */
+/** `bun dev compile`'s options. */
 export interface CompileOptions {
   readonly all: boolean;
   readonly install: boolean;

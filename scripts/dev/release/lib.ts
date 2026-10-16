@@ -8,7 +8,7 @@ import { delimiter, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 /**
- * A check the release died on. `bun run dev release` prints its message as
+ * A check the release died on. `bun dev release` prints its message as
  * `release: …` on stderr and exits 1; a test reads it where it is thrown.
  */
 export class ReleaseError extends Error {
@@ -120,7 +120,7 @@ function notBun(release: Release, name: string): string {
   }
 
   die(
-    `no ${name} other than Bun's on PATH; npm runs on node (bun run dev puts Bun first as node, docs/decisions.md)`,
+    `no ${name} other than Bun's on PATH; npm runs on node (bun dev puts Bun first as node, docs/decisions.md)`,
   );
 }
 

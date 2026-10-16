@@ -1,4 +1,6 @@
+import { execFile } from 'node:child_process';
 import { expect, test } from 'bun:test';
+import process from 'node:process';
 import {
   draftFile,
   editInEditor,
@@ -57,6 +59,50 @@ test('the file ends with a newline the draft gets back without', () => {
   expect(fileDraft('no newline')).toStrictEqual('no newline');
 });
 
+/**
+ * `edit` in a Bun of its own, whose stderr is kept: the shells the editor
+ * runs under have the terminal's, as the editor library gives it them, and
+ * say there what became of a command they ran.
+ */
+function editAside(
+  draft: string,
+  editor: string,
+): Promise<{ end: unknown; stderr: string }> {
+  const script = `
+    const { editInEditor } = await import(${JSON.stringify(
+      new URL('../src/editor.ts', import.meta.url).pathname,
+    )});
+    const end = await editInEditor(process.env.CHORD_TEST_DRAFT, {
+      env: (name) =>
+        name === 'EDITOR' ? process.env.CHORD_TEST_EDITOR : undefined,
+      shell: ['/bin/sh', '-c'],
+    });
+
+    process.stdout.write('\\n' + JSON.stringify(end));
+  `;
+
+  return new Promise((resolve, reject) => {
+    execFile(
+      process.execPath,
+      ['-e', script],
+      {
+        env: {
+          ...process.env,
+          CHORD_TEST_DRAFT: draft,
+          CHORD_TEST_EDITOR: editor,
+        },
+      },
+      (error, stdout, stderr) =>
+        error
+          ? reject(error)
+          : resolve({
+              end: JSON.parse(stdout.split('\n').at(-1) ?? ''),
+              stderr,
+            }),
+    );
+  });
+}
+
 test('a draft comes back from an editor that leaves it as it was', async () => {
   const draft = 'first line\n  indented second\n\nunicode: héllo, привет, ✻';
 
@@ -80,24 +126,39 @@ test('an editor that fails says so and gives nothing back', async () => {
   ).toStrictEqual({
     failed: 'sh exited with code 3; the draft is unchanged',
   });
-  expect(await edit('kept', 'chord-no-such-editor')).toStrictEqual({
+
+  const missing = await editAside('kept', 'chord-no-such-editor');
+
+  expect(missing.end).toStrictEqual({
     failed: 'chord-no-such-editor was not found; the draft is unchanged',
   });
+  // bash's `command not found`, dash's `not found`.
+  expect(missing.stderr).toMatch(/chord-no-such-editor: (command )?not found/);
 });
 
 test('an editor or shell killed by a signal is a failure, not an edit', async () => {
-  // The shell that runs the editor is killed after the file was written.
-  expect(
-    await edit('kept', 'printf changed > "$1"; kill -TERM $$ #'),
-  ).toStrictEqual({
+  // The shell that runs the editor is killed after the file was written,
+  // and chord's own shell around it says so.
+  const terminated = await editAside(
+    'kept',
+    'printf changed > "$1"; kill -TERM $$ #',
+  );
+
+  expect(terminated.end).toStrictEqual({
     failed: 'printf was stopped by SIGTERM; the draft is unchanged',
   });
+  expect(terminated.stderr).toContain('Terminated');
+
   // A program the shell started is killed.
-  expect(
-    await edit('kept', 'sh -c \'printf changed > "$1"; kill -KILL $$\' ed'),
-  ).toStrictEqual({
+  const killed = await editAside(
+    'kept',
+    'sh -c \'printf changed > "$1"; kill -KILL $$\' ed',
+  );
+
+  expect(killed.end).toStrictEqual({
     failed: 'sh was stopped by SIGKILL; the draft is unchanged',
   });
+  expect(killed.stderr).toContain('Killed');
 });
 
 test('the status line names the signal that stopped an editor', () => {

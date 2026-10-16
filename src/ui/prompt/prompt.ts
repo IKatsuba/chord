@@ -165,8 +165,9 @@ export function broken(
  * The keys the textarea acts on itself, by their hint names, and the action
  * each is when it is one of chord's: the textarea sends, breaks the line,
  * and hands ↑ and ↓ at its edges to history. They are react-ink-textarea's,
- * which the box was first drawn with; any other key the textarea would act
- * on is kept from it (`textareaTakes`).
+ * which the box was first drawn with, and option and cmd with ← and →, with
+ * which macOS moves by word and to the line's ends (CHD-386); any other key
+ * the textarea would act on is kept from it (`textareaTakes`).
  */
 const TEXTAREA: Record<string, { chord: TKeybinding; action?: Action }> = {
   enter: { chord: 'Enter', action: 'chat:submit' },
@@ -180,6 +181,10 @@ const TEXTAREA: Record<string, { chord: TKeybinding; action?: Action }> = {
   right: { chord: 'Right' },
   'alt+b': { chord: 'Alt+B' },
   'alt+f': { chord: 'Alt+F' },
+  'alt+left': { chord: 'Alt+Left' },
+  'alt+right': { chord: 'Alt+Right' },
+  'cmd+left': { chord: 'Cmd+Left' },
+  'cmd+right': { chord: 'Cmd+Right' },
   'ctrl+a': { chord: 'Ctrl+A' },
   'ctrl+e': { chord: 'Ctrl+E' },
   'ctrl+w': { chord: 'Ctrl+W' },

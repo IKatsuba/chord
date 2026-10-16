@@ -1604,3 +1604,68 @@ test('shift+← selects nothing in the draft, which only a drag selects (CHD-172
     await window.shows('› abcx');
     expect(window.selected()).toStrictEqual('');
   }));
+
+describe('option and cmd with ← and → (CHD-386)', () => {
+  const CTRL_A = '\x01';
+  const CTRL_E = '\x05';
+
+  /** The box's text after `keys`, with an X typed where they left the cursor. */
+  async function landed(window: Window, keys: readonly string[]) {
+    await ready(window);
+    await window.type('one two three');
+    await window.shows('› one two three');
+
+    for (const key of keys) {
+      await window.press(key);
+    }
+
+    await window.type('X');
+    await until('the X typed', () => promptRow(window)?.includes('X') === true);
+
+    return promptRow(window);
+  }
+
+  for (const [name, keys, expected] of [
+    ['option+← as CSI 1;3D', ['\x1b[1;3D'], 'one two Xthree'],
+    ['option+← as ESC b', ['\x1bb'], 'one two Xthree'],
+    ['option+→ as CSI 1;3C', [CTRL_A, '\x1b[1;3C'], 'one Xtwo three'],
+    ['option+→ as ESC f', [CTRL_A, '\x1bf'], 'one Xtwo three'],
+    ['kitty option+→ as CSI 102;3u', [CTRL_A, '\x1b[102;3u'], 'one Xtwo three'],
+    ['kitty option+← as CSI 98;3u', ['\x1b[98;3u'], 'one two Xthree'],
+    ['cmd+← as CSI 1;9D', ['\x1b[1;9D'], 'Xone two three'],
+    ['cmd+→ as CSI 1;9C', [CTRL_A, '\x1b[1;9C'], 'one two threeX'],
+    ['cmd+← as ctrl+a', [CTRL_A], 'Xone two three'],
+    ['cmd+→ as ctrl+e', [CTRL_A, CTRL_E], 'one two threeX'],
+  ] as const) {
+    test(`${name} moves the cursor`, () =>
+      withWindow(async (window) => {
+        expect(await landed(window, keys)).toContain(`› ${expected}`);
+      }));
+  }
+});
+
+test("a keybinding on option+← takes it from the textarea's word move (CHD-386)", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('one two three');
+      await window.shows('› one two three');
+      await window.press('\x1b[1;3D');
+      await window.type('X');
+      await until('the draft on two lines', () => {
+        const lines = window.frame().split('\n');
+        const first = lines.findIndex((line) =>
+          line.includes('› one two three'),
+        );
+
+        return first >= 0 && lines[first + 1]!.includes('X');
+      });
+    },
+    {
+      keybindings: JSON.stringify({
+        bindings: [
+          { context: 'Chat', bindings: { 'alt+left': 'chat:newline' } },
+        ],
+      }),
+    },
+  ));

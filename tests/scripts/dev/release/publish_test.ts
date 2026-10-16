@@ -70,6 +70,8 @@ publish)
 esac
 `;
 
+const NODE = '#!/bin/bash\nexec /bin/bash "$@"\n';
+
 const GIT_ENV = {
   GIT_AUTHOR_NAME: 'release',
   GIT_AUTHOR_EMAIL: 'release@example.com',
@@ -105,6 +107,9 @@ beforeEach(() => {
   mkdirSync(bin);
   writeFileSync(join(bin, 'npm'), NPM);
   chmodSync(join(bin, 'npm'), 0o755);
+  // npm runs as `node <npm>`; this node runs the fake npm with bash.
+  writeFileSync(join(bin, 'node'), NODE);
+  chmodSync(join(bin, 'node'), 0o755);
 
   mkdirSync(repo);
   writeFileSync(

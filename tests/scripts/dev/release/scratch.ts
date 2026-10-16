@@ -29,6 +29,9 @@ export function scratch(): Scratch {
 
   mkdirSync(root);
   mkdirSync(bin);
+  // npm runs as `node <npm>`: this node runs a faked npm with bash.
+  writeFileSync(join(bin, 'node'), '#!/bin/bash\nexec /bin/bash "$@"\n');
+  chmodSync(join(bin, 'node'), 0o755);
 
   return {
     place,

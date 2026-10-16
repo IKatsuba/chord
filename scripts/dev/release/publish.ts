@@ -14,6 +14,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   die,
+  npm,
   type Package,
   PACKAGES,
   PLATFORMS,
@@ -78,16 +79,11 @@ export async function publish(
       asked = true;
     }
 
-    const npm = run(
-      release,
-      'npm',
-      ['publish', '--access', 'public', tarball],
-      {
-        stdio: 'inherit',
-      },
-    );
+    const sent = npm(release, ['publish', '--access', 'public', tarball], {
+      stdio: 'inherit',
+    });
 
-    if (npm.status !== 0) {
+    if (sent.status !== 0) {
       die(`npm publish of ${tarball} failed`);
     }
   };

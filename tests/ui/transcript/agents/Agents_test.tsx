@@ -205,3 +205,83 @@ describe('tester: selectable group titles', () => {
       ));
   }
 });
+
+describe('subagentstates: the states subagent never reaches', () => {
+  test("the parent's plan shows above the prompt, a child's never does", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'subagentstates');
+        await window.shows('⏺ Agent(Find the session layer)');
+        await window.shows(
+          [
+            '  ⎿  ☒ Plan the change',
+            '     ◐ Read the session layer',
+            '     ☐ Write the design',
+          ].join('\n'),
+        );
+        await window.shows('+2 more tool uses');
+        expect(
+          !window.frame().includes('Find the transport'),
+          "a child's plan shows",
+        ).toBeTruthy();
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('a lone running child shows its latest three calls and counts the rest', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'subagentstates');
+        await window.shows(
+          [
+            '⏺ Agent(Find the session layer)',
+            '   ⎿  Read(src/session/session.ts)',
+            '      Read(src/session/conversation.ts)',
+            '      Read(src/session/enrichers.ts)',
+            '      +2 more tool uses (ctrl+o to expand)',
+          ].join('\n'),
+        );
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test("the parent's own call draws beside a running group of two", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'subagentstates');
+        await until('the parent to wait on its running pair', () => {
+          const frame = window.frame();
+
+          return (
+            frame.includes('⏺ Running 2 agents… (ctrl+o to expand)') &&
+            frame.includes('⏺ Wait(explorer, worker)\n   ⎿  Running…')
+          );
+        });
+
+        expect(window.frame()).toContain('⎿  Done (5 tool uses · ');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('a group whose children all completed reads as finished', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'subagentstates');
+        await window.shows('⏺ 2 agents finished (ctrl+o to expand)');
+        await window.shows('drawing is Tool in');
+
+        const frame = window.frame();
+
+        expect(frame).toContain('├─ Agent(explorer) · 3 tool uses · ');
+        expect(frame).toContain('│  ⎿  Done');
+        expect(frame).toContain('└─ Agent(worker) · 1 tool use · ');
+        expect(frame).toContain('      ⎿  Done');
+        expect(frame).toContain('⏺ Wait(explorer, worker)');
+        expect(
+          !frame.includes('Running…'),
+          'the wait runs on after the pair',
+        ).toBeTruthy();
+      },
+      { rows: 40, columns: 120 },
+    ));
+});

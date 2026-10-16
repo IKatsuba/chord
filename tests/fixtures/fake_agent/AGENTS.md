@@ -12,7 +12,8 @@
   `shellcut`, `bash`), `compaction.ts` (`compact`, `codexcompact`,
   `compactfail`), `modes.ts` (`status`, `exitplan`, `mode`, `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
-  `subagents.ts` (`subagent`, `subagentupdate`), `chord_tools.ts`
+  `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`),
+  `chord_tools.ts`
   (`chordtools`) and `misbehaving.ts` (`error`, `late`, `unknown`). Beside it, what the scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
@@ -23,7 +24,7 @@
   `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
   `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
   `mode`, `late`, `twins`, `mcpask`, `unknown`, `subagent`, `subagentupdate`,
-  `chordtools`)
+  `subagentstates`, `chordtools`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second; `form` asks for a form with a field of each kind and
   `link` for a link to open (`tests/fixtures/forms.ts`), `askclaude`,
@@ -110,7 +111,11 @@
   line of the parent's, a third alone that runs on about 2 s past the turn's
   answer; a cancel ends each still
   open `cancelled` before the answer; `subagentupdate` sends one in ACP's
-  own `subagent_update`, running then idle. `--step-ms <ms>` or
+  own `subagent_update`, running then idle; `subagentstates` reaches what
+  `subagent` does not: the parent's own plan beside a lone subagent with a
+  plan of its own and five calls, held about 2 s, then a pair spawned back
+  to back that the parent waits on with a call of its own, as Codex's
+  adapter does, both finishing. `--step-ms <ms>` or
   `CHORD_FAKE_STEP_MS` sets the pace of every scenario (5 ms a step by
   default). Every
   session offers two models, `Fake Large with a 1M context window` (in use

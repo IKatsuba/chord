@@ -104,7 +104,10 @@
  * outlives the turn by about 2 s. A cancel ends
  * every one still open as `cancelled` before the turn is answered, as
  * Claude's adapter does. `subagentupdate` sends one in ACP's own
- * `subagent_update` shape, running and then idle. To any other client each
+ * `subagent_update` shape, running and then idle. `subagentstates` plays
+ * what `subagent` never reaches: the parent's plan beside a lone subagent of
+ * five calls with a plan of its own, then a pair the parent waits on with a
+ * call of its own, both finishing. To any other client each
  * says so in a line of text.
  *
  * Started with `--steering claude` or `--steering codex`, or with
@@ -269,6 +272,7 @@ const SCENARIOS = [
   'unknown',
   'subagent',
   'subagentupdate',
+  'subagentstates',
   'chordtools',
   'task',
   'chordcalls',

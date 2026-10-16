@@ -550,3 +550,186 @@ describe('preflight', () => {
     );
   });
 });
+
+describe('tester: publish guard boundaries', () => {
+  test('a fresh run publishes all five in order and announces npm once', async () => {
+    rmSync(join(state, 'published', PLATFORMS[0]));
+
+    expect(await release()).toBeTrue();
+    expect(
+      lines('npm.log')
+        .filter((line) => line.startsWith(PUBLISH))
+        .map((line) => line.slice(line.lastIndexOf('/') + 1)),
+    ).toStrictEqual(
+      [...PLATFORMS, 'chord'].map((name) => `chorded-${name}-${VERSION}.tgz`),
+    );
+    expect(out.filter((line) => line.startsWith('npm will ask'))).toHaveLength(
+      1,
+    );
+    expect(tagged(origin)).toBe(TAG);
+  });
+
+  test('the tag stays absent while the main package answers late', async () => {
+    for (const name of PLATFORMS) {
+      publishedAlready(name);
+    }
+
+    writeFileSync(join(state, 'late', 'chord'), '2');
+
+    const ctx = context();
+
+    expect(
+      await publish(
+        {
+          ...ctx,
+          sleep: (ms) => {
+            expect(isPublished('chord')).toBeTrue();
+            expect(tagged(repo)).toBe('');
+            expect(tagged(origin)).toBe('');
+
+            return ctx.sleep(ms);
+          },
+        },
+        { version: VERSION, only: 'chord' },
+      ),
+    ).toBeTrue();
+    expect(sleeps).toStrictEqual([15_000, 15_000]);
+    expect(tagged(origin)).toBe(TAG);
+  });
+
+  test('a missing sums file stops before any publish or tag', async () => {
+    rmSync(join(repo, 'dist', 'release', 'tgz', 'SHA256SUMS'));
+
+    expect(await died(release)).toContain('has no sum for');
+    expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
+      [],
+    );
+    expect(tagged(repo)).toBe('');
+    expect(tagged(origin)).toBe('');
+  });
+
+  test('a resumed package needs no local tarball or checksum', async () => {
+    rmSync(
+      join(
+        repo,
+        'dist',
+        'release',
+        'tgz',
+        `chorded-${PLATFORMS[0]}-${VERSION}.tgz`,
+      ),
+    );
+
+    tty = false;
+
+    expect(await release(PLATFORMS[0])).toBeFalse();
+    expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
+      [],
+    );
+    expect(sleeps).toEqual([]);
+    expect(out.filter((line) => line.startsWith('npm will ask'))).toEqual([]);
+    expect(tagged(repo)).toBe('');
+  });
+
+  test('a selected platform that answers late does not wait or tag', async () => {
+    for (const name of [...PLATFORMS, 'chord']) {
+      if (name !== 'chord-linux-x64') {
+        publishedAlready(name);
+      }
+    }
+
+    writeFileSync(join(state, 'late', 'chord-linux-x64'), '2');
+
+    expect(
+      await publish(context(), { version: VERSION, only: 'chord-linux-x64' }),
+    ).toBeFalse();
+    expect(isPublished('chord-linux-x64')).toBeTrue();
+    expect(sleeps).toEqual([]);
+    expect(tagged(repo)).toBe('');
+    expect(tagged(origin)).toBe('');
+  });
+
+  test('a successful npm view with the wrong version stops with its answer', async () => {
+    writeFileSync(
+      join(bin, 'npm'),
+      NPM.replace('echo "${spec##*@}"', 'echo "9.9.8"'),
+    );
+
+    expect(await died(release)).toBe(
+      `npm view @chorded/${PLATFORMS[0]}@${VERSION} answered "9.9.8"`,
+    );
+    expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
+      [],
+    );
+    expect(sleeps).toEqual([]);
+  });
+
+  test('preflight command failures retain their diagnostic and stop before publish', async () => {
+    const cases = [
+      ['status', 'git status failed: fixture status denied'],
+      ['fetch', 'git fetch origin failed: fixture fetch denied'],
+      [
+        'rev-parse origin/main',
+        'git rev-parse origin/main failed: fixture rev-parse origin/main denied',
+      ],
+      ['ls-remote', 'git ls-remote origin failed: fixture ls-remote denied'],
+    ];
+
+    for (const [command, message] of cases) {
+      writeFileSync(
+        join(bin, 'git'),
+        `#!/bin/sh
+case "$*" in
+  '${command}'*) echo 'fixture ${command} denied' >&2; exit 2 ;;
+  'symbolic-ref --short HEAD') echo main ;;
+  'rev-parse main'|'rev-parse origin/main') echo fixture-commit ;;
+esac
+`,
+      );
+      chmodSync(join(bin, 'git'), 0o755);
+
+      expect(
+        await died(() =>
+          preflight(context(), { dryRun: false, publish: true }),
+        ),
+      ).toBe(message!);
+      expect(
+        lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
+      ).toEqual([]);
+    }
+  });
+
+  test('tag and push failures retain their diagnostic after all five answer', async () => {
+    for (const name of [...PLATFORMS, 'chord']) {
+      publishedAlready(name);
+    }
+
+    for (const command of ['tag', 'push']) {
+      writeFileSync(
+        join(bin, 'git'),
+        `#!/bin/sh
+printf '%s\\n' "$*" >>"$RELEASE_STATE/git.log"
+case "$1" in
+  ${command}) echo 'fixture ${command} denied' >&2; exit 2 ;;
+esac
+`,
+      );
+      chmodSync(join(bin, 'git'), 0o755);
+      rmSync(join(state, 'git.log'), { force: true });
+
+      expect(
+        await died(() =>
+          publish(context(), { version: VERSION, only: 'chord-linux-x64' }),
+        ),
+      ).toBe(
+        command === 'tag'
+          ? `git tag -a ${TAG} failed: fixture tag denied`
+          : `git push origin ${TAG} failed: fixture push denied`,
+      );
+      expect(lines('git.log')).toStrictEqual(
+        command === 'tag'
+          ? [`tag -a ${TAG} -m chord ${TAG}`]
+          : [`tag -a ${TAG} -m chord ${TAG}`, `push origin ${TAG}`],
+      );
+    }
+  });
+});

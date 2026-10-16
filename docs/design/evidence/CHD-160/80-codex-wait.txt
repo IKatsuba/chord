@@ -1,0 +1,24 @@
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Done (5 tool uses · 1m 31s)
+
+ ⏺ Routing is in src/acp/connection.ts. Now both sides.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(explorer) · 1 tool use
+   │  ⎿  Read(src/acp/connection.ts)
+   └─ Agent(worker) · 1 tool use
+      ⎿  Read(src/ui/transcript/tools/Tool.tsx)
+
+ ⏺ Wait(explorer, worker)
+   ⎿  Running…
+
+ ››› Working… (1m 36s · esc to interrupt)
+  ⎿  ☒ Plan the change
+     ☒ Read the session layer
+     ◐ Write the design
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

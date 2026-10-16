@@ -62,6 +62,7 @@
     "@types/culori": "^4.0.1",
     "@types/npm-package-arg": "^6.1.4",
     "@types/react": "^19.3.0",
+    "@types/semver": "^7.8.0",
     "@types/shell-quote": "^1.7.5",
     "@types/split2": "^4.2.3",
     "@typescript-eslint/utils": "^8.71.1",
@@ -74,6 +75,7 @@
     "jiti": "^2.7.0",
     "prettier": "^3.9.9",
     "puppeteer-core": "^25.13.0",
+    "semver": "^7.8.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.71.1"
   }

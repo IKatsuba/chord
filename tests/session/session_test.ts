@@ -260,10 +260,19 @@ test('an agent that sends plans by id only on request sends chord one', () =>
     '--plan-capability-only',
   ));
 
+/**
+ * A session on the fake at a short pace: `proposal`'s 2 s between plan
+ * updates are for a person watching `chord:fake`, and what it sends, in what
+ * order, is the same at any pace.
+ */
+function withProposal(body: (session: Session) => Promise<void>) {
+  return withSession(body, undefined, '--step-ms', '1');
+}
+
 // Codex's plan mode proposes its plan as markdown, the whole text each time,
 // and may withdraw it by id.
 test('a proposed plan rewritten and withdrawn leaves the rest of the reply', () =>
-  withSession(async (session) => {
+  withProposal(async (session) => {
     const updates = await collect(session, 'proposal');
     const transcript = updates.reduce(
       (state, update) =>
@@ -300,7 +309,7 @@ test('a proposed plan rewritten and withdrawn leaves the rest of the reply', () 
 
 // Each run proposes its own plans, so a second run keeps the first run's.
 test('a second proposal in one session leaves the first one in place', () =>
-  withSession(async (session) => {
+  withProposal(async (session) => {
     let transcript = emptyTranscript;
 
     for (const turnId of ['t1', 't2']) {

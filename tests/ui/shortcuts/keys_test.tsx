@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import ru from 'convert-layout/ru.js';
 import * as harness from '../harness.tsx';
 import { type ReactNode, useState } from 'react';
@@ -1833,4 +1833,83 @@ test('a copy key that types, or begins a chord that does, beats a form and the s
       name,
     ).not.toStrictEqual('key_pending');
   }
+});
+
+describe('CHD-386 tester: movement panel entries', () => {
+  test('word and line moves follow paste, before history, in both layouts', () => {
+    const lines = shortcuts().map(shortcutLine);
+    const paste = lines.indexOf('ctrl + v to paste an image');
+
+    expect(lines.slice(paste + 1, paste + 4)).toStrictEqual([
+      'alt + ← → to move by word',
+      'cmd + ← → to line start or end',
+      '↑ ↓ for prompts, agents and monitors',
+    ]);
+    expect(lines).toHaveLength(40);
+    expect(
+      inColumns(lines, columnCount(lines, 80)).map((c) => c.length),
+    ).toStrictEqual([20, 20]);
+    expect(
+      inColumns(lines, columnCount(lines, 120)).map((c) => c.length),
+    ).toStrictEqual([14, 14, 12]);
+    expect(lines).toContain('/ @ for commands or files');
+    expect(lines).toContain('↑ ↓ to pick a command or file');
+    expect(lines).toContain('tab to complete a command');
+    expect(lines).toContain('tab enter to add a file');
+    expect(lines.at(-1)).toStrictEqual('esc to close shortcuts');
+  });
+
+  test('the shared navigation line follows rebound keys once and disappears when unbound', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          {
+            context: 'Autocomplete',
+            bindings: {
+              up: null,
+              down: null,
+              'ctrl+p': 'autocomplete:previous',
+              'ctrl+n': 'autocomplete:next',
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(problems).toStrictEqual([]);
+
+    const shown = shortcuts(keymap);
+    const navigation = shown.filter(
+      (entry) => entry.does === 'to pick a command or file',
+    );
+
+    expect(navigation).toHaveLength(1);
+    expect(shortcutLine(navigation[0]!)).toStrictEqual(
+      'ctrl + p ctrl + n to pick a command or file',
+    );
+    expect(navigation[0]!.commands).toStrictEqual([
+      'menu_up',
+      'menu_down',
+      'finder_up',
+      'finder_down',
+    ]);
+
+    const unbound = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          { context: 'Autocomplete', bindings: { up: null, down: null } },
+        ],
+      }),
+    );
+
+    expect(unbound.problems).toStrictEqual([]);
+    expect(
+      shortcuts(unbound.keymap).some(
+        (entry) => entry.does === 'to pick a command or file',
+      ),
+    ).toBeFalse();
+    expect(shortcuts(unbound.keymap).map(shortcutLine)).toContain(
+      '/ @ for commands or files',
+    );
+  });
 });

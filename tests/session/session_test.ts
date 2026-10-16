@@ -1186,3 +1186,79 @@ describe('CHD-246 tester: large MCP permission fixture', () => {
       }),
   );
 });
+
+describe('CHD-393 tester: headline scenario payloads', () => {
+  test('sends four complete arguments and matching completion outputs', () =>
+    withSession(async (session) => {
+      const { updates, result } = await run(session, 'headlines');
+      const events = calls(updates);
+      const starts = events.filter(
+        (event) => event.sessionUpdate === 'tool_call',
+      );
+      const ends = events.filter(
+        (event) => event.sessionUpdate === 'tool_call_update',
+      );
+
+      expect(result.status).toBe('completed');
+      expect(starts).toHaveLength(4);
+      expect(ends.map((event) => [event.toolCallId, event.status])).toEqual(
+        starts.map((event) => [event.toolCallId, 'completed']),
+      );
+      expect(new Set(starts.map((event) => event.toolCallId)).size).toBe(4);
+      expect(starts.map((event) => event.status)).toEqual(
+        Array.from({ length: 4 }, () => 'in_progress'),
+      );
+
+      const commands = starts
+        .filter((event) => event.kind === 'execute')
+        .map((event) => {
+          const input = event.rawInput as { command: string };
+
+          expect(event.title).toBe('`' + input.command + '`');
+
+          return input.command;
+        });
+
+      expect(commands[0]?.split('\n')).toHaveLength(13);
+      expect(commands[0]).toContain('\n\n');
+      expect(commands[0]).toEndWith('\nEOF');
+      expect(commands[1]?.length).toBeGreaterThan(200);
+      expect(commands[1]).not.toContain('\n');
+      expect(commands[1]).toEndWith('src/ui/transcript/tools/');
+      expect(commands[2]?.split('\n')).toHaveLength(300);
+      expect(commands[2]).toEndWith('line 298 of the long command\nEOF');
+
+      const mcp = starts.find((event) => event.kind === 'other');
+
+      assert(mcp);
+      expect(mcp.title).toBe('mcp__chord__send_message');
+      expect(mcp.rawInput).toEqual({
+        to: 'reviewer',
+        text: expect.stringContaining('a command of 300 lines'),
+      });
+      expect(ends.map((event) => event.content?.length)).toEqual([1, 1, 1, 1]);
+      expect(said(updates)).toEqual(['Four calls with long headlines.']);
+    }));
+
+  test('can cancel between calls and play the complete scenario next turn', () =>
+    withSession(
+      async (session) => {
+        const cancelled = await run(session, 'headlines', {
+          onUpdate: (updates, turn) => {
+            if (calls(updates).length === 1) {
+              void turn.cancel();
+            }
+          },
+        });
+
+        expect(cancelled.result.status).toBe('cancelled');
+        expect(said(cancelled.updates)).toEqual([]);
+        expect((await run(session, 'headlines')).result.status).toBe(
+          'completed',
+        );
+      },
+      undefined,
+      '--step-ms',
+      '20',
+    ));
+});

@@ -119,3 +119,79 @@ describe('memory', () => {
 test('an unknown command is refused', async () => {
   await expect(parsed(['publish'])).rejects.toThrow(ValidationError);
 });
+
+describe('tester: migrated command boundaries', () => {
+  test('commands without positional arguments refuse extras', async () => {
+    for (const command of ['compile', 'npm', 'registry', 'mark', 'memory']) {
+      await expect(parsed([command, 'extra'])).rejects.toThrow(ValidationError);
+    }
+  });
+
+  test('options stay with the command that declares them', async () => {
+    for (const argv of [
+      ['npm', '--all'],
+      ['registry', '--install'],
+      ['mark', '--development'],
+      ['compile', '--binary', 'chord'],
+      ['memory', '--all'],
+      ['--install', 'compile'],
+    ]) {
+      await expect(parsed(argv)).rejects.toThrow(ValidationError);
+    }
+  });
+
+  test('every memory value option requires its value', async () => {
+    for (const option of [
+      '--minutes',
+      '--sample-seconds',
+      '--snapshots',
+      '--step-ms',
+      '--binary',
+    ]) {
+      await expect(parsed(['memory', option])).rejects.toThrow(ValidationError);
+    }
+  });
+
+  test('every numeric memory option rejects text', async () => {
+    for (const option of [
+      '--minutes',
+      '--sample-seconds',
+      '--snapshots',
+      '--step-ms',
+    ]) {
+      await expect(parsed(['memory', option, 'invalid'])).rejects.toThrow(
+        ValidationError,
+      );
+    }
+  });
+
+  test('compile retains the combined all and install options', async () => {
+    expect(await parsed(['compile', '--all', '--install'])).toStrictEqual([
+      ['compile', { all: true, install: true }],
+    ]);
+  });
+
+  test('an asynchronous action failure reaches the caller', async () => {
+    const failure = new Error('fixture action failed');
+    const unexpected = () => {
+      throw new Error('another command ran');
+    };
+
+    const actions: DevActions = {
+      compile: unexpected,
+      npm: unexpected,
+      registry: unexpected,
+      mark: async () => {
+        await Promise.resolve();
+
+        throw failure;
+      },
+      screenshots: unexpected,
+      memory: unexpected,
+    };
+
+    await expect(
+      devCommand(actions).noExit().throwErrors().parse(['mark']),
+    ).rejects.toBe(failure);
+  });
+});

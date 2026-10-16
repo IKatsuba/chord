@@ -348,9 +348,7 @@ export const TOOLS = {
         sessionUpdate: 'tool_call_update',
         toolCallId: call.toolCallId,
         status: 'completed',
-        content: [
-          { type: 'content', content: { type: 'text', text: output } },
-        ],
+        content: [{ type: 'content', content: { type: 'text', text: output } }],
       });
     }
 

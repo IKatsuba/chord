@@ -3,7 +3,7 @@
  *
  *   bun dev <command>   see `bun dev --help`
  */
-import { Command, EnumType } from '@cliffy/command';
+import { Command, EnumType, ValidationError } from '@cliffy/command';
 import process from 'node:process';
 import type { CompileOptions } from './dev/compile.ts';
 import type { MemoryOptions } from './dev/memory.ts';
@@ -14,6 +14,7 @@ import {
   type Stage,
   STAGES,
 } from './dev/release/select.ts';
+import { BUMPS, isVersionArgument } from './dev/release/version.ts';
 
 /**
  * What each command does once its arguments are parsed. Apart from the
@@ -32,6 +33,7 @@ export interface DevActions {
   release(
     stages: readonly Stage[],
     options: ReleaseOptions,
+    version: string | undefined,
   ): void | Promise<void>;
   chord(fake: boolean, args: readonly string[]): void | Promise<void>;
   test(args: readonly string[]): void | Promise<void>;
@@ -55,11 +57,11 @@ const RUN: DevActions = {
 
     await dying(() => selftest(release(), binary, arch));
   },
-  release: async (stages, options) => {
+  release: async (stages, options, version) => {
     const { dying, release } = await import('./dev/release/lib.ts');
     const { runRelease } = await import('./dev/release/stages.ts');
 
-    await dying(() => runRelease(release(), stages, options));
+    await dying(() => runRelease(release(), stages, options, process, version));
   },
   chord: async (fake, args) => {
     process.exitCode = (await import('./dev/tools.ts')).chord(fake, args);
@@ -78,7 +80,9 @@ const RUN: DevActions = {
   },
 };
 
-const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs every stage in order, step for step as scripts/release.sh did, and the last line it prints is the published version. Preflight runs on every run, whatever is skipped. If a run stopped between publishes, the next run resumes it: it publishes what is missing from the tarballs already packed and builds nothing. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
+const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs every stage in order, step for step as scripts/release.sh did, and the last line it prints is the published version.
+
+The version is package.json's, or the one given: an exact version above it, or major, minor, patch or fix (patch) to bump it; pre-releases are refused. Given one, the release checks it, writes it into package.json and commits that alone as "chore: chord v<version>" before any stage. A run that publishes pushes the commit to origin's main first, and it stays there if a later stage fails: rerun with no version, or that one; if the push fails, the commit is dropped and the release stops. A dry run, or a run without publish, drops the commit at the end and pushes nothing. A stopped publish resumes only package.json's version. Preflight runs on every run, whatever is skipped. If a run stopped between publishes, the next run resumes it: it publishes what is missing from the tarballs already packed and builds nothing. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
 
 Stages:
   install    bun install --frozen-lockfile
@@ -261,6 +265,16 @@ export function devCommand(actions: DevActions = RUN) {
           .description(RELEASE)
           .type('stage', new EnumType(STAGES))
           .type('package', new EnumType(PACKAGES))
+          .type('version', ({ value }) => {
+            if (!isVersionArgument(value)) {
+              throw new ValidationError(
+                `"${value}" is neither an exact version (1.2.3) nor one of ${BUMPS.join(', ')}.`,
+              );
+            }
+
+            return value;
+          })
+          .arguments('[version:version]')
           .option(
             '--dry-run',
             'Every stage but publish, so it still submits to Apple. It never resumes a stopped publish.',
@@ -282,6 +296,12 @@ export function devCommand(actions: DevActions = RUN) {
             { conflicts: ['dry-run'] },
           )
           .example('the whole release', 'bun dev release')
+          .example('the next minor version', 'bun dev release minor')
+          .example('an exact version', 'bun dev release 1.0.0')
+          .example(
+            'a dry run of the next patch, package.json as it was after',
+            'bun dev release patch --dry-run --skip notarise',
+          )
           .example('everything up to npm publish', 'bun dev release --dry-run')
           .example(
             'no Apple submission',
@@ -303,7 +323,9 @@ export function devCommand(actions: DevActions = RUN) {
             'one package',
             'bun dev release --only publish --package chord-linux-x64',
           )
-          .action((options) => actions.release(selectStages(options), options)),
+          .action((options, version) =>
+            actions.release(selectStages(options, version), options, version),
+          ),
       )
       // Back to the root, so what a caller chains on applies to the whole tree.
       .reset()

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -374,5 +375,167 @@ esac
     expect(existsSync(join(at.place, 'published', 'chord'))).toBeTrue();
     expect(at.out).not.toContain(VERSION);
     expect(ran().some((line) => line.startsWith('git push'))).toBeFalse();
+  });
+});
+
+describe('a version given', () => {
+  /** Runs the release `options` select at `version`. */
+  async function releasedAt(
+    version: string,
+    options: ReleaseOptions,
+    env: Record<string, string> = {},
+  ): Promise<void> {
+    await runRelease(
+      context(env),
+      selectStages(options, version),
+      options,
+      MAC,
+      version,
+    );
+  }
+
+  function out(cwd: string, ...args: string[]): string {
+    return String(spawnSync('git', args, { cwd }).stdout).trim();
+  }
+
+  const origin = () => join(at.place, 'origin.git');
+  const version = () =>
+    (
+      JSON.parse(readFileSync(join(at.root, 'package.json'), 'utf8')) as {
+        version: string;
+      }
+    ).version;
+
+  beforeEach(() => {
+    // The bun faked records the version package.json had when check ran.
+    at.fake(
+      'bun',
+      `echo "bun $*" >>"$STATE/ran.log"
+if [ "$2" = 'check' ]; then cat package.json >"$STATE/checked.json"; fi
+if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
+`,
+    );
+  });
+
+  const checked = () =>
+    (
+      JSON.parse(readFileSync(join(at.place, 'checked.json'), 'utf8')) as {
+        version: string;
+      }
+    ).version;
+
+  test('a dry run builds the new version, then drops its commit', async () => {
+    const head = out(at.root, 'rev-parse', 'HEAD');
+
+    await releasedAt('minor', { dryRun: true, only: ['install', 'check'] });
+
+    expect(checked()).toBe('9.10.0');
+    expect(at.out.at(-1)).toBe(
+      'dry run: @chorded/chord 9.10.0, ran install, check; not published',
+    );
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(version()).toBe(VERSION);
+    expect(out(at.root, 'status', '--porcelain')).toBe('');
+    expect(out(origin(), 'rev-parse', 'main')).toBe(head);
+  });
+
+  test('a run without publish that fails drops the commit too', async () => {
+    const head = out(at.root, 'rev-parse', 'HEAD');
+
+    expect(
+      await died(releasedAt('9.9.10', { to: 'check' }, { FAIL_CHECK: 'yes' })),
+    ).toBe('bun scripts/dev.ts check failed');
+    expect(checked()).toBe('9.9.10');
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(version()).toBe(VERSION);
+    expect(out(origin(), 'rev-parse', 'main')).toBe(head);
+  });
+
+  test('a run that publishes commits package.json alone and pushes it before any stage', async () => {
+    const head = out(at.root, 'rev-parse', 'HEAD');
+
+    // Nothing is packed, so publish dies; the commit stays where it went.
+    await died(
+      releasedAt(
+        'patch',
+        {
+          skip: ['natives', 'compile', 'sign', 'selftest', 'notarise', 'pack'],
+        },
+        { FAIL_CHECK: 'yes' },
+      ),
+    );
+
+    expect(checked()).toBe('9.9.10');
+    expect(out(at.root, 'log', '-1', '--format=%s')).toBe(
+      'chore: chord v9.9.10',
+    );
+    expect(out(at.root, 'rev-parse', 'HEAD~1')).toBe(head);
+    expect(out(at.root, 'show', '--name-only', '--format=', 'HEAD')).toBe(
+      'package.json',
+    );
+    expect(out(origin(), 'rev-parse', 'main')).toBe(
+      out(at.root, 'rev-parse', 'HEAD'),
+    );
+    expect(version()).toBe('9.9.10');
+  });
+
+  test('preflight checks the new version, before anything is committed', async () => {
+    git(at.root, 'tag', 'v9.9.10');
+
+    const head = out(at.root, 'rev-parse', 'HEAD');
+
+    expect(await died(releasedAt('fix', {}))).toBe('v9.9.10 is a tag already');
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(ran().some((line) => line.startsWith('bun '))).toBeFalse();
+  });
+
+  test("a version not above package.json's dies before preflight", async () => {
+    expect(await died(releasedAt('9.9.8', { dryRun: true }))).toBe(
+      "9.9.8 is not above package.json's version 9.9.9",
+    );
+    expect(ran()).toStrictEqual([]);
+  });
+
+  test("a stopped publish resumes only package.json's version", async () => {
+    writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
+
+    const head = out(at.root, 'rev-parse', 'HEAD');
+
+    expect(await died(releasedAt('patch', {}))).toBe(
+      "a stopped publish resumes package.json's version 9.9.9, not 9.9.10; run it without a version",
+    );
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
+  });
+
+  test('a push that fails drops the commit and stops before any stage', async () => {
+    const head = out(at.root, 'rev-parse', 'HEAD');
+    const hook = join(origin(), 'hooks', 'pre-receive');
+
+    writeFileSync(hook, '#!/bin/sh\necho refused >&2\nexit 1\n');
+    chmodSync(hook, 0o755);
+
+    expect(await died(releasedAt('patch', {}))).toStartWith(
+      'git push origin main failed, so chore: chord v9.9.10 is dropped:',
+    );
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(version()).toBe(VERSION);
+    expect(out(at.root, 'status', '--porcelain')).toBe('');
+    expect(ran().some((line) => line.startsWith('bun '))).toBeFalse();
+  });
+
+  test("package.json's own version makes no commit", async () => {
+    const head = out(at.root, 'rev-parse', 'HEAD');
+
+    await releasedAt(VERSION, { to: 'check' });
+
+    expect(checked()).toBe(VERSION);
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+  });
+
+  test('with --only publish it is refused', () => {
+    expect(() => selectStages({ only: ['publish'] }, 'patch')).toThrow(
+      'takes none',
+    );
   });
 });

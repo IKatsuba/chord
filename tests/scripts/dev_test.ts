@@ -458,6 +458,36 @@ describe('release', () => {
   });
 });
 
+describe('release [version]', () => {
+  test('takes an exact version or a bump', async () => {
+    for (const version of ['1.0.0', 'major', 'minor', 'patch', 'fix']) {
+      const [call] = await parsed(['release', version, '--dry-run']);
+
+      expect(call?.[3]).toBe(version);
+    }
+
+    expect((await parsed(['release']))[0]?.[3]).toBeUndefined();
+  });
+
+  test.each([['v1.0.0'], ['1.0'], ['next'], ['1.0.0+build']])(
+    'refuses %s',
+    async (version) => {
+      await expect(parsed(['release', version])).rejects.toThrow(
+        ValidationError,
+      );
+    },
+  );
+
+  test('refuses a version with --only publish', async () => {
+    await expect(
+      parsed(['release', 'patch', '--only', 'publish']),
+    ).rejects.toThrow(ValidationError);
+    expect((await parsed(['release', '--only', 'publish']))[0]?.[1]).toEqual([
+      'publish',
+    ]);
+  });
+});
+
 describe('tester: release parsing boundaries', () => {
   test('conflicts are refused with the arguments in either order', async () => {
     for (const pair of [

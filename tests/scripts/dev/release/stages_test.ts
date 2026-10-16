@@ -266,6 +266,34 @@ test('--package publishes the one package, and prints no version while others ar
   expect(at.err.at(-1)).toStartWith('not tagged: ');
 });
 
+describe('tester: CHD-411 release check caller', () => {
+  test('check selected alone calls the dev entry point without install', async () => {
+    await released({ only: ['check'] });
+
+    expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
+      'bun scripts/dev.ts check',
+    ]);
+    expect(at.out).toEqual([]);
+  });
+
+  test('a failed install never reaches the migrated check command', async () => {
+    at.fake(
+      'bun',
+      `echo "bun $*" >>"$STATE/ran.log"
+if [ "$1" = 'install' ]; then exit 7; fi
+`,
+    );
+
+    expect(await died(released({ to: 'check' }))).toBe(
+      'bun install --frozen-lockfile failed',
+    );
+    expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
+      'bun install --frozen-lockfile',
+    ]);
+    expect(at.out).toEqual([]);
+  });
+});
+
 describe('tester: release orchestration boundaries', () => {
   test('natives alone refuses an unsupported host before preflight', async () => {
     expect(

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { ValidationError } from '@cliffy/command';
+import stripAnsi from 'strip-ansi';
 import { type DevActions, devCommand } from '../../scripts/dev.ts';
 
 /** Each command `argv` ran, with what it was given; nothing is run. */
@@ -20,6 +21,11 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     memory: record('memory'),
     selftest: record('selftest'),
     release: record('release'),
+    chord: record('chord'),
+    test: record('test'),
+    check: record('check'),
+    fmt: record('fmt'),
+    lint: record('lint'),
   };
 
   await devCommand(actions).noExit().throwErrors().parse(argv);
@@ -118,6 +124,114 @@ describe('memory', () => {
   });
 });
 
+describe('chord', () => {
+  test('passes every argument on to chord', async () => {
+    expect(await parsed(['chord'])).toStrictEqual([['chord', false, []]]);
+    expect(await parsed(['chord', '-p', 'hi'])).toStrictEqual([
+      ['chord', false, ['-p', 'hi']],
+    ]);
+    expect(await parsed(['chord', 'codex', '--resume'])).toStrictEqual([
+      ['chord', false, ['codex', '--resume']],
+    ]);
+  });
+
+  test("--fake before chord's arguments is its own", async () => {
+    expect(await parsed(['chord', '--fake'])).toStrictEqual([
+      ['chord', true, []],
+    ]);
+    expect(await parsed(['chord', '--fake', '-p', 'hi'])).toStrictEqual([
+      ['chord', true, ['-p', 'hi']],
+    ]);
+  });
+
+  test("--fake after chord's first word is chord's", async () => {
+    expect(await parsed(['chord', 'codex', '--fake'])).toStrictEqual([
+      ['chord', false, ['codex', '--fake']],
+    ]);
+  });
+
+  test('words after -- reach chord, without the --', async () => {
+    expect(await parsed(['chord', '--', '--help'])).toStrictEqual([
+      ['chord', false, ['--help']],
+    ]);
+    expect(
+      await parsed(['chord', '--fake', '-p', 'hi', '--', '--fake']),
+    ).toStrictEqual([['chord', true, ['-p', 'hi', '--fake']]]);
+  });
+});
+
+describe('test', () => {
+  test('passes every argument on to bun test', async () => {
+    expect(await parsed(['test'])).toStrictEqual([['test', []]]);
+    expect(
+      await parsed(['test', './tests/x_test.ts', '-t', 'a stop']),
+    ).toStrictEqual([['test', ['./tests/x_test.ts', '-t', 'a stop']]]);
+  });
+
+  test("--update-timings is bun test's", async () => {
+    expect(await parsed(['test', '--update-timings'])).toStrictEqual([
+      ['test', ['--update-timings']],
+    ]);
+  });
+
+  test('words after -- follow, without the --', async () => {
+    expect(await parsed(['test', '--changed', '--', '--bail'])).toStrictEqual([
+      ['test', ['--changed', '--bail']],
+    ]);
+  });
+});
+
+describe('check', () => {
+  test('runs everything, or only the static steps', async () => {
+    expect(await parsed(['check'])).toStrictEqual([
+      ['check', { static: false }],
+    ]);
+    expect(await parsed(['check', '--static'])).toStrictEqual([
+      ['check', { static: true }],
+    ]);
+  });
+
+  test('takes no arguments and no other option', async () => {
+    await expect(parsed(['check', 'tests/'])).rejects.toThrow(ValidationError);
+    await expect(parsed(['check', '--fix'])).rejects.toThrow(ValidationError);
+  });
+});
+
+test('fmt takes no arguments', async () => {
+  expect(await parsed(['fmt'])).toStrictEqual([['fmt']]);
+  await expect(parsed(['fmt', 'src/'])).rejects.toThrow(ValidationError);
+});
+
+test('lint passes every argument on to ESLint', async () => {
+  expect(await parsed(['lint'])).toStrictEqual([['lint', []]]);
+  expect(await parsed(['lint', '--fix'])).toStrictEqual([['lint', ['--fix']]]);
+  expect(await parsed(['lint', '--fix', '--', '--quiet'])).toStrictEqual([
+    ['lint', ['--fix', '--quiet']],
+  ]);
+});
+
+test('--help lists every command', () => {
+  const help = stripAnsi(devCommand().getHelp());
+
+  for (const name of [
+    'chord',
+    'test',
+    'check',
+    'fmt',
+    'lint',
+    'compile',
+    'npm',
+    'registry',
+    'mark',
+    'screenshots',
+    'memory',
+    'selftest',
+    'release',
+  ]) {
+    expect(help).toMatch(new RegExp(`^  ${name} `, 'm'));
+  }
+});
+
 test('an unknown command is refused', async () => {
   await expect(parsed(['publish'])).rejects.toThrow(ValidationError);
 });
@@ -192,6 +306,11 @@ describe('tester: migrated command boundaries', () => {
       memory: unexpected,
       selftest: unexpected,
       release: unexpected,
+      chord: unexpected,
+      test: unexpected,
+      check: unexpected,
+      fmt: unexpected,
+      lint: unexpected,
     };
 
     await expect(

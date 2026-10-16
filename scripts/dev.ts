@@ -33,6 +33,11 @@ export interface DevActions {
     stages: readonly Stage[],
     options: ReleaseOptions,
   ): void | Promise<void>;
+  chord(fake: boolean, args: readonly string[]): void | Promise<void>;
+  test(args: readonly string[]): void | Promise<void>;
+  check(options: { static: boolean }): void | Promise<void>;
+  fmt(): void | Promise<void>;
+  lint(args: readonly string[]): void | Promise<void>;
 }
 
 const RUN: DevActions = {
@@ -55,6 +60,21 @@ const RUN: DevActions = {
     const { runRelease } = await import('./dev/release/stages.ts');
 
     await dying(() => runRelease(release(), stages, options));
+  },
+  chord: async (fake, args) => {
+    process.exitCode = (await import('./dev/tools.ts')).chord(fake, args);
+  },
+  test: async (args) => {
+    process.exitCode = (await import('./dev/tools.ts')).test(args);
+  },
+  check: async (options) => {
+    process.exitCode = (await import('./dev/tools.ts')).check(options);
+  },
+  fmt: async () => {
+    process.exitCode = (await import('./dev/tools.ts')).fmt();
+  },
+  lint: async (args) => {
+    process.exitCode = (await import('./dev/tools.ts')).lint(args);
   },
 };
 
@@ -80,6 +100,73 @@ export function devCommand(actions: DevActions = RUN) {
       .action(function () {
         this.showHelp();
       })
+      .command(
+        'chord',
+        new Command()
+          .description(
+            "Run chord from source with React's production build; the rest of the arguments are chord's.",
+          )
+          .option(
+            '--fake',
+            'On the fake agent in tests/fixtures/fake_agent/ instead of a real one.',
+            { default: false },
+          )
+          .arguments('[args...:string]')
+          // Everything from chord's first word or option on is chord's.
+          .stopEarly()
+          .example('an agent', 'bun dev chord codex')
+          .example('the fake agent, one prompt', 'bun dev chord --fake -p hi')
+          .example("chord's own help", 'bun dev chord -- --help')
+          .action(function ({ fake }, ...args) {
+            return actions.chord(fake, [...args, ...this.getLiteralArgs()]);
+          }),
+      )
+      .command(
+        'test',
+        new Command()
+          .description(
+            "Run the whole suite with bun test, a worker per core, on the timings in tests/timings.json; the rest of the arguments are bun test's. --update-timings rewrites tests/timings.json: rerun with it after a slow file is added or split.",
+          )
+          .arguments('[args...:string]')
+          .stopEarly()
+          .example('the timings rewritten', 'bun dev test --update-timings')
+          .example('only the uncommitted changes', 'bun dev test --changed')
+          .action(function (_options, ...args) {
+            return actions.test([...args, ...this.getLiteralArgs()]);
+          }),
+      )
+      .command(
+        'check',
+        new Command()
+          .description(
+            "The full validation: tsc, ESLint, Prettier and lint/'s own test, then the whole suite. It stops at the first step that fails, with that step's exit status.",
+          )
+          .option(
+            '--static',
+            "Only tsc, ESLint, Prettier and lint/'s own test, not the suite.",
+            { default: false },
+          )
+          .action((options) => actions.check(options)),
+      )
+      .command(
+        'fmt',
+        new Command()
+          .description("Lay the tree out with Prettier's --write.")
+          .action(() => actions.fmt()),
+      )
+      .command(
+        'lint',
+        new Command()
+          .description(
+            "Run ESLint over the tree; the rest of the arguments are ESLint's.",
+          )
+          .arguments('[args...:string]')
+          .stopEarly()
+          .example('what ESLint can fix, fixed', 'bun dev lint --fix')
+          .action(function (_options, ...args) {
+            return actions.lint([...args, ...this.getLiteralArgs()]);
+          }),
+      )
       .command(
         'compile',
         new Command()

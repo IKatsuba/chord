@@ -40,7 +40,7 @@ Or build from source with [Bun](https://bun.sh) 1.4.2 or newer:
 
 ```sh
 bun install
-bun run compile --install   # compiles into ~/.local/bin/chord
+bun run dev compile --install   # compiles into ~/.local/bin/chord
 ```
 
 ## Use
@@ -562,18 +562,41 @@ adapter or CLI, it does not sign you in to anybody.
 ```sh
 bun install           # the dependencies
 bun run chord         # run from source
-bun run check         # types, lint, format, tests — must pass before every commit
-bun run compile       # this machine's binary into dist/
-bun run registry      # refetch the ACP Registry's agents into src/registry.ts
+bun run check         # full validation: types, lint, format, tests
+bun run dev compile   # this machine's binary into dist/
+bun run dev registry  # refetch the ACP Registry's agents into src/registry.ts
 ```
 
-`AGENTS.md` is how the code is written and is binding for people and agents
-alike. `docs/decisions.md` records why the stack is what it is.
+`AGENTS.md` is binding for people and agents and says which checks a change
+needs. `docs/decisions.md` records why the stack is what it is.
+
+`bun run dev --help` lists the build, release and maintenance commands:
+`compile` (`--all` or `--install`), `npm`, `registry`, `mark`, `screenshots`
+(optionally shot names), `memory`, `selftest <binary>` and `release`.
+
+The owner's release runs `install`, `check`, `natives`, `compile`, `sign`,
+`selftest`, `notarise`, `pack` and `publish` in order. `--skip` and `--only`
+take comma-separated stages; `--from` and `--to` bound the run. `--only`
+cannot combine with the other three. `--package` selects one package to
+publish. `--dry-run` stops before publishing but still submits to Apple;
+`--dry-run --skip notarise` leaves out that submission.
+
+Preflight always checks a clean tree, the version and npm login. Publishing
+also needs `main` equal to `origin/main` and no `v<version>` tag. `natives`,
+`sign` and `notarise` require an arm64 Mac; the signing identity and notary
+credentials are checked before building when their stages are selected.
+A stopped publish resumes from the packed tarballs without rebuilding;
+a dry run or a run without `publish` refuses that resume. Each tarball must
+match its recorded SHA-256 sum. The main package waits for all four platform
+packages on npm, then all five must answer before the annotated version
+tag is pushed to origin. Publishing needs the owner at a terminal: npm
+gets the terminal for each authorisation and the CLI waits. See
+`bun run dev release --help` for examples.
 
 A chord that has grown large: `kill -USR2 <pid>` writes a heap snapshot of
 it, without stopping it, into `heaps/` in chord's state directory, for
 Chrome's DevTools. `docs/memory.md` has how, and the long-run memory check
-(`bun scripts/memory.ts`).
+(`bun run dev memory`).
 
 ## Built on
 

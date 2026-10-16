@@ -6372,6 +6372,49 @@ signed: there is nothing to sign them with. CI keeps running the checks.
   npm, sleep and plutil faked on PATH; the fresh path builds everything, so
   it shares the same `publish_missing` untested.
 
+### CHD-395 — The local dev CLI (owner, 2026-10-16)
+
+`bun run dev <command>` is one local CLI on `@cliffy/command`, declared in
+`scripts/dev.ts`, with modules under `scripts/dev/`. Its commands are
+`release`, `selftest <binary>`, `compile` (`--all` or `--install`), `npm`,
+`registry`, `mark`, `screenshots [names…]` and `memory [options]`. The old
+package.json scripts and shell scripts are removed, with no aliases or
+shims. The release stages are `install`, `check`, `natives`, `compile`,
+`sign`, `selftest`, `notarise`, `pack` and `publish`, in that order.
+
+- **Stages can be selected.** `--skip` and `--only` take comma-separated
+  stages; `--from` and `--to` bound the run. `--only` conflicts with those
+  three. Any stage may be skipped, checks included, on a real release too.
+  `--package` limits publishing to one package. `--dry-run` excludes
+  publishing, still submits to Apple unless `--skip notarise` is given,
+  and refuses `--only publish` and `--package`. A stopped publish resumes
+  from the existing tarballs without rebuilding; a dry run or a run without
+  `publish` refuses that resume.
+- **Preflight always runs.** It checks the clean tree (untracked files
+  included), package.json's version, whether npm already has it, and
+  `npm whoami`. Only a run including `publish` requires `main` equal to
+  fetched `origin/main` and no `v<version>` tag locally or on origin.
+  A run including `natives`, `sign` or `notarise` checks for an arm64 Mac
+  first. The signing identity and Apple's notary credentials are checked
+  before building when their stages are selected.
+- **Packed bytes are the published bytes.** `pack` records `SHA256SUMS`
+  beside the tarballs in `dist/release/tgz/`; each tarball must match before
+  it is published, including one packed by an earlier dry run. Publishing
+  does not require self-test, signing and notarisation in the same run.
+- **The owner authorises npm at the keyboard.** Before the first publish,
+  the CLI requires a terminal and says npm will ask. Each `npm publish`
+  inherits stdin, stdout and stderr, with no spinner, and is waited on as
+  long as the owner takes. With npm 11.6.2, authorisation is per publish
+  process when the registry challenges it; the announced five-minute
+  remember-me window is unconfirmed. Staged publishing stays out.
+- **The tag follows npm visibility.** Already published versions are
+  skipped. `@chorded/chord` still waits for all four platform packages at
+  the version. Once all five answer `npm view`, the CLI creates the
+  annotated tag with `git tag -a v<version> -m "chord v<version>"` and pushes
+  it to origin. A single-package run leaves tagging to a later run while
+  any package is missing. If the main package was published but does not
+  answer in time, the CLI stops with the manual tagging command.
+
 ## 2026-10-14 — The working line in Chorded's colours (owner)
 
 The accent and the working line's spinner were Claude Code's: its orange

@@ -51,20 +51,24 @@ bun test --isolate --timeout=60000 --changed=<commit> ./tests/ # since a commit
 bun run lint --fix          # what ESLint can fix, then bun run fmt lays it out
 ```
 
-The binary is built by `bun build --compile`, Bun 1.4.2 or newer. The
-installer is `compile --install`, not a script named `install`, which
-`bun install` would run as the package's own install step:
+The binary is built by `bun build --compile`, Bun 1.4.2 or newer. Build,
+release and maintenance commands share `bun run dev <command>` (Cliffy):
 
 ```sh
-bun run compile             # this machine's binary into dist/<target>/chord
-bun run compile --all       # every release target
-bun run compile --install   # this machine's binary into ~/.local/bin/chord
-bun run npm                 # lay out npm/ from dist/
-scripts/release.sh --dry-run  # the owner's release, short of publishing
-bun run registry            # refetch the ACP Registry into src/registry.ts
-bun run mark                # rasterise scripts/mark.svg into src/ui/header/mark.ts
-bun run screenshots         # retake docs/images/ from chord on the fake agent
+bun run dev compile           # this machine's binary into dist/<target>/chord
+bun run dev compile --all     # every release target
+bun run dev compile --install # this machine's binary into ~/.local/bin/chord
+bun run dev npm               # lay out npm/ from dist/
+bun run dev release --dry-run # the owner's release, short of publishing
+bun run dev selftest <binary> # check a binary on the fake agent, including tmux
+bun run dev registry          # refetch the ACP Registry into src/registry.ts
+bun run dev mark              # rasterise scripts/mark.svg into the header mark
+bun run dev screenshots       # retake docs/images/ from chord on the fake agent
+bun run dev memory            # long-run memory check; options in docs/memory.md
 ```
+
+`bun run dev release --help` lists its stages and selection flags. A dry run
+still submits to Apple; add `--skip notarise` to leave that stage out.
 
 ## How code is written
 

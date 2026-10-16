@@ -618,18 +618,17 @@ await dying(() =>
     return String(spawnSync('git', args, { cwd }).stdout).trim();
   }
 
-  test.each([
-    ['SIGINT', 130],
-    ['SIGTERM', 143],
-    ['SIGHUP', 129],
-  ])('%s drops the commit and exits with its status', (signal, status) => {
-    const head = out(at.root, 'rev-parse', 'HEAD');
-    const child = interrupted(signal, { dryRun: true, to: 'compile' });
+  test.each(['SIGINT', 'SIGTERM', 'SIGHUP'])(
+    '%s drops the commit and ends the run by it',
+    (signal) => {
+      const head = out(at.root, 'rev-parse', 'HEAD');
+      const child = interrupted(signal, { dryRun: true, to: 'compile' });
 
-    expect(child.status).toBe(status);
-    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
-    expect(out(at.root, 'status', '--porcelain')).toBe('');
-  });
+      expect(child.signal).toBe(signal);
+      expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+      expect(out(at.root, 'status', '--porcelain')).toBe('');
+    },
+  );
 
   test('a run that has pushed keeps its commit', () => {
     const child = interrupted('SIGINT', {

@@ -6795,8 +6795,10 @@ Without one, the release is package.json's version, as before.
   preflight. package.json's own version is fine with any stages.
 - **A signal drops an unpushed commit.** While a local version commit is
   held (a dry run, a run without publish, or a real run before its push
-  succeeds), SIGINT, SIGTERM and SIGHUP drop it and the release exits with
-  130, 143 or 129. Once pushed there is nothing to drop. SIGKILL cannot be
+  succeeds), SIGINT, SIGTERM and SIGHUP drop it, and the signal is raised
+  again, as selftest's cleanup raises it, so selftest's own cleanup still
+  runs and the release ends by the signal (130, 143 or 129 in a shell).
+  Once pushed there is nothing to drop. SIGKILL cannot be
   caught: a killed run may leave the commit, dropped with
   `git reset --keep HEAD~1`, as the release's help says.
 - **A stopped publish resumes package.json's version only.**

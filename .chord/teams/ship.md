@@ -180,7 +180,7 @@ members:
       fake agent, never a real model or agent. Where the unit is seen on
       screen, also run it by hand: bun run chord:fake in a tmux session of
       your own at 120x40 and 80x24, -C on a directory from mktemp -d, and
-      kill the session after; where it reaches the binary, run bun run dev
+      kill the session after; where it reaches the binary, run bun dev
       compile and dist/<target>/chord the same way. Commit tests locally with
       a conventional message and no trailers. Send each failure to developer
       with the steps to reproduce and the design part it breaks, and rerun
@@ -246,7 +246,7 @@ The whole suite takes about ten minutes; nobody waits that long for a change of 
 
 - While working, and for every fix and every rerun, run only what the change reaches: one file (`bun test --isolate --timeout=60000 ./tests/ui/dialogs/Form_test.tsx`), the tests whose names match (`-t "a stop"` after the file), or every test file the change reaches by git (`bun test --parallel --timeout=60000 --changed ./tests/` for what is not committed, `--changed=<commit>` against a commit, such as the one before the unit). Add `bun run check:static` when types, lint or layout may have moved.
 - The whole `bun run check` runs at the end of a step, not after each edit: once by developer when a unit is finished, before it is handed on, and once by tester on the final commit of the slice. A fix commit gets the targeted tests and `bun run check:static`, not the whole suite.
-- A heavy command (`bun run check`, `bun run check:static`, `bun run dev compile`, a long test file) runs in the background, and you wait for it to report and read what it returned before acting on it. Do not poll it with sleep, and do not start a second whole run while one is still going.
+- A heavy command (`bun run check`, `bun run check:static`, `bun dev compile`, a long test file) runs in the background, and you wait for it to report and read what it returned before acting on it. Do not poll it with sleep, and do not start a second whole run while one is still going.
 
 Everything written is in English and names no private path, per AGENTS.md. Follow the one rule: a maintained package before our own code, and when a library does not do what the task asks, stop and hand the question up with options, never a workaround around it. Tests never reach a real model or a real agent. Commits are local, conventional and carry no trailers; nobody pushes or publishes.
 

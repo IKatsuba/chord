@@ -6374,7 +6374,7 @@ signed: there is nothing to sign them with. CI keeps running the checks.
 
 ### CHD-395 — The local dev CLI (owner, 2026-10-16)
 
-`bun run dev <command>` is one local CLI on `@cliffy/command`, declared in
+`bun dev <command>` is one local CLI on `@cliffy/command`, declared in
 `scripts/dev.ts`, with modules under `scripts/dev/`. Its commands are
 `release`, `selftest <binary>`, `compile` (`--all` or `--install`), `npm`,
 `registry`, `mark`, `screenshots [names…]` and `memory [options]`. The old
@@ -6678,7 +6678,7 @@ to `tests/fixtures/fake_agent/AGENTS.md`; the rest of Layout is dropped.
 `bunfig.toml`'s `[run] bun = true` makes every package.json script run on
 Bun even where a bin asks for node: under `bun run`, Bun puts a `node` that
 is itself first on PATH, and every child's `#!/usr/bin/env node` finds it.
-`bun run dev release` is such a script, so its npm ran on Bun. npm 11.6.2
+`bun dev release` is such a script, so its npm ran on Bun. npm 11.6.2
 fails there: the dry run's pack stage stopped at the scratch `npm init -y`
 with `mod.require is not a function`, and npm's log showed Bun as its
 runtime. `scripts/release.sh`, started by bash, had run npm on the user's
@@ -6692,14 +6692,14 @@ The options put to the owner:
   edits the environment Bun set up, which is a workaround.
 - **(b)** The entry point is `bun scripts/dev.ts <command>`, not a
   package.json script: a file run directly gets no node shim. This uses Bun
-  as it is, but changes the agreed `bun run dev` shape.
+  as it is, but changes the agreed `bun dev` shape.
 - **(c)** Turn off `[run] bun = true`. Every package.json script (tsc,
   eslint, prettier) would then run on the user's node, against its stated
   reason.
 - **(d)** The CLI runs npm as `node <npm>`, with the real node found past
   Bun's on PATH. This is (a) by other means.
 
-The owner chose (d), consenting to it as a workaround, so that `bun run dev`
+The owner chose (d), consenting to it as a workaround, so that `bun dev`
 stays and `bunfig.toml` is untouched. Every npm call of the release (view,
 whoami, pack, init, install, publish) goes through one helper in
 `scripts/dev/release/lib.ts`: it runs the first `node` on PATH whose

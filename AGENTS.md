@@ -53,22 +53,22 @@ bun run lint --fix          # what ESLint can fix, then bun run fmt lays it out
 ```
 
 The binary is built by `bun build --compile`, Bun 1.4.2 or newer. Build,
-release and maintenance commands share `bun run dev <command>` (Cliffy):
+release and maintenance commands share `bun dev <command>` (Cliffy):
 
 ```sh
-bun run dev compile           # this machine's binary into dist/<target>/chord
-bun run dev compile --all     # every release target
-bun run dev compile --install # this machine's binary into ~/.local/bin/chord
-bun run dev npm               # lay out npm/ from dist/
-bun run dev release --dry-run # the owner's release, short of publishing
-bun run dev selftest <binary> # check a binary on the fake agent, including tmux
-bun run dev registry          # refetch the ACP Registry into src/registry.ts
-bun run dev mark              # rasterise scripts/mark.svg into the header mark
-bun run dev screenshots       # retake docs/images/ from chord on the fake agent
-bun run dev memory            # long-run memory check; options in docs/memory.md
+bun dev compile           # this machine's binary into dist/<target>/chord
+bun dev compile --all     # every release target
+bun dev compile --install # this machine's binary into ~/.local/bin/chord
+bun dev npm               # lay out npm/ from dist/
+bun dev release --dry-run # the owner's release, short of publishing
+bun dev selftest <binary> # check a binary on the fake agent, including tmux
+bun dev registry          # refetch the ACP Registry into src/registry.ts
+bun dev mark              # rasterise scripts/mark.svg into the header mark
+bun dev screenshots       # retake docs/images/ from chord on the fake agent
+bun dev memory            # long-run memory check; options in docs/memory.md
 ```
 
-`bun run dev release --help` lists its stages and selection flags. A dry run
+`bun dev release --help` lists its stages and selection flags. A dry run
 still submits to Apple; add `--skip notarise` to leave that stage out.
 
 ## How code is written

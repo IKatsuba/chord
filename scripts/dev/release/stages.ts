@@ -1,5 +1,5 @@
 /**
- * `bun run dev release`: the release, on the owner's arm64 Mac, not in CI,
+ * `bun dev release`: the release, on the owner's arm64 Mac, not in CI,
  * as stages run in order, each checked before the next. Build every binary,
  * sign the macOS ones and the native libraries they embed, self-test,
  * notarise, pack, verify the installed copies, and publish to npm: the

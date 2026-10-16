@@ -1,7 +1,7 @@
 /**
  * Take the README's screenshots from chord itself.
  *
- *   bun run dev screenshots [name…]   rewrite docs/images/*.png, or those named
+ *   bun dev screenshots [name…]   rewrite docs/images/*.png, or those named
  *
  * Each shot runs chord from source in a tmux session of its own, `COLUMNS`
  * × `ROWS`, on

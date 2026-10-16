@@ -1,6 +1,6 @@
 /**
  * The release's stages, and which of them a run's options leave. Apart from
- * the stages themselves, so parsing `bun run dev release` loads none of them.
+ * the stages themselves, so parsing `bun dev release` loads none of them.
  */
 import { ValidationError } from '@cliffy/command';
 import type { Package } from './lib.ts';
@@ -19,7 +19,7 @@ export const STAGES = [
 
 export type Stage = (typeof STAGES)[number];
 
-/** `bun run dev release`'s options, as parsed. */
+/** `bun dev release`'s options, as parsed. */
 export interface ReleaseOptions {
   readonly dryRun?: boolean | undefined;
   readonly skip?: readonly Stage[] | undefined;

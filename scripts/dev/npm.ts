@@ -5,8 +5,8 @@
  * depending on all of them optionally and holding a small shim as its `bin`.
  * No Node build of chord exists; the shim only finds and execs the binary.
  *
- *   bun run dev compile --all && bun run dev npm   writes npm/
- * `bun run dev release` runs it on the signed binaries, packs and publishes.
+ *   bun dev compile --all && bun dev npm   writes npm/
+ * `bun dev release` runs it on the signed binaries, packs and publishes.
  */
 import { chmod, copyFile, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -79,7 +79,7 @@ export async function npm(): Promise<void> {
 
   if (missing.length > 0) {
     console.error(
-      `Missing binaries; run \`bun run dev compile --all\` first:\n${missing.join(
+      `Missing binaries; run \`bun dev compile --all\` first:\n${missing.join(
         '\n',
       )}`,
     );

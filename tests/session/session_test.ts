@@ -262,7 +262,7 @@ test('an agent that sends plans by id only on request sends chord one', () =>
 
 /**
  * A session on the fake at a short pace: `proposal`'s 2 s between plan
- * updates are for a person watching `chord:fake`, and what it sends, in what
+ * updates are for a person watching `bun dev chord --fake`, and what it sends, in what
  * order, is the same at any pace.
  */
 function withProposal(body: (session: Session) => Promise<void>) {

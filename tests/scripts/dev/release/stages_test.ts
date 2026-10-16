@@ -199,7 +199,7 @@ test('the credentials and the identity are asked only for the stages that need t
 
   expect(ran().filter((line) => !line.startsWith('npm '))).toStrictEqual([
     'bun install --frozen-lockfile',
-    'bun check',
+    'bun scripts/dev.ts check',
   ]);
 });
 
@@ -298,7 +298,7 @@ describe('tester: release orchestration boundaries', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1" = 'check' ]; then exit 2; fi
+if [ "$2" = 'check' ]; then exit 2; fi
 `,
     );
 
@@ -306,10 +306,10 @@ if [ "$1" = 'check' ]; then exit 2; fi
       await died(
         released({ dryRun: true, only: ['install', 'check', 'compile'] }),
       ),
-    ).toBe('bun check failed');
+    ).toBe('bun scripts/dev.ts check failed');
     expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
       'bun install --frozen-lockfile',
-      'bun check',
+      'bun scripts/dev.ts check',
     ]);
     expect(at.out).toEqual([]);
   });

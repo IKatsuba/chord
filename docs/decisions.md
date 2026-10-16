@@ -6729,3 +6729,33 @@ suite on 12 workers. Its tests moved, unchanged, into files of 20–30 s each:
 `selecting.ts`. The fixed waits the window tests take (`settle`'s 50 ms
 after each key, `asked`'s 150 ms) are the next cost, and are left as they
 are.
+
+## CHD-411 — package.json keeps only dev (owner, 2026-10-16)
+
+package.json's scripts keep only `dev` (`bun scripts/dev.ts`). The other
+scripts became commands of the Cliffy dev CLI, in `scripts/dev.ts` with the
+spawning in `scripts/dev/tools.ts`, with no aliases.
+
+- **The names.** `bun dev chord [args…]` and `bun dev chord --fake
+  [args…]` replace `chord` and `chord:fake`; `bun dev test [args…]`
+  replaces `test`, and `bun dev test --update-timings` replaces
+  `test:timings`, so there is no timings command; `bun dev check` and
+  `bun dev check --static` replace `check` and `check:static`; `bun dev
+  fmt` and `bun dev lint [args…]` replace `fmt` and `lint`.
+- **`--fake` is an option** of `chord`, parsed by Cliffy, never picked out
+  of argv by hand. It adds `fake --agent-command` with the fake agent in
+  `tests/fixtures/fake_agent/main.ts`.
+- **The rest of the arguments pass on as written.** `chord`, `test` and
+  `lint` have `.stopEarly()` and `[args...]`: Cliffy parses its own options
+  until the first word or option it does not know and hands on the rest.
+  Words after a literal `--` follow them, without the `--`, so `bun dev
+  chord -- --help` reaches chord's own help.
+- **chord runs in a child.** The CLI spawns `bun --define
+  process.env.NODE_ENV:"production" src/main.tsx`, as the script did, with
+  the terminal handed over, and exits with the child's status.
+- **check orchestrates in one process.** It calls tsc, ESLint, Prettier,
+  `lint/`'s own test and then the suite as functions, each spawning its
+  tool, and stops at the first failure with that tool's exit status. tsc,
+  ESLint and Prettier are spawned as `bun run <bin>`, so they run as the
+  scripts ran them, on Bun by `bunfig.toml`, also when the release's check
+  stage runs `bun scripts/dev.ts check` directly.

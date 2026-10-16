@@ -14,5 +14,5 @@ jobs:
         with:
           bun-version: 1.4.x
       - run: bun install --frozen-lockfile
-      - run: bun check
+      - run: bun dev check
       - run: bun dev compile

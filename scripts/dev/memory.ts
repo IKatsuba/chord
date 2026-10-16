@@ -2,7 +2,7 @@
  * The long-run memory check (CHD-343): chord's window on the fake agent, a
  * team at work in it for as long as asked, its memory sampled and its heap
  * snapshotted over the run, and the first snapshot compared with the last.
- * Too slow for `bun check`, whose tests must end in seconds: memory that
+ * Too slow for `bun dev check`, whose tests must end in seconds: memory that
  * grows only shows over minutes.
  *
  *   bun dev memory                        10 minutes from source
@@ -86,7 +86,7 @@ export async function memory(args: MemoryOptions): Promise<void> {
     Bun.file(join(root, 'tests', 'fixtures', 'teams', 'fake', 'bugfix.md')),
   );
 
-  // From source as `bun chord` runs it, React's production build defined
+  // From source as `bun dev chord` runs it, React's production build defined
   // (CHD-344), unless the development build is what is measured.
   const chord =
     args.binary === undefined

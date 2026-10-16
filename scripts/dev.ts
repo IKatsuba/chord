@@ -108,7 +108,7 @@ export function devCommand(actions: DevActions = RUN) {
         'chord',
         new Command()
           .description(
-            "Run chord from source with React's production build; the rest of the arguments are chord's.",
+            "Run chord from source with React's production build; the rest of the arguments are chord's, an empty one only after --.",
           )
           .option(
             '--fake',
@@ -129,12 +129,13 @@ export function devCommand(actions: DevActions = RUN) {
         'test',
         new Command()
           .description(
-            "Run the whole suite with bun test, a worker per core, on the timings in tests/timings.json; the rest of the arguments are bun test's. --update-timings rewrites tests/timings.json: rerun with it after a slow file is added or split.",
+            "Run the whole suite with bun test, a worker per core, on the timings in tests/timings.json; the rest of the arguments are bun test's, an empty one only after --. --update-timings rewrites tests/timings.json: rerun with it after a slow file is added or split.",
           )
           .arguments('[args...:string]')
           .stopEarly()
           .example('the timings rewritten', 'bun dev test --update-timings')
           .example('only the uncommitted changes', 'bun dev test --changed')
+          .example('an empty pattern, after --', "bun dev test -- -t ''")
           .action(function (_options, ...args) {
             return actions.test([...args, ...this.getLiteralArgs()]);
           }),
@@ -162,7 +163,7 @@ export function devCommand(actions: DevActions = RUN) {
         'lint',
         new Command()
           .description(
-            "Run ESLint over the tree; the rest of the arguments are ESLint's.",
+            "Run ESLint over the tree; the rest of the arguments are ESLint's, an empty one only after --.",
           )
           .arguments('[args...:string]')
           .stopEarly()

@@ -6745,11 +6745,14 @@ spawning in `scripts/dev/tools.ts`, with no aliases.
 - **`--fake` is an option** of `chord`, parsed by Cliffy, never picked out
   of argv by hand. It adds `fake --agent-command` with the fake agent in
   `tests/fixtures/fake_agent/main.ts`.
-- **The rest of the arguments pass on as written.** `chord`, `test` and
-  `lint` have `.stopEarly()` and `[args...]`: Cliffy parses its own options
-  until the first word or option it does not know and hands on the rest.
-  Words after a literal `--` follow them, without the `--`, so `bun dev
-  chord -- --help` reaches chord's own help.
+- **The rest of the arguments pass on as written, but empty words.**
+  `chord`, `test` and `lint` have `.stopEarly()` and `[args...]`: Cliffy
+  parses its own options until the first word or option it does not know
+  and hands on the rest. Words after a literal `--` follow them, without
+  the `--`, so `bun dev chord -- --help` reaches chord's own help. Cliffy
+  drops an empty word before `--` and keeps one after it; the owner took
+  that as it is, so an empty argument needs `--` (`bun dev test -- -t ''`),
+  as the three commands' help says.
 - **chord runs in a child.** The CLI spawns `bun --define
   process.env.NODE_ENV:"production" src/main.tsx`, as the script did, with
   the terminal handed over, and exits with the child's status.

@@ -65,7 +65,15 @@ test('each manager installs the exact version globally', () => {
   ]);
 });
 
-function upgradeWith(provider: ManagerProvider) {
+/**
+ * Upgrades from 0.54.0 to 0.55.0, with what the upgrade says to the person
+ * kept in `said` rather than printed among the test run's own lines.
+ */
+function upgradeWith(provider: ManagerProvider, said: string[] = []) {
+  const keep = (...data: unknown[]) => void said.push(data.join(' '));
+
+  provider.setLogger({ log: keep, info: keep, warn: keep, error: keep });
+
   return provider.upgrade({
     name: 'chord',
     from: '0.54.0',
@@ -81,10 +89,16 @@ test('the upgrade runs the manager that installed chord', async () => {
     return Promise.resolve();
   });
 
-  await upgradeWith(provider);
+  const said: string[] = [];
+
+  await upgradeWith(provider, said);
 
   expect(ran).toStrictEqual([
     ['bun', 'add', '--global', '@chorded/chord@0.55.0'],
+  ]);
+  expect(said).toStrictEqual([
+    '$ bun add --global @chorded/chord@0.55.0',
+    'A chord already running keeps 0.54.0 until it is started again.',
   ]);
 });
 
@@ -114,9 +128,12 @@ test('a manager missing from PATH is said by name', async () => {
     ),
   );
 
-  await expect(upgradeWith(provider)).rejects.toThrow(
+  const said: string[] = [];
+
+  await expect(upgradeWith(provider, said)).rejects.toThrow(
     'pnpm is not on PATH. Install pnpm, or upgrade chord with the manager that installed it.',
   );
+  expect(said).toStrictEqual(['$ pnpm add --global @chorded/chord@0.55.0']);
 });
 
 test('latest is resolved to an exact version for the manager', async () => {

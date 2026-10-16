@@ -28,11 +28,13 @@ export interface PreflightOptions {
   readonly dryRun: boolean;
   /** Whether the run's stages include publish. */
   readonly publish: boolean;
+  /** The version to release, before it is written; package.json's if none. */
+  readonly version?: string | undefined;
 }
 
 export function preflight(
   release: Release,
-  { dryRun, publish }: PreflightOptions,
+  { dryRun, publish, version = packageVersion(release) }: PreflightOptions,
 ): Preflight {
   // 1. The tree, untracked files included.
   const status = run(release, 'git', [
@@ -52,8 +54,6 @@ export function preflight(
   }
 
   // 2. The version, refused if the main package has it.
-  const version = packageVersion(release);
-
   if (published(release, 'chord', version)) {
     die(`@chorded/chord@${version} is on npm already`);
   }

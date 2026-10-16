@@ -34,7 +34,17 @@ export interface ReleaseOptions {
  * declarations cannot say of the values themselves is refused here, as a
  * ValidationError the parser shows with the help.
  */
-export function selectStages(options: ReleaseOptions): Stage[] {
+export function selectStages(
+  options: ReleaseOptions,
+  version?: string,
+): Stage[] {
+  // --only publish publishes what was packed for package.json's version.
+  if (version !== undefined && options.only?.includes('publish')) {
+    throw new ValidationError(
+      'A version is written before the stages run, so --only publish, which publishes what is packed already, takes none.',
+    );
+  }
+
   if (options.dryRun && options.only?.includes('publish')) {
     throw new ValidationError(
       '--dry-run stops before publish, so --only publish has nothing to run.',

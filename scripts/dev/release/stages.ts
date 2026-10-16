@@ -9,24 +9,30 @@
  */
 import { join } from 'node:path';
 import { check, compile, install, natives } from './build.ts';
+import { commitVersion, dropVersion, pushVersion } from './bump.ts';
 import { die, identity, type Package, type Release, run, said } from './lib.ts';
 import { notarise, PROFILE } from './notarise.ts';
 import { pack } from './pack.ts';
-import { preflight } from './preflight.ts';
+import { packageVersion, preflight } from './preflight.ts';
 import { publish, tarballs } from './publish.ts';
 import { selftest } from './selftest.ts';
 import { type ReleaseOptions, type Stage } from './select.ts';
 import { sign } from './sign.ts';
+import { releaseVersion, VersionError } from './version.ts';
 
 const ARM = 'dist/bun-darwin-arm64/chord';
 const X64 = 'dist/bun-darwin-x64/chord';
 
-/** Runs `stages`, guarded as the owner decided, on `release`. */
+/**
+ * Runs `stages`, guarded as the owner decided, on `release`, at `wanted`:
+ * a version or a bump of package.json's, or package.json's own if none.
+ */
 export async function runRelease(
   release: Release,
   stages: readonly Stage[],
   options: ReleaseOptions,
   machine: { platform: string; arch: string } = process,
+  wanted?: string,
 ): Promise<void> {
   const has = (stage: Stage) => stages.includes(stage);
   const dryRun = options.dryRun ?? false;
@@ -45,14 +51,22 @@ export async function runRelease(
   // A clean tree, the version not yet published (or a run stopped between
   // publishes to resume), and the owner's npm login; for a run that
   // publishes, main level with origin's and no tag yet.
+  const current = packageVersion(release);
   const { mode, version } = preflight(release, {
     dryRun,
     publish: has('publish'),
+    version: target(current, wanted),
   });
 
   // A run stopped between publishes is finished from the packages it built,
   // without building again.
   if (mode === 'resume') {
+    if (version !== current) {
+      die(
+        `a stopped publish resumes package.json's version ${current}, not ${version}; run it without a version`,
+      );
+    }
+
     release.out(
       `resuming ${version}: a platform package is published, @chorded/chord is not`,
     );
@@ -98,16 +112,45 @@ export async function runRelease(
     publish: () => published(release, version, options.package),
   };
 
-  for (const stage of stages) {
-    await steps[stage]();
-  }
+  // A new version is written and committed before any stage reads it; a
+  // run that publishes keeps the commit on origin once pushed, any other
+  // drops it.
+  const head =
+    version === current ? undefined : commitVersion(release, version);
 
-  if (dryRun) {
-    release.out(
-      has('pack')
-        ? `dry run: @chorded/chord ${version} is packed in ${tarballs(release)}, not published`
-        : `dry run: @chorded/chord ${version}, ran ${stages.join(', ')}; not published`,
-    );
+  try {
+    if (head !== undefined && has('publish')) {
+      pushVersion(release, version, head);
+    }
+
+    for (const stage of stages) {
+      await steps[stage]();
+    }
+
+    if (dryRun) {
+      release.out(
+        has('pack')
+          ? `dry run: @chorded/chord ${version} is packed in ${tarballs(release)}, not published`
+          : `dry run: @chorded/chord ${version}, ran ${stages.join(', ')}; not published`,
+      );
+    }
+  } finally {
+    if (head !== undefined && !has('publish')) {
+      dropVersion(release, head);
+    }
+  }
+}
+
+/** The version `wanted` makes of `current`, or the release dies saying why. */
+function target(current: string, wanted: string | undefined): string {
+  try {
+    return releaseVersion(current, wanted);
+  } catch (error) {
+    if (error instanceof VersionError) {
+      die(error.message);
+    }
+
+    throw error;
   }
 }
 

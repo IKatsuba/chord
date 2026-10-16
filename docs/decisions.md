@@ -6759,3 +6759,31 @@ spawning in `scripts/dev/tools.ts`, with no aliases.
   ESLint and Prettier are spawned as `bun run <bin>`, so they run as the
   scripts ran them, on Bun by `bunfig.toml`, also when the release's check
   stage runs `bun scripts/dev.ts check` directly.
+
+### CHD-412 — the release takes a version or a bump (owner, 2026-10-16)
+
+`bun dev release [version]` takes one positional: an exact version, or
+`major`, `minor`, `patch` or `fix` (`patch`'s other name), parsed, compared
+and bumped by the `semver` package (`scripts/dev/release/version.ts`).
+Without one, the release is package.json's version, as before.
+
+- **Only canonical release versions.** An exact version is written as
+  semver writes it: no `v` or `=` prefix, no build metadata. Pre-releases
+  are refused, and every version, a bump or an exact one, is refused while
+  package.json's own version is a pre-release.
+- **An exact version is above package.json's, or is it.** package.json's
+  own version is accepted and releases it with no new commit, so a rerun
+  after a failed publish can name the version that run committed.
+- **A run that publishes commits and pushes first.** Preflight checks the
+  new version (not on npm, not tagged, the tree clean, main level with
+  origin's). Then, before any stage, the release writes the version into
+  package.json, commits that file alone as `chore: chord v<version>` and
+  pushes main to origin. If the push fails, the commit is dropped, the
+  branch and tree left as found, and the release stops. A later failure
+  leaves the pushed commit there; a rerun with no version, or with that
+  one, releases package.json's, with no new commit.
+- **Any other run drops its commit.** A dry run, or a run without publish,
+  makes the same commit locally, runs its stages on it, and drops it at the
+  end (`git reset --keep`), on a failure too, pushing nothing.
+- **A stopped publish resumes package.json's version only**, and a version
+  with `--only publish` is refused when the options are parsed.

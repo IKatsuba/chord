@@ -131,7 +131,7 @@ beforeEach(() => {
 
   recordSums(tgz, files);
 
-  git(place, 'init', '-q', '--bare', origin);
+  git(place, 'init', '-q', '--bare', '-b', 'main', origin);
   git(repo, 'init', '-q', '-b', 'main');
   git(repo, 'add', '-A');
   git(repo, 'commit', '-q', '-m', 'release');

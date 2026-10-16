@@ -103,7 +103,8 @@
   `mode` says the mode the turn runs in;
   `subagent` runs subagents as Claude's and Codex's adapters send them to a
   client that declares `clientCapabilities.subagents` (`subagent_spawned`,
-  `subagent_state_update`, each subagent's work under its own session id):
+  `subagent_state_update`, each subagent's work under its own session id,
+  opaque and never one an earlier fake process gave, as after a resume):
   two spawned back to back, one with a plan, five calls, a subagent of its
   own and a write it asks permission for, the other failing, then, after a
   line of the parent's, a third alone that runs on about 2 s past the turn's

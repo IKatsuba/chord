@@ -21,9 +21,16 @@ type Children = Map<string, Turn>;
  */
 let subagentCount = 0;
 
-/** A new subagent's session id. */
+/**
+ * This process's own mark in its subagents' ids: a fake started on a
+ * resumed session counts from zero again, and a new subagent must not take
+ * the id of one an earlier process started, as no real adapter's does.
+ */
+const run = crypto.randomUUID().slice(0, 8);
+
+/** A new subagent's session id, opaque as an adapter's. */
 function subagentId(): string {
-  return `agent-${++subagentCount}`;
+  return `agent-${run}-${++subagentCount}`;
 }
 
 /**

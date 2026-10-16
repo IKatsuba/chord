@@ -96,7 +96,8 @@
  *
  * `subagent` runs subagents as both adapters do to a client that declares
  * `clientCapabilities.subagents`: each announced to its parent by
- * `subagent_spawned`, its work sent under a session id of its own, and its
+ * `subagent_spawned`, its work sent under a session id of its own, opaque
+ * and never one an earlier fake process gave, as after a resume, and its
  * end by `subagent_state_update`. Two start back to back: one makes a plan,
  * calls tools, starts a subagent of its own and asks permission to write;
  * the other fails. After a line of the parent's, a third starts alone and

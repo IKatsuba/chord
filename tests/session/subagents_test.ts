@@ -526,11 +526,61 @@ async function withSession(
   }
 }
 
-/** The ids of the subagents the fake's `subagent` scenario starts, in order. */
-const FIND = 'agent-1';
-const DRAW = 'agent-2';
-const READ = 'agent-3';
-const TESTS = 'agent-4';
+/** The titles of the subagents the fake's `subagent` scenario starts. */
+const TITLES = {
+  find: 'Find the session layer',
+  draw: 'Find where tool calls are drawn on screen and how they fold',
+  read: 'Read the transport tests',
+  tests: 'Run the whole test suite',
+} as const;
+
+/**
+ * The ids of the `subagent` scenario's subagents, by the titles they were
+ * announced with in `updates`: the fake's ids are opaque, fresh in each
+ * process.
+ */
+function idsOf(
+  updates: Iterable<SessionUpdate>,
+): Record<keyof typeof TITLES, string> {
+  const byTitle = new Map<string, string>();
+
+  for (const update of updates) {
+    if (update.sessionUpdate === 'subagent_update' && update.title) {
+      byTitle.set(update.title, update.sessionId);
+    }
+  }
+
+  const id = (key: keyof typeof TITLES) => {
+    const found = byTitle.get(TITLES[key]);
+
+    assert(found, `no subagent ${TITLES[key]}`);
+
+    return found;
+  };
+
+  // Each looked up as it is read, as a run cut short announces only some.
+  return {
+    get find() {
+      return id('find');
+    },
+    get draw() {
+      return id('draw');
+    },
+    get read() {
+      return id('read');
+    },
+    get tests() {
+      return id('tests');
+    },
+  };
+}
+
+/** The updates among a transcript's actions. */
+function updatesIn(actions: readonly TranscriptAction[]): SessionUpdate[] {
+  return actions.flatMap((action) =>
+    action.type === 'update' ? [action.update] : [],
+  );
+}
 
 test("a subagent's updates reach its parent's session tagged with it, and none reads as the parent's", () =>
   withSession(async (session) => {
@@ -542,6 +592,10 @@ test("a subagent's updates reach its parent's session tagged with it, and none r
     });
 
     const ran = await run(session, 'subagent');
+    const { find, draw, read, tests } = idsOf([
+      ...ran.updates,
+      ...ran.subagents.map(({ update }) => update),
+    ]);
 
     expect(said(ran.updates)).toStrictEqual([
       'I will send two agents, one for each side.',
@@ -555,23 +609,23 @@ test("a subagent's updates reach its parent's session tagged with it, and none r
       ran.updates.flatMap((update) =>
         update.sessionUpdate === 'subagent_update' ? [update.sessionId] : [],
       ),
-    ).toStrictEqual([FIND, DRAW, DRAW, FIND, TESTS]);
+    ).toStrictEqual([find, draw, draw, find, tests]);
     expect(
       [...new Set(ran.subagents.map((each) => each.subagentId))].toSorted(),
-    ).toStrictEqual([FIND, DRAW, READ, TESTS]);
+    ).toStrictEqual([find, draw, read, tests].toSorted());
     // The grandchild is announced on its parent's session, not the root's.
     expect(
       ran.subagents.some(
         ({ update, subagentId }) =>
-          subagentId === FIND &&
+          subagentId === find &&
           update.sessionUpdate === 'subagent_update' &&
-          update.sessionId === READ,
+          update.sessionId === read,
       ),
     ).toBeTruthy();
     // The child's request is answered like any other, its call named.
     expect(
       asked.map(({ sessionId, toolCall }) => [sessionId, toolCall.title]),
-    ).toStrictEqual([[FIND, 'Write notes/routing.md']]);
+    ).toStrictEqual([[find, 'Write notes/routing.md']]);
     expect(ran.result.status).toStrictEqual('completed');
   }));
 
@@ -579,6 +633,7 @@ test('the subagent scenario folds every state CHD-151 draws, apart from the pare
   withSession(async (session) => {
     const actions = await play(session, 'subagent');
     const transcript = fold(actions);
+    const { find } = idsOf(updatesIn(actions));
 
     expect(shape(transcript.entries)).toStrictEqual([
       'user: subagent',
@@ -618,9 +673,9 @@ test('the subagent scenario folds every state CHD-151 draws, apart from the pare
     ]);
     expect(transcript.plan).toStrictEqual([]);
     expect(
-      only(transcript, FIND).plan.map((step) => step.status),
+      only(transcript, find).plan.map((step) => step.status),
     ).toStrictEqual(['completed', 'completed', 'completed']);
-    expect(only(transcript, FIND).planAt).toStrictEqual(1);
+    expect(only(transcript, find).planAt).toStrictEqual(1);
     expect(runningSubagents(transcript)).toStrictEqual(1);
   }));
 
@@ -628,6 +683,7 @@ test('Esc while a subagent asks withdraws its request, and every subagent still 
   withSession(async (session) => {
     const actions = await play(session, 'subagent', { answer: 'cancel' });
     const transcript = fold(actions);
+    const { find, draw, read } = idsOf(updatesIn(actions));
 
     expect(transcript.turn).toStrictEqual({ status: 'idle' });
     expect(
@@ -641,9 +697,9 @@ test('Esc while a subagent asks withdraws its request, and every subagent still 
     expect(
       subagentsIn(transcript.entries).map(({ id, state }) => [id, state]),
     ).toStrictEqual([
-      [FIND, 'cancelled'],
-      [READ, 'completed'],
-      [DRAW, 'failed'],
+      [find, 'cancelled'],
+      [read, 'completed'],
+      [draw, 'failed'],
     ]);
     // The agent's own word for the one it cancelled came too.
     expect(
@@ -651,7 +707,7 @@ test('Esc while a subagent asks withdraws its request, and every subagent still 
         (action) =>
           action.type === 'update' &&
           action.update.sessionUpdate === 'subagent_update' &&
-          action.update.sessionId === FIND &&
+          action.update.sessionId === find &&
           action.update.state?.state === 'cancelled',
       ),
     ).toBeTruthy();
@@ -667,8 +723,16 @@ test('a subagent that outlives its turn goes on reaching the session after the a
     const { promise: over, resolve } = Promise.withResolvers<void>();
     const after: TranscriptAction[] = [];
     let answered = false;
+    let tests: string | undefined;
 
     session.subscribe((update, subagentId) => {
+      if (
+        update.sessionUpdate === 'subagent_update' &&
+        update.title === TITLES.tests
+      ) {
+        tests = update.sessionId;
+      }
+
       if (!answered) {
         return;
       }
@@ -682,7 +746,7 @@ test('a subagent that outlives its turn goes on reaching the session after the a
 
       if (
         update.sessionUpdate === 'subagent_update' &&
-        update.sessionId === TESTS
+        update.sessionId === tests
       ) {
         resolve();
       }
@@ -698,7 +762,8 @@ test('a subagent that outlives its turn goes on reaching the session after the a
     const later = fold(after, live);
 
     expect(runningSubagents(later)).toStrictEqual(0);
-    expect(shape(only(later, TESTS).entries)).toStrictEqual([
+    assert(tests !== undefined);
+    expect(shape(only(later, tests).entries)).toStrictEqual([
       'tool: deno task test completed',
       'assistant: Every test passed.',
     ]);
@@ -816,10 +881,11 @@ test('a resumed session folds its subagents as they were live, times and all, an
       permit: true,
     });
     const record = await readPast((await readRecords(stateDir))[0]?.path ?? '');
+    const { find, tests } = idsOf(updatesIn(transcriptActions(live)));
 
     expect(
       record.some(
-        (entry) => entry.type === 'update' && entry.subagentId === FIND,
+        (entry) => entry.type === 'update' && entry.subagentId === find,
       ),
       "a subagent's update is recorded with its id",
     ).toBeTruthy();
@@ -851,12 +917,90 @@ test('a resumed session folds its subagents as they were live, times and all, an
       const expected = fold([{ type: 'disconnected', turnId: TURN }], shown);
 
       expect(timed(pastOf(session))).toStrictEqual(timed(expected));
-      expect(only(pastOf(session), TESTS).state).toStrictEqual('disconnected');
-      expect(only(pastOf(session), TESTS).endedAt).toStrictEqual(undefined);
+      expect(only(pastOf(session), tests).state).toStrictEqual('disconnected');
+      expect(only(pastOf(session), tests).endedAt).toStrictEqual(undefined);
       expect(runningSubagents(pastOf(session))).toStrictEqual(0);
     } finally {
       await session.close();
     }
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('subagents started again after a resume, in a new fake process, are new ones, and the old ones stay as they were (CHD-159)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-subagents-'));
+  const stateDir = join(dir, 'state');
+  /** The session as a fake reopened on its record draws it. */
+  const reopened = async (id: string): Promise<Transcript> => {
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: RESUMING,
+      resume: sessionById(await readRecords(stateDir), id, {
+        agent: 'fake',
+        cwd: dir,
+      }),
+    });
+
+    try {
+      return pastOf(session);
+    } finally {
+      await session.close();
+    }
+  };
+
+  /** Each top-level entry as a short line, a subagent by its title. */
+  const outline = (entries: readonly Entry[]) =>
+    entries.map((entry) =>
+      entry.kind === 'subagent'
+        ? `subagent: ${entry.subagent.title}`
+        : shape([entry])[0],
+    );
+
+  try {
+    const id = await recordSession({
+      stateDir,
+      cwd: dir,
+      command: FAKE,
+      prompts: ['subagent'],
+      permit: true,
+    });
+    const before = await reopened(id);
+
+    await recordSession({
+      stateDir,
+      cwd: dir,
+      command: RESUMING,
+      prompts: ['subagent'],
+      resume: sessionById(await readRecords(stateDir), id, {
+        agent: 'fake',
+        cwd: dir,
+      }),
+      permit: true,
+    });
+
+    const after = await reopened(id);
+    const old = subagentsIn(before.entries);
+    const oldIds = new Set(old.map((subagent) => subagent.id));
+    const all = subagentsIn(after.entries);
+    const fresh = all.filter((subagent) => !oldIds.has(subagent.id));
+
+    expect(old).toHaveLength(4);
+    // The old ones are as they were, states, times and all.
+    expect(all.filter((subagent) => oldIds.has(subagent.id))).toStrictEqual(
+      old,
+    );
+    // The new ones are as many, each its own, started in the same order.
+    expect(new Set(fresh.map((subagent) => subagent.id)).size).toStrictEqual(4);
+    expect(fresh.map((subagent) => subagent.title)).toStrictEqual(
+      old.map((subagent) => subagent.title),
+    );
+    // Each new spawn is an entry of its own, between the reply's lines.
+    expect(outline(after.entries)).toStrictEqual([
+      ...outline(before.entries),
+      ...outline(before.entries),
+    ]);
   } finally {
     await rm(dir, { recursive: true });
   }
@@ -888,7 +1032,7 @@ test('an agent that exits disconnects its running subagents then, and a resumed 
       if (
         event.type === 'update' &&
         event.update.sessionUpdate === 'subagent_update' &&
-        event.update.sessionId === READ
+        event.update.title === TITLES.read
       ) {
         process.kill([...(session?.agentPids ?? [])][0] ?? 0, 'SIGKILL');
       }
@@ -910,10 +1054,11 @@ test('an agent that exits disconnects its running subagents then, and a resumed 
 
     const exit = events.find((event) => event.type === 'disconnected');
     const shown = fold(transcriptActions(events));
+    const { find, read } = idsOf(updatesIn(transcriptActions(events)));
 
     assert(exit?.type === 'disconnected' && exit.at !== undefined);
     expect(
-      [FIND, READ].map((id) => {
+      [find, read].map((id) => {
         const { state, endedAt } = only(shown, id);
 
         return [state, endedAt];

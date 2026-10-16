@@ -530,7 +530,9 @@ const FORM_PRESSES = RAW_PRESSES.filter(
  * Typing and editing in a text field, as in the prompt, are not listed.
  */
 test('every key a form answers is in the panel', async () => {
-  const settle = (ms = 10) => new Promise((resolve) => setTimeout(resolve, ms));
+  // A lone ESC waits 20 ms for the rest of a sequence that never comes; the
+  // harness's own wait is for what a key draws, so this one is the ESC's.
+  const escaped = () => new Promise((resolve) => setTimeout(resolve, 40));
   const answered = new Set<string>();
 
   for (const [state, schema, prelude] of FORM_STATES) {
@@ -548,11 +550,8 @@ test('every key a form answers is in the panel', async () => {
         />,
       );
 
-      await settle();
-
       for (const press of prelude) {
         await app.write(press);
-        await settle();
       }
 
       answers.length = 0;
@@ -567,8 +566,10 @@ test('every key a form answers is in the panel', async () => {
         const before = app.frame();
 
         await app.write(sequence);
-        // A lone ESC waits 20 ms for the rest of a sequence that never comes.
-        await settle(40);
+
+        if (sequence === '\x1b') {
+          await escaped();
+        }
 
         if (app.frame() === before && answers.length === 0) {
           continue;
@@ -659,7 +660,9 @@ const QUESTION_STATES: [string, string[], boolean][] = [
  * listed.
  */
 test('every key the question box answers is in the panel', async () => {
-  const settle = (ms = 10) => new Promise((resolve) => setTimeout(resolve, ms));
+  // A lone ESC waits 20 ms for the rest of a sequence that never comes; the
+  // harness's own wait is for what a key draws, so this one is the ESC's.
+  const escaped = () => new Promise((resolve) => setTimeout(resolve, 40));
   const answered = new Set<string>();
 
   for (const [state, prelude, typing] of QUESTION_STATES) {
@@ -682,11 +685,8 @@ test('every key the question box answers is in the panel', async () => {
         />,
       );
 
-      await settle();
-
       for (const press of prelude) {
         await app.write(press);
-        await settle();
       }
 
       answers.length = 0;
@@ -701,8 +701,10 @@ test('every key the question box answers is in the panel', async () => {
         const before = app.frame();
 
         await app.write(sequence);
-        // A lone ESC waits 20 ms for the rest of a sequence that never comes.
-        await settle(40);
+
+        if (sequence === '\x1b') {
+          await escaped();
+        }
 
         if (app.frame() === before && answers.length === 0) {
           continue;

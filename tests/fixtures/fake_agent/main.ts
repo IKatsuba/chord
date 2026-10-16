@@ -383,6 +383,13 @@ const playing = new Map<string, Turn>();
 const prompted = new Map<string, Promise<unknown>>();
 
 /**
+ * The messages chord holds for a session's next prompt and sends ahead of
+ * it, each joined to the next by a blank line, as `Conversation.send` does.
+ */
+const HELD_NOTES =
+  /^(?:<message from="[^"]*"(?: monitor="[^"]*")?>\n[\s\S]*?\n<\/message>\n\n)+/;
+
+/**
  * A prompt that starts with one of `FAKE_COMMANDS`: `greet` answers with a
  * fixed line, `echo` with what follows it.
  */
@@ -391,9 +398,12 @@ async function playCommand(
   text: string,
 ): Promise<acp.StopReason | undefined> {
   // `/team new` as it reaches the agent: the words after chord's line that
-  // names propose_team.
+  // names propose_team, behind the notes chord held for main's next prompt,
+  // each a wrapped message on its own, as a run's `/team run` leaves one.
   if (
-    text.startsWith('The person asks for a team of agents through /team new')
+    text
+      .replace(HELD_NOTES, '')
+      .startsWith('The person asks for a team of agents through /team new')
   ) {
     return await PLAY.propose(turn);
   }

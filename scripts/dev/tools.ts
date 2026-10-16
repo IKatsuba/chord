@@ -13,12 +13,14 @@ import { spawnSync } from 'node:child_process';
 import { constants } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import { quote } from 'shell-quote';
 
 /** Runs one command to its end and answers its exit status. */
 export type Run = (argv: readonly string[]) => number;
 
-const root = new URL('../..', import.meta.url).pathname;
+// A file path, not the URL's percent-encoded one, for a checkout under a name with a space.
+const root = fileURLToPath(new URL('../..', import.meta.url));
 
 /** `argv` from the root, on this terminal; a signal is 128 + its number. */
 export const spawn: Run = ([command, ...args]) => {

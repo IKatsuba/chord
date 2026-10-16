@@ -17,11 +17,18 @@ import { Ansi } from '../../theme/Ansi.tsx';
 import { CUT, DIM, DIM_BORDER, fg, FILL, TEXT } from '../../theme/text.ts';
 import { TranscriptEntry } from '../Transcript.tsx';
 import type { Headline } from '../tools/tools.ts';
-import { Gutter, Outcome, Tool, ToolMarker, Under } from '../tools/Tool.tsx';
 import {
+  Gutter,
+  HeadlineText,
+  Outcome,
+  Tool,
+  ToolMarker,
+  Under,
+} from '../tools/Tool.tsx';
+import {
+  agentHeadline,
   agentTone,
   blockFold,
-  blockHeadline,
   endedLine,
   endingOf,
   groupHeader,
@@ -181,16 +188,12 @@ function AgentBlock({
   const fold = blockFold(subagent, waitsOf(turn));
   const key = useHintKey('app:toggleTranscript');
   const ended = endedLine(subagent);
-  const colours = useHeadlineColours();
-  const selectable = useSelectable();
 
   return (
     <box marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
         <ToolMarker tone={agentTone(subagent.state)} />
-        <text {...CUT} {...selectable}>
-          {headlineText(blockHeadline(subagent, width), colours)}
-        </text>
+        <HeadlineText line={agentHeadline(subagent)} width={width} />
       </box>
       {open ? (
         <>
@@ -408,6 +411,7 @@ function Work({
         call={item.entry.call}
         expanded
         ended={endingOf(subagent.state) !== undefined}
+        width={width}
       />
     ) : (
       <TranscriptEntry

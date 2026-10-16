@@ -173,6 +173,46 @@ test('a task whose record has gone says so where its work would be, only when op
   expect(await shown(false)).toContain('⎿  Cancelled (9s)');
 });
 
+test("a lone block's headline wraps whole, its runtime, model and effort after the `)`", async () => {
+  const drawn = await draw(
+    <Agents
+      agents={[
+        {
+          id: 's1',
+          title: 'Fix the tokenizer so a heredoc reaches the shell whole',
+          state: 'completed',
+          entries: [],
+          plan: [],
+          startedAt: 0,
+          endedAt: 9_000,
+          task: {
+            name: 'Fix the tokenizer',
+            runtime: 'codex',
+            model: 'gpt-5.3-codex',
+            effort: 'high',
+          },
+        },
+      ]}
+      turn={{ status: 'idle' }}
+      agent='fake'
+      open={false}
+      width={36}
+    />,
+    { columns: 40, rows: 10 },
+  );
+  const frame = stripAnsi(drawn.frame());
+
+  await drawn.unmount();
+
+  expect(frame).toContain(
+    [
+      '⏺ Agent(Fix the tokenizer so a heredoc',
+      '  reaches the shell whole) · codex ·',
+      '  gpt-5.3-codex · high',
+    ].join('\n'),
+  );
+});
+
 describe('tester: selectable group titles', () => {
   for (const [columns, rows] of [
     [120, 40],

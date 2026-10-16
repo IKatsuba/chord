@@ -7,19 +7,18 @@ import type { ToolCallContent, ToolKind } from '@agentclientprotocol/sdk';
 import type { ToolCall, TurnState } from '../../../session/transcript/types.ts';
 import { type DiffView, diffView } from './diff.ts';
 import { isEmpty, type TerminalView, terminalView } from './terminal.ts';
+import { type Run, runs } from '../../theme/text.ts';
 import type { CodeTones } from '../../theme/theme.ts';
 import { chordHeadline, chordLines, chordWraps } from './chord.ts';
 import { wrapLine } from '../message.ts';
 
-/** `Read(src/main.tsx)`: the tool's name, and its argument when it has one. */
+/**
+ * `Read(src/main.tsx)`: the tool's name, and its argument when it has one,
+ * whole: a heredoc command keeps every line, as Claude Code draws it.
+ */
 export interface Headline {
   readonly name: string;
   readonly arg?: string;
-  /**
-   * The argument's lines past its first, which only ctrl+o's view shows: a
-   * headline is one row, so a heredoc command does not fill the transcript.
-   */
-  readonly more?: readonly string[];
   /** Said dim after it: a task's runtime, a message that waited. */
   readonly note?: string;
   /**
@@ -55,18 +54,102 @@ const VERB_FIRST = /^([A-Z][A-Za-z]*) (.+)$/;
 /**
  * ACP sends a free-text title (`Read README.md`, `` `ls -la` ``), so the
  * headline is read out of it: a leading capitalised verb becomes the name,
- * otherwise the call's kind names the tool and the title is its argument,
- * cut to its first line.
+ * otherwise the call's kind names the tool and the title is its argument.
  */
 export function headline(call: ToolCall): Headline {
-  if (call.chord !== undefined) {
-    return chordHeadline(call.chord);
+  return call.chord === undefined
+    ? titleHeadline(call)
+    : chordHeadline(call.chord);
+}
+
+/**
+ * A headline for a row that stays one row, a subagent's latest calls and
+ * the sessions list's: its argument's first line.
+ */
+export function firstLine(line: Headline): Headline {
+  const [first = ''] = line.arg?.split('\n') ?? [];
+
+  return line.arg === undefined ? line : { ...line, arg: first.trimEnd() };
+}
+
+/** Which part of a headline a run of it is, which says how it is drawn. */
+export type HeadlinePart = 'to' | 'name' | 'arg' | 'note';
+
+/** A run of a headline's text, its own SGR read, and its part. */
+export interface HeadlinePiece {
+  readonly part: HeadlinePart;
+  readonly run: Run;
+}
+
+/**
+ * A headline laid out in rows of `width` cells, as `wrapLine` wraps: each
+ * line of its argument starts a row, a line wider than the room breaks
+ * between words, and the `)` and the note follow the argument's last word.
+ * The runs are split where the rows break, so each keeps its style.
+ */
+export function headlineRows(
+  { name, arg, note, sent }: Headline,
+  width: number,
+): HeadlinePiece[][] {
+  const parts: [HeadlinePart, string][] = [
+    ...(sent ? [['to', 'to '] as [HeadlinePart, string]] : []),
+    ['name', sent ? `@${name}` : name],
+    ...(arg === undefined
+      ? []
+      : [['arg', `(${arg})`] as [HeadlinePart, string]]),
+    ...(note === undefined ? [] : [['note', note] as [HeadlinePart, string]]),
+  ];
+  const pieces = parts.flatMap(([part, text]) =>
+    runs(text).map((run) => ({ part, run })),
+  );
+  const plain = pieces.map((piece) => piece.run.text).join('');
+  const spans: [number, number][] = [];
+  let lineStart = 0;
+
+  for (const line of plain.split('\n')) {
+    let at = 0;
+
+    for (const row of wrapLine(line, width)) {
+      // wrap-ansi drops only the spaces it broke on, so a row is the line's
+      // text from the first place it is found on.
+      const found = row === '' ? -1 : line.indexOf(row, at);
+      const start = found < 0 ? at : found;
+
+      spans.push([lineStart + start, lineStart + start + row.length]);
+
+      at = start + row.length;
+    }
+
+    lineStart += line.length + 1;
   }
 
-  const read = titleHeadline(call);
-  const [first = '', ...more] = read.arg?.split('\n') ?? [];
+  return spans.map(([start, end]) => slicePieces(pieces, start, end));
+}
 
-  return more.length === 0 ? read : { ...read, arg: first.trimEnd(), more };
+/** The pieces' text from `start` to `end`, cut where they cross either. */
+function slicePieces(
+  pieces: readonly HeadlinePiece[],
+  start: number,
+  end: number,
+): HeadlinePiece[] {
+  const kept: HeadlinePiece[] = [];
+  let at = 0;
+
+  for (const { part, run } of pieces) {
+    const from = Math.max(start, at);
+    const to = Math.min(end, at + run.text.length);
+
+    if (from < to) {
+      kept.push({
+        part,
+        run: { ...run, text: run.text.slice(from - at, to - at) },
+      });
+    }
+
+    at += run.text.length;
+  }
+
+  return kept;
 }
 
 function titleHeadline(call: ToolCall): Headline {

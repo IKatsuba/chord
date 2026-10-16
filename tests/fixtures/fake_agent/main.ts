@@ -235,6 +235,8 @@ const SCENARIOS = [
   'edit',
   'rewrite',
   'headlines',
+  'heredoc',
+  'longcommand',
   'markdown',
   'graphemes',
   'permission',

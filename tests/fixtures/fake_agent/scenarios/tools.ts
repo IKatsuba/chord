@@ -5,8 +5,9 @@
  */
 import * as acp from '@agentclientprotocol/sdk';
 import { EDIT_NEW, EDIT_OLD, REWRITE_NEW, REWRITE_OLD } from '../../edits.ts';
+import { NOTES_COMMAND, WEATHER_COMMAND } from '../../headlines.ts';
 import { STEP_MS } from '../options.ts';
-import { pause, type Play } from '../turn.ts';
+import { pause, type Play, type Turn } from '../turn.ts';
 
 /** Calls in a `steps` turn, each an entry of the transcript. */
 const STEPS = 150;
@@ -64,6 +65,33 @@ const LONG = [
   ),
   'EOF',
 ].join('\n');
+
+/** A command Bash ran, as Claude's adapter titles it, that wrote `output`. */
+async function ran(
+  turn: Turn,
+  command: string,
+  output: string,
+): Promise<acp.StopReason> {
+  const toolCallId = turn.callId('bash');
+
+  await turn.send({
+    sessionUpdate: 'tool_call',
+    toolCallId,
+    title: `\`${command}\``,
+    kind: 'execute',
+    status: 'in_progress',
+    rawInput: { command },
+  });
+  await turn.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId,
+    status: 'completed',
+    content: [{ type: 'content', content: { type: 'text', text: output } }],
+  });
+  await turn.say('Done.');
+
+  return 'end_turn';
+}
 
 export const TOOLS = {
   steps,
@@ -356,4 +384,8 @@ export const TOOLS = {
 
     return 'end_turn';
   },
+
+  // The calls of the Claude Code capture in docs/design/CHD-393.md.
+  heredoc: (turn) => ran(turn, NOTES_COMMAND, '      10 notes.md'),
+  longcommand: (turn) => ran(turn, WEATHER_COMMAND, '309'),
 } satisfies Record<string, Play>;

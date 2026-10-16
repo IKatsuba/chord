@@ -6,6 +6,7 @@ import stripAnsi from 'strip-ansi';
 import type { TurnState } from '../../../../src/session/transcript/types.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import { CTRL_O, send, withWindow } from '../../app/render.tsx';
+import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
 
 test('tool calls draw their status, their output and a failure', () =>
   withWindow(async (window) => {
@@ -288,7 +289,7 @@ test("an agent's escapes in a call colour it, folded and open, the rest go", asy
   }
 });
 
-test('a command of many lines leaves the transcript under it in reach', async () => {
+test('a command of many lines is drawn whole and leaves the transcript under it in reach', async () => {
   const title = [
     "cat >> notes.md <<'EOF'",
     ...Array.from({ length: 40 }, (_, line) => `## ${line}. A decision`),
@@ -324,17 +325,103 @@ test('a command of many lines leaves the transcript under it in reach', async ()
     return frame;
   };
 
-  const folded = await shown(false);
+  // The headline is whole either way; ctrl+o does not change it.
+  for (const expanded of [false, true]) {
+    const frame = await shown(expanded);
 
-  expect(folded).toContain("⏺ Bash(cat >> notes.md <<'EOF' … +41 lines)");
-  expect(folded).toContain('the reply after them');
-
-  const whole = await shown(true);
-
-  expect(whole).toContain('  ## 39. A decision');
-  expect(whole).toContain('  EOF)');
-  expect(whole).toContain('the reply after them');
+    expect(frame).toContain('  ## 39. A decision');
+    expect(frame).toContain('  EOF)');
+    expect(frame).toContain('the reply after them');
+  }
 });
+
+/** The rows of `frame` from the one holding `from` to the one holding `to`. */
+function rowsBetween(frame: string, from: string, to: string): string[] {
+  const lines = frame.split('\n').map((line) => line.trimEnd());
+  const start = lines.findIndex((line) => line.includes(from));
+  const end = lines.findIndex(
+    (line, index) => index >= start && line.includes(to),
+  );
+
+  return lines.slice(start, end + 1);
+}
+
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
+] as const) {
+  test(`a long command's headline wraps under its name, the ⎿ under its last row, at ${columns}×${rows}`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'longcommand');
+        await window.shows('Done.');
+
+        // The design's mocks, docs/design/evidence/CHD-393/mock/.
+        expect(
+          rowsBetween(stripAnsi(window.frame()), '⏺ Bash(echo', '⎿'),
+        ).toStrictEqual(
+          columns === 80
+            ? [
+                ' ⏺ Bash(echo "This morning the weather started out cool and misty with a thin',
+                '   layer of fog rolling over the hills, but by noon the sun had burned through',
+                '   the clouds, the temperature climbed steadily, a light breeze came in from',
+                '   the west, and forecasters warned that scattered thunderstorms could arrive',
+                '   late in the evening" | tr a-z A-Z | wc -c)',
+                '   ⎿  309',
+              ]
+            : [
+                ' ⏺ Bash(echo "This morning the weather started out cool and misty with a thin layer of fog rolling over the hills, but',
+                '   by noon the sun had burned through the clouds, the temperature climbed steadily, a light breeze came in from the',
+                '   west, and forecasters warned that scattered thunderstorms could arrive late in the evening" | tr a-z A-Z | wc -c)',
+                '   ⎿  309',
+              ],
+        );
+      },
+      { columns, rows },
+    ));
+
+  test(`a heredoc's every line is drawn, an empty one too, at ${columns}×${rows}`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'heredoc');
+        await window.shows('Done.');
+
+        const [first, ...rest] = NOTES_COMMAND.split('\n');
+        const drawn = [
+          ` ⏺ Bash(${first}`,
+          ...rest.map((line, index) =>
+            `   ${line}${index === rest.length - 1 ? ')' : ''}`.trimEnd(),
+          ),
+          '   ⎿        10 notes.md',
+        ];
+
+        expect(
+          rowsBetween(stripAnsi(window.frame()), '⏺ Bash(cat', '⎿'),
+        ).toStrictEqual(drawn);
+      },
+      { columns, rows },
+    ));
+}
+
+test('a command of 300 lines is drawn whole, its output and the reply under it', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'headlines');
+      await window.shows('Four calls with long headlines.');
+
+      expect(
+        rowsBetween(stripAnsi(window.frame()), 'line 297 of', 'Four calls'),
+      ).toStrictEqual([
+        '   line 297 of the long command',
+        '   line 298 of the long command',
+        '   EOF)',
+        '   ⎿  (no output)',
+        '',
+        ' ⏺ Four calls with long headlines.',
+      ]);
+    },
+    { columns: 80, rows: 24 },
+  ));
 
 describe('CHD-1 tester: original question result visibility', () => {
   for (const columns of [80, 120]) {

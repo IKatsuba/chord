@@ -1,10 +1,14 @@
 import { expect, test } from 'bun:test';
 import type { ToolCall } from '../../../../src/session/transcript/types.ts';
 import {
+  firstLine,
+  type Headline,
   headline,
+  headlineRows,
   summary,
   toneOf,
 } from '../../../../src/ui/transcript/tools/tools.ts';
+import { NOTES_COMMAND, WEATHER_COMMAND } from '../../../fixtures/headlines.ts';
 
 function text(value: string): NonNullable<ToolCall['content']>[number] {
   return { type: 'content', content: { type: 'text', text: value } };
@@ -41,18 +45,106 @@ test('a bare command or description is named by its kind', () => {
   expect(headline({ id: 'a', kind: 'fetch' })).toStrictEqual({ name: 'Fetch' });
 });
 
-test("a title of several lines keeps its first; the rest is ctrl+o's", () => {
-  expect(
-    headline({
-      id: 'a',
-      title: "cat >> notes.md <<'EOF'  \n## 1. One\n\nEOF",
-      kind: 'execute',
-    }),
-  ).toStrictEqual({
+test('a title of several lines is the argument whole, every line kept', () => {
+  const title = "cat >> notes.md <<'EOF'  \n## 1. One\n\n  - indented\nEOF";
+
+  expect(headline({ id: 'a', title, kind: 'execute' })).toStrictEqual({
     name: 'Bash',
-    arg: "cat >> notes.md <<'EOF'",
-    more: ['## 1. One', '', 'EOF'],
+    arg: title,
   });
+});
+
+test("a row that stays one row takes the argument's first line", () => {
+  expect(
+    firstLine({ name: 'Bash', arg: "cat <<'EOF'  \n## 1. One\nEOF" }),
+  ).toStrictEqual({ name: 'Bash', arg: "cat <<'EOF'" });
+  expect(firstLine({ name: 'Bash' })).toStrictEqual({ name: 'Bash' });
+});
+
+/** The rows' text, each row's pieces joined. */
+function rowsText(line: Headline, width: number): string[] {
+  return headlineRows(line, width).map((row) =>
+    row.map((piece) => piece.run.text).join(''),
+  );
+}
+
+test("a long command wraps between words as the design's mocks do at 80 and 120 columns", () => {
+  const line = { name: 'Bash', arg: WEATHER_COMMAND };
+
+  // An entry's width is the window's less four cells.
+  expect(rowsText(line, 76)).toStrictEqual([
+    'Bash(echo "This morning the weather started out cool and misty with a thin',
+    'layer of fog rolling over the hills, but by noon the sun had burned through',
+    'the clouds, the temperature climbed steadily, a light breeze came in from',
+    'the west, and forecasters warned that scattered thunderstorms could arrive',
+    'late in the evening" | tr a-z A-Z | wc -c)',
+  ]);
+  expect(rowsText(line, 116)).toStrictEqual([
+    'Bash(echo "This morning the weather started out cool and misty with a thin layer of fog rolling over the hills, but',
+    'by noon the sun had burned through the clouds, the temperature climbed steadily, a light breeze came in from the',
+    'west, and forecasters warned that scattered thunderstorms could arrive late in the evening" | tr a-z A-Z | wc -c)',
+  ]);
+});
+
+test('each line of a heredoc starts a row, an empty one too, the `)` after the last', () => {
+  const [first, ...rest] = NOTES_COMMAND.split('\n');
+
+  expect(rowsText({ name: 'Bash', arg: NOTES_COMMAND }, 76)).toStrictEqual([
+    `Bash(${first}`,
+    ...rest.slice(0, -1),
+    'EOF)',
+  ]);
+});
+
+test('a line keeps its indent; a word wider than the room breaks at the edge', () => {
+  expect(rowsText({ name: 'Bash', arg: 'f\n    two words' }, 10)).toStrictEqual(
+    ['Bash(f', '    two', 'words)'],
+  );
+  expect(
+    rowsText({ name: 'Fetch', arg: 'https://example.com/a' }, 10),
+  ).toStrictEqual(['Fetch(http', 's://exampl', 'e.com/a)']);
+});
+
+test('the note follows the `)`; the name, the `to` and the note keep their parts on every row', () => {
+  const rows = headlineRows(
+    { name: 'tester', arg: 'run the suite', note: ' · waited 2s', sent: true },
+    18,
+  );
+
+  expect(
+    rows.map((row) => row.map(({ part, run }) => [part, run.text])),
+  ).toStrictEqual([
+    [
+      ['to', 'to '],
+      ['name', '@tester'],
+      ['arg', '(run the'],
+    ],
+    [
+      ['arg', 'suite)'],
+      ['note', ' · waited 2s'],
+    ],
+  ]);
+});
+
+test("an agent's colour in an argument is kept on each row it wraps to", () => {
+  const rows = headlineRows(
+    { name: 'Bash', arg: '\x1b[31mred words here\x1b[0m plain' },
+    13,
+  );
+
+  expect(
+    rows.map((row) =>
+      row.map(({ run }) => [run.text, run.fg === undefined ? '' : 'fg']),
+    ),
+  ).toStrictEqual([
+    [
+      ['Bash', ''],
+      ['(', ''],
+      ['red', 'fg'],
+    ],
+    [['words here', 'fg']],
+    [['plain)', '']],
+  ]);
 });
 
 test('the status picks the tone; no status is pending', () => {

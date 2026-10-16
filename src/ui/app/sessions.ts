@@ -138,7 +138,7 @@ import {
   teamRefusal,
   type TeamRun,
 } from '../teams/teams.ts';
-import { headline } from '../transcript/tools/tools.ts';
+import { firstLine, headline } from '../transcript/tools/tools.ts';
 import {
   type AppAction,
   type AppState,
@@ -1855,7 +1855,7 @@ export function useSessions(
         open: true,
         ...(state === undefined ? {} : { state }),
         ...(latest?.kind === 'tool'
-          ? { latest: headlineText(headline(latest.call)) }
+          ? { latest: headlineText(firstLine(headline(latest.call))) }
           : latest?.kind === 'message'
             ? { latest: messageHeadline(latest.from) }
             : {}),

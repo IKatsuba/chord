@@ -12,6 +12,7 @@ import type {
   TranscriptAction,
 } from '../../../src/session/transcript/types.ts';
 import { fold, states } from './fold.ts';
+import { NOTES_COMMAND } from '../../fixtures/headlines.ts';
 
 /** A tool call update for call `c1`, carrying `_meta` and `fields`. */
 function terminalUpdate(
@@ -343,4 +344,34 @@ test('a tool call that names no terminal has none', () => {
 
   assert(entry?.kind === 'tool');
   expect('terminals' in entry.call).toStrictEqual(false);
+});
+
+test("a call's title keeps every line and its length, as the headline draws it whole", () => {
+  const title = `\`${NOTES_COMMAND}\n${'x'.repeat(5000)}\``;
+  const update = (
+    fields: Partial<Extract<SessionUpdate, { sessionUpdate: 'tool_call' }>>,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: 't1',
+    update: {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'c1',
+      title: 'Bash',
+      ...fields,
+    },
+  });
+  const transcript = fold([
+    { type: 'prompt', turnId: 't1', text: 'heredoc', at: 0 },
+    update({ kind: 'execute', status: 'pending' }),
+    // Claude's adapter sends the command in a later update.
+    {
+      type: 'update',
+      turnId: 't1',
+      update: { sessionUpdate: 'tool_call_update', toolCallId: 'c1', title },
+    },
+  ]);
+  const entry = transcript.entries.find((each) => each.kind === 'tool');
+
+  assert(entry?.kind === 'tool');
+  expect(entry.call.title).toStrictEqual(title);
 });

@@ -78,7 +78,7 @@ bun run check || die "bun run check failed"
 #    team, then every binary, built on this arm64 Mac.
 bun install --frozen-lockfile --os='*' --cpu='*' || die "installing every platform's packages failed"
 "$steps/natives.sh"
-bun run compile --all || die "compile --all failed"
+bun run dev compile --all || die "compile --all failed"
 check_kind() {
 	kind=$(file "dist/$1/chord")
 	case "$kind" in *"$2"*) ;; *) die "dist/$1/chord is $kind" ;; esac

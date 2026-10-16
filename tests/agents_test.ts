@@ -16,7 +16,7 @@ import {
 } from '../src/agents.ts';
 import { CLI_AGENTS } from '../src/clis.ts';
 import { REGISTRY_AGENTS } from '../src/registry.ts';
-import { frozenAgents } from '../scripts/registry.ts';
+import { frozenAgents } from '../scripts/dev/registry.ts';
 
 test('the default agent is one chord knows', () => {
   expect(findAgent(DEFAULT_AGENT) !== undefined).toBeTruthy();

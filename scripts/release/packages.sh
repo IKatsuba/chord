@@ -1,6 +1,6 @@
 #!/bin/bash
 # Lays out the five npm packages from the signed binaries in dist/
-# (scripts/npm.ts), packs them, installs the tarballs in scratch projects,
+# (bun run dev npm), packs them, installs the tarballs in scratch projects,
 # and checks the installed copies as a user gets them: the same bytes as
 # built, a macOS one still verifying and not quarantined, and the arm64 one
 # self-tested through the shim, the x64 one under Rosetta.
@@ -14,7 +14,7 @@ root=$(cd "$here/../.." && pwd)
 out=${1:?usage: scripts/release/packages.sh OUT_DIR}
 rm -rf "$out"
 mkdir -p "$out/tgz"
-(cd "$root" && bun scripts/npm.ts >/dev/null) || die "laying out npm/ failed"
+(cd "$root" && bun run dev npm >/dev/null) || die "laying out npm/ failed"
 for name in "${PACKAGES[@]}"; do
 	(cd "$root/npm/$name" && npm pack --pack-destination "$out/tgz" >/dev/null) ||
 		die "npm pack of $name failed"

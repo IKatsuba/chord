@@ -285,3 +285,82 @@ describe('subagentstates: the states subagent never reaches', () => {
       { rows: 40, columns: 120 },
     ));
 });
+
+describe('tester: subagentstates keys and terminal sizes', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`the child plan opens with ctrl+o and all four states fit at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'subagentstates');
+          await window.shows('Search(sessionUpdate in src)');
+          expect(window.frame()).toContain('◐ Read the session layer');
+          expect(window.frame()).not.toContain('Find the transport');
+          await window.press(CTRL_O);
+          await window.shows('Find the transport');
+          expect(window.frame()).toContain('◐ Read the session layer');
+          await window.press(CTRL_O);
+          await window.shows('+2 more tool uses (ctrl+o to expand)');
+
+          const lone = window.frame();
+
+          expect(lone).toContain('Read(src/session/session.ts)');
+          expect(lone).toContain('Read(src/session/conversation.ts)');
+          expect(lone).toContain('Read(src/session/enrichers.ts)');
+          expect(lone).not.toContain('Search(sessionUpdate in src)');
+          expect(lone).not.toContain('Find the transport');
+          await until('the parent to wait beside its running pair', () => {
+            const frame = window.frame();
+
+            return (
+              frame.includes('Running 2 agents…') &&
+              frame.includes('Wait(explorer, worker)\n   ⎿  Running…')
+            );
+          });
+
+          await window.shows('2 agents finished (ctrl+o to expand)');
+          await window.shows('drawing is Tool');
+
+          const finished = window.frame();
+
+          expect(finished).toContain('│  ⎿  Done');
+          expect(finished).toContain('      ⎿  Done');
+          expect(finished).not.toContain('Running…');
+        },
+        { columns, rows },
+      ));
+
+    for (const phase of ['lone child', 'pair'] as const) {
+      test(`Esc cancels the ${phase} at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await send(window, 'subagentstates');
+
+            if (phase === 'lone child') {
+              await window.shows('+2 more tool uses');
+            } else {
+              await until('the pair and parent wait to run', () => {
+                const frame = window.frame();
+
+                return (
+                  frame.includes('Running 2 agents…') &&
+                  frame.includes('Wait(explorer, worker)\n   ⎿  Running…')
+                );
+              });
+            }
+
+            await window.press(ESC);
+            await window.shows('Interrupted by user');
+            await window.shows(
+              phase === 'pair' ? '2 agents ended · 2 cancelled' : 'Cancelled',
+            );
+            expect(window.frame()).not.toContain('Running 2 agents');
+            expect(window.frame()).not.toContain('still running');
+          },
+          { columns, rows },
+        ));
+    }
+  }
+});

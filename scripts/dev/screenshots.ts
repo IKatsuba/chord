@@ -5,7 +5,7 @@
  *
  * Each shot runs chord from source in a tmux session of its own, `COLUMNS`
  * × `ROWS`, on
- * the fake agent in tests/fixtures/, as `bun chord:fake` does, types
+ * the fake agent in tests/fixtures/, as `bun dev chord --fake` does, types
  * what a person would, waits for the state the shot shows, and reads the
  * screen back with its colours (`capture-pane -e`). The frame is then drawn
  * in a Chorded terminal pane in Chrome (puppeteer-core) through ansi_up and

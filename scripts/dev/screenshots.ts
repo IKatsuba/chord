@@ -1,7 +1,7 @@
 /**
  * Take the README's screenshots from chord itself.
  *
- *   bun run screenshots [name…]   rewrite docs/images/*.png, or those named
+ *   bun run dev screenshots [name…]   rewrite docs/images/*.png, or those named
  *
  * Each shot runs chord from source in a tmux session of its own, `COLUMNS`
  * × `ROWS`, on
@@ -136,7 +136,7 @@ const SHOTS: readonly Shot[] = [
   },
 ];
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = new URL('../..', import.meta.url).pathname;
 const IMAGES = join(ROOT, 'docs', 'images');
 const CHROME =
   process.env['CHROME'] ??
@@ -347,36 +347,39 @@ function page(frame: string): string {
 </div></div></div>`;
 }
 
-const only = new Set(process.argv.slice(2));
-const browser = await puppeteer.launch({ executablePath: CHROME });
+/** Retakes every shot, or only the ones `names` lists. */
+export async function screenshots(names: readonly string[]): Promise<void> {
+  const only = new Set(names);
+  const browser = await puppeteer.launch({ executablePath: CHROME });
 
-try {
-  await mkdir(IMAGES, { recursive: true });
+  try {
+    await mkdir(IMAGES, { recursive: true });
 
-  const tab = await browser.newPage();
+    const tab = await browser.newPage();
 
-  await tab.setViewport({ width: 1400, height: 900, deviceScaleFactor: 2 });
+    await tab.setViewport({ width: 1400, height: 900, deviceScaleFactor: 2 });
 
-  for (const shot of SHOTS) {
-    if (only.size > 0 && !only.has(shot.name)) {
-      continue;
+    for (const shot of SHOTS) {
+      if (only.size > 0 && !only.has(shot.name)) {
+        continue;
+      }
+
+      await tab.setContent(page(await capture(shot)), { waitUntil: 'load' });
+      await tab.evaluate(() => document.fonts.ready);
+
+      const element = await tab.$('.page');
+
+      if (element === null) {
+        throw new Error(`${shot.name}: nothing was drawn.`);
+      }
+
+      await element.screenshot({
+        path: join(IMAGES, `${shot.name}.png`),
+        omitBackground: true,
+      });
+      console.log(`docs/images/${shot.name}.png`);
     }
-
-    await tab.setContent(page(await capture(shot)), { waitUntil: 'load' });
-    await tab.evaluate(() => document.fonts.ready);
-
-    const element = await tab.$('.page');
-
-    if (element === null) {
-      throw new Error(`${shot.name}: nothing was drawn.`);
-    }
-
-    await element.screenshot({
-      path: join(IMAGES, `${shot.name}.png`),
-      omitBackground: true,
-    });
-    console.log(`docs/images/${shot.name}.png`);
+  } finally {
+    await browser.close();
   }
-} finally {
-  await browser.close();
 }

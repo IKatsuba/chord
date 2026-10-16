@@ -184,7 +184,7 @@ function unidentifiedText(path: string, version: string): string {
     installArgv(manager, version).join(' '),
   );
 
-  return `chord cannot tell which package manager installed ${path}. If one did, upgrade with it: ${lines.join(', ')}. A build from source upgrades with git pull and bun run compile --install.`;
+  return `chord cannot tell which package manager installed ${path}. If one did, upgrade with it: ${lines.join(', ')}. A build from source upgrades with git pull and bun run dev compile --install.`;
 }
 
 /**

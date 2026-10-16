@@ -5,13 +5,13 @@
  * depending on all of them optionally and holding a small shim as its `bin`.
  * No Node build of chord exists; the shim only finds and execs the binary.
  *
- *   bun run compile --all && bun run npm   writes npm/
- * `scripts/release.sh` runs it on the signed binaries, packs and publishes.
+ *   bun run dev compile --all && bun run dev npm   writes npm/
+ * `bun run dev release` runs it on the signed binaries, packs and publishes.
  */
 import { chmod, copyFile, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import manifest from '../package.json' with { type: 'json' };
-import { platformPackage, SCOPE, TARGETS } from './targets.ts';
+import manifest from '../../package.json' with { type: 'json' };
+import { platformPackage, SCOPE, TARGETS } from '../targets.ts';
 
 const SHIM = `#!/usr/bin/env node
 // The \`chord\` command npm installs: it runs the binary of this machine's
@@ -54,7 +54,7 @@ child.on("exit", (status, signal) => {
 });
 `;
 
-const root = new URL('..', import.meta.url).pathname;
+const root = new URL('../..', import.meta.url).pathname;
 const out = join(root, 'npm');
 const version = manifest.version;
 const common = {
@@ -65,77 +65,80 @@ const common = {
   bugs: { url: 'https://github.com/IKatsuba/chord/issues' },
 };
 
-const missing = [];
+/** Writes npm/ from the binaries in dist/, or stops on one missing. */
+export async function npm(): Promise<void> {
+  const missing = [];
 
-for (const target of TARGETS) {
-  const path = join(root, 'dist', target.bun, 'chord');
+  for (const target of TARGETS) {
+    const path = join(root, 'dist', target.bun, 'chord');
 
-  if (!(await stat(path).catch(() => null))) {
-    missing.push(path);
+    if (!(await stat(path).catch(() => null))) {
+      missing.push(path);
+    }
   }
-}
 
-if (missing.length > 0) {
-  console.error(
-    `Missing binaries; run \`bun run compile --all\` first:\n${missing.join(
-      '\n',
-    )}`,
-  );
-  process.exit(1);
-}
+  if (missing.length > 0) {
+    console.error(
+      `Missing binaries; run \`bun run dev compile --all\` first:\n${missing.join(
+        '\n',
+      )}`,
+    );
+    process.exit(1);
+  }
 
-await rm(out, { recursive: true, force: true });
+  await rm(out, { recursive: true, force: true });
 
-for (const target of TARGETS) {
-  const name = platformPackage(target);
-  const dir = join(out, name.replace(`${SCOPE}/`, ''));
+  for (const target of TARGETS) {
+    const name = platformPackage(target);
+    const dir = join(out, name.replace(`${SCOPE}/`, ''));
 
-  await mkdir(join(dir, 'bin'), { recursive: true });
-  await copyFile(
-    join(root, 'dist', target.bun, 'chord'),
-    join(dir, 'bin', 'chord'),
-  );
-  await chmod(join(dir, 'bin', 'chord'), 0o755).catch(() => {});
+    await mkdir(join(dir, 'bin'), { recursive: true });
+    await copyFile(
+      join(root, 'dist', target.bun, 'chord'),
+      join(dir, 'bin', 'chord'),
+    );
+    await chmod(join(dir, 'bin', 'chord'), 0o755).catch(() => {});
 
-  await copyFile(join(root, 'LICENSE'), join(dir, 'LICENSE'));
-  await writeJson(join(dir, 'package.json'), {
-    name,
+    await copyFile(join(root, 'LICENSE'), join(dir, 'LICENSE'));
+    await writeJson(join(dir, 'package.json'), {
+      name,
+      ...common,
+      description: `The chord binary for ${target.os}-${target.cpu}.`,
+      os: [target.os],
+      cpu: [target.cpu],
+      files: ['bin/'],
+    });
+  }
+
+  const main = join(out, 'chord');
+
+  await mkdir(join(main, 'bin'), { recursive: true });
+  await copyFile(join(root, 'README.md'), join(main, 'README.md'));
+  await copyFile(join(root, 'LICENSE'), join(main, 'LICENSE'));
+  await writeFile(join(main, 'bin', 'chord.js'), SHIM);
+  await chmod(join(main, 'bin', 'chord.js'), 0o755);
+  await writeJson(join(main, 'package.json'), {
+    name: `${SCOPE}/chord`,
     ...common,
-    description: `The chord binary for ${target.os}-${target.cpu}.`,
-    os: [target.os],
-    cpu: [target.cpu],
+    description: 'A full-screen terminal client for ACP coding agents.',
+    keywords: [
+      'acp',
+      'agent-client-protocol',
+      'claude-code',
+      'codex',
+      'gemini-cli',
+      'coding-agent',
+      'terminal',
+      'tui',
+    ],
+    bin: { chord: 'bin/chord.js' },
     files: ['bin/'],
+    optionalDependencies: Object.fromEntries(
+      TARGETS.map((target) => [platformPackage(target), version]),
+    ),
   });
+  console.log(out);
 }
-
-const main = join(out, 'chord');
-
-await mkdir(join(main, 'bin'), { recursive: true });
-await copyFile(join(root, 'README.md'), join(main, 'README.md'));
-await copyFile(join(root, 'LICENSE'), join(main, 'LICENSE'));
-await writeFile(join(main, 'bin', 'chord.js'), SHIM);
-await chmod(join(main, 'bin', 'chord.js'), 0o755);
-await writeJson(join(main, 'package.json'), {
-  name: `${SCOPE}/chord`,
-  ...common,
-  description: 'A full-screen terminal client for ACP coding agents.',
-  keywords: [
-    'acp',
-    'agent-client-protocol',
-    'claude-code',
-    'codex',
-    'gemini-cli',
-    'coding-agent',
-    'terminal',
-    'tui',
-  ],
-  bin: { chord: 'bin/chord.js' },
-  files: ['bin/'],
-  optionalDependencies: Object.fromEntries(
-    TARGETS.map((target) => [platformPackage(target), version]),
-  ),
-});
-console.log(out);
 
 async function writeJson(path: string, value: unknown) {
   await writeFile(path, JSON.stringify(value, null, 2) + '\n');

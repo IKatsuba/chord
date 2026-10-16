@@ -10,7 +10,7 @@ import {
   SPLASH_ROWS,
   THRESHOLD,
   viewBox,
-} from '../../../scripts/mark.ts';
+} from '../../../scripts/dev/mark.ts';
 import {
   MARK,
   type MarkGrid,

@@ -15,11 +15,7 @@
     "test": "bun test --isolate --timeout=60000 ./tests/",
     "fmt": "prettier --write .",
     "lint": "eslint .",
-    "compile": "bun scripts/compile.ts",
-    "npm": "bun scripts/npm.ts",
-    "registry": "bun scripts/registry.ts",
-    "mark": "bun scripts/mark.ts",
-    "screenshots": "bun scripts/screenshots.ts"
+    "dev": "bun scripts/dev.ts"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^1.7.0",

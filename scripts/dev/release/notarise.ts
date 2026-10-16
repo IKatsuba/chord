@@ -45,7 +45,7 @@ export async function notarise(
       );
     }
 
-    run(release, 'ditto', [
+    const zipped = run(release, 'ditto', [
       '-c',
       '-k',
       '--norsrc',
@@ -54,6 +54,11 @@ export async function notarise(
       join(staging, 'chord'),
       zip,
     ]);
+
+    // Stopped here, or an older zip left in place would be submitted.
+    if (zipped.status !== 0) {
+      die(`ditto could not make ${zip}: ${said(zipped.stderr)}`);
+    }
   } finally {
     rmSync(staging, { recursive: true, force: true });
   }

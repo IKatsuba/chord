@@ -22,10 +22,17 @@ import { tarballs } from './publish.ts';
 import { selftest } from './selftest.ts';
 import { recordSums } from './sums.ts';
 
-export async function pack(release: Release): Promise<void> {
+/**
+ * Packs the release. `test` self-tests the installed copies; a test passes
+ * one that runs no binary.
+ */
+export async function pack(
+  release: Release,
+  test: typeof selftest = selftest,
+): Promise<void> {
   const out = join(release.root, 'dist', 'release', 'packages');
 
-  await packages(release, out);
+  await packages(release, out, test);
 
   const tgz = tarballs(release);
   const version = packageVersion(release);
@@ -40,16 +47,17 @@ export async function pack(release: Release): Promise<void> {
   recordSums(tgz, files);
 }
 
-async function packages(release: Release, out: string): Promise<void> {
+async function packages(
+  release: Release,
+  out: string,
+  test: typeof selftest,
+): Promise<void> {
   const quiet: SpawnSyncOptions = { stdio: ['inherit', 'ignore', 'inherit'] };
 
   rmSync(out, { recursive: true, force: true });
   mkdirSync(join(out, 'tgz'), { recursive: true });
 
-  if (
-    run(release, process.execPath, ['scripts/dev.ts', 'npm'], quiet).status !==
-    0
-  ) {
+  if (run(release, 'bun', ['scripts/dev.ts', 'npm'], quiet).status !== 0) {
     die('laying out npm/ failed');
   }
 
@@ -145,8 +153,8 @@ async function packages(release: Release, out: string): Promise<void> {
       );
     }
 
-    await selftest(release, join(scratch, 'node_modules', '.bin', 'chord'));
-    await selftest(
+    await test(release, join(scratch, 'node_modules', '.bin', 'chord'));
+    await test(
       release,
       join(
         scratch,

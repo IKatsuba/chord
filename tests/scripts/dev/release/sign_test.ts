@@ -146,3 +146,27 @@ test('natives with no macOS library to sign dies', () => {
     ),
   );
 });
+
+test('entitlements plutil cannot read stop the signing, even when the read-back is as empty', () => {
+  at.fake('plutil', 'echo "plutil: cannot parse" >&2\nexit 1\n');
+
+  expect(() => sign(keychain({ SIGNED: '' }), [BINARY])).toThrow(
+    new ReleaseError(
+      'scripts/macos/chord.entitlements could not be read: plutil: cannot parse',
+    ),
+  );
+  expect(at.out).toStrictEqual([]);
+});
+
+test('a read-back plutil fails on differs from the file, and dies', () => {
+  at.fake(
+    'plutil',
+    'if [ "$5" = - ]; then echo "plutil: bad input" >&2; exit 1; fi\ncat "$5"\n',
+  );
+
+  expect(() => sign(keychain(), [BINARY])).toThrow(
+    new ReleaseError(
+      `entitlements of ${BINARY} differ from scripts/macos/chord.entitlements: got plutil: bad input, want ${ENTITLEMENTS}`,
+    ),
+  );
+});

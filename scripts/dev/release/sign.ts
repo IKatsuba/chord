@@ -153,10 +153,22 @@ export function sign(release: Release, binaries: readonly string[]): void {
       input: signed.stdout,
     });
     const got = said(read.stdout + read.stderr);
-    const want = said(
-      run(release, 'plutil', ['-convert', 'json', '-o', '-', entitlements])
-        .stdout,
-    );
+    const reference = run(release, 'plutil', [
+      '-convert',
+      'json',
+      '-o',
+      '-',
+      entitlements,
+    ]);
+    const want = said(reference.stdout);
+
+    // What is compared against must be read, or a failed read-back that
+    // says nothing would equal it.
+    if (reference.status !== 0 || want === '') {
+      die(
+        `scripts/macos/chord.entitlements could not be read: ${said(reference.stderr)}`,
+      );
+    }
 
     if (got !== want) {
       die(

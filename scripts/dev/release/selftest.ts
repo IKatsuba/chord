@@ -88,6 +88,34 @@ export async function selftest(
     );
   };
 
+  // The tmux server and the scratch directory are this run's: gone however
+  // it ends, a signal included, as the shell step's EXIT trap had them.
+  let cleaned = false;
+  const cleanUp = () => {
+    if (!cleaned) {
+      cleaned = true;
+
+      tmux('kill-server');
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  };
+
+  const signals = ['SIGINT', 'SIGTERM', 'SIGHUP'] as const;
+  const onSignal = (signal: NodeJS.Signals) => {
+    cleanUp();
+
+    for (const each of signals) {
+      process.removeListener(each, onSignal);
+    }
+
+    // Raised again with no listener left, so the run ends by it.
+    process.kill(process.pid, signal);
+  };
+
+  for (const signal of signals) {
+    process.on(signal, onSignal);
+  }
+
   try {
     for (const dir of ['project', 'state', 'config']) {
       mkdirSync(join(scratch, dir));
@@ -148,7 +176,10 @@ export async function selftest(
       `self-tested ${binary}${arch === undefined ? '' : ` under ${arch}`}`,
     );
   } finally {
-    tmux('kill-server');
-    rmSync(scratch, { recursive: true, force: true });
+    for (const signal of signals) {
+      process.removeListener(signal, onSignal);
+    }
+
+    cleanUp();
   }
 }

@@ -143,3 +143,13 @@ test('a binary Apple has no ticket for dies, with what the log lists', async () 
     `Apple's log has no ticket for ${X64} (cdhash bb22); it lists: "cdhash":"aa11"`,
   );
 });
+
+test('a zip ditto could not make stops before anything is submitted', async () => {
+  at.fake('ditto', 'echo "ditto: No space left on device" >&2\nexit 1\n');
+  at.fake('xcrun', 'echo "$*" >>"$STATE/xcrun.log"\n');
+
+  expect(await died(notarise(apple({}), out, [ARM]))).toBe(
+    `ditto could not make ${join(out, 'chord.zip')}: ditto: No space left on device`,
+  );
+  expect(existsSync(join(at.place, 'xcrun.log'))).toBeFalse();
+});

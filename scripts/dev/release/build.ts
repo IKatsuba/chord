@@ -10,15 +10,14 @@ const loud = { stdio: 'inherit' } as const;
 
 export function install(release: Release): void {
   if (
-    run(release, process.execPath, ['install', '--frozen-lockfile'], loud)
-      .status !== 0
+    run(release, 'bun', ['install', '--frozen-lockfile'], loud).status !== 0
   ) {
     die('bun install --frozen-lockfile failed');
   }
 }
 
 export function check(release: Release): void {
-  if (run(release, process.execPath, ['run', 'check'], loud).status !== 0) {
+  if (run(release, 'bun', ['run', 'check'], loud).status !== 0) {
     die('bun run check failed');
   }
 }
@@ -28,7 +27,7 @@ export function natives(release: Release): void {
   if (
     run(
       release,
-      process.execPath,
+      'bun',
       ['install', '--frozen-lockfile', '--os=*', '--cpu=*'],
       loud,
     ).status !== 0
@@ -50,8 +49,8 @@ export const KINDS = {
 /** Every binary built, each checked to be the kind its target builds. */
 export function compile(release: Release): void {
   if (
-    run(release, process.execPath, ['scripts/dev.ts', 'compile', '--all'], loud)
-      .status !== 0
+    run(release, 'bun', ['scripts/dev.ts', 'compile', '--all'], loud).status !==
+    0
   ) {
     die('compile --all failed');
   }

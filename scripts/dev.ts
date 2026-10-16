@@ -3,10 +3,17 @@
  *
  *   bun run dev <command>   see `bun run dev --help`
  */
-import { Command } from '@cliffy/command';
+import { Command, EnumType } from '@cliffy/command';
 import process from 'node:process';
 import type { CompileOptions } from './dev/compile.ts';
 import type { MemoryOptions } from './dev/memory.ts';
+import { PACKAGES } from './dev/release/lib.ts';
+import {
+  type ReleaseOptions,
+  selectStages,
+  type Stage,
+  STAGES,
+} from './dev/release/select.ts';
 
 /**
  * What each command does once its arguments are parsed. Apart from the
@@ -22,6 +29,10 @@ export interface DevActions {
   screenshots(names: readonly string[]): void | Promise<void>;
   memory(options: MemoryOptions): void | Promise<void>;
   selftest(binary: string, arch: string | undefined): void | Promise<void>;
+  release(
+    stages: readonly Stage[],
+    options: ReleaseOptions,
+  ): void | Promise<void>;
 }
 
 const RUN: DevActions = {
@@ -39,7 +50,26 @@ const RUN: DevActions = {
 
     await dying(() => selftest(release(), binary, arch));
   },
+  release: async (stages, options) => {
+    const { dying, release } = await import('./dev/release/lib.ts');
+    const { runRelease } = await import('./dev/release/stages.ts');
+
+    await dying(() => runRelease(release(), stages, options));
+  },
 };
+
+const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs every stage in order, step for step as scripts/release.sh did, and the last line it prints is the published version. Preflight runs on every run, whatever is skipped. If a run stopped between publishes, the next run resumes it: it publishes what is missing from the tarballs already packed and builds nothing. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
+
+Stages:
+  install    bun install --frozen-lockfile
+  check      bun run check
+  natives    every platform's packages installed; the macOS native libraries signed
+  compile    bun run dev compile --all; each binary's kind checked with file(1)
+  sign       both macOS binaries signed, verified and their entitlements compared
+  selftest   each macOS binary run on the fake agent, the window in tmux (the x64 one under Rosetta)
+  notarise   one zip submitted to Apple; each binary's cdhash found in Apple's log
+  pack       the five packages laid out and packed, their sha256 recorded, the tarballs installed and checked
+  publish    the four platform packages, a wait until npm answers for each, then @chorded/chord, then the tag`;
 
 /** `bun run dev`'s commands, declared, each running through `actions`. */
 export function devCommand(actions: DevActions = RUN) {
@@ -137,6 +167,59 @@ export function devCommand(actions: DevActions = RUN) {
             'bun run dev selftest dist/bun-darwin-x64/chord --arch x86_64',
           )
           .action(({ arch }, binary) => actions.selftest(binary, arch)),
+      )
+      .command(
+        'release',
+        new Command()
+          .description(RELEASE)
+          .type('stage', new EnumType(STAGES))
+          .type('package', new EnumType(PACKAGES))
+          .option(
+            '--dry-run',
+            'Every stage but publish, so it still submits to Apple. It never resumes a stopped publish.',
+          )
+          .option(
+            '--skip <stages:stage[]>',
+            'Leave these stages out (comma-separated). Any stage may be skipped, check and install included.',
+          )
+          .option(
+            '--only <stages:stage[]>',
+            'Run only these stages (comma-separated).',
+            { conflicts: ['skip', 'from', 'to'] },
+          )
+          .option('--from <stage:stage>', 'Start at this stage.')
+          .option('--to <stage:stage>', 'Stop after this stage.')
+          .option(
+            '--package <name:package>',
+            'Publish only this package: chord-darwin-arm64, chord-darwin-x64, chord-linux-arm64, chord-linux-x64 or chord.',
+            { conflicts: ['dry-run'] },
+          )
+          .example('the whole release', 'bun run dev release')
+          .example(
+            'everything up to npm publish',
+            'bun run dev release --dry-run',
+          )
+          .example(
+            'no Apple submission',
+            'bun run dev release --dry-run --skip notarise',
+          )
+          .example(
+            'without the checks and tests',
+            'bun run dev release --skip install,check',
+          )
+          .example(
+            "publish a dry run's tarballs",
+            'bun run dev release --only publish',
+          )
+          .example(
+            'rerun from the self-test',
+            'bun run dev release --from selftest',
+          )
+          .example(
+            'one package',
+            'bun run dev release --only publish --package chord-linux-x64',
+          )
+          .action((options) => actions.release(selectStages(options), options)),
       )
       // Back to the root, so what a caller chains on applies to the whole tree.
       .reset()

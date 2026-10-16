@@ -19,6 +19,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     screenshots: record('screenshots'),
     memory: record('memory'),
     selftest: record('selftest'),
+    release: record('release'),
   };
 
   await devCommand(actions).noExit().throwErrors().parse(argv);
@@ -218,5 +219,121 @@ describe('selftest', () => {
 
   test('needs a binary', async () => {
     await expect(parsed(['selftest'])).rejects.toThrow(ValidationError);
+  });
+});
+
+describe('release', () => {
+  /** The stages and options `argv` gives the release, or the error. */
+  async function released(argv: string[]) {
+    const [call] = await parsed(['release', ...argv]);
+
+    expect(call?.[0]).toBe('release');
+
+    return { stages: call?.[1], options: call?.[2] };
+  }
+
+  test('with no options runs every stage', async () => {
+    expect(await released([])).toStrictEqual({
+      stages: [
+        'install',
+        'check',
+        'natives',
+        'compile',
+        'sign',
+        'selftest',
+        'notarise',
+        'pack',
+        'publish',
+      ],
+      options: {},
+    });
+  });
+
+  test('--dry-run runs every stage but publish', async () => {
+    const { stages, options } = await released(['--dry-run']);
+
+    expect(stages).not.toContain('publish');
+    expect(stages).toHaveLength(8);
+    expect(options).toStrictEqual({ dryRun: true });
+  });
+
+  test('--skip takes a comma-separated list', async () => {
+    expect(await released(['--skip', 'install,check'])).toStrictEqual({
+      stages: [
+        'natives',
+        'compile',
+        'sign',
+        'selftest',
+        'notarise',
+        'pack',
+        'publish',
+      ],
+      options: { skip: ['install', 'check'] },
+    });
+  });
+
+  test('--dry-run --skip notarise, the run without Apple', async () => {
+    expect(
+      (await released(['--dry-run', '--skip', 'notarise'])).stages,
+    ).toStrictEqual([
+      'install',
+      'check',
+      'natives',
+      'compile',
+      'sign',
+      'selftest',
+      'pack',
+    ]);
+  });
+
+  test('--only runs the stages named', async () => {
+    expect((await released(['--only', 'publish'])).stages).toStrictEqual([
+      'publish',
+    ]);
+    expect((await released(['--only', 'pack,sign'])).stages).toStrictEqual([
+      'sign',
+      'pack',
+    ]);
+  });
+
+  test('--from and --to', async () => {
+    expect((await released(['--from', 'selftest'])).stages).toStrictEqual([
+      'selftest',
+      'notarise',
+      'pack',
+      'publish',
+    ]);
+    expect(
+      (await released(['--from', 'natives', '--to', 'sign'])).stages,
+    ).toStrictEqual(['natives', 'compile', 'sign']);
+  });
+
+  test('--package names one of the five packages', async () => {
+    expect(
+      await released(['--only', 'publish', '--package', 'chord-linux-x64']),
+    ).toStrictEqual({
+      stages: ['publish'],
+      options: { only: ['publish'], package: 'chord-linux-x64' },
+    });
+    expect((await released(['--package', 'chord'])).stages).toContain(
+      'publish',
+    );
+  });
+
+  test.each([
+    ['an unknown stage', ['--skip', 'tests']],
+    ['an unknown stage in a list', ['--only', 'pack,tests']],
+    ['an unknown stage for --from', ['--from', 'build']],
+    ['an unknown package', ['--package', 'chord-windows-x64']],
+    ['--only with --skip', ['--only', 'publish', '--skip', 'check']],
+    ['--only with --from', ['--only', 'publish', '--from', 'pack']],
+    ['--only with --to', ['--only', 'pack', '--to', 'pack']],
+    ['--package with --dry-run', ['--package', 'chord', '--dry-run']],
+    ['--dry-run with --only publish', ['--dry-run', '--only', 'publish']],
+    ['--package without publish', ['--to', 'pack', '--package', 'chord']],
+    ['options that leave no stage', ['--from', 'pack', '--to', 'check']],
+    ['an argument', ['now']],
+  ])('refuses %s', async (_name, argv) => {
+    await expect(parsed(['release', ...argv])).rejects.toThrow(ValidationError);
   });
 });

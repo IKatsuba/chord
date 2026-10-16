@@ -70,7 +70,7 @@ function editAside(
 ): Promise<{ end: unknown; stderr: string }> {
   const script = `
     const { editInEditor } = await import(${JSON.stringify(
-      new URL('../src/editor.ts', import.meta.url).pathname,
+      new URL('../src/editor.ts', import.meta.url).href,
     )});
     const end = await editInEditor(process.env.CHORD_TEST_DRAFT, {
       env: (name) =>
@@ -92,13 +92,20 @@ function editAside(
           CHORD_TEST_EDITOR: editor,
         },
       },
-      (error, stdout, stderr) =>
-        error
-          ? reject(error)
-          : resolve({
-              end: JSON.parse(stdout.split('\n').at(-1) ?? ''),
-              stderr,
-            }),
+      (error, stdout, stderr) => {
+        try {
+          if (error) {
+            throw error;
+          }
+
+          resolve({
+            end: JSON.parse(stdout.split('\n').at(-1) ?? '') as unknown,
+            stderr,
+          });
+        } catch (failed) {
+          reject(failed as Error);
+        }
+      },
     );
   });
 }

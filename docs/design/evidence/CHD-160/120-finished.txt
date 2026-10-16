@@ -1,0 +1,40 @@
+ ▀▄     chord v0.54.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.vJ9fkbhQIc
+ ▀▀     ? for shortcuts · /help
+
+ › subagentstates
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Done (5 tool uses · 24s)
+
+ ⏺ Routing is in src/acp/connection.ts. Now both sides.
+
+ ⏺ 2 agents finished (ctrl+o to expand)
+   ├─ Agent(explorer) · 3 tool uses · 5s
+   │  ⎿  Done
+   └─ Agent(worker) · 1 tool use · 1s
+      ⎿  Done
+
+ ⏺ Wait(explorer, worker)
+
+ ⏺ Both sides found: routing is in src/acp/connection.ts, drawing is Tool in src/ui/transcript/tools/Tool.tsx.
+
+ ⏺ Plan
+   ⎿  ☒ Plan the change
+      ☒ Read the session layer
+      ☒ Write the design
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

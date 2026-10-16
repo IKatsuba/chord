@@ -1,0 +1,24 @@
+ ▀▄     chord v0.54.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.vJ9fkbhQIc
+ ▀▀     ? for shortcuts · /help
+
+ › subagentstates
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Read(src/session/session.ts)
+      Read(src/session/conversation.ts)
+      Read(src/session/enrichers.ts)
+      +2 more tool uses (ctrl+o to expand)
+
+
+
+ ››› Working… (52s · esc to interrupt)
+  ⎿  ☒ Plan the change
+     ◐ Read the session layer
+     ☐ Write the design
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

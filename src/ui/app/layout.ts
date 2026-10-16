@@ -78,6 +78,9 @@ export function useMeasured(
   // The window a backfill was last asked for from, until React mounts it or
   // the view follows again; the same window held later asks anew.
   const asked = useRef<{ front: number; first: number }>(undefined);
+  // A shift React set that a drag's selection must be read against, once
+  // the frame has laid the transcript out under it.
+  const shifted = useRef(false);
 
   latest.current = { state, front, first };
 
@@ -109,6 +112,12 @@ export function useMeasured(
           renderer.requestSelectionUpdate();
         }
       };
+
+      if (shifted.current) {
+        shifted.current = false;
+
+        reselect();
+      }
 
       const whole = content.current.getLayout();
       const view =
@@ -214,12 +223,14 @@ export function useMeasured(
     if (content.current && content.current.translateY !== shift) {
       content.current.translateY = shift;
 
-      // As above: a wheel step during a drag extends the selection.
-      if (latest.current.state.selection?.kind === 'dragging') {
-        renderer.requestSelectionUpdate();
-      }
+      // As above: a wheel step during a drag extends the selection. Read in
+      // the frame, not here: the press that stops the view following also
+      // moves the transcript from the bottom to the top, which only the
+      // frame lays out, and a selection read before it reaches to the end
+      // of the transcript (CHD-410).
+      shifted.current = true;
     }
-  }, [shift, renderer]);
+  }, [shift]);
 
   const place = useCallback(
     (index: number) =>

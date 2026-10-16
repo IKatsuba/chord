@@ -6,3 +6,8 @@
 import chalk from 'chalk';
 
 chalk.level = 0;
+
+// bun test --parallel run from a terminal sets FORCE_COLOR=1 for its
+// workers, and every process a test starts inherits it, so Bun's
+// console.error there paints what a test reads off stderr red.
+delete process.env['FORCE_COLOR'];

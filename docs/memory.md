@@ -117,11 +117,30 @@ Memory grows without bound in all three, and the growth has three holders:
    objects. Held only from the handler `Bun.serve` keeps natively, they show
    no path from a root. A real agent that keeps one MCP connection a session
    leaks little this way; one that reconnects leaks a server each time.
-   Open, not fixed: a session its client left stays until the caller's token
-   is revoked. This was measured on the fake's client-a-turn pattern, not on
-   a real agent, so the next step is to look for these servers in a snapshot
-   of a live chord (`SIGUSR2`, above) before a policy for letting them go is
-   chosen with the owner.
+   CHD-346 measured live Claude and Codex on 2026-10-16, from source in the
+   production build at 120×40, about five minutes each: 18 `SIGUSR2`
+   snapshots read with memlab's `getFullHeapFromFile`. Both kept the main
+   MCP session id through seven turns calling `list_agents`/`list_sessions`,
+   an Esc interruption and the turn after it. Every snapshot held one
+   `McpServer` and one `monitor` description reference per live token, never
+   two. An `open_agent` child and a second tab each added one; a finished
+   `spawn_task` left none. Killing the second tab's adapter removed its
+   server by token revocation. chord does not restart an exited adapter;
+   `/clear` made a new token and session. Each run ended with three servers
+   for three tokens: main, child and replacement.
+
+   One server with its tools retained about 109–111 KB alone, or 38–105 KB
+   each with several, where zod schemas and code are shared. Total
+   `heapUsed` rose from 34 to 38 MB for Claude and 33 to 37 MB for Codex;
+   that growth is not attributed to MCP. Each agent used at least four
+   distinct MCP sessions plus the task's; none outlived its token. Exact
+   initialize/DELETE counts were not measured, so whether the adapters
+   send DELETE is unknown: every observed session end was by revocation.
+   A dropped MCP stream was not provoked (Esc cancelled before an in-flight
+   call), nor an adapter restart in place. The fake's pile-up did not appear
+   in these cases. Open, not fixed: a reconnecting client can still leave
+   a server until its token is revoked. The policy for letting it go is
+   the owner's.
 
 ## After CHD-344 (2026-10-12)
 

@@ -268,6 +268,75 @@ test('--package publishes the one package, and prints no version while others ar
   expect(at.err.at(-1)).toStartWith('not tagged: ');
 });
 
+describe('tester: CHD-412 release transaction boundaries', () => {
+  function output(cwd: string, ...args: string[]): string {
+    const child = spawnSync('git', args, { cwd, encoding: 'utf8' });
+
+    expect(child.status).toBe(0);
+
+    return child.stdout.trim();
+  }
+
+  function versioned(wanted: string, options: ReleaseOptions) {
+    return runRelease(context(), selectStages(options), options, MAC, wanted);
+  }
+
+  test('a successful local run drops its version commit without a dry-run flag', async () => {
+    const head = output(at.root, 'rev-parse', 'HEAD');
+
+    at.fake('file', `echo "$1: ${Object.values(KINDS).join(' ')}"\n`);
+    await versioned('fix', { only: ['compile'] });
+
+    expect(output(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(output(join(at.place, 'origin.git'), 'rev-parse', 'main')).toBe(
+      head,
+    );
+    expect(output(at.root, 'status', '--porcelain')).toBe('');
+    expect(at.out).toEqual([]);
+  });
+
+  test('dropping a failed local version preserves unrelated tracked stage edits', async () => {
+    const head = output(at.root, 'rev-parse', 'HEAD');
+
+    at.fake(
+      'bun',
+      `echo "bun $*" >>"$STATE/ran.log"
+if [ "$2" = 'check' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
+`,
+    );
+
+    expect(await died(versioned('patch', { only: ['check', 'compile'] }))).toBe(
+      'bun scripts/dev.ts check failed',
+    );
+    expect(output(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(readFileSync(join(at.root, '.gitignore'), 'utf8')).toBe(
+      'dist/\nstage-output/\n',
+    );
+    expect(
+      JSON.parse(readFileSync(join(at.root, 'package.json'), 'utf8')),
+    ).toEqual({
+      version: VERSION,
+    });
+    expect(ran().filter((line) => line.startsWith('bun '))).toEqual([
+      'bun scripts/dev.ts check',
+    ]);
+  });
+
+  test('an equal exact version can publish packed fixtures without a new commit', async () => {
+    const head = output(at.root, 'rev-parse', 'HEAD');
+
+    packed();
+    await versioned(VERSION, { only: ['publish'] });
+
+    expect(output(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(output(join(at.place, 'origin.git'), 'rev-parse', 'main')).toBe(
+      head,
+    );
+    expect(at.out.at(-1)).toBe(VERSION);
+    expect(ran().some((line) => line.startsWith('bun '))).toBeFalse();
+  });
+});
+
 describe('tester: CHD-411 release check caller', () => {
   test('check selected alone calls the dev entry point without install', async () => {
     await released({ only: ['check'] });

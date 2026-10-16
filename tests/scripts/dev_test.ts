@@ -191,6 +191,7 @@ describe('tester: migrated command boundaries', () => {
       screenshots: unexpected,
       memory: unexpected,
       selftest: unexpected,
+      release: unexpected,
     };
 
     await expect(

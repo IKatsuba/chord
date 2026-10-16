@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { cp, mkdtemp, realpath, rm, symlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
 import { quote } from 'shell-quote';
@@ -164,5 +166,32 @@ describe('spawn', () => {
         `process.exit(process.cwd() === ${JSON.stringify(root)} ? 0 : 1)`,
       ]),
     ).toBe(0);
+  });
+
+  test('runs from a root whose name has a space', async () => {
+    const dir = await realpath(await mkdtemp(join(tmpdir(), 'chord-tools-')));
+    const checkout = join(dir, 'chord checkout');
+
+    try {
+      await cp(
+        join(root, 'scripts', 'dev', 'tools.ts'),
+        join(checkout, 'scripts', 'dev', 'tools.ts'),
+      );
+      await symlink(join(root, 'node_modules'), join(checkout, 'node_modules'));
+
+      const moved = (await import(
+        join(checkout, 'scripts', 'dev', 'tools.ts')
+      )) as { spawn: Run };
+
+      expect(
+        moved.spawn([
+          bun,
+          '-e',
+          `process.exit(process.cwd() === ${JSON.stringify(checkout)} ? 0 : 1)`,
+        ]),
+      ).toBe(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

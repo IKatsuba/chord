@@ -561,8 +561,8 @@ adapter or CLI, it does not sign you in to anybody.
 
 ```sh
 bun install       # the dependencies
-bun chord         # run from source
-bun check         # full validation: types, lint, format, tests
+bun dev chord     # run from source
+bun dev check     # full validation: types, lint, format, tests
 bun dev compile   # this machine's binary into dist/
 bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
 ```
@@ -570,28 +570,52 @@ bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
 `AGENTS.md` is binding for people and agents and says which checks a change
 needs. `docs/decisions.md` records why the stack is what it is.
 
-`bun dev --help` lists the build, release and maintenance commands:
-`compile` (`--all` or `--install`), `npm`, `registry`, `mark`, `screenshots`
-(optionally shot names), `memory`, `selftest <binary>` and `release`.
+`bun dev --help` lists all development commands: `chord` (`--fake` for the
+test agent), `test` (`--update-timings` after a slow test is added or split),
+`check` (`--static` to leave out the suite), `fmt`, `lint`, `compile`
+(`--all` or `--install`), `npm`, `registry`, `mark`, `screenshots` (optionally
+shot names), `memory`, `selftest <binary>` and `release [version]`.
+Arguments after `chord`, `test` and `lint` pass on as written; an empty
+argument needs `--` (`bun dev test -- -t ''`). Use `bun dev chord -- --help`
+for chord's own help.
 
-The owner's release runs `install`, `check`, `natives`, `compile`, `sign`,
+The owner's `bun dev release [version|major|minor|patch|fix]` releases
+package.json's version when none is given. An exact version must equal it
+or be above it, in canonical `X.Y.Z` form with no prefix or build metadata.
+`fix` means `patch`. Pre-releases are refused, including a version argument
+when package.json's current version is a pre-release. Give the command a
+version or bump instead of editing package.json's version by hand.
+
+The release runs `install`, `check`, `natives`, `compile`, `sign`,
 `selftest`, `notarise`, `pack` and `publish` in order. `--skip` and `--only`
 take comma-separated stages; `--from` and `--to` bound the run. `--only`
-cannot combine with the other three. `--package` selects one package to
-publish. `--dry-run` stops before publishing but still submits to Apple;
+cannot combine with the other three. A new version needs `compile` among
+the selected stages. `--package` selects one package to publish.
+`--dry-run` stops before publishing but still submits to Apple;
 `--dry-run --skip notarise` leaves out that submission.
 
-Preflight always checks a clean tree, the version and npm login. Publishing
-also needs `main` equal to `origin/main` and no `v<version>` tag. `natives`,
-`sign` and `notarise` require an arm64 Mac; the signing identity and notary
+Preflight checks a clean tree, the version and npm login. Publishing also
+needs `main` equal to `origin/main` and no `v<version>` tag. A new version
+is then written into package.json and committed alone as
+`chore: chord v<version>` before any stage. A publishing run pushes main
+first. If the push fails, it drops the local commit and stops; a later
+failure leaves the pushed commit on origin. Rerun with no version, or the
+same one, to release package.json's version without another commit.
+
+A dry run or a run without `publish` makes the version commit locally and
+drops it at the end, on failure too. SIGINT, SIGTERM and SIGHUP also drop
+an unpushed version commit. SIGKILL may leave it; drop that commit with
+`git reset --keep HEAD~1`.
+
+`natives`, `sign` and `notarise` require an arm64 Mac; signing and notary
 credentials are checked before building when their stages are selected.
-A stopped publish resumes from the packed tarballs without rebuilding;
-a dry run or a run without `publish` refuses that resume. Each tarball must
-match its recorded SHA-256 sum. The main package waits for all four platform
-packages on npm, then all five must answer before the annotated version
-tag is pushed to origin. Publishing needs the owner at a terminal: npm
-gets the terminal for each authorisation and the CLI waits. See
-`bun dev release --help` for examples.
+A stopped publish resumes only package.json's version from the packed
+tarballs without rebuilding; a dry run or a run without `publish` refuses
+that resume. Each tarball must match its recorded SHA-256 sum. The main
+package waits for all four platform packages on npm, then all five must
+answer before the annotated version tag is pushed to origin. Publishing
+needs the owner at a terminal: npm gets the terminal for each authorisation
+and the CLI waits. See `bun dev release --help` for examples.
 
 A chord that has grown large: `kill -USR2 <pid>` writes a heap snapshot of
 it, without stopping it, into `heaps/` in chord's state directory, for

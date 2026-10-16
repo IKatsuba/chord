@@ -64,11 +64,11 @@ screen. Ctrl+C or `SIGTERM` at any point ends its tmux session and waits
 for chord and every fake agent under it to exit, signalling what has not
 within ten seconds.
 
-From source it runs chord as `bun chord` does, with React's production
+From source it runs chord as `bun dev chord` does, with React's production
 build; `--development` runs it as plain `bun src/main.tsx` does, with the
 development build.
 
-It is a script, not part of `bun check`: memory that grows shows only
+It is a script, not part of `bun dev check`: memory that grows shows only
 over minutes, and the check's tests end in seconds.
 
 memlab's ids do not carry over between two of Bun's snapshots, so what grew
@@ -145,7 +145,7 @@ Memory grows without bound in all three, and the growth has three holders:
 
 ## After CHD-344 (2026-10-12)
 
-`bun chord`, `bun chord:fake` and `bun dev compile` now define
+`bun dev chord`, `bun dev chord --fake` and `bun dev compile` now define
 `process.env.NODE_ENV` as `"production"` (Bun's `--define`), so React loads
 its production build from source and in the binary. Two 8-minute runs side
 by side, as above:

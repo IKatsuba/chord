@@ -1,10 +1,11 @@
 # Fake agent scenarios
 
 - `tests/fixtures/fake_agent/` — a scripted ACP agent on the SDK's agent side.
-  `main.ts` is the agent, which `bun chord:fake` and `tests/fixtures/fake.ts`'s
-  `fakeAgentCommand` start: the scenario chosen, every request answered,
-  sessions listed, loaded and resumed, and a turn's usage; it plays one
-  table spread from a module per family under `scenarios/`: `text.ts`
+  `main.ts` is the agent, which `bun dev chord --fake` and
+  `tests/fixtures/fake.ts`'s `fakeAgentCommand` start: the scenario chosen,
+  every request answered, sessions listed, loaded and resumed, and a turn's
+  usage; it plays one table spread from a module per family under
+  `scenarios/`: `text.ts`
   (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `unordered`, `edit`, `rewrite`),
   `permissions.ts` (`permission`, `twins`, `mcpask`), `plans.ts` (`plan`, `planshrink`,

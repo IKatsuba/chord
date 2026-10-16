@@ -14,7 +14,7 @@ does, `docs/FEATURES.md` is the map of what gets built and in which order,
 The repository is public-ready from the first commit: everything in it — code,
 comments, docs, commit messages, test names — is in English, and nothing in it
 names a private path, a key, or a person's machine. `tests/privacy_test.ts`
-fails `bun check` on any file git tracks that names a home directory,
+fails `bun dev check` on any file git tracks that names a home directory,
 the name of the home of whoever runs it, or a path in Claude Code's own
 directory there other than its public settings files.
 
@@ -39,18 +39,24 @@ owner's consent.
 ## Commands
 
 ```sh
-bun install                 # the dependencies, as bun.lock pins them
-bun chord [agent]           # run from source
-bun chord:fake              # run from source against the fake agent in tests/fixtures/
-bun check                   # full validation: types, lint, fmt and all tests
-bun check:static            # tsc, ESLint, Prettier and lint/'s own test; check runs it too
-bun run test                # tests only, a worker per core (bun test is Bun's own)
-bun test:timings            # the same, then tests/timings.json rewritten; rerun after a slow file is added or split
-bun test --isolate --timeout=60000 ./tests/x_test.ts -t '…' # matching tests
-bun test --parallel --timeout=60000 --changed ./tests/ # uncommitted changes
-bun test --parallel --timeout=60000 --changed=<commit> ./tests/ # since a commit
-bun lint --fix              # what ESLint can fix, then bun fmt lays it out
+bun install                    # the dependencies, as bun.lock pins them
+bun dev chord [agent]           # run from source
+bun dev chord --fake            # run against the scripted test agent
+bun dev check                   # types, lint, fmt and all tests
+bun dev check --static          # tsc, ESLint, Prettier and lint/'s own test
+bun dev test [args…]            # tests, a worker per core; Bun's test arguments
+bun dev test --update-timings   # rewrite timings after a slow test is added/split
+bun dev test -t '…'             # matching tests
+bun dev test --changed          # uncommitted changes
+bun dev test --changed=<commit> # since a commit
+bun test --isolate --timeout=60000 ./tests/x_test.ts -t '…' # Bun's own runner
+bun dev lint --fix              # what ESLint can fix
+bun dev fmt                    # lay out the tree with Prettier
 ```
+
+Arguments after `chord`, `test` and `lint` pass on as written. An empty
+argument needs `--` (`bun dev test -- -t ''`); the tool's own help does too
+(`bun dev chord -- --help`).
 
 The binary is built by `bun build --compile`, Bun 1.4.2 or newer. Build,
 release and maintenance commands share `bun dev <command>` (Cliffy):
@@ -60,7 +66,7 @@ bun dev compile           # this machine's binary into dist/<target>/chord
 bun dev compile --all     # every release target
 bun dev compile --install # this machine's binary into ~/.local/bin/chord
 bun dev npm               # lay out npm/ from dist/
-bun dev release --dry-run # the owner's release, short of publishing
+bun dev release [version|major|minor|patch|fix] # the owner's release
 bun dev selftest <binary> # check a binary on the fake agent, including tmux
 bun dev registry          # refetch the ACP Registry into src/registry.ts
 bun dev mark              # rasterise scripts/mark.svg into the header mark
@@ -68,13 +74,17 @@ bun dev screenshots       # retake docs/images/ from chord on the fake agent
 bun dev memory            # long-run memory check; options in docs/memory.md
 ```
 
-`bun dev release --help` lists its stages and selection flags. A dry run
-still submits to Apple; add `--skip notarise` to leave that stage out.
+`bun dev release --help` lists its stages and selection flags. Give it the
+version or bump instead of editing package.json's version by hand. A new
+version needs `compile`; a publishing run commits and pushes it to main
+before any stage. A dry run or run without publish drops its local commit
+at the end. A dry run still submits to Apple; add `--skip notarise` to
+leave that stage out. See `docs/guide.md` for failure and signal cleanup.
 
 ## How code is written
 
-- **Bun runs chord.** `bun check` runs `tsc`, ESLint, Prettier and
-  `bun test`. Tests use `test`, `describe`, `expect` and the fake timers of
+- **Bun runs chord.** `bun dev check` runs `tsc`, ESLint, Prettier and
+  `bun dev test`. Tests use `test`, `describe`, `expect` and the fake timers of
   `bun:test`. Code outside `src/platform/` calls `node:` built-ins; that
   folder holds Bun's runtime calls. The binary is `bun build --compile`'s,
   with OpenTUI's native library for its target embedded. Dependencies go in
@@ -87,7 +97,7 @@ still submits to Apple; add `--skip notarise` to leave that stage out.
   compiler flags, `eslint.config.ts` the lint rules, `lint/style.ts` what
   Prettier cannot express (blank lines, imports first), and
   `.prettierrc.json` the layout (80 columns, single quotes, JSX's too).
-  `bun lint --fix` then `bun fmt` lays code out. A lint rule added
+  `bun dev lint --fix` then `bun dev fmt` lays code out. A lint rule added
   to `eslint.config.ts` gets its snippet in `lint/config_test.ts`.
 - **Logic lives where a test reaches it.** Reducers from runtime events to
   transcript state, key handling, history, completion, settings merge — pure
@@ -97,7 +107,7 @@ still submits to Apple; add `--skip notarise` to leave that stage out.
 - **Tests never reach a real model or a real agent.** Drive the UI through
   `tests/ui/harness.tsx`, on OpenTUI's `testRender`; drive the session layer
   with a fake ACP agent in `tests/fixtures/` speaking the protocol over stdio. A live agent is for a
-  person checking by hand, not for `bun check`.
+  person checking by hand, not for `bun dev check`.
 - **Comments say why, not what.** A doc comment on a type says what it is for.
 - **Every action has a key.** Nothing on screen needs a pointer. A new action
   names its key in the same change, and the shortcuts panel (`?` on an empty
@@ -112,7 +122,7 @@ still submits to Apple; add `--skip notarise` to leave that stage out.
 ## Choosing checks for a change
 
 Run checks that match the changed files and the behavior they can affect.
-A full `bun check` is not required before every commit.
+A full `bun dev check` is not required before every commit.
 
 - For prose-only documentation, repository metadata or agent instructions,
   review the diff and check formatting of the changed files. Check links or
@@ -122,7 +132,7 @@ A full `bun check` is not required before every commit.
 - For code changes, run the relevant tests and static checks for the affected
   code. For interface changes, also check the behavior and layout by hand
   where automated checks do not cover them.
-- Use the full `bun check` for changes with broad impact, such as shared
+- Use the full `bun dev check` for changes with broad impact, such as shared
   runtime behavior, dependencies or build and test configuration, or when
   targeted checks leave a concrete concern unresolved. Do not broaden or
   repeat checks without a reason tied to the change or a failure.
@@ -137,7 +147,7 @@ chord is a terminal program, so a check runs it in a real terminal of a known
 size and reads the screen back as text:
 
 ```sh
-tmux new-session -d -s chord-qa -x 120 -y 40 'bun chord'
+tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord'
 tmux send-keys -t chord-qa 'hello' Enter
 tmux capture-pane -t chord-qa -p        # the screen as text; -e keeps colours
 tmux kill-session -t chord-qa

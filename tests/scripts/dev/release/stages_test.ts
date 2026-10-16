@@ -20,6 +20,7 @@ import {
   selectStages,
 } from '../../../../scripts/dev/release/select.ts';
 import { runRelease } from '../../../../scripts/dev/release/stages.ts';
+import { KINDS } from '../../../../scripts/dev/release/build.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
 import { type Scratch, scratch } from './scratch.ts';
 
@@ -387,7 +388,7 @@ describe('a version given', () => {
   ): Promise<void> {
     await runRelease(
       context(env),
-      selectStages(options, version),
+      selectStages(options),
       options,
       MAC,
       version,
@@ -415,6 +416,8 @@ if [ "$2" = 'check' ]; then cat package.json >"$STATE/checked.json"; fi
 if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
 `,
     );
+    // Every binary the compile faked is every kind it should be.
+    at.fake('file', `echo "$1: ${Object.values(KINDS).join(' ')}"\n`);
   });
 
   const checked = () =>
@@ -427,11 +430,14 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
   test('a dry run builds the new version, then drops its commit', async () => {
     const head = out(at.root, 'rev-parse', 'HEAD');
 
-    await releasedAt('minor', { dryRun: true, only: ['install', 'check'] });
+    await releasedAt('minor', {
+      dryRun: true,
+      only: ['install', 'check', 'compile'],
+    });
 
     expect(checked()).toBe('9.10.0');
     expect(at.out.at(-1)).toBe(
-      'dry run: @chorded/chord 9.10.0, ran install, check; not published',
+      'dry run: @chorded/chord 9.10.0, ran install, check, compile; not published',
     );
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(version()).toBe(VERSION);
@@ -443,7 +449,9 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
     const head = out(at.root, 'rev-parse', 'HEAD');
 
     expect(
-      await died(releasedAt('9.9.10', { to: 'check' }, { FAIL_CHECK: 'yes' })),
+      await died(
+        releasedAt('9.9.10', { to: 'compile' }, { FAIL_CHECK: 'yes' }),
+      ),
     ).toBe('bun scripts/dev.ts check failed');
     expect(checked()).toBe('9.9.10');
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
@@ -459,7 +467,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
       releasedAt(
         'patch',
         {
-          skip: ['natives', 'compile', 'sign', 'selftest', 'notarise', 'pack'],
+          skip: ['natives', 'sign', 'selftest', 'notarise', 'pack'],
         },
         { FAIL_CHECK: 'yes' },
       ),
@@ -533,9 +541,107 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
   });
 
-  test('with --only publish it is refused', () => {
-    expect(() => selectStages({ only: ['publish'] }, 'patch')).toThrow(
-      'takes none',
+  test.each([
+    ['--only publish', { only: ['publish' as const] }],
+    [
+      '--only check,pack,publish',
+      { only: ['check', 'pack', 'publish'] as const },
+    ],
+    ['--from pack', { from: 'pack' as const }],
+    ['--skip compile', { skip: ['compile' as const] }],
+    ['--to check', { to: 'check' as const }],
+  ])('a new version without compile is refused: %s', async (_name, options) => {
+    const head = out(at.root, 'rev-parse', 'HEAD');
+
+    expect(await died(releasedAt('patch', options))).toBe(
+      "a new version needs the compile stage: 9.9.10 is not package.json's 9.9.9",
     );
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(ran()).toStrictEqual([]);
+  });
+
+  test("package.json's own version needs no compile", async () => {
+    await releasedAt(VERSION, { dryRun: true, only: ['check'] });
+
+    expect(checked()).toBe(VERSION);
+  });
+});
+
+describe('a signal while the version commit is held', () => {
+  const lib = join(import.meta.dir, '../../../../scripts/dev/release');
+
+  /**
+   * A release at `version` in a process of its own, whose check stage
+   * sends that process `signal`, as Ctrl+C reaches a stage's child and
+   * chord's release together, then fails.
+   */
+  function interrupted(signal: string, options: ReleaseOptions) {
+    at.fake(
+      'bun',
+      `echo "bun $*" >>"$STATE/ran.log"
+if [ "$2" = 'check' ]; then kill -${signal} $PPID; exit 2; fi
+`,
+    );
+
+    const script = join(at.place, 'run.ts');
+
+    writeFileSync(
+      script,
+      `import { dying } from ${JSON.stringify(join(lib, 'lib.ts'))};
+import { selectStages } from ${JSON.stringify(join(lib, 'select.ts'))};
+import { runRelease } from ${JSON.stringify(join(lib, 'stages.ts'))};
+
+const options = ${JSON.stringify(options)};
+const release = {
+  root: ${JSON.stringify(at.root)},
+  env: process.env,
+  sleep: () => Promise.resolve(),
+  out: (line) => console.log(line),
+  err: (line) => console.error(line),
+  tty: true,
+};
+
+await dying(() =>
+  runRelease(release, selectStages(options), options, { platform: 'darwin', arch: 'arm64' }, 'patch'),
+);
+`,
+    );
+
+    return spawnSync(process.execPath, [script], {
+      cwd: at.root,
+      env: context().env,
+      encoding: 'utf8',
+    });
+  }
+
+  function out(cwd: string, ...args: string[]): string {
+    return String(spawnSync('git', args, { cwd }).stdout).trim();
+  }
+
+  test.each([
+    ['SIGINT', 130],
+    ['SIGTERM', 143],
+    ['SIGHUP', 129],
+  ])('%s drops the commit and exits with its status', (signal, status) => {
+    const head = out(at.root, 'rev-parse', 'HEAD');
+    const child = interrupted(signal, { dryRun: true, to: 'compile' });
+
+    expect(child.status).toBe(status);
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(out(at.root, 'status', '--porcelain')).toBe('');
+  });
+
+  test('a run that has pushed keeps its commit', () => {
+    const child = interrupted('SIGINT', {
+      skip: ['natives', 'sign', 'selftest', 'notarise', 'pack'],
+    });
+
+    expect(child.status).not.toBe(0);
+    expect(out(at.root, 'log', '-1', '--format=%s')).toBe(
+      'chore: chord v9.9.10',
+    );
+    expect(
+      out(join(at.place, 'origin.git'), 'log', '-1', '--format=%s', 'main'),
+    ).toBe('chore: chord v9.9.10');
   });
 });

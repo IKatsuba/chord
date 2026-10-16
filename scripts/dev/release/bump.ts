@@ -4,8 +4,10 @@
  * stage, which reads package.json, builds and packs that version. A run
  * that publishes pushes it to origin's main, and drops it if the push
  * fails; any other run drops it at the end, leaving the branch as it found
- * it.
+ * it. Until it is pushed or dropped, Ctrl+C, SIGTERM and SIGHUP drop it
+ * too; SIGKILL cannot be caught, and leaves it.
  */
+import process from 'node:process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { die, type Release, run, said } from './lib.ts';
@@ -51,20 +53,87 @@ export function commitVersion(release: Release, version: string): string {
   return said(head.stdout);
 }
 
-/** main pushed to origin, the version commit made on `head` with it. */
+/** The signals a held version commit is dropped on, with the status each exits with. */
+const SIGNALS = [
+  ['SIGINT', 130],
+  ['SIGTERM', 143],
+  ['SIGHUP', 129],
+] as const;
+
+/** A local version commit, dropped once, or kept once pushed. */
+export interface Held {
+  /** Drops the commit, if it is still held, and stops watching for signals. */
+  drop(): void;
+  /** Keeps the commit, pushed, and stops watching for signals. */
+  keep(): void;
+}
+
+/**
+ * Holds the version commit made on `head`: a signal while it is held drops
+ * it, then exits with the signal's status.
+ */
+export function holdVersion(release: Release, head: string): Held {
+  let held = true;
+  const handlers = SIGNALS.map(([signal, status]) => {
+    const handler = () => {
+      try {
+        if (held) {
+          dropVersion(release, head);
+        }
+      } catch (error) {
+        release.err(`release: ${(error as Error).message}`);
+      } finally {
+        process.exit(status);
+      }
+    };
+
+    process.on(signal, handler);
+
+    return [signal, handler] as const;
+  });
+
+  const done = () => {
+    held = false;
+
+    for (const [signal, handler] of handlers) {
+      process.off(signal, handler);
+    }
+  };
+
+  return {
+    drop: () => {
+      if (!held) {
+        return;
+      }
+
+      held = false;
+
+      // The handlers outlive the drop by a turn of the event loop: Ctrl+C
+      // during a stage's child is handled only once the stage has failed
+      // and the commit is dropped, and must still exit with its status.
+      setImmediate(done);
+      dropVersion(release, head);
+    },
+    keep: done,
+  };
+}
+
+/** main pushed to origin, the version commit `held` with it. */
 export function pushVersion(
   release: Release,
   version: string,
-  head: string,
+  held: Held,
 ): void {
   const pushed = run(release, 'git', ['push', '-q', 'origin', 'main']);
 
   if (pushed.status !== 0) {
-    dropVersion(release, head);
+    held.drop();
     die(
       `git push origin main failed, so chore: chord v${version} is dropped: ${said(pushed.stderr)}`,
     );
   }
+
+  held.keep();
 }
 
 /**

@@ -68,3 +68,53 @@ describe('releaseVersion', () => {
     );
   });
 });
+
+describe('tester: CHD-412 version boundaries', () => {
+  test('major and minor reset subordinate components, and fix equals patch', () => {
+    expect(releaseVersion('2.9.8', 'major')).toBe('3.0.0');
+    expect(releaseVersion('2.9.8', 'minor')).toBe('2.10.0');
+    expect(releaseVersion('2.9.8', 'fix')).toBe(
+      releaseVersion('2.9.8', 'patch'),
+    );
+    expect(releaseVersion('0.0.0', 'fix')).toBe('0.0.1');
+  });
+
+  test('exact versions compare numerically across multi-digit components', () => {
+    expect(releaseVersion('1.9.9', '1.10.0')).toBe('1.10.0');
+    expect(releaseVersion('1.10.0', '1.10.0')).toBe('1.10.0');
+    expect(() => releaseVersion('1.10.0', '1.9.99')).toThrow(VersionError);
+  });
+
+  test('noncanonical spellings are refused before version resolution', () => {
+    for (const wanted of [
+      ' 1.2.3',
+      '1.2.3 ',
+      '01.2.3',
+      '1.02.3',
+      '1.2.03',
+      '=1.2.3',
+      '1.2.3+build.1',
+      '^1.2.3',
+      '*',
+      'FIX',
+    ]) {
+      expect(isVersionArgument(wanted)).toBeFalse();
+      expect(() => releaseVersion('1.0.0', wanted)).toThrow(VersionError);
+    }
+  });
+
+  test('every requested bump or exact version over a prerelease is refused', () => {
+    for (const wanted of [
+      'major',
+      'minor',
+      'patch',
+      'fix',
+      '1.2.3-rc.1',
+      '1.2.2',
+      '1.2.3',
+      '2.0.0',
+    ]) {
+      expect(() => releaseVersion('1.2.3-rc.1', wanted)).toThrow(VersionError);
+    }
+  });
+});

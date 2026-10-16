@@ -319,6 +319,46 @@ describe('tester: migrated command boundaries', () => {
   });
 });
 
+describe('tester: CHD-411 forwarding boundaries', () => {
+  test('quoted and dash-prefixed values retain their boundaries', async () => {
+    const args = ['-t', 'a stop with spaces', '--unknown=value'];
+
+    expect(await parsed(['test', ...args])).toStrictEqual([['test', args]]);
+    expect(await parsed(['lint', ...args])).toStrictEqual([['lint', args]]);
+    expect(await parsed(['chord', '--fake', ...args])).toStrictEqual([
+      ['chord', true, args],
+    ]);
+  });
+
+  test('empty arguments survive only after the literal boundary', async () => {
+    expect(await parsed(['test', '-t', ''])).toStrictEqual([['test', ['-t']]]);
+    expect(await parsed(['test', '--', '-t', ''])).toStrictEqual([
+      ['test', ['-t', '']],
+    ]);
+  });
+
+  test('fake is forwarded after the first chord argument or literal boundary', async () => {
+    for (const args of [
+      ['-p', 'text', '--fake'],
+      ['--', '--fake'],
+    ]) {
+      expect(await parsed(['chord', ...args])).toStrictEqual([
+        ['chord', false, args.filter((arg) => arg !== '--')],
+      ]);
+    }
+  });
+
+  test('strict commands refuse options meant for forwarded tools', async () => {
+    for (const argv of [
+      ['fmt', '--fix'],
+      ['check', '--update-timings'],
+      ['check', '--static', 'extra'],
+    ]) {
+      await expect(parsed(argv)).rejects.toThrow(ValidationError);
+    }
+  });
+});
+
 describe('selftest', () => {
   test('takes the binary, natively by default', async () => {
     expect(

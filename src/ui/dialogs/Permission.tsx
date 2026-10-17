@@ -1,3 +1,18 @@
+import {
+  type BoxRenderable,
+  LinearScrollAccel,
+  type MouseEvent,
+  type ScrollBoxRenderable,
+} from '@opentui/core';
+import { useTerminalDimensions } from '@opentui/react';
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import type {
   PermissionWait,
   SaveBox as SaveBoxQuestion,
@@ -9,12 +24,19 @@ import { borderOf, ChoiceList } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { askerRow } from '../transcript/agents/subagents.ts';
+import type { ScrollStep } from '../transcript/scroll.ts';
 import {
   choicesFor,
-  inputLines,
-  locationsShown,
+  hiddenRows,
+  INPUT_INDENT,
+  requestRows,
+  requestRule,
+  type RequestRow,
   saveChoices,
 } from './permission.ts';
+
+/** Moves the permission request on screen by a scroll key's step. */
+export type RequestScroller = (step: ScrollStep) => void;
 
 /** The question waiting: the agent's, or chord's own save box. */
 export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
@@ -39,6 +61,8 @@ function AgentPermission({
   width = 0,
   active,
   onChoose,
+  scroller,
+  onOverflow,
 }: {
   wait: PermissionWait;
   /** The way down to the subagent that asks; empty when the agent does. */
@@ -49,19 +73,25 @@ function AgentPermission({
   width?: number;
   active: boolean;
   onChoose: (optionId: string) => void;
+  /** Where the window finds how to scroll the request, while it is up. */
+  scroller?: RefObject<RequestScroller | undefined>;
+  /** Called as the request comes to run past its room, or to fit again. */
+  onOverflow?: (overflows: boolean) => void;
 }) {
-  const { accent } = useColours();
+  const colours = useColours();
   const asks = askerRow(asker, width);
+  const { pinned, rows } = requestRows(wait, Math.max(width, 1));
 
   return (
+    // It gives way only in its request's rows, every other row pinned.
     <box
-      {...borderOf(useColours().permission)}
+      {...borderOf(colours.permission)}
       paddingX={1}
       marginTop={1}
-      flexShrink={0}
+      flexShrink={1}
     >
       {child !== undefined && asks.length === 0 && (
-        <text {...CUT}>
+        <text {...CUT} flexShrink={0}>
           <span {...fg(child.colour)} attributes={BOLD}>
             {child.name}
           </span>
@@ -69,7 +99,7 @@ function AgentPermission({
         </text>
       )}
       {asks.length > 0 && (
-        <text {...CUT} {...fg(accent)}>
+        <text {...CUT} {...fg(colours.accent)} flexShrink={0}>
           {asks.map((piece, index) => (
             <span key={index} attributes={piece.bold ? BOLD : 0}>
               <Ansi text={piece.text} />
@@ -77,31 +107,197 @@ function AgentPermission({
           ))}
         </text>
       )}
-      <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
-        <Ansi text={wait.title ?? 'Tool call'} />
+      <text
+        {...CUT}
+        {...fg(colours.permission)}
+        attributes={BOLD}
+        flexShrink={0}
+      >
+        <Ansi text={pinned} />
       </text>
-      {locationsShown(wait).map((path) => (
-        <text key={path} {...CUT} attributes={DIM}>
-          <Ansi text={path} />
-        </text>
-      ))}
-      {inputLines(wait).map((line, index) => (
-        <box key={index} paddingLeft={2}>
-          <text {...TEXT}>
-            <Ansi text={line} />
-          </text>
-        </box>
-      ))}
-      <box marginTop={1}>
+      {rows.length > 0 && (
+        <Request
+          rows={rows}
+          width={Math.max(width, 1)}
+          {...(scroller === undefined ? {} : { scroller })}
+          {...(onOverflow === undefined ? {} : { onOverflow })}
+        />
+      )}
+      <box marginTop={1} flexShrink={0}>
         <text {...TEXT}>Do you want to proceed?</text>
       </box>
-      <ChoiceList
-        choices={choicesFor(wait)}
-        active={active}
-        onSelect={onChoose}
-      />
+      <box flexShrink={0}>
+        <ChoiceList
+          choices={choicesFor(wait)}
+          active={active}
+          onSelect={onChoose}
+        />
+      </box>
       <PermissionHint />
     </box>
+  );
+}
+
+/**
+ * The request under the pinned title, in at most half the window's rows and
+ * fewer where the window has no more left once the answers are drawn: the
+ * answers are never cut, and the transcript gives way first. Taller than
+ * that, it scrolls in OpenTUI's scrollbox, by the wheel over it and by the
+ * scroll keys the window hands it, a dim rule saying how much is out of view
+ * above and below, in rows the request has.
+ */
+function Request({
+  rows,
+  width,
+  scroller,
+  onOverflow,
+}: {
+  rows: readonly RequestRow[];
+  width: number;
+  scroller?: RefObject<RequestScroller | undefined>;
+  onOverflow?: (overflows: boolean) => void;
+}) {
+  const colours = useColours();
+  const { height: windowRows } = useTerminalDimensions();
+  const view = useRef<ScrollBoxRenderable | null>(null);
+  const area = useRef<BoxRenderable | null>(null);
+  const [room, setRoom] = useState(rows.length);
+  const [top, setTop] = useState(0);
+  const total = rows.length;
+  const overflows = total > room;
+  const above = overflows && top > 0;
+  // A row the room has is the rule's, so the view is the rest.
+  const unruled = room - (above ? 1 : 0);
+  const below = overflows && top + unruled < total;
+  const shown = Math.max(0, unruled - (below ? 1 : 0));
+  // One row holds a single rule; the one that says more is below wins.
+  const rules = {
+    above: above && (!below || room > 1),
+    below,
+  };
+  const hidden = hiddenRows(total, top, shown);
+  const upKey = useHintKey('scroll:pageUp');
+  const downKey = useHintKey('scroll:pageDown');
+  const scroll = useCallback(
+    (step: ScrollStep) => {
+      const box = view.current;
+
+      if (box === null) {
+        return;
+      }
+
+      switch (step) {
+        case 'page_up':
+          return box.scrollBy(-Math.max(room - 1, 1));
+        case 'page_down':
+          return box.scrollBy(Math.max(room - 1, 1));
+        case 'line_up':
+          return box.scrollBy(-1);
+        case 'line_down':
+          return box.scrollBy(1);
+        case 'top':
+          return box.scrollTo(0);
+        case 'bottom':
+          return box.scrollTo(box.scrollHeight);
+      }
+    },
+    [room],
+  );
+
+  useEffect(() => {
+    onOverflow?.(overflows);
+  }, [onOverflow, overflows]);
+
+  useEffect(() => {
+    if (scroller === undefined) {
+      return;
+    }
+
+    scroller.current = scroll;
+
+    return () => {
+      scroller.current = undefined;
+    };
+  }, [scroller, scroll]);
+
+  // The scrollbox moves by itself under the wheel; its scrollbar says where.
+  useLayoutEffect(() => {
+    const bar = view.current?.verticalScrollBar;
+    const moved = ({ position }: { position: number }) => setTop(position);
+
+    bar?.on('change', moved);
+
+    return () => {
+      bar?.off('change', moved);
+    };
+  }, []);
+
+  return (
+    <box
+      flexBasis={Math.min(total, Math.max(Math.floor(windowRows / 2), 1))}
+      // Not 1: Yoga leaves an item at its basis rather than shrink it to
+      // exactly its minimum, which a window of 19 rows asks for.
+      minHeight={0}
+      flexShrink={1}
+      overflow='hidden'
+      ref={area}
+      onSizeChange={() => setRoom(area.current?.getLayout().height ?? total)}
+    >
+      {rules.above && (
+        <Rule text={requestRule('↑', hidden.above, upKey, width)} />
+      )}
+      <scrollbox
+        ref={view}
+        // A room of one row is its rule's; laid out to nothing, the view
+        // would be drawn a row tall over it.
+        visible={shown > 0}
+        flexGrow={1}
+        flexShrink={1}
+        minHeight={0}
+        focusable={false}
+        scrollAcceleration={WHEEL}
+        verticalScrollbarOptions={{ visible: false }}
+        // Over a request that scrolls, the wheel is its own, not the view's.
+        onMouseScroll={(event: MouseEvent) => {
+          if (overflows) {
+            event.stopPropagation();
+          }
+        }}
+      >
+        {rows.map((row, index) => (
+          <box
+            key={index}
+            flexShrink={0}
+            paddingLeft={row.kind === 'input' ? INPUT_INDENT : 0}
+          >
+            <text
+              {...CUT}
+              {...(row.kind === 'title'
+                ? { ...fg(colours.permission), attributes: BOLD }
+                : row.kind === 'location'
+                  ? { attributes: DIM }
+                  : {})}
+            >
+              <Ansi text={row.text === '' ? ' ' : row.text} />
+            </text>
+          </box>
+        ))}
+      </scrollbox>
+      {rules.below && (
+        <Rule text={requestRule('↓', hidden.below, downKey, width)} />
+      )}
+    </box>
+  );
+}
+
+/** A row a wheel report moves the request, as it moves the transcript. */
+const WHEEL = new LinearScrollAccel();
+
+function Rule({ text }: { text: string }) {
+  return (
+    <text {...CUT} attributes={DIM} flexShrink={0}>
+      {text}
+    </text>
   );
 }
 
@@ -152,7 +348,7 @@ function PermissionHint() {
   const key = useHintKey('confirm:no');
 
   return key === undefined ? null : (
-    <box marginTop={1}>
+    <box marginTop={1} flexShrink={0}>
       <text {...TEXT} attributes={DIM}>{`${capital(key)} to reject`}</text>
     </box>
   );

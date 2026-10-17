@@ -614,3 +614,51 @@ test('a selection cleared mid-drag lets go of the view, here and on a tab switch
   expect(two.sessions[1]!.scroll.held).toBeUndefined();
   expect(two.sessions[1]!.scroll.following).toBe(true);
 });
+
+test("the scroll keys move a permission request only while it overflows, and only that request's", () => {
+  const asked = reduceApp(busy, {
+    type: 'permission_requested',
+    turnId: 't1',
+    permission: { id: 'p1', options: [] },
+  });
+  const pgdn = { ...plain, pageDown: true };
+  const overflowing = reduceApp(asked, {
+    type: 'request_overflowed',
+    id: 'p1',
+    overflows: true,
+  });
+
+  expect(keyCommand('', pgdn, asked, '')).toStrictEqual('scroll_page_down');
+  expect(keyCommand('', pgdn, overflowing, '')).toStrictEqual(
+    'request_page_down',
+  );
+  expect(
+    keyCommand('', { ...plain, home: true }, overflowing, ''),
+  ).toStrictEqual('request_top');
+
+  // Fitting again, or another request's, gives the keys back to the view.
+  const fits = reduceApp(overflowing, {
+    type: 'request_overflowed',
+    id: 'p1',
+    overflows: false,
+  });
+
+  expect(fits.overflowing).toStrictEqual(undefined);
+  expect(keyCommand('', pgdn, fits, '')).toStrictEqual('scroll_page_down');
+  expect(
+    reduceApp(overflowing, {
+      type: 'request_overflowed',
+      id: 'p0',
+      overflows: false,
+    }).overflowing,
+  ).toStrictEqual('p1');
+
+  const answered = reduceApp(overflowing, {
+    type: 'permission_settled',
+    turnId: 't1',
+    id: 'p1',
+    answer: { type: 'rejected' },
+  });
+
+  expect(keyCommand('', pgdn, answered, '')).toStrictEqual('scroll_page_down');
+});

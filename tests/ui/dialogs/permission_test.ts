@@ -4,9 +4,12 @@ import type { PermissionWait } from '../../../src/session/transcript/types.ts';
 import {
   askedPermission,
   choicesFor,
+  hiddenRows,
   inputLines,
   locationsShown,
   permissionOutcome,
+  requestRows,
+  requestRule,
   saveChoices,
 } from '../../../src/ui/dialogs/permission.ts';
 
@@ -185,4 +188,54 @@ test("a save box's choices name the file each writes, in a column of their own",
     '2. Yes, for every project  ~/.config/chord/teams/bugfix.md',
     '3. No, tell claude what to change',
   ]);
+});
+
+test("a request's rows: the title's first pinned, its others, the locations and the arguments after, each wrapped", () => {
+  const { pinned, rows } = requestRows(
+    {
+      id: 'p',
+      options: [],
+      title: 'Write a file whose title runs on',
+      locations: [{ path: 'docs/a.md' }],
+      rawInput: { content: 'one two three four\n\nfive', mode: 'overwrite' },
+    },
+    16,
+  );
+
+  expect(pinned).toStrictEqual('Write a file');
+  expect(rows).toStrictEqual([
+    { text: 'whose title runs', kind: 'title' },
+    { text: 'on', kind: 'title' },
+    { text: 'docs/a.md', kind: 'location' },
+    // Two cells in, so in 14.
+    { text: 'content: one', kind: 'input' },
+    { text: 'two three four', kind: 'input' },
+    { text: '', kind: 'input' },
+    { text: 'five', kind: 'input' },
+    { text: 'mode:', kind: 'input' },
+    { text: 'overwrite', kind: 'input' },
+  ]);
+});
+
+test('a request counts the rows out of view above and below', () => {
+  expect(hiddenRows(40, 0, 5)).toStrictEqual({ above: 0, below: 35 });
+  expect(hiddenRows(40, 12, 4)).toStrictEqual({ above: 12, below: 24 });
+  expect(hiddenRows(40, 35, 5)).toStrictEqual({ above: 35, below: 0 });
+  expect(hiddenRows(40, 39, 0)).toStrictEqual({ above: 39, below: 1 });
+});
+
+test("a request's rule says how much, which way and the key, to the box's width", () => {
+  expect(requestRule('↓', 37, 'pagedown', 48)).toStrictEqual(
+    '── ↓ 37 lines below · pagedown to scroll ───────',
+  );
+  expect(requestRule('↑', 1, 'pageup', 40)).toStrictEqual(
+    '── ↑ 1 line above · pageup to scroll ───',
+  );
+  // Too narrow for the key, the count stays; unbound, there is none to name.
+  expect(requestRule('↓', 37, 'pagedown', 24)).toStrictEqual(
+    '── ↓ 37 lines below ────',
+  );
+  expect(requestRule('↓', 2, undefined, 24)).toStrictEqual(
+    '── ↓ 2 lines below ─────',
+  );
 });

@@ -4,11 +4,13 @@
  * and Enter; this module says what is on the list and what a pick answers.
  */
 import type { PermissionOption } from '@agentclientprotocol/sdk';
+import stringWidth from 'string-width';
 import type {
   Entry,
   PermissionWait,
   TurnState,
 } from '../../session/transcript/types.ts';
+import { wrapLine } from '../transcript/message.ts';
 
 /** One row of the list, in ink-select-input's item shape. */
 export interface Choice {
@@ -126,4 +128,86 @@ export function permissionOutcome(
   const how = allowed ? ` · ${option.name}` : '';
 
   return { text: `${allowed ? 'Allowed' : 'Rejected'} ${what}${how}`, allowed };
+}
+
+/** A row of the request the box scrolls, and how it is drawn. */
+export interface RequestRow {
+  readonly text: string;
+  readonly kind: 'title' | 'location' | 'input';
+}
+
+/** The cells an argument's rows hang in from the box's edge. */
+export const INPUT_INDENT = 2;
+
+/**
+ * The request laid out in rows of `width` cells, each wrapped, never cut, as
+ * `wrapLine` wraps it: the title's first row, pinned above the request so it
+ * says what is asked while the rest scrolls, and the request itself, the
+ * title's other rows, the locations, then the arguments, two cells in.
+ */
+export function requestRows(
+  wait: PermissionWait,
+  width: number,
+): { readonly pinned: string; readonly rows: readonly RequestRow[] } {
+  const wrapped = (text: string, room: number) =>
+    text.split('\n').flatMap((line) => wrapLine(line, room));
+  const [pinned = '', ...title] = wrapped(wait.title ?? 'Tool call', width);
+
+  return {
+    pinned,
+    rows: [
+      ...title.map((text) => ({ text, kind: 'title' as const })),
+      ...locationsShown(wait).flatMap((path) =>
+        wrapped(path, width).map((text) => ({
+          text,
+          kind: 'location' as const,
+        })),
+      ),
+      ...inputLines(wait).flatMap((line) =>
+        wrapped(line, Math.max(width - INPUT_INDENT, 1)).map((text) => ({
+          text,
+          kind: 'input' as const,
+        })),
+      ),
+    ],
+  };
+}
+
+/**
+ * The request's rows above and below its view, `view` rows from row `top`
+ * of `total`; none where nothing is hidden.
+ */
+export function hiddenRows(
+  total: number,
+  top: number,
+  view: number,
+): { readonly above: number; readonly below: number } {
+  return {
+    above: Math.max(0, top),
+    below: Math.max(0, total - top - Math.max(view, 0)),
+  };
+}
+
+const RULE = '─';
+
+/**
+ * A dim rule row saying how much of the request is out of view, `↑` above
+ * or `↓` below, and the key that scrolls to it when one is bound, drawn to
+ * `width` cells as the transcript's rule is.
+ */
+export function requestRule(
+  way: '↑' | '↓',
+  count: number,
+  key: string | undefined,
+  width: number,
+): string {
+  const words = `${way} ${count} ${count === 1 ? 'line' : 'lines'} ${
+    way === '↑' ? 'above' : 'below'
+  }`;
+  const whole = `${RULE}${RULE} ${words}${
+    key === undefined ? '' : ` · ${key} to scroll`
+  } `;
+  const text = stringWidth(whole) < width ? whole : `${RULE}${RULE} ${words} `;
+
+  return text + RULE.repeat(Math.max(0, width - stringWidth(text)));
 }

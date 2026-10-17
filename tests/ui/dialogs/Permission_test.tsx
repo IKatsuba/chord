@@ -11,7 +11,9 @@ import { parseTeam } from '../../../src/teams.ts';
 import {
   asked,
   DOWN,
+  END,
   ESC,
+  left,
   send,
   until,
   UP,
@@ -274,3 +276,179 @@ test("the subagent that asks keeps the agent's colours in its title", async () =
     chalk.level = level;
   }
 });
+
+const PAGE_DOWN = '\x1b[6~';
+const HOME = '\x1b[H';
+const SHIFT_DOWN = '\x1b[1;2B';
+/** An SGR wheel report, `up` or down, at the 0-based cell `x`, `y`. */
+const wheel = (x: number, y: number, up: boolean) =>
+  `\x1b[<${up ? 64 : 65};${x + 1};${y + 1}M`;
+
+/** The permission box's rows in `frame`, its borders included. */
+function boxRows(frame: string): string[] {
+  const lines = stripAnsi(frame).split('\n');
+  const title = lines.findIndex((line) => line.includes('mcp__files__write'));
+  const end = lines.findIndex(
+    (line, index) => index > title && /^╰/.test(line),
+  );
+
+  return lines.slice(title - 1, end + 1).map((line) => line.trimEnd());
+}
+
+/** The box as designer's mock of `state` draws it (docs/design/CHD-246.md). */
+async function mock(state: string): Promise<string[]> {
+  const path = join(
+    import.meta.dir,
+    `../../../docs/design/evidence/CHD-246/mock/${state}.txt`,
+  );
+
+  return boxRows(await readFile(path, 'utf8'));
+}
+
+/** Waits for the box to draw `rows`, and says what it drew instead. */
+async function draws(
+  window: Awaited<Parameters<Parameters<typeof withWindow>[0]>[0]>,
+  rows: string[],
+): Promise<void> {
+  await until('the box as the mock draws it', () =>
+    Bun.deepEquals(boxRows(window.frame()), rows),
+  ).catch(() => {
+    expect(boxRows(window.frame())).toStrictEqual(rows);
+  });
+}
+
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
+] as const) {
+  test(`a request taller than its room scrolls under its pinned title, the answers whole, at ${columns}×${rows}`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'bigask');
+        await asked(window);
+        await draws(window, await mock(`top-${columns}x${rows}`));
+        // The prompt box and the status line are still on screen.
+        expect(window.frame()).toContain('? for shortcuts');
+
+        await window.press(END);
+        await draws(window, await mock(`end-${columns}x${rows}`));
+      },
+      { columns, rows },
+    ));
+}
+
+test('the scroll keys move a request that overflows: a page, a row, its top and its end', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'bigask');
+      await asked(window);
+      await window.shows('── ↓ 37 lines below · pagedown to scroll');
+
+      // A page is the request's room, six rows, less one.
+      await window.press(PAGE_DOWN);
+      await window.shows('── ↑ 5 lines above · pageup to scroll');
+      await window.shows('── ↓ 33 lines below');
+      await window.press(SHIFT_DOWN);
+      await window.shows('── ↑ 6 lines above');
+      await window.press(HOME);
+      await window.shows('── ↓ 37 lines below');
+      expect(window.frame()).not.toContain('lines above');
+      await window.press(END);
+      await window.shows('── ↑ 37 lines above');
+      expect(window.frame()).toContain('mode: overwrite');
+      // The answers still take their keys.
+      await window.press(DOWN);
+      await window.shows('❯ 2. Yes');
+    },
+    { columns: 80, rows: 24 },
+  ));
+
+test('the wheel over the request scrolls it, and over the transcript the transcript', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'bigask');
+      await asked(window);
+      await window.shows('── ↓ 22 lines below');
+
+      const lines = stripAnsi(window.frame()).split('\n');
+      const over = lines.findIndex((line) => line.includes('Change 3:'));
+
+      await window.press(wheel(10, over, false));
+      await window.shows('── ↑ 1 line above');
+      // The transcript was not moved by it.
+      expect(window.frame()).not.toContain('end to jump to the bottom');
+
+      await window.press(wheel(10, 1, true));
+      await window.shows('end to jump to the bottom');
+      expect(window.frame()).toContain('── ↑ 1 line above');
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test('a request that fits has no rule, and the scroll keys keep the transcript', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'mcpask');
+      await asked(window);
+      expect(window.frame()).not.toContain('to scroll');
+      expect(window.frame()).toContain('timeout_ms: 600000');
+    },
+    { columns: 80, rows: 24 },
+  ));
+
+test('a window of 19 rows leaves the request one row, its rule, and every answer', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'bigask');
+      await asked(window);
+      await window.shows('── ↓ 42 lines below');
+
+      const box = boxRows(window.frame());
+
+      expect(box[1]).toContain('mcp__files__write_file');
+      expect(box[2]).toContain('── ↓ 42 lines below');
+      expect(box.join('\n')).toContain('3. No, and tell Claude');
+      expect(box.join('\n')).toContain('Esc to reject');
+    },
+    { columns: 80, rows: 19 },
+  ));
+
+test('a resize lays the request out again, its top row kept and its answers whole', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'bigask');
+      await asked(window);
+      await window.press(END);
+      await window.shows('mode: overwrite');
+      await window.resize({ columns: 80, rows: 24 });
+      // The top row stays where the new room lets it; the answers are whole.
+      await window.shows('── ↑ 22 lines above');
+      await window.shows('── ↓ 16 lines below');
+
+      const box = boxRows(window.frame()).join('\n');
+
+      expect(box).toContain('3. No, and tell Claude');
+      expect(box).toContain('│ Esc to reject');
+      expect(window.frame()).toContain('? for shortcuts');
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test('a click on the request leaves the keys with the answers', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'bigask');
+      await asked(window);
+
+      const lines = stripAnsi(window.frame()).split('\n');
+      const over = lines.findIndex((line) => line.includes('content:'));
+
+      await window.press(left(10, over, 'down'));
+      await window.press(left(10, over, 'up'));
+      await window.press(DOWN);
+      await window.shows('❯ 2. Yes');
+      await window.press(PAGE_DOWN);
+      await window.shows('── ↑ 5 lines above');
+    },
+    { columns: 80, rows: 24 },
+  ));

@@ -115,7 +115,10 @@ import { AgentColours, COLOUR, Colours, Keys } from './context.ts';
 import { ElicitationForm } from '../dialogs/Form.tsx';
 import { QuestionBox } from '../dialogs/Questions.tsx';
 import { LinkPrompt } from '../dialogs/Link.tsx';
-import { PermissionPrompt } from '../dialogs/Permission.tsx';
+import {
+  PermissionPrompt,
+  type RequestScroller,
+} from '../dialogs/Permission.tsx';
 import {
   ConfigPicker,
   McpPanel,
@@ -388,6 +391,8 @@ export function App({
   // Set from a cut placeholder until the box it redraws is up: the old
   // textarea still reports the cursor it left after its own deletion.
   const cutting = useRef(false);
+  // How the permission box on screen scrolls its request, while one is up.
+  const requestScroller = useRef<RequestScroller | undefined>(undefined);
 
   useEffect(() => {
     cutting.current = false;
@@ -662,6 +667,8 @@ export function App({
         return conversation()?.interrupt();
       case 'reject_permission':
         return conversation()?.reject(step.id);
+      case 'scroll_request':
+        return requestScroller.current?.(step.step);
       case 'set_mode':
         return conversation()?.setMode(step.mode);
       case 'read_commands':
@@ -774,7 +781,10 @@ export function App({
         every entry is pinned with flexShrink={0}, because OpenTUI boxes shrink by
         default and Yoga would squeeze entries and the prompt box instead of
         letting the transcript run past the view, to be scrolled back to. */}
-            <Clip flexGrow={1} flexShrink={1} paddingX={1}>
+            {/* Its basis is nothing, so when the rows under it run out it
+        has none to keep, and a permission request taller than what is left
+        gives way only after the transcript is gone (CHD-246). */}
+            <Clip flexGrow={1} flexShrink={1} flexBasis={0} paddingX={1}>
               {/* Following, the transcript hangs from the top while it fits,
           the header on the window's first row, or under the tab strip, and
           once it overflows it sits on the bottom and new rows push the old
@@ -905,6 +915,14 @@ export function App({
                 active={listening && !state.agentsFocus}
                 onChoose={(optionId) =>
                   conversation()?.choose(asked.id, optionId)
+                }
+                scroller={requestScroller}
+                onOverflow={(overflows) =>
+                  dispatch({
+                    type: 'request_overflowed',
+                    id: asked.id,
+                    overflows,
+                  })
                 }
               />
             )}

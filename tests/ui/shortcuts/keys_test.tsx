@@ -99,6 +99,17 @@ const STATES: Record<string, AppState> = {
     turnId: 't1',
     permission: { id: 'p1', options: [] },
   }),
+  // Its request runs past the box, so the scroll keys move it (CHD-246).
+  'asked, overflowing': after(
+    { type: 'connected', sessionId: 'session-1' },
+    prompt,
+    {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: { id: 'p1', options: [] },
+    },
+    { type: 'request_overflowed', id: 'p1', overflows: true },
+  ),
   form: after({ type: 'connected', sessionId: 'session-1' }, prompt, {
     type: 'elicitation_requested',
     turnId: 't1',

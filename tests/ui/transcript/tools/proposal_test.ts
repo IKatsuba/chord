@@ -70,7 +70,7 @@ test('a proposal is read from what chord served, and not before or after a refus
   ).toStrictEqual(undefined);
 });
 
-test("the table's columns fit the width: the role wraps in its column first, then the model is cut, the mode never", () => {
+test("the table's columns fit the width: the role and then agent · model wrap in their columns, the mode never", () => {
   const rows = agentRows(TEAM);
   const wide = proposalTable(rows, 120);
 
@@ -94,21 +94,21 @@ test("the table's columns fit the width: the role wraps in its column first, the
     '                                            files the lead names',
   ]);
   expect(proposalTable(rows, 44).map((line) => line.text)).toStrictEqual([
-    'lead    claude ·…  default      Splits the',
-    '                                job, says',
-    '                                who edits',
-    '                                which files,',
-    '                                reports to',
-    '                                main',
-    'tester  claude ·…  acceptEdits  Writes the',
-    '                                failing',
-    '                                test, then',
-    '                                proves the',
-    '                                fix',
-    'coder   codex · …  auto         Writes the',
-    '                                fix, in the',
-    '                                files the',
-    '                                lead names',
+    'lead    claude · opus  default      Splits the',
+    '                                    job, says',
+    '                                    who edits',
+    '                                    which files,',
+    '                                    reports to',
+    '                                    main',
+    'tester  claude ·       acceptEdits  Writes the',
+    '        sonnet                      failing',
+    '                                    test, then',
+    '                                    proves the',
+    '                                    fix',
+    'coder   codex ·        auto         Writes the',
+    '        gpt-5.3-codex               fix, in the',
+    '                                    files the',
+    '                                    lead names',
   ]);
 });
 
@@ -512,7 +512,7 @@ test('an effort is a column between agent · model and the mode, — where none 
   );
 });
 
-test('a changed effort says the one it had, dim, and folded drops that before the model is cut', () => {
+test('a changed effort says the one it had, dim, and folded drops that before agent · model narrows', () => {
   const firsts = (lines: TableLine[]) =>
     lines.filter(({ mode: [start, end] }) => end > start);
   const rows = agentRows(EFFORTS, EFFORTS_BEFORE);
@@ -556,25 +556,25 @@ test('a changed effort says the one it had, dim, and folded drops that before th
   const narrow = firsts(narrowAll);
 
   expect(narrowAll.map((line) => line.text)).toStrictEqual([
-    '   lead      clau…  high   default                            Splits the',
-    '                                                              job, says',
-    '                                                              who edits',
-    '                                                              which files,',
-    '                                                              reports to',
-    '                                                              main',
-    '~  tester    clau…  high   acceptEdits was bypassPermissions  Writes the',
-    '                                                              failing',
-    '                                                              test, then',
-    '                                                              proves the',
-    '                                                              fix',
-    '~  coder     code…  xhigh  auto                               Writes the',
-    '                                                              fix, in the',
-    '                                                              files the',
-    '                                                              lead names',
-    '~  reviewer  clau…  —      plan was read-only                 Reads the',
-    '                                                              diff and',
-    '                                                              edits',
-    '                                                              nothing',
+    '   lead      claude · opus  high   default                            Splits the',
+    '                                                                      job, says',
+    '                                                                      who edits',
+    '                                                                      which files,',
+    '                                                                      reports to',
+    '                                                                      main',
+    '~  tester    claude ·       high   acceptEdits was bypassPermissions  Writes the',
+    '             sonnet                                                   failing',
+    '                                                                      test, then',
+    '                                                                      proves the',
+    '                                                                      fix',
+    '~  coder     codex ·        xhigh  auto                               Writes the',
+    '             gpt-5.3-codex                                            fix, in the',
+    '                                                                      files the',
+    '                                                                      lead names',
+    '~  reviewer  claude · opus  —      plan was read-only                 Reads the',
+    '                                                                      diff and',
+    '                                                                      edits',
+    '                                                                      nothing',
   ]);
   expect(narrow.some((line) => line.effortWas !== undefined)).toBeFalsy();
   expect(narrow[1]!.text.slice(...narrow[1]!.was!)).toStrictEqual(
@@ -637,4 +637,21 @@ test('opened, a changed cell that wraps breaks before was, and the effort wraps 
     '-  security-review  claude ·                     max     bypassPermissions',
     '                    claude-sonnet-4-5-20250929',
   ]);
+});
+
+test('narrow, every word of agent · model and of the role is kept, each wrapping in its column', () => {
+  const rows = agentRows(EFFORTS, EFFORTS_BEFORE);
+
+  for (const width of [74, 60, 44]) {
+    const lines = proposalTable(rows, width, true);
+    const read = lines.map((line) => line.text).join(' ');
+
+    for (const row of rows) {
+      for (const word of `${row.runtime} ${row.role}`.split(' ')) {
+        expect(read.includes(word), `${word} at ${width}`).toBeTruthy();
+      }
+    }
+
+    expect(lines.some((line) => line.text.includes('…'))).toBeFalsy();
+  }
 });

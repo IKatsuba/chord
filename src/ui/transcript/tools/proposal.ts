@@ -9,7 +9,6 @@
  * changed lines; and the line the person's answer leaves.
  */
 import { Cell, Table } from '@cliffy/table';
-import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import type { ChordCall } from '../../../session/transcript/types.ts';
 import { type RowChange, type Team, teamChanges } from '../../../teams.ts';
@@ -230,10 +229,11 @@ function widest(cells: readonly string[]): number {
 
 /**
  * The rows laid out in columns no wider than `width`, a change's with its
- * mark first when `marked`: the role cut first, down to `MIN_ROLE`, then a
- * changed effort's `was …` dropped, then the runtime's model, the name,
- * effort and mode never, as the mode is the permission the person approves
- * and the effort what the agent spends on it. `whole`, as the person
+ * mark first when `marked`: the role narrowed first, down to `MIN_ROLE`,
+ * then a changed effort's `was …` dropped, then agent · model narrowed,
+ * each wrapping in its column, never cut, as a tool's result is (CHD-422);
+ * the name, effort and mode never, as the mode is the permission the person
+ * approves and the effort what the agent spends on it. `whole`, as the person
  * reviewing a proposal reads all the file holds, each row's role is not cut
  * but goes on lines of its own under the row, from the runtime's column to
  * the right edge, wrapped there by @cliffy/table, and where the row would
@@ -276,31 +276,39 @@ export function proposalTable(
       width - fixed - (whole ? 0 : Math.min(roles, roleRoom) + PADDING),
     ),
   );
-  const cut = (text: string, room: number) =>
-    stringWidth(text) <= room ? text : cliTruncate(text, Math.max(1, room));
 
   if (rows.length === 0) {
     return [];
   }
 
   if (!whole) {
-    const effortAt =
-      named +
-      names +
-      PADDING +
-      widest(rows.map((row) => cut(row.runtime, runtimeRoom))) +
-      PADDING;
+    // A cell that wraps keeps its longest word whole where the row has room,
+    // agent · model before the role, which wraps in what is left.
+    const runtimeColumn = Math.min(
+      runtimes,
+      Math.max(widestWord(rows.map((row) => row.runtime)), runtimeRoom),
+    );
+    const roleColumn = Math.max(
+      1,
+      Math.min(
+        roles,
+        Math.max(leastRole, width - fixed - runtimeColumn - PADDING),
+      ),
+    );
+    const effortAt = named + names + PADDING + runtimeColumn + PADDING;
     const before = effortAt + (efforts ? effortsWidth + PADDING : 0);
-    // The role is a tool result's words, so it wraps in its own column,
-    // never cut (CHD-422); each row is laid out on its own in the same
-    // columns, so a role's later lines are told from the next row.
+    // The role and agent · model are a tool result's words, so each wraps
+    // in its own column, never cut (CHD-422); each row is laid out on its
+    // own in the same columns, so a cell's later lines are told from the
+    // next row, and the mode and effort, on its first line, keep their
+    // places.
     const columns = [
       ...(marked ? [1] : []),
       names,
-      widest(rows.map((row) => cut(row.runtime, runtimeRoom))),
+      runtimeColumn,
       ...(efforts ? [effortsWidth] : []),
       modes,
-      Math.max(1, Math.min(roles, roleRoom)),
+      roleColumn,
     ];
 
     return rows.flatMap((row) => {
@@ -309,7 +317,7 @@ export function proposalTable(
           [
             ...(marked ? [mark(row)] : []),
             row.name,
-            cut(row.runtime, runtimeRoom),
+            row.runtime,
             ...(efforts ? [effortCell(row, effortWas)] : []),
             modeCell(row),
             row.role,

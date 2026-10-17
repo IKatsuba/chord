@@ -18,16 +18,26 @@ import {
   wrapLine,
 } from '../../../src/ui/transcript/message.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
+import {
+  PROSE_EN,
+  PROSE_RU,
+} from '../../fixtures/fake_agent/scenarios/agents.ts';
 
-async function frame(entry: Entry, expanded = false): Promise<string> {
+async function frame(
+  entry: Entry,
+  expanded = false,
+  width = 80,
+): Promise<string> {
   const drawn = await draw(
     <TranscriptEntry
       entry={entry}
       turn={{ status: 'idle' }}
       agent='fake'
       expanded={expanded}
-      width={80}
+      width={width}
     />,
+    // Tall enough for a long message whole.
+    { columns: width, rows: 60 },
   );
   const shown = stripAnsi(drawn.frame());
 
@@ -138,7 +148,7 @@ function body(shown: string): string[] {
     .filter((row, index, rows) => rows.slice(index).some((r) => r !== ''));
 }
 
-test('a message sent is drawn as one received is: markdown, wrapped to the row and folded after six lines', async () => {
+test('a message sent is drawn as one received is: markdown, wrapped to the row, whole, with no fold', async () => {
   const input = { to: 'parser', text: REVIEW };
   const sentRows = body(await frame(sent({ input })));
   const cameRows = body(
@@ -153,17 +163,41 @@ test('a message sent is drawn as one received is: markdown, wrapped to the row a
     '  already does for a received message.',
     '2. The hint names ctrl+o even when the person has rebound it.',
     '3. The refusal goes after the body, never folded.',
-    '… +2 lines (ctrl+o to expand)',
-  ]);
-  expect(!sentRows.some((row) => row.includes('...'))).toBeTruthy();
-
-  const whole = body(await frame(sent({ input }), true));
-
-  expect(whole.at(-1)).toStrictEqual(
+    '',
     "Tell me when the check passes and I'll look again.",
-  );
-  expect(!whole.some((row) => row.includes('to expand'))).toBeTruthy();
+  ]);
+  // ctrl+o has nothing more to show.
+  expect(body(await frame(sent({ input }), true))).toStrictEqual(sentRows);
 });
+
+/** The words of `text`, markdown's and the gutter's marks aside. */
+function words(text: string): string[] {
+  return text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word));
+}
+
+for (const width of [80, 120]) {
+  test(`long paragraphs, Cyrillic and ASCII, sent and received, are wrapped whole at ${width} columns: every word, no cut, no fold`, async () => {
+    for (const text of [PROSE_RU, PROSE_EN]) {
+      for (const entry of [
+        sent({ input: { to: 'parser', text } }),
+        came({ name: 'parser', runtime: 'codex', reachable: true }, text),
+      ]) {
+        const shown = await frame(entry, false, width);
+        const rows = body(shown);
+
+        expect(rows.join(' ').split(/\s+/).filter(Boolean)).toStrictEqual(
+          words(text),
+        );
+        expect(!shown.includes('...')).toBeTruthy();
+        expect(!shown.includes('to expand')).toBeTruthy();
+        expect(rows.length > 2).toBeTruthy();
+        expect(
+          shown.split('\n').every((row) => row.length <= width),
+        ).toBeTruthy();
+      }
+    }
+  });
+}
 
 test('a message sent that opens with an indented code block keeps it, as the same message received does', async () => {
   const code = '    const answer = 42;\n\nThat is the fix.';
@@ -195,7 +229,7 @@ test('a message sent draws its text at once, with no Waiting… while it goes, a
   ).toStrictEqual(['parser is closed']);
 });
 
-test("a refused message keeps its text, folded, and chord's refusal comes after the fold, never folded", async () => {
+test("a refused message keeps its whole text, and chord's refusal comes after it", async () => {
   const refusal = 'No agent parser is open in this session';
   const rows = body(
     await frame(
@@ -207,7 +241,7 @@ test("a refused message keeps its text, folded, and chord's refusal comes after 
     'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
   ]);
   expect(rows.slice(-2)).toStrictEqual([
-    '… +2 lines (ctrl+o to expand)',
+    "Tell me when the check passes and I'll look again.",
     refusal,
   ]);
   expect(body(await frame(sent({}, 'failed')))).toStrictEqual([

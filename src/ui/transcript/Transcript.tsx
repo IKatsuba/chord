@@ -263,10 +263,11 @@ function SelfStarted({
 
 /**
  * A message another agent, or chord, sent the session: `←` and who sent it,
- * then what it said as markdown, as a reply is, folded after six lines. Never
- * the person's `›`, so nothing an agent wrote reads as theirs. The body hangs
- * under `⎿`, dim, as a tool's result and the outgoing `→` row's do, so a long
- * instruction reads as quoted next to the agent's own bright replies.
+ * then what it said as markdown, as a reply is, whole; a monitor's event
+ * folds after six lines. Never the person's `›`, so nothing an agent wrote
+ * reads as theirs. The body hangs under `⎿`, dim, as a tool's result and
+ * the outgoing `→` row's do, so a long instruction reads as quoted next to
+ * the agent's own bright replies.
  */
 function Message({
   from,
@@ -299,7 +300,6 @@ function Message({
       {from.monitor === undefined ? (
         <MessageBody
           text={text}
-          expanded={expanded}
           width={width}
           failed={from.note === 'failed'}
         />

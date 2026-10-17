@@ -21,7 +21,12 @@ import { Ansi } from '../../theme/Ansi.tsx';
 import { colour, CUT, DIM, fg, FILL, TEXT } from '../../theme/text.ts';
 import type { Palette } from '../../theme/theme.ts';
 import { markdown } from '../markdown.ts';
-import { type ArrowTone, foldMessage, outArrow, wrapLine } from '../message.ts';
+import {
+  type ArrowTone,
+  outArrow,
+  wholeMessage,
+  wrapLine,
+} from '../message.ts';
 import { diffHeadline, type DiffView } from './diff.ts';
 import {
   agentRows,
@@ -67,8 +72,9 @@ function toneColour(tone: Tone, colours: Palette): string | undefined {
  * diff. The headline is drawn whole, wrapped to the row's `width`; the lines
  * under it are cut at the window's edge rather than wrapped, so a long
  * source line stays one row, but what Open and Team handed over wraps, and
- * what a message sent says is drawn as a received one's. A call left running in a turn
- * or a subagent that has `ended` no longer blinks or says it waits.
+ * what a message sent says is drawn whole, as a received one's is. A call
+ * left running in a turn or a subagent that has `ended` no longer blinks or
+ * says it waits.
  */
 export function Tool({
   call,
@@ -126,12 +132,7 @@ export function Tool({
         />
       )}
       {sent !== undefined && (
-        <MessageBody
-          text={sent.text}
-          expanded={expanded}
-          width={width}
-          ending={sent.ending}
-        />
+        <MessageBody text={sent.text} width={width} ending={sent.ending} />
       )}
       {proposal === undefined &&
         sent === undefined &&
@@ -163,19 +164,18 @@ export function Tool({
 
 /**
  * A message's text under its arrow, `←` or `→` alike, so the two never
- * drift apart: as markdown at the row's `width` less the gutter, folded
- * after six lines, dim, or in the error colour when it `failed`; then
- * `ending`, why a send failed, in the error colour and never folded.
+ * drift apart: as markdown at the row's `width` less the gutter, whole,
+ * never folded or cut, as the owner reads a message in full (CHD-387), dim,
+ * or in the error colour when it `failed`; then `ending`, why a send
+ * failed, in the error colour.
  */
 export function MessageBody({
   text,
-  expanded,
   width,
   failed = false,
   ending,
 }: {
   text: string;
-  expanded: boolean;
   /** Cells beside the marker. */
   width: number;
   failed?: boolean;
@@ -189,12 +189,11 @@ export function MessageBody({
       markdown(stripAnsi(text), Math.max(width - 5, 1), undefined, colours),
     [text, width, colours],
   );
-  const { lines, hidden } = foldMessage(
+  const lines = wholeMessage(
     blocks.flatMap((block, index) => [
       ...(index === 0 ? [] : ['']),
       ...block.text.split('\n'),
     ]),
-    expanded,
   );
 
   return (
@@ -210,7 +209,6 @@ export function MessageBody({
           </text>
         </Under>
       ))}
-      {hidden > 0 && <Folded hidden={hidden} />}
       {ending !== undefined && (
         <Under first={lines.length === 0}>
           <text {...FILL} {...selectable} {...fg(colours.error)}>

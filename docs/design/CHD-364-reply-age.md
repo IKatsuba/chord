@@ -35,7 +35,11 @@ A time on a row counts from the event its words name:
 orders the news for `ctrl+x a` and the status line's oldest-first naming.
 The age drawn on the row is a separate time, kept beside it, as
 `failedAt` already is for a failed turn: a `repliedAt` (or a field of any
-name) set when the state becomes `replied`.
+name) set when the state becomes `replied` and set again at each later reply
+before the person looks. The row names the newest reply, since that is
+what a reply means to the person. A failed turn keeps its first failure,
+because the first failure is the one to look into; a reply has no such
+first.
 
 **Why:** the words say `replied 23s ago`, so the person reads the time as
 when the reply came. The order of the news is another question. A message

@@ -15,7 +15,7 @@ import {
   windowDirectory,
   windowSummary,
 } from '../../session/windows.ts';
-import { failureOf, type TabWait } from '../../session/tabs.ts';
+import { failedSince, failureOf, type TabWait } from '../../session/tabs.ts';
 import { homePath } from '../../settings.ts';
 import { visibleRange } from '../prompt/commands.ts';
 import { GLYPHS } from '../app/strip.ts';
@@ -232,7 +232,7 @@ export function tabState(tab: TabRow, now: number): string {
         ? 'exited'
         : failure === 'start'
           ? 'failed to start'
-          : `turn failed ${briefly(now - wait.unseen.since)}`
+          : `turn failed ${briefly(now - (failedSince(wait) ?? now))}`
     }`;
   }
 

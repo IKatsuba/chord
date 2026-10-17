@@ -9,6 +9,7 @@ import {
   childName,
   closeChild,
   closeTab,
+  failedSince,
   failureOf,
   frontTab,
   goTo,
@@ -285,18 +286,77 @@ test('a failed turn or an agent that never came up is unseen as failed, each wit
     kind: 'failed',
     since: 2000,
     failure: 'turn',
+    failedAt: 2000,
   });
   expect(tabOf(start, 1)?.wait.unseen).toStrictEqual({
     kind: 'failed',
     since: 0,
     failure: 'start',
+    failedAt: 0,
   });
   // A reply after it does not hide the failure, nor move when it began.
   expect(tabOf(later, 1)?.wait.unseen).toStrictEqual({
     kind: 'failed',
     since: 2000,
     failure: 'turn',
+    failedAt: 2000,
   });
+});
+
+test('a failed turn counts its time from the failure, not from older news not yet seen', () => {
+  const message: ConversationEvent = {
+    type: 'prompt',
+    turnId: 'm',
+    text: 'hi',
+    at: 0,
+    from: { name: 'main', reachable: true },
+  };
+  // A reply at 2 s, then a turn that fails a minute later.
+  const replied = heard(opened('a', 'b'), 1, [up, prompt('t1'), ended('t1')]);
+  const afterReply = heard(replied, 1, [prompt('t2'), failed('t2')], 61_000);
+  const afterMessage = heard(
+    heard(opened('a', 'b'), 1, [up, message]),
+    1,
+    [prompt('t2'), failed('t2')],
+    61_000,
+  );
+
+  for (const tabs of [afterReply, afterMessage]) {
+    const wait = tabOf(tabs, 1)!.wait;
+
+    expect(failedSince(wait)).toStrictEqual(62_000);
+    // The first news still sets its place in the order.
+    expect(wait.unseen!.since < 62_000).toStrictEqual(true);
+  }
+});
+
+test('an exit is unseen news even with no turn failed: idle, or after a reply; seen once it clears, and the agent stays exited', () => {
+  const gone: ConversationEvent = { type: 'disconnected', turnId: '' };
+  const idleExit = heard(opened('a', 'b'), 1, [up, gone], 5000);
+  const afterReply = heard(
+    heard(opened('a', 'b'), 1, [up, prompt('t1'), ended('t1')]),
+    1,
+    [gone],
+    9000,
+  );
+
+  expect(tabOf(idleExit, 1)!.wait.unseen).toStrictEqual({
+    kind: 'failed',
+    since: 6000,
+    failure: 'exited',
+    failedAt: 6000,
+  });
+  expect(failureOf(tabOf(afterReply, 1)!.wait)).toStrictEqual('exited');
+  // The reply came first, so the tab keeps its place in the order.
+  expect(tabOf(afterReply, 1)!.wait.unseen?.since).toStrictEqual(2000);
+
+  const seen = tabOf(goTo(idleExit, 1), 1)!.wait;
+
+  expect([seen.unseen, failureOf(seen), seen.exited]).toStrictEqual([
+    undefined,
+    undefined,
+    true,
+  ]);
 });
 
 test("an exit after a failed turn, or one that cuts a turn short, is the failure's cause: the agent went", () => {

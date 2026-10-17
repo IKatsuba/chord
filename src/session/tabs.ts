@@ -40,6 +40,11 @@ export interface TabWait {
         readonly from?: string;
         /** A failure's cause, the gravest seen since it was last looked at. */
         readonly failure?: Failure;
+        /**
+         * When the first failure came, which a failed turn counts its time
+         * from; `since` is the first news of any kind, for the order.
+         */
+        readonly failedAt?: number;
       }
     | undefined;
   /** When the turn running now began, while one runs. */
@@ -59,6 +64,13 @@ export const FAILURES: readonly Failure[] = ['exited', 'start', 'turn'];
 /** The graver of two failures. */
 function graver(a: Failure | undefined, b: Failure): Failure {
   return a !== undefined && FAILURES.indexOf(a) < FAILURES.indexOf(b) ? a : b;
+}
+
+/** When a wait's failure came, which a failed turn counts its time from. */
+export function failedSince(wait: TabWait): number | undefined {
+  return wait.unseen?.kind === 'failed'
+    ? (wait.unseen.failedAt ?? wait.unseen.since)
+    : undefined;
 }
 
 /** A wait's failure, if it has one: an exit, while the agent is gone, first. */
@@ -843,8 +855,10 @@ function waitAfter(
       : watch.asking.size === 0
         ? undefined
         : before.asking;
+  // An exit is news even with no turn running: the agent is gone.
   const failed =
     event.type === 'connect_failed' ||
+    event.type === 'disconnected' ||
     (started?.kind === 'turn_ended' &&
       event.type === 'result' &&
       event.result.status === 'failed');
@@ -872,21 +886,20 @@ function waitAfter(
             kind: 'failed' as const,
             since: before.unseen?.since ?? now,
             failure,
+            failedAt:
+              before.unseen?.kind === 'failed'
+                ? (before.unseen.failedAt ?? before.unseen.since)
+                : now,
           }
-      : // An exit after a failed turn says the agent went, not the turn.
-        exits &&
-          before.unseen?.kind === 'failed' &&
-          before.unseen.failure !== 'exited'
-        ? { ...before.unseen, failure: 'exited' as const }
-        : from !== undefined &&
-            before.unseen?.kind !== 'failed' &&
-            before.unseen?.kind !== 'replied'
-          ? {
-              kind: 'message' as const,
-              from,
-              since: before.unseen?.since ?? now,
-            }
-          : before.unseen;
+      : from !== undefined &&
+          before.unseen?.kind !== 'failed' &&
+          before.unseen?.kind !== 'replied'
+        ? {
+            kind: 'message' as const,
+            from,
+            since: before.unseen?.since ?? now,
+          }
+        : before.unseen;
   const working =
     event.type === 'prompt'
       ? (before.working ?? event.at)

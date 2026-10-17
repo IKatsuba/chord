@@ -7,7 +7,12 @@
  */
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
-import { type Failure, failureOf, type TabWait } from '../../session/tabs.ts';
+import {
+  type Failure,
+  failedSince,
+  failureOf,
+  type TabWait,
+} from '../../session/tabs.ts';
 import { GLYPHS } from '../app/strip.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
@@ -100,7 +105,7 @@ export function agentState(row: AgentRow, now: number): AgentState | undefined {
           ? 'exited'
           : failure === 'start'
             ? 'failed to start'
-            : `turn failed ${briefly(now - (wait.unseen?.since ?? now))} ago`,
+            : `turn failed ${briefly(now - (failedSince(wait) ?? now))} ago`,
       tone: 'error',
     };
   }

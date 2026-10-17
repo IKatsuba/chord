@@ -131,6 +131,8 @@ Everything written is in English and names no private path, per AGENTS.md. Follo
 
 One writer per file. A member who needs a change in another's file asks that owner through the lead. Nobody touches code under `src/`, `tests/`, `scripts/` or `lint/`. Other runs of this team may be working on other tasks here at the same time: stay inside your own `<key>`, and the lead re-reads `docs/decisions.md` just before merging and adds only its own entries. Commit with a conventional message (`docs:`) and no trailers; never push.
 
+Every commit is signed: main's branch rules refuse a pull request with one unsigned commit in it, and only the owner can rewrite one that got in. Commit with plain `git commit`, never with `-c commit.gpgsign=false`, `--no-gpg-sign` or any other override of signing, and after each commit check that it carries a signature (`git cat-file commit HEAD` shows a `gpgsig` header). If signing fails, do not commit without it: stop and tell the lead, who takes it to main.
+
 ## Reporting
 
 For the lead and every member, send_message always goes alone, never in a parallel batch with other tool calls. If it fails with an empty error or one that gives no reason, retry it once at once, alone. If it fails again, write the same text as a board comment on the task (`board comment <KEY> '<text>'`) and carry on; never stop and wait. A message steered into a running turn can cut off a batch; Claude Code then shows the other calls a "doesn't want to take this action… STOP" text that is not the person.

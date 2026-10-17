@@ -577,3 +577,48 @@ test('a line indented past the width keeps as much indent as leaves room for its
   expect(rows.every((row) => row.length <= 76)).toBeTruthy();
   expect(wrapLine('  indented', 76)).toStrictEqual(['  indented']);
 });
+
+describe('CHD-387 tester: sent body boundaries', () => {
+  test('sent escapes and fenced code render exactly as the received text does', async () => {
+    const text = [
+      '\x1b[31m**Read this**\x1b[0m and `keep` its formatting.',
+      '',
+      '```ts',
+      'const answer = 42;',
+      '```',
+      '',
+      'The last paragraph is still here.',
+    ].join('\n');
+
+    for (const expanded of [false, true]) {
+      const outgoing = await frame(
+        sent({ input: { to: 'parser', text } }),
+        expanded,
+      );
+      const incoming = await frame(
+        came({ name: 'parser', reachable: true }, text),
+        expanded,
+      );
+
+      expect(body(outgoing)).toStrictEqual(body(incoming));
+      expect(outgoing).not.toContain('[31m');
+      expect(outgoing).toContain('const answer = 42;');
+    }
+  });
+
+  test('a failed long body keeps its final sentence only after expansion, before Failed', async () => {
+    const entry = sent({ input: { to: 'parser', text: REVIEW } }, 'failed');
+    const folded = body(await frame(entry));
+    const expanded = body(await frame(entry, true));
+
+    expect(folded.slice(-2)).toStrictEqual([
+      '… +2 lines (ctrl+o to expand)',
+      'Failed',
+    ]);
+    expect(expanded.slice(-2)).toStrictEqual([
+      "Tell me when the check passes and I'll look again.",
+      'Failed',
+    ]);
+    expect(expanded.join('\n')).not.toContain('to expand');
+  });
+});

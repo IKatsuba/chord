@@ -506,3 +506,53 @@ describe('CHD-377 tester: Codex call session isolation', () => {
     }
   });
 });
+
+describe('CHD-387 tester: sent messages in the window', () => {
+  test('a rebound key expands a refused body and cancellation keeps its text and refusal', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'agentsendrefused');
+          await window.shows('parser is not open, so I will review it myself.');
+          await window.shows('(ctrl+y to expand)');
+          await window.shows('No agent parser is open in this session');
+          expect(window.frame()).not.toContain('(ctrl+o to expand)');
+
+          await window.press('\x19');
+          await window.shows("the check passes and I'll look again.");
+          expect(window.frame()).not.toContain('to expand)');
+          await window.shows('No agent parser is open in this session');
+
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+          await window.press(ESC);
+          await window.shows('Interrupted');
+          await window.shows("the check passes and I'll look again.");
+          await window.shows('No agent parser is open in this session');
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 40,
+          columns: 80,
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'Global',
+                bindings: {
+                  'ctrl+o': null,
+                  'ctrl+y': 'app:toggleTranscript',
+                },
+              },
+            ],
+          }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});

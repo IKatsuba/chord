@@ -405,6 +405,9 @@ test("a message held behind the child's running call waits in its queue until it
         expect(window.frame()).toContain('Running…');
         await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
         await window.shows('The tests pass.');
+        // The answer can draw before the held steers have been accepted.
+        await window.shows(`← from @main\n   ⎿  ${HELD_MESSAGE}`);
+        await window.shows(`← from @main\n   ⎿  ${HELD_AGAIN}`);
 
         const frame = window.frame();
 

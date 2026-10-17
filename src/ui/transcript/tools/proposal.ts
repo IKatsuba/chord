@@ -291,31 +291,46 @@ export function proposalTable(
       widest(rows.map((row) => cut(row.runtime, runtimeRoom))) +
       PADDING;
     const before = effortAt + (efforts ? effortsWidth + PADDING : 0);
+    // The role is a tool result's words, so it wraps in its own column,
+    // never cut (CHD-422); each row is laid out on its own in the same
+    // columns, so a role's later lines are told from the next row.
+    const columns = [
+      ...(marked ? [1] : []),
+      names,
+      widest(rows.map((row) => cut(row.runtime, runtimeRoom))),
+      ...(efforts ? [effortsWidth] : []),
+      modes,
+      Math.max(1, Math.min(roles, roleRoom)),
+    ];
 
-    return new Table()
-      .body(
-        rows.map((row) => [
-          ...(marked ? [mark(row)] : []),
-          row.name,
-          cut(row.runtime, runtimeRoom),
-          ...(efforts ? [effortCell(row, effortWas)] : []),
-          modeCell(row),
-          cut(row.role, roleRoom),
-        ]),
-      )
-      .padding(PADDING)
-      .toString()
-      .split('\n')
-      .map((line, index) => {
-        const row = rows[index]!;
-        const from = effortAt + row.effort.length;
-        const end = effortAt + effortCell(row, effortWas).length;
+    return rows.flatMap((row) => {
+      const [first = '', ...rest] = new Table()
+        .body([
+          [
+            ...(marked ? [mark(row)] : []),
+            row.name,
+            cut(row.runtime, runtimeRoom),
+            ...(efforts ? [effortCell(row, effortWas)] : []),
+            modeCell(row),
+            row.role,
+          ],
+        ])
+        .minColWidth(columns)
+        .maxColWidth(columns)
+        .padding(PADDING)
+        .toString()
+        .split('\n');
+      const from = effortAt + row.effort.length;
+      const end = effortAt + effortCell(row, effortWas).length;
 
-        return {
-          ...modeLine(line, row, before),
+      return [
+        {
+          ...modeLine(first, row, before),
           ...(efforts && from < end ? { effortWas: [from, end] as const } : {}),
-        };
-      });
+        },
+        ...rest.map((line) => wrapped(line.trimEnd(), row)),
+      ];
+    });
   }
 
   // Where the row does not fit, the mode cell wraps first, at its spaces and

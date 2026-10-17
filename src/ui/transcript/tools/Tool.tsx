@@ -266,9 +266,9 @@ export function HeadlineText({
 /**
  * `propose_team`'s team under its call: the description, a row per agent
  * with each mode whole, a mode that skips the person's ok in the warning
- * colour and a change's rows marked, then the body, folded, or a change's
- * body as a diff under a line that counts it, and the line the person's
- * answer left. One fold line counts all that ctrl+o adds.
+ * colour and a change's rows marked, then each agent's instructions and
+ * the body, whole as a tool's result is (CHD-422), or a change's body as a
+ * diff under a line that counts it, and the line the person's answer left.
  */
 function Proposal({
   view,
@@ -296,7 +296,8 @@ function Proposal({
           name: view.name,
           before: before.body,
           after: team.body,
-          expanded,
+          // A tool result's, drawn whole (CHD-422).
+          expanded: true,
           rows: changeRows(windowRows ?? 24),
           tones: colours.code,
         })
@@ -305,7 +306,7 @@ function Proposal({
     instructions: instructionLines(team, width),
     blocks: diff === undefined ? blocks.map((block) => block.text) : [],
     keep: bodyLines(windowRows ?? 24),
-    expanded,
+    expanded: true,
   });
   const hidden = body + (diff?.hidden ?? 0);
   const saved = savedLine(view);

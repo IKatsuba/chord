@@ -319,8 +319,9 @@ test("/team new after a stopped run proposes against the saved team, its prompt 
       await send(window, '/team stop bugfix');
       await window.shows('The person closed team bugfix: its lead (fake');
       await send(window, '/team new a team that fixes bugs, a test first');
-      await window.shows('Team(bugfix) · change');
       await window.shows('Replace team bugfix?');
+      // Drawn whole, the proposal runs above the view (CHD-422).
+      expect(window.mounted('Team(bugfix) · change')).toBeTruthy();
       expect(window.frame()).not.toContain('Hello, world');
     },
     { runtimes: ['fake', 'claude', 'codex'] },

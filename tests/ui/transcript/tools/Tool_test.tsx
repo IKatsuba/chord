@@ -15,6 +15,7 @@ import {
   LONG_TERMINAL,
 } from '../../../fixtures/fake_agent/scenarios/tools.ts';
 import { readFile } from 'node:fs/promises';
+import { serveChord } from '../../../../src/server/server.ts';
 import { join } from 'node:path';
 
 test('tool calls draw their status, their output and a failure', () =>
@@ -764,4 +765,42 @@ for (const columns of [80, 120]) {
       },
       { columns, rows: 60 },
     ));
+}
+
+for (const columns of [80, 120]) {
+  test(`a proposed team's roles wrap in their column and its body is drawn whole at ${columns} columns`, async () => {
+    // propose_team is chord's, and its team names claude and codex.
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'propose');
+          await window.shows('Save team bugfix?');
+
+          const frame = window.frame();
+          const read = frame.replace(/\s+/g, ' ');
+
+          expect(!frame.includes('to expand'), frame).toBeTruthy();
+
+          for (const role of [
+            'Splits the job, says who edits which files, reports to main',
+            'Writes the failing test, then proves the fix',
+            'Writes the fix, in the files the lead names',
+            'Reads the diff and edits nothing',
+          ]) {
+            for (const word of wordsOf(role)) {
+              expect(read.includes(word), `${word} is missing`).toBeTruthy();
+            }
+          }
+
+          // The body's last line, which a fold left out.
+          expect(read).toContain('make, when the job is done');
+        },
+        { columns, rows: 120, server, runtimes: ['fake', 'claude', 'codex'] },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 }

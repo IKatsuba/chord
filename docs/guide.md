@@ -202,6 +202,21 @@ either mode. Esc in normal mode does what it does without vim mode, so
 interrupting a turn takes Esc twice from insert mode; an open list, picker
 or panel still closes on the first Esc.
 
+Permission requests appear under the transcript: 1–9 picks an answer,
+↑/↓ moves the highlight, Enter picks it, and Esc rejects. A long request
+scrolls under its pinned title; long lines wrap, and the answers stay on
+screen. The request takes the room left, at most half the window's rows;
+the transcript gives way first. With three answers and no asker row, it
+gets 6 rows at 80×24 and 20 at 120×40.
+
+While the request overflows, pgup/pgdn scroll it by a page, shift+↑/↓ by
+a row, home/end to either end, and the wheel over the box scrolls it too.
+Dim rules count wrapped lines out of view: `↑ N lines above` and
+`↓ N lines below · pgdn to scroll`, with your bound key in the hint.
+When only one request row fits, the count sits beside the title. You can
+allow at any time, without scrolling to the end. Resizing may move the
+view; the counts still say what is hidden, and every row remains reachable.
+
 `-p` draws no window: it sends one prompt, with anything piped in after it
 on a line of its own, writes the reply to stdout as it streams, and exits 0
 when the agent ends its turn, or 1 with the error on stderr. Nobody is there
@@ -278,8 +293,9 @@ user's file alone for the same reason, and `/vim` writes it there the same
 way.
 
 chord reads the mouse, so the wheel and the trackpad scroll the
-transcript, and a drag selects text. Release copies it, through the
-system clipboard, or OSC 52 over SSH; the highlight stays until a key or
+transcript (or an overflowing permission request), and a drag selects text.
+Release copies it through the system clipboard, or OSC 52 over SSH;
+the highlight stays until a key or
 a click. `"copyOnSelect": false` leaves the copy to ctrl+c. To use your
 terminal's own selection instead, hold its modifier while you drag: option in iTerm2, fn in
 Terminal.app, shift in most others. Inside tmux, the wheel and drags

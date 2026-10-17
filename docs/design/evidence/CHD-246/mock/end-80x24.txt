@@ -3,7 +3,7 @@
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ mcp__files__write_file                                                       │
-│ ── ↑ 37 lines above · pgup to scroll ─────────────────────────────────────── │
+│ ── ↑ 37 lines above · pageup to scroll ───────────────────────────────────── │
 │   - Change 28: headlines wrap                                                │
 │   - Change 29: the box scrolls                                               │
 │   - Change 30: tests run in parallel                                         │

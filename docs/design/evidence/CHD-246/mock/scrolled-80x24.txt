@@ -3,12 +3,12 @@
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ mcp__files__write_file                                                       │
-│ ── ↑ 12 lines above · pgup to scroll ─────────────────────────────────────── │
+│ ── ↑ 12 lines above · pageup to scroll ───────────────────────────────────── │
 │   - Change 3: headlines wrap                                                 │
 │   - Change 4: the box scrolls                                                │
 │   - Change 5: tests run in parallel                                          │
 │   - Change 6: the prompt keeps its draft                                     │
-│ ── ↓ 26 lines below · pgdn to scroll ─────────────────────────────────────── │
+│ ── ↓ 26 lines below · pagedown to scroll ─────────────────────────────────── │
 │                                                                              │
 │ Do you want to proceed?                                                      │
 │ ❯ 1. Yes                                                                     │

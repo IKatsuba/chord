@@ -8,7 +8,7 @@
 │                                                                              │
 │   This release changes how chord draws long requests: the permission box now │
 │   caps its height, keeps its options on screen and lets the person scroll    │
-│ ── ↓ 37 lines below · pgdn to scroll ─────────────────────────────────────── │
+│ ── ↓ 37 lines below · pagedown to scroll ─────────────────────────────────── │
 │                                                                              │
 │ Do you want to proceed?                                                      │
 │ ❯ 1. Yes                                                                     │

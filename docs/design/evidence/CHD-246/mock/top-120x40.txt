@@ -24,7 +24,7 @@
 │   - Change 8: headlines wrap                                                                                         │
 │   - Change 9: the box scrolls                                                                                        │
 │   - Change 10: tests run in parallel                                                                                 │
-│ ── ↓ 22 lines below · pgdn to scroll ─────────────────────────────────────────────────────────────────────────────── │
+│ ── ↓ 22 lines below · pagedown to scroll ─────────────────────────────────────────────────────────────────────────── │
 │                                                                                                                      │
 │ Do you want to proceed?                                                                                              │
 │ ❯ 1. Yes                                                                                                             │

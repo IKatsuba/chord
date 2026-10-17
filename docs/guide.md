@@ -462,7 +462,11 @@ a list of its agents sits under the status line, `main` and each child in
 the order it opened, each child in a colour of its own, with its runtime,
 model, the effort it is on (`open_agent` takes one as `spawn_task` does)
 and state (`✻ working 41s`, `● permission 12s`, `← message from
-@main`, `✓ replied 2m ago`). A failed turn reads `✗ turn failed 12s ago`
+@main`, `✓ replied 2m ago`). Reply age counts from the latest reply,
+asking from the request, working from the turn's start and turn failed
+from the failure. These clocks also apply to folded teams and ctrl+x w;
+ctrl+x a still follows the oldest unseen news.
+A failed turn reads `✗ turn failed 12s ago`
 until you look at the child; it stays open for prompts and messages.
 `✗ failed to start` means the agent never came up, and `✗ exited` means
 its process is gone. Those rows keep their state until closed; an exit

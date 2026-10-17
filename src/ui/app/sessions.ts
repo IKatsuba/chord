@@ -131,6 +131,7 @@ import {
   backgroundItems,
   type ItemOwner,
 } from '../background/background.ts';
+import { focusedItem, moveViewFocus } from '../background/view.ts';
 import { stripLayout, tabGlyph } from './strip.ts';
 import {
   headlineText,
@@ -1584,6 +1585,44 @@ export function useSessions(
     showFront();
   };
 
+  /** ↑ ↓ in the background view: the `❯` `by` rows on, stopping at the ends. */
+  const moveBackground = (by: number) => {
+    const focus = moveViewFocus(background(), state.backgroundView?.focus, by);
+
+    if (focus !== undefined) {
+      dispatch({ type: 'background_focused', focus });
+    }
+  };
+
+  /**
+   * `x` in the background view: the focused item stops at once, with no
+   * confirmation, its row turning to stopped in place. A monitor stops as
+   * its row's `x` stopped it before, its agent told; a task's turn is
+   * cancelled, which ends it and closes its session. An ended one is left.
+   */
+  const stopBackground = () => {
+    const item = focusedItem(background(), state.backgroundView?.focus);
+
+    if (
+      item === undefined ||
+      (item.status.group !== 'running' && item.status.group !== 'asking')
+    ) {
+      return;
+    }
+
+    // Kept on it by its ref, so the ❯ stays on the row as it changes.
+    dispatch({
+      type: 'background_focused',
+      focus: { key: item.key, id: item.id },
+    });
+
+    if (item.kind === 'monitor') {
+      conversationAt(item.key)?.stopMonitor(item.id, 'person');
+    } else {
+      conversationAt(item.key)?.task(item.id)?.cancel();
+    }
+  };
+
   /**
    * `x` in the list: closes the picked child, once a second press confirms
    * cutting a busy one short. chord tells the parent, so it is not left
@@ -2771,6 +2810,8 @@ export function useSessions(
     pickOption,
     moveAgent,
     closePicked,
+    moveBackground,
+    stopBackground,
     frontKey: () => front()?.key,
     listTeams,
     runTyped,

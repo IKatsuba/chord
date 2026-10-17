@@ -299,6 +299,8 @@ const SCENARIOS = [
   'chordcalls',
   'codexchordcalls',
   'taskchild',
+  'tasklong',
+  'taskwait',
   'agents',
   'agentsheld',
   'agentchild',

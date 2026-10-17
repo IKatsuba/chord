@@ -202,6 +202,15 @@ export type KeyCommand =
   | 'agents_leave'
   /** x in the list: closes the picked child, or asks again while it is busy. */
   | 'close_agent'
+  /** Enter on the background's summary line: its view opens. */
+  | 'open_background'
+  /** ↑ and ↓, or k and j, in the background view: the row above or below. */
+  | 'background_up'
+  | 'background_down'
+  /** x in the background view: the focused item stops at once. */
+  | 'stop_background'
+  /** Esc in the background view: back to the summary line. */
+  | 'close_background'
   /** The first keys of a chord: the next is waited for. */
   | 'key_pending'
   /** A key after a chord's first that finishes no chord: both go. */

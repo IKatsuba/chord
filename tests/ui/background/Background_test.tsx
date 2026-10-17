@@ -34,7 +34,7 @@ async function withBackground(
   }
 }
 
-test('with no child open the summary line stands alone; ↓ reaches it, x and enter do nothing there, esc and ↑ go back to the box', () =>
+test('with no child open the summary line stands alone; ↓ reaches it, x does nothing there, esc and ↑ go back to the box', () =>
   withBackground(async (window) => {
     await ready(window);
     await send(window, 'monitors');
@@ -45,9 +45,8 @@ test('with no child open the summary line stands alone; ↓ reaches it, x and en
     await window.shows('  ❯ background  2 monitors running');
     await window.shows('↑ ↓ to move · enter to open · esc to go back');
 
-    // Not an item: x stops nothing, and enter leaves the ❯ where it is.
+    // Not an item: x stops nothing, and ↓ leaves the ❯ where it is.
     await window.press('x');
-    await window.press('\r');
     await window.press(DOWN);
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(window.frame()).toContain('  ❯ background  2 monitors running');
@@ -264,3 +263,62 @@ describe('CHD-424 tester: standing background edges', () => {
     });
   }
 });
+
+test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a monitor in place, esc goes back to the summary line', () =>
+  withBackground(async (window) => {
+    await ready(window);
+    await send(window, 'monitors');
+    await window.shows(
+      'Received the message from dev server errors · monitor.',
+    );
+    await window.press(DOWN);
+    await window.shows('❯ background');
+    await window.press('\r');
+    await window.shows(' Background · 2 in this tab');
+    await window.shows(
+      '↑ ↓ to move · enter to go to its call · x to stop · esc to close',
+    );
+    // The whole window: no prompt box, no status line.
+    expect(!window.frame().includes('╭')).toBeTruthy();
+    expect(window.frame()).toMatch(
+      /❯ dev server errors {2}monitor {2}running \d+s · 1 event +main/,
+    );
+
+    await window.press('j');
+    await window.shows('❯ CI run 4812');
+    // The last row stays the last.
+    await window.press(DOWN);
+    await window.press('x');
+    await window.shows('■ stopped after');
+    expect(window.frame()).toMatch(/❯ CI run 4812 .*■ stopped after \d+s/);
+    await window.press('k');
+    await window.shows('❯ dev server errors');
+
+    await window.press(ESC);
+    await window.shows('❯ background  1 monitor running · ■ 1 monitor stopped');
+    // The stop is told in the transcript as before.
+    await window.shows('← from CI run 4812 · monitor · stopped');
+    await window.press('\r');
+    await window.shows(' Background · 2 in this tab');
+    await window.press(ESC);
+    await window.press(ESC);
+    await until('the ❯ gone', () => !window.frame().includes('❯ background'));
+  }));
+
+test('x on a working task cancels its turn: its row turns to stopped, and it sends no report', () =>
+  withBackground(
+    async (window) => {
+      await ready(window);
+      await send(window, 'tasklong');
+      await window.shows('The build is being watched.');
+      await window.shows('    background  1 task running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Watch the build  task · fake  working');
+      await window.press('x');
+      await window.shows('■ stopped after');
+      await window.press(ESC);
+      await window.shows('❯ background  ■ 1 task stopped');
+    },
+    { rows: 24, columns: 80 },
+  ));

@@ -80,6 +80,7 @@ import {
 import { agentsHint, agentsRowLimit, summaryHint } from '../agents/agents.ts';
 import { AgentsList, ChildLine } from '../agents/Agents.tsx';
 import { SummaryLine } from '../background/Background.tsx';
+import { BackgroundView } from '../background/BackgroundView.tsx';
 import { startingVim } from '../prompt/vim.ts';
 import { useCommands } from './commands.ts';
 import {
@@ -692,6 +693,10 @@ export function App({
         return sessions.moveAgent(step.by, agentsLimit);
       case 'close_agent':
         return sessions.closePicked();
+      case 'move_background':
+        return sessions.moveBackground(step.by);
+      case 'stop_background':
+        return sessions.stopBackground();
       case 'interrupt':
         return conversation()?.interrupt();
       case 'reject_permission':
@@ -807,9 +812,19 @@ export function App({
             )}
             {/* Under the splash the window is laid out but not drawn, so the
         keys pressed meanwhile land in it as if typed there. */}
+            {state.backgroundView && !splashing && (
+              <BackgroundView
+                items={backgroundItems}
+                focus={state.backgroundView.focus}
+                columns={columns}
+                rows={rows}
+              />
+            )}
+            {/* Hidden under the background view, not let go, so esc gives
+        the transcript back as it was. */}
             <box
               // Always given, so a window shown again is not left hidden.
-              visible={!splashing}
+              visible={!splashing && state.backgroundView === undefined}
               width={columns}
               height={rows}
               {...mouse}

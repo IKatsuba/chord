@@ -92,6 +92,10 @@ export type Step =
   | { readonly type: 'move_agent'; readonly by: number }
   /** `x` in the list: the picked child closes, or asks again. */
   | { readonly type: 'close_agent' }
+  /** The `❯` in the background view moves `by` rows. */
+  | { readonly type: 'move_background'; readonly by: number }
+  /** `x` in the background view: the focused item stops. */
+  | { readonly type: 'stop_background' }
   | { readonly type: 'interrupt' }
   | { readonly type: 'reject_permission'; readonly id: string }
   /** A scroll key moves the permission request in its box (CHD-246). */
@@ -576,6 +580,16 @@ function commandSteps(
       return [dispatch({ type: 'agents_focused', focused: false })];
     case 'close_agent':
       return [{ type: 'close_agent' }];
+    case 'open_background':
+      return [dispatch({ type: 'background_opened' })];
+    case 'background_up':
+      return [{ type: 'move_background', by: -1 }];
+    case 'background_down':
+      return [{ type: 'move_background', by: 1 }];
+    case 'stop_background':
+      return [{ type: 'stop_background' }];
+    case 'close_background':
+      return [dispatch({ type: 'background_closed' })];
     case 'list_sessions':
       return [dispatch({ type: 'sessions_picker_opened' })];
     case 'close_sessions_picker':

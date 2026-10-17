@@ -466,6 +466,9 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'keys_pending':
       return reduceShortcuts(state, action) as AppState;
     case 'background_cleared':
+    case 'background_opened':
+    case 'background_closed':
+    case 'background_focused':
       return reduceBackground(state, action) as AppState;
     case 'expanded_toggled':
       // Rewrapped, its cells would hold other characters.
@@ -513,6 +516,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         agentCloseArmed: _________,
         summaryFocus: __________,
         teamsPicker: ___________,
+        backgroundView: ____________,
         ...rest
       } = state;
 
@@ -1387,6 +1391,12 @@ function boundCommand(
   // letter does nothing, so a stray key never lands in a child's prompt. A
   // permission or form of the agent picked waits until Enter or Esc goes
   // back to it, so moving through the list never answers one.
+  // The background view takes the whole window and every key: ↑ ↓, j k,
+  // x and Esc, and the quit keys.
+  if (state.backgroundView && !pickerShown(state)) {
+    return backgroundCommand(input, key, state, on);
+  }
+
   if (state.agentsFocus && !pickerShown(state)) {
     return agentsCommand(input, key, state, on);
   }
@@ -1617,6 +1627,36 @@ function boundCommand(
   return undefined;
 }
 
+/** What a key means while the background view is open. */
+function backgroundCommand(
+  input: string,
+  key: KeyPress,
+  state: AppState,
+  on: (action: Action) => boolean,
+): KeyCommand | undefined {
+  if (key.ctrl && input === 'c') {
+    return state.quitArmed ? 'quit' : 'arm_quit';
+  }
+
+  if (key.ctrl && input === 'd') {
+    return 'quit';
+  }
+
+  if (on('agents:close')) {
+    return 'stop_background';
+  }
+
+  if (key.upArrow || (input === 'k' && !key.ctrl && !key.meta)) {
+    return 'background_up';
+  }
+
+  if (key.downArrow || (input === 'j' && !key.ctrl && !key.meta)) {
+    return 'background_down';
+  }
+
+  return on('select:cancel') ? 'close_background' : undefined;
+}
+
 /** What a key means while the list of the session's agents has the keys. */
 function agentsCommand(
   input: string,
@@ -1656,7 +1696,7 @@ function agentsCommand(
   }
 
   if (key.return && state.summaryFocus) {
-    return undefined;
+    return 'open_background';
   }
 
   return key.return || key.escape ? 'agents_leave' : undefined;

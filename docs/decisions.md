@@ -198,7 +198,11 @@ small components do it on Ink's own `Box` and `Text`. A call's headline is
 drawn whole and wrapped, every line of its title, for every tool, with no
 cap, as Claude Code draws it (the owner, 2026-10-17, CHD-393): wrap-ansi,
 through `wrapLine`, breaks it between words where OpenTUI's own wrap breaks
-at a hyphen too (`--`, `include`).
+at a hyphen too (`--`, `include`). The headline is styled first, as one
+string with its codes (the name bold, the note dim, a recipient's colour),
+and wrap-ansi carries them across the rows it breaks; `runs` reads each
+row back into spans, so nothing maps rows back onto the title, which
+wrap-ansi rewrites (a decomposed é, a tab) (owner, Q8).
 
 - ACP gives a call a free-text title, not a tool name and an argument. The
   headline reads a leading capitalised verb as the name (`Read README.md` →

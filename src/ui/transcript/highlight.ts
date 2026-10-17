@@ -15,7 +15,7 @@ const emphasize = createEmphasize(common);
  * A hex through chalk, at whatever level the terminal takes, or one of the
  * terminal's 16 by name; a class with no colour stays as it is.
  */
-function brush(
+export function brush(
   paint: ChalkInstance,
   colour: string | undefined,
 ): (text: string) => string {

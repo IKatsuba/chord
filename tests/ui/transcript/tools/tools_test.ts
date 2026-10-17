@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { ToolCall } from '../../../../src/session/transcript/types.ts';
+import { TextAttributes } from '@opentui/core';
+import type { Run } from '../../../../src/ui/theme/text.ts';
 import {
   firstLine,
   type Headline,
@@ -64,7 +66,7 @@ test("a row that stays one row takes the argument's first line", () => {
 /** The rows' text, each row's pieces joined. */
 function rowsText(line: Headline, width: number): string[] {
   return headlineRows(line, width).map((row) =>
-    row.map((piece) => piece.run.text).join(''),
+    row.map((run) => run.text).join(''),
   );
 }
 
@@ -105,46 +107,82 @@ test('a line keeps its indent; a word wider than the room breaks at the edge', (
   ).toStrictEqual(['Fetch(http', 's://exampl', 'e.com/a)']);
 });
 
-test('the note follows the `)`; the name, the `to` and the note keep their parts on every row', () => {
-  const rows = headlineRows(
-    { name: 'tester', arg: 'run the suite', note: ' · waited 2s', sent: true },
-    18,
+/** Each row's runs as their text and how they are drawn. */
+function styled(rows: Run[][]): [string, string][][] {
+  return rows.map((row) =>
+    row.map((run) => [
+      run.text,
+      [
+        run.attributes & TextAttributes.BOLD ? 'bold' : '',
+        run.attributes & TextAttributes.DIM ? 'dim' : '',
+        run.fg === undefined ? '' : 'fg',
+      ]
+        .filter(Boolean)
+        .join(' '),
+    ]),
   );
+}
 
+test('the note follows the `)`; the name keeps its bold and colour, the `to` and the note their dim, on every row', () => {
   expect(
-    rows.map((row) => row.map(({ part, run }) => [part, run.text])),
+    styled(
+      headlineRows(
+        {
+          name: 'tester',
+          arg: 'run the suite',
+          note: ' · waited 2s',
+          sent: true,
+        },
+        18,
+        '#6cb6ff',
+      ),
+    ),
   ).toStrictEqual([
     [
-      ['to', 'to '],
-      ['name', '@tester'],
-      ['arg', '(run the'],
+      ['to ', 'dim'],
+      ['@tester', 'bold fg'],
+      ['(run the', ''],
     ],
     [
-      ['arg', 'suite)'],
-      ['note', ' · waited 2s'],
+      ['suite)', ''],
+      [' · waited 2s', 'dim'],
     ],
   ]);
 });
 
 test("an agent's colour in an argument is kept on each row it wraps to", () => {
-  const rows = headlineRows(
-    { name: 'Bash', arg: '\x1b[31mred words here\x1b[0m plain' },
-    13,
-  );
-
   expect(
-    rows.map((row) =>
-      row.map(({ run }) => [run.text, run.fg === undefined ? '' : 'fg']),
+    styled(
+      headlineRows(
+        { name: 'Bash', arg: '\x1b[31mred words here\x1b[0m plain' },
+        13,
+      ),
     ),
   ).toStrictEqual([
     [
-      ['Bash', ''],
+      ['Bash', 'bold'],
       ['(', ''],
       ['red', 'fg'],
     ],
     [['words here', 'fg']],
     [['plain)', '']],
   ]);
+});
+
+test('an argument wrap-ansi writes otherwise is drawn whole, its `)` kept', () => {
+  // A decomposed é, which wrap-ansi composes, four times (CHD-393 review).
+  const accents = rowsText({ name: 'Bash', arg: 'e\u0301'.repeat(4) }, 76);
+
+  expect(accents.join('').normalize('NFC')).toStrictEqual(
+    `Bash(${'é'.repeat(4)})`,
+  );
+
+  // A tab, which wrap-ansi lays out as spaces, then the rest of the line.
+  const tabbed = rowsText({ name: 'Bash', arg: 'printf "a\tb" | cat' }, 76);
+
+  expect(tabbed).toHaveLength(1);
+  expect(tabbed[0]).toStartWith('Bash(printf "a');
+  expect(tabbed[0]).toEndWith('b" | cat)');
 });
 
 test('the status picks the tone; no status is pending', () => {

@@ -7,7 +7,9 @@ import type { ToolCallContent, ToolKind } from '@agentclientprotocol/sdk';
 import type { ToolCall, TurnState } from '../../../session/transcript/types.ts';
 import { type DiffView, diffView } from './diff.ts';
 import { isEmpty, type TerminalView, terminalView } from './terminal.ts';
+import { Chalk } from 'chalk';
 import { type Run, runs } from '../../theme/text.ts';
+import { brush } from '../highlight.ts';
 import type { CodeTones } from '../../theme/theme.ts';
 import { chordHeadline, chordLines, chordWraps } from './chord.ts';
 import { wrapLine } from '../message.ts';
@@ -72,84 +74,52 @@ export function firstLine(line: Headline): Headline {
   return line.arg === undefined ? line : { ...line, arg: first.trimEnd() };
 }
 
-/** Which part of a headline a run of it is, which says how it is drawn. */
-export type HeadlinePart = 'to' | 'name' | 'arg' | 'note';
-
-/** A run of a headline's text, its own SGR read, and its part. */
-export interface HeadlinePiece {
-  readonly part: HeadlinePart;
-  readonly run: Run;
-}
+/**
+ * Styles a headline is built with before it is wrapped: every colour as
+ * itself, as wrap-ansi carries the codes across the rows it breaks, and
+ * `runs` reads them back into OpenTUI's spans.
+ */
+const STYLE = new Chalk({ level: 3 });
 
 /**
- * A headline laid out in rows of `width` cells, as `wrapLine` wraps: each
- * line of its argument starts a row, a line wider than the room breaks
+ * A headline laid out in rows of `width` cells, each row its styled runs:
+ * the name bold, a recipient's in its `colour`, the `to` and the note dim.
+ * It is built as one string with those codes and wrapped by `wrapLine`, so
+ * each line of its argument starts a row, a line wider than the room breaks
  * between words, and the `)` and the note follow the argument's last word.
- * The runs are split where the rows break, so each keeps its style.
  */
 export function headlineRows(
   { name, arg, note, sent }: Headline,
   width: number,
-): HeadlinePiece[][] {
-  const parts: [HeadlinePart, string][] = [
-    ...(sent ? [['to', 'to '] as [HeadlinePart, string]] : []),
-    ['name', sent ? `@${name}` : name],
-    ...(arg === undefined
-      ? []
-      : [['arg', `(${arg})`] as [HeadlinePart, string]]),
-    ...(note === undefined ? [] : [['note', note] as [HeadlinePart, string]]),
-  ];
-  const pieces = parts.flatMap(([part, text]) =>
-    runs(text).map((run) => ({ part, run })),
-  );
-  const plain = pieces.map((piece) => piece.run.text).join('');
-  const spans: [number, number][] = [];
-  let lineStart = 0;
+  colour?: string,
+): Run[][] {
+  const named = brush(STYLE, sent ? colour : undefined);
+  const text = [
+    sent ? STYLE.dim('to ') : '',
+    STYLE.bold(named(sent ? `@${name}` : name)),
+    arg === undefined ? '' : `(${arg})`,
+    note === undefined ? '' : STYLE.dim(note),
+  ].join('');
+  const wrapped = text
+    .split('\n')
+    .flatMap((line) => wrapLine(line, width))
+    .join('\n');
+  const rows: Run[][] = [[]];
 
-  for (const line of plain.split('\n')) {
-    let at = 0;
+  // Read as one, so a style the agent opened on a line holds on the next.
+  for (const run of runs(wrapped)) {
+    const [first = '', ...rest] = run.text.split('\n');
 
-    for (const row of wrapLine(line, width)) {
-      // wrap-ansi drops only the spaces it broke on, so a row is the line's
-      // text from the first place it is found on.
-      const found = row === '' ? -1 : line.indexOf(row, at);
-      const start = found < 0 ? at : found;
-
-      spans.push([lineStart + start, lineStart + start + row.length]);
-
-      at = start + row.length;
+    if (first !== '') {
+      rows.at(-1)!.push({ ...run, text: first });
     }
 
-    lineStart += line.length + 1;
-  }
-
-  return spans.map(([start, end]) => slicePieces(pieces, start, end));
-}
-
-/** The pieces' text from `start` to `end`, cut where they cross either. */
-function slicePieces(
-  pieces: readonly HeadlinePiece[],
-  start: number,
-  end: number,
-): HeadlinePiece[] {
-  const kept: HeadlinePiece[] = [];
-  let at = 0;
-
-  for (const { part, run } of pieces) {
-    const from = Math.max(start, at);
-    const to = Math.min(end, at + run.text.length);
-
-    if (from < to) {
-      kept.push({
-        part,
-        run: { ...run, text: run.text.slice(from - at, to - at) },
-      });
+    for (const row of rest) {
+      rows.push(row === '' ? [] : [{ ...run, text: row }]);
     }
-
-    at += run.text.length;
   }
 
-  return kept;
+  return rows;
 }
 
 function titleHeadline(call: ToolCall): Headline {

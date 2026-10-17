@@ -1,4 +1,3 @@
-import { TextAttributes } from '@opentui/core';
 import { useTerminalDimensions } from '@opentui/react';
 import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
 import type { ToolCall } from '../../../session/transcript/types.ts';
@@ -34,7 +33,6 @@ import type { TerminalView } from './terminal.ts';
 import {
   type Headline,
   headline,
-  type HeadlinePart,
   headlineRows,
   summary,
   type Tone,
@@ -158,21 +156,19 @@ export function HeadlineText({
   colour?: string | undefined;
 }) {
   const selectable = useSelectable();
-  const rows = headlineRows(line, width);
+  const rows = headlineRows(line, width, colour);
 
   return (
     <text {...FILL} wrapMode='none' {...selectable}>
       {rows.map((row, index) => (
         <Fragment key={index}>
           {index > 0 && <span>{'\n'}</span>}
-          {row.map(({ part, run }, at) => (
+          {row.map((run, at) => (
             <span
               key={at}
-              {...(run.fg === undefined
-                ? fg(part === 'name' ? colour : undefined)
-                : { fg: run.fg })}
+              {...(run.fg === undefined ? {} : { fg: run.fg })}
               {...(run.bg === undefined ? {} : { bg: run.bg })}
-              attributes={run.attributes | PART_ATTRIBUTES[part]}
+              attributes={run.attributes}
             >
               {run.text}
             </span>
@@ -182,13 +178,6 @@ export function HeadlineText({
     </text>
   );
 }
-
-const PART_ATTRIBUTES: Record<HeadlinePart, number> = {
-  to: TextAttributes.DIM,
-  name: TextAttributes.BOLD,
-  arg: 0,
-  note: TextAttributes.DIM,
-};
 
 /**
  * `propose_team`'s team under its call: the description, a row per agent

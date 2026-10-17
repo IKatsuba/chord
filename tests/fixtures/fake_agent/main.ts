@@ -303,6 +303,8 @@ const SCENARIOS = [
   'agentsheld',
   'agentchild',
   'agentclose',
+  'agentcall',
+  'callchild',
   'agentsend',
   'codexagentsend',
   'agentsendrefused',

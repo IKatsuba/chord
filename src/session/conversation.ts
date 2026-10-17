@@ -131,6 +131,11 @@ export type ConversationEvent =
        * goes in once they answer.
        */
       readonly afterAnswer?: true;
+      /**
+       * A message held while the turn it goes into has tool calls open that
+       * a steer would cut off: it goes in once they have ended (CHD-423).
+       */
+      readonly afterCalls?: true;
     }
   /**
    * An interrupt took every queued prompt of the person's back; none of them
@@ -798,14 +803,24 @@ export class Conversation {
 
       // The steer ahead may have found the turn over, or the person may have
       // been asked something while it was out.
-      if (this.#steerable(session) === into && this.#waitsOnPerson()) {
-        this.#emit({
-          type: 'queued',
-          turnId: next.turnId,
-          text: next.text,
-          ...(next.from === undefined ? {} : { from: next.from }),
-          afterAnswer: true,
-        });
+      // Held for the calls open as it came, it waits in the queue as one
+      // held for an answer does, until it goes in.
+      if (this.#steerable(session) === into) {
+        const why = this.#waitsOnPerson()
+          ? ({ afterAnswer: true } as const)
+          : open()
+            ? ({ afterCalls: true } as const)
+            : undefined;
+
+        if (why !== undefined) {
+          this.#emit({
+            type: 'queued',
+            turnId: next.turnId,
+            text: next.text,
+            ...(next.from === undefined ? {} : { from: next.from }),
+            ...why,
+          });
+        }
       }
 
       while (

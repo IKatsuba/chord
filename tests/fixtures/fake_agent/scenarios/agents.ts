@@ -54,6 +54,9 @@ export const LONG_INSTRUCTION = [
   'Tell me only what failed, if anything.',
 ].join('\n');
 
+/** What `agentcall` tells `parser` while its call is open. */
+export const HELD_MESSAGE = 'Then the docs, once the tests pass.';
+
 /** A short message to `parser`, sent before `LONG_MESSAGE`. */
 export const SHORT_MESSAGE = 'Start on the tokenizer; the printer can wait.';
 
@@ -361,6 +364,64 @@ export const AGENTS = {
     } finally {
       await client.close();
     }
+
+    return 'end_turn';
+  },
+
+  // Opens `parser` on `callchild` and, while its call is open, tells it
+  // `HELD_MESSAGE`, which a steering adapter that cuts calls holds.
+  async agentcall(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'open_agent', {
+        ...PARSER_ARGS,
+        prompt: 'callchild',
+      });
+      await pause(turn.signal, AGENT_STEP_MS * 2);
+      await callChord(turn, client, 'send_message', {
+        to: 'parser',
+        text: HELD_MESSAGE,
+      });
+      await turn.say('Waiting on parser.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // One call open from the turn's start for about 3 s, long enough for a
+  // message held behind it to be seen, then the answer.
+  async callchild(turn) {
+    const toolCallId = turn.callId('execute');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: '`deno task test`',
+      kind: 'execute',
+      status: 'in_progress',
+    });
+    await pause(turn.signal, AGENT_STEP_MS * 30);
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'completed',
+      content: [
+        {
+          type: 'content',
+          content: { type: 'text', text: '214 passed, 0 failed' },
+        },
+      ],
+    });
+    await turn.say('The tests pass.');
 
     return 'end_turn';
   },

@@ -12,6 +12,7 @@ import {
   CHILD_MESSAGES,
   CRASH_WORDS,
   DOCS_MESSAGE,
+  HELD_MESSAGE,
   MAIN_MESSAGES,
 } from '../../fixtures/fake_agent/scenarios/agents.ts';
 import { TASK_REPORT } from '../../fixtures/fake_agent/scenarios/tasks.ts';
@@ -311,6 +312,43 @@ test("a queued message's row keeps its header whole on a narrow window and cuts 
         runtimes: ['fake'],
         rows: 40,
         columns: 60,
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test("a message held behind the child's running call waits in its queue until it goes in, then the row is gone", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'agentcall');
+        await window.shows('Open(parser)');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('╭─ parser ─');
+        await window.shows(
+          `← from @main · after the running calls: ${HELD_MESSAGE}`,
+        );
+        // Not in the turn yet: its call still runs.
+        expect(window.frame()).toContain('Running…');
+        await window.shows('The tests pass.');
+
+        const frame = window.frame();
+
+        expect(frame).toContain(`← from @main\n   ⎿  ${HELD_MESSAGE}`);
+        expect(frame).not.toContain('after the running calls');
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        server,
+        runtimes: ['fake'],
+        rows: 40,
+        columns: 120,
       },
     );
   } finally {

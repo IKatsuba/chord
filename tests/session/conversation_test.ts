@@ -1191,7 +1191,7 @@ async function callOpen(events: readonly ConversationEvent[]): Promise<void> {
   );
 }
 
-test("on Claude's adapter, a message told while the turn's call is open is held until the call ends, then goes into the same turn", () =>
+test("on Claude's adapter, a message told while the turn's call is open waits in the queue until the call ends, then goes into the same turn", () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
     conversation.send('bash');
     await callOpen(events);
@@ -1212,8 +1212,21 @@ test("on Claude's adapter, a message told while the turn's call is open is held 
       'ended',
     ]);
     expect(saidIn(events)).toContain('Read the message from main.');
-    // Held for the call, not the person: nothing says it waits on an answer.
-    expect(!events.some((event) => event.type === 'queued')).toBeTruthy();
+    // Held for the call, it waits in the queue as such, never as one held
+    // for an answer, until it goes in (CHD-423); the sender's row stays.
+    expect(
+      events.flatMap((event) =>
+        event.type === 'queued'
+          ? [[event.text, event.afterCalls, event.afterAnswer]]
+          : [],
+      ),
+    ).toStrictEqual([['Then the docs.', true, undefined]]);
+    expect(
+      events.findIndex((event) => event.type === 'queued') <
+        events.findIndex(
+          (event) => event.type === 'prompt' && event.into !== undefined,
+        ),
+    ).toBeTruthy();
     expect(queued).toStrictEqual(0);
   }));
 
@@ -1248,6 +1261,33 @@ test("on Claude's adapter, a message waits only for the calls open when it was t
       'a completed',
       'into: Then the docs.',
       'b completed',
+    ]);
+  }));
+
+test("a message held behind an open call that the turn's end refuses waits in the queue as any queued message does, and goes as the next turn", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(() => events.some((event) => event.type === 'queued'));
+    conversation.interrupt();
+    await until(
+      () => events.filter((event) => event.type === 'result').length === 2,
+    );
+
+    const queued = events.flatMap((event) =>
+      event.type === 'queued' ? [event] : [],
+    );
+
+    // Held for the call, then, the turn over, queued as today, the same row.
+    expect(queued.map((event) => event.afterCalls)).toStrictEqual([
+      true,
+      undefined,
+    ]);
+    expect(new Set(queued.map((event) => event.turnId)).size).toStrictEqual(1);
+    expect(promptsIn(events)).toStrictEqual([
+      ['bash', undefined],
+      ['Then the docs.', undefined],
     ]);
   }));
 

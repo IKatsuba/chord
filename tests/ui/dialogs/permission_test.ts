@@ -328,7 +328,7 @@ test('paging down and back up reaches every row of the request, none passed over
   expect(requestStep('page_up', 42, 6, 37)).toStrictEqual(33);
 });
 
-test('a room of two has one rule and a row; a room of one no rule, every key a row', () => {
+test('a room of two has one rule and a row; a room of one no rule, a page a row', () => {
   expect(requestView(42, 2, 0)).toStrictEqual({
     top: 0,
     shown: 1,
@@ -349,7 +349,8 @@ test('a room of two has one rule and a row; a room of one no rule, every key a r
     below: false,
   });
   expect(requestStep('page_down', 42, 1, 3)).toStrictEqual(4);
-  expect(requestStep('bottom', 42, 1, 3)).toStrictEqual(4);
-  expect(requestStep('top', 42, 1, 3)).toStrictEqual(2);
+  // Home and end still jump to the two ends.
+  expect(requestStep('bottom', 42, 1, 3)).toStrictEqual(41);
+  expect(requestStep('top', 42, 1, 3)).toStrictEqual(0);
   expect(requestStep('line_up', 42, 1, 0)).toStrictEqual(0);
 });

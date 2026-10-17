@@ -410,9 +410,11 @@ test('a window of 19 rows leaves the request one row, no rule, and every answer'
       expect(box.join('\n')).toContain('3. No, and tell Claude');
       expect(box.join('\n')).toContain('Esc to reject');
 
-      // A room of one row: every key moves it a row.
+      // A room of one row: a page is a row, and end still goes to the end.
       await window.press(PAGE_DOWN);
       await window.shows('content: # Release 0.56.0');
+      await window.press(END);
+      await window.shows('mode: overwrite');
     },
     { columns: 80, rows: 19 },
   ));

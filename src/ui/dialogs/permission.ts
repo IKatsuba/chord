@@ -220,8 +220,8 @@ export function requestView(
  * The top a scroll key leaves the request at. A page down starts at the
  * row after the last one shown; a page up ends at the row before the first
  * one shown, on a view of `room − 2` rows, or goes to the top view when that
- * reaches the row already, so no row is passed over. A room of one row
- * moves a row for every key (docs/design/CHD-246.md, "A page").
+ * reaches the row already, so no row is passed over. In a room of one row
+ * a page is a row; home and end still jump (docs/design/CHD-246.md).
  */
 export function requestStep(
   step: ScrollStep,
@@ -232,12 +232,9 @@ export function requestStep(
   const view = requestView(total, room, top);
   const to = (next: number) => requestView(total, room, next).top;
 
-  if (room === 1) {
+  if (room === 1 && step !== 'top' && step !== 'bottom') {
     return to(
-      view.top +
-        (step === 'page_down' || step === 'line_down' || step === 'bottom'
-          ? 1
-          : -1),
+      view.top + (step === 'page_down' || step === 'line_down' ? 1 : -1),
     );
   }
 

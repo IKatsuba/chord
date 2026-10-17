@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › agentfail
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  error
+
+ ⏺ Waiting on parser.
+
+ ← from chord
+   ⎿  parser's turn failed: The fake agent failed on purpose. It is still
+      open; send_message reaches it.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ✗ parser's turn failed · ctrl+x a    Fake Large with a 1M context… · 1% used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✗ turn failed 12s ago

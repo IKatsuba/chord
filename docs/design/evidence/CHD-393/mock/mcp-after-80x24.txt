@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+ › mcpnote
+
+ ⏺ notes - save_note (MCP)(title: "Tool-call rendering test: long titles,
+   wrapped bodies, and multiple tags in one note", body: "This note is part of
+   a UI test that checks how tool calls are drawn in the terminal. It covers a
+   long single-line Bash command, a heredoc that writes a file, a file read, an
+   edit, a write, a wide regex search, a brace-expansion glob, this MCP call, a
+   subagent call, and finally a 300-line heredoc. The goal is to see how
+   titles, bodies, and tag arrays are truncated, wrapped, or expanded in the
+   rendered output.", tags:
+   ["ui-test","tool-rendering","mcp","terminal","claude-code"])
+   ⎿  saved "Tool-call rendering test: long titles, wrapped bodies, and multiple
+
+ ⏺ Done.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

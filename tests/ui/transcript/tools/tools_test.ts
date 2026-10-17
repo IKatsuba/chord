@@ -1,6 +1,7 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { ToolCall } from '../../../../src/session/transcript/types.ts';
 import { TextAttributes } from '@opentui/core';
+import stringWidth from 'string-width';
 import type { Run } from '../../../../src/ui/theme/text.ts';
 import {
   firstLine,
@@ -413,4 +414,43 @@ test("a call whose questions the box answered reads Asking(…), whatever its ti
     name: 'Asking',
     arg: 'Which language should helper scripts use?',
   });
+});
+
+describe('CHD-393 tester: styled headline boundaries', () => {
+  test('keeps an open colour across a real newline and resets it before plain text', () => {
+    const rows = headlineRows(
+      { name: 'Bash', arg: '\x1b[31mone\ntwo three four\x1b[0m plain' },
+      13,
+    );
+    const pieces = rows.flat();
+
+    expect(
+      pieces
+        .filter((run) => run.fg)
+        .map((run) => run.text)
+        .join(' '),
+    ).toBe('one two three four');
+    expect(
+      pieces.find((run) => run.text.includes('plain'))?.fg,
+    ).toBeUndefined();
+    expect(rows.map((row) => row.map((run) => run.text).join(''))).toEqual([
+      'Bash(one',
+      'two three',
+      'four plain)',
+    ]);
+  });
+
+  for (const width of [3, 13, 76]) {
+    test(`keeps Unicode, tab suffix and closing punctuation within ${width} cells`, () => {
+      const rows = headlineRows(
+        { name: 'Bash', arg: 'e\u0301漢👩‍💻\tEND' },
+        width,
+      ).map((row) => row.map((run) => run.text).join(''));
+
+      expect(rows.join('').replace(/\s/g, '').normalize('NFC')).toBe(
+        'Bash(é漢👩‍💻END)',
+      );
+      expect(rows.every((row) => stringWidth(row) <= width)).toBe(true);
+    });
+  }
 });

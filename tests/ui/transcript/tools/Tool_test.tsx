@@ -5,7 +5,7 @@ import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import type { TurnState } from '../../../../src/session/transcript/types.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
-import { CTRL_O, send, withWindow } from '../../app/render.tsx';
+import { CTRL_O, END, send, until, withWindow } from '../../app/render.tsx';
 import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
 
 test('tool calls draw their status, their output and a failure', () =>
@@ -486,5 +486,64 @@ describe('CHD-1 tester: original question result visibility', () => {
         }
       }
     });
+  }
+});
+
+describe('CHD-393 tester: long headline navigation', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`every numbered line remains reachable with paging at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'headlines');
+          await window.shows('Four calls with long headlines.');
+          await until(
+            'the headline turn to finish',
+            () => !window.frame().includes('Working'),
+          );
+
+          const tail = rowsBetween(
+            stripAnsi(window.frame()),
+            'line 298 of',
+            'Four calls',
+          );
+
+          await window.press(CTRL_O);
+          expect(
+            rowsBetween(stripAnsi(window.frame()), 'line 298 of', 'Four calls'),
+          ).toEqual(tail);
+          await window.press(CTRL_O);
+          await window.press('\x1b[H');
+          await window.shows('› headlines');
+
+          const seen = new Set<number>();
+
+          for (let page = 0; page < 40; page++) {
+            const frame = window.frame();
+
+            for (const match of frame.matchAll(
+              /line (\d+) of the long command/g,
+            )) {
+              seen.add(Number(match[1]));
+            }
+
+            if (frame.includes('Four calls with long headlines.')) {
+              break;
+            }
+
+            await window.press('\x1b[6~');
+          }
+
+          expect([...seen].sort((a, b) => a - b)).toEqual(
+            Array.from({ length: 298 }, (_, index) => index + 1),
+          );
+          await window.press(END);
+          await window.shows('EOF)');
+          await window.shows('Four calls with long headlines.');
+        },
+        { columns, rows },
+      ));
   }
 });

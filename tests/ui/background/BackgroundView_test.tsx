@@ -8,6 +8,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import {
   DOWN,
   END,
+  ESC,
   promptRow,
   ready,
   send,
@@ -187,4 +188,70 @@ describe('CHD-424 tester: call navigation edges', () => {
       expect(promptRow(window)).toContain('parser draft');
       expect(window.frame()).not.toContain('Do you want to proceed?');
     }));
+});
+
+describe('CHD-424 tester: rebound background stop', () => {
+  test('the rebound key leaves the summary alone, stops view items, and closes an agent; shift arrows leave the view focus alone', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'monitorchild');
+          await window.shows('background  2 monitors running');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.shows('❯ background');
+          await window.press('z');
+          await window.shows('❯ background  2 monitors running');
+          await window.press('\r');
+          await window.shows('❯ dev server errors');
+          await window.press('\x1b[1;2B');
+          expect(window.frame()).toContain('❯ dev server errors');
+          await window.press('x');
+          expect(window.frame()).not.toContain('■ stopped after');
+          await window.press('z');
+          await window.shows('■ stopped after');
+          await window.press('j');
+          await window.shows('❯ parser tests');
+          await window.press('\x1b[1;2A');
+          expect(window.frame()).toContain('❯ parser tests');
+          await window.press('z');
+          await until(
+            'both monitors stopped',
+            () => (window.frame().match(/■ stopped after/g) ?? []).length === 2,
+          );
+          await window.press(ESC);
+          await window.shows('❯ background  ■ 2 monitors stopped');
+          await window.press(UP);
+          await window.shows('❯ parser ');
+          await window.press('z');
+          await window.press('z');
+          await window.shows('background  ■ 1 monitor stopped');
+          expect(window.frame()).not.toContain('❯ parser ');
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 24,
+          columns: 80,
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'Agents',
+                bindings: {
+                  x: null,
+                  z: 'agents:close',
+                },
+              },
+            ],
+          }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });

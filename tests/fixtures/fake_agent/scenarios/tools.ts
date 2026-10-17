@@ -98,6 +98,39 @@ async function ran(
   return 'end_turn';
 }
 
+/** An MCP call's result on one line of JSON, a few rows long at 120 columns. */
+export const LONG_JSON = JSON.stringify({
+  status: 'completed',
+  result:
+    '# Long MCP result\n\nEvery note in the vault, exported with its tags, ' +
+    'its links and the date it was last changed, so the agent can read ' +
+    'them without opening each file.\n\nEnd of the long result.',
+  logs: [],
+});
+
+/** A command's output with a line longer than any row. */
+export const LONG_STDOUT = [
+  'Building chord for darwin-arm64, linux-x64, linux-arm64, windows-x64 ' +
+    'and darwin-x64 with bun build --compile, the native library embedded ' +
+    'for each target, and the binaries laid out under dist/.',
+  'Done.',
+].join('\n');
+
+/** A file's one line before and after an edit that makes it long. */
+export const LONG_DIFF = {
+  path: 'src/greeting.ts',
+  oldText: "export const greeting = 'Hello';\n",
+  newText:
+    "export const greeting = 'Hello, and welcome to chord, the terminal ' +\n" +
+    "  'client for coding agents that speak the Agent Client Protocol, ' + 'run from source';\n",
+};
+
+/** A terminal's line longer than any row, as Codex's adapter streams it. */
+export const LONG_TERMINAL =
+  'error: tests/parse/tokenize_test.ts:42 expected the closing quote of a ' +
+  'string at the end of a line to be kept, but the token ended one ' +
+  'character early and the quote was read as the start of the next one\n';
+
 export const TOOLS = {
   steps,
 
@@ -221,6 +254,69 @@ export const TOOLS = {
       ],
     });
     await turn.say('Two calls worked, one failed.');
+
+    return 'end_turn';
+  },
+
+  // Results longer than a row, each to be read whole and wrapped: an MCP
+  // call's JSON on one line, a command's long stdout, an edit that makes a
+  // line long, and a terminal's long line, as Codex's adapter sends one.
+  async longresults(turn) {
+    const done = (
+      toolCallId: string,
+      call: Omit<acp.ToolCall, 'toolCallId' | 'status'>,
+      content: acp.ToolCallContent[],
+    ) =>
+      turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId,
+        status: 'completed',
+        ...call,
+        content,
+      });
+    const text = (value: string): acp.ToolCallContent => ({
+      type: 'content',
+      content: { type: 'text', text: value },
+    });
+
+    await done(
+      turn.callId('export'),
+      { title: 'mcp__notes__export_notes', kind: 'other', rawInput: {} },
+      [text(LONG_JSON)],
+    );
+    await done(
+      turn.callId('build'),
+      { title: '`bun dev compile --all`', kind: 'execute' },
+      [text(LONG_STDOUT)],
+    );
+    await done(
+      turn.callId('edit'),
+      { title: 'Edit src/greeting.ts', kind: 'edit' },
+      [{ type: 'diff', ...LONG_DIFF }],
+    );
+
+    const shell = turn.callId('shell');
+    const terminalId = `terminal-${shell}`;
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId: shell,
+      title: 'Run deno task test',
+      kind: 'execute',
+      status: 'in_progress',
+      content: [{ type: 'terminal', terminalId }],
+      _meta: { terminal_info: { terminal_id: terminalId } },
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: shell,
+      status: 'failed',
+      _meta: {
+        terminal_output_delta: { terminal_id: terminalId, data: LONG_TERMINAL },
+        terminal_exit: { terminal_id: terminalId, exit_code: 1, signal: null },
+      },
+    });
+    await turn.say('Four long results.');
 
     return 'end_turn';
   },

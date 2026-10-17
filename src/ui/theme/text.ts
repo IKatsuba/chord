@@ -86,6 +86,13 @@ export const TEXT = {
  */
 export const FILL = { ...TEXT, flexGrow: 1 } as const;
 
+/**
+ * A `<text>` laid out into its rows already, by `wrapLine`, beside a gutter:
+ * OpenTUI wraps nothing, so a row as wide as its room never gains an empty
+ * one under it, and nothing is cut.
+ */
+export const ROWS = { ...FILL, wrapMode: 'none' } as const;
+
 /** A `<text>` that stays one row, cut at its edge by OpenTUI. */
 export const CUT = { ...TEXT, wrapMode: 'none', truncate: true } as const;
 

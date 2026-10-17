@@ -18,7 +18,7 @@ import {
   useSelectable,
 } from '../../app/context.ts';
 import { Ansi } from '../../theme/Ansi.tsx';
-import { colour, CUT, DIM, fg, FILL, TEXT } from '../../theme/text.ts';
+import { colour, CUT, DIM, fg, FILL, ROWS, TEXT } from '../../theme/text.ts';
 import type { Palette } from '../../theme/theme.ts';
 import { markdown } from '../markdown.ts';
 import {
@@ -69,12 +69,10 @@ function toneColour(tone: Tone, colours: Palette): string | undefined {
 
 /**
  * `⏺ Read(src/main.tsx)` and what it produced under `⎿`, then each edit's
- * diff. The headline is drawn whole, wrapped to the row's `width`; the lines
- * under it are cut at the window's edge rather than wrapped, so a long
- * source line stays one row, but what Open and Team handed over wraps, and
- * what a message sent says is drawn whole, as a received one's is. A call
- * left running in a turn or a subagent that has `ended` no longer blinks or
- * says it waits.
+ * diff. The headline is drawn whole, wrapped to the row's `width`, and so
+ * is every line under it, never cut in the middle (CHD-422); what a message
+ * sent says is drawn whole, as a received one's is. A call left running in
+ * a turn or a subagent that has `ended` no longer blinks or says it waits.
  */
 export function Tool({
   call,
@@ -139,23 +137,29 @@ export function Tool({
         lines.map((line, index) => (
           <Under key={index} first={index === 0}>
             <text
-              {...CUT}
+              {...ROWS}
               {...selectable}
               {...(tone === 'failed' ? fg(colours.error) : { attributes: DIM })}
             >
-              <Ansi text={line} />
+              <Ansi text={line === '' ? ' ' : line} />
             </text>
           </Under>
         ))}
       {sent === undefined && hidden > 0 && <Folded hidden={hidden} />}
       {terminals.map((view, index) => (
-        <TerminalOutput key={index} view={view} first={ahead[index] === 0} />
+        <TerminalOutput
+          key={index}
+          view={view}
+          first={ahead[index] === 0}
+          width={Math.max(width - 5, 1)}
+        />
       ))}
       {diffs.map((view, index) => (
         <Diff
           key={index}
           view={view}
           first={ahead.at(-1) === 0 && index === 0}
+          width={Math.max(width - 5, 1)}
         />
       ))}
     </box>
@@ -323,7 +327,7 @@ function Proposal({
       ))}
       {shown.map((line, index) => (
         <Under key={`b${index}`} first={false}>
-          <text {...CUT}>
+          <text {...FILL}>
             <Ansi text={line === '' ? ' ' : line} />
           </text>
         </Under>
@@ -339,7 +343,7 @@ function Proposal({
       {saved !== undefined && (
         <Under first={false}>
           <text
-            {...CUT}
+            {...FILL}
             {...(saved.saved ? fg(colours.success) : { attributes: DIM })}
           >
             {saved.text}
@@ -371,7 +375,7 @@ export function TableRow({
 
   if (row.change === 'removed' || line.role) {
     return (
-      <text {...CUT} attributes={DIM}>
+      <text {...FILL} attributes={DIM}>
         {text}
       </text>
     );
@@ -387,7 +391,7 @@ export function TableRow({
   let read = 0;
 
   return (
-    <text {...CUT}>
+    <text {...FILL}>
       {spans.map(({ at: [from, to], dim }) => {
         const plain = text.slice(read, from);
 
@@ -415,25 +419,28 @@ export function TableRow({
 
 /**
  * What a command wrote in its terminal, dim as a call's other lines, its
- * latest lines and the count of those above them, then a failing exit in the
- * error tone.
+ * latest lines, each wrapped to `width`, and the count of those above them,
+ * then a failing exit in the error tone.
  */
 function TerminalOutput({
   view,
   first,
+  width,
 }: {
   view: TerminalView;
   first: boolean;
+  width: number;
 }) {
   const { error } = useColours();
   const selectable = useSelectable();
+  const rows = view.lines.flatMap((line) => wrapLine(line, width));
 
   return (
     <>
-      {view.lines.map((line, index) => (
+      {rows.map((line, index) => (
         <Under key={index} first={first && index === 0}>
-          <text {...CUT} {...selectable} attributes={DIM}>
-            {line}
+          <text {...ROWS} {...selectable} attributes={DIM}>
+            {line === '' ? ' ' : line}
           </text>
         </Under>
       ))}
@@ -441,7 +448,7 @@ function TerminalOutput({
       {view.note && (
         <Under first={first && view.lines.length === 0}>
           <text
-            {...CUT}
+            {...FILL}
             {...(view.note.failed ? fg(error) : { attributes: DIM })}
           >
             {view.note.text}
@@ -500,24 +507,27 @@ function Diff({
   view,
   first,
   headline = diffHeadline(view),
+  width,
 }: {
   view: DiffView;
   first: boolean;
   /** In place of `Updated …`, for a change not written yet. */
   headline?: string;
+  /** Cells beside the `⎿`, which each row's code is wrapped to. */
+  width?: number;
 }) {
   const selectable = useSelectable();
 
   return (
     <>
       <Under first={first}>
-        <text {...CUT} {...selectable} attributes={DIM}>
+        <text {...FILL} {...selectable} attributes={DIM}>
           {headline}
         </text>
       </Under>
       {view.rows.length > 0 && (
         <box paddingLeft={5}>
-          <DiffRows view={view} />
+          <DiffRows view={view} {...(width === undefined ? {} : { width })} />
         </box>
       )}
       {view.hidden > 0 && <Folded hidden={view.hidden} />}
@@ -529,68 +539,65 @@ function Diff({
  * A diff's rows in the theme's colours. With a tint, a changed row is tinted
  * green or red and its code coloured by the file's language on the tint;
  * without, as in the 16-colour themes, the row is green or red from its sign
- * on, as `git diff` draws it; under NO_COLOR it is neither.
+ * on, as `git diff` draws it; under NO_COLOR it is neither. Given the
+ * `width` the rows take, a line longer than its room wraps under its code,
+ * the number and the sign on its first row alone.
  */
-export function DiffRows({ view }: { view: DiffView }) {
+export function DiffRows({ view, width }: { view: DiffView; width?: number }) {
   const { diff } = useColours();
   const { tint } = diff;
   const selectable = useSelectable();
+  // The number, a space, the sign and a space before the code.
+  const room =
+    width === undefined ? undefined : Math.max(width - view.numberWidth - 3, 1);
 
-  return view.rows.map((row, index) => (
-    <box key={index} flexDirection='row'>
-      {row.kind === 'gap' ? (
-        <text {...TEXT} attributes={DIM}>
-          {' '.repeat(view.numberWidth + 1)}…
+  return view.rows.flatMap((row, index) => {
+    if (row.kind === 'gap') {
+      return [
+        <box key={index} flexDirection='row'>
+          <text {...TEXT} attributes={DIM}>
+            {' '.repeat(view.numberWidth + 1)}…
+          </text>
+        </box>,
+      ];
+    }
+
+    const code =
+      tint || row.kind === 'context' ? (row.code ?? row.text) : row.text;
+    const pieces = room === undefined ? [code] : wrapLine(code, room);
+    const colouring = tint
+      ? row.kind === 'context'
+        ? {}
+        : fg(tint.text)
+      : row.kind === 'context'
+        ? {}
+        : fg(diff[row.kind]);
+
+    return pieces.map((piece, at) => (
+      <box
+        key={`${index}.${at}`}
+        flexDirection='row'
+        {...(tint
+          ? {
+              flexGrow: 1,
+              ...(row.kind === 'context'
+                ? {}
+                : { backgroundColor: colour(tint[row.kind]) }),
+            }
+          : {})}
+      >
+        <Gutter width={view.numberWidth + 1} dimColor>
+          {at === 0 ? String(row.number).padStart(view.numberWidth) : ''}
+        </Gutter>
+        <text {...TEXT} {...(row.kind === 'context' ? {} : fg(diff[row.kind]))}>
+          {at === 0 ? `${DIFF_MARKS[row.kind]} ` : '  '}
         </text>
-      ) : tint ? (
-        <box
-          flexDirection='row'
-          flexGrow={1}
-          {...(row.kind === 'context'
-            ? {}
-            : { backgroundColor: colour(tint[row.kind]) })}
-        >
-          <Gutter width={view.numberWidth + 1} dimColor>
-            {String(row.number).padStart(view.numberWidth)}
-          </Gutter>
-          <text
-            {...TEXT}
-            {...(row.kind === 'context' ? {} : fg(diff[row.kind]))}
-          >
-            {`${DIFF_MARKS[row.kind]} `}
-          </text>
-          <text
-            {...CUT}
-            {...selectable}
-            {...(row.kind === 'context' ? {} : fg(tint.text))}
-          >
-            <Ansi text={row.code ?? row.text} />
-          </text>
-        </box>
-      ) : (
-        <>
-          <Gutter width={view.numberWidth + 1} dimColor>
-            {String(row.number).padStart(view.numberWidth)}
-          </Gutter>
-          <text
-            {...TEXT}
-            {...(row.kind === 'context' ? {} : fg(diff[row.kind]))}
-          >
-            {`${DIFF_MARKS[row.kind]} `}
-          </text>
-          <text
-            {...CUT}
-            {...selectable}
-            {...(row.kind === 'context' ? {} : fg(diff[row.kind]))}
-          >
-            <Ansi
-              text={row.kind === 'context' ? (row.code ?? row.text) : row.text}
-            />
-          </text>
-        </>
-      )}
-    </box>
-  ));
+        <text {...ROWS} {...selectable} {...colouring}>
+          <Ansi text={piece === '' ? ' ' : piece} />
+        </text>
+      </box>
+    ));
+  });
 }
 
 /**

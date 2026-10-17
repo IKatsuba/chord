@@ -26,7 +26,7 @@ import { shellView } from '../prompt/bash.ts';
 import { Agents } from './agents/Agents.tsx';
 import { TeamEntry } from '../teams/Teams.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
-import { CUT, DIM, DIM_BORDER, fg, FILL, TEXT } from '../theme/text.ts';
+import { CUT, DIM, DIM_BORDER, fg, FILL, ROWS, TEXT } from '../theme/text.ts';
 import { compactionLine, inSpinner } from './compaction.ts';
 import { markdown, QUOTE_INSET } from './markdown.ts';
 import {
@@ -35,6 +35,7 @@ import {
   monitorMessage,
   selfStartedLine,
   teamPartLine,
+  wrapLine,
 } from './message.ts';
 import { indicator, type Scroll } from './scroll.ts';
 import {
@@ -204,7 +205,7 @@ export const TranscriptEntry = memo(function TranscriptEntry({
     case 'plan':
       return <PlanRecord entries={entry.entries} />;
     case 'shell':
-      return <Shell run={entry.run} expanded={expanded} />;
+      return <Shell run={entry.run} width={width} />;
     case 'report':
       return <Report command={entry.command} rows={entry.rows} />;
     case 'note':
@@ -441,13 +442,21 @@ function Note({
 /**
  * A bash-mode command as Claude Code draws one: `!` and the command, then
  * what it wrote under `⎿`, stderr in red, and how it ended when that is news.
- * Lines are cut at the edge, as a tool call's are.
+ * Its output is a result, drawn whole and wrapped, as a tool call's is
+ * (CHD-422).
  */
-function Shell({ run, expanded }: { run: ShellRun; expanded: boolean }) {
+function Shell({ run, width }: { run: ShellRun; width: number }) {
   const { lines, hidden, note } = shellView(
     run,
-    expanded,
+    true,
     useHintKey('chat:cancel'),
+  );
+  // The `⎿` and its gutter take five columns.
+  const rows = lines.flatMap((line) =>
+    wrapLine(line.text, Math.max(width - 5, 1)).map((text) => ({
+      ...line,
+      text,
+    })),
   );
   const { bash, error } = useColours();
   const selectable = useSelectable();
@@ -456,25 +465,25 @@ function Shell({ run, expanded }: { run: ShellRun; expanded: boolean }) {
     <box marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
         <Gutter {...paint(bash)}>!</Gutter>
-        <text {...CUT} {...selectable}>
+        <text {...FILL} {...selectable}>
           {run.command}
         </text>
       </box>
-      {lines.map((line, index) => (
+      {rows.map((line, index) => (
         <Under key={index} first={index === 0}>
           <text
-            {...CUT}
+            {...ROWS}
             {...selectable}
             {...(line.stream === 'stderr' ? fg(error) : {})}
           >
-            {line.text}
+            {line.text === '' ? ' ' : line.text}
           </text>
         </Under>
       ))}
       {hidden > 0 && <Folded hidden={hidden} />}
       {note && (
         <Under first={lines.length === 0}>
-          <text {...CUT} {...(note.failed ? fg(error) : { attributes: DIM })}>
+          <text {...FILL} {...(note.failed ? fg(error) : { attributes: DIM })}>
             {note.text}
           </text>
         </Under>

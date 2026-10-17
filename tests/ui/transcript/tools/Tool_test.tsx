@@ -8,6 +8,12 @@ import { ChordServerName } from '../../../../src/ui/app/context.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import { CTRL_O, END, send, until, withWindow } from '../../app/render.tsx';
 import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
+import {
+  LONG_DIFF,
+  LONG_JSON,
+  LONG_STDOUT,
+  LONG_TERMINAL,
+} from '../../../fixtures/fake_agent/scenarios/tools.ts';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -128,7 +134,7 @@ test('an escape split between pieces of output is never drawn half', () =>
     expect(window.frame()).toContain('FAILED | 1 failed');
   }));
 
-test("a command's line wider than the screen is cut, not wrapped", () =>
+test("a command's line wider than the screen is wrapped, not cut", () =>
   withWindow(
     async (window) => {
       await send(window, 'shell');
@@ -139,9 +145,14 @@ test("a command's line wider than the screen is cut, not wrapped", () =>
       const lines = window.frame().split('\n');
       const at = lines.findIndex((line) => line.includes('Task te'));
 
-      // OpenTUI's cut keeps both ends of the line, `...` between them.
-      expect(lines[at]?.trimEnd()).toStrictEqual('   ⎿  Task te...no test');
-      expect(lines[at + 1]?.trimEnd()).toStrictEqual('      running 3 tests');
+      // Wrapped at its words, as every result is (CHD-422).
+      expect(
+        lines.slice(at, at + 3).map((line) => line.trimEnd()),
+      ).toStrictEqual([
+        '   ⎿  Task test deno',
+        '      test',
+        '      running 3 tests',
+      ]);
 
       for (const line of lines) {
         expect(
@@ -716,3 +727,41 @@ describe('CHD-415 tester: MCP context and view changes', () => {
       ));
   }
 });
+
+/** The words of `text`, each as it would be read on screen. */
+function wordsOf(text: string): string[] {
+  return text.split(/\s+/).filter((word) => word !== '');
+}
+
+for (const columns of [80, 120]) {
+  test(`every result longer than a row is wrapped whole at ${columns} columns, never cut or folded`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'longresults');
+        await window.shows('Four long results.');
+
+        const frame = window.frame();
+        // The rows as read, the gutters and the wrapping left out.
+        const read = frame.replace(/\s+/g, ' ');
+
+        expect(!frame.includes('...'), frame).toBeTruthy();
+        expect(!frame.includes('to expand'), frame).toBeTruthy();
+
+        for (const text of [
+          LONG_JSON,
+          LONG_STDOUT,
+          LONG_DIFF.newText,
+          LONG_TERMINAL,
+        ]) {
+          for (const word of wordsOf(text)) {
+            expect(read.includes(word), `${word} is missing`).toBeTruthy();
+          }
+        }
+
+        for (const line of frame.split('\n')) {
+          expect(stringWidth(line) <= columns, line).toBeTruthy();
+        }
+      },
+      { columns, rows: 60 },
+    ));
+}

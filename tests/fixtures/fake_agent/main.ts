@@ -235,6 +235,7 @@ const SCENARIOS = [
   'steps',
   'stepslater',
   'calls',
+  'longresults',
   'unordered',
   'edit',
   'rewrite',

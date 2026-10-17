@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import stringWidth from 'string-width';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
   moveViewFocus,
@@ -322,4 +323,103 @@ test('a long unbroken name breaks where wrap-ansi breaks it, every character kep
 
   expect(names).toStrictEqual(['x'.repeat(22), 'x'.repeat(22), 'x'.repeat(16)]);
   expect(names.join('')).toStrictEqual(name);
+});
+
+describe('CHD-424 tester: view layout edges', () => {
+  test('long unbroken Unicode names keep every grapheme at wide and narrow widths', () => {
+    for (const name of [
+      '界'.repeat(30),
+      'e\u0301'.repeat(60),
+      '👩‍💻'.repeat(30),
+    ]) {
+      for (const width of [24, 40, 76, 116]) {
+        const rows = viewRows([monitor('m1', name, { group: 'running' })], {
+          width,
+          focus: undefined,
+          now: NOW,
+        });
+        const kept = rows[0]!.lines
+          .flatMap((line) =>
+            line
+              .filter(({ role }) => role === 'name')
+              .map(({ text }) => text.trimEnd()),
+          )
+          .join('');
+
+        expect(kept.normalize('NFC')).toBe(name.normalize('NFC'));
+        expect(text(rows).every((line) => stringWidth(line) <= width)).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  test('ended durations freeze while working and asking durations advance from their own clocks', () => {
+    const ended = ITEMS[0]!;
+    const asking = ITEMS[3]!;
+    const working = ITEMS[4]!;
+
+    expect(stateText(ended, NOW + 90_000)).toStrictEqual(stateText(ended, NOW));
+    expect(stateText(asking, NOW + 2_000).text).toBe('● permission 15s');
+    expect(stateText(working, NOW + 2_000).text).toBe('working 34s');
+  });
+
+  test('every focus stays visible among variable-height rows and the indicators count items', () => {
+    const many = Array.from({ length: 30 }, (_, index) =>
+      monitor(
+        `m${index + 1}`,
+        index % 2 === 0
+          ? `build-${index + 1}-` + 'x'.repeat(48)
+          : `build ${index + 1}`,
+        { group: 'running' },
+      ),
+    );
+
+    for (const width of [24, 40, 76]) {
+      for (const item of many) {
+        const shown = viewWindow(
+          viewRows(many, {
+            width,
+            focus: item,
+            now: NOW,
+          }),
+          20,
+        );
+        const occupied =
+          shown.rows.reduce((n, row) => n + row.lines.length, 0) +
+          Number(shown.above > 0) +
+          Number(shown.below > 0);
+
+        expect(
+          shown.rows
+            .filter(({ focused }) => focused)
+            .map(({ item }) => item.id),
+        ).toStrictEqual([item.id]);
+        expect(occupied).toBeLessThanOrEqual(20);
+        expect(shown.above + shown.rows.length + shown.below).toBe(many.length);
+      }
+    }
+  });
+
+  test('a state change keeps focus on the same owner when monitor ids collide across agents', () => {
+    const focus = { key: 2, id: 'm1' };
+    const changed = ITEMS.map((item) =>
+      item.key === focus.key && item.id === focus.id
+        ? { ...item, status: { group: 'stopped' as const, endedAt: NOW } }
+        : item,
+    );
+    const laid = viewRows(changed, { width: 76, focus, now: NOW });
+
+    expect(laid.map(({ item }) => item.name)).toStrictEqual(
+      ITEMS.map(({ name }) => name),
+    );
+    expect(
+      laid
+        .filter(({ focused }) => focused)
+        .map(({ item }) => [item.key, item.id]),
+    ).toStrictEqual([[2, 'm1']]);
+    expect(text(laid).find((line) => line.startsWith('❯'))).toContain(
+      'parser tests',
+    );
+  });
 });

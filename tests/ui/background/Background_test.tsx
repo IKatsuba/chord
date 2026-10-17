@@ -6,7 +6,9 @@
 import { describe, expect, test } from 'bun:test';
 import { serveChord } from '../../../src/server/server.ts';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
+import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { draw } from '../harness.tsx';
 import {
   CTRL_X,
@@ -347,3 +349,147 @@ test('the view is modal: the window’s session keys do nothing in it, and esc g
     expect(!window.frame().includes(' 2 fake ')).toBeTruthy();
     expect(window.frame()).toContain('Two monitors are running.');
   }));
+
+describe('CHD-424 tester: full-screen background edges', () => {
+  async function withSlowTask(body: (window: Window) => Promise<void>) {
+    const server = serveChord();
+    const agentCommand = fakeAgentCommand(undefined, '--step-ms', '30');
+
+    try {
+      await withWindow(body, {
+        server,
+        runtimes: ['fake'],
+        rows: 40,
+        columns: 120,
+        agentCommand,
+        startupOf: () => ({ agentCommand }),
+      });
+    } finally {
+      await server.close();
+    }
+  }
+
+  test('x stops a permission-waiting task immediately and a second x on its ended row changes nothing', () =>
+    withSlowTask(async (window) => {
+      await ready(window);
+      await send(window, 'task');
+      await window.shows('background  1 task running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('● permission');
+      await window.shows('❯ Fix the tokenizer');
+      await window.press('x');
+      await window.shows('■ stopped after');
+
+      const stopped = window.frame();
+
+      await window.press('x');
+      await window.press(UP);
+      expect(window.frame()).toBe(stopped);
+      await window.press(ESC);
+      await window.shows('❯ background  ■ 1 task stopped');
+      expect(window.frame()).not.toContain('waiting for permission');
+      expect(window.frame()).not.toContain('· report');
+    }));
+
+  test('22 task rows scroll at 80x24, keep focus visible at both ends, and reopen on the first row', () =>
+    withBackground(
+      async (window) => {
+        await ready(window);
+
+        for (let count = 1; count <= 22; count++) {
+          await send(window, 'tasklong');
+          await window.shows(
+            `background  ${count} ${count === 1 ? 'task' : 'tasks'} running`,
+          );
+        }
+
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('Background · 22 in this tab');
+        await window.shows('… 3 below');
+
+        for (let index = 0; index < 25; index++) {
+          await window.press('j');
+        }
+
+        await window.shows('… 3 above');
+        expect(window.frame()).toContain('❯ Watch the build');
+        expect(window.frame()).not.toContain(' below');
+        expect(window.frame().split('\n')).toHaveLength(24);
+        await window.press('x');
+        await window.shows('■ stopped after');
+        expect(window.frame()).toMatch(/❯ Watch the build .*■ stopped after/);
+        await window.press(ESC);
+        await window.shows('❯ background  21 tasks running · ■ 1 task stopped');
+        await window.press('\r');
+        await window.shows('❯ Watch the build');
+        await window.shows('… 3 below');
+        expect(window.frame()).not.toContain(' above');
+      },
+      { rows: 24, columns: 80 },
+    ));
+
+  test('a stopped monitor duration freezes while another monitor keeps ticking', () =>
+    withBackground(async (window) => {
+      await ready(window);
+      await send(window, 'monitors');
+      await window.shows('background  2 monitors running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ dev server errors');
+      await window.press('x');
+      await window.shows('■ stopped after');
+
+      const row = () =>
+        window
+          .frame()
+          .split('\n')
+          .find((line) => line.includes('❯ dev server errors'));
+      const stopped = row();
+      const running = /running ([^·\n]+)/.exec(window.frame())?.[1];
+
+      await until(
+        'running monitor time advances',
+        () => /running ([^·\n]+)/.exec(window.frame())?.[1] !== running,
+      );
+      await window.press('x');
+      expect(row()).toBe(stopped);
+      expect(window.frame()).toContain('Background · 2 in this tab');
+    }));
+
+  test('long names render whole in a scrolled 80x24 view, with the focused item and hint visible', async () => {
+    const items: BackgroundItem[] = Array.from({ length: 30 }, (_, index) => ({
+      kind: 'task',
+      id: `task-${index}`,
+      key: 1,
+      name: `${index}-` + 'x'.repeat(60),
+      startedAt: Date.now(),
+      status: { group: 'running' },
+      runtime: 'fake',
+      model: 'Fake Small',
+    }));
+    const drawn = await draw(
+      <BackgroundView items={items} focus={items[29]} columns={80} rows={24} />,
+      { columns: 80, rows: 24 },
+    );
+
+    try {
+      const lines = drawn.frame().split('\n');
+      const at = lines.findIndex((line) => line.includes('❯ 29-'));
+      const kept = [
+        lines[at]!.trim().split(/\s+/)[1],
+        lines[at + 1]!.trim(),
+        lines[at + 2]!.trim(),
+      ].join('');
+
+      expect(kept).toBe(items[29]!.name);
+      expect(drawn.frame()).toContain(' above');
+      expect(drawn.frame()).not.toContain(' below');
+      expect(lines).toHaveLength(24);
+      expect(lines[23]).toContain('esc to close');
+    } finally {
+      await drawn.unmount();
+    }
+  });
+});

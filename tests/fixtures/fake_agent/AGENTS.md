@@ -20,7 +20,8 @@
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
   `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`, `subagentcall`),
   `chord_tools.ts`
-  (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts` (`codexchordcalls`) and
+  (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
+  (`codexchordcalls`, `tasklong`, `tasktwo`, `taskwait`) and
   `misbehaving.ts` (`error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
@@ -30,7 +31,7 @@
   A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `stepslater`, `calls`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlapfail`, `overlapask`, `subagentcall`,
-  `cutcalls`, `cutcallsback`,
+  `cutcalls`, `cutcallsback`, `tasklong`, `tasktwo`, `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `plan`, `proposal`,
   `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
   `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
@@ -81,8 +82,12 @@
   then plays the prompt as if it came alone;
   `task` starts `taskchild` as a task agent on the fake runtime and
   works on a while, and `taskask` one whose job is `askclaude`, after a
-  call of its own that, played first, shares the task's call id `ask-1`; `taskchild` makes two calls, asks permission to edit,
+  call of its own that shares the task's call id `ask-1`; `taskchild`
+  makes two calls, asks permission to edit,
   messages its parent through `send_message`, runs the tests and reports;
+  `tasklong` starts one `taskwait` task, and `tasktwo` two drawn as a group,
+  then leaves the parent idle; `taskwait` works for a minute without asking
+  permission, unless stopped;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
   long-lived on the fake runtime, and messages `parser` twice;
   `agentcall` opens `parser` on `callchild` and messages it during its

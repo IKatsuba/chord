@@ -75,7 +75,9 @@ there.
 ### Subagents, folded
 
 When the agent fans out, its subagents run as one tree with their latest call
-each, and their full work is a key away.
+each, and their full work is a key away. Monitors and spawned tasks share a
+`background` summary under the agents list. From an empty prompt, ↓ past the
+agents reaches it; Enter opens the full list, where `x` stops an item.
 
 <img src="docs/images/subagents.png" alt="Two subagents running in parallel under one block" width="900">
 

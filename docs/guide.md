@@ -364,8 +364,8 @@ before. The actions are `chat:submit`, `chat:newline`, `chat:cancel`,
 `app:toggleTranscript`, `history:search`, and chord's own `session:new`,
 `session:next`, `session:previous`, `session:goto1` to `session:goto9`,
 `session:list`, `session:attention` and `session:close` in `Global`;
-chord's own `agents:close` (`x`) in `Agents`, the list of a session's
-agents and monitors, where it closes an agent or stops a monitor;
+chord's own `agents:close` (`x`) in `Agents`, where it closes an agent
+in the agents list or stops an item in the background view;
 `autocomplete:accept`, `dismiss`, `previous` and `next` in `Autocomplete`;
 `historySearch:next`, `accept` and `cancel` in `HistorySearch`;
 `confirm:no` in `Confirmation`; `help:dismiss` in `Help`; `select:cancel`
@@ -556,12 +556,26 @@ session's or a long-lived child's, and each batch of lines it prints reaches
 that agent later as a message: a turn of its own, drawn `← from dev server errors
 · monitor` with the lines as printed, folded after six. Its end is one more,
 `· exit code 1`, `· timed out`, `· flooded` or `· stopped`, with chord's
-sentence last. While one runs it is a row in the list under the prompt, after
-the agents, with its command and how long it has run, a child's ending with
-its name; ↓ reaches it, and `x` on it stops it at once. A turn an event
-started does not ring the terminal when it ends. `stop_monitor` and
-`list_monitors` are the agent's own, and a resumed session draws its events
-again and names the monitors it left running, which are not restarted.
+sentence last. A turn an event starts does not ring the terminal when it
+ends. `stop_monitor` and `list_monitors` are the agent's own. A resumed
+session draws its events again and names monitors left running, without
+restarting them.
+
+Monitors and `spawn_task` tasks share one `background` summary under the
+agents list, or alone when no child is open. It counts the front tab's
+items, including its children's and team members', by state: asking,
+failed, running, done and stopped, in that order. The line wraps without
+cutting text. From an empty prompt, ↓ past the agents reaches it as the
+last stop; Enter opens a full-screen background view. Each item has a row
+with its name, kind, state with time and owner, oldest first. ↑ ↓ or j k
+move between rows; `x` stops the focused item at once, with no confirmation,
+and does nothing on an ended item. Enter closes the view, picks the owner
+and scrolls its transcript to the call that started the item, as high as
+scrolling allows. A folded subagent stays folded, with its headline in
+view instead; a missing call leaves the view open. Esc returns to the
+summary line, and another Esc to the prompt. Ended items stay until your
+next prompt to any agent in that tab; running items stay, and messages
+between agents clear nothing. Closing an owner removes its items.
 
 A session resumed after its agents ran draws them as they were: each task
 agent's block, its work behind ctrl+o (read from the task's own record,
@@ -577,7 +591,8 @@ with no parent to message. A team run is one of them, named with how many of
 its agents were open (`team bugfix (4 agents)`), and the line ends with
 `/team run bugfix starts the team again`: a fresh run, with no memory of
 the last but the working tree and what main was told. `/resume` lists its
-lead and members like any child. A task agent gets no command on quit.
+lead and members like any child. A task agent gets no command on quit,
+and past tasks do not appear in the resumed tab's background view.
 chord's own calls draw as `List agents`, `List sessions`, `Open(parser)`
 and `Close(parser)`, and a message sent as `→ to @main` or `→ to @parser`,
 in Claude and Codex sessions. Messages sent or received, from agents or

@@ -2291,3 +2291,160 @@ describe('CHD-417 tester: held steer lifecycle', () => {
     });
   }
 });
+
+describe('CHD-417 tester: cut-call note delivery', () => {
+  test('a queued teammate turn takes the ordered note once without drawing a chord message row', async () => {
+    const sent: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send('cutcallsback');
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'update' &&
+              event.update.sessionUpdate === 'tool_call',
+          ),
+        );
+        expect(conversation.deliver(MAIN, 'Continue the review.')).toBe(
+          'queued',
+        );
+        await ended(events, 2);
+        conversation.send('text');
+        await ended(events, 3);
+
+        expect(sent[1]).toContain('<message from="chord">');
+        expect(sent[1]!.indexOf('Your send_message')).toBeLessThan(
+          sent[1]!.indexOf('Your open_agent'),
+        );
+        expect(sent[1]!.indexOf('Your open_agent')).toBeLessThan(
+          sent[1]!.indexOf('Your list_sessions'),
+        );
+        expect(sent[1]).toEndWith(
+          '<message from="main">\nContinue the review.\n</message>',
+        );
+        expect(sent[2]).toBe('text');
+        expect(
+          events.some(
+            (event) => event.type === 'prompt' && event.from?.name === 'chord',
+          ),
+        ).toBe(false);
+      },
+      noting(sent),
+    );
+  });
+
+  test('a prompt cancelled before it goes restores the note for this session only, once', async () => {
+    const attempted: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send('cutcalls');
+        await ended(events, 1);
+        conversation.send('cancel-before-send');
+        await ended(events, 2);
+        conversation.send('text');
+        await ended(events, 3);
+        conversation.send('text');
+        await ended(events, 4);
+
+        expect(attempted[1]).toContain('Your send_message to @main');
+        expect(attempted[2]).toContain('Your send_message to @main');
+        expect(attempted[2]!.match(/Your send_message/g)).toHaveLength(1);
+        expect(attempted[3]).toBe('text');
+      },
+      (session) => {
+        const observed = noting(attempted)(session);
+        const prompt = observed.prompt.bind(observed);
+
+        observed.prompt = (text, ...rest) => {
+          if (text.endsWith('cancel-before-send')) {
+            attempted.push(text);
+
+            return {
+              id: 'unsent',
+              sent: Promise.resolve(undefined),
+              result: Promise.resolve({
+                status: 'cancelled',
+                stopReason: 'cancelled',
+              }),
+              cancel: () => Promise.resolve(),
+            };
+          }
+
+          return prompt(text, ...rest);
+        };
+
+        return observed;
+      },
+    );
+  });
+
+  test('replayed cut-call updates still mark their rows but schedule no new note', async () => {
+    let history: TranscriptAction[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send('cutcalls');
+        await ended(events, 1);
+
+        history = [
+          { type: 'prompt', turnId: 'history-1', text: 'cutcalls', at: 0 },
+          ...events.flatMap((event): TranscriptAction[] =>
+            event.type === 'update'
+              ? [{ type: 'update', turnId: 'history-1', update: event.update }]
+              : [],
+          ),
+        ];
+      },
+      noting([]),
+    );
+
+    const sent: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        const replayed = history.reduce(reduceTranscript, emptyTranscript);
+
+        expect(
+          replayed.entries.filter(
+            (entry) => entry.kind === 'tool' && entry.call.cut,
+          ),
+        ).toHaveLength(2);
+        conversation.send('text');
+        await ended(events, 1);
+        expect(sent).toStrictEqual(['text']);
+      },
+      (session) =>
+        Object.assign(noting(sent)(session), { history: () => history }),
+    );
+  });
+
+  test('an interrupted call on a different server schedules no chord retry note', async () => {
+    const sent: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send('cutcalls');
+        await ended(events, 1);
+        conversation.send('text');
+        await ended(events, 2);
+        expect(sent[1]).toBe('text');
+      },
+      (session) =>
+        Object.assign(noting(sent)(session), {
+          chordServer: {
+            type: 'http' as const,
+            name: 'chord-2',
+            url: 'http://127.0.0.1:1/mcp',
+            headers: [],
+          },
+        }),
+    );
+  });
+});

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { cutNote, cutSentence } from '../../src/session/cut_off.ts';
 
 test('a cut send_message names its recipient and quotes its first line, cut at 60 characters', () => {
@@ -41,4 +41,21 @@ test('any other cut call names its tool, and several are a line each, in order',
     cutSentence({ tool: 'send_message', input: { to: 'main', text: 'Hi' } }),
     cutSentence(open),
   ]);
+});
+
+describe('CHD-417 tester: quoted message boundaries', () => {
+  test('sixty Unicode code points stay whole and the next adds one ellipsis, without the second line', () => {
+    for (const count of [60, 61]) {
+      const note = cutSentence({
+        tool: 'send_message',
+        input: { to: 'parser', text: `${'😀'.repeat(count)}\nnot quoted` },
+      });
+
+      expect(note).toContain(
+        `("${'😀'.repeat(60)}${count === 61 ? '…' : ''}")`,
+      );
+      expect(note).not.toContain('not quoted');
+      expect(note).not.toContain('\ufffd');
+    }
+  });
 });

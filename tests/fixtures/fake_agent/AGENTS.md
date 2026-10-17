@@ -89,6 +89,9 @@
   running call; `agentcalltwice` sends two messages during that call, to
   check their queue order. `callchild` runs one call for about three
   seconds, then reports that the tests pass;
+  `agentcallgated` sends two messages to `parser` on `callchildgated` only
+  after its call opens (`<cwd>/.fake-gate/open`); the call stays open until
+  the test writes `<cwd>/.fake-gate/release`;
   `agentsend` and `codexagentsend` open `parser` on `agentchild` and send
   it a short message and a long markdown one, as Claude and Codex do;
   `agentsendrefused` sends the long one to `parser` without opening it,

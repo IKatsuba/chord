@@ -1,0 +1,40 @@
+ parser · fake · Fake Large with a 1M context window · opened by main 8s ago
+
+ ← from @main
+   ⎿  childmonitor
+
+ ⏺ Monitor(parser tests)
+   ⎿  $ sleep 1; echo "ok 1 - parse a string at the end of a line"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ Watching the parser tests.
+
+ ← from parser tests · monitor
+   ⎿  ok 1 - parse a string at the end of a line
+
+ ⏺ Received the message from parser tests · monitor.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ── ↓ 1 line below · end to jump to the bottom ────────────────────────────────────────────────────────────────────────
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main    fake · Fake Large with a 1M context window · medium
+    parser  fake · Fake Large with a 1M context window · medium
+    background  2 monitors running

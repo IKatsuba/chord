@@ -111,9 +111,14 @@ test('pgup scrolls back while a reply streams, and end comes back', () =>
 
       const reading = window.frame().split('\n')[1];
 
-      // The stream goes on below; the rule says so and the lines stay.
+      // The stream goes on below; the rule says so and the lines stay. A
+      // frame can take in several lines at once on a loaded machine, so the
+      // count may pass any one number without drawing it (CHD-408).
+      const below = () =>
+        Number(/new output · (\d+) lines? below/.exec(window.frame())?.[1]);
+
       await window.shows('↓ new output ·');
-      await window.shows('↓ new output · 20 lines below');
+      await until('20 new lines below', () => below() >= 20);
       expect(window.frame().split('\n')[1]).toStrictEqual(reading);
 
       await window.press(END);

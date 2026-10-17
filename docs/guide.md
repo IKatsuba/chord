@@ -556,8 +556,9 @@ its agents were open (`team bugfix (4 agents)`), and the line ends with
 the last but the working tree and what main was told. `/resume` lists its
 lead and members like any child. A task agent gets no command on quit.
 chord's own calls draw as `List agents`, `List sessions`, `Open(parser)`
-and `Close(parser)`, and a message sent as `→ to @main` or `→ to @parser`, never as
-their MCP names. A name after an arrow takes `@` where `send_message` reaches
+and `Close(parser)`, and a message sent as `→ to @main` or `→ to @parser`,
+in Claude and Codex sessions. Older Codex records keep their earlier display.
+A name after an arrow takes `@` where `send_message` reaches
 it, `main` and a long-lived child; a task, named by its title, and chord's
 own `← from chord` stay bare. `/mcp` lists chord's server first,
 and says what it gives the agent, or that the agent does not take HTTP and

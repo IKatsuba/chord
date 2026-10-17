@@ -282,6 +282,7 @@ const SCENARIOS = [
   'chordtools',
   'task',
   'chordcalls',
+  'codexchordcalls',
   'taskchild',
   'agents',
   'agentsheld',

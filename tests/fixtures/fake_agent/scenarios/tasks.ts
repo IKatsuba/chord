@@ -6,7 +6,7 @@
 import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
-import { callChord, chordClient } from './chord_tools.ts';
+import { codexCall, callChord, chordClient } from './chord_tools.ts';
 
 /** A task's pace: 20 steps, a tenth of a second by default. */
 const TASK_STEP_MS = STEP_MS * 20;
@@ -148,6 +148,40 @@ export const TASKS = {
         agent: 'fakx',
       });
       await turn.say('chord knows no fakx.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // The same lists as codex-acp calls them (CHD-377), after a call of
+  // another server's with the same arguments as the first, which chord
+  // served none of.
+  async codexchordcalls(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      const other = turn.callId('list_notes');
+
+      await turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId: other,
+        status: 'completed',
+        ...codexCall('notes', 'list_notes', {}),
+        content: [
+          { type: 'content', content: { type: 'text', text: 'no notes' } },
+        ],
+      });
+      await callChord(turn, client, 'list_agents', {}, undefined, 'codex');
+      await callChord(turn, client, 'list_sessions', {}, undefined, 'codex');
+      await turn.say('Listed as Codex.');
     } finally {
       await client.close();
     }

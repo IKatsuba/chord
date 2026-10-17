@@ -5,8 +5,9 @@ import type {
   SessionConfigOption,
   SessionUpdate,
 } from '@agentclientprotocol/sdk';
-import { enricherRelay, FILLED } from '../../src/session/enrich.ts';
+import { enricherRelay, FILLED, MCP_CALL } from '../../src/session/enrich.ts';
 import {
+  codexMcpCall,
   costFromTokens,
   ENRICHERS,
   modeReadBack,
@@ -300,6 +301,64 @@ test("a tool call's title and kind are carried onto updates that leave them out"
   expect(
     updates(update({ sessionUpdate: 'tool_call_update', toolCallId: 'other' })),
   ).toStrictEqual([{ sessionUpdate: 'tool_call_update', toolCallId: 'other' }]);
+});
+
+test("Codex's MCP call has its tool and arguments filed beside its rawInput, which stays as sent", () => {
+  const { update } = relayOn([codexMcpCall]);
+  const rawInput = {
+    server: 'chord',
+    tool: 'send_message',
+    arguments: { to: 'ship', text: 'ready' },
+  };
+
+  expect(
+    updates(
+      update({
+        sessionUpdate: 'tool_call',
+        toolCallId: 'exec-1',
+        title: 'mcp.chord.send_message',
+        kind: 'execute',
+        status: 'in_progress',
+        rawInput,
+        _meta: { is_mcp_tool_call: true },
+      }),
+    ),
+  ).toStrictEqual([
+    {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'exec-1',
+      title: 'mcp.chord.send_message',
+      kind: 'execute',
+      status: 'in_progress',
+      rawInput,
+      _meta: {
+        is_mcp_tool_call: true,
+        [FILLED]: [MCP_CALL],
+        [MCP_CALL]: {
+          tool: 'send_message',
+          arguments: { to: 'ship', text: 'ready' },
+        },
+      },
+    },
+  ]);
+
+  // Claude's shape, and a command that is no MCP call, are left alone.
+  for (const call of [
+    { title: 'mcp__chord__list_agents', kind: 'other', rawInput: {} },
+    {
+      title: 'Run a.sh',
+      kind: 'execute',
+      rawInput: { server: 'x', tool: 'y', arguments: {} },
+    },
+  ] as const) {
+    const sent: SessionUpdate = {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'other',
+      ...call,
+    };
+
+    expect(updates(update(sent))).toStrictEqual([sent]);
+  }
 });
 
 test('a permission asked about a known call names it', () => {
@@ -1205,5 +1264,69 @@ describe('CHD-1 tester: conservative question enrichment', () => {
       placeholder: 'Token note',
     });
     expect(questions?.questions[1]?.secret).toBe(true);
+  });
+});
+
+describe('CHD-377 tester: wrapped MCP enrichment boundaries', () => {
+  test('an update alone retains raw input and metadata, and enriching twice is idempotent', () => {
+    const { update } = relayOn([codexMcpCall]);
+    const rawInput = Object.freeze({
+      server: 'chord-2',
+      tool: 'send_message',
+      arguments: Object.freeze({ to: 'reviewer', text: 'ready' }),
+    });
+    const sent: SessionUpdate = {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'late-args',
+      rawInput,
+      _meta: {
+        is_mcp_tool_call: true,
+        [FILLED]: ['existing'],
+        untouched: { keep: true },
+      },
+    };
+    const original = structuredClone(sent);
+    const [enriched] = updates(update(sent));
+
+    assert(enriched?.sessionUpdate === 'tool_call_update');
+    expect(sent).toEqual(original);
+    expect(enriched.rawInput).toBe(rawInput);
+    expect(enriched._meta).toEqual({
+      is_mcp_tool_call: true,
+      [FILLED]: ['existing', MCP_CALL],
+      untouched: { keep: true },
+      [MCP_CALL]: { tool: 'send_message', arguments: rawInput.arguments },
+    });
+    expect(updates(update(enriched))).toEqual([enriched]);
+  });
+
+  test('missing tool or arguments and unmarked wrappers remain unfilled', () => {
+    const { update } = relayOn([codexMcpCall]);
+
+    for (const rawInput of [
+      undefined,
+      { tool: 7, arguments: {} },
+      { tool: 'send_message' },
+    ]) {
+      const sent: SessionUpdate = {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guard',
+        rawInput,
+        _meta: { is_mcp_tool_call: true },
+      };
+
+      expect(updates(update(sent))).toEqual([sent]);
+    }
+
+    for (const marked of [false, 'true', undefined]) {
+      const sent: SessionUpdate = {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guard',
+        rawInput: { tool: 'send_message', arguments: {} },
+        _meta: { is_mcp_tool_call: marked },
+      };
+
+      expect(updates(update(sent))).toEqual([sent]);
+    }
   });
 });

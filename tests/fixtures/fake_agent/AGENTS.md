@@ -17,7 +17,9 @@
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
   `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`),
   `chord_tools.ts`
-  (`chordtools`) and `misbehaving.ts` (`error`, `late`, `unknown`). Beside it, what the scenarios read too:
+  (`chordtools`), `tasks.ts` (`codexchordcalls`) and
+  `misbehaving.ts` (`error`, `late`, `unknown`). Beside it, what the
+  scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
   `sessions.ts` each session's directory, MCP servers, model, mode and
@@ -28,7 +30,7 @@
   `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
   `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
-  `subagent`, `subagentupdate`, `subagentstates`, `chordtools`)
+  `subagent`, `subagentupdate`, `subagentstates`, `chordtools`, `codexchordcalls`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second;
   `headlines` plays a heredoc, a long one-line command, an MCP call and a
@@ -56,7 +58,9 @@
   `list_agents` and `list_sessions` and answers with what came back, as
   JSON; `chordcalls` makes the same calls as tool calls, titled as Claude's
   adapter titles them, then a `spawn_task` on a runtime chord does not
-  know; `task` starts `taskchild` as a task agent on the fake runtime and
+  know; `codexchordcalls` lists agents and sessions as Codex does, after
+  another server's call with the same arguments as the first;
+  `task` starts `taskchild` as a task agent on the fake runtime and
   works on a while, and `taskask` one whose job is `askclaude`, after a
   call of its own that, played first, shares the task's call id `ask-1`; `taskchild` makes two calls, asks permission to edit,
   messages its parent through `send_message`, runs the tests and reports;

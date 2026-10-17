@@ -17,6 +17,7 @@ import {
   answerOf,
   type Enricher,
   markFilled,
+  MCP_CALL,
   notificationOf,
   recordOf,
   type SessionWire,
@@ -728,10 +729,52 @@ export const dimcodeQuestions = questionShape((params, fields) => {
   return { agent: 'dimcode', questions };
 });
 
+/**
+ * The enricher that files an MCP call's tool and arguments under
+ * `_meta["chord/mcp"]` where codex-acp wraps them in the call's `rawInput`,
+ * `{server, tool, arguments}`, and says `_meta.is_mcp_tool_call`: Claude's
+ * adapter sends the arguments as `rawInput` itself, which is what chord
+ * ties a request its own server served to the call by (CHD-377). The
+ * `rawInput` stays as the agent sent it.
+ */
+export const codexMcpCall: Enricher = (message) => {
+  const update = notificationOf(message)?.update;
+
+  if (
+    update?.sessionUpdate !== 'tool_call' &&
+    update?.sessionUpdate !== 'tool_call_update'
+  ) {
+    return [message];
+  }
+
+  const meta = recordOf(update._meta);
+  const wrapped = recordOf(update.rawInput);
+
+  if (
+    meta.is_mcp_tool_call !== true ||
+    meta[MCP_CALL] !== undefined ||
+    typeof wrapped.tool !== 'string' ||
+    !('arguments' in wrapped)
+  ) {
+    return [message];
+  }
+
+  return [
+    withUpdate(message, {
+      ...update,
+      _meta: {
+        ...markFilled(update._meta, [MCP_CALL]),
+        [MCP_CALL]: { tool: wrapped.tool, arguments: wrapped.arguments },
+      },
+    }),
+  ];
+};
+
 /** Every enricher, in the order each runs over what the last one made. */
 export const ENRICHERS: readonly Enricher[] = [
   subagentShape,
   toolCallFacts,
+  codexMcpCall,
   modeReadBack,
   costFromTokens,
   windowFromModel,

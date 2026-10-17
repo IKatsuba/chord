@@ -5,7 +5,6 @@ import {
   type ScrollBoxRenderable,
 } from '@opentui/core';
 import { useTerminalDimensions } from '@opentui/react';
-import stringWidth from 'string-width';
 import {
   type RefObject,
   useCallback,
@@ -29,6 +28,7 @@ import type { ScrollStep } from '../transcript/scroll.ts';
 import {
   choicesFor,
   hiddenRows,
+  countRoom,
   requestCount,
   requestStep,
   requestView,
@@ -186,16 +186,14 @@ function Request({
   );
 
   // The wheel can leave the scrollbox past a view there is, as at the end
-  // it shows a row more than a view between the rules does; and a resize
-  // can leave it where its old size let it go. After every render, so it
-  // settles once the room it is laid out in has.
+  // it shows a row more than a view between the rules does.
   useEffect(() => {
     const box = view.current;
 
     if (box !== null && box.scrollTop !== shown.top) {
       box.scrollTo(shown.top);
     }
-  });
+  }, [shown.top]);
 
   useEffect(() => {
     onOverflow?.(overflows);
@@ -214,21 +212,9 @@ function Request({
   }, [scroller, scroll]);
 
   // The scrollbox moves by itself under the wheel; its scrollbar says where.
-  // A move down to where it can go no further, from a top it was asked to
-  // be at, is its own clamp to the size it had, as a resize leaves it, not
-  // the person scrolling: the top asked for stays, and the view clamps it.
   useLayoutEffect(() => {
-    const box = view.current;
-    const bar = box?.verticalScrollBar;
-    const moved = ({ position }: { position: number }) =>
-      setTop((asked) =>
-        box !== null &&
-        box !== undefined &&
-        position < asked &&
-        position >= box.scrollHeight - box.viewport.height
-          ? asked
-          : position,
-      );
+    const bar = view.current?.verticalScrollBar;
+    const moved = ({ position }: { position: number }) => setTop(position);
 
     bar?.on('change', moved);
 
@@ -313,16 +299,6 @@ function Request({
       </box>
     </>
   );
-}
-
-/**
- * The cells the widest count a request of about `total` rows can say takes,
- * with room for the rows a narrower title adds.
- */
-function countRoom(total: number): number {
-  const most = 10 ** String(total * 2).length - 1;
-
-  return stringWidth(requestCount({ above: most, below: most }));
 }
 
 /** A row a wheel report moves the request, as it moves the transcript. */

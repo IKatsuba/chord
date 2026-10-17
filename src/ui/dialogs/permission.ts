@@ -297,6 +297,18 @@ export function requestCount({
       : `↑ ${above} above · ↓ ${below} below`;
 }
 
+/**
+ * The cells the widest count a request of about `total` rows can say takes,
+ * with room for the rows a narrower title adds: what a one-row room leaves
+ * the title beside it, the same however far it is scrolled, so the title's
+ * rows, and every row under them, stay where they are as the count changes.
+ */
+export function countRoom(total: number): number {
+  const most = 10 ** String(total * 2).length - 1;
+
+  return stringWidth(requestCount({ above: most, below: most }));
+}
+
 const RULE = '─';
 
 /**

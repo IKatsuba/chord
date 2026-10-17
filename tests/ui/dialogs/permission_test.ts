@@ -7,6 +7,7 @@ import {
   hiddenRows,
   inputLines,
   locationsShown,
+  countRoom,
   permissionOutcome,
   requestCount,
   requestRows,
@@ -375,4 +376,22 @@ test('a room of one row counts what it leaves out on the pinned row, naming no k
     pinned: 'Write a',
     rows: [{ text: 'long title', kind: 'title' }],
   });
+});
+
+test('a one-row room keeps the title beside the widest count it can say, however it is scrolled', () => {
+  // Every count of a request of 42 rows fits in it, so the title never rewraps.
+  const room = countRoom(42);
+
+  for (const [above, below] of [
+    [0, 41],
+    [1, 40],
+    [20, 21],
+    [41, 0],
+  ] as const) {
+    const count = requestCount({ above, below });
+
+    expect(count.length <= room, count).toBeTruthy();
+  }
+
+  expect(room).toStrictEqual('↑ 99 above · ↓ 99 below'.length);
 });

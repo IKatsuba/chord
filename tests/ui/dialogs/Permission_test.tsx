@@ -487,22 +487,6 @@ test('a resize lays the request out again, its top row kept and its answers whol
     { columns: 120, rows: 40 },
   ));
 
-test('a request at its end stays at its end when the window grows', () =>
-  withWindow(
-    async (window) => {
-      await send(window, 'bigask');
-      await asked(window);
-      await window.resize({ columns: 80, rows: 19 });
-      await window.press(END);
-      await window.shows('mode: overwrite');
-      await window.resize({ columns: 120, rows: 40 });
-      await window.shows('── ↑ 22 lines above');
-      await window.shows('mode: overwrite');
-      expect(window.frame()).not.toContain('lines below');
-    },
-    { columns: 80, rows: 24 },
-  ));
-
 test('a click on the request leaves the keys with the answers', () =>
   withWindow(
     async (window) => {

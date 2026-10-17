@@ -1,4 +1,10 @@
 
+
+
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
  › task
 
  ⏺ I will send a task agent on fake for the fix.
@@ -14,11 +20,5 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ ›                                                                            │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 2% used
-    main               fake                        ✻ working 15s
-    bugfix             team · fake · 3 agents      ● tester: permission 1m 56s
-  background
-    Fix the tokenizer   task · fake      ● permission 13s       main
-    dev server errors   monitor          running 22s · 1 event  main
-    CI run 4812         monitor          running 21s · no events main
-    … +1 more
+  ? for shortcuts                             Fake Large with a 1M… · 2% used
+    background  2 monitors running

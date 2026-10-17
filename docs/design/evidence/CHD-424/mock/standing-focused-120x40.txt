@@ -1,6 +1,5 @@
 
 
-
  ← from Fix the tokenizer · fake
    ⎿  Found it: a string at the end of a line lost its closing quote. Fixing src/parse/tokenize.ts now.
 
@@ -33,8 +32,9 @@
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ ›                                                                                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-  ● tester needs your permission · ctrl+x a · 4 in background · ctrl+t Fake Large with a 1M context window · 2% used
-    main               fake · Fake Large with a 1M context window · medium                ✻ working 6s
-    bugfix             team · fake · Fake Large with a 1M context window · medium         ✓ replied 2m ago
-    ├─ tester          fake · Fake Small · medium                                         ● permission 1m 47s
-    └─ coder           fake · Fake Large with a 1M context window · medium                ✓ replied 2m ago
+  ↑ ↓ to move · enter to open · esc to go back                           Fake Large with a 1M context window · 2% used
+    main               fake · Fake Large with a 1M context window · medium                     ✻ working 6s
+    bugfix             team · fake · Fake Large with a 1M context window · medium              ✓ replied 2m ago
+    ├─ tester          fake · Fake Small · medium                                              ● permission 1m 47s
+    └─ coder           fake · Fake Large with a 1M context window · medium                     ✓ replied 2m ago
+  ❯ background  ● 1 task asking · ✗ 1 monitor failed · 2 monitors and 1 task running

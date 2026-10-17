@@ -1,0 +1,24 @@
+ Background · 30 in this tab
+
+    … 10 above
+    build 11             monitor      running 19m · 11 events      main
+    build 12             monitor      running 18m · 12 events      parser
+    build 13             monitor      running 17m · 13 events      main
+    build 14             monitor      running 16m · 14 events      parser
+    build 15             monitor      running 15m · 15 events      main
+    build 16             monitor      running 14m · 16 events      parser
+    build 17             monitor      running 13m · 17 events      main
+    build 18             monitor      running 12m · 18 events      parser
+    build 19             monitor      running 11m · 19 events      main
+  ❯ build 20             monitor      running 10m · 20 events      parser
+    build 21             monitor      running 9m · 21 events       main
+    build 22             monitor      running 8m · 22 events       parser
+    build 23             monitor      running 7m · 23 events       main
+    build 24             monitor      running 6m · 24 events       parser
+    build 25             monitor      running 5m · 25 events       main
+    build 26             monitor      running 4m · 26 events       parser
+    build 27             monitor      running 3m · 27 events       main
+    build 28             monitor      running 2m · 28 events       parser
+    … 2 below
+
+ ↑ ↓ to move · enter to go to its call · x to stop · esc to close

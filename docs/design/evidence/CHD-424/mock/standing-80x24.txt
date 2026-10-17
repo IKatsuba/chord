@@ -1,4 +1,3 @@
-
           at validate (src/routes/login.tsx:41:22)
 
  ⏺ Received the message from dev server errors · monitor.
@@ -21,4 +20,5 @@
   ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 2% used
     main               fake                        ✻ working 15s
     bugfix             team · fake · 3 agents      ● tester: permission 1m 56s
-  background  ● 1 task asking · 3 monitors running
+    background  ● 1 task asking · ✗ 1 monitor failed ·
+                2 monitors and 1 task running

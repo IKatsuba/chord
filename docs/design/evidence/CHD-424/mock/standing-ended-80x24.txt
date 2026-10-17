@@ -1,4 +1,6 @@
 
+          at validate (src/routes/login.tsx:41:22)
+
  ⏺ Received the message from dev server errors · monitor.
 
  › task
@@ -16,9 +18,7 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ ›                                                                            │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 2% used
-  agents  main ✻ working 15s · bugfix ● tester: permission 1m 56s
-  background
-  ❯ Fix the tokenizer   task · fake      ● permission 13s       main
-    dev server errors   monitor          running 22s · 1 event  main
-    … +2 more
+  ? for shortcuts                             Fake Large with a 1M… · 2% used
+    main               fake                        
+    bugfix             team · fake · 3 agents      ✓ replied 2m ago
+    background  ✗ 1 monitor failed · ✓ 1 task done · ■ 1 monitor stopped

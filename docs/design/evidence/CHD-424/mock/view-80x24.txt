@@ -1,0 +1,24 @@
+ Background · 5 in this tab
+
+    CI run 4812         monitor      ✗ exit code 1 after 3m 12s   main
+    dev server errors   monitor      running 4m 2s · 1 event      main
+    parser tests        monitor      running 2m 3s · 4 events     parser
+  ❯ Fix the tokenizer   task · fake  ● permission 13s             main
+    Fix the printer     task · fake  working 32s                  coder
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑ ↓ to move · enter to go to its call · x to stop · esc to close

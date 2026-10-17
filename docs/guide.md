@@ -136,6 +136,18 @@ anywhere around them: `chord codex -r <id> -r <id>`. As the id is optional,
 a word after `--resume` that names one of chord's own flags (`model`, `c`)
 is not read as an id.
 
+`@` opens the file finder; fuzzy matching starts at the first character
+after it. ↑/↓ moves the highlight, Enter or Tab adds the file, and Esc
+closes the list. While matching, typing continues and the previous list
+stays. After 150 ms, a dim `searching…` marks its last row, keeping the
+highlight visible. Only results for the current mention replace the list.
+
+During a match, Enter or Tab waits for its first result unless you moved
+the highlight, in which case it picks that row at once. A waiting pick is
+dropped if the mention changes or you switch sessions; keys typed while
+waiting go into the draft as usual. If nothing matches, Enter sends the
+draft as typed and Tab does nothing.
+
 In the prompt, option+←/→ (alt+←/→) moves by word; cmd+←/→ moves to the
 current displayed line's start or end, including when text wraps. alt+b/f
 also moves by word, and ctrl+a/e goes to the line's start or end. `?` on

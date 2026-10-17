@@ -221,7 +221,7 @@ test('narrower still, each item takes two lines: its name and kind, then its sta
   expect(narrow.every((line) => line.length <= 24)).toStrictEqual(true);
 });
 
-test('a name past 24 cells wraps inside its column, the rest two cells in, the other columns on its first line', () => {
+test('a name past 24 cells wraps two cells short of its column, the rest two cells in, the other columns on its first line', () => {
   const long = monitor('m9', 'Run the parser suite in watch mode', {
     group: 'running',
   });
@@ -231,8 +231,8 @@ test('a name past 24 cells wraps inside its column, the rest two cells in, the o
       viewRows([long, ITEMS[1]!], { width: 116, focus: undefined, now: NOW }),
     ),
   ).toStrictEqual([
-    '❯ Run the parser suite in   monitor  running 4m 2s · 1 event  main',
-    '    watch mode',
+    '❯ Run the parser suite      monitor  running 4m 2s · 1 event  main',
+    '    in watch mode',
     '  dev server errors         monitor  running 4m 2s · 1 event  main',
   ]);
 });
@@ -307,4 +307,19 @@ test('more rows than fit scroll to keep the ❯ in sight, … N above and … N 
   });
   // All fit: neither.
   expect(window(1, 40).above + window(1, 40).below).toStrictEqual(0);
+});
+
+test('a long unbroken name breaks where wrap-ansi breaks it, every character kept and nothing added', () => {
+  const name = 'x'.repeat(60);
+  const rows = viewRows([monitor('m1', name, { group: 'running' })], {
+    width: 116,
+    focus: undefined,
+    now: NOW,
+  });
+  const names = rows[0]!.lines.map((line) =>
+    line.find((cell) => cell.role === 'name')!.text.trimEnd(),
+  );
+
+  expect(names).toStrictEqual(['x'.repeat(22), 'x'.repeat(22), 'x'.repeat(16)]);
+  expect(names.join('')).toStrictEqual(name);
 });

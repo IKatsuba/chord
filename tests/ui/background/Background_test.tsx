@@ -9,6 +9,7 @@ import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import { draw } from '../harness.tsx';
 import {
+  CTRL_X,
   DOWN,
   ESC,
   leader,
@@ -322,3 +323,27 @@ test('x on a working task cancels its turn: its row turns to stopped, and it sen
     },
     { rows: 24, columns: 80 },
   ));
+
+test('the view is modal: the window’s session keys do nothing in it, and esc gives the window back as it was', () =>
+  withBackground(async (window) => {
+    await ready(window);
+    await send(window, 'monitors');
+    await window.shows('    background  2 monitors running');
+    await window.press(DOWN);
+    await window.press('\r');
+    await window.shows(' Background · 2 in this tab');
+
+    // ctrl+x w would open the sessions picker; ctrl+x c a new tab.
+    await window.press(CTRL_X);
+    await window.press('w');
+    await window.press(CTRL_X);
+    await window.press('c');
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(window.frame()).toContain(' Background · 2 in this tab');
+    expect(!window.frame().includes('╭')).toBeTruthy();
+
+    await window.press(ESC);
+    await window.shows('❯ background  2 monitors running');
+    expect(!window.frame().includes(' 2 fake ')).toBeTruthy();
+    expect(window.frame()).toContain('Two monitors are running.');
+  }));

@@ -168,15 +168,14 @@ function wrapped(text: string, width: number): string[] {
 }
 
 /**
- * A name in its column: its first line `width` wide, the rest two cells in
- * under it, so a wrapped name reads as one.
+ * A name in its column: whole on one line where it fits, else wrapped two
+ * cells short of the column, as every line after the first is drawn two
+ * cells in, so a wrapped name reads as one and stays inside its column.
  */
 function nameIn(name: string, width: number): string[] {
-  const [first = '', ...rest] = wrapped(name, width);
-
-  return rest.length === 0
-    ? [first]
-    : [first, ...wrapped(rest.join(' '), Math.max(1, width - 2))];
+  return stringWidth(name) <= width && !name.includes('\n')
+    ? [name]
+    : wrapped(name, Math.max(1, width - 2));
 }
 
 /**

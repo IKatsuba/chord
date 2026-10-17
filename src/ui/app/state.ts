@@ -1258,6 +1258,11 @@ function pressCommand(
     return command;
   }
 
+  // The background view begins no chord: its keys are its own.
+  if (state.backgroundView) {
+    return state.pendingKeys === undefined ? undefined : 'key_dropped';
+  }
+
   if (
     pressed !== undefined &&
     startsChord(liveChords(state, draft, cursor), pressed)
@@ -1340,6 +1345,13 @@ function boundCommand(
   // textarea's own.
   const textareaDid = (action: Action) =>
     !translated && textareaDoes(pressed, action);
+
+  // The background view is modal: it takes every key, the window's
+  // sessions' and the pickers' too, which wait until Esc closes it.
+  if (state.backgroundView) {
+    return backgroundCommand(input, key, state, on);
+  }
+
   const session = sessionCommand(on);
 
   // A selection shown takes its copy key first, and ctrl+c with no chord
@@ -1391,12 +1403,6 @@ function boundCommand(
   // letter does nothing, so a stray key never lands in a child's prompt. A
   // permission or form of the agent picked waits until Enter or Esc goes
   // back to it, so moving through the list never answers one.
-  // The background view takes the whole window and every key: ↑ ↓, j k,
-  // x and Esc, and the quit keys.
-  if (state.backgroundView && !pickerShown(state)) {
-    return backgroundCommand(input, key, state, on);
-  }
-
   if (state.agentsFocus && !pickerShown(state)) {
     return agentsCommand(input, key, state, on);
   }

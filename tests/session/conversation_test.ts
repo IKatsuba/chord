@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -1817,4 +1817,109 @@ test('a message told while the prompt waits to go, as one with mentions does, is
   ).toMatchObject({ turnId: firstTurn(events) });
   expect(!events.some((event) => event.type === 'self_started')).toBeTruthy();
   await conversation.close();
+});
+
+describe('CHD-417 tester: held steer lifecycle', () => {
+  test('serialized messages keep separate snapshots when the second call opens between them', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      const has = (id: string) =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.toolCallId === id,
+        );
+
+      conversation.send('overlap');
+      await until(() => has('overlap-a'));
+      conversation.tell(MAIN, 'First.');
+      await until(() => has('overlap-b'));
+      conversation.tell(MAIN, 'Second.');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      const order = events.flatMap((event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'tool_call_update' &&
+        event.update.status === 'completed'
+          ? [event.update.toolCallId]
+          : event.type === 'prompt' && event.into !== undefined
+            ? [event.text]
+            : [],
+      );
+
+      expect(order).toStrictEqual([
+        'overlap-a',
+        'First.',
+        'overlap-b',
+        'Second.',
+      ]);
+      expect(
+        promptsIn(events)
+          .slice(1)
+          .map(([, into]) => into),
+      ).toStrictEqual([firstTurn(events), firstTurn(events)]);
+    }));
+
+  for (const action of ['clear', 'close'] as const) {
+    test(`${action} discards a held steer without delivering it to the old or new session`, async () => {
+      const steered: string[] = [];
+      const pids: number[] = [];
+
+      await onFake(
+        ['--steering', 'claude'],
+        async (conversation, events) => {
+          conversation.send('bash');
+          await callOpen(events);
+          conversation.tell(MAIN, 'Must be discarded.');
+          expect(steered).toStrictEqual([]);
+
+          if (action === 'clear') {
+            conversation.clear();
+            await until(
+              () =>
+                events.filter((event) => event.type === 'connected').length ===
+                2,
+            );
+            conversation.send('slow');
+            await until(() => saidIn(events).includes('Working'));
+            conversation.tell(MAIN, 'New session only.');
+            await until(() => steered.length === 1);
+            await until(() =>
+              saidIn(events).includes('Read the message from main.'),
+            );
+            expect(steered[0]).toContain('New session only.');
+            conversation.interrupt();
+          } else {
+            await conversation.close();
+          }
+
+          expect(steered.join('\n')).not.toContain('Must be discarded.');
+          expect(promptsIn(events).map(([text]) => text)).not.toContain(
+            'Must be discarded.',
+          );
+        },
+        (session) => {
+          pids.push(...session.agentPids);
+
+          const steer = session.steer.bind(session);
+
+          session.steer = (text) => {
+            steered.push(text);
+
+            return steer(text);
+          };
+
+          return session;
+        },
+      );
+
+      expect(pids.length > 0).toBeTruthy();
+
+      for (const pid of pids) {
+        expect(await isAlive(pid), `fake agent ${pid} survived ${action}`).toBe(
+          false,
+        );
+      }
+    });
+  }
 });

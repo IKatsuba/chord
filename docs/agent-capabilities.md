@@ -5516,7 +5516,7 @@ n" its section 6.
   delta (see New tasks); goose's live output in `_meta.toolNotification` (goose,
   Custom); nova's `_meta.compass.permissionScope` (no10); minimax's opt-in
   subagent notifications (mm19); fast-agent's usage status line (fa15); grok's
-  `_meta.askUserQuestion: false` (gr4); codebuddy's
+  `_meta.askUserQuestion: false` (grok, Custom); codebuddy's
   `_meta["codebuddy.ai"].question` (see New tasks); and qwen's
   `_qwencode/start_turn`, answered method-not-found (admits the turn),
   `{accepted: false}` (defers it), or served on screen (qw20).
@@ -5607,8 +5607,8 @@ n" its section 6.
   permissions come with no turn running (qw10, qw20). goose starts a turn and
   asks after loading a session with confirmations pending (go5, inferred);
   opencode v2 forwards the asks of a cancelled turn's children (op12);
-  codebuddy's unasked turns, kimi's background subagents and minimax's
-  connection-wide stream ask with no turn too. auggie's indexing permission
+  codebuddy's unasked turns and kimi's background subagents ask with no turn
+  too. auggie's indexing permission
   comes right after `session/new`, and chord's unseen `reject_once` turns
   indexing off for the session (au9). bob's `sso` login through `authenticate`
   would also come before the first turn. dimcode, devin, kiro and poolside may
@@ -5682,7 +5682,7 @@ n" its section 6.
 - **CHD-383** (changes), Questions qwen, cursor and nova ask outside a form
   reach the person and are answered: grok belongs on the list; its
   `x.ai/ask_user_question` is on by default, chord answers it method-not-found,
-  and only `_meta.askUserQuestion: false` turns it off (gr4).
+  and only `_meta.askUserQuestion: false` turns it off (grok, Custom).
   `docs/design/CHD-1.md:41`, `:83` and `:641` call it opt-in; correcting them is
   the owner's. cursor falls back to a permission box with "Skip" per
   single-select question and drops multi-select ones (cu12; cursor, Custom); is
@@ -5739,6 +5739,76 @@ n" its section 6.
 - **CHD-428** (new evidence), Remote Control on Claude: `/remote-control`
   reaches claude as a plain prompt; what chord sees of a prompt or permission
   answer sent from claude.ai was not read (cl21).
+
+### Open questions
+
+The thirteen questions `board questions -p CHD` lists as open, each with what
+this reading does to it.
+
+- **Q26 (CHD-2).** **Premise changes.** Declaring AIR still switches claude's
+  subagents to the draft `subagent_spawned` shape and drops Edit's and Write's
+  `rawInput` (claude, Custom), and codex's AIR changes every update's shape
+  (codex, Custom). Without AIR, a cancel on a claude child's id stops that
+  child (cl19), while background subagents outlive the parent's cancel (cl17);
+  on codex a child id stops nothing (cx17). The question's "no other registry
+  adapter" no longer holds: codebuddy stops one background task by the
+  `terminalId` its backgrounded call carries opt-in or not, with no model call
+  (cb10; codebuddy, Custom), its private opt-in needed only for the task's
+  state and output; dimcode stops a subagent by `_lody/subagents/cancel`
+  (dm19; dimcode, Custom) and grok by `x.ai/subagent/cancel` (gr19).
+- **Q27 (CHD-409).** **Premise changes.** CHD-432's C11 reads the adapter bug
+  as fixed upstream since claude 0.90, from code and not run. This reading
+  adds nothing: claude-acp's part has no footnote on the Agent call's hook
+  result.
+- **Q28 (CHD-404).** **Premise changes.** The question rests on claude and
+  codex; claude's Bash stays `pending` until done (cl13) and codex's call is
+  `in_progress` while it waits on an approval (cx13), as it says. More agents
+  never send `in_progress`: cursor, but for plan and `Watching:` calls (cu10),
+  and auggie (au8); goose sends it only on an MCP notification (go14), droid
+  only for a running shell (dr13). codebuddy sends `in_progress` every second
+  while a shell call runs (cb10). codex also sends
+  `session_info_update._meta.codex.threadStatus` (codex, Custom), whose values
+  its part does not give.
+- **Q29–Q32 (CHD-158).** The cases with no turn running are no longer only
+  claude's and codex's; the options in the questions are untouched.
+  - **Q29 (P1).** **Premise changes.** New cases: qwen's own turns (qw20),
+    goose reopening a session with approvals pending (go5; goose, In chord,
+    inferred), opencode v2's children after a cancel (op12), codebuddy's
+    unasked turns (codebuddy, Custom and In chord), kimi's and grok's
+    background subagents (kimi, In chord; grok, In chord), auggie's indexing
+    permission right after `session/new` (au9), and droid's sign-in URL during
+    `session/new`, before any session exists (dr15; factory-droid, In chord).
+    Today's refusal is not inert: auggie's unseen `reject_once` turns indexing
+    off for the session (auggie, In chord), and goose cancels the tool, inferred
+    (goose, In chord). qwen marks such permissions `_meta.backgroundTurn` and
+    lets a client defer the turn with `{accepted: false}` to
+    `_qwencode/start_turn` (qw20). Not cases: gemini's permission for an unseen
+    call id comes inside a prompt, before its first update (gemini, In chord);
+    cline's queued second prompt is never reached, as chord queues its own
+    (ci16; cline, In chord); minimax's part names no ask outside a turn, only
+    subagent asks sent to the root session (mm19).
+  - **Q30 (P2).** **Standing.** The agents' own clocks differ: grok times an
+    unanswered permission out by a backstop deadline and re-sends it on
+    re-attach (gr14), qoder rejects the tool after 30 s (qo13), and claude
+    (cl14) and codex (cx14) set no timeout of their own.
+  - **Q31 (P4).** **Standing.** Nothing an agent sends bears on which keys a
+    box takes.
+  - **Q32 (P3).** **Premise changes.** What the agent gets differs by agent:
+    auggie's first prompt waits until its indexing permission is answered
+    (au9), and kimi answers a prompt sent during a turn it started itself
+    `end_turn` at once and runs it later, unseen (km19).
+- **Q33–Q36 (CHD-389).** **Standing.** main, a `spawn_task` task, a long-lived
+  child and a team member are chord's own askers; no agent's part has a field
+  that names them.
+- **Q37 (CHD-389).** **Premise changes.** For an agent's own subagent, the
+  agent decides what can be named: opencode v2 already names the child in a
+  subagent form's message, `<child>: Questions` (op10), while minimax's
+  subagents ask on the root session (mm19) and dirac's children's approvals
+  come as the parent's (di19), so neither can be told from main. grok names
+  the asking session on permission requests, `x.ai/requestingSessionId`, but
+  its questions never reach the person (grok, Custom).
+- **Q38 (CHD-228).** **Standing.** It rests on chord's agents list, which no
+  agent feeds.
 
 ### New tasks it suggests
 
@@ -5828,8 +5898,8 @@ that page unless it says otherwise.
   `session/resume` is method-not-found (di6); its answer usage is a session
   total (di20).
 - fast-agent starts on current uv (0.13.1), not on uv 0.6.12.
-- grok's questions are on by default, not opt-in (gr4).
-- qwen widens CHD-158 through its own turns (qw10).
+- grok's questions are on by default, not opt-in (CHD-432's gr4; grok, Custom).
+- qwen widens CHD-158 through its own turns (qw20).
 - claude's `/mcp`, and codex's `/status` beside its `/mcp`, are hidden behind
   chord's (U8).
 - bob's B6: after `session/cancel`, the next prompt waits for the cancelled turn

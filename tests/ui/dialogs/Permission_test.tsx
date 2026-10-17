@@ -1,8 +1,11 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
-import { PermissionPrompt } from '../../../src/ui/dialogs/Permission.tsx';
+import {
+  type RequestScroller,
+  PermissionPrompt,
+} from '../../../src/ui/dialogs/Permission.tsx';
 import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -502,3 +505,73 @@ test('a click on the request leaves the keys with the answers', () =>
     },
     { columns: 80, rows: 24 },
   ));
+
+describe('CHD-246 tester: long-title paging regression', () => {
+  test('a one-row room keeps every word of a long title reachable beside its count', async () => {
+    const title = Array.from(
+      { length: 60 },
+      (_, index) => `word${index + 1}`,
+    ).join(' ');
+    const scroller: { current: RequestScroller | undefined } = {
+      current: undefined,
+    };
+    const drawn = await draw(
+      <box height={12}>
+        <PermissionPrompt
+          wait={{
+            id: 'long-title',
+            title,
+            rawInput: { mode: 'overwrite' },
+            options: [
+              { optionId: 'allow', name: 'Yes', kind: 'allow_once' },
+              { optionId: 'always', name: 'Always', kind: 'allow_always' },
+              { optionId: 'deny', name: 'No', kind: 'reject_once' },
+            ],
+          }}
+          width={76}
+          active
+          onChoose={() => {}}
+          scroller={scroller}
+        />
+      </box>,
+      { columns: 80, rows: 19 },
+    );
+
+    try {
+      await until('a one-row title count', () =>
+        drawn.frame().includes('lines below'),
+      );
+
+      const seen = new Set<string>();
+
+      for (let page = 0; page < 30; page++) {
+        const frame = stripAnsi(drawn.frame());
+
+        for (const word of frame.matchAll(/word\d+/g)) {
+          seen.add(word[0]);
+        }
+
+        expect(frame).toContain('Esc to reject');
+        expect(frame).toContain('3. No');
+
+        if (frame.includes('mode: overwrite')) {
+          break;
+        }
+
+        const before = frame;
+
+        scroller.current?.('page_down');
+        await drawn.write('');
+        await until(
+          'the one-row request moves',
+          () => stripAnsi(drawn.frame()) !== before,
+        );
+      }
+
+      expect(seen).toEqual(new Set(title.split(' ')));
+      expect(stripAnsi(drawn.frame())).toContain('mode: overwrite');
+    } finally {
+      await drawn.unmount();
+    }
+  });
+});

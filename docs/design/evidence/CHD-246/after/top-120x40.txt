@@ -1,0 +1,40 @@
+ ⏺ Tool(mcp__files__write_file)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ mcp__files__write_file                                                                                               │
+│   path: docs/release.md                                                                                              │
+│   content: # Release 0.56.0                                                                                          │
+│                                                                                                                      │
+│   This release changes how chord draws long requests: the permission box now caps its height, keeps its options on   │
+│   screen and lets the person scroll through the whole argument before answering, at any window size, including 80 by │
+│   24.                                                                                                                │
+│                                                                                                                      │
+│   ## Changes                                                                                                         │
+│                                                                                                                      │
+│   - Change 1: the prompt keeps its draft                                                                             │
+│   - Change 2: a turn can be resumed                                                                                  │
+│   - Change 3: headlines wrap                                                                                         │
+│   - Change 4: the box scrolls                                                                                        │
+│   - Change 5: tests run in parallel                                                                                  │
+│   - Change 6: the prompt keeps its draft                                                                             │
+│   - Change 7: a turn can be resumed                                                                                  │
+│   - Change 8: headlines wrap                                                                                         │
+│   - Change 9: the box scrolls                                                                                        │
+│   - Change 10: tests run in parallel                                                                                 │
+│ ── ↓ 22 lines below · pagedown to scroll ─────────────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Yes                                                                                                             │
+│   2. Yes, and don't ask again for files - write_file commands                                                        │
+│   3. No, and tell Claude what to do differently                                                                      │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

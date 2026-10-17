@@ -294,6 +294,31 @@ test("a child's exit in a tab behind is named for the child, in that tab", () =>
     expect(!window.frame().includes('2 fake exited')).toBeTruthy();
   }));
 
+test("a child's reply to a message reads its age from the reply, not from the message (CHD-364)", () =>
+  withAgents(
+    async (window) => {
+      await ready(window);
+      await send(window, 'agents');
+      await window.shows('← message from @main');
+      await until(
+        'parser replied',
+        () => /parser .*✓ replied/.test(window.frame()),
+        30_000,
+      );
+
+      const age = /parser .*✓ replied (\d+)s ago/.exec(window.frame());
+
+      // The message came seconds before; the reply has only just come.
+      expect(Number(age?.[1])).toBeLessThanOrEqual(2);
+    },
+    '--steering',
+    'codex',
+    '--steer-late',
+    // Slow enough that the reply comes seconds after the message.
+    '--step-ms',
+    '30',
+  ));
+
 /** How many `closed` lines the records in `dir`'s state hold. */
 async function closedInRecords(dir: string): Promise<number> {
   const records = `${dir}/state/records`;

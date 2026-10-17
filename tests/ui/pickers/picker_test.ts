@@ -376,6 +376,13 @@ test('a session in the sessions picker says where it stands, and since when', ()
   expect(
     tabState(wait({ unseen: { kind: 'replied', since: at(125) } }), now),
   ).toStrictEqual('✓ replied 2m ago');
+  // From the reply, not from the message it answered (CHD-364).
+  expect(
+    tabState(
+      wait({ unseen: { kind: 'replied', since: at(125), repliedAt: at(4) } }),
+      now,
+    ),
+  ).toStrictEqual('✓ replied 4s ago');
   expect(
     tabState(wait({ unseen: { kind: 'failed', since: at(65) } }), now),
   ).toStrictEqual('✗ turn failed 1m');

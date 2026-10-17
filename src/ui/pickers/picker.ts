@@ -15,7 +15,12 @@ import {
   windowDirectory,
   windowSummary,
 } from '../../session/windows.ts';
-import { failedSince, failureOf, type TabWait } from '../../session/tabs.ts';
+import {
+  failedSince,
+  failureOf,
+  repliedSince,
+  type TabWait,
+} from '../../session/tabs.ts';
 import { homePath } from '../../settings.ts';
 import { visibleRange } from '../prompt/commands.ts';
 import { GLYPHS } from '../app/strip.ts';
@@ -237,7 +242,9 @@ export function tabState(tab: TabRow, now: number): string {
   }
 
   if (wait.unseen) {
-    return `${GLYPHS.replied} replied ${briefly(now - wait.unseen.since)} ago`;
+    return `${GLYPHS.replied} replied ${briefly(
+      now - (repliedSince(wait) ?? wait.unseen.since),
+    )} ago`;
   }
 
   return wait.working === undefined

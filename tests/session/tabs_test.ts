@@ -29,6 +29,7 @@ import {
   pick,
   position,
   previousTab,
+  repliedSince,
   runName,
   show,
   shownKey,
@@ -260,6 +261,7 @@ test('a turn ending behind is unseen until the person goes to it', () => {
   expect(tabOf(tabs, 1)?.wait.unseen).toStrictEqual({
     kind: 'replied',
     since: 2000,
+    repliedAt: 2000,
   });
   expect(tabOf(tabs, 1)?.wait.working).toStrictEqual(undefined);
   expect(tabOf(goTo(tabs, 1), 1)?.wait.unseen).toStrictEqual(undefined);
@@ -1019,4 +1021,31 @@ describe('CHD-264 tester: child failure lifecycle', () => {
       'conversation of parser',
     );
   });
+});
+
+test('a reply to a message counts its age from the reply, while the message keeps its place in the order (CHD-364)', () => {
+  const message: ConversationEvent = {
+    type: 'prompt',
+    turnId: 'm',
+    text: 'hi',
+    at: 0,
+    from: { name: 'main', reachable: true },
+  };
+  // The message at 1 s starts a turn that answers 23 s later.
+  const asked = heard(opened('a', 'b'), 1, [up, message]);
+  const replied = heard(asked, 1, [ended('m')], 24_000);
+  const wait = tabOf(replied, 1)!.wait;
+
+  expect(tabOf(asked, 1)!.wait.unseen?.kind).toStrictEqual('message');
+  expect(wait.unseen).toStrictEqual({
+    kind: 'replied',
+    since: 1000,
+    repliedAt: 24_000,
+  });
+  expect(repliedSince(wait)).toStrictEqual(24_000);
+
+  // A second reply before a look keeps the first reply's time.
+  const again = heard(replied, 1, [prompt('t2'), ended('t2')], 40_000);
+
+  expect(repliedSince(tabOf(again, 1)!.wait)).toStrictEqual(24_000);
 });

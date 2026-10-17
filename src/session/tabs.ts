@@ -45,6 +45,11 @@ export interface TabWait {
          * from; `since` is the first news of any kind, for the order.
          */
         readonly failedAt?: number;
+        /**
+         * When a reply came, which its age counts from (CHD-364): set as the
+         * news becomes a reply, apart from `since`, which orders it.
+         */
+        readonly repliedAt?: number;
       }
     | undefined;
   /** When the turn running now began, while one runs. */
@@ -64,6 +69,13 @@ export const FAILURES: readonly Failure[] = ['exited', 'start', 'turn'];
 /** The graver of two failures. */
 function graver(a: Failure | undefined, b: Failure): Failure {
   return a !== undefined && FAILURES.indexOf(a) < FAILURES.indexOf(b) ? a : b;
+}
+
+/** When a wait's reply came, which `replied … ago` counts from. */
+export function repliedSince(wait: TabWait): number | undefined {
+  return wait.unseen?.kind === 'replied'
+    ? (wait.unseen.repliedAt ?? wait.unseen.since)
+    : undefined;
 }
 
 /** When a wait's failure came, which a failed turn counts its time from. */
@@ -881,7 +893,14 @@ function waitAfter(
     ? before.unseen
     : ended
       ? failure === undefined
-        ? { kind: 'replied' as const, since: before.unseen?.since ?? now }
+        ? {
+            kind: 'replied' as const,
+            since: before.unseen?.since ?? now,
+            repliedAt:
+              before.unseen?.kind === 'replied'
+                ? (before.unseen.repliedAt ?? before.unseen.since)
+                : now,
+          }
         : {
             kind: 'failed' as const,
             since: before.unseen?.since ?? now,

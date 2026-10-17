@@ -11,6 +11,7 @@ import {
   type Failure,
   failedSince,
   failureOf,
+  repliedSince,
   type TabWait,
 } from '../../session/tabs.ts';
 import { GLYPHS } from '../app/strip.ts';
@@ -121,7 +122,7 @@ export function agentState(row: AgentRow, now: number): AgentState | undefined {
   if (wait.unseen?.kind === 'replied') {
     return {
       glyph: GLYPHS.replied,
-      words: `replied ${briefly(now - wait.unseen.since)} ago`,
+      words: `replied ${briefly(now - (repliedSince(wait) ?? now))} ago`,
       tone: 'success',
     };
   }

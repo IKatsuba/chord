@@ -1266,3 +1266,67 @@ describe('CHD-1 tester: conservative question enrichment', () => {
     expect(questions?.questions[1]?.secret).toBe(true);
   });
 });
+
+describe('CHD-377 tester: wrapped MCP enrichment boundaries', () => {
+  test('an update alone retains raw input and metadata, and enriching twice is idempotent', () => {
+    const { update } = relayOn([codexMcpCall]);
+    const rawInput = Object.freeze({
+      server: 'chord-2',
+      tool: 'send_message',
+      arguments: Object.freeze({ to: 'reviewer', text: 'ready' }),
+    });
+    const sent: SessionUpdate = {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'late-args',
+      rawInput,
+      _meta: {
+        is_mcp_tool_call: true,
+        [FILLED]: ['existing'],
+        untouched: { keep: true },
+      },
+    };
+    const original = structuredClone(sent);
+    const [enriched] = updates(update(sent));
+
+    assert(enriched?.sessionUpdate === 'tool_call_update');
+    expect(sent).toEqual(original);
+    expect(enriched.rawInput).toBe(rawInput);
+    expect(enriched._meta).toEqual({
+      is_mcp_tool_call: true,
+      [FILLED]: ['existing', MCP_CALL],
+      untouched: { keep: true },
+      [MCP_CALL]: { tool: 'send_message', arguments: rawInput.arguments },
+    });
+    expect(updates(update(enriched))).toEqual([enriched]);
+  });
+
+  test('missing tool or arguments and unmarked wrappers remain unfilled', () => {
+    const { update } = relayOn([codexMcpCall]);
+
+    for (const rawInput of [
+      undefined,
+      { tool: 7, arguments: {} },
+      { tool: 'send_message' },
+    ]) {
+      const sent: SessionUpdate = {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guard',
+        rawInput,
+        _meta: { is_mcp_tool_call: true },
+      };
+
+      expect(updates(update(sent))).toEqual([sent]);
+    }
+
+    for (const marked of [false, 'true', undefined]) {
+      const sent: SessionUpdate = {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guard',
+        rawInput: { tool: 'send_message', arguments: {} },
+        _meta: { is_mcp_tool_call: marked },
+      };
+
+      expect(updates(update(sent))).toEqual([sent]);
+    }
+  });
+});

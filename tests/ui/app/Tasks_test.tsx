@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -15,7 +15,15 @@ import {
 } from '../../../src/session/transcript/types.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
-import { CTRL_O, ESC, ready, send, until, withWindow } from './render.tsx';
+import {
+  CTRL_O,
+  ESC,
+  leader,
+  ready,
+  send,
+  until,
+  withWindow,
+} from './render.tsx';
 
 test("each session gets chord's server with a token of its own, good until its agent goes, and its tools read the window", async () => {
   const server = serveChord();
@@ -468,4 +476,33 @@ test('Esc stops a running task agent, which sends no report, takes the queued pr
   } finally {
     await server.close();
   }
+});
+
+describe('CHD-377 tester: Codex call session isolation', () => {
+  test('two fake sessions with reused call ids keep their own served results', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'codexchordcalls');
+          await window.shows('Listed as Codex.');
+          await window.shows('1 open · 1 fake (you)');
+          await leader(window, 'c');
+          await ready(window);
+          await send(window, 'codexchordcalls');
+          await window.shows('Listed as Codex.');
+          await window.shows('2 open');
+          expect(window.frame()).not.toContain('Bash(mcp.chord.');
+          await leader(window, '1');
+          await window.shows('1 open · 1 fake (you)');
+          expect(window.frame()).not.toContain('2 open');
+          expect(window.frame().match(/Listed as Codex\./g)).toHaveLength(1);
+        },
+        { server, runtimes: ['fake'], rows: 40, columns: 80 },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });

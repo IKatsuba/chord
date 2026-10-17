@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { MCP_CALL } from '../../../src/session/enrich.ts';
 import { taskUpdate } from '../../../src/session/tasks.ts';
@@ -574,4 +574,149 @@ test('a call of another tool with the same arguments is not tied, whatever serve
 
   expect(calls.map((call) => call.chord)).toStrictEqual([undefined, undefined]);
   expect(transcript.served).toStrictEqual([listed]);
+});
+
+describe('CHD-377 tester: neutral MCP matching isolation', () => {
+  for (const servedFirst of [false, true]) {
+    test(`tool and deep arguments match independently of server, servedFirst=${servedFirst}`, () => {
+      const message: ChordCall = {
+        tool: 'send_message',
+        input: {
+          to: 'reviewer',
+          text: 'ready',
+          nested: { a: [1, 2], b: true },
+        },
+        answer: { to: 'reviewer' },
+      };
+      const calls = [
+        wrapped('wrong-args', 'chord', 'send_message', {
+          to: 'reviewer',
+          text: 'different',
+          nested: { a: [1, 2], b: true },
+        }),
+        wrapped(
+          'wrong-tool',
+          'chord',
+          'close_agent',
+          message.input as Record<string, unknown>,
+        ),
+        wrapped('accepted', 'another-server', 'send_message', {
+          nested: { b: true, a: [1, 2] },
+          text: 'ready',
+          to: 'reviewer',
+        }),
+      ];
+      const state = fold([
+        PROMPT,
+        ...(servedFirst
+          ? [served(message), ...calls]
+          : [...calls, served(message)]),
+      ]);
+      const shown = state.entries.flatMap((entry) =>
+        entry.kind === 'tool' ? [entry.call] : [],
+      );
+
+      expect(shown.map((call) => [call.id, call.chord])).toEqual([
+        ['wrong-args', undefined],
+        ['wrong-tool', undefined],
+        ['accepted', message],
+      ]);
+      expect(shown[2]?.rawInput).toEqual({
+        server: 'another-server',
+        tool: 'send_message',
+        arguments: {
+          nested: { b: true, a: [1, 2] },
+          text: 'ready',
+          to: 'reviewer',
+        },
+      });
+    });
+  }
+
+  test('metadata arriving only in an update links a request that was already served', () => {
+    const input = { to: 'reviewer', text: 'ready' };
+    const rawInput = {
+      server: 'chord',
+      tool: 'send_message',
+      arguments: input,
+    };
+    const message: ChordCall = { tool: 'send_message', input, answer: {} };
+    const before = fold([
+      PROMPT,
+      called('late', rawInput, 'mcp.chord.send_message'),
+      served(message),
+    ]);
+    const old = before.entries.find((entry) => entry.kind === 'tool');
+
+    assert(old?.kind === 'tool');
+    expect(old.call.chord).toBeUndefined();
+
+    const after = fold(
+      [
+        {
+          type: 'update',
+          turnId: 't1',
+          update: {
+            sessionUpdate: 'tool_call_update',
+            toolCallId: 'late',
+            _meta: { [MCP_CALL]: { tool: 'send_message', arguments: input } },
+          },
+        },
+      ],
+      before,
+    );
+    const linked = after.entries.find((entry) => entry.kind === 'tool');
+
+    assert(linked?.kind === 'tool');
+    expect(linked.call.chord).toEqual(message);
+    expect(linked.call.rawInput).toEqual(rawInput);
+    expect(linked.call.mcp).toEqual({ tool: 'send_message', input });
+    expect(after.served).toBeUndefined();
+    // The older, unenriched record is intentionally unchanged by CHD-377.
+    expect(old.call.mcp).toBeUndefined();
+    expect(old.call.chord).toBeUndefined();
+  });
+
+  test('a parent served request never consumes the same call in its child', () => {
+    const message: ChordCall = {
+      tool: 'send_message',
+      input: { to: 'reviewer', text: 'ready' },
+      answer: {},
+    };
+    const childCall = wrapped(
+      'same-id',
+      'chord',
+      'send_message',
+      message.input as Record<string, unknown>,
+    );
+
+    assert(childCall.type === 'update');
+
+    const state = fold([
+      PROMPT,
+      STARTED,
+      { ...childCall, subagentId: 'task-1' },
+      served(message),
+    ]);
+    const child = state.entries.find((entry) => entry.kind === 'subagent');
+
+    assert(child?.kind === 'subagent');
+    expect(
+      child.subagent.entries.flatMap((entry) =>
+        entry.kind === 'tool' ? [entry.call.chord] : [],
+      ),
+    ).toEqual([undefined]);
+    expect(state.served).toEqual([message]);
+
+    const after = fold([served(message, 'task-1')], state);
+    const linked = after.entries.find((entry) => entry.kind === 'subagent');
+
+    assert(linked?.kind === 'subagent');
+    expect(
+      linked.subagent.entries.flatMap((entry) =>
+        entry.kind === 'tool' ? [entry.call.chord] : [],
+      ),
+    ).toEqual([message]);
+    expect(after.served).toEqual([message]);
+  });
 });

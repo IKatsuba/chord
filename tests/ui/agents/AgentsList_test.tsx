@@ -126,3 +126,48 @@ describe('CHD-264 tester: folded failure rendering', () => {
     }
   }
 });
+
+describe('CHD-364 tester: folded reply clock', () => {
+  for (const columns of [80, 120]) {
+    test(`the folded lead uses its member's newest reply clock at ${columns} columns`, async () => {
+      const now = Date.now();
+      const agents = [
+        row('main', 1, { picked: true }),
+        row('bugfix', 2, { runtime: 'team · fake', team: 2 }),
+        row('coder', 3, {
+          team: 2,
+          wait: {
+            watch: emptyWatch,
+            unseen: {
+              kind: 'replied',
+              since: now - 120_000,
+              repliedAt: now - 1000,
+            },
+          },
+        }),
+        row('tester', 4, { team: 2 }),
+        row('reviewer', 5, { team: 2 }),
+      ];
+      const drawn = await draw(
+        <AgentsList
+          rows={listRows(agents, 4)}
+          limit={4}
+          width={columns - 4}
+          focused={false}
+        />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        expect(stripAnsi(drawn.frame())).toContain('coder: replied 1s ago');
+        await until(
+          'the folded reply clock ticks',
+          () => stripAnsi(drawn.frame()).includes('coder: replied 3s ago'),
+          4000,
+        );
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});

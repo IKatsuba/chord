@@ -785,3 +785,35 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
       }));
   }
 });
+
+describe('CHD-364 tester: narrow reply age', () => {
+  test('the first reply at 80x24 starts fresh and then ages from the reply', () =>
+    withAgents(
+      async (window) => {
+        await window.resize({ columns: 80, rows: 24 });
+        await ready(window);
+        await send(window, 'agents');
+        await window.shows('← message from @main');
+
+        const age = () =>
+          Number(/parser .*✓ replied (\d+)s ago/.exec(window.frame())?.[1]);
+
+        await until(
+          'the narrow parser reply',
+          () => Number.isFinite(age()),
+          30_000,
+        );
+
+        const first = age();
+
+        expect(first).toBeLessThanOrEqual(2);
+        await until('reply age advances', () => age() > first);
+        expect(age()).toBeLessThan(10);
+      },
+      '--steering',
+      'codex',
+      '--steer-late',
+      '--step-ms',
+      '30',
+    ));
+});

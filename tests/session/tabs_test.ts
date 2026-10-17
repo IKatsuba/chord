@@ -1051,3 +1051,83 @@ test('a reply to a message counts its age from the reply, while the message keep
   expect(repliedSince(tabOf(again, 1)!.wait)).toStrictEqual(41_000);
   expect(tabOf(again, 1)!.wait.unseen?.since).toStrictEqual(1000);
 });
+
+describe('CHD-364 tester: separate reply and attention clocks', () => {
+  const message = (turnId: string): ConversationEvent => ({
+    type: 'prompt',
+    turnId,
+    text: 'hi',
+    at: 0,
+    from: { name: 'main', reachable: true },
+  });
+
+  test('each later reply moves its age but leaves the oldest child first for attention', () => {
+    const base = withChildren(opened('fake'), 1, 'parser', 'docs');
+    const first = heard(
+      heard(base, 2, [up, message('p')], 1000),
+      2,
+      [ended('p')],
+      10_000,
+    );
+    const other = heard(first, 3, [up, prompt('d'), ended('d')], 20_000);
+    const latest = heard(other, 2, [prompt('next'), ended('next')], 50_000);
+    const wait = agentOf(latest, 2)!.child!.wait;
+
+    expect(repliedSince(wait)).toBe(51_000);
+    expect(wait.unseen?.since).toBe(2000);
+    expect(attentionOrder(latest)).toStrictEqual([2, 3]);
+
+    const there = attend(latest)!;
+
+    expect(shownKey(there)).toBe(2);
+    expect(repliedSince(agentOf(there, 2)!.child!.wait)).toBeUndefined();
+    expect(shownKey(attend(there)!)).toBe(3);
+  });
+
+  test('a cancelled turn does not move a previous unseen reply clock', () => {
+    const first = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('first'),
+      ended('first'),
+    ]);
+    const cancelled = heard(
+      first,
+      1,
+      [
+        prompt('next'),
+        { type: 'cancel', turnId: 'next', at: 50_000 },
+        ended('next'),
+      ],
+      50_000,
+    );
+
+    expect(repliedSince(tabOf(cancelled, 1)!.wait)).toBe(2000);
+    expect(tabOf(cancelled, 1)!.wait.unseen?.since).toBe(2000);
+  });
+
+  test('replies after a failure cannot replace its first failure time, or expose a reply age', () => {
+    const first = heard(opened('a', 'b'), 1, [
+      up,
+      message('first'),
+      ended('first'),
+    ]);
+    const failure = heard(first, 1, [prompt('bad'), failed('bad')], 10_000);
+    const after = heard(
+      failure,
+      1,
+      [
+        prompt('later'),
+        ended('later'),
+        prompt('bad-again'),
+        failed('bad-again'),
+      ],
+      20_000,
+    );
+    const wait = tabOf(after, 1)!.wait;
+
+    expect(failureOf(wait)).toBe('turn');
+    expect(failedSince(wait)).toBe(11_000);
+    expect(repliedSince(wait)).toBeUndefined();
+    expect(wait.unseen?.since).toBe(1000);
+  });
+});

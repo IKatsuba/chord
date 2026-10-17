@@ -594,3 +594,27 @@ describe('CHD-264 tester: picker failure identity', () => {
     );
   });
 });
+
+describe('CHD-364 tester: legacy and newest reply age', () => {
+  test('old waits fall back to news time; a later reply uses its own time, including epoch zero', () => {
+    const state = (since: number, repliedAt?: number) =>
+      tabState(
+        {
+          ...idleTab,
+          wait: {
+            ...idle,
+            unseen: {
+              kind: 'replied',
+              since,
+              ...(repliedAt === undefined ? {} : { repliedAt }),
+            },
+          },
+        },
+        65_000,
+      );
+
+    expect(state(1000)).toBe('✓ replied 1m ago');
+    expect(state(1000, 64_000)).toBe('✓ replied 1s ago');
+    expect(state(-100_000, 0)).toBe('✓ replied 1m ago');
+  });
+});

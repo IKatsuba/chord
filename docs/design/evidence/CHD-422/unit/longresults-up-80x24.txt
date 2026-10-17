@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.vs3Cr57wAz
+ ▀▀     ? for shortcuts · /help
+
+ › longresults
+
+ ⏺ notes - export_notes (MCP)
+   ⎿  {"status":"completed","result":"# Long MCP result\n\nEvery note in the
+      vault, exported with its tags, its links and the date it was last
+      changed, so the agent can read them without opening each file.\n\nEnd
+      of the long result.","logs":[]}
+
+ ⏺ Bash(bun dev compile --all)
+   ⎿  Building chord for darwin-arm64, linux-x64, linux-arm64, windows-x64
+      and darwin-x64 with bun build --compile, the native library embedded
+      for each target, and the binaries laid out under dist/.
+      Done.
+ ── ↓ 16 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

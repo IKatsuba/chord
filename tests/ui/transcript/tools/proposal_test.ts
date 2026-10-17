@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import stringWidth from 'string-width';
 import type { Team } from '../../../../src/teams.ts';
 import {
   agentRows,
@@ -13,6 +14,7 @@ import {
   proposalTable,
   savedLine,
   skipsAsking,
+  type TableLine,
 } from '../../../../src/ui/transcript/tools/proposal.ts';
 
 const TEAM: Team = {
@@ -69,7 +71,7 @@ test('a proposal is read from what chord served, and not before or after a refus
   ).toStrictEqual(undefined);
 });
 
-test("the table's columns fit the width: the role cut first, then the model, the mode never", () => {
+test("the table's columns fit the width: the role and then agent · model wrap in their columns, the mode never", () => {
   const rows = agentRows(TEAM);
   const wide = proposalTable(rows, 120);
 
@@ -82,16 +84,21 @@ test("the table's columns fit the width: the role cut first, then the model, the
     wide.map(({ text, mode: [start, end] }) => text.slice(start, end)),
   ).toStrictEqual(['default', 'acceptEdits', 'auto']);
 
+  // A tool result's words, the role wraps, never cut (CHD-422).
   expect(proposalTable(rows, 70).map((line) => line.text)).toStrictEqual([
-    'lead    claude · opus          default      Splits the job, says who …',
-    'tester  claude · sonnet        acceptEdits  Writes the failing test, …',
-    'coder   codex · gpt-5.3-codex  auto         Writes the fix, in the fi…',
+    'lead    claude · opus          default      Splits the job, says who',
+    '                                            edits which files, reports',
+    '                                            to main',
+    'tester  claude · sonnet        acceptEdits  Writes the failing test,',
+    '                                            then proves the fix',
+    'coder   codex · gpt-5.3-codex  auto         Writes the fix, in the',
+    '                                            files the lead names',
   ]);
-  expect(proposalTable(rows, 44).map((line) => line.text)).toStrictEqual([
-    'lead    claude ·…  default      Splits the …',
-    'tester  claude ·…  acceptEdits  Writes the …',
-    'coder   codex · …  auto         Writes the …',
-  ]);
+  // Where agent · model's longest word and the role's least do not fit
+  // beside the other cells, the table is laid out as opened.
+  expect(proposalTable(rows, 44)).toStrictEqual(
+    proposalTable(rows, 44, false, true),
+  );
 });
 
 test('opened, each role is whole on lines of its own under its row, to the right edge', () => {
@@ -244,7 +251,10 @@ test("a change's rows are marked against the team saved before, its gone members
       { ...TEAM.members[1]!, name: 'fixer' },
     ],
   };
-  const lines = proposalTable(agentRows(after, TEAM), 120, true);
+  // Each row's first line, which holds its mode, a wrapped role under it.
+  const lines = proposalTable(agentRows(after, TEAM), 120, true).filter(
+    ({ mode: [start, end] }) => end > start,
+  );
 
   expect(lines.map((line) => line.text.slice(0, 11))).toStrictEqual([
     '   lead    ',
@@ -468,14 +478,22 @@ test('an effort is a column between agent · model and the mode, — where none 
     'coder     codex · gpt-5.3-codex  xhigh  auto         Writes the fix, in the files the lead names',
     'reviewer  claude · opus          —      plan         Reads the diff and edits nothing',
   ]);
-  // The role pays for the column at 80.
+  // The role pays for the column at 80, wrapping in what is left.
   expect(
     proposalTable(agentRows(EFFORTS), 74).map((line) => line.text),
   ).toStrictEqual([
-    'lead      claude · opus          high   default      Splits the job, says…',
-    'tester    claude · sonnet        high   acceptEdits  Writes the failing t…',
-    'coder     codex · gpt-5.3-codex  xhigh  auto         Writes the fix, in t…',
-    'reviewer  claude · opus          —      plan         Reads the diff and e…',
+    'lead      claude · opus          high   default      Splits the job, says',
+    '                                                     who edits which',
+    '                                                     files, reports to',
+    '                                                     main',
+    'tester    claude · sonnet        high   acceptEdits  Writes the failing',
+    '                                                     test, then proves the',
+    '                                                     fix',
+    'coder     codex · gpt-5.3-codex  xhigh  auto         Writes the fix, in',
+    '                                                     the files the lead',
+    '                                                     names',
+    'reviewer  claude · opus          —      plan         Reads the diff and',
+    '                                                     edits nothing',
   ]);
   expect(agentRows(TEAM)[0]!.effort).toStrictEqual('—');
   expect(proposalTable(agentRows(TEAM), 120)[0]!.text).toStrictEqual(
@@ -483,7 +501,9 @@ test('an effort is a column between agent · model and the mode, — where none 
   );
 });
 
-test('a changed effort says the one it had, dim, and folded drops that before the model is cut', () => {
+test('a changed effort says the one it had, dim, and folded drops that before agent · model narrows', () => {
+  const firsts = (lines: TableLine[]) =>
+    lines.filter(({ mode: [start, end] }) => end > start);
   const rows = agentRows(EFFORTS, EFFORTS_BEFORE);
 
   expect(rows.map((row) => [row.effort, row.effortWas])).toStrictEqual([
@@ -502,30 +522,28 @@ test('a changed effort says the one it had, dim, and folded drops that before th
     ['—', undefined],
   ]);
 
-  const wide = proposalTable(rows, 114, true);
+  const all = proposalTable(rows, 114, true);
+  const wide = firsts(all);
 
-  expect(wide.map((line) => line.text)).toStrictEqual([
-    '   lead      claude · opus          high             default                            Splits the job, says who …',
-    '~  tester    claude · sonnet        high was medium  acceptEdits was bypassPermissions  Writes the failing test, …',
-    '~  coder     codex · gpt-5.3-codex  xhigh was —      auto                               Writes the fix, in the fi…',
-    '~  reviewer  claude · opus          —                plan was read-only                 Reads the diff and edits …',
+  expect(all.map((line) => line.text)).toStrictEqual([
+    '   lead      claude · opus          high             default                            Splits the job, says who',
+    '                                                                                        edits which files, reports',
+    '                                                                                        to main',
+    '~  tester    claude · sonnet        high was medium  acceptEdits was bypassPermissions  Writes the failing test,',
+    '                                                                                        then proves the fix',
+    '~  coder     codex · gpt-5.3-codex  xhigh was —      auto                               Writes the fix, in the',
+    '                                                                                        files the lead names',
+    '~  reviewer  claude · opus          —                plan was read-only                 Reads the diff and edits',
+    '                                                                                        nothing',
   ]);
   expect(wide[1]!.text.slice(...wide[1]!.effortWas!)).toStrictEqual(
     ' was medium',
   );
   expect(wide[0]!.effortWas).toStrictEqual(undefined);
 
-  const narrow = proposalTable(rows, 74, true);
-
-  expect(narrow.map((line) => line.text)).toStrictEqual([
-    '   lead      clau…  high   default                            Splits the …',
-    '~  tester    clau…  high   acceptEdits was bypassPermissions  Writes the …',
-    '~  coder     code…  xhigh  auto                               Writes the …',
-    '~  reviewer  clau…  —      plan was read-only                 Reads the d…',
-  ]);
-  expect(narrow.some((line) => line.effortWas !== undefined)).toBeFalsy();
-  expect(narrow[1]!.text.slice(...narrow[1]!.was!)).toStrictEqual(
-    ' was bypassPermissions',
+  // Too narrow for its columns beside the changed cells, laid out as opened.
+  expect(proposalTable(rows, 74, true)).toStrictEqual(
+    proposalTable(rows, 74, true, true),
   );
 });
 
@@ -584,4 +602,72 @@ test('opened, a changed cell that wraps breaks before was, and the effort wraps 
     '-  security-review  claude ·                     max     bypassPermissions',
     '                    claude-sonnet-4-5-20250929',
   ]);
+});
+
+test('narrow, every word of agent · model and of the role is kept, each wrapping in its column', () => {
+  const rows = agentRows(EFFORTS, EFFORTS_BEFORE);
+
+  for (const width of [74, 60]) {
+    const lines = proposalTable(rows, width, true);
+    const read = lines.map((line) => line.text).join(' ');
+
+    for (const row of rows) {
+      for (const word of `${row.runtime} ${row.role}`.split(' ')) {
+        expect(read.includes(word), `${word} at ${width}`).toBeTruthy();
+      }
+    }
+
+    expect(lines.some((line) => line.text.includes('…'))).toBeFalsy();
+  }
+});
+
+test('no row of a narrow table is wider than its width, so every word stays in its column', () => {
+  for (const [rows, marked] of [
+    [agentRows(EFFORTS, EFFORTS_BEFORE), true],
+    [agentRows(TEAM), false],
+  ] as const) {
+    for (let width = 70; width >= 48; width--) {
+      const lines = proposalTable(rows, width, marked);
+
+      for (const line of lines) {
+        expect(
+          stringWidth(line.text) <= width,
+          `${width}: ${line.text}`,
+        ).toBeTruthy();
+      }
+    }
+  }
+});
+
+describe('CHD-422 tester: proposal cell preservation', () => {
+  test('narrow marked tables retain long model identifiers and roles through their opened fallback', () => {
+    const model = 'model-with-a-very-long-identifier-and-a-suffix';
+    const changed: Team = {
+      ...TEAM,
+      members: [
+        {
+          ...TEAM.members[0]!,
+          model,
+          role: 'Checks every word and keeps the final role sentence intact.',
+        },
+      ],
+    };
+
+    for (const width of [74, 60, 48]) {
+      const lines = proposalTable(agentRows(changed, TEAM), width, true);
+      const joined = lines.map((line) => line.text).join('');
+
+      expect(joined.replace(/\s+/g, '')).toContain(model);
+      expect(
+        lines
+          .map((line) => line.text)
+          .join(' ')
+          .replace(/\s+/g, ' '),
+      ).toContain(
+        'Checks every word and keeps the final role sentence intact.',
+      );
+      expect(joined).not.toContain('…');
+      expect(lines.every((line) => stringWidth(line.text) <= width)).toBe(true);
+    }
+  });
 });

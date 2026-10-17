@@ -52,8 +52,8 @@ chord codex      # or any other agent
 
 ### Diffs you can read
 
-Edits arrive as numbered, highlighted diffs, folded until you want the whole
-thing (`ctrl+o`).
+Edits arrive as whole, numbered, highlighted diffs, with long lines wrapped
+under their code.
 
 <img src="docs/images/edit.png" alt="An Edit tool call drawn as a coloured diff" width="900">
 
@@ -140,7 +140,7 @@ Inside the window:
 | `alt+←` / `alt+→` | move by word in the prompt                    |
 | `cmd+←` / `cmd+→` | line start/end, where the terminal passes it  |
 | `shift+tab`       | cycle the permission mode                    |
-| `ctrl+o`          | expand tool output and subagents             |
+| `ctrl+o`          | expand Read output and subagents             |
 | `ctrl+x c` / `/new codex` | open another session as a tab        |
 | `ctrl+x 1`…`9`    | go to a tab                                  |
 | `esc`             | interrupt the turn                           |

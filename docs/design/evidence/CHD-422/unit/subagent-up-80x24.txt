@@ -1,0 +1,24 @@
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+ ── ↓ 4 lines below · end to jump to the bottom ───────────────────────────────
+
+ ››› Waiting for permission… (10s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Find the session layer) asks                                           │
+│ Write notes/routing.md                                                       │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

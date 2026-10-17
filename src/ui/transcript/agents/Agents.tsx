@@ -163,7 +163,7 @@ function WorkLineText({ line }: { line: WorkLine }) {
   const colours = useHeadlineColours();
 
   return (
-    <text {...CUT} {...(line.failed ? fg(colours.error) : {})}>
+    <text {...FILL} {...(line.failed ? fg(colours.error) : {})}>
       {headlineText(line.headline, colours, line.arrow || undefined)}
       {line.waiting && <span attributes={DIM}>{WAITING_NOTE}</span>}
     </text>

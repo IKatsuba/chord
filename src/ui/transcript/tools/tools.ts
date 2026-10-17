@@ -15,7 +15,7 @@ import { Chalk } from 'chalk';
 import { type Run, runs } from '../../theme/text.ts';
 import { brush } from '../highlight.ts';
 import type { CodeTones } from '../../theme/theme.ts';
-import { chordHeadline, chordLines, chordWraps, sentText } from './chord.ts';
+import { chordHeadline, chordLines, sentText } from './chord.ts';
 import { wrapLine } from '../message.ts';
 
 /**
@@ -339,14 +339,21 @@ export interface Summary {
 export const SUMMARY_LINES = 3;
 
 /**
- * What the call produced, a few lines of it, the last few of each terminal's
- * and a few rows of each diff unless `expanded`. A call still waiting or
- * running with nothing to show says so, a terminal that has written nothing
- * yet included, unless what ran it has `ended`, when nothing is waiting any
- * more; a failed call with nothing to say still says it failed, so failure
- * never rests on colour alone. With a theme's `tones`, the diffs' code is
- * coloured. With the room its lines have, `width`, what Open and Team handed
- * over is wrapped to it before it is folded.
+ * The kinds of call whose result still folds after `SUMMARY_LINES` lines:
+ * Read's, which is the file, while its rule is open with the owner; every
+ * other result is drawn whole (the owner's answer on CHD-422).
+ */
+const FOLDED_KINDS: ReadonlySet<string> = new Set(['read']);
+
+/**
+ * What the call produced, whole, each diff too; a Read's first few lines
+ * unless `expanded`, and each terminal's last few, as `terminalView` keeps
+ * them. A call still waiting or running with nothing to show says so, a
+ * terminal that has written nothing yet included, unless what ran it has
+ * `ended`, when nothing is waiting any more; a failed call with nothing to
+ * say still says it failed, so failure never rests on colour alone. With a
+ * theme's `tones`, the diffs' code is coloured. With the room its lines
+ * have, `width`, each line is wrapped to it, never cut.
  */
 export function summary(
   call: ToolCall,
@@ -366,12 +373,10 @@ export function summary(
   const lines =
     call.chord === undefined
       ? content.flatMap(contentLines)
-      : width !== undefined && chordWraps(call.chord)
-        ? chordLines(call.chord).flatMap((line) => wrapLine(line, width))
-        : chordLines(call.chord);
+      : chordLines(call.chord);
   const diffs = content.flatMap((item) =>
     item.type === 'diff'
-      ? [diffView(item.path, item.oldText, item.newText, expanded, tones)]
+      ? [diffView(item.path, item.oldText, item.newText, true, tones)]
       : [],
   );
   const terminals = (call.terminals ?? [])
@@ -407,13 +412,18 @@ export function summary(
       ? withError(lines)
       : lines;
 
-  if (expanded || shown.length <= SUMMARY_LINES) {
-    return { lines: shown, hidden: 0, terminals, diffs };
-  }
+  const folds =
+    !expanded &&
+    FOLDED_KINDS.has(call.kind ?? '') &&
+    shown.length > SUMMARY_LINES;
+  const kept = folds ? shown.slice(0, SUMMARY_LINES) : shown;
 
   return {
-    lines: shown.slice(0, SUMMARY_LINES),
-    hidden: shown.length - SUMMARY_LINES,
+    lines:
+      width === undefined
+        ? kept
+        : kept.flatMap((line) => wrapLine(line, width)),
+    hidden: folds ? shown.length - SUMMARY_LINES : 0,
     terminals,
     diffs,
   };

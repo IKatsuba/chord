@@ -3,12 +3,22 @@ import chalk from 'chalk';
 import { draw } from '../../harness.tsx';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
-import type { TurnState } from '../../../../src/session/transcript/types.ts';
+import type {
+  ToolCall,
+  TurnState,
+} from '../../../../src/session/transcript/types.ts';
 import { ChordServerName } from '../../../../src/ui/app/context.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import { CTRL_O, END, send, until, withWindow } from '../../app/render.tsx';
 import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
+import {
+  LONG_DIFF,
+  LONG_JSON,
+  LONG_STDOUT,
+  LONG_TERMINAL,
+} from '../../../fixtures/fake_agent/scenarios/tools.ts';
 import { readFile } from 'node:fs/promises';
+import { serveChord } from '../../../../src/server/server.ts';
 import { join } from 'node:path';
 
 test('tool calls draw their status, their output and a failure', () =>
@@ -128,7 +138,7 @@ test('an escape split between pieces of output is never drawn half', () =>
     expect(window.frame()).toContain('FAILED | 1 failed');
   }));
 
-test("a command's line wider than the screen is cut, not wrapped", () =>
+test("a command's line wider than the screen is wrapped, not cut", () =>
   withWindow(
     async (window) => {
       await send(window, 'shell');
@@ -139,9 +149,14 @@ test("a command's line wider than the screen is cut, not wrapped", () =>
       const lines = window.frame().split('\n');
       const at = lines.findIndex((line) => line.includes('Task te'));
 
-      // OpenTUI's cut keeps both ends of the line, `...` between them.
-      expect(lines[at]?.trimEnd()).toStrictEqual('   ⎿  Task te...no test');
-      expect(lines[at + 1]?.trimEnd()).toStrictEqual('      running 3 tests');
+      // Wrapped at its words, as every result is (CHD-422).
+      expect(
+        lines.slice(at, at + 3).map((line) => line.trimEnd()),
+      ).toStrictEqual([
+        '   ⎿  Task test deno',
+        '      test',
+        '      running 3 tests',
+      ]);
 
       for (const line of lines) {
         expect(
@@ -714,5 +729,204 @@ describe('CHD-415 tester: MCP context and view changes', () => {
         },
         { columns, rows },
       ));
+  }
+});
+
+/** The words of `text`, each as it would be read on screen. */
+function wordsOf(text: string): string[] {
+  return text.split(/\s+/).filter((word) => word !== '');
+}
+
+for (const columns of [80, 120]) {
+  test(`every result longer than a row is wrapped whole at ${columns} columns, never cut or folded`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'longresults');
+        await window.shows('Four long results.');
+
+        const frame = window.frame();
+        // The rows as read, the gutters and the wrapping left out.
+        const read = frame.replace(/\s+/g, ' ');
+
+        expect(!frame.includes('...'), frame).toBeTruthy();
+        expect(!frame.includes('to expand'), frame).toBeTruthy();
+
+        for (const text of [
+          LONG_JSON,
+          LONG_STDOUT,
+          LONG_DIFF.newText,
+          LONG_TERMINAL,
+        ]) {
+          for (const word of wordsOf(text)) {
+            expect(read.includes(word), `${word} is missing`).toBeTruthy();
+          }
+        }
+
+        for (const line of frame.split('\n')) {
+          expect(stringWidth(line) <= columns, line).toBeTruthy();
+        }
+      },
+      { columns, rows: 60 },
+    ));
+}
+
+for (const columns of [80, 120]) {
+  test(`a proposed team's roles wrap in their column and its body is drawn whole at ${columns} columns`, async () => {
+    // propose_team is chord's, and its team names claude and codex.
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'propose');
+          await window.shows('Save team bugfix?');
+
+          const frame = window.frame();
+          const read = frame.replace(/\s+/g, ' ');
+
+          expect(!frame.includes('to expand'), frame).toBeTruthy();
+
+          for (const role of [
+            'Splits the job, says who edits which files, reports to main',
+            'Writes the failing test, then proves the fix',
+            'Writes the fix, in the files the lead names',
+            'Reads the diff and edits nothing',
+          ]) {
+            for (const word of wordsOf(role)) {
+              expect(read.includes(word), `${word} is missing`).toBeTruthy();
+            }
+          }
+
+          // The body's last line, which a fold left out.
+          expect(read).toContain('make, when the job is done');
+        },
+        { columns, rows: 120, server, runtimes: ['fake', 'claude', 'codex'] },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+}
+
+test("a proposed change's body diff wraps its long lines under their code, never clipped, at 80 columns", async () => {
+  const server = serveChord();
+  const bugfix = await readFile(
+    new URL('../../../fixtures/teams/fake/bugfix.md', import.meta.url),
+    'utf8',
+  );
+
+  try {
+    await withWindow(
+      async (window) => {
+        await send(window, 'propose');
+        await window.shows('Replace team bugfix?');
+
+        const read = window.frame().replace(/\s+/g, ' ');
+
+        expect(read).toContain("bugfix.md's body · 10 additions, 6 removals");
+        // A line wider than the row, whole under its number and sign.
+        expect(read).toContain(
+          '5 + 3. coder fixes the code so that test passes. It edits only the files the lead named for it, and never `tests/`.',
+        );
+      },
+      {
+        columns: 80,
+        rows: 120,
+        server,
+        runtimes: ['fake', 'claude', 'codex'],
+        teams: { bugfix },
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+describe('CHD-422 tester: wrapped source-line exceptions', () => {
+  for (const columns of [80, 120]) {
+    test(`Read keeps the first three source lines and terminal the last three at ${columns} columns`, async () => {
+      const source = Array.from(
+        { length: 4 },
+        (_, index) =>
+          `source-${index + 1} ${'one two three four five six seven eight '.repeat(5)}tail-${index + 1}`,
+      );
+      const calls: ToolCall[] = [
+        {
+          id: 'read',
+          title: 'Read notes.txt',
+          kind: 'read',
+          status: 'completed',
+          content: [
+            {
+              type: 'content',
+              content: { type: 'text', text: source.join('\n') },
+            },
+          ],
+        },
+        {
+          id: 'terminal',
+          title: '`test`',
+          kind: 'execute',
+          status: 'failed',
+          terminals: [
+            {
+              id: 'term',
+              output: source.join('\n'),
+              exited: true,
+              exitCode: 2,
+            },
+          ],
+        },
+      ];
+
+      for (const call of calls) {
+        for (const expanded of [false, true]) {
+          const drawn = await draw(
+            <TranscriptEntry
+              entry={{ kind: 'tool', turnId: 't', call }}
+              turn={{ status: 'idle' }}
+              agent='fake'
+              expanded={expanded}
+              width={columns}
+            />,
+            { columns, rows: 60 },
+          );
+
+          try {
+            const shown = stripAnsi(drawn.frame());
+            const read = shown.replace(/\s+/g, ' ');
+            const kept = expanded
+              ? source
+              : call.id === 'read'
+                ? source.slice(0, 3)
+                : source.slice(-3);
+
+            for (const line of kept) {
+              expect(read).toContain(line);
+            }
+
+            expect(shown).not.toContain('...');
+            expect(
+              shown.split('\n').every((row) => stringWidth(row) <= columns),
+            ).toBe(true);
+
+            if (expanded) {
+              expect(shown).not.toContain('to expand');
+            } else {
+              expect(shown).toContain('… +1 line (ctrl+o to expand)');
+              expect(shown).not.toContain(
+                call.id === 'read' ? 'tail-4' : 'source-1',
+              );
+            }
+
+            if (call.id === 'terminal') {
+              expect(shown).toContain('Exit code 2');
+            }
+          } finally {
+            await drawn.unmount();
+          }
+        }
+      }
+    });
   }
 });

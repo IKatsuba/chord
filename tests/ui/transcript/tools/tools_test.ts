@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { ToolCall } from '../../../../src/session/transcript/types.ts';
 import { TextAttributes } from '@opentui/core';
 import stringWidth from 'string-width';
-import type { Run } from '../../../../src/ui/theme/text.ts';
+import { runs, type Run } from '../../../../src/ui/theme/text.ts';
 import {
   firstLine,
   type Headline,
@@ -399,7 +399,7 @@ test('a call left unfinished by what ran it, which has ended, waits on nothing',
   ).toStrictEqual(['Failed']);
 });
 
-test('long output keeps three lines and counts the rest', () => {
+test("long output is drawn whole, and only a Read's keeps three lines and counts the rest", () => {
   const call: ToolCall = {
     id: 'a',
     status: 'completed',
@@ -407,6 +407,12 @@ test('long output keeps three lines and counts the rest', () => {
   };
 
   expect(summary(call, false)).toStrictEqual({
+    lines: ['1', '2', '3', '4', '5'],
+    hidden: 0,
+    terminals: [],
+    diffs: [],
+  });
+  expect(summary({ ...call, kind: 'read' }, false)).toStrictEqual({
     lines: ['1', '2', '3'],
     hidden: 2,
     terminals: [],
@@ -419,8 +425,30 @@ test('long output keeps three lines and counts the rest', () => {
     diffs: [],
   });
   expect(
-    summary({ ...call, content: [text('1\n2\n3')] }, false).hidden,
+    summary({ ...call, kind: 'read', content: [text('1\n2\n3')] }, false)
+      .hidden,
   ).toStrictEqual(0);
+});
+
+test("a result line longer than its room wraps at its words, a Read's too, never cut", () => {
+  const line = 'one two three four five six seven eight nine ten';
+
+  for (const kind of ['other', 'read'] as const) {
+    const { lines, hidden } = summary(
+      { id: 'a', status: 'completed', kind, content: [text(line)] },
+      false,
+      undefined,
+      false,
+      20,
+    );
+
+    expect(lines).toStrictEqual([
+      'one two three four',
+      'five six seven eight',
+      'nine ten',
+    ]);
+    expect(hidden).toStrictEqual(0);
+  }
 });
 
 test('a failed call says Error before its output', () => {
@@ -518,7 +546,7 @@ test('a failing exit is the failure, in words, without Failed', () => {
   expect(summary(failed(0), false).lines).toStrictEqual(['Failed']);
 });
 
-test('what Team and Open handed over wraps to the row and folds after three lines', () => {
+test('what Team and Open handed over wraps to the row, whole', () => {
   const job =
     'Issue 214: a string at the end of a line loses its closing ' +
     'quote. readString stops at the newline before it consumes the quote. ' +
@@ -540,16 +568,15 @@ test('what Team and Open handed over wraps to the row and folds after three line
   });
 
   for (const tool of ['run_team', 'open_agent'] as const) {
-    const folded = summary(call(tool), false, undefined, false, 40);
+    for (const expanded of [false, true]) {
+      const whole = summary(call(tool), expanded, undefined, false, 40);
 
-    expect(folded.lines.length).toStrictEqual(3);
-    expect(folded.lines.every((line) => line.length <= 40)).toStrictEqual(true);
-    expect(folded.hidden > 0).toStrictEqual(true);
-
-    const whole = summary(call(tool), true, undefined, false, 40);
-
-    expect(whole.lines.join(' ')).toStrictEqual(job);
-    expect(whole.hidden).toStrictEqual(0);
+      expect(whole.lines.every((line) => line.length <= 40)).toStrictEqual(
+        true,
+      );
+      expect(whole.lines.join(' ')).toStrictEqual(job);
+      expect(whole.hidden).toStrictEqual(0);
+    }
   }
 });
 
@@ -762,5 +789,37 @@ describe('CHD-419 tester: wrapper authority and legacy title fallback', () => {
         'chord-2',
       ),
     ).toEqual({ name: 'List agents' });
+  });
+});
+
+describe('CHD-422 tester: wrapped result styling', () => {
+  test('a coloured result stays coloured across all wrapped rows and resets for the following line', () => {
+    const coloured = 'one two three four five six seven eight nine ten';
+    const shown = summary(
+      {
+        id: 'styled',
+        kind: 'other',
+        status: 'completed',
+        content: [text(`\x1b[31m${coloured}\x1b[0m\nplain-end`)],
+      },
+      false,
+      undefined,
+      false,
+      12,
+    );
+    const painted = shown.lines.slice(0, -1).flatMap((line) => runs(line));
+
+    expect(shown.hidden).toBe(0);
+    expect(shown.lines.length > 3).toBe(true);
+    expect(
+      painted
+        .map((run) => run.text)
+        .join(' ')
+        .replace(/\s+/g, ' '),
+    ).toBe(coloured);
+    expect(painted.every((run) => run.fg !== undefined)).toBe(true);
+    expect(runs(shown.lines.at(-1)!)).toStrictEqual([
+      { text: 'plain-end', attributes: 0 },
+    ]);
   });
 });

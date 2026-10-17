@@ -132,18 +132,6 @@ export function sentText(call: ChordCall): string | undefined {
     : undefined;
 }
 
-/**
- * Whether the lines under the call are wrapped at the window's edge rather
- * than cut: what an agent or a team was handed is read as a message is, and
- * every other call keeps its one row a line.
- */
-export function chordWraps(call: ChordCall): boolean {
-  return (
-    call.error === undefined &&
-    (call.tool === 'open_agent' || call.tool === 'run_team')
-  );
-}
-
 /** `a, b, c, d, +3 more`. */
 function names(all: readonly string[]): string {
   const shown = all.slice(0, NAMED);

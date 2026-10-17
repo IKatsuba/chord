@@ -1,0 +1,24 @@
+           leads agree on files among themselves.
+      14 + - Nobody commits. The person commits.
+      15
+      16   ## Reporting
+      17
+      14 - The lead writes to main when the job is done or cannot be done.
+      18 + The lead writes to main when it needs a decision only the person
+           can make, when the job is done, and when it cannot be done.
+
+ ››› Waiting for you… (8s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                         │
+│                                                                              │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                          │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

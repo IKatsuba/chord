@@ -7,8 +7,9 @@
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
   (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
-  `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `unordered`, `edit`,
-  `rewrite`, `headlines`, `heredoc`, `longcommand`, `mcpnote`, `codexmcpnote`),
+  `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `longresults`,
+  `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
+  `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `twins`, `mcpask`, `bigask`, `bigasktwice`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
   `shell.ts` (`shell`,
@@ -25,7 +26,8 @@
   `sessions.ts` each session's directory, MCP servers, model, mode and
   effort with the config options that offer them.
   A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `stepslater`, `calls`,
-  `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
+  `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
+  `longcommand`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `plan`, `proposal`,
   `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
   `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
@@ -33,6 +35,8 @@
   `subagent`, `subagentupdate`, `subagentstates`, `chordtools`, `codexchordcalls`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second;
+  `longresults` plays an MCP result, command output, an edit and terminal
+  output with long lines, to check wrapping;
   `headlines` plays a heredoc, a long one-line command, an MCP call and a
   300-line heredoc; `heredoc` and `longcommand` play the Bash calls from
   the Claude Code capture in `docs/design/CHD-393.md`, and `mcpnote` its

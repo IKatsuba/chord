@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import type { Team } from '../../../../src/teams.ts';
 import {
@@ -637,4 +637,37 @@ test('no row of a narrow table is wider than its width, so every word stays in i
       }
     }
   }
+});
+
+describe('CHD-422 tester: proposal cell preservation', () => {
+  test('narrow marked tables retain long model identifiers and roles through their opened fallback', () => {
+    const model = 'model-with-a-very-long-identifier-and-a-suffix';
+    const changed: Team = {
+      ...TEAM,
+      members: [
+        {
+          ...TEAM.members[0]!,
+          model,
+          role: 'Checks every word and keeps the final role sentence intact.',
+        },
+      ],
+    };
+
+    for (const width of [74, 60, 48]) {
+      const lines = proposalTable(agentRows(changed, TEAM), width, true);
+      const joined = lines.map((line) => line.text).join('');
+
+      expect(joined.replace(/\s+/g, '')).toContain(model);
+      expect(
+        lines
+          .map((line) => line.text)
+          .join(' ')
+          .replace(/\s+/g, ' '),
+      ).toContain(
+        'Checks every word and keeps the final role sentence intact.',
+      );
+      expect(joined).not.toContain('…');
+      expect(lines.every((line) => stringWidth(line.text) <= width)).toBe(true);
+    }
+  });
 });

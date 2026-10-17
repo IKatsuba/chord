@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { ToolCall } from '../../../../src/session/transcript/types.ts';
 import { TextAttributes } from '@opentui/core';
 import stringWidth from 'string-width';
-import type { Run } from '../../../../src/ui/theme/text.ts';
+import { runs, type Run } from '../../../../src/ui/theme/text.ts';
 import {
   firstLine,
   type Headline,
@@ -789,5 +789,37 @@ describe('CHD-419 tester: wrapper authority and legacy title fallback', () => {
         'chord-2',
       ),
     ).toEqual({ name: 'List agents' });
+  });
+});
+
+describe('CHD-422 tester: wrapped result styling', () => {
+  test('a coloured result stays coloured across all wrapped rows and resets for the following line', () => {
+    const coloured = 'one two three four five six seven eight nine ten';
+    const shown = summary(
+      {
+        id: 'styled',
+        kind: 'other',
+        status: 'completed',
+        content: [text(`\x1b[31m${coloured}\x1b[0m\nplain-end`)],
+      },
+      false,
+      undefined,
+      false,
+      12,
+    );
+    const painted = shown.lines.slice(0, -1).flatMap((line) => runs(line));
+
+    expect(shown.hidden).toBe(0);
+    expect(shown.lines.length > 3).toBe(true);
+    expect(
+      painted
+        .map((run) => run.text)
+        .join(' ')
+        .replace(/\s+/g, ' '),
+    ).toBe(coloured);
+    expect(painted.every((run) => run.fg !== undefined)).toBe(true);
+    expect(runs(shown.lines.at(-1)!)).toStrictEqual([
+      { text: 'plain-end', attributes: 0 },
+    ]);
   });
 });

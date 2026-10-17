@@ -3,7 +3,10 @@ import chalk from 'chalk';
 import { draw } from '../../harness.tsx';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
-import type { TurnState } from '../../../../src/session/transcript/types.ts';
+import type {
+  ToolCall,
+  TurnState,
+} from '../../../../src/session/transcript/types.ts';
 import { ChordServerName } from '../../../../src/ui/app/context.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import { CTRL_O, END, send, until, withWindow } from '../../app/render.tsx';
@@ -836,5 +839,94 @@ test("a proposed change's body diff wraps its long lines under their code, never
     );
   } finally {
     await server.close();
+  }
+});
+
+describe('CHD-422 tester: wrapped source-line exceptions', () => {
+  for (const columns of [80, 120]) {
+    test(`Read keeps the first three source lines and terminal the last three at ${columns} columns`, async () => {
+      const source = Array.from(
+        { length: 4 },
+        (_, index) =>
+          `source-${index + 1} ${'one two three four five six seven eight '.repeat(5)}tail-${index + 1}`,
+      );
+      const calls: ToolCall[] = [
+        {
+          id: 'read',
+          title: 'Read notes.txt',
+          kind: 'read',
+          status: 'completed',
+          content: [
+            {
+              type: 'content',
+              content: { type: 'text', text: source.join('\n') },
+            },
+          ],
+        },
+        {
+          id: 'terminal',
+          title: '`test`',
+          kind: 'execute',
+          status: 'failed',
+          terminals: [
+            {
+              id: 'term',
+              output: source.join('\n'),
+              exited: true,
+              exitCode: 2,
+            },
+          ],
+        },
+      ];
+
+      for (const call of calls) {
+        for (const expanded of [false, true]) {
+          const drawn = await draw(
+            <TranscriptEntry
+              entry={{ kind: 'tool', turnId: 't', call }}
+              turn={{ status: 'idle' }}
+              agent='fake'
+              expanded={expanded}
+              width={columns}
+            />,
+            { columns, rows: 60 },
+          );
+
+          try {
+            const shown = stripAnsi(drawn.frame());
+            const read = shown.replace(/\s+/g, ' ');
+            const kept = expanded
+              ? source
+              : call.id === 'read'
+                ? source.slice(0, 3)
+                : source.slice(-3);
+
+            for (const line of kept) {
+              expect(read).toContain(line);
+            }
+
+            expect(shown).not.toContain('...');
+            expect(
+              shown.split('\n').every((row) => stringWidth(row) <= columns),
+            ).toBe(true);
+
+            if (expanded) {
+              expect(shown).not.toContain('to expand');
+            } else {
+              expect(shown).toContain('… +1 line (ctrl+o to expand)');
+              expect(shown).not.toContain(
+                call.id === 'read' ? 'tail-4' : 'source-1',
+              );
+            }
+
+            if (call.id === 'terminal') {
+              expect(shown).toContain('Exit code 2');
+            }
+          } finally {
+            await drawn.unmount();
+          }
+        }
+      }
+    });
   }
 });

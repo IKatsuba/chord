@@ -1,6 +1,6 @@
 {
   "name": "@chorded/chord",
-  "version": "0.55.1",
+  "version": "0.55.2",
   "private": true,
   "license": "MIT",
   "type": "module",

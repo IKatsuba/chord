@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -27,6 +27,11 @@ import {
 } from '../../src/session/transcript/types.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { cutNote } from '../../src/session/cut_off.ts';
+import {
+  CUT_MESSAGE,
+  CUT_OPEN,
+} from '../fixtures/fake_agent/scenarios/chord_tools.ts';
 
 /**
  * A session with one option, `effort`, held in memory, that answers a change
@@ -1156,6 +1161,146 @@ test('a message held for an answer goes as the next turn when Esc interrupts the
     ).not.toHaveProperty('afterAnswer');
   }));
 
+/**
+ * The order of a call's end, the messages that went into the turn and the
+ * turn's end among `events`.
+ */
+function steerOrder(events: readonly ConversationEvent[]): string[] {
+  return events.flatMap((event) =>
+    event.type === 'update' &&
+    event.update.sessionUpdate === 'tool_call_update' &&
+    event.update.status === 'completed'
+      ? ['call ended']
+      : event.type === 'prompt' && event.into !== undefined
+        ? [`into: ${event.text}`]
+        : event.type === 'result'
+          ? ['ended']
+          : [],
+  );
+}
+
+/** Until the turn on the fake has its call open. */
+async function callOpen(events: readonly ConversationEvent[]): Promise<void> {
+  await until(() =>
+    events.some(
+      (event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'tool_call_update' &&
+        event.update.status === 'in_progress',
+    ),
+  );
+}
+
+test("on Claude's adapter, a message told while the turn's call is open is held until the call ends, then goes into the same turn", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+
+    let queued = 0;
+
+    expect(
+      conversation.tell(MAIN, 'Then the docs.', () => (queued += 1)),
+    ).toStrictEqual('sent');
+    expect(
+      !events.some((event) => event.type === 'prompt' && event.into),
+    ).toBeTruthy();
+    await until(() => events.some((event) => event.type === 'result'));
+
+    expect(steerOrder(events)).toStrictEqual([
+      'call ended',
+      'into: Then the docs.',
+      'ended',
+    ]);
+    expect(saidIn(events)).toContain('Read the message from main.');
+    // Held for the call, not the person: nothing says it waits on an answer.
+    expect(!events.some((event) => event.type === 'queued')).toBeTruthy();
+    expect(queued).toStrictEqual(0);
+  }));
+
+test("on Claude's adapter, a message waits only for the calls open when it was told, not for one opened after", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('overlap');
+    await until(() =>
+      events.some(
+        (event) =>
+          event.type === 'update' &&
+          event.update.sessionUpdate === 'tool_call' &&
+          event.update.toolCallId === 'overlap-a',
+      ),
+    );
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    const order = events.flatMap((event) =>
+      event.type === 'update' &&
+      (event.update.sessionUpdate === 'tool_call' ||
+        event.update.sessionUpdate === 'tool_call_update')
+        ? [`${event.update.toolCallId.slice(-1)} ${event.update.status}`]
+        : event.type === 'prompt' && event.into !== undefined
+          ? [`into: ${event.text}`]
+          : [],
+    );
+
+    // `b` is still running when it goes in, as the owner's answer has it.
+    expect(order).toStrictEqual([
+      'a in_progress',
+      'b in_progress',
+      'a completed',
+      'into: Then the docs.',
+      'b completed',
+    ]);
+  }));
+
+test("on Claude's adapter, two messages held behind an open call go into the turn in the order they were told", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+    conversation.tell(MAIN, 'Run the tests.');
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    expect(steerOrder(events)).toStrictEqual([
+      'call ended',
+      'into: Run the tests.',
+      'into: Then the docs.',
+      'ended',
+    ]);
+  }));
+
+test("on Claude's adapter, a message held behind an open call goes as the next turn when the turn ends first", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+
+    let queued = 0;
+
+    conversation.tell(MAIN, 'Then the docs.', () => (queued += 1));
+    conversation.interrupt();
+    await until(
+      () => events.filter((event) => event.type === 'result').length === 2,
+    );
+
+    expect(promptsIn(events)).toStrictEqual([
+      ['bash', undefined],
+      ['Then the docs.', undefined],
+    ]);
+    expect(queued).toStrictEqual(1);
+  }));
+
+test("on Codex's adapter, whose steer cuts nothing, a message told while the turn's call is open goes into it at once", () =>
+  onFake(['--steering', 'codex'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    expect(steerOrder(events)).toStrictEqual([
+      'into: Then the docs.',
+      'call ended',
+      'ended',
+    ]);
+  }));
+
 /** Each prompt's text among `events`, with the turn it went into. */
 function promptsIn(
   events: readonly ConversationEvent[],
@@ -1677,4 +1822,629 @@ test('a message told while the prompt waits to go, as one with mentions does, is
   ).toMatchObject({ turnId: firstTurn(events) });
   expect(!events.some((event) => event.type === 'self_started')).toBeTruthy();
   await conversation.close();
+});
+
+/**
+ * A session on the fake that names chord's server `chord`, as the window
+ * gives it one, and keeps every prompt it sends the agent in `sent`.
+ */
+function noting(sent: string[]) {
+  return (session: Session): Session => {
+    const prompt = session.prompt.bind(session);
+
+    return Object.assign(session, {
+      chordServer: {
+        type: 'http' as const,
+        name: 'chord',
+        url: 'http://127.0.0.1:1/mcp',
+        headers: [],
+      },
+      prompt: ((text, ...rest) => {
+        sent.push(text);
+
+        return prompt(text, ...rest);
+      }) as Session['prompt'],
+    });
+  };
+}
+
+/** Until `count` turns have ended among `events`. */
+function ended(events: readonly ConversationEvent[], count: number) {
+  return until(
+    () => events.filter((event) => event.type === 'result').length === count,
+  );
+}
+
+test("chord's calls the agent cut off before they reached chord are told to it ahead of its next turn, once, a line each", async () => {
+  const sent: string[] = [];
+
+  await onFake(
+    ['--steering', 'claude'],
+    async (conversation, events) => {
+      conversation.send('cutcalls');
+      await ended(events, 1);
+      conversation.send('text');
+      await ended(events, 2);
+      conversation.send('text');
+      await ended(events, 3);
+
+      expect(sent[1]).toStrictEqual(
+        `<message from="chord">\n${cutNote([
+          { tool: 'send_message', input: { to: 'main', text: CUT_MESSAGE } },
+          { tool: 'open_agent', input: CUT_OPEN },
+        ])}\n</message>\n\ntext`,
+      );
+      expect(sent[2]).toStrictEqual('text');
+      expect(saidIn(events)).toContain(
+        "Received chord's note: Your send_message to @main",
+      );
+      // The person's prompt is drawn as they typed it.
+      expect(
+        events.flatMap((event) =>
+          event.type === 'prompt' ? [event.text] : [],
+        ),
+      ).toStrictEqual(['cutcalls', 'text', 'text']);
+    },
+    noting(sent),
+  );
+});
+
+test('a cut call chord served after all reached it, and the note names only the calls that did not', async () => {
+  const sent: string[] = [];
+  const input = { to: 'main', text: CUT_MESSAGE };
+
+  await onFake(
+    ['--steering', 'claude'],
+    async (conversation, events) => {
+      conversation.send('cutcalls');
+      // The send_message\'s arguments came: chord serves it as the batch waits.
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call_update' &&
+            JSON.stringify(event.update.rawInput) === JSON.stringify(input),
+        ),
+      );
+      conversation.served({
+        tool: 'send_message',
+        input,
+        answer: { delivered: 'sent', to: 'main' },
+      });
+      await ended(events, 1);
+      conversation.send('text');
+      await ended(events, 2);
+
+      expect(sent[1]).toStrictEqual(
+        `<message from="chord">\n${cutNote([
+          { tool: 'open_agent', input: CUT_OPEN },
+        ])}\n</message>\n\ntext`,
+      );
+    },
+    noting(sent),
+  );
+});
+
+test('cut calls are told once each, in the order they were made, whatever order they failed in', async () => {
+  const sent: string[] = [];
+
+  await onFake(
+    ['--steering', 'claude'],
+    async (conversation, events) => {
+      conversation.send('cutcallsback');
+      await ended(events, 1);
+      conversation.send('text');
+      await ended(events, 2);
+
+      expect(sent[1]).toStrictEqual(
+        `<message from="chord">\n${cutNote([
+          { tool: 'send_message', input: { to: 'main', text: CUT_MESSAGE } },
+          { tool: 'open_agent', input: CUT_OPEN },
+          { tool: 'list_sessions', input: {} },
+        ])}\n</message>\n\ntext`,
+      );
+    },
+    noting(sent),
+  );
+});
+
+test('a cut call is told though chord served another tool with the same arguments', async () => {
+  const sent: string[] = [];
+
+  await onFake(
+    ['--steering', 'claude'],
+    async (conversation, events) => {
+      conversation.send('cutcallsback');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.title === 'mcp__chord__list_sessions',
+        ),
+      );
+      // list_agents({}) served: the cut list_sessions({}) is not it.
+      conversation.served({ tool: 'list_agents', input: {}, answer: {} });
+      await ended(events, 1);
+      conversation.send('text');
+      await ended(events, 2);
+
+      expect(sent[1]).toContain(
+        'Your list_sessions call was cut off before it reached chord',
+      );
+    },
+    noting(sent),
+  );
+});
+
+test('a note a prompt never took stays with its session, never the one clear starts after it', async () => {
+  const opened: {
+    prompts: string[];
+    update: (update: SessionUpdate) => void;
+    turns: {
+      went: (links: readonly never[] | undefined) => void;
+      end: () => void;
+    }[];
+  }[] = [];
+  const open = () => {
+    const { session } = heldSession();
+    const own: (typeof opened)[number] = {
+      prompts: [],
+      update: () => {},
+      turns: [],
+    };
+
+    opened.push(own);
+
+    return Promise.resolve(
+      Object.assign(session, {
+        chordServer: {
+          type: 'http' as const,
+          name: 'chord',
+          url: 'http://127.0.0.1:1/mcp',
+          headers: [],
+        },
+        steers: () => false,
+        cutsCallsOnSteer: () => true,
+        subscribe: (listener: (update: SessionUpdate) => void) => {
+          own.update = listener;
+
+          return () => {};
+        },
+        prompt: (text: string) => {
+          const sent = Promise.withResolvers<readonly never[] | undefined>();
+          const result = Promise.withResolvers<TurnResult>();
+
+          own.prompts.push(text);
+          own.turns.push({
+            went: sent.resolve,
+            end: () =>
+              result.resolve({ status: 'completed', stopReason: 'end_turn' }),
+          });
+
+          return {
+            id: text,
+            sent: sent.promise,
+            result: result.promise,
+            cancel: () => Promise.resolve(),
+          };
+        },
+      }),
+    );
+  };
+
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(open, (event) => events.push(event));
+  const connected = (count: number) =>
+    until(
+      () =>
+        events.filter((event) => event.type === 'connected').length === count,
+    );
+
+  conversation.start();
+  await connected(1);
+
+  const [first] = opened;
+
+  conversation.send('first');
+  await until(() => first!.turns.length === 1);
+  first!.turns[0]!.went([]);
+  await went();
+  first!.update({
+    sessionUpdate: 'tool_call',
+    toolCallId: 'cut',
+    title: 'mcp__chord__send_message',
+    status: 'pending',
+    rawInput: { to: 'main', text: 'Hi' },
+  });
+  first!.update({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: 'cut',
+    status: 'failed',
+    _meta: { claudeCode: { nonExecutionKind: 'interrupted' } },
+  });
+  first!.turns[0]!.end();
+  await ended(events, 1);
+
+  // The next prompt takes the note but has not gone when clear starts anew.
+  conversation.send('second');
+  await until(() => first!.turns.length === 2);
+  expect(first!.prompts[1]).toContain('Your send_message to @main');
+  conversation.clear();
+  await connected(2);
+  first!.turns[1]!.went(undefined);
+  first!.turns[1]!.end();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  conversation.send('third');
+  await until(() => opened[1]!.prompts.length === 1);
+  expect(opened[1]!.prompts).toStrictEqual(['third']);
+});
+
+describe('CHD-417 tester: held steer lifecycle', () => {
+  test('serialized messages keep separate snapshots when the second call opens between them', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      const has = (id: string) =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.toolCallId === id,
+        );
+
+      conversation.send('overlap');
+      await until(() => has('overlap-a'));
+      conversation.tell(MAIN, 'First.');
+      await until(() => has('overlap-b'));
+      conversation.tell(MAIN, 'Second.');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      const order = events.flatMap((event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'tool_call_update' &&
+        event.update.status === 'completed'
+          ? [event.update.toolCallId]
+          : event.type === 'prompt' && event.into !== undefined
+            ? [event.text]
+            : [],
+      );
+
+      expect(order).toStrictEqual([
+        'overlap-a',
+        'First.',
+        'overlap-b',
+        'Second.',
+      ]);
+      expect(
+        promptsIn(events)
+          .slice(1)
+          .map(([, into]) => into),
+      ).toStrictEqual([firstTurn(events), firstTurn(events)]);
+    }));
+
+  test('a failed snapshotted call releases its message before a later call ends', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('overlapfail');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.toolCallId === 'overlapfail-a',
+        ),
+      );
+      conversation.tell(MAIN, 'After the failed call.');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      const order = events.flatMap((event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'tool_call_update'
+          ? [`${event.update.toolCallId}: ${event.update.status}`]
+          : event.type === 'prompt' && event.into !== undefined
+            ? [event.text]
+            : [],
+      );
+
+      expect(order).toStrictEqual([
+        'overlapfail-a: failed',
+        'After the failed call.',
+        'overlapfail-b: completed',
+      ]);
+    }));
+
+  for (const answer of ['allow', 'deny']) {
+    test(`a permission ${answer} releases the message only after the other top-level call ends`, () =>
+      onFake(['--steering', 'claude'], async (conversation, events) => {
+        conversation.send('overlapask');
+        await until(() =>
+          events.some((event) => event.type === 'permission_requested'),
+        );
+
+        const asked = events.find(
+          (event) => event.type === 'permission_requested',
+        );
+
+        assert(asked?.type === 'permission_requested');
+        assert(asked.permission.toolCallId !== undefined);
+        expect(conversation.tell(MAIN, 'After both calls.')).toBe('queued');
+        conversation.choose(asked.permission.id, answer);
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'prompt' && event.text === 'After both calls.',
+          ),
+        );
+
+        const sent = events.findIndex(
+          (event) =>
+            event.type === 'prompt' && event.text === 'After both calls.',
+        );
+        const ended = (id: string, status: string) =>
+          events.findIndex(
+            (event) =>
+              event.type === 'update' &&
+              event.update.sessionUpdate === 'tool_call_update' &&
+              event.update.toolCallId === id &&
+              event.update.status === status,
+          );
+        const write = ended(
+          asked.permission.toolCallId,
+          answer === 'allow' ? 'completed' : 'failed',
+        );
+        const other = ended('overlapask-a', 'completed');
+
+        expect(write >= 0).toBe(true);
+        expect(other > write).toBe(true);
+        expect(sent > other).toBe(true);
+      }));
+  }
+
+  test('an open subagent-only call never holds a steer into its parent', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('subagentcall');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.subagentId !== undefined &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.status === 'in_progress',
+        ),
+      );
+      conversation.tell(MAIN, 'For the parent.');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      const order = events.flatMap((event) =>
+        event.type === 'update' &&
+        event.subagentId !== undefined &&
+        event.update.sessionUpdate === 'tool_call_update' &&
+        event.update.status === 'completed'
+          ? ['child ended']
+          : event.type === 'prompt' && event.into !== undefined
+            ? [event.text]
+            : [],
+      );
+
+      expect(order).toStrictEqual(['For the parent.', 'child ended']);
+    }));
+
+  for (const action of ['clear', 'close'] as const) {
+    test(`${action} discards a held steer without delivering it to the old or new session`, async () => {
+      const steered: string[] = [];
+      const pids: number[] = [];
+
+      await onFake(
+        ['--steering', 'claude'],
+        async (conversation, events) => {
+          conversation.send('bash');
+          await callOpen(events);
+          conversation.tell(MAIN, 'Must be discarded.');
+          expect(steered).toStrictEqual([]);
+
+          if (action === 'clear') {
+            conversation.clear();
+            await until(
+              () =>
+                events.filter((event) => event.type === 'connected').length ===
+                2,
+            );
+            conversation.send('slow');
+            await until(() => saidIn(events).includes('Working'));
+            conversation.tell(MAIN, 'New session only.');
+            await until(() => steered.length === 1);
+            await until(() =>
+              saidIn(events).includes('Read the message from main.'),
+            );
+            expect(steered[0]).toContain('New session only.');
+            conversation.interrupt();
+          } else {
+            await conversation.close();
+          }
+
+          expect(steered.join('\n')).not.toContain('Must be discarded.');
+          expect(promptsIn(events).map(([text]) => text)).not.toContain(
+            'Must be discarded.',
+          );
+        },
+        (session) => {
+          pids.push(...session.agentPids);
+
+          const steer = session.steer.bind(session);
+
+          session.steer = (text) => {
+            steered.push(text);
+
+            return steer(text);
+          };
+
+          return session;
+        },
+      );
+
+      expect(pids.length > 0).toBeTruthy();
+
+      for (const pid of pids) {
+        expect(await isAlive(pid), `fake agent ${pid} survived ${action}`).toBe(
+          false,
+        );
+      }
+    });
+  }
+});
+
+describe('CHD-417 tester: cut-call note delivery', () => {
+  test('a queued teammate turn takes the ordered note once without drawing a chord message row', async () => {
+    const sent: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send('cutcallsback');
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'update' &&
+              event.update.sessionUpdate === 'tool_call',
+          ),
+        );
+        expect(conversation.deliver(MAIN, 'Continue the review.')).toBe(
+          'queued',
+        );
+        await ended(events, 2);
+        conversation.send('text');
+        await ended(events, 3);
+
+        expect(sent[1]).toContain('<message from="chord">');
+        expect(sent[1]!.indexOf('Your send_message')).toBeLessThan(
+          sent[1]!.indexOf('Your open_agent'),
+        );
+        expect(sent[1]!.indexOf('Your open_agent')).toBeLessThan(
+          sent[1]!.indexOf('Your list_sessions'),
+        );
+        expect(sent[1]).toEndWith(
+          '<message from="main">\nContinue the review.\n</message>',
+        );
+        expect(sent[2]).toBe('text');
+        expect(
+          events.some(
+            (event) => event.type === 'prompt' && event.from?.name === 'chord',
+          ),
+        ).toBe(false);
+      },
+      noting(sent),
+    );
+  });
+
+  test('a prompt cancelled before it goes restores the note for this session only, once', async () => {
+    const attempted: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send('cutcalls');
+        await ended(events, 1);
+        conversation.send('cancel-before-send');
+        await ended(events, 2);
+        conversation.send('text');
+        await ended(events, 3);
+        conversation.send('text');
+        await ended(events, 4);
+
+        expect(attempted[1]).toContain('Your send_message to @main');
+        expect(attempted[2]).toContain('Your send_message to @main');
+        expect(attempted[2]!.match(/Your send_message/g)).toHaveLength(1);
+        expect(attempted[3]).toBe('text');
+      },
+      (session) => {
+        const observed = noting(attempted)(session);
+        const prompt = observed.prompt.bind(observed);
+
+        observed.prompt = (text, ...rest) => {
+          if (text.endsWith('cancel-before-send')) {
+            attempted.push(text);
+
+            return {
+              id: 'unsent',
+              sent: Promise.resolve(undefined),
+              result: Promise.resolve({
+                status: 'cancelled',
+                stopReason: 'cancelled',
+              }),
+              cancel: () => Promise.resolve(),
+            };
+          }
+
+          return prompt(text, ...rest);
+        };
+
+        return observed;
+      },
+    );
+  });
+
+  test('replayed cut-call updates still mark their rows but schedule no new note', async () => {
+    let history: TranscriptAction[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send('cutcalls');
+        await ended(events, 1);
+
+        history = [
+          { type: 'prompt', turnId: 'history-1', text: 'cutcalls', at: 0 },
+          ...events.flatMap((event): TranscriptAction[] =>
+            event.type === 'update'
+              ? [{ type: 'update', turnId: 'history-1', update: event.update }]
+              : [],
+          ),
+        ];
+      },
+      noting([]),
+    );
+
+    const sent: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        const replayed = history.reduce(reduceTranscript, emptyTranscript);
+
+        expect(
+          replayed.entries.filter(
+            (entry) => entry.kind === 'tool' && entry.call.cut,
+          ),
+        ).toHaveLength(2);
+        conversation.send('text');
+        await ended(events, 1);
+        expect(sent).toStrictEqual(['text']);
+      },
+      (session) =>
+        Object.assign(noting(sent)(session), { history: () => history }),
+    );
+  });
+
+  test('an interrupted call on a different server schedules no chord retry note', async () => {
+    const sent: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send('cutcalls');
+        await ended(events, 1);
+        conversation.send('text');
+        await ended(events, 2);
+        expect(sent[1]).toBe('text');
+      },
+      (session) =>
+        Object.assign(noting(sent)(session), {
+          chordServer: {
+            type: 'http' as const,
+            name: 'chord-2',
+            url: 'http://127.0.0.1:1/mcp',
+            headers: [],
+          },
+        }),
+    );
+  });
 });

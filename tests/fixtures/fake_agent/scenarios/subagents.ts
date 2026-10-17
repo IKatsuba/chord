@@ -350,6 +350,43 @@ async function readAll(
 }
 
 export const SUBAGENTS = {
+  // One subagent whose call is the only one open: the parent has none of
+  // its own while the subagent's `sleep 2` runs, then it ends.
+  async subagentcall(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const open: Children = new Map();
+
+    try {
+      const child = await spawn(turn, open, 'sleeper', 'Sleep a while');
+      const id = await call(
+        child,
+        'sleep',
+        { title: '`sleep 2`', kind: 'execute' },
+        'in_progress',
+      );
+
+      await pause(turn.signal, SUBAGENT_STEP_MS);
+      await child.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: id,
+        status: 'completed',
+      });
+      await finish(child.sessionId, open, 'completed');
+      await turn.say('The sleeper is done.');
+    } finally {
+      for (const id of [...open.keys()]) {
+        await finish(id, open, 'cancelled');
+      }
+    }
+
+    return 'end_turn';
+  },
+
   // Subagents as Claude's and Codex's adapters send them to a client that
   // takes them: two spawned back to back, one with a plan, calls, a subagent
   // of its own and a permission to ask, the other failing; then, alone, a

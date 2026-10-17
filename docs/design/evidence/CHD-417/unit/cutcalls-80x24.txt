@@ -1,0 +1,24 @@
+ → to @main
+   ⎿  CHD-393: the owner has a question on Q8, with the options
+      for the headline:
+
+      1. Draw the headline whole and wrap it.
+      2. Cut it at the edge, as today.
+      Not delivered: cut off before it reached chord. chord tells the agent at
+      its next turn.
+
+ ⏺ Open(parser) · fake
+   ⎿  agentchild
+      Cut off before it reached chord, so it did nothing. chord tells the
+      agent at its next turn.
+
+ ⏺ Bash(board show CHD-377)
+   ⎿  Error: The user doesn't want to take this action right now. STOP what
+      you are doing and wait for the user to tell you how to proceed.
+
+ ⏺ I have stopped.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

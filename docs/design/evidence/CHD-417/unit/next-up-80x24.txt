@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.JdGO5WoNSc
+ ▀▀     ? for shortcuts · /help
+
+ › cutcalls
+
+ → to @main
+   ⎿  CHD-393: the owner has a question on Q8, with the options
+      for the headline:
+
+      1. Draw the headline whole and wrap it.
+      2. Cut it at the edge, as today.
+      Not delivered: cut off before it reached chord. chord tells the agent at
+      its next turn.
+
+ ⏺ Open(parser) · fake
+   ⎿  agentchild
+ ── ↓ 16 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

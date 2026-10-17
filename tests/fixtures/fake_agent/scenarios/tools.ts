@@ -321,6 +321,69 @@ export const TOOLS = {
     return 'end_turn';
   },
 
+  // As `overlap`, but `a` ends failed: a call that fails has ended too, and
+  // a message held for it goes in before `b` ends.
+  async overlapfail(turn) {
+    const open = (toolCallId: string, title: string) =>
+      turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId,
+        title,
+        kind: 'execute',
+        status: 'in_progress',
+      });
+
+    await open('overlapfail-a', '`false`');
+    await pause(turn.signal, STEP_MS * 20);
+    await open('overlapfail-b', '`sleep 2`');
+    await pause(turn.signal, STEP_MS * 20);
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'overlapfail-a',
+      status: 'failed',
+    });
+    await pause(turn.signal, STEP_MS * 20);
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'overlapfail-b',
+      status: 'completed',
+    });
+    await turn.say('One failed, one slept.');
+
+    return 'end_turn';
+  },
+
+  // Two calls that overlap: `a` opens, then `b` a while later, then `a`
+  // ends and, a while after, `b`, so a message told while only `a` was
+  // open is seen to wait for `a` alone.
+  async overlap(turn) {
+    const open = (toolCallId: string, title: string) =>
+      turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId,
+        title,
+        kind: 'execute',
+        status: 'in_progress',
+      });
+    const end = (toolCallId: string) =>
+      turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId,
+        status: 'completed',
+      });
+
+    await open('overlap-a', '`sleep 1`');
+    await pause(turn.signal, STEP_MS * 20);
+    await open('overlap-b', '`sleep 2`');
+    await pause(turn.signal, STEP_MS * 20);
+    await end('overlap-a');
+    await pause(turn.signal, STEP_MS * 20);
+    await end('overlap-b');
+    await turn.say('Both slept.');
+
+    return 'end_turn';
+  },
+
   // What a client has to survive: an update before its call, the call sent
   // twice, and a stale status after the call finished.
   async unordered(turn) {

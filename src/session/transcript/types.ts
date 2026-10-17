@@ -54,6 +54,12 @@ export interface ToolCall {
    */
   readonly chord?: ChordCall;
   /**
+   * The agent cut the call off before it ran, as Claude's adapter does to a
+   * batch a steer interrupts: one of chord's that nothing was served for
+   * never reached chord, and chord tells the agent so (CHD-417).
+   */
+  readonly cut?: true;
+  /**
    * The call's questions are asked in chord's question box, from when it
    * opens: the call reads as asking, and the box's record under it stands
    * in for its own lines while folded.

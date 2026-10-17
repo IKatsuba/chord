@@ -118,7 +118,10 @@
  * no turn playing, Claude's answers `promptRequired` and does nothing where
  * the request's `_meta.steering.idleBehavior` asks for that, and otherwise,
  * as Codex's always does, plays it as a turn of its own and answers
- * `startedNewTurn`. Without it, the method is not found. With
+ * `startedNewTurn`. As Claude's, it names itself in `agentInfo` as that
+ * adapter does, whose steer cuts the turn's open calls off; the fake cuts
+ * none, so a test sees what chord holds back. Without it, the method is not
+ * found. With
  * `--steer-late`, or `CHORD_FAKE_STEER_LATE=1`, a steer lands only once the
  * turn playing has ended, as one that meets a turn's end does. As Codex's, a
  * prompt that comes while a turn plays opens with `Started alongside a turn
@@ -236,6 +239,10 @@ const SCENARIOS = [
   'stepslater',
   'calls',
   'longresults',
+  'overlap',
+  'overlapfail',
+  'overlapask',
+  'subagentcall',
   'unordered',
   'edit',
   'rewrite',
@@ -286,6 +293,8 @@ const SCENARIOS = [
   'subagentupdate',
   'subagentstates',
   'chordtools',
+  'cutcalls',
+  'cutcallsback',
   'task',
   'chordcalls',
   'codexchordcalls',
@@ -413,6 +422,14 @@ const prompted = new Map<string, Promise<unknown>>();
  */
 const HELD_NOTES =
   /^(?:<message from="[^"]*"(?: monitor="[^"]*")?>\n[\s\S]*?\n<\/message>\n\n)+/;
+
+/**
+ * chord's note that calls of its tools were cut off, sent ahead of the next
+ * prompt (CHD-417): answered first, its first line quoted, and the prompt
+ * behind it played as if it came alone.
+ */
+const CUT_NOTE =
+  /^<message from="chord">\n(Your \S+ (?:to @\S+ )?(?:call )?was cut off before it reached chord[\s\S]*?)\n<\/message>\n\n/;
 
 /**
  * A prompt that starts with one of `FAKE_COMMANDS`: `greet` answers with a
@@ -593,7 +610,10 @@ async function playPrompt(
 
   turns.set(params.sessionId, controller);
 
-  const { runs, text } = splitContext(promptText(params.prompt));
+  const { runs, text: whole } = splitContext(promptText(params.prompt));
+  const cutNote = CUT_NOTE.exec(whole.trimStart());
+  const text =
+    cutNote === null ? whole : whole.trimStart().slice(cutNote[0].length);
   const asked = text.trim();
   const scenario = isScenario(asked) ? asked : fallback;
 
@@ -605,6 +625,12 @@ async function playPrompt(
 
     if (alongside) {
       await turn.say('Started alongside a turn still playing. ');
+    }
+
+    if (cutNote !== null) {
+      await turn.say(
+        `Received chord's note: ${cutNote[1]!.split('\n')[0]}\n\n`,
+      );
     }
 
     for (const run of runs) {
@@ -724,7 +750,15 @@ const connection = acp
               ...(RESUME_ONLY ? { resume: {} } : {}),
             },
           },
-          agentInfo: { name: 'chord-fake-agent', version: '0.0.0' },
+          // Steering as Claude's adapter, it names itself as that adapter does,
+          // whose steer cuts the turn's open calls off.
+          agentInfo: {
+            name:
+              STEERING === 'claude'
+                ? '@agentclientprotocol/claude-agent-acp'
+                : 'chord-fake-agent',
+            version: '0.0.0',
+          },
           ...(STEERING === undefined
             ? {}
             : { _meta: { steering: { supported: true } } }),

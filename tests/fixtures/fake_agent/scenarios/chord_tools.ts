@@ -5,7 +5,8 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { mcpServers } from '../sessions.ts';
-import type { Play, Turn } from '../turn.ts';
+import { STEP_MS } from '../options.ts';
+import { pause, type Play, type Turn } from '../turn.ts';
 
 /** The text of a tool's answer, or what went wrong with it. */
 function textOf(result: Awaited<ReturnType<Client['callTool']>>): string {
@@ -119,7 +120,130 @@ export async function callChord(
   return failed ? undefined : text;
 }
 
+/** The message `cutcalls` sends main, which its adapter cuts off. */
+export const CUT_MESSAGE = [
+  'CHD-393: the owner has a question on Q8, with the options for the headline:',
+  '',
+  '1. Draw the headline whole and wrap it.',
+  '2. Cut it at the edge, as today.',
+].join('\n');
+
+/** What `cutcalls` asked `open_agent` for, which its adapter cuts off too. */
+export const CUT_OPEN = { agent: 'fake', name: 'parser', prompt: 'agentchild' };
+
 export const CHORD_TOOLS = {
+  // A batch Claude's adapter cuts off as a steer interrupts it: a
+  // send_message to main and an open_agent, each failed `interrupted` with
+  // an empty error and nothing asked of chord's server, and a command
+  // beside them cancelled with Claude Code's words for a stopped call.
+  // As `cutcalls`, with a list_sessions({}) after the two, cut off in the
+  // reverse of the order they were made, the send_message's twice.
+  async cutcallsback(turn) {
+    const calls = [
+      ['send_message', { to: 'main', text: CUT_MESSAGE }],
+      ['open_agent', CUT_OPEN],
+      ['list_sessions', {}],
+    ] as const;
+    const ids = calls.map(([tool]) => turn.callId(tool));
+
+    for (const [index, [tool, input]] of calls.entries()) {
+      await turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId: ids[index]!,
+        title: `mcp__chord__${tool}`,
+        kind: 'other',
+        status: 'pending',
+        rawInput: input,
+      });
+    }
+
+    await pause(turn.signal, STEP_MS * 20);
+
+    for (const index of [2, 1, 0, 0]) {
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: ids[index]!,
+        status: 'failed',
+        _meta: { claudeCode: { nonExecutionKind: 'interrupted' } },
+      });
+    }
+
+    await turn.say('I have stopped.');
+
+    return 'end_turn';
+  },
+
+  async cutcalls(turn) {
+    const chord = (tool: string, input: Record<string, unknown>) => ({
+      id: turn.callId(tool),
+      tool,
+      input,
+    });
+    const calls = [
+      chord('send_message', { to: 'main', text: CUT_MESSAGE }),
+      chord('open_agent', CUT_OPEN),
+    ];
+    const bash = turn.callId('bash');
+
+    for (const { id, tool, input } of calls) {
+      await turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId: id,
+        title: `mcp__chord__${tool}`,
+        kind: 'other',
+        status: 'pending',
+        rawInput: {},
+      });
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: id,
+        rawInput: input,
+      });
+    }
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId: bash,
+      title: '`board show CHD-377`',
+      kind: 'execute',
+      status: 'pending',
+    });
+    // The batch is in flight a moment before the steer cuts it.
+    await pause(turn.signal, STEP_MS * 20);
+
+    for (const { id, tool } of calls) {
+      const error = `<tool_use_error>Error calling tool (mcp__chord__${tool}): </tool_use_error>`;
+
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: id,
+        status: 'failed',
+        rawOutput: error,
+        content: [{ type: 'content', content: { type: 'text', text: error } }],
+        _meta: { claudeCode: { nonExecutionKind: 'interrupted' } },
+      });
+    }
+
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: bash,
+      status: 'failed',
+      content: [
+        {
+          type: 'content',
+          content: {
+            type: 'text',
+            text: "The user doesn't want to take this action right now. STOP what you are doing and wait for the user to tell you how to proceed.",
+          },
+        },
+      ],
+      _meta: { claudeCode: { nonExecutionKind: 'cancelled' } },
+    });
+    await turn.say('I have stopped.');
+
+    return 'end_turn';
+  },
+
   // Calls `list_agents` and `list_sessions` and answers with what came back,
   // each as JSON.
   async chordtools(turn) {

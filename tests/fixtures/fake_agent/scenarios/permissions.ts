@@ -5,7 +5,8 @@
  */
 import * as acp from '@agentclientprotocol/sdk';
 import { RELEASE_NOTES } from '../../release_notes.ts';
-import { type Play, type Turn } from '../turn.ts';
+import { STEP_MS } from '../options.ts';
+import { pause, type Play, type Turn } from '../turn.ts';
 
 /**
  * Asks for permission to call `server`'s `tool` with `rawInput`, as
@@ -108,6 +109,38 @@ async function askPermission(
 }
 
 export const PERMISSIONS = {
+  // A write asked for while another call, `overlapask-a`, stays open: the
+  // answer releases what waited on it while `a` still runs, and `a` ends
+  // a while after the write.
+  async overlapask(turn) {
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'overlapask-a',
+      title: '`sleep 2`',
+      kind: 'execute',
+      status: 'in_progress',
+    });
+    await pause(turn.signal, STEP_MS * 20);
+
+    const stop = await askPermission(turn, [
+      { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+    ]);
+
+    if (stop === 'cancelled') {
+      return stop;
+    }
+
+    await pause(turn.signal, STEP_MS * 20);
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'overlapask-a',
+      status: 'completed',
+    });
+
+    return 'end_turn';
+  },
+
   async permission(turn) {
     return await askPermission(turn, [
       { optionId: 'allow', name: 'Allow', kind: 'allow_once' },

@@ -462,9 +462,11 @@ the box takes its colour and its name on the top border, and the status line
 its model, effort and context: what you type goes to it as your own prompt. `send_message` from the parent reaches a
 child, and from a child its parent alone, each a turn of the recipient's,
 as many as they trade; `list_sessions` gives each session's children. A
-message to an agent that is working goes into its turn at once, where its
-runtime takes that (Claude's and Codex's adapters advertise ACP's
-`_session/steering`), and draws there, among the turn's calls; while the
+message to a working Claude or Codex session goes into its running turn
+through ACP's `_session/steering`, drawn among its calls. Claude waits for
+the tool calls open when the message arrived to end, so steering does not
+cut them off; calls opened later can still be running when it goes in.
+Codex takes it at once, since its steering does not cut calls. While the
 turn waits on your answer to a permission, form or link, it waits under the
 working line as `← from @main · after your answer: …` and goes in once you
 answer. A runtime without steering takes it as the next turn, as the queue
@@ -580,6 +582,11 @@ too, with no fold or ctrl+o hint. A pending send shows its text at once;
 a refused send keeps it, then shows the refusal in the error colour.
 Monitor events keep their six-line fold. Older Codex records keep their
 earlier display.
+If a call to chord is cut off before it reaches chord, its row ends in the
+error colour: `Not delivered: cut off before it reached chord. chord tells
+the agent at its next turn.` At that turn, chord names each cut call in a
+note and asks the agent to send it again, on its own. A resumed record
+shows the row without resending the note.
 A name after an arrow takes `@` where `send_message` reaches
 it, `main` and a long-lived child; a task, named by its title, and chord's
 own `← from chord` stay bare. `/mcp` lists chord's server first,

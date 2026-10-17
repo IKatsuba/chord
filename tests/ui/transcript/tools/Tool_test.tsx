@@ -842,6 +842,36 @@ test("a proposed change's body diff wraps its long lines under their code, never
   }
 });
 
+test("chord's calls the agent cut off say after their body that they did nothing, wrapped at 80 columns", async () => {
+  // Read as chord's own by the name the session gave chord's server.
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await send(window, 'cutcalls');
+        await window.shows('I have stopped.');
+
+        const read = window.frame().replace(/\s+/g, ' ');
+
+        expect(read).toContain(
+          '→ to @main ⎿ CHD-393: the owner has a question on Q8',
+        );
+        expect(read).toContain(
+          'Not delivered: cut off before it reached chord. chord tells the agent at its next turn.',
+        );
+        expect(read).toContain(
+          'Cut off before it reached chord, so it did nothing. chord tells the agent at its next turn.',
+        );
+        expect(read).not.toContain('Error calling tool');
+      },
+      { columns: 80, rows: 50, server },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
 describe('CHD-422 tester: wrapped source-line exceptions', () => {
   for (const columns of [80, 120]) {
     test(`Read keeps the first three source lines and terminal the last three at ${columns} columns`, async () => {

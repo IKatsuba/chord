@@ -155,6 +155,9 @@ export interface Turn {
  */
 export type SteerOutcome = 'injected' | 'startedNewTurn' | 'refused';
 
+/** The name Claude's adapter gives itself in `initialize`'s `agentInfo`. */
+export const CLAUDE_ADAPTER = '@agentclientprotocol/claude-agent-acp';
+
 /** One agent process and one ACP session in it, until `close()`. */
 export interface Session {
   readonly agent: string;
@@ -232,6 +235,14 @@ export interface Session {
    * `initialize` answer advertises `_session/steering`.
    */
   steers(): boolean;
+  /**
+   * Whether a steer cuts off the tool calls the turn has open: Claude's
+   * adapter, told by the name it gives in `initialize`, delivers a steer
+   * at a priority that aborts them, a `send_message` among them lost
+   * before it reaches chord (CHD-417). Codex's queues a steer as input to
+   * the live turn and cuts nothing, as the records show, so it is not.
+   */
+  cutsCallsOnSteer(): boolean;
   /**
    * Puts `text` into the turn the agent is running, asking an agent with
    * none running to do nothing with it; rejects when the request fails.
@@ -594,6 +605,7 @@ export async function openSession(
     takesImages: () =>
       connection.init.agentCapabilities?.promptCapabilities?.image === true,
     steers: () => connection.steering,
+    cutsCallsOnSteer: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     steer: async (text) => {
       const { outcome } = await connection.steer({
         sessionId: id,

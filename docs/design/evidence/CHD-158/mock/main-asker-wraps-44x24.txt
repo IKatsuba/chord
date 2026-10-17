@@ -1,0 +1,24 @@
+
+
+
+ ⏺ Watching the build; I will write the repo
+
+ ››› Waiting for permission… (2s)
+
+╭──────────────────────────────────────────╮
+│ Agent(Run the whole test suite) asks ·   │
+│ between turns                            │
+│ Write notes/test-report.md               │
+│                                          │
+│ Do you want to proceed?                  │
+│   1. Allow                               │
+│   2. Always allow                        │
+│   3. Deny                                │
+│                                          │
+│ ctrl+x a to answer                       │
+╰──────────────────────────────────────────╯
+
+╭──────────────────────────────────────────╮
+│ ›                                        │
+╰──────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer

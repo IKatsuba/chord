@@ -393,9 +393,16 @@ describe('tester: subagentstates keys and terminal sizes', () => {
 
             await window.press(ESC);
             await window.shows('Interrupted by user');
-            await window.shows(
-              phase === 'pair' ? '2 agents ended · 2 cancelled' : 'Cancelled',
-            );
+
+            if (phase === 'pair') {
+              // The worker may finish before Esc reaches the pair; only
+              // children still running then are cancelled.
+              await window.shows('2 agents ended');
+              expect(window.frame()).toMatch(/2 agents ended · [12] cancelled/);
+            } else {
+              await window.shows('Cancelled');
+            }
+
             expect(window.frame()).not.toContain('Running 2 agents');
             expect(window.frame()).not.toContain('still running');
           },

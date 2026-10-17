@@ -14,7 +14,7 @@
    titles, bodies, and tag arrays are truncated, wrapped, or expanded in the
    rendered output.", tags:
    ["ui-test","tool-rendering","mcp","terminal","claude-code"])
-   ⎿  saved "Tool-call rendering test: long titles, wrapped bodies, and multiple
+   ⎿  saved "Tool-call rendering test: lo...tiple tags in one note" (411 chars)
 
  ⏺ Done.
 

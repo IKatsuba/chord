@@ -573,7 +573,7 @@ describe('CHD-423 tester: two held messages on screen', () => {
         await withWindow(
           async (window) => {
             await ready(window);
-            await send(window, 'agentcalltwice');
+            await send(window, 'agentcallgated');
             await window.shows('← message from @main');
             expect(window.frame()).not.toContain('after the running calls');
             await window.press(DOWN);
@@ -592,6 +592,7 @@ describe('CHD-423 tester: two held messages on screen', () => {
               held.indexOf(HELD_AGAIN),
             );
             expect(held).toContain('Running…');
+            await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
             await window.shows('The tests pass.');
             await until(
               'held rows taken',
@@ -605,6 +606,53 @@ describe('CHD-423 tester: two held messages on screen', () => {
             runtimes: ['fake'],
             columns,
             rows,
+            agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+
+  for (const action of ['cancel', 'close'] as const) {
+    test(`${action} cleans up a call whose release gate was never opened`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'agentcallgated');
+            await window.shows('← message from @main');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.shows(
+              `← from @main · after the running calls: ${HELD_AGAIN}`,
+            );
+            expect(window.frame()).toContain('Running…');
+            expect(window.pids.length >= 2).toBe(true);
+
+            if (action === 'cancel') {
+              await window.press('\r');
+              await window.press(ESC);
+              await window.shows('Interrupted');
+              await until(
+                'cancelled hold removed',
+                () => !window.frame().includes('after the running calls'),
+              );
+            }
+
+            expect(await readdir(join(window.dir, GATE))).not.toContain(
+              GATE_RELEASE,
+            );
+            // withWindow closes the parent and child and proves their PIDs gone.
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns: 80,
+            rows: 24,
             agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
           },
         );

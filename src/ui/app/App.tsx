@@ -697,6 +697,8 @@ export function App({
         return sessions.moveBackground(step.by);
       case 'stop_background':
         return sessions.stopBackground();
+      case 'go_to_call':
+        return sessions.goToCall();
       case 'interrupt':
         return conversation()?.interrupt();
       case 'reject_permission':

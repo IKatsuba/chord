@@ -207,6 +207,8 @@ export type KeyCommand =
   /** ↑ and ↓, or k and j, in the background view: the row above or below. */
   | 'background_up'
   | 'background_down'
+  /** Enter in the background view: to the call that started the item. */
+  | 'go_to_call'
   /** x in the background view: the focused item stops at once. */
   | 'stop_background'
   /** Esc in the background view: back to the summary line. */

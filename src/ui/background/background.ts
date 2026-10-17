@@ -13,6 +13,7 @@ import type {
   Transcript,
 } from '../../session/transcript/types.ts';
 import { GLYPHS } from '../app/strip.ts';
+import { agentGroup } from '../transcript/agents/subagents.ts';
 
 /**
  * What an item is, in the order the summary line names them; CHD-2 adds an
@@ -384,4 +385,43 @@ export function summaryLines(
   });
 
   return lines;
+}
+
+/**
+ * The entry of its owner's transcript that draws the call that started
+ * `item`: a monitor's `Monitor(…)`, by the id its answer gave, or a task's
+ * `Agent(…)`, which stands where its `spawn_task` call was, or the group
+ * of tasks that draws it; none once the call is gone. A call inside a
+ * subagent's work is drawn by the subagent's entry.
+ */
+export function callEntry(
+  entries: readonly Entry[],
+  item: BackgroundItem,
+): number | undefined {
+  const own = (entry: Entry): boolean =>
+    item.kind === 'monitor'
+      ? entry.kind === 'tool' &&
+        entry.call.chord?.tool === 'monitor' &&
+        isRecord(entry.call.chord.answer) &&
+        entry.call.chord.answer.id === item.id
+      : entry.kind === 'subagent' && entry.subagent.id === item.id;
+  const holds = (entry: Entry): boolean =>
+    own(entry) ||
+    (entry.kind === 'subagent' && entry.subagent.entries.some(holds));
+  let at = entries.findIndex(holds);
+
+  if (at === -1) {
+    return undefined;
+  }
+
+  // A group of tasks is drawn by its first.
+  while (agentGroup(entries, at)?.length === 0) {
+    at -= 1;
+  }
+
+  return at;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }

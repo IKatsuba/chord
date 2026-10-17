@@ -96,6 +96,8 @@ export type Step =
   | { readonly type: 'move_background'; readonly by: number }
   /** `x` in the background view: the focused item stops. */
   | { readonly type: 'stop_background' }
+  /** Enter in the background view: to the call that started the item. */
+  | { readonly type: 'go_to_call' }
   | { readonly type: 'interrupt' }
   | { readonly type: 'reject_permission'; readonly id: string }
   /** A scroll key moves the permission request in its box (CHD-246). */
@@ -588,6 +590,8 @@ function commandSteps(
       return [{ type: 'move_background', by: 1 }];
     case 'stop_background':
       return [{ type: 'stop_background' }];
+    case 'go_to_call':
+      return [{ type: 'go_to_call' }];
     case 'close_background':
       return [dispatch({ type: 'background_closed' })];
     case 'list_sessions':

@@ -13,6 +13,7 @@ import {
   type BackgroundAgent,
   type BackgroundItem,
   backgroundItems,
+  callEntry,
   summaryGroups,
   summaryLines,
   type SummaryPiece,
@@ -565,5 +566,68 @@ describe('CHD-424 tester: background item edges', () => {
         lines.slice(1).every((line) => line.startsWith(' '.repeat(12))),
       ).toBe(true);
     }
+  });
+});
+
+describe('the call that started an item', () => {
+  const monitorCall = (id: string, callId: string): Entry => ({
+    kind: 'tool',
+    turnId: 't1',
+    call: {
+      id: callId,
+      title: 'Monitor',
+      chord: {
+        tool: 'monitor',
+        input: {},
+        answer: { id, description: 'x', timeout_ms: 1000 },
+      },
+    },
+  });
+  const item = (kind: 'monitor' | 'task', id: string): BackgroundItem => ({
+    kind,
+    id,
+    key: 1,
+    name: 'x',
+    startedAt: 0,
+    status: { group: 'running' },
+  });
+  const text: Entry = { kind: 'user', turnId: 't1', text: 'hi' };
+
+  test("a monitor's is its Monitor call, by the id its answer gave", () => {
+    const entries = [text, monitorCall('m1', 'c1'), monitorCall('m2', 'c2')];
+
+    expect(callEntry(entries, item('monitor', 'm2'))).toStrictEqual(2);
+    expect(callEntry(entries, item('monitor', 'm9'))).toStrictEqual(undefined);
+  });
+
+  test("a task's is its Agent block, or the first of the group of tasks that draws it", () => {
+    const entries = [
+      text,
+      task('task-1', 'one', 0),
+      task('task-2', 'two', 0),
+      text,
+      task('task-3', 'three', 0),
+    ];
+
+    expect(callEntry(entries, item('task', 'task-1'))).toStrictEqual(1);
+    expect(callEntry(entries, item('task', 'task-2'))).toStrictEqual(1);
+    expect(callEntry(entries, item('task', 'task-3'))).toStrictEqual(4);
+    expect(callEntry(entries, item('task', 'gone'))).toStrictEqual(undefined);
+  });
+
+  test("a call inside a subagent's work is drawn by the subagent's entry", () => {
+    const claude: Entry = {
+      kind: 'subagent',
+      turnId: 't1',
+      subagent: {
+        id: 'claude-1',
+        state: 'running',
+        entries: [monitorCall('m1', 'c1'), task('task-1', 'inner', 0)],
+        plan: [],
+      },
+    };
+
+    expect(callEntry([text, claude], item('monitor', 'm1'))).toStrictEqual(1);
+    expect(callEntry([text, claude], item('task', 'task-1'))).toStrictEqual(1);
   });
 });

@@ -169,3 +169,21 @@ test('the tail is held as the view leaves the bottom, grows on the way up, and g
   ).toBeUndefined();
   expect(reduceApp(long, { type: 'scrolled', step: 'top' }).mounted).toBe(0);
 });
+
+test('a jump scrolls the view back and mounts its entry, until the measure has put it on top or the view follows again', () => {
+  const tall = after({ type: 'scroll_measured', content: 100, view: 20 });
+  const jumped = reduceApp(tall, { type: 'jumped_to', entry: 0 });
+
+  expect(jumped.jump).toStrictEqual(0);
+  expect(jumped.scroll.following).toStrictEqual(false);
+  expect(jumped.mounted).toStrictEqual(0);
+  expect(reduceApp(jumped, { type: 'jump_done' }).jump).toStrictEqual(
+    undefined,
+  );
+
+  // end before the measure: nothing is left to scroll to.
+  const back = reduceApp(jumped, { type: 'scrolled', step: 'bottom' });
+
+  expect(back.jump).toStrictEqual(undefined);
+  expect(back.scroll.following).toStrictEqual(true);
+});

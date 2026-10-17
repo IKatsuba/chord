@@ -129,6 +129,7 @@ import {
   type BackgroundAgent,
   type BackgroundItem,
   backgroundItems,
+  callEntry,
   type ItemOwner,
 } from '../background/background.ts';
 import { focusedItem, moveViewFocus } from '../background/view.ts';
@@ -1624,6 +1625,33 @@ export function useSessions(
   };
 
   /**
+   * Enter in the background view: the view closes, the item's owner is
+   * picked, as moving onto its row picks it, and its transcript scrolls back
+   * so that the call that started the item is its top line, the keys going
+   * to the box. A call no longer in the transcript leaves the view as it is.
+   */
+  const goToCall = () => {
+    const item = focusedItem(background(), state.backgroundView?.focus);
+    const entries = item && all.sessions[item.key]?.transcript.entries;
+    const entry = entries && callEntry(entries, item);
+
+    if (item === undefined || entry === undefined) {
+      return;
+    }
+
+    dispatch({ type: 'background_closed' });
+    dispatch({ type: 'agents_focused', focused: false });
+    dispatch({ type: 'agent_close_disarmed' });
+    sessions.pick(item.key);
+    showFront();
+    dispatch({
+      type: 'in_session',
+      key: item.key,
+      action: { type: 'jumped_to', entry },
+    });
+  };
+
+  /**
    * `x` in the list: closes the picked child, once a second press confirms
    * cutting a busy one short. chord tells the parent, so it is not left
    * waiting on a child that will never answer. On `main` it closes nothing.
@@ -2812,6 +2840,7 @@ export function useSessions(
     closePicked,
     moveBackground,
     stopBackground,
+    goToCall,
     frontKey: () => front()?.key,
     listTeams,
     runTyped,

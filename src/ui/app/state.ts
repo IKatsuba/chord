@@ -85,7 +85,7 @@ import { type Cursor, endOf, textareaDoes } from '../prompt/prompt.ts';
 import { mine, started } from '../prompt/queue.ts';
 import type { Search } from '../prompt/search.ts';
 import { vimKeyNames, vimTakes, vimTakesCharacter } from '../prompt/vim.ts';
-import { backfilled, heldMount } from '../transcript/mount.ts';
+import { backfilled, firstMounted, heldMount } from '../transcript/mount.ts';
 import {
   copyable,
   type CopyResult,
@@ -477,7 +477,14 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'scrolled':
     case 'scroll_held':
     case 'scroll_released':
+    case 'jump_done':
       return reduceView(state, action) as AppState;
+    case 'jumped_to':
+      // Its entry mounted, with every one after it.
+      return {
+        ...(reduceView(state, action) as AppState),
+        mounted: Math.min(firstMounted(state), action.entry),
+      };
     case 'form_filled':
     case 'questions_answered':
     case 'request_overflowed':
@@ -873,6 +880,7 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   transcript: true,
   scroll: true,
   mounted: true,
+  jump: true,
   models: true,
   startedModel: true,
   resumed: true,
@@ -1658,6 +1666,10 @@ function backgroundCommand(
 
   if (key.downArrow || (input === 'j' && !key.ctrl && !key.meta)) {
     return 'background_down';
+  }
+
+  if (key.return) {
+    return 'go_to_call';
   }
 
   return on('select:cancel') ? 'close_background' : undefined;

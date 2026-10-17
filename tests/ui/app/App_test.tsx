@@ -1,4 +1,4 @@
-import { expect, spyOn, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -1621,4 +1621,83 @@ test('a click on the box while the sessions picker is open gives the box no keys
 
 test('the renderer gives no widget the keys on a click (CHD-429)', () => {
   expect(terminalOptions({ mouse: true }).autoFocus).toStrictEqual(false);
+});
+
+describe('CHD-429 tester: mouse focus boundaries', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const [key, outcome] of [
+      ['1', 'allow'],
+      ['3', 'deny'],
+    ] as const) {
+      test(`repeated prompt clicks leave ${outcome} exclusively with the permission at ${columns}x${rows}`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'permission');
+            await asked(window);
+            await clickBox(window);
+            await clickBox(window);
+            await window.press(key);
+            await window.shows(`Permission: ${outcome}.`);
+            await window.type('abcdef');
+            expect(promptRow(window)?.trimEnd()).toContain('› abcdef');
+            expect(promptRow(window)).not.toContain(`› ${key}`);
+            await window.press('\x1b[D');
+            await window.type('X');
+            expect(promptRow(window)).toContain('› abcdeXf');
+          },
+          { columns, rows },
+        ));
+    }
+
+    test(`picking after a click preserves a nonempty draft and returns cursor keys at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await window.type('abcdef');
+          await leader(window, 'w');
+          await window.shows('Esc to close');
+          await clickBox(window);
+          await window.press('1');
+          await until(
+            'the picker closed',
+            () => !window.frame().includes('Esc to close'),
+          );
+          expect(promptRow(window)).toContain('› abcdef');
+          await window.press('\x1b[D');
+          await window.type('X');
+          expect(promptRow(window)).toContain('› abcdeXf');
+        },
+        { columns, rows },
+      ));
+
+    test(`search after a click owns its query and restores the previous draft at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'fix auth');
+          await until(
+            'the turn ended',
+            () => !window.frame().includes('Working'),
+          );
+          await window.type('draft kept');
+          await window.press(CTRL_R);
+          await window.shows('search prompts:');
+          await clickBox(window);
+          await window.type('auth');
+          await window.shows('search prompts: auth');
+          await window.press(ESC);
+          await until(
+            'the search closed',
+            () => !window.frame().includes('search prompts:'),
+          );
+          expect(promptRow(window)).toContain('› draft kept');
+          expect(promptRow(window)).not.toContain('auth');
+        },
+        { columns, rows },
+      ));
+  }
 });

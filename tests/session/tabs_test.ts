@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { ConversationEvent } from '../../src/session/conversation.ts';
 import {
   agentOf,
@@ -9,6 +9,8 @@ import {
   childName,
   closeChild,
   closeTab,
+  failedSince,
+  failureOf,
   frontTab,
   goTo,
   hear,
@@ -33,6 +35,7 @@ import {
   tabName,
   tabOf,
   type Tabs,
+  waitingChild,
 } from '../../src/session/tabs.ts';
 
 /** Tabs for `agents`, opened in order, the last in front. */
@@ -269,7 +272,7 @@ test('a turn ending in front is not unseen', () => {
   expect(tabOf(tabs, 2)?.wait.unseen).toStrictEqual(undefined);
 });
 
-test('a failed turn or an agent that never came up is unseen as failed', () => {
+test('a failed turn or an agent that never came up is unseen as failed, each with its cause', () => {
   const turn = heard(opened('a', 'b'), 1, [up, prompt('t1'), failed('t1')]);
   const start = heard(opened('a', 'b'), 1, [
     {
@@ -282,16 +285,111 @@ test('a failed turn or an agent that never came up is unseen as failed', () => {
   expect(tabOf(turn, 1)?.wait.unseen).toStrictEqual({
     kind: 'failed',
     since: 2000,
+    failure: 'turn',
+    failedAt: 2000,
   });
   expect(tabOf(start, 1)?.wait.unseen).toStrictEqual({
     kind: 'failed',
     since: 0,
+    failure: 'start',
+    failedAt: 0,
   });
   // A reply after it does not hide the failure, nor move when it began.
   expect(tabOf(later, 1)?.wait.unseen).toStrictEqual({
     kind: 'failed',
     since: 2000,
+    failure: 'turn',
+    failedAt: 2000,
   });
+});
+
+test('a failed turn counts its time from the failure, not from older news not yet seen', () => {
+  const message: ConversationEvent = {
+    type: 'prompt',
+    turnId: 'm',
+    text: 'hi',
+    at: 0,
+    from: { name: 'main', reachable: true },
+  };
+  // A reply at 2 s, then a turn that fails a minute later.
+  const replied = heard(opened('a', 'b'), 1, [up, prompt('t1'), ended('t1')]);
+  const afterReply = heard(replied, 1, [prompt('t2'), failed('t2')], 61_000);
+  const afterMessage = heard(
+    heard(opened('a', 'b'), 1, [up, message]),
+    1,
+    [prompt('t2'), failed('t2')],
+    61_000,
+  );
+
+  for (const tabs of [afterReply, afterMessage]) {
+    const wait = tabOf(tabs, 1)!.wait;
+
+    expect(failedSince(wait)).toStrictEqual(62_000);
+    // The first news still sets its place in the order.
+    expect(wait.unseen!.since < 62_000).toStrictEqual(true);
+  }
+});
+
+test('an exit is unseen news even with no turn failed: idle, or after a reply; seen once it clears, and the agent stays exited', () => {
+  const gone: ConversationEvent = { type: 'disconnected', turnId: '' };
+  const idleExit = heard(opened('a', 'b'), 1, [up, gone], 5000);
+  const afterReply = heard(
+    heard(opened('a', 'b'), 1, [up, prompt('t1'), ended('t1')]),
+    1,
+    [gone],
+    9000,
+  );
+
+  expect(tabOf(idleExit, 1)!.wait.unseen).toStrictEqual({
+    kind: 'failed',
+    since: 6000,
+    failure: 'exited',
+    failedAt: 6000,
+  });
+  expect(failureOf(tabOf(afterReply, 1)!.wait)).toStrictEqual('exited');
+  // The reply came first, so the tab keeps its place in the order.
+  expect(tabOf(afterReply, 1)!.wait.unseen?.since).toStrictEqual(2000);
+
+  const seen = tabOf(goTo(idleExit, 1), 1)!.wait;
+
+  expect([seen.unseen, failureOf(seen), seen.exited]).toStrictEqual([
+    undefined,
+    undefined,
+    true,
+  ]);
+});
+
+test("an exit after a failed turn, or one that cuts a turn short, is the failure's cause: the agent went", () => {
+  const exitedAfter = heard(opened('a', 'b'), 1, [
+    up,
+    prompt('t1'),
+    failed('t1'),
+    { type: 'disconnected', turnId: 't1' },
+  ]);
+  const cutShort = heard(opened('a', 'b'), 1, [
+    up,
+    prompt('t1'),
+    { type: 'disconnected', turnId: 't1' },
+    failed('t1'),
+  ]);
+
+  for (const tabs of [exitedAfter, cutShort]) {
+    const wait = tabOf(tabs, 1)!.wait;
+
+    expect([wait.unseen?.failure, failureOf(wait), wait.exited]).toStrictEqual([
+      'exited',
+      'exited',
+      true,
+    ]);
+  }
+
+  // A failed turn alone leaves the agent open.
+  expect(
+    failureOf(
+      tabOf(heard(opened('a', 'b'), 1, [up, prompt('t1'), failed('t1')]), 1)!
+        .wait,
+    ),
+  ).toStrictEqual('turn');
 });
 
 test('a cancelled turn, or one a queued prompt follows, is not unseen', () => {
@@ -851,4 +949,74 @@ test('a member is named with its run only while another run has one of its name'
   expect(notifiedName(tabs, key('t2'))).toStrictEqual('tester (bugfix 2)');
   expect(notifiedName(tabs, key('two'))).toStrictEqual('bugfix 2');
   expect(notifiedName(tabs, 1)).toStrictEqual('claude');
+});
+
+test("the child a tab's wait belongs to: the one asking, else the one whose failure is oldest; none for the tab's own", () => {
+  let tabs = withChildren(opened('claude'), 1, 'parser', 'docs');
+
+  tabs = heard(tabs, 2, [up, prompt('p'), failed('p')]);
+
+  expect(waitingChild(tabOf(tabs, 1)!)?.name).toStrictEqual('parser');
+
+  tabs = heard(tabs, 3, [up, prompt('d'), asked('d', 'q')], 5000);
+
+  expect(waitingChild(tabOf(tabs, 1)!)?.name).toStrictEqual('docs');
+  expect(
+    waitingChild(
+      tabOf(heard(opened('claude'), 1, [up, prompt('t'), failed('t')]), 1)!,
+    ),
+  ).toStrictEqual(undefined);
+});
+
+describe('CHD-264 tester: child failure lifecycle', () => {
+  test('showing the parent does not acknowledge a child; picking it clears only its failure and a later failure gets a fresh time', () => {
+    const base = withChildren(opened('a', 'b'), 1, 'parser', 'docs');
+    const both = heard(
+      heard(base, 3, [up, prompt('p'), failed('p')]),
+      4,
+      [up, prompt('d'), failed('d')],
+      5000,
+    );
+    const parent = show(both, 1);
+
+    expect(attentionOrder(parent)).toStrictEqual([3, 4]);
+
+    const seen = pick(parent, 3);
+
+    expect(agentOf(seen, 3)?.child?.wait.unseen).toBeUndefined();
+    expect(attentionOrder(seen)).toStrictEqual([4]);
+    expect(
+      agentOf(show(show(seen, 2), 1), 3)?.child?.wait.unseen,
+    ).toBeUndefined();
+
+    const later = heard(
+      pick(seen, 1),
+      3,
+      [prompt('next'), failed('next')],
+      20_000,
+    );
+
+    expect(failedSince(agentOf(later, 3)!.child!.wait)).toBe(21_000);
+    expect(attentionOrder(later)).toStrictEqual([4, 3]);
+  });
+
+  test('acknowledging an exited child clears attention while preserving its exited state across tab switches', () => {
+    const base = withChildren(opened('a', 'b'), 1, 'parser');
+    const gone = heard(base, 3, [
+      up,
+      prompt('p'),
+      failed('p'),
+      { type: 'disconnected', turnId: 'p' },
+    ]);
+    const seen = pick(gone, 3);
+    const returned = show(show(seen, 2), 1);
+    const wait = agentOf(returned, 3)!.child!.wait;
+
+    expect(wait.exited).toBe(true);
+    expect(wait.unseen).toBeUndefined();
+    expect(attentionOrder(returned)).toStrictEqual([]);
+    expect(agentOf(returned, 3)?.child?.conversation).toBe(
+      'conversation of parser',
+    );
+  });
 });

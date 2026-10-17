@@ -246,6 +246,9 @@ test("a child's agent that exits tells the parent with a message from chord, its
     // The message starts the parent's turn, as every message does.
     await window.shows('Received the message from chord.');
     expect(count(window, '← from chord')).toStrictEqual(1);
+    // Behind, its row and the status line say the agent went, not its turn.
+    expect(window.frame()).toMatch(/ {4}parser {2}fake.* {2}✗ exited$/m);
+    await window.shows('✗ parser exited · ctrl+x a to go');
   }));
 
 test("a child's turn that fails tells the parent, and the child stays open", () =>
@@ -258,6 +261,37 @@ test("a child's turn that fails tells the parent, and the child stays open", () 
     );
     await window.shows('Received the message from chord.');
     expect(window.frame()).toContain('    parser  fake');
+    // Behind, its row says its turn failed and since when, not that it is
+    // gone, and so does the status line.
+    expect(window.frame()).toMatch(
+      / {4}parser {2}fake.* {2}✗ turn failed \d+s ago$/m,
+    );
+    await window.shows("✗ parser's turn failed · ctrl+x a to go");
+    // Once looked at, the failed turn clears, and parser reads open and idle.
+    await leader(window, 'a');
+    await window.shows('╭─ parser ');
+    await until(
+      'the failed turn cleared',
+      () => !window.frame().includes('turn failed'),
+    );
+  }));
+
+test("a child's exit in a tab behind is named for the child, in that tab", () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'agentfail');
+    await window.shows("✗ parser's turn failed · ctrl+x a to go");
+    await leader(window, 'c');
+    await window.shows(' 2 fake ');
+    await ready(window);
+    await send(window, 'agentexit');
+    await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a to go');
+    // Back in tab 1, its failed turn seen: only tab 2's child is left.
+    await leader(window, '1');
+    await leader(window, 'a');
+    await window.shows('╭─ parser ');
+    await window.shows('✗ parser exited in 2 fake · ctrl+x a to go');
+    expect(!window.frame().includes('2 fake exited')).toBeTruthy();
   }));
 
 /** How many `closed` lines the records in `dir`'s state hold. */
@@ -660,5 +694,69 @@ describe('CHD-423 tester: two held messages on screen', () => {
         await server.close();
       }
     });
+  }
+});
+
+describe('CHD-264 tester: failure surfaces in the window', () => {
+  async function anotherTab(window: Window) {
+    const opened = window.pids.length;
+
+    await leader(window, 'c');
+    // A failure notice can replace the ready hint at a narrow width.
+    await until(
+      'the new fake session connected',
+      () => window.pids.length > opened,
+    );
+  }
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`failure ages, mixed notices and picker owners stay correct at ${columns}x${rows}; seeing each child clears only its news`, () =>
+      withAgents(async (window) => {
+        await window.resize({ columns, rows });
+        await ready(window);
+        await send(window, 'agentfail');
+        await window.shows("✗ parser's turn failed · ctrl+x a");
+
+        const failedRow = () =>
+          window
+            .frame()
+            .split('\n')
+            .find((line) => /^ {4}parser {2}fake/.test(line));
+        const age = () =>
+          Number(/turn failed (\d+)s ago/.exec(failedRow() ?? '')?.[1]);
+        const first = age();
+
+        expect(Number.isFinite(first)).toBe(true);
+        await until('failed-turn age advances', () => age() > first);
+        expect(failedRow()).toMatch(/✗ turn failed \d+s ago/);
+        await anotherTab(window);
+        await send(window, 'agentexit');
+        await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a');
+        await anotherTab(window);
+        await leader(window, 'w');
+        await window.shows('✗ parser: turn failed');
+        await window.shows('✗ parser: exited');
+        expect(window.frame()).not.toContain('sessions ended');
+        await window.press(ESC);
+        await leader(window, 'a');
+        await window.shows('╭─ parser ');
+        await until('only exited child remains unseen', () =>
+          window.frame().includes('✗ parser exited in 2 fake · ctrl+x a'),
+        );
+        expect(window.frame()).not.toMatch(/^ {4}parser .*turn failed/m);
+        await send(window, 'text');
+        await window.shows('came in chunks');
+        await leader(window, '2');
+        await leader(window, 'a');
+        await window.shows('╭─ parser ');
+        expect(window.frame()).toMatch(/^ {4}parser .*✗ exited$/m);
+        await leader(window, '1');
+        await leader(window, '2');
+        expect(window.frame()).toMatch(/^ {4}parser .*✗ exited$/m);
+        expect(window.frame()).not.toContain('✗ parser exited in 2 fake');
+      }));
   }
 });

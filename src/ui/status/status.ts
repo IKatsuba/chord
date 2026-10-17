@@ -9,7 +9,12 @@
  */
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
-import type { TabWait } from '../../session/tabs.ts';
+import {
+  type Failure,
+  FAILURES,
+  failureOf,
+  type TabWait,
+} from '../../session/tabs.ts';
 import type { TurnState, Usage } from '../../session/transcript/types.ts';
 import {
   type Action,
@@ -139,12 +144,41 @@ export interface TabBehind {
    * the prompt already shows it.
    */
   readonly name?: string;
+  /**
+   * A tab behind's child or member whose wait its own is, by its name: a
+   * failure of one is named for it, in the tab (CHD-264).
+   */
+  readonly waiter?: string;
 }
+
+/** A failure's words after a name, `parser's turn failed`, and in a count. */
+const FAILURE_WORDS: Record<
+  Failure,
+  {
+    readonly named: (name: string) => string;
+    readonly counted: (count: number) => string;
+  }
+> = {
+  exited: {
+    named: (name) => `${name} exited`,
+    counted: (count) => `${count} exited`,
+  },
+  start: {
+    named: (name) => `${name} failed to start`,
+    counted: (count) => `${count} failed to start`,
+  },
+  turn: {
+    named: (name) => `${name}'s turn failed`,
+    counted: (count) => `${count} ${count === 1 ? 'turn' : 'turns'} failed`,
+  },
+};
 
 /**
  * The notice for the tabs behind, or none when none wants the person. A
  * permission or form outranks a failure, which outranks a reply; within each,
- * the one waiting longest is named, or the count once there are more.
+ * the one waiting longest is named, or the count once there are more. Many
+ * failures count each kind on its own, gravest first, with no noun, so an
+ * agent still open is never said to have ended (CHD-264).
  */
 export function waitsNotice(
   behind: readonly TabBehind[],
@@ -184,16 +218,36 @@ export function waitsNotice(
           );
   }
 
-  const unseen = failed.length + replied.length;
+  if (failed.length > 1) {
+    const counts = FAILURES.flatMap((failure) => {
+      const count = failed.filter(
+        (tab) => failureOf(tab.wait) === failure,
+      ).length;
 
-  if (unseen > 1) {
-    return failed.length > 0
-      ? notice(`${GLYPHS.failed} ${unseen} sessions ended`, 'ended')
-      : notice(`${GLYPHS.replied} ${unseen} sessions replied`, 'plain');
+      return count === 0 ? [] : [FAILURE_WORDS[failure].counted(count)];
+    });
+
+    return notice(`${GLYPHS.failed} ${counts.join(' · ')}`, 'ended');
   }
 
-  return failed[0]
-    ? notice(`${GLYPHS.failed} ${named(failed[0])} failed`, 'ended')
+  if (failed[0]) {
+    const tab = failed[0];
+    const words = FAILURE_WORDS[failureOf(tab.wait) ?? 'turn'];
+
+    // A child's in a tab behind is its own, in that tab: `parser exited in
+    // 2 fake`, never the tab's, which would read as a count.
+    return notice(
+      `${GLYPHS.failed} ${
+        tab.waiter === undefined
+          ? words.named(named(tab))
+          : `${words.named(tab.waiter)} in ${named(tab)}`
+      }`,
+      'ended',
+    );
+  }
+
+  return replied.length > 1
+    ? notice(`${GLYPHS.replied} ${replied.length} sessions replied`, 'plain')
     : replied[0]
       ? notice(`${GLYPHS.replied} ${named(replied[0])} replied`, 'plain')
       : undefined;

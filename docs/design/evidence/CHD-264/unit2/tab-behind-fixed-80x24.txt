@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake ✗   /tmp/chord-qa.XXXX
+ parser · fake · Fake Small · opened by main 20s ago
+
+ ← from @main
+   ⎿  error
+
+ ⏺ About to fail.
+
+ ⏺ The fake agent failed on purpose.
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ✗ parser exited in 2 fake · ctrl+x a to go · ? for shortcuts      Fake Small
+    main    fake · Fake Large with a 1M context window · medium
+    parser  fake · Fake Small · medium

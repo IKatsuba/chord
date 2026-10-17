@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import {
   contextUsed,
@@ -255,12 +255,60 @@ test('the waits notice names the one that waits, or counts them', () => {
     tone: 'plain',
     key: 'ctrl+x a',
   });
+  // A failure outranks a reply, and names the one that failed.
   expect(
     waitsNotice([
       behind(3, 'fake', replied),
       behind(4, 'fake', { unseen: { kind: 'failed', since: 30 } }),
     ]),
-  ).toStrictEqual({ text: '✗ 2 sessions ended', tone: 'ended' });
+  ).toStrictEqual({ text: "✗ 4 fake's turn failed", tone: 'ended' });
+});
+
+test('a failure says what failed: a turn, a start or an exit; many count each kind, gravest first, with no noun', () => {
+  const failed = (failure: 'turn' | 'start' | 'exited', since = 30) => ({
+    unseen: { kind: 'failed' as const, since, failure },
+    ...(failure === 'exited' ? { exited: true as const } : {}),
+  });
+  const parser = (wait: Partial<TabWait>): TabBehind => ({
+    ...behind(1, 'fake', wait),
+    name: 'parser',
+  });
+
+  expect(waitsNotice([parser(failed('turn'))])?.text).toStrictEqual(
+    "✗ parser's turn failed",
+  );
+  expect(waitsNotice([parser(failed('start'))])?.text).toStrictEqual(
+    '✗ parser failed to start',
+  );
+  expect(waitsNotice([parser(failed('exited'))])?.text).toStrictEqual(
+    '✗ parser exited',
+  );
+  expect(waitsNotice([behind(1, 'fake', failed('turn'))])?.text).toStrictEqual(
+    "✗ 1 fake's turn failed",
+  );
+  expect(
+    waitsNotice(
+      [behind(1, 'fake', failed('turn')), behind(2, 'fake', failed('exited'))],
+      'ctrl+x a',
+    ),
+  ).toStrictEqual({
+    text: '✗ 1 exited · 1 turn failed',
+    tone: 'ended',
+    key: 'ctrl+x a',
+  });
+  expect(
+    waitsNotice([
+      parser(failed('turn', 10)),
+      behind(2, 'fake', failed('turn', 20)),
+      behind(3, 'fake', failed('start')),
+      behind(4, 'fake', failed('exited')),
+      behind(5, 'fake', failed('exited')),
+    ])?.text,
+  ).toStrictEqual('✗ 2 exited · 1 failed to start · 2 turns failed');
+  // Replies alone still count as sessions, which only tabs behind make.
+  expect(
+    waitsNotice([behind(1, 'fake', replied), behind(2, 'fake', replied)])?.text,
+  ).toStrictEqual('✓ 2 sessions replied');
 });
 
 test('the waits notice goes ahead of the hint, and the hint goes first', () => {
@@ -442,4 +490,50 @@ test('with no gradient the spinner dims all but the lit mark, in the one tone', 
     { colour: 'green', dim: true },
     { colour: 'green', dim: false },
   ]);
+});
+
+describe('CHD-264 tester: grouped failures', () => {
+  test('a stale turn cause with an exited process counts as exited, and the narrow notice preserves both groups', () => {
+    const turn = {
+      unseen: { kind: 'failed' as const, failure: 'turn' as const, since: 1 },
+    };
+    const entries = [
+      behind(1, 'fake', turn),
+      behind(2, 'fake', { ...turn, exited: true }),
+    ];
+    const notice = waitsNotice(entries, 'ctrl+x a');
+
+    expect(notice?.text).toBe('✗ 1 exited · 1 turn failed');
+    expect(waitsNotice([...entries].reverse(), 'ctrl+x a')).toStrictEqual(
+      notice,
+    );
+    expect(text({ ...facts, waits: notice }, 76)).toContain(
+      '✗ 1 exited · 1 turn failed · ctrl+x a',
+    );
+    expect(notice?.text).not.toContain('sessions');
+    expect(waitsNotice([behind(2, 'fake', { exited: true })])).toBeUndefined();
+  });
+});
+
+test("a tab behind names a child's failure for the child, in the tab; only its own main's is the tab's", () => {
+  const failed = (failure: 'turn' | 'start' | 'exited') => ({
+    unseen: { kind: 'failed' as const, since: 30, failure },
+  });
+  const child = (failure: 'turn' | 'start' | 'exited'): TabBehind => ({
+    ...behind(2, 'fake', failed(failure)),
+    waiter: 'parser',
+  });
+
+  expect(waitsNotice([child('exited')])?.text).toStrictEqual(
+    '✗ parser exited in 2 fake',
+  );
+  expect(waitsNotice([child('turn')])?.text).toStrictEqual(
+    "✗ parser's turn failed in 2 fake",
+  );
+  expect(waitsNotice([child('start')])?.text).toStrictEqual(
+    '✗ parser failed to start in 2 fake',
+  );
+  expect(waitsNotice([behind(2, 'fake', failed('turn'))])?.text).toStrictEqual(
+    "✗ 2 fake's turn failed",
+  );
 });

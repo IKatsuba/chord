@@ -7,7 +7,12 @@
  */
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
-import type { TabWait } from '../../session/tabs.ts';
+import {
+  type Failure,
+  failedSince,
+  failureOf,
+  type TabWait,
+} from '../../session/tabs.ts';
 import { GLYPHS } from '../app/strip.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
@@ -55,9 +60,23 @@ function briefly(ms: number): string {
 }
 
 /**
+ * What failed for an agent, gravest first: its process exited, it never came
+ * up, or its turn failed while it stayed open, which only an unseen failure
+ * says; none when nothing did.
+ */
+function failureFor(row: AgentRow): Failure | undefined {
+  return row.wait.exited
+    ? 'exited'
+    : row.failed
+      ? 'start'
+      : failureOf(row.wait);
+}
+
+/**
  * Where an agent stands, most urgent first, as the strip's glyphs and the
  * sessions picker's words say it, with `←` for a message not yet seen;
- * none while it is idle and seen.
+ * none while it is idle and seen. A failed turn is told apart from an agent
+ * that is gone, as the agent is still open (CHD-264).
  */
 export function agentState(row: AgentRow, now: number): AgentState | undefined {
   if (row.folded !== undefined) {
@@ -76,12 +95,19 @@ export function agentState(row: AgentRow, now: number): AgentState | undefined {
     };
   }
 
-  if (row.failed || wait.unseen?.kind === 'failed') {
-    return { glyph: GLYPHS.failed, words: 'failed', tone: 'error' };
-  }
+  const failure = failureFor(row);
 
-  if (wait.exited) {
-    return { glyph: GLYPHS.failed, words: 'exited', tone: 'error' };
+  if (failure !== undefined) {
+    return {
+      glyph: GLYPHS.failed,
+      words:
+        failure === 'exited'
+          ? 'exited'
+          : failure === 'start'
+            ? 'failed to start'
+            : `turn failed ${briefly(now - (failedSince(wait) ?? now))} ago`,
+      tone: 'error',
+    };
   }
 
   if (wait.unseen?.kind === 'message') {
@@ -121,19 +147,20 @@ function urgency(row: AgentRow): readonly [number, number] | undefined {
     return [0, wait.asking.since];
   }
 
-  if (row.failed || wait.unseen?.kind === 'failed') {
-    return [1, wait.unseen?.since ?? 0];
-  }
+  const failure = failureFor(row);
 
-  if (wait.exited) {
-    return [2, 0];
+  if (failure !== undefined) {
+    return [
+      failure === 'exited' ? 1 : failure === 'start' ? 2 : 3,
+      wait.unseen?.since ?? 0,
+    ];
   }
 
   if (wait.unseen !== undefined) {
-    return [wait.unseen.kind === 'message' ? 3 : 4, wait.unseen.since];
+    return [wait.unseen.kind === 'message' ? 4 : 5, wait.unseen.since];
   }
 
-  return wait.working === undefined ? undefined : [5, wait.working];
+  return wait.working === undefined ? undefined : [6, wait.working];
 }
 
 /**
@@ -206,14 +233,15 @@ export function teamRows(
 
 /**
  * Whether a time on the list goes on counting, so the list ticks: an agent
- * asking, working or with a reply not yet seen, a folded team's members
- * among them, since their state stands on the lead's row.
+ * asking, working or with a reply or failed turn not yet seen, a folded
+ * team's members among them, since their state stands on the lead's row.
  */
 export function listTimed(rows: readonly AgentRow[]): boolean {
   const timed = (row: AgentRow): boolean =>
     row.wait.asking !== undefined ||
     row.wait.working !== undefined ||
     row.wait.unseen?.kind === 'replied' ||
+    failureFor(row) === 'turn' ||
     (row.folded ?? []).some(timed);
 
   return rows.some(timed);

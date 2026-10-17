@@ -75,6 +75,7 @@ import {
 import {
   agentOf,
   askingChild,
+  waitingChild,
   type Child,
   childEnded,
   type ChildInfo,
@@ -2382,7 +2383,7 @@ export function useSessions(
       const first = all.sessions[tab.key]?.transcript.entries.find(
         (entry) => entry.kind === 'user',
       );
-      const waiter = askingChild(tab)?.name;
+      const waiter = waitingChild(tab)?.name;
 
       return {
         agent: tab.agent,
@@ -2749,11 +2750,24 @@ export function useSessions(
     const waits = waitsNotice(
       [
         ...others,
-        ...tabs.tabs.flatMap((tab, index) =>
-          tab.key === tabs.front
-            ? []
-            : [{ number: index + 1, agent: tab.agent, wait: mergedWait(tab) }],
-        ),
+        ...tabs.tabs.flatMap((tab, index) => {
+          if (tab.key === tabs.front) {
+            return [];
+          }
+
+          const waiter = waitingChild(tab);
+
+          return [
+            {
+              number: index + 1,
+              agent: tab.agent,
+              wait: mergedWait(tab),
+              ...(waiter === undefined
+                ? {}
+                : { waiter: namedChild(tab, waiter) }),
+            },
+          ];
+        }),
       ],
       hintKey(state.keys, 'session:attention'),
     );

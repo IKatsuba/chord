@@ -158,21 +158,13 @@ function Request({
   const [top, setTop] = useState(0);
   const whole = requestRows(wait, width);
   // A room of one row says what is hidden beside the pinned row, whose
-  // title then wraps to the cells the count leaves.
-  const counted =
-    room === 1 && whole.rows.length > 1
-      ? requestCount(
-          hiddenRows(
-            whole.rows.length,
-            requestView(whole.rows.length, 1, top).top,
-            1,
-          ),
-        )
-      : undefined;
+  // title then wraps to the cells the count leaves: as many as its widest
+  // count leaves, so the rows stay put while the count changes as it
+  // scrolls.
   const { pinned, rows } =
-    counted === undefined
-      ? whole
-      : requestRows(wait, width, width - stringWidth(counted) - 1);
+    room === 1 && whole.rows.length > 1
+      ? requestRows(wait, width, width - countRoom(whole.rows.length) - 1)
+      : whole;
   const total = rows.length;
   const overflows = total > room;
   const shown = requestView(total, room, top);
@@ -194,14 +186,16 @@ function Request({
   );
 
   // The wheel can leave the scrollbox past a view there is, as at the end
-  // it shows a row more than a view between the rules does.
+  // it shows a row more than a view between the rules does; and a resize
+  // can leave it where its old size let it go. After every render, so it
+  // settles once the room it is laid out in has.
   useEffect(() => {
     const box = view.current;
 
     if (box !== null && box.scrollTop !== shown.top) {
       box.scrollTo(shown.top);
     }
-  }, [shown.top]);
+  });
 
   useEffect(() => {
     onOverflow?.(overflows);
@@ -220,9 +214,21 @@ function Request({
   }, [scroller, scroll]);
 
   // The scrollbox moves by itself under the wheel; its scrollbar says where.
+  // A move down to where it can go no further, from a top it was asked to
+  // be at, is its own clamp to the size it had, as a resize leaves it, not
+  // the person scrolling: the top asked for stays, and the view clamps it.
   useLayoutEffect(() => {
-    const bar = view.current?.verticalScrollBar;
-    const moved = ({ position }: { position: number }) => setTop(position);
+    const box = view.current;
+    const bar = box?.verticalScrollBar;
+    const moved = ({ position }: { position: number }) =>
+      setTop((asked) =>
+        box !== null &&
+        box !== undefined &&
+        position < asked &&
+        position >= box.scrollHeight - box.viewport.height
+          ? asked
+          : position,
+      );
 
     bar?.on('change', moved);
 
@@ -307,6 +313,16 @@ function Request({
       </box>
     </>
   );
+}
+
+/**
+ * The cells the widest count a request of about `total` rows can say takes,
+ * with room for the rows a narrower title adds.
+ */
+function countRoom(total: number): number {
+  const most = 10 ** String(total * 2).length - 1;
+
+  return stringWidth(requestCount({ above: most, below: most }));
 }
 
 /** A row a wheel report moves the request, as it moves the transcript. */

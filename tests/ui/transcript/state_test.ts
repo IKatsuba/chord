@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   type AppAction,
   type AppState,
@@ -186,4 +186,52 @@ test('a jump scrolls the view back and mounts its entry, until the measure has p
 
   expect(back.jump).toStrictEqual(undefined);
   expect(back.scroll.following).toStrictEqual(true);
+});
+
+describe('CHD-424 tester: targeted transcript jumps', () => {
+  test('a pending box target survives measurement and expansion, and completing it keeps the view held', () => {
+    const jumped = reduceApp(
+      after({ type: 'scroll_measured', content: 100, view: 20 }),
+      {
+        type: 'jumped_to',
+        entry: 0,
+        target: 'agent:task-2',
+      },
+    );
+    const measured = reduceApp(jumped, {
+      type: 'scroll_measured',
+      content: 120,
+      view: 20,
+    });
+    const expanded = reduceApp(measured, { type: 'expanded_toggled' });
+
+    expect(expanded.jump).toStrictEqual({ entry: 0, target: 'agent:task-2' });
+    expect(expanded.expanded).toBe(true);
+
+    const finished = reduceApp(expanded, { type: 'jump_done' });
+
+    expect(finished.jump).toBeUndefined();
+    expect(finished.scroll.following).toBe(false);
+    expect(finished.mounted).toBe(0);
+  });
+
+  test('a second jump replaces the previous box target and End discards the pending jump', () => {
+    const first = reduceApp(scrolledBack, {
+      type: 'jumped_to',
+      entry: 0,
+      target: 'call:first',
+    });
+    const second = reduceApp(first, {
+      type: 'jumped_to',
+      entry: 2,
+      target: 'agent:second',
+    });
+
+    expect(second.jump).toStrictEqual({ entry: 2, target: 'agent:second' });
+
+    const following = reduceApp(second, { type: 'scrolled', step: 'bottom' });
+
+    expect(following.jump).toBeUndefined();
+    expect(following.scroll.following).toBe(true);
+  });
 });

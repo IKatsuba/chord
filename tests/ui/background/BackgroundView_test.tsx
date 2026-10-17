@@ -3,14 +3,16 @@
  * view closes, the item's owner is picked and its transcript scrolls back to
  * the call that started the item.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { serveChord } from '../../../src/server/server.ts';
 import {
   DOWN,
+  END,
   promptRow,
   ready,
   send,
   until,
+  UP,
   type Window,
   withWindow,
 } from '../app/render.tsx';
@@ -107,3 +109,82 @@ test("enter on the second task of a group puts that task's own row on top, not t
     expect(!window.frame().includes('Running 2 agents')).toBeTruthy();
     await window.shows('lines below');
   }));
+
+describe('CHD-424 tester: call navigation edges', () => {
+  for (const columns of [80, 120]) {
+    test(`a lone task jump at ${columns} columns holds while typing and End returns to the tail with the draft intact`, () =>
+      withBackground(async (window) => {
+        await window.resize({ rows: 24, columns });
+        await ready(window);
+        await send(window, 'tasklong');
+        await window.shows('background  1 task running');
+        await send(window, 'steps');
+        await window.shows('150 steps read.');
+        expect(window.frame()).not.toContain('Agent(Watch the build)');
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('Background · 1 in this tab');
+        await window.press('\r');
+        await until('the lone task call on the first line', () =>
+          window.frame().split('\n')[0]!.includes('⏺ Agent(Watch the build)'),
+        );
+        await window.type('draft stays');
+        expect(promptRow(window)).toContain('draft stays');
+        expect(window.frame().split('\n')[0]).toContain(
+          'Agent(Watch the build)',
+        );
+        await window.press(END);
+        await window.shows('150 steps read.');
+        expect(promptRow(window)).toContain('draft stays');
+        expect(window.frame()).not.toContain('lines below');
+      }));
+  }
+
+  test('enter picks parser from a different picked child and mounts parser’s old call on top at 80x24', () =>
+    withBackground(async (window) => {
+      await window.resize({ rows: 24, columns: 80 });
+      await ready(window);
+      await send(window, 'monitorchild');
+      await window.shows('background  2 monitors running');
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.shows('❯ parser ');
+      await window.press('\r');
+      await send(window, 'steps');
+      await window.shows('150 steps read.');
+      await window.press(DOWN);
+      await window.press(UP);
+      await window.shows('❯ main ');
+      await window.press('\r');
+      await send(window, 'agents');
+      await window.shows('Waiting on parser.');
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.shows('❯ docs ');
+      await window.press(DOWN);
+      await window.shows('❯ background');
+      expect(window.frame()).toContain('╭─ docs ');
+      await window.press('\r');
+      await window.shows('Background · 2 in this tab');
+
+      for (
+        let index = 0;
+        index < 2 && !window.frame().includes('❯ parser tests');
+        index++
+      ) {
+        await window.press('j');
+      }
+
+      await window.shows('❯ parser tests');
+      await window.press('\r');
+      await window.shows('╭─ parser ');
+      await until('parser’s own monitor call at the top', () =>
+        window.frame().split('\n')[0]!.includes('⏺ Monitor(parser tests)'),
+      );
+      await window.type('parser draft');
+      expect(promptRow(window)).toContain('parser draft');
+      expect(window.frame()).not.toContain('Do you want to proceed?');
+    }));
+});

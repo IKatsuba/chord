@@ -1860,6 +1860,112 @@ describe('CHD-417 tester: held steer lifecycle', () => {
       ).toStrictEqual([firstTurn(events), firstTurn(events)]);
     }));
 
+  test('a failed snapshotted call releases its message before a later call ends', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('overlapfail');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.toolCallId === 'overlapfail-a',
+        ),
+      );
+      conversation.tell(MAIN, 'After the failed call.');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      const order = events.flatMap((event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'tool_call_update'
+          ? [`${event.update.toolCallId}: ${event.update.status}`]
+          : event.type === 'prompt' && event.into !== undefined
+            ? [event.text]
+            : [],
+      );
+
+      expect(order).toStrictEqual([
+        'overlapfail-a: failed',
+        'After the failed call.',
+        'overlapfail-b: completed',
+      ]);
+    }));
+
+  for (const answer of ['allow', 'deny']) {
+    test(`a permission ${answer} releases the message only after the other top-level call ends`, () =>
+      onFake(['--steering', 'claude'], async (conversation, events) => {
+        conversation.send('overlapask');
+        await until(() =>
+          events.some((event) => event.type === 'permission_requested'),
+        );
+
+        const asked = events.find(
+          (event) => event.type === 'permission_requested',
+        );
+
+        assert(asked?.type === 'permission_requested');
+        assert(asked.permission.toolCallId !== undefined);
+        expect(conversation.tell(MAIN, 'After both calls.')).toBe('queued');
+        conversation.choose(asked.permission.id, answer);
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'prompt' && event.text === 'After both calls.',
+          ),
+        );
+
+        const sent = events.findIndex(
+          (event) =>
+            event.type === 'prompt' && event.text === 'After both calls.',
+        );
+        const ended = (id: string, status: string) =>
+          events.findIndex(
+            (event) =>
+              event.type === 'update' &&
+              event.update.sessionUpdate === 'tool_call_update' &&
+              event.update.toolCallId === id &&
+              event.update.status === status,
+          );
+        const write = ended(
+          asked.permission.toolCallId,
+          answer === 'allow' ? 'completed' : 'failed',
+        );
+        const other = ended('overlapask-a', 'completed');
+
+        expect(write >= 0).toBe(true);
+        expect(other > write).toBe(true);
+        expect(sent > other).toBe(true);
+      }));
+  }
+
+  test('an open subagent-only call never holds a steer into its parent', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('subagentcall');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.subagentId !== undefined &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.status === 'in_progress',
+        ),
+      );
+      conversation.tell(MAIN, 'For the parent.');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      const order = events.flatMap((event) =>
+        event.type === 'update' &&
+        event.subagentId !== undefined &&
+        event.update.sessionUpdate === 'tool_call_update' &&
+        event.update.status === 'completed'
+          ? ['child ended']
+          : event.type === 'prompt' && event.into !== undefined
+            ? [event.text]
+            : [],
+      );
+
+      expect(order).toStrictEqual(['For the parent.', 'child ended']);
+    }));
+
   for (const action of ['clear', 'close'] as const) {
     test(`${action} discards a held steer without delivering it to the old or new session`, async () => {
       const steered: string[] = [];

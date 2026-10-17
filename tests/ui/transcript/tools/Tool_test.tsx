@@ -804,3 +804,37 @@ for (const columns of [80, 120]) {
     }
   });
 }
+
+test("a proposed change's body diff wraps its long lines under their code, never clipped, at 80 columns", async () => {
+  const server = serveChord();
+  const bugfix = await readFile(
+    new URL('../../../fixtures/teams/fake/bugfix.md', import.meta.url),
+    'utf8',
+  );
+
+  try {
+    await withWindow(
+      async (window) => {
+        await send(window, 'propose');
+        await window.shows('Replace team bugfix?');
+
+        const read = window.frame().replace(/\s+/g, ' ');
+
+        expect(read).toContain("bugfix.md's body · 10 additions, 6 removals");
+        // A line wider than the row, whole under its number and sign.
+        expect(read).toContain(
+          '5 + 3. coder fixes the code so that test passes. It edits only the files the lead named for it, and never `tests/`.',
+        );
+      },
+      {
+        columns: 80,
+        rows: 120,
+        server,
+        runtimes: ['fake', 'claude', 'codex'],
+        teams: { bugfix },
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});

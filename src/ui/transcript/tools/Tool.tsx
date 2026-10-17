@@ -338,6 +338,7 @@ function Proposal({
           view={diff.view}
           first={false}
           headline={bodyChangeLine(view.name, diff.view)}
+          width={width}
         />
       )}
       {hidden > 0 && <Folded hidden={hidden} />}

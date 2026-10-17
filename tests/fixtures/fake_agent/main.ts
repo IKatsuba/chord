@@ -269,6 +269,7 @@ const SCENARIOS = [
   'late',
   'twins',
   'mcpask',
+  'bigask',
   'unknown',
   'subagent',
   'subagentupdate',

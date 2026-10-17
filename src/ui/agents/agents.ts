@@ -2,9 +2,8 @@
  * The list of a session's agents under the prompt, kept out of the
  * component: `main` and each long-lived child, one row each with its
  * runtime, model and state, a team's members nested under its lead or
- * folded into its row, then the monitors its agents run, each with its
- * command and how long it has run, cut to the window's height and width;
- * and where ↑ ↓ and `x` move the `❯` in it.
+ * folded into its row, cut to the window's height and width; and where
+ * ↑ ↓ move the `❯` in it, on to the background's summary line after it.
  */
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
@@ -12,7 +11,6 @@ import type { TabWait } from '../../session/tabs.ts';
 import { GLYPHS } from '../app/strip.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
-import type { RunningMonitor } from '../../session/monitors.ts';
 import type { LeftOpen } from '../../session/transcript/types.ts';
 
 /** One agent of the front session, as the list is asked to draw it. */
@@ -207,19 +205,18 @@ export function teamRows(
 }
 
 /**
- * Whether a time on the list goes on counting, so the list ticks: a
- * monitor's, or an agent asking, working or with a reply not yet seen,
- * a folded team's members among them, since their state stands on the
- * lead's row.
+ * Whether a time on the list goes on counting, so the list ticks: an agent
+ * asking, working or with a reply not yet seen, a folded team's members
+ * among them, since their state stands on the lead's row.
  */
-export function listTimed(rows: readonly ListRow[]): boolean {
+export function listTimed(rows: readonly AgentRow[]): boolean {
   const timed = (row: AgentRow): boolean =>
     row.wait.asking !== undefined ||
     row.wait.working !== undefined ||
     row.wait.unseen?.kind === 'replied' ||
     (row.folded ?? []).some(timed);
 
-  return rows.some((row) => isMonitorRow(row) || timed(row));
+  return rows.some(timed);
 }
 
 /** At most this many rows, the queue's own limit: 4 at 24 rows, 6 at 40. */
@@ -228,163 +225,70 @@ export function agentsRowLimit(rows: number): number {
 }
 
 /**
- * One monitor of the front session's agents, as the list draws it after
- * them: whose it is, what it watches and how long, never something to write
- * to, so focusing it picks nothing.
- */
-export interface MonitorRow {
-  readonly kind: 'monitor';
-  /** The session that started it: the tab's own key, or a child's. */
-  readonly key: number;
-  readonly id: string;
-  readonly description: string;
-  readonly command: string;
-  readonly startedAt: number;
-  readonly events: number;
-  /** A child's: its name and its place among the agent colours. */
-  readonly owner?: { readonly name: string; readonly colour: number };
-  /** It has the `❯` while the list has the keys. */
-  readonly focused: boolean;
-}
-
-/** A row of the list: an agent, or a monitor after the agents. */
-export type ListRow = AgentRow | MonitorRow;
-
-export function isMonitorRow(row: ListRow): row is MonitorRow {
-  return 'kind' in row && row.kind === 'monitor';
-}
-
-/** A monitor by the session that started it and its id there. */
-export interface MonitorRef {
-  readonly key: number;
-  readonly id: string;
-}
-
-/**
- * The list's rows: the agents, drawn only while there is a child, then every
- * running monitor of the tab's agents, in the order they started.
- * The `❯` is on the monitor `focus` names; failing that, on the agent picked,
- * or with no agents drawn, on the first monitor. When they all do not fit
- * `limit` rows, each team the pick is not in folds to its lead's row.
+ * The list's rows: the agents, drawn only while there is a child. When they
+ * all do not fit `limit` rows, each team the pick is not in folds to its
+ * lead's row.
  */
 export function listRows(
   agents: readonly AgentRow[],
-  monitors: readonly {
-    readonly key: number;
-    readonly owner?: { readonly name: string; readonly colour: number };
-    readonly monitor: RunningMonitor;
-  }[],
-  focus: MonitorRef | undefined,
   limit = Infinity,
-): ListRow[] {
-  const nested = teamRows(agents, {
-    fold: agents.length + monitors.length > limit,
-  });
-  const found = monitors.some(
-    ({ key, monitor }) => key === focus?.key && monitor.id === focus.id,
-  );
-
-  return [
-    ...nested,
-    ...monitors
-      .toSorted((a, b) => a.monitor.startedAt - b.monitor.startedAt)
-      .map(({ key, owner, monitor }, index): MonitorRow => ({
-        kind: 'monitor',
-        key,
-        id: monitor.id,
-        description: monitor.description,
-        command: monitor.command,
-        startedAt: monitor.startedAt,
-        events: monitor.events,
-        ...(owner === undefined ? {} : { owner }),
-        focused: found
-          ? key === focus?.key && monitor.id === focus.id
-          : agents.length === 0 && index === 0,
-      })),
-  ];
+): AgentRow[] {
+  return teamRows(agents, { fold: agents.length > limit });
 }
 
-/** Where the `❯` goes: an agent, which is picked, or a monitor. */
+/**
+ * Where the `❯` goes: an agent, which is picked, or the background's
+ * summary line after the agents, the list's last stop.
+ */
 export type ListTarget =
   | { readonly kind: 'agent'; readonly key: number }
-  | ({ readonly kind: 'monitor' } & MonitorRef);
-
-function targetOf(row: ListRow): ListTarget {
-  return isMonitorRow(row)
-    ? { kind: 'monitor', key: row.key, id: row.id }
-    : { kind: 'agent', key: row.key };
-}
-
-/** The row with the `❯`: a focused monitor's, or the agent picked. */
-function focusedAt(rows: readonly ListRow[]): number {
-  const monitor = rows.findIndex((row) => isMonitorRow(row) && row.focused);
-
-  return monitor !== -1
-    ? monitor
-    : Math.max(
-        0,
-        rows.findIndex((row) => !isMonitorRow(row) && row.picked),
-      );
-}
+  | { readonly kind: 'summary' };
 
 /**
- * ↑ ↓ in the list: the row `by` from the focused one, the last staying the
- * last; none above the first, which hands the keys back to the box.
+ * ↑ ↓ in the list: the stop `by` from the focused one, the summary line
+ * (when `summary` is drawn) after the agents; the last stays the last, and
+ * none above the first hands the keys back to the box. With no agents drawn
+ * the summary line is the one stop.
  */
 export function moveListFocus(
-  rows: readonly ListRow[],
+  rows: readonly AgentRow[],
   by: number,
+  {
+    summary,
+    onSummary,
+  }: { readonly summary: boolean; readonly onSummary: boolean },
 ): ListTarget | undefined {
-  const at = focusedAt(rows) + by;
+  const stops = rows.length + (summary ? 1 : 0);
+  const from =
+    summary && (onSummary || rows.length === 0)
+      ? rows.length
+      : Math.max(
+          0,
+          rows.findIndex((row) => row.picked),
+        );
+  const at = Math.min(from + by, stops - 1);
 
-  if (rows.length === 0 || at < 0) {
+  if (stops === 0 || at < 0) {
     return undefined;
   }
 
-  return targetOf(rows[Math.min(at, rows.length - 1)]!);
-}
-
-/**
- * The focused monitor `x` stops, and where the `❯` goes once its row has
- * left: the row above, or the one that takes its place at the top; none
- * once the list is gone.
- */
-export function stopFocused(
-  rows: readonly ListRow[],
-): { readonly stop: MonitorRef; readonly then?: ListTarget } | undefined {
-  const at = rows.findIndex((row) => isMonitorRow(row) && row.focused);
-  const row = rows[at];
-
-  if (row === undefined || !isMonitorRow(row)) {
-    return undefined;
-  }
-
-  const rest = rows.filter((other) => other !== row);
-  const then = rest[Math.max(0, at - 1)];
-
-  return {
-    stop: { key: row.key, id: row.id },
-    ...(then === undefined ? {} : { then: targetOf(then) }),
-  };
+  return at === rows.length
+    ? { kind: 'summary' }
+    : { kind: 'agent', key: rows[at]!.key };
 }
 
 /** One row laid out: its columns, each padded to the widest. */
 export interface LaidRow {
-  readonly row: ListRow;
+  readonly row: AgentRow;
   /** `❯ ` on the focused row while the list has the keys, else two spaces. */
   readonly mark: string;
   /** A member's `├─ ` or `└─ `, drawn dim ahead of its name. */
   readonly branch?: string;
   /** The name, padded so that with the branch it fills the column. */
   readonly name: string;
-  /** An agent's runtime and model, or a monitor's `$ command`. */
+  /** Its runtime and model. */
   readonly detail: string;
-  readonly state?: {
-    readonly text: string;
-    readonly tone: AgentTone;
-    /** ` · parser` after a child's monitor's state, in the child's colour. */
-    readonly owner?: { readonly text: string; readonly colour: number };
-  };
+  readonly state?: { readonly text: string; readonly tone: AgentTone };
 }
 
 export interface AgentsLayout {
@@ -396,57 +300,40 @@ export interface AgentsLayout {
 /** The least a name is ever cut to, so one stays readable. */
 const NAME_FLOOR = 12;
 
-/** A monitor's description at most, so a long one leaves room. */
-const DESCRIPTION_CELLS = 24;
-
-/** The least a monitor's command is cut to: `$ `, twelve cells, `…`. */
-const COMMAND_FLOOR = 15;
-
 /** The gap between the columns. */
 const GAP = '  ';
 
-/** `no events`, `1 event`, `3 events`. */
-function eventsWords(events: number): string {
-  return events === 0
-    ? 'no events'
-    : `${events} ${events === 1 ? 'event' : 'events'}`;
-}
-
 /**
  * What one way of fitting the rows keeps: an agent's model and its effort,
- * an agent's state words and a folded team's size, a monitor's command
- * whole, and its `running 6m · `.
+ * and its state words and a folded team's size.
  */
 interface Fit {
   readonly model: boolean;
   readonly effort: boolean;
   readonly words: boolean;
-  readonly whole: boolean;
-  readonly running: boolean;
 }
 
 /**
- * Each way of fitting, the fullest first: a monitor's command is cut first,
- * then an agent's effort goes, then its model, then a monitor's running
- * time, then an agent's state words, leaving its glyph.
+ * Each way of fitting, the fullest first: an agent's effort goes first,
+ * then its model, then its state words, leaving its glyph.
  */
 const FITS: readonly Fit[] = [
-  { model: true, effort: true, words: true, whole: true, running: true },
-  { model: true, effort: true, words: true, whole: false, running: true },
-  { model: true, effort: false, words: true, whole: false, running: true },
-  { model: false, effort: false, words: true, whole: false, running: true },
-  { model: false, effort: false, words: true, whole: false, running: false },
-  { model: false, effort: false, words: false, whole: false, running: false },
+  { model: true, effort: true, words: true },
+  { model: true, effort: false, words: true },
+  { model: false, effort: false, words: true },
+  { model: false, effort: false, words: false },
 ];
 
 /**
  * The rows drawn in `limit` at `width`: past the limit, the last row is
  * `… +N more`, and while the list has the keys the rows shown move so the
- * focused one is among them. A row that does not fit gives way as `FITS`
- * says; the name is cut last, never below twelve columns.
+ * picked one is among them. `focused` marks the picked row with the `❯`,
+ * which is elsewhere while the summary line has it. A row that does not fit
+ * gives way as `FITS` says; the name is cut last, never below twelve
+ * columns.
  */
 export function agentsLayout(
-  rows: readonly ListRow[],
+  rows: readonly AgentRow[],
   {
     limit,
     width,
@@ -462,45 +349,29 @@ export function agentsLayout(
   const room = Math.max(1, limit);
   const fits = rows.length <= room;
   const shown = fits ? rows.length : room - 1;
-  const monitorAt = rows.findIndex((row) => isMonitorRow(row) && row.focused);
-  const at =
-    monitorAt !== -1
-      ? monitorAt
-      : Math.max(
-          0,
-          rows.findIndex((row) => !isMonitorRow(row) && row.picked),
-        );
+  const at = Math.max(
+    0,
+    rows.findIndex((row) => row.picked),
+  );
   const start =
     fits || !focused
       ? 0
       : Math.min(Math.max(0, at - shown + 1), rows.length - shown);
   const visible = rows.slice(start, start + shown);
-  const states = new Map(
-    rows.map((row) => [
-      row,
-      isMonitorRow(row) ? undefined : agentState(row, now),
-    ]),
-  );
+  const states = new Map(rows.map((row) => [row, agentState(row, now)]));
   // Widths over every row, drawn or not, so scrolling never moves a column.
   const widest = (texts: readonly string[]) =>
     Math.max(0, ...texts.map((text) => stringWidth(text)));
-  const nameOf = (row: ListRow) =>
-    isMonitorRow(row)
-      ? cliTruncate(row.description, DESCRIPTION_CELLS)
-      : row.name;
-  const branchOf = (row: ListRow) =>
-    isMonitorRow(row) || row.branch === undefined ? '' : `${row.branch} `;
+  const branchOf = (row: AgentRow) =>
+    row.branch === undefined ? '' : `${row.branch} `;
   // A folded team's members count too, under their branch as unfolded, so
   // folding never moves a column.
   const nameWidth = widest(
     rows.flatMap((row) => [
-      branchOf(row) + nameOf(row),
-      ...(isMonitorRow(row) ? [] : (row.folded ?? [])).map(
-        (member) => `├─ ${member.name}`,
-      ),
+      branchOf(row) + row.name,
+      ...(row.folded ?? []).map((member) => `├─ ${member.name}`),
     ]),
   );
-  const commands = rows.filter(isMonitorRow).map((row) => `$ ${row.command}`);
 
   for (const fit of FITS) {
     // A folded lead's size stands where its model would, and stays while
@@ -522,26 +393,7 @@ export function agentsLayout(
       ]
         .filter((part) => part !== undefined)
         .join(' · ');
-    const stateOf = (row: ListRow): LaidRow['state'] => {
-      if (isMonitorRow(row)) {
-        const events = eventsWords(row.events);
-
-        return {
-          text: fit.running
-            ? `running ${briefly(Math.max(0, now - row.startedAt))} · ${events}`
-            : events,
-          tone: 'dim',
-          ...(row.owner === undefined
-            ? {}
-            : {
-                owner: {
-                  text: ` · ${row.owner.name}`,
-                  colour: row.owner.colour,
-                },
-              }),
-        };
-      }
-
+    const stateOf = (row: AgentRow): LaidRow['state'] => {
       const state = states.get(row);
 
       return (
@@ -552,65 +404,38 @@ export function agentsLayout(
       );
     };
 
-    const stateText = (row: ListRow) => {
-      const state = stateOf(row);
-
-      return state === undefined ? '' : state.text + (state.owner?.text ?? '');
-    };
-
-    const runtimeWidth = widest(
-      rows
-        .filter((row) => !isMonitorRow(row))
-        .map((row) => runtimeOf(row as AgentRow)),
-    );
-    const stateWidth = widest(rows.map(stateText));
+    const runtimeWidth = widest(rows.map(runtimeOf));
+    const stateWidth = widest(rows.map((row) => stateOf(row)?.text ?? ''));
     const fixed =
       2 +
       nameWidth +
       GAP.length +
       (stateWidth === 0 ? 0 : GAP.length + stateWidth);
-    const whole = widest(commands);
-    // What the detail column may take; a cut command no shorter than its floor.
-    const left = width - fixed;
-    const detailWidth = fit.whole
-      ? Math.max(runtimeWidth, whole)
-      : Math.max(runtimeWidth, Math.min(whole, Math.max(left, COMMAND_FLOOR)));
     const last = fit === FITS[FITS.length - 1];
 
-    if (fixed + detailWidth > width && !last) {
+    if (fixed + runtimeWidth > width && !last) {
       continue;
     }
 
     // Past the last fallback the name gives way, down to its floor.
     const names = Math.max(
       Math.min(nameWidth, NAME_FLOOR),
-      nameWidth - Math.max(0, fixed + detailWidth - width),
+      nameWidth - Math.max(0, fixed + runtimeWidth - width),
     );
 
     return {
       more: rows.length - shown,
       rows: visible.map((row) => {
         const state = stateOf(row);
-        const mark =
-          focused &&
-          (isMonitorRow(row) ? row.focused : row.picked && monitorAt === -1)
-            ? '❯ '
-            : '  ';
-
         const branch = branchOf(row);
         const room = names - stringWidth(branch);
 
         return {
           row,
-          mark,
+          mark: focused && row.picked ? '❯ ' : '  ',
           ...(branch === '' ? {} : { branch }),
-          name: pad(cliTruncate(nameOf(row), room), room),
-          detail: pad(
-            isMonitorRow(row)
-              ? cliTruncate(`$ ${row.command}`, detailWidth)
-              : runtimeOf(row),
-            detailWidth,
-          ),
+          name: pad(cliTruncate(row.name, room), room),
+          detail: pad(runtimeOf(row), runtimeWidth),
           ...(state === undefined ? {} : { state }),
         };
       }),
@@ -652,23 +477,15 @@ export function agentsHint(width: number, close: string | undefined): string {
 }
 
 /**
- * The status line's hint while a monitor's row has the `❯`: it is stopped,
+ * The status line's hint while the summary line has the `❯`: it is opened,
  * not written to; shortened where the full one does not fit.
  */
-export function monitorHint(width: number, stop: string | undefined): string {
-  const full = [
-    '↑ ↓ to pick',
-    ...(stop === undefined ? [] : [`${stop} to stop it`]),
-    'enter esc to go back',
-  ].join(' · ');
+export function summaryHint(width: number): string {
+  const full = '↑ ↓ to move · enter to open · esc to go back';
 
   return stringWidth(full) + RIGHT_ROOM <= width
     ? full
-    : [
-        '↑ ↓ pick',
-        ...(stop === undefined ? [] : [`${stop} stop`]),
-        'esc back',
-      ].join(' · ');
+    : '↑ ↓ move · enter open · esc back';
 }
 
 /**

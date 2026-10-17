@@ -77,13 +77,9 @@ import {
   resolveTheme,
   type ThemeSetting,
 } from '../theme/theme.ts';
-import {
-  agentsHint,
-  agentsRowLimit,
-  isMonitorRow,
-  monitorHint,
-} from '../agents/agents.ts';
+import { agentsHint, agentsRowLimit, summaryHint } from '../agents/agents.ts';
 import { AgentsList, ChildLine } from '../agents/Agents.tsx';
+import { SummaryLine } from '../background/Background.tsx';
 import { startingVim } from '../prompt/vim.ts';
 import { useCommands } from './commands.ts';
 import {
@@ -507,12 +503,16 @@ export function App({
   // The front session's agents under the prompt, and the child the prompt
   // goes to, if one is picked.
   const agentRows = sessions.agentRows();
-  // The list under the prompt: those agents, then the monitors they run.
+  // The list under the prompt: those agents, then the background's
+  // summary line, its last stop.
   const agentsLimit = agentsRowLimit(rows);
   const listRows = sessions.listed(agentsLimit);
-  const monitorFocused = listRows.some(
-    (row) => isMonitorRow(row) && row.focused,
-  );
+  const backgroundItems = sessions.background();
+  const listShown = listRows.length > 0 || backgroundItems.length > 0;
+  // With no agents drawn the summary line is the list's one stop.
+  const summaryFocused =
+    backgroundItems.length > 0 &&
+    (state.summaryFocus === true || listRows.length === 0);
   const child = sessions.picked();
   const childShown = child && {
     name: child.name,
@@ -531,13 +531,20 @@ export function App({
     [agentRows.map((row) => `${row.name}:${row.colour}`).join('\n'), colours],
   );
 
-  // A list gone while it had the keys, its last monitor ended on its own,
-  // hands them back to the box.
+  // A list gone while it had the keys hands them back to the box; a summary
+  // line gone gives the `❯` back to the agent picked.
   useEffect(() => {
-    if (state.agentsFocus && listRows.length === 0) {
+    if (state.agentsFocus && !listShown) {
       dispatch({ type: 'agents_focused', focused: false });
+    } else if (state.summaryFocus && backgroundItems.length === 0) {
+      dispatch({ type: 'summary_focused', focused: false });
     }
-  }, [state.agentsFocus, listRows.length]);
+  }, [
+    state.agentsFocus,
+    state.summaryFocus,
+    listShown,
+    backgroundItems.length,
+  ]);
 
   const menu = commandMenu(state, draft);
   const finder = fileFinder(state, draft, cursor);
@@ -634,7 +641,8 @@ export function App({
     typed: typed.current,
     submitting: images.submitting(all.front),
     home,
-    agents: listRows.length > 0,
+    agents: listShown,
+    summaryOnly: listRows.length === 0 && backgroundItems.length > 0,
     splash: splashing,
   });
 
@@ -683,7 +691,7 @@ export function App({
       case 'move_agent':
         return sessions.moveAgent(step.by, agentsLimit);
       case 'close_agent':
-        return sessions.closePicked(agentsLimit);
+        return sessions.closePicked();
       case 'interrupt':
         return conversation()?.interrupt();
       case 'reject_permission':
@@ -1192,10 +1200,12 @@ export function App({
                       width={columns - 4}
                       {...(state.agentsFocus
                         ? {
-                            hint: (monitorFocused ? monitorHint : agentsHint)(
-                              columns - 4,
-                              hintKey(state.keys, 'agents:close'),
-                            ),
+                            hint: summaryFocused
+                              ? summaryHint(columns - 4)
+                              : agentsHint(
+                                  columns - 4,
+                                  hintKey(state.keys, 'agents:close'),
+                                ),
                           }
                         : {})}
                     />
@@ -1212,7 +1222,12 @@ export function App({
                 rows={listRows}
                 limit={agentsLimit}
                 width={columns - 4}
-                focused={state.agentsFocus === true}
+                focused={state.agentsFocus === true && !summaryFocused}
+              />
+              <SummaryLine
+                items={backgroundItems}
+                width={columns - 4}
+                focused={state.agentsFocus === true && summaryFocused}
               />
             </box>
           </Keys.Provider>

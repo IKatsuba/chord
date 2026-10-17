@@ -121,11 +121,9 @@ import {
 import {
   type AgentRow,
   agentState,
-  type ListRow,
   listRows,
   type ListTarget,
   moveListFocus,
-  stopFocused,
 } from '../agents/agents.ts';
 import {
   type BackgroundAgent,
@@ -1557,12 +1555,17 @@ export function useSessions(
    * and the box following; above `main` the focus goes back to the box.
    */
   const moveAgent = (by: number, limit: number) => {
-    focusOn(moveListFocus(listed(limit), by));
+    focusOn(
+      moveListFocus(listed(limit), by, {
+        summary: background().length > 0,
+        onSummary: state.summaryFocus === true,
+      }),
+    );
   };
 
   /**
    * The `❯` onto `target`: an agent's row picks it, the transcript and the
-   * box following; a monitor's row picks nothing; none hands the keys back
+   * box following; the summary line picks nothing; none hands the keys back
    * to the box.
    */
   const focusOn = (target: ListTarget | undefined) => {
@@ -1572,34 +1575,13 @@ export function useSessions(
 
     dispatch({ type: 'agent_close_disarmed' });
 
-    if (target.kind === 'monitor') {
-      return dispatch({
-        type: 'monitor_focused',
-        monitor: { key: target.key, id: target.id },
-      });
+    if (target.kind === 'summary') {
+      return dispatch({ type: 'summary_focused', focused: true });
     }
 
-    dispatch({ type: 'monitor_focused' });
+    dispatch({ type: 'summary_focused', focused: false });
     sessions.pick(target.key);
     showFront();
-  };
-
-  /**
-   * `x` on a monitor's row: stopped at once, as it holds nothing of the
-   * person's; its agent gets the `· stopped` message, and the `❯` goes to
-   * the row above.
-   */
-  const stopMonitor = (limit: number): boolean => {
-    const stopped = stopFocused(listed(limit));
-
-    if (stopped === undefined) {
-      return false;
-    }
-
-    conversationAt(stopped.stop.key)?.stopMonitor(stopped.stop.id, 'person');
-    focusOn(stopped.then);
-
-    return true;
   };
 
   /**
@@ -1607,11 +1589,7 @@ export function useSessions(
    * cutting a busy one short. chord tells the parent, so it is not left
    * waiting on a child that will never answer. On `main` it closes nothing.
    */
-  const closePicked = (limit: number) => {
-    if (stopMonitor(limit)) {
-      return;
-    }
-
+  const closePicked = () => {
     const tab = front();
     const child = tab && pickedChild(tab);
 
@@ -2015,38 +1993,9 @@ export function useSessions(
 
   /**
    * The list under the prompt as it is drawn in `limit` rows: the front
-   * tab's agents while it has a child, a team folded where they do not fit,
-   * then the monitors it and its children run, a child's in its colour.
+   * tab's agents while it has a child, a team folded where they do not fit.
    */
-  const listed = (limit: number): ListRow[] => {
-    const tab = front();
-
-    if (tab === undefined) {
-      return [];
-    }
-
-    const monitorsOf = (
-      key: number,
-      owner?: { readonly name: string; readonly colour: number },
-    ) =>
-      (all.sessions[key]?.monitors ?? []).map((monitor) => ({
-        key,
-        monitor,
-        ...(owner === undefined ? {} : { owner }),
-      }));
-
-    return listRows(
-      agentRows(),
-      [
-        ...monitorsOf(tab.key),
-        ...tab.children.flatMap((child) =>
-          monitorsOf(child.key, { name: child.name, colour: child.colour }),
-        ),
-      ],
-      state.monitorFocus,
-      limit,
-    );
-  };
+  const listed = (limit: number): AgentRow[] => listRows(agentRows(), limit);
 
   /**
    * The front tab's background: every monitor and task of its `main` and

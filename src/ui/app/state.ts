@@ -199,10 +199,10 @@ export interface WindowState
    */
   readonly agentsFocus?: true;
   /**
-   * The monitor in that list with the `❯`, which picks no agent; none while
-   * the `❯` is on the agent picked.
+   * The background's summary line, the list's last stop, has the `❯`,
+   * which picks no agent; none while the `❯` is on the agent picked.
    */
-  readonly monitorFocus?: { readonly key: number; readonly id: string };
+  readonly summaryFocus?: true;
   /**
    * `x` was pressed once on the busy child with this key; a second press
    * while it holds stops and closes it.
@@ -253,10 +253,8 @@ export type AppAction =
   | { readonly type: 'close_disarmed' }
   /** ↓ on an empty prompt moved the keys into the list, or they went back. */
   | { readonly type: 'agents_focused'; readonly focused: boolean }
-  | {
-      readonly type: 'monitor_focused';
-      readonly monitor?: { readonly key: number; readonly id: string };
-    }
+  /** The `❯` went on to the summary line, or off it. */
+  | { readonly type: 'summary_focused'; readonly focused: boolean }
   /** `x` on the busy child `key` asks for a second press. */
   | { readonly type: 'agent_close_armed'; readonly key: number }
   | { readonly type: 'agent_close_disarmed' }
@@ -513,7 +511,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         sessionsPicker: _______,
         agentsFocus: ________,
         agentCloseArmed: _________,
-        monitorFocus: __________,
+        summaryFocus: __________,
         teamsPicker: ___________,
         ...rest
       } = state;
@@ -696,7 +694,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       const {
         agentsFocus: _,
         agentCloseArmed: __,
-        monitorFocus: ___,
+        summaryFocus: ___,
         ...rest
       } = state;
 
@@ -705,12 +703,10 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         ? { ...rest, agentsFocus: true, help: false }
         : rest;
     }
-    case 'monitor_focused': {
-      const { monitorFocus: _, ...rest } = state;
+    case 'summary_focused': {
+      const { summaryFocus: _, ...rest } = state;
 
-      return action.monitor === undefined
-        ? rest
-        : { ...rest, monitorFocus: action.monitor };
+      return action.focused ? { ...rest, summaryFocus: true } : rest;
     }
     case 'agent_close_armed': {
       const { sessionsNote: _, ...rest } = state;
@@ -1646,8 +1642,9 @@ function agentsCommand(
     return `scroll_${step}`;
   }
 
+  // The summary line is no item: `x` there stops nothing.
   if (on('agents:close')) {
-    return 'close_agent';
+    return state.summaryFocus ? undefined : 'close_agent';
   }
 
   if (key.upArrow || (input === 'k' && !key.ctrl && !key.meta)) {
@@ -1656,6 +1653,10 @@ function agentsCommand(
 
   if (key.downArrow || (input === 'j' && !key.ctrl && !key.meta)) {
     return 'agents_down';
+  }
+
+  if (key.return && state.summaryFocus) {
+    return undefined;
   }
 
   return key.return || key.escape ? 'agents_leave' : undefined;

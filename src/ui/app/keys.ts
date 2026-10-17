@@ -142,8 +142,13 @@ export interface KeyContext {
   readonly submitting: boolean;
   /** The home directory a `~/` path starts in. */
   readonly home: string | undefined;
-  /** The list of the session's agents is under the prompt: it has a child. */
+  /**
+   * The list under the prompt is drawn: the session's agents, as it has a
+   * child, or the background's summary line, or both.
+   */
   readonly agents?: boolean;
+  /** The summary line is the list's one stop, with no agents drawn. */
+  readonly summaryOnly?: boolean;
   /** The startup splash holds the screen in front of the window. */
   readonly splash?: boolean;
 }
@@ -306,7 +311,12 @@ export function newerSteps(context: KeyContext): Step[] {
   }
 
   return listed && context.agents && draft === '' && history.index === undefined
-    ? [dispatch({ type: 'agents_focused', focused: true })]
+    ? [
+        dispatch({ type: 'agents_focused', focused: true }),
+        ...(context.summaryOnly
+          ? [dispatch({ type: 'summary_focused', focused: true })]
+          : []),
+      ]
     : [];
 }
 

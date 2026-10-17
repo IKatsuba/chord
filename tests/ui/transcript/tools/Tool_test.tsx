@@ -4,6 +4,7 @@ import { draw } from '../../harness.tsx';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import type { TurnState } from '../../../../src/session/transcript/types.ts';
+import { ChordServerName } from '../../../../src/ui/app/context.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import { CTRL_O, END, send, until, withWindow } from '../../app/render.tsx';
 import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
@@ -584,6 +585,93 @@ describe('CHD-393 tester: long headline navigation', () => {
           await window.press(END);
           await window.shows('EOF)');
           await window.shows('Four calls with long headlines.');
+        },
+        { columns, rows },
+      ));
+  }
+});
+
+describe('CHD-415 tester: MCP context and view changes', () => {
+  test('a chord-2 context distinguishes own and external calls before rawInput arrives', async () => {
+    const drawn = await draw(
+      <ChordServerName.Provider value='chord-2'>
+        {['chord', 'chord-2'].map((server) => (
+          <TranscriptEntry
+            key={server}
+            entry={{
+              kind: 'tool',
+              turnId: 't',
+              call: {
+                id: server,
+                title: `mcp__${server}__monitor`,
+                status: 'completed',
+              },
+            }}
+            turn={{ status: 'idle' }}
+            agent='fake'
+            expanded={false}
+            width={76}
+          />
+        ))}
+      </ChordServerName.Provider>,
+      { columns: 80, rows: 12 },
+    );
+
+    try {
+      const frame = stripAnsi(drawn.frame());
+
+      expect(frame).toContain('⏺ chord - monitor (MCP)');
+      expect(frame).toContain('⏺ Monitor');
+      expect(frame).not.toContain('chord-2 - monitor');
+      expect(frame).not.toContain('undefined');
+    } finally {
+      await drawn.unmount();
+    }
+  });
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`MCP arguments survive verbose toggle and resize from ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'mcpnote');
+          await window.shows('Done.');
+          await until(
+            'the MCP turn to finish',
+            () => !window.frame().includes('Working'),
+          );
+
+          const before = rowsBetween(
+            stripAnsi(window.frame()),
+            '⏺ notes - save_note',
+            '⎿',
+          ).slice(0, -1);
+
+          await window.press(CTRL_O);
+          expect(
+            rowsBetween(
+              stripAnsi(window.frame()),
+              '⏺ notes - save_note',
+              '⎿',
+            ).slice(0, -1),
+          ).toEqual(before);
+          await window.resize({ columns: columns === 80 ? 120 : 80, rows: 40 });
+
+          const after = rowsBetween(
+            stripAnsi(window.frame()),
+            '⏺ notes - save_note',
+            '⎿',
+          ).slice(0, -1);
+          const joined = (lines: string[]) =>
+            lines.map((line) => line.trim()).join(' ');
+
+          expect(joined(after)).toBe(joined(before));
+          expect(joined(after)).toEndWith(
+            '["ui-test","tool-rendering","mcp","terminal","claude-code"])',
+          );
+          expect(after.length).not.toBe(before.length);
         },
         { columns, rows },
       ));

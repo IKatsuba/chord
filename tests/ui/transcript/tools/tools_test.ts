@@ -580,3 +580,53 @@ describe('CHD-393 tester: styled headline boundaries', () => {
     });
   }
 });
+
+describe('CHD-415 tester: MCP identity and control boundaries', () => {
+  test('own-server collision routing is stable before arguments and served identity wins', () => {
+    for (const rawInput of [undefined, null, {}]) {
+      expect(
+        headline(
+          { id: 'a', title: 'mcp__chord-2__monitor', rawInput },
+          'chord-2',
+        ),
+      ).toEqual({ name: 'Monitor' });
+      expect(
+        headline(
+          { id: 'a', title: 'mcp__chord__monitor', rawInput },
+          'chord-2',
+        ),
+      ).toEqual({ name: 'chord - monitor', tag: ' (MCP)' });
+    }
+
+    expect(
+      headline(
+        {
+          id: 'a',
+          title: 'mcp__other__monitor',
+          rawInput: { to: 'wrong' },
+          chord: {
+            tool: 'send_message',
+            input: { to: 'alias', text: 'hello' },
+            answer: { to: 'reviewer' },
+          },
+        },
+        'chord-2',
+      ),
+    ).toEqual({ name: 'reviewer', sent: true });
+    expect(
+      headline(
+        { id: 'a', title: 'mcp__chord-2__custom', rawInput: {} },
+        'chord-2',
+      ),
+    ).toEqual({ name: 'chord-2 - custom', tag: ' (MCP)' });
+  });
+
+  test('primitive inputs and escaped control keys remain visible JSON text', () => {
+    expect(mcpArguments(false)).toBe('false');
+    expect(mcpArguments(0)).toBe('0');
+    expect(mcpArguments('')).toBe('""');
+    expect(mcpArguments({ 'line\n\u007f': 'left\u009bright\u009f' })).toBe(
+      'line\\n\\u007f: "left\\u009bright\\u009f"',
+    );
+  });
+});

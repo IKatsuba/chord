@@ -1,11 +1,15 @@
 /**
  * Tool calls: a read, calls as a screen shows them, calls out of order,
  * edits with their diffs, a turn of many calls, and headlines longer than a
- * row.
+ * row, an MCP call's among them.
  */
 import * as acp from '@agentclientprotocol/sdk';
 import { EDIT_NEW, EDIT_OLD, REWRITE_NEW, REWRITE_OLD } from '../../edits.ts';
-import { NOTES_COMMAND, WEATHER_COMMAND } from '../../headlines.ts';
+import {
+  NOTE_ARGUMENTS,
+  NOTES_COMMAND,
+  WEATHER_COMMAND,
+} from '../../headlines.ts';
 import { STEP_MS } from '../options.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
 
@@ -388,4 +392,42 @@ export const TOOLS = {
   // The calls of the Claude Code capture in docs/design/CHD-393.md.
   heredoc: (turn) => ran(turn, NOTES_COMMAND, '      10 notes.md'),
   longcommand: (turn) => ran(turn, WEATHER_COMMAND, '309'),
+
+  // The capture's MCP call, as claude-agent-acp sends one: titled by its
+  // name, its arguments in rawInput alone, first empty then whole.
+  async mcpnote(turn) {
+    const toolCallId = turn.callId('save_note');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: 'mcp__notes__save_note',
+      kind: 'other',
+      status: 'pending',
+      rawInput: {},
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'in_progress',
+      rawInput: NOTE_ARGUMENTS,
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'completed',
+      content: [
+        {
+          type: 'content',
+          content: {
+            type: 'text',
+            text: `saved "${NOTE_ARGUMENTS.title}" (${NOTE_ARGUMENTS.body.length} chars)`,
+          },
+        },
+      ],
+    });
+    await turn.say('Done.');
+
+    return 'end_turn';
+  },
 } satisfies Record<string, Play>;

@@ -4,7 +4,11 @@
  * `⎿` lines and diffs that show what it produced.
  */
 import type { ToolCallContent, ToolKind } from '@agentclientprotocol/sdk';
-import type { ToolCall, TurnState } from '../../../session/transcript/types.ts';
+import type {
+  ChordTool,
+  ToolCall,
+  TurnState,
+} from '../../../session/transcript/types.ts';
 import { type DiffView, diffView } from './diff.ts';
 import { isEmpty, type TerminalView, terminalView } from './terminal.ts';
 import { Chalk } from 'chalk';
@@ -21,6 +25,8 @@ import { wrapLine } from '../message.ts';
 export interface Headline {
   readonly name: string;
   readonly arg?: string;
+  /** Said dim right after the name, before the argument: ` (MCP)`. */
+  readonly tag?: string;
   /** Said dim after it: a task's runtime, a message that waited. */
   readonly note?: string;
   /**
@@ -57,11 +63,83 @@ const VERB_FIRST = /^([A-Z][A-Za-z]*) (.+)$/;
  * ACP sends a free-text title (`Read README.md`, `` `ls -la` ``), so the
  * headline is read out of it: a leading capitalised verb becomes the name,
  * otherwise the call's kind names the tool and the title is its argument.
+ * An MCP call, titled `mcp__<server>__<tool>` with its arguments only in
+ * `rawInput`, is drawn as Claude Code draws it; one to chord's own server,
+ * by the name the session gave it, `chordServer`, as chord's own call even
+ * before chord has tied it to the request it served.
  */
-export function headline(call: ToolCall): Headline {
-  return call.chord === undefined
-    ? titleHeadline(call)
-    : chordHeadline(call.chord);
+export function headline(call: ToolCall, chordServer?: string): Headline {
+  if (call.chord !== undefined) {
+    return chordHeadline(call.chord);
+  }
+
+  const mcp = MCP_TITLE.exec(call.title?.trim() ?? '');
+
+  if (mcp === null || call.rawInput === undefined) {
+    return titleHeadline(call);
+  }
+
+  const [, server = '', tool = ''] = mcp;
+
+  if (server === chordServer && isChordTool(tool)) {
+    return chordHeadline({ tool, input: call.rawInput });
+  }
+
+  const arg = mcpArguments(call.rawInput);
+
+  return {
+    name: `${server} - ${tool}`,
+    tag: ' (MCP)',
+    ...(arg === undefined ? {} : { arg }),
+  };
+}
+
+/** `mcp__<server>__<tool>`: the server up to the next `__`, the tool the rest. */
+const MCP_TITLE = /^mcp__(.+?)__(.+)$/s;
+
+const CHORD_TOOLS: ReadonlySet<string> = new Set<ChordTool>([
+  'list_agents',
+  'list_sessions',
+  'spawn_task',
+  'open_agent',
+  'send_message',
+  'close_agent',
+  'monitor',
+  'stop_monitor',
+  'list_monitors',
+  'list_teams',
+  'run_team',
+  'propose_team',
+]);
+
+function isChordTool(tool: string): tool is ChordTool {
+  return CHORD_TOOLS.has(tool);
+}
+
+/**
+ * An MCP call's arguments as Claude Code writes them: `key: value` joined
+ * by `, `, the key bare and the value as JSON, so a newline in a string is
+ * `\n` and never breaks the row; none for no arguments, and anything but an
+ * object as JSON whole. The C1 controls JSON leaves as they are are escaped
+ * too, as Claude Code escapes them.
+ */
+export function mcpArguments(input: unknown): string | undefined {
+  const text =
+    input === null || typeof input !== 'object' || Array.isArray(input)
+      ? JSON.stringify(input)
+      : Object.entries(input)
+          .map(
+            ([key, value]) =>
+              `${JSON.stringify(key).slice(1, -1)}: ${JSON.stringify(value)}`,
+          )
+          .join(', ');
+
+  return text === '' || text === undefined
+    ? undefined
+    : text.replace(
+        /[\u007f-\u009f]/g,
+        (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`,
+      );
 }
 
 /**
@@ -89,7 +167,7 @@ const STYLE = new Chalk({ level: 3 });
  * between words, and the `)` and the note follow the argument's last word.
  */
 export function headlineRows(
-  { name, arg, note, sent }: Headline,
+  { name, arg, tag, note, sent }: Headline,
   width: number,
   colour?: string,
 ): Run[][] {
@@ -97,6 +175,7 @@ export function headlineRows(
   const text = [
     sent ? STYLE.dim('to ') : '',
     STYLE.bold(named(sent ? `@${name}` : name)),
+    tag === undefined ? '' : STYLE.dim(tag),
     arg === undefined ? '' : `(${arg})`,
     note === undefined ? '' : STYLE.dim(note),
   ].join('');

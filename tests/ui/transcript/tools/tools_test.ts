@@ -8,6 +8,7 @@ import {
   type Headline,
   headline,
   headlineRows,
+  mcpArguments,
   summary,
   toneOf,
 } from '../../../../src/ui/transcript/tools/tools.ts';
@@ -184,6 +185,122 @@ test('an argument wrap-ansi writes otherwise is drawn whole, its `)` kept', () =
   expect(tabbed).toHaveLength(1);
   expect(tabbed[0]).toStartWith('Bash(printf "a');
   expect(tabbed[0]).toEndWith('b" | cat)');
+});
+
+test("an MCP call's headline is Claude Code's: the server, the tool, (MCP), its arguments", () => {
+  const call = (rawInput?: unknown): ToolCall => ({
+    id: 'a',
+    title: 'mcp__notes__save_note',
+    kind: 'other',
+    ...(rawInput === undefined ? {} : { rawInput }),
+  });
+
+  expect(headline(call({ title: 'A "quoted" note', limit: 3 }))).toStrictEqual({
+    name: 'notes - save_note',
+    tag: ' (MCP)',
+    arg: 'title: "A \\"quoted\\" note", limit: 3',
+  });
+  // No arguments yet, as the adapter sends the call first: the name alone.
+  expect(headline(call({}))).toStrictEqual({
+    name: 'notes - save_note',
+    tag: ' (MCP)',
+  });
+  // No rawInput at all is not read as an MCP call.
+  expect(headline(call())).toStrictEqual({
+    name: 'Tool',
+    arg: 'mcp__notes__save_note',
+  });
+  // The server runs to the next `__`; the tool is the rest.
+  expect(
+    headline({ ...call({}), title: 'mcp__my_files__write__file' }).name,
+  ).toStrictEqual('my_files - write__file');
+});
+
+test('MCP arguments: strings quoted, the rest bare or compact JSON, a newline as \\n', () => {
+  expect(
+    mcpArguments({
+      timeout_ms: 600000,
+      follow: true,
+      since: null,
+      paths: ['src/a.ts', 'src/b.ts'],
+      options: { depth: 2, ignore: ['node_modules'] },
+      content: '# Notes\n\n- one\t',
+    }),
+  ).toStrictEqual(
+    'timeout_ms: 600000, follow: true, since: null, ' +
+      'paths: ["src/a.ts","src/b.ts"], ' +
+      'options: {"depth":2,"ignore":["node_modules"]}, ' +
+      'content: "# Notes\\n\\n- one\\t"',
+  );
+  expect(mcpArguments({})).toStrictEqual(undefined);
+  expect(mcpArguments('just text')).toStrictEqual('"just text"');
+  expect(mcpArguments(['a', 1])).toStrictEqual('["a",1]');
+  // A key is JSON with its quotes dropped; C1 controls are escaped.
+  expect(mcpArguments({ 'say "hi"': 'a\u0085b' })).toStrictEqual(
+    'say \\"hi\\": "a\\u0085b"',
+  );
+});
+
+test("a call to chord's own server is chord's own from its first update, by the name the session gave it", () => {
+  const call = (server: string): ToolCall => ({
+    id: 'a',
+    title: `mcp__${server}__send_message`,
+    kind: 'other',
+    rawInput: { to: 'reviewer', text: 'hi' },
+  });
+
+  expect(headline(call('chord'), 'chord')).toStrictEqual({
+    name: 'reviewer',
+    sent: true,
+  });
+  // Beside a server of the person's called chord, chord's is chord-2.
+  expect(headline(call('chord-2'), 'chord-2')).toStrictEqual({
+    name: 'reviewer',
+    sent: true,
+  });
+  expect(headline(call('chord'), 'chord-2')).toStrictEqual({
+    name: 'chord - send_message',
+    tag: ' (MCP)',
+    arg: 'to: "reviewer", text: "hi"',
+  });
+});
+
+test("an MCP headline wraps as one long line, (MCP) dim, the design's rows at 80 columns", () => {
+  const rows = (rawInput: unknown) =>
+    headline({
+      id: 'a',
+      title: 'mcp__files__write_file',
+      kind: 'other',
+      rawInput,
+    });
+
+  expect(
+    rowsText(
+      rows({
+        paths: ['src/a.ts', 'src/b.ts'],
+        options: { depth: 2, ignore: ['node_modules'] },
+      }),
+      76,
+    ),
+  ).toStrictEqual([
+    'files - write_file (MCP)(paths: ["src/a.ts","src/b.ts"], options:',
+    '{"depth":2,"ignore":["node_modules"]})',
+  ]);
+  expect(
+    rowsText(
+      rows({ path: 'notes.md', content: '# Notes\n\n- one\n- two\n' }),
+      76,
+    ),
+  ).toStrictEqual([
+    'files - write_file (MCP)(path: "notes.md", content: "# Notes\\n\\n- one\\n-',
+    'two\\n")',
+  ]);
+  expect(styled(headlineRows(rows({}), 76))).toStrictEqual([
+    [
+      ['files - write_file', 'bold'],
+      [' (MCP)', 'dim'],
+    ],
+  ]);
 });
 
 test('the status picks the tone; no status is pending', () => {

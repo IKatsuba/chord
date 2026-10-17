@@ -229,13 +229,14 @@ export interface WorkLine {
 function workLines(
   subagent: Subagent,
   waits: readonly PermissionWait[],
+  chordServer?: string,
 ): WorkLine[] {
   return subagent.entries.flatMap((entry): WorkLine[] => {
     switch (entry.kind) {
       case 'tool': {
         // A row of three under the block: a heredoc whole would push out
         // the other two.
-        const line = firstLine(headline(entry.call));
+        const line = firstLine(headline(entry.call, chordServer));
         // chord's refusal fails a call its adapter reported completed.
         const tone = toneOf(entry.call);
 
@@ -289,6 +290,7 @@ export type BlockFold =
 export function blockFold(
   subagent: Subagent,
   waits: readonly PermissionWait[],
+  chordServer?: string,
 ): BlockFold {
   const ending = endingOf(subagent.state);
 
@@ -302,7 +304,7 @@ export function blockFold(
     };
   }
 
-  const lines = workLines(subagent, waits);
+  const lines = workLines(subagent, waits, chordServer);
 
   return lines.length === 0
     ? { kind: 'starting' }
@@ -394,9 +396,10 @@ export function groupRow(
   };
 }
 
-function headlineWidth({ name, arg, note }: Headline): number {
+function headlineWidth({ name, arg, tag, note }: Headline): number {
   return (
     stringWidth(name) +
+    (tag === undefined ? 0 : stringWidth(tag)) +
     (arg === undefined ? 0 : stringWidth(arg) + 2) +
     (note === undefined ? 0 : stringWidth(note))
   );
@@ -434,6 +437,7 @@ export type RowLine =
 export function rowLine(
   subagent: Subagent,
   waits: readonly PermissionWait[],
+  chordServer?: string,
 ): RowLine {
   const ending = endingOf(subagent.state);
 
@@ -441,7 +445,7 @@ export function rowLine(
     return { kind: 'ended', ending };
   }
 
-  const lines = workLines(subagent, waits);
+  const lines = workLines(subagent, waits, chordServer);
   const line = lines.find((line) => line.waiting) ?? lines.at(-1);
 
   return line === undefined ? { kind: 'starting' } : { kind: 'call', line };

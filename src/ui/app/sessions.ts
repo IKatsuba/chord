@@ -1855,7 +1855,16 @@ export function useSessions(
         open: true,
         ...(state === undefined ? {} : { state }),
         ...(latest?.kind === 'tool'
-          ? { latest: headlineText(firstLine(headline(latest.call))) }
+          ? {
+              latest: headlineText(
+                firstLine(
+                  headline(
+                    latest.call,
+                    child.conversation.session?.chordServer?.name,
+                  ),
+                ),
+              ),
+            }
           : latest?.kind === 'message'
             ? { latest: messageHeadline(latest.from) }
             : {}),

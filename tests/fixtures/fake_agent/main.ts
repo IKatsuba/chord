@@ -237,6 +237,7 @@ const SCENARIOS = [
   'headlines',
   'heredoc',
   'longcommand',
+  'mcpnote',
   'markdown',
   'graphemes',
   'permission',

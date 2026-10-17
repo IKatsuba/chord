@@ -7,6 +7,8 @@ import type { TurnState } from '../../../../src/session/transcript/types.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import { CTRL_O, END, send, until, withWindow } from '../../app/render.tsx';
 import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 test('tool calls draw their status, their output and a failure', () =>
   withWindow(async (window) => {
@@ -422,6 +424,45 @@ test('a command of 300 lines is drawn whole, its output and the reply under it',
     },
     { columns: 80, rows: 24 },
   ));
+
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
+] as const) {
+  test(`an MCP call's arguments wrap under its name as the design's mock does, at ${columns}×${rows}`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'mcpnote');
+        await window.shows('Done.');
+
+        const mock = (
+          await readFile(
+            join(
+              import.meta.dir,
+              `../../../../docs/design/evidence/CHD-393/mock/mcp-after-${columns}x${rows}.txt`,
+            ),
+            'utf8',
+          )
+        ).split('\n');
+        const from = (lines: string[]) => {
+          const start = lines.findIndex((line) =>
+            line.includes('⏺ notes - save_note'),
+          );
+          const end = lines.findIndex(
+            (line, index) => index > start && line.includes('⎿'),
+          );
+
+          // The headline's rows; the ⎿ line under it is cut as it always was.
+          return lines.slice(start, end).map((line) => line.trimEnd());
+        };
+
+        expect(from(stripAnsi(window.frame()).split('\n'))).toStrictEqual(
+          from(mock),
+        );
+      },
+      { columns, rows },
+    ));
+}
 
 describe('CHD-1 tester: original question result visibility', () => {
   for (const columns of [80, 120]) {

@@ -160,13 +160,19 @@ export interface TeamListing {
 export function headlineText({
   name,
   arg,
+  tag = '',
   sent,
 }: {
   name: string;
   arg?: string;
+  tag?: string;
   sent?: true;
 }): string {
-  return sent ? `→ to @${name}` : arg === undefined ? name : `${name}(${arg})`;
+  return sent
+    ? `→ to @${name}`
+    : arg === undefined
+      ? `${name}${tag}`
+      : `${name}${tag}(${arg})`;
 }
 
 /**

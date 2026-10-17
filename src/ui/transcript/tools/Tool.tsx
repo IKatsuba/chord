@@ -1,7 +1,15 @@
 import { useTerminalDimensions } from '@opentui/react';
-import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
+import {
+  Fragment,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import type { ToolCall } from '../../../session/transcript/types.ts';
 import {
+  ChordServerName,
   paint,
   useAgentColour,
   useColours,
@@ -71,7 +79,7 @@ export function Tool({
   /** Cells beside the marker. */
   width: number;
 }) {
-  const line = headline(call);
+  const line = headline(call, useContext(ChordServerName));
   const recipient = useAgentColour(line.name);
   const live = toneOf(call);
   const tone = ended && live === 'running' ? 'pending' : live;

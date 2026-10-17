@@ -231,16 +231,17 @@ export function viewRows(
     }
 
     if (total > width) {
-      return items.map((item, index) =>
-        stacked(item, item === focused, {
-          name: names[index]!,
-          kind: kinds[index]!,
-          state: states[index]!,
-          owner: owners[index]!,
-          width,
-          mark: mark(item),
-        }),
-      );
+      return stackedRows(items, {
+        names,
+        states,
+        owners,
+        nameWidth,
+        width,
+      }).map((lines, index) => ({
+        item: items[index]!,
+        focused: items[index] === focused,
+        lines: [[mark(items[index]!), ...lines[0]!], ...lines.slice(1)],
+      }));
     }
 
     return items.map((item, index) => {
@@ -278,55 +279,81 @@ export function viewRows(
   return [];
 }
 
+/** What every line of a row after its first starts with: under the name, two in. */
+const UNDER: ViewCell = { text: '    ', role: 'gap' };
+
 /**
- * A row too wide for one line: the name wrapped, then its kind, then its
- * state and owner, each under the name and wrapped in turn.
+ * Rows too wide for one line, two lines each: the name with its kind, its
+ * parts giving way as `FITS` says, then the state and the owner, every line
+ * after the first two cells further in than the name, so each name alone is
+ * at the left edge. Where a name and even a bare kind do not fit, the kind
+ * goes to a line of its own; a part longer than a line wraps, never cut. The
+ * `❯` is the caller's, ahead of the first line.
  */
-function stacked(
-  item: BackgroundItem,
-  focused: boolean,
+function stackedRows(
+  items: readonly BackgroundItem[],
   {
-    name,
-    kind,
-    state,
-    owner,
+    names,
+    states,
+    owners,
+    nameWidth,
     width,
-    mark,
   }: {
-    readonly name: string;
-    readonly kind: string;
-    readonly state: { readonly text: string; readonly group: BackgroundGroup };
-    readonly owner: string;
+    readonly names: readonly string[];
+    readonly states: readonly {
+      readonly text: string;
+      readonly group: BackgroundGroup;
+    }[];
+    readonly owners: readonly string[];
+    readonly nameWidth: number;
     readonly width: number;
-    readonly mark: ViewCell;
   },
-): ViewRow {
-  const room = Math.max(1, width - 2);
-  const indent: ViewCell = { text: '  ', role: 'gap' };
+): ViewCell[][][] {
+  const room = Math.max(1, width - UNDER.text.length);
+  const widest = (texts: readonly string[]) =>
+    Math.max(0, ...texts.map((text) => stringWidth(text)));
+  // The fullest kinds that fit beside the names on every row.
+  const kinds = FITS.map((fit) =>
+    items.map((item) => kindText(item, fit)),
+  ).find((each) => 2 + nameWidth + GAP.length + widest(each) <= width);
+  const kindWidth = kinds === undefined ? 0 : widest(kinds);
   const under = (
     text: string,
     role: ViewCell['role'],
     group?: BackgroundGroup,
   ) =>
     wrapped(text, room).map((line): ViewCell[] => [
-      indent,
+      UNDER,
       { text: line, role, ...(group === undefined ? {} : { group }) },
     ]);
-  const together =
-    stringWidth(state.text) + GAP.length + stringWidth(owner) <= room;
-  const [first, ...rest] = wrapped(name, Math.min(NAME_CELLS, room));
 
-  return {
-    item,
-    focused,
-    lines: [
-      [mark, { text: first ?? '', role: 'name' }],
-      ...rest.map((line): ViewCell[] => [indent, { text: line, role: 'name' }]),
-      ...under(kind, 'kind'),
+  return items.map((item, index) => {
+    const state = states[index]!;
+    const owner = owners[index]!;
+    const nameLines = nameIn(names[index]!, Math.min(nameWidth, width - 2));
+    const first: ViewCell[] =
+      kinds === undefined
+        ? [{ text: nameLines[0]!, role: 'name' }]
+        : [
+            { text: pad(nameLines[0]!, nameWidth), role: 'name' },
+            { text: GAP, role: 'gap' },
+            { text: pad(kinds[index]!, kindWidth), role: 'kind' },
+          ];
+    const together =
+      stringWidth(state.text) + GAP.length + stringWidth(owner) <= room;
+
+    return [
+      first,
+      ...nameLines
+        .slice(1)
+        .map((line): ViewCell[] => [UNDER, { text: line, role: 'name' }]),
+      ...(kinds === undefined
+        ? under(kindText(item, FITS[FITS.length - 1]!), 'kind')
+        : []),
       ...(together
         ? [
             [
-              indent,
+              UNDER,
               { text: state.text, role: 'state', group: state.group },
               { text: GAP, role: 'gap' },
               { text: owner, role: 'owner' },
@@ -336,8 +363,8 @@ function stacked(
             ...under(state.text, 'state', state.group),
             ...under(owner, 'owner'),
           ]),
-    ],
-  };
+    ];
+  });
 }
 
 /** The rows in sight, and how many are out of it above and below. */

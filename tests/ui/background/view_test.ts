@@ -185,17 +185,40 @@ test("narrower, an end's events go first, then a task's model, then its runtime;
   );
 });
 
-test('narrower still, the state and owner go under the name, so nothing is cut', () => {
-  const rows = text(
-    viewRows([ITEMS[3]!], { width: 30, focus: undefined, now: NOW }),
-  );
+test('narrower still, each item takes two lines: its name and kind, then its state and owner two cells further in', () => {
+  const at = (width: number) =>
+    text(viewRows(ITEMS.slice(2, 4), { width, focus: undefined, now: NOW }));
 
-  expect(rows).toStrictEqual([
-    '❯ Fix the tokenizer',
-    '  task',
-    '  ● permission 13s  main',
+  expect(at(46)).toStrictEqual([
+    '❯ parser tests       monitor',
+    '    running 2m 3s · 4 events  parser',
+    '  Fix the tokenizer  task · fake · Fake Small',
+    '    ● permission 13s  main',
   ]);
-  expect(rows.every((line) => line.length <= 30)).toStrictEqual(true);
+  // The kind's parts give way before it leaves the name's line.
+  expect(at(40)).toStrictEqual([
+    '❯ parser tests       monitor',
+    '    running 2m 3s · 4 events  parser',
+    '  Fix the tokenizer  task · fake',
+    '    ● permission 13s  main',
+  ]);
+
+  // Not even a bare kind beside the name: it goes to a line of its own,
+  // and a state and owner too wide together go one under the other.
+  const narrow = at(24);
+
+  expect(narrow).toStrictEqual([
+    '❯ parser tests',
+    '    monitor',
+    '    running 2m 3s · 4',
+    '    events',
+    '    parser',
+    '  Fix the tokenizer',
+    '    task',
+    '    ● permission 13s',
+    '    main',
+  ]);
+  expect(narrow.every((line) => line.length <= 24)).toStrictEqual(true);
 });
 
 test('a name past 24 cells wraps inside its column, the rest two cells in, the other columns on its first line', () => {

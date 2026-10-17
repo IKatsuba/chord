@@ -3,7 +3,7 @@
  * opened under the prompt, picked, written to, messaged both ways and
  * closed.
  */
-import { expect, setSystemTime, test } from 'bun:test';
+import { describe, expect, setSystemTime, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { serveChord } from '../../../src/server/server.ts';
@@ -12,6 +12,7 @@ import {
   CHILD_MESSAGES,
   CRASH_WORDS,
   DOCS_MESSAGE,
+  HELD_AGAIN,
   HELD_MESSAGE,
   MAIN_MESSAGES,
 } from '../../fixtures/fake_agent/scenarios/agents.ts';
@@ -550,3 +551,57 @@ test("a picked child's opening line goes on aging with the TUI idle", () =>
       setSystemTime();
     }
   }));
+
+describe('CHD-423 tester: two held messages on screen', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`the background marker and both foreground rows last until taken at ${columns}x${rows}`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'agentcalltwice');
+            await window.shows('← message from @main');
+            expect(window.frame()).not.toContain('after the running calls');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.shows('╭─ parser ─');
+            await window.shows(
+              `← from @main · after the running calls: ${HELD_AGAIN}`,
+            );
+
+            const held = window.frame();
+
+            expect(held).toContain(
+              `← from @main · after the running calls: ${HELD_MESSAGE}`,
+            );
+            expect(held.indexOf(HELD_MESSAGE)).toBeLessThan(
+              held.indexOf(HELD_AGAIN),
+            );
+            expect(held).toContain('Running…');
+            await window.shows('The tests pass.');
+            await until(
+              'held rows taken',
+              () => !window.frame().includes('after the running calls'),
+            );
+            expect(window.frame()).toContain(HELD_AGAIN);
+            expect(window.frame()).not.toContain('after your answer');
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

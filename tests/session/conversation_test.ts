@@ -2533,3 +2533,92 @@ describe('CHD-417 tester: cut-call note delivery', () => {
     );
   });
 });
+
+describe('CHD-423 tester: mixed queue holds', () => {
+  test('answer-to-call reason replacement preserves the earlier call-held message and delivery order', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('overlapask');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.toolCallId === 'overlapask-a',
+        ),
+      );
+      conversation.tell(MAIN, 'First, while the call runs.');
+      await until(() =>
+        events.some((event) => event.type === 'permission_requested'),
+      );
+      conversation.tell(MAIN, 'Second, while the answer waits.');
+
+      const asked = events.find(
+        (event) => event.type === 'permission_requested',
+      );
+
+      assert(asked?.type === 'permission_requested');
+      conversation.choose(asked.permission.id, 'allow');
+      await until(
+        () =>
+          events.filter(
+            (event) => event.type === 'prompt' && event.from?.name === 'main',
+          ).length === 2,
+      );
+
+      const queued = events.flatMap((event) =>
+        event.type === 'queued' ? [event] : [],
+      );
+
+      expect(
+        queued
+          .slice(0, 3)
+          .map((event) => [event.text, event.afterCalls, event.afterAnswer]),
+      ).toStrictEqual([
+        ['First, while the call runs.', true, undefined],
+        ['Second, while the answer waits.', undefined, true],
+        ['Second, while the answer waits.', true, undefined],
+      ]);
+      expect(queued[1]!.turnId).toBe(queued[2]!.turnId);
+      expect(
+        queued.filter((event) => event.text.startsWith('First,')).length,
+      ).toBe(1);
+      expect(
+        promptsIn(events)
+          .slice(1)
+          .map(([text]) => text),
+      ).toStrictEqual([
+        'First, while the call runs.',
+        'Second, while the answer waits.',
+      ]);
+    }));
+
+  test('an adapter refusal starts the held message as the next turn with the same row identity', () =>
+    onFake(
+      ['--steering', 'claude', '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('bash');
+        await callOpen(events);
+        conversation.tell(MAIN, 'After refusal.');
+        await ended(events, 2);
+
+        const queued = events.flatMap((event) =>
+          event.type === 'queued' ? [event] : [],
+        );
+
+        expect(queued.filter((event) => event.afterCalls)).toHaveLength(1);
+
+        const taken = events.find(
+          (event) => event.type === 'prompt' && event.text === 'After refusal.',
+        );
+
+        assert(taken?.type === 'prompt');
+        expect(taken.turnId).toBe(queued[0]!.turnId);
+        expect(taken.into).toBeUndefined();
+        expect(new Set(queued.map((event) => event.turnId)).size).toBe(1);
+        expect(promptsIn(events)).toStrictEqual([
+          ['bash', undefined],
+          ['After refusal.', undefined],
+        ]);
+      },
+    ));
+});

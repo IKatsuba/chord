@@ -150,3 +150,31 @@ describe('CHD-385 tester: queued sender identity', () => {
     ]);
   });
 });
+
+describe('CHD-423 tester: held queue overflow', () => {
+  test('held agent rows keep oldest-first limits and are excluded from the restored draft', () => {
+    const from = { name: 'main', reachable: true } as const;
+    const held = Array.from({ length: 6 }, (_, index) => ({
+      turnId: `held-${index}`,
+      text: `Message ${index}.\nSecond line.`,
+      from,
+      afterCalls: true as const,
+    }));
+    const rows = queueRows(held, queueRowLimit(24));
+
+    expect(rows).toStrictEqual([
+      ...[0, 1, 2].map((index) => ({
+        kind: 'message' as const,
+        header: 'from @main · after the running calls: ',
+        text: `Message ${index}. …`,
+      })),
+      { kind: 'more', count: 3 },
+    ]);
+    expect(
+      restoredDraft(
+        [...held, { turnId: 'mine', text: 'My queued prompt.' }],
+        'typing',
+      ),
+    ).toBe('My queued prompt.\ntyping');
+  });
+});

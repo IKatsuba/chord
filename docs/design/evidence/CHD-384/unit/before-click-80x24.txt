@@ -1,0 +1,24 @@
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties
+      of undefined (reading 'trim')"; echo "    at validate
+      (src/routes/login.tsx:41:22)"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 600
+      m2 · times out after 10m
+
+ ⏺ Two monitors are running.
+
+ ← from dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined
+      (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ move · enter open · esc back     Fake Large with a 1M context… · 1% used
+  ❯ background  2 monitors running

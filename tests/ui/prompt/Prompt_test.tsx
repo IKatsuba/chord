@@ -3,7 +3,7 @@ import { matchFiles } from '../../../src/ui/prompt/mentions.ts';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import stringWidth from 'string-width';
-import { Queue } from '../../../src/ui/prompt/Prompt.tsx';
+import { FileList, Queue } from '../../../src/ui/prompt/Prompt.tsx';
 import { draw } from '../harness.tsx';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -441,6 +441,64 @@ test("Enter before a path's match is back picks the file its whole query matches
     },
     { match: held },
   );
+});
+
+test('the searching marker takes the last row, never the highlighted file, and the list never grows for it', async () => {
+  const rowsOf = async (files: string[], highlighted: number) => {
+    const drawn = await draw(
+      <FileList
+        finder={{
+          mention: { query: 'x', line: 0, column: 0 },
+          files,
+          highlighted,
+          top: 0,
+          pending: true,
+          searching: true,
+        }}
+        rows={6}
+      />,
+      { columns: 40, rows: 10 },
+    );
+    const rows = stripAnsi(drawn.frame())
+      .split('\n')
+      .map((row) => row.trim())
+      .filter((row) => row !== '');
+
+    await drawn.unmount();
+
+    return rows;
+  };
+
+  const eight = Array.from({ length: 8 }, (_, at) => `file${at}.ts`);
+
+  // The highlight on the sixth file: the list moves a row, file5 stays above.
+  expect(await rowsOf(eight, 5)).toStrictEqual([
+    'file1.ts',
+    'file2.ts',
+    'file3.ts',
+    'file4.ts',
+    'file5.ts',
+    'searching…',
+  ]);
+  expect(await rowsOf(eight, 0)).toStrictEqual([
+    'file0.ts',
+    'file1.ts',
+    'file2.ts',
+    'file3.ts',
+    'file4.ts',
+    'searching…',
+  ]);
+  // A short list keeps its height: the marker takes its last row.
+  expect(await rowsOf(eight.slice(0, 3), 0)).toStrictEqual([
+    'file0.ts',
+    'file1.ts',
+    'searching…',
+  ]);
+  expect(await rowsOf(eight.slice(0, 3), 2)).toStrictEqual([
+    'file1.ts',
+    'file2.ts',
+    'searching…',
+  ]);
 });
 
 test('Esc puts the finder away and keeps what was typed', () =>

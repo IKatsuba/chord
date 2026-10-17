@@ -379,6 +379,32 @@ test('two sessions keep their own draft, scroll and permission', () => {
   expect(one.expanded).toStrictEqual(true);
 });
 
+test('a pick Enter waits on is dropped when another session comes to the front, even on the same mention', () => {
+  const mention = { query: 'mentions.ts', line: 0, column: 0 };
+  const waiting = (
+    [
+      { type: 'session_opened', key: 2 },
+      { type: 'draft_set', text: '@mentions.ts' },
+      { type: 'session_shown', key: 1 },
+      { type: 'draft_set', text: '@mentions.ts' },
+      { type: 'pick_awaited', mention, enter: true },
+    ] satisfies WindowedAction[]
+  ).reduce(reduceWindowed, windowed(ready, 1));
+
+  expect(frontState(waiting).awaitedPick).toStrictEqual({
+    mention,
+    enter: true,
+  });
+  expect(
+    frontState(reduceWindowed(waiting, { type: 'session_shown', key: 2 }))
+      .awaitedPick,
+  ).toStrictEqual(undefined);
+  expect(
+    frontState(reduceWindowed(waiting, { type: 'session_opened', key: 3 }))
+      .awaitedPick,
+  ).toStrictEqual(undefined);
+});
+
 test("a form filled in so far is the session's, and comes back with it", () => {
   const form = openForm({
     type: 'object',

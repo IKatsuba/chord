@@ -32,7 +32,12 @@ import {
   searched,
   searchedOlder,
 } from '../prompt/search.ts';
-import { commandMenu, fileFinder, runningShell } from '../prompt/state.ts';
+import {
+  commandMenu,
+  fileFinder,
+  pendingMention,
+  runningShell,
+} from '../prompt/state.ts';
 import {
   typedAt,
   type Vim,
@@ -195,9 +200,11 @@ function recall(history: History, text: string): Step[] {
  */
 function mention({ state }: KeyContext, enter: boolean): Step[] {
   const finder = fileFinder(state, state.draft, state.cursor);
+  // With no list on screen yet, after an empty one, it waits all the same.
+  const waiting = pendingMention(state, state.draft, state.cursor);
 
-  if (finder?.pending && !state.finder.moved) {
-    return [dispatch({ type: 'pick_awaited', mention: finder.mention, enter })];
+  if (waiting !== undefined && (finder === undefined || !state.finder.moved)) {
+    return [dispatch({ type: 'pick_awaited', mention: waiting, enter })];
   }
 
   const path = finder?.files[finder.highlighted];
@@ -311,8 +318,12 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
   const { state, history, home } = context;
   const { draft, cursor } = state;
 
-  // Enter in the finder picks, as Tab does, rather than sending.
-  if (fileFinder(state, draft, cursor)) {
+  // Enter in the finder picks, as Tab does, rather than sending; a match
+  // still running waits to pick, list or none.
+  if (
+    fileFinder(state, draft, cursor) ||
+    pendingMention(state, draft, cursor)
+  ) {
     return mention(context, true);
   }
 

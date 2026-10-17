@@ -10,7 +10,12 @@ import {
   type Step,
   submitSteps,
 } from '../../../src/ui/app/keys.ts';
-import { type AppAction, reduceApp } from '../../../src/ui/app/state.ts';
+import {
+  type AppAction,
+  keyCommand,
+  reduceApp,
+} from '../../../src/ui/app/state.ts';
+import { fileFinder } from '../../../src/ui/prompt/state.ts';
 import { emptyHistory, recorded } from '../../../src/ui/prompt/history.ts';
 import { endOf, START } from '../../../src/ui/prompt/prompt.ts';
 import { readKeybindings } from '../../../src/ui/shortcuts/bindings.ts';
@@ -375,6 +380,29 @@ describe("Enter or Tab while the mention's match runs", () => {
         cursor: [0, 27],
       },
     ]);
+  });
+
+  test('after an empty match, with no list on screen yet, Enter and Tab wait all the same', () => {
+    const empty = reduceApp(files, {
+      type: 'files_matched',
+      files: files.files!,
+      query: 'mentions.t',
+      matched: [],
+    });
+    const next = typing('@mentions.ts', empty);
+
+    expect(fileFinder(next, next.draft, next.cursor)).toStrictEqual(undefined);
+    expect(submitSteps('@mentions.ts', context(next))).toStrictEqual([
+      dispatched({ type: 'pick_awaited', mention, enter: true }),
+    ]);
+    expect(
+      keyCommand(
+        '',
+        { ctrl: false, escape: false, tab: true },
+        next,
+        next.draft,
+      ),
+    ).toStrictEqual('complete_mention');
   });
 
   test('a moved highlight picks its row at once', () => {

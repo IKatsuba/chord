@@ -67,6 +67,7 @@ import {
 import {
   commandMenu,
   fileFinder,
+  pendingMention,
   initialPrompt,
   type PromptAction,
   type PromptSession,
@@ -942,7 +943,13 @@ export function reduceWindowed(
       // It comes forward as a switch does, so a note of the sessions goes,
       // and the selection with what drew it.
       const left = letGo(state);
-      const { sessionsNote: _, selection: __, ...window } = left.window;
+      // A pick Enter waits on belongs to the draft it was pressed in.
+      const {
+        sessionsNote: _,
+        selection: __,
+        awaitedPick: ___,
+        ...window
+      } = left.window;
 
       return {
         ...left,
@@ -962,7 +969,12 @@ export function reduceWindowed(
       }
 
       const left = letGo(state);
-      const { sessionsNote: _, selection: __, ...window } = left.window;
+      const {
+        sessionsNote: _,
+        selection: __,
+        awaitedPick: ___,
+        ...window
+      } = left.window;
 
       return { ...left, window, front: action.key };
     }
@@ -1440,7 +1452,10 @@ function boundCommand(
 
   const finder = fileFinder(state, draft, cursor);
 
-  if (finder && on('autocomplete:accept')) {
+  if (
+    (finder || pendingMention(state, draft, cursor)) &&
+    on('autocomplete:accept')
+  ) {
     return 'complete_mention';
   }
 

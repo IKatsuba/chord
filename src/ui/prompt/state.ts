@@ -528,6 +528,38 @@ export interface FileFinder {
 export const SLOW_MATCH_MS = 150;
 
 /**
+ * The mention whose own match has not come back yet, whether or not the
+ * finder shows a list meanwhile: Enter and Tab wait for it either way.
+ * None for an empty query, which waits on nothing, or where the finder
+ * could not open.
+ */
+export function pendingMention(
+  state: PromptState & Open,
+  draft: string,
+  cursor: Cursor,
+): Mention | undefined {
+  const mention = mentionAt(draft, cursor);
+
+  if (
+    mention === undefined ||
+    mention.query === '' ||
+    state.files === undefined ||
+    state.bash ||
+    state.search !== undefined ||
+    state.finder.dismissed ||
+    state.connection.status === 'closing' ||
+    asksPerson(state.transcript)
+  ) {
+    return undefined;
+  }
+
+  const current =
+    state.matched?.files === state.files ? state.matched : undefined;
+
+  return current?.query === mention.query ? undefined : mention;
+}
+
+/**
  * The `@` file finder the draft opens: the cursor at the end of an `@` and
  * part of a path, once the files are walked, outside bash mode, while no
  * permission is asked and Esc has not put it away. None when nothing matches, so Enter sends what was

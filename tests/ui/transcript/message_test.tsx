@@ -18,16 +18,26 @@ import {
   wrapLine,
 } from '../../../src/ui/transcript/message.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
+import {
+  PROSE_EN,
+  PROSE_RU,
+} from '../../fixtures/fake_agent/scenarios/agents.ts';
 
-async function frame(entry: Entry): Promise<string> {
+async function frame(
+  entry: Entry,
+  expanded = false,
+  width = 80,
+): Promise<string> {
   const drawn = await draw(
     <TranscriptEntry
       entry={entry}
       turn={{ status: 'idle' }}
       agent='fake'
-      expanded={false}
-      width={80}
+      expanded={expanded}
+      width={width}
     />,
+    // Tall enough for a long message whole.
+    { columns: width, rows: 60 },
   );
   const shown = stripAnsi(drawn.frame());
 
@@ -107,11 +117,137 @@ test('a message sent is → to and its recipient, not a call, queued or refused'
   expect(await frame(sent({}, 'in_progress'))).toContain('→ to @parser\n');
   expect(
     await frame(sent({ error: 'parser is closed; it takes no more messages' })),
-  ).toContain('→ to @parser\n  ⎿  parser is closed; it takes no more messages');
+  ).toContain(
+    '→ to @parser\n  ⎿  Run the parser tests.\n     parser is closed; it takes no more messages',
+  );
   // A child's, inside its task block, goes to main.
   expect(
     await frame(sent({ input: { text: 'Found it' }, queued: true })),
   ).toContain('→ to @main · queued');
+});
+
+/** A review of eleven rows at 80 columns, its list items wrapping. */
+const REVIEW = [
+  'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
+  '',
+  '1. The fold counts the blank line after the list; drop it, as ' +
+    '`foldMessage` already does for a received message.',
+  '2. The hint names ctrl+o even when the person has rebound it.',
+  '3. The refusal goes after the body, **never** folded.',
+  '',
+  "Tell me when the check passes and I'll look again.",
+].join('\n');
+
+/** The rows from the entry's `⎿` on, the gutter cut off. */
+function body(shown: string): string[] {
+  const rows = shown.split('\n');
+
+  return rows
+    .slice(rows.findIndex((row) => row.includes('⎿')))
+    .map((row) => row.slice(5).trimEnd())
+    .filter((row, index, rows) => rows.slice(index).some((r) => r !== ''));
+}
+
+test('a message sent is drawn as one received is: markdown, wrapped to the row, whole, with no fold', async () => {
+  const input = { to: 'parser', text: REVIEW };
+  const sentRows = body(await frame(sent({ input })));
+  const cameRows = body(
+    await frame(came({ name: 'parser', reachable: true }, REVIEW)),
+  );
+
+  expect(sentRows).toStrictEqual(cameRows);
+  expect(sentRows).toStrictEqual([
+    'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
+    '',
+    '1. The fold counts the blank line after the list; drop it, as foldMessage',
+    '  already does for a received message.',
+    '2. The hint names ctrl+o even when the person has rebound it.',
+    '3. The refusal goes after the body, never folded.',
+    '',
+    "Tell me when the check passes and I'll look again.",
+  ]);
+  // ctrl+o has nothing more to show.
+  expect(body(await frame(sent({ input }), true))).toStrictEqual(sentRows);
+});
+
+/** The words of `text`, markdown's and the gutter's marks aside. */
+function words(text: string): string[] {
+  return text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word));
+}
+
+for (const width of [80, 120]) {
+  test(`long paragraphs, Cyrillic and ASCII, sent and received, are wrapped whole at ${width} columns: every word, no cut, no fold`, async () => {
+    for (const text of [PROSE_RU, PROSE_EN]) {
+      for (const entry of [
+        sent({ input: { to: 'parser', text } }),
+        came({ name: 'parser', runtime: 'codex', reachable: true }, text),
+      ]) {
+        const shown = await frame(entry, false, width);
+        const rows = body(shown);
+
+        expect(rows.join(' ').split(/\s+/).filter(Boolean)).toStrictEqual(
+          words(text),
+        );
+        expect(!shown.includes('...')).toBeTruthy();
+        expect(!shown.includes('to expand')).toBeTruthy();
+        expect(rows.length > 2).toBeTruthy();
+        expect(
+          shown.split('\n').every((row) => row.length <= width),
+        ).toBeTruthy();
+      }
+    }
+  });
+}
+
+test('a message sent that opens with an indented code block keeps it, as the same message received does', async () => {
+  const code = '    const answer = 42;\n\nThat is the fix.';
+  const sentShown = await frame(sent({ input: { to: 'parser', text: code } }));
+  const cameShown = await frame(
+    came({ name: 'parser', reachable: true }, code),
+  );
+
+  expect(body(sentShown)).toStrictEqual(body(cameShown));
+  expect(sentShown).toContain('│ const answer = 42; │');
+});
+
+test('a message sent draws its text at once, with no Waiting… while it goes, and an empty one only its failure', async () => {
+  for (const status of ['pending', 'in_progress']) {
+    const shown = await frame(sent({}, status));
+
+    expect(shown).toContain('→ to @parser\n  ⎿  Run the parser tests.');
+    expect(!shown.includes('Waiting…')).toBeTruthy();
+    expect(!shown.includes('Running…')).toBeTruthy();
+  }
+
+  const empty = { to: 'parser', text: '  ' };
+
+  expect(body(await frame(sent({ input: empty }, 'failed')))).toStrictEqual([
+    'Failed',
+  ]);
+  expect(
+    body(await frame(sent({ input: empty, error: 'parser is closed' }))),
+  ).toStrictEqual(['parser is closed']);
+});
+
+test("a refused message keeps its whole text, and chord's refusal comes after it", async () => {
+  const refusal = 'No agent parser is open in this session';
+  const rows = body(
+    await frame(
+      sent({ input: { to: 'parser', text: REVIEW }, error: refusal }),
+    ),
+  );
+
+  expect(rows.slice(0, 1)).toStrictEqual([
+    'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
+  ]);
+  expect(rows.slice(-2)).toStrictEqual([
+    "Tell me when the check passes and I'll look again.",
+    refusal,
+  ]);
+  expect(body(await frame(sent({}, 'failed')))).toStrictEqual([
+    'Run the parser tests.',
+    'Failed',
+  ]);
 });
 
 test("a child's message inside its task block is → to @main, not Message(main)", async () => {
@@ -474,4 +610,47 @@ test('a line indented past the width keeps as much indent as leaves room for its
   expect(rows).toStrictEqual([`${' '.repeat(75)}t`, ...'wowords']);
   expect(rows.every((row) => row.length <= 76)).toBeTruthy();
   expect(wrapLine('  indented', 76)).toStrictEqual(['  indented']);
+});
+
+describe('CHD-387 tester: sent body boundaries', () => {
+  test('sent escapes and fenced code render exactly as the received text does', async () => {
+    const text = [
+      '\x1b[31m**Read this**\x1b[0m and `keep` its formatting.',
+      '',
+      '```ts',
+      'const answer = 42;',
+      '```',
+      '',
+      'The last paragraph is still here.',
+    ].join('\n');
+
+    for (const expanded of [false, true]) {
+      const outgoing = await frame(
+        sent({ input: { to: 'parser', text } }),
+        expanded,
+      );
+      const incoming = await frame(
+        came({ name: 'parser', reachable: true }, text),
+        expanded,
+      );
+
+      expect(body(outgoing)).toStrictEqual(body(incoming));
+      expect(outgoing).not.toContain('[31m');
+      expect(outgoing).toContain('const answer = 42;');
+    }
+  });
+
+  test('a failed long body keeps its final sentence before Failed in both views', async () => {
+    const entry = sent({ input: { to: 'parser', text: REVIEW } }, 'failed');
+    const compact = body(await frame(entry));
+    const expanded = body(await frame(entry, true));
+
+    expect(compact.slice(-2)).toStrictEqual([
+      "Tell me when the check passes and I'll look again.",
+      'Failed',
+    ]);
+    expect(expanded).toStrictEqual(compact);
+    expect(compact.join('\n')).not.toContain('to expand');
+    expect(compact.join('\n')).not.toContain('… +');
+  });
 });

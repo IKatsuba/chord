@@ -119,6 +119,20 @@ export function chordHeadline(call: ChordCall): Headline {
 }
 
 /**
+ * What a `send_message` sent, as it was sent, so its markdown reads as a
+ * received message's does, a leading indent's code block included; none
+ * for another call or an empty text.
+ */
+export function sentText(call: ChordCall): string | undefined {
+  const sent =
+    call.tool === 'send_message' ? record(call.input).text : undefined;
+
+  return typeof sent === 'string' && text(sent) !== undefined
+    ? sent
+    : undefined;
+}
+
+/**
  * Whether the lines under the call are wrapped at the window's edge rather
  * than cut: what an agent or a team was handed is read as a message is, and
  * every other call keeps its one row a line.
@@ -216,8 +230,9 @@ export function chordLines(call: ChordCall): string[] {
 
       return [`${plural(teams.length, 'team', 'teams')} · ${names(teams)}`];
     }
+    // None for an empty text, so the row says the call's state instead.
     case 'send_message':
-      return (text(input.text) ?? '').split('\n');
+      return text(input.text)?.split('\n') ?? [];
     // Drawn as a table by its own component once served.
     case 'propose_team':
       return [];

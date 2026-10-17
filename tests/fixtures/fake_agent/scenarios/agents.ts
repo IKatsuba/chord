@@ -2,9 +2,10 @@
  * Long-lived agents: a session that opens two on the fake runtime through
  * chord's `open_agent` and messages one of them twice, the child's first
  * turn, which messages its parent twice, a session that closes one and is
- * refused when it messages it after, and sessions that open one on a long
- * instruction, or whose first turn starts a task agent, or whose agent exits
- * or turn fails in it.
+ * refused when it messages it after, sessions that send one a short and a
+ * long message, or long prose it sends back, as Claude and Codex do, or one
+ * never opened, and sessions that open one on a long instruction, or whose
+ * first turn starts a task agent, or whose agent exits or turn fails in it.
  */
 import process from 'node:process';
 import * as acp from '@agentclientprotocol/sdk';
@@ -53,6 +54,52 @@ export const LONG_INSTRUCTION = [
   'Tell me only what failed, if anything.',
 ].join('\n');
 
+/** A short message to `parser`, sent before `LONG_MESSAGE`. */
+export const SHORT_MESSAGE = 'Start on the tokenizer; the printer can wait.';
+
+/**
+ * A review sent as a message, with a numbered list, weight and code in it,
+ * longer than a message's six lines at 120 columns, so the sent body folds.
+ */
+export const LONG_MESSAGE = [
+  'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
+  '',
+  '1. The fold counts the blank line after the list; drop it, as ' +
+    '`foldMessage` already does for a received message.',
+  '2. `foldMessage` runs on every render; keep its lines in the same ' +
+    '`useMemo` as the markdown.',
+  '3. The hint names ctrl+o even when the person has rebound it; take the ' +
+    'key from `useHintKey`.',
+  '4. The refusal goes after the body, in the error colour, **never** folded.',
+  '',
+  'Commit each as its own fix, run the targeted tests, and tell me when ' +
+    "the check passes and I'll look again.",
+].join('\n');
+
+/**
+ * Two paragraphs of Cyrillic prose, each a few rows long at 120 columns, so
+ * a message is read whole, wrapped at its words, never cut in the middle.
+ */
+export const PROSE_RU = [
+  'Это длинное тестовое сообщение для проверки передачи текста между ' +
+    'агентами. В нём нет задания на изменение кода, запуск проверок или ' +
+    'работу с файлами: оно предназначено только для проверки доставки и ' +
+    'отображения большого объёма текста.',
+  '',
+  'Представим небольшую обсерваторию на вершине холма. Каждое утро ' +
+    'смотритель открывает деревянные ставни, проверяет журнал наблюдений и ' +
+    'ставит чайник на старую плиту. За окном медленно расходится туман, на ' +
+    'дорожке появляются первые солнечные пятна, а в саду перекликаются птицы.',
+].join('\n');
+
+/** A paragraph of ASCII prose a few rows long at 120 columns, the same way. */
+export const PROSE_EN =
+  'The printer is fixed, and every case in tests/parse/printer_test.ts ' +
+  'passes now. The tokenizer still drops a closing quote when a string ' +
+  'ends the line, so I left a failing case for it beside the others and ' +
+  'wrote down what I found in the notes, with the input that shows it and ' +
+  'the line in src/parse/tokenize.ts where the quote is lost.';
+
 /** What a child's last words are when its agent exits mid-turn. */
 export const CRASH_WORDS =
   'fatal: out of memory reading tests/parse/fixtures/huge.json';
@@ -83,6 +130,83 @@ async function openParserOn(turn: Turn, prompt: string): Promise<'end_turn'> {
     await turn.say('Waiting on parser.');
   } finally {
     await client.close();
+  }
+
+  return 'end_turn';
+}
+
+/**
+ * Opens `parser` on `prompt`, which answers, and sends it `texts`, its
+ * calls in `shape`'s adapter's.
+ */
+async function sendParser(
+  turn: Turn,
+  shape: 'claude' | 'codex',
+  prompt = 'agentchild',
+  texts: readonly string[] = [SHORT_MESSAGE, LONG_MESSAGE],
+): Promise<'end_turn'> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
+  }
+
+  try {
+    await callChord(
+      turn,
+      client,
+      'open_agent',
+      { ...PARSER_ARGS, prompt },
+      undefined,
+      shape,
+    );
+
+    for (const text of texts) {
+      await callChord(
+        turn,
+        client,
+        'send_message',
+        { to: 'parser', text },
+        undefined,
+        shape,
+      );
+      await pause(turn.signal, AGENT_STEP_MS * 10);
+    }
+
+    await turn.say('Waiting on parser.');
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn';
+}
+
+/** `PROSE_RU` and `PROSE_EN` to the parent, in `shape`'s adapter's calls. */
+async function sendProse(
+  turn: Turn,
+  shape: 'claude' | 'codex',
+): Promise<'end_turn'> {
+  const client = await chordClient(turn);
+
+  try {
+    for (const text of [PROSE_RU, PROSE_EN]) {
+      if (client !== undefined) {
+        await callChord(
+          turn,
+          client,
+          'send_message',
+          { text },
+          undefined,
+          shape,
+        );
+      }
+    }
+
+    await turn.say('Both sent back.');
+  } finally {
+    await client?.close();
   }
 
   return 'end_turn';
@@ -234,6 +358,43 @@ export const AGENTS = {
         text: 'Are you still there?',
       });
       await turn.say('parser is closed, so I will run the tests myself.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // A short message and a long one to `parser`, which answers: Claude's
+  // calls, then Codex's, wrapped as its adapter wraps another server's.
+  agentsend: (turn) => sendParser(turn, 'claude'),
+  codexagentsend: (turn) => sendParser(turn, 'codex'),
+
+  // `PROSE_RU` and `PROSE_EN` to `parser`, which sends both back: long
+  // paragraphs, Cyrillic and ASCII, sent and received, as Claude and Codex.
+  agentprose: (turn) =>
+    sendParser(turn, 'claude', 'prosechild', [PROSE_RU, PROSE_EN]),
+  codexagentprose: (turn) =>
+    sendParser(turn, 'codex', 'codexprosechild', [PROSE_RU, PROSE_EN]),
+  prosechild: (turn) => sendProse(turn, 'claude'),
+  codexprosechild: (turn) => sendProse(turn, 'codex'),
+
+  // `LONG_MESSAGE` to `parser`, which was never opened: chord refuses it.
+  async agentsendrefused(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'send_message', {
+        to: 'parser',
+        text: LONG_MESSAGE,
+      });
+      await turn.say('parser is not open, so I will review it myself.');
     } finally {
       await client.close();
     }

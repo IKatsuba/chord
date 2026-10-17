@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.0qoahIis32
+ ▀▀     ? for shortcuts · /help
+
+ › agents
+
+ ⏺ I will open parser on the tests and docs on the README.
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ → to @parser · queued
+   ⎿  I changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.
+
+ → to @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts        Fake Large with a 1M context window · 1% used
+    main    fake · Fake Large with a 1M context window · medium
+    parser  fake · Fake Small · medium                           ✓ replied 12s ago
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 12s

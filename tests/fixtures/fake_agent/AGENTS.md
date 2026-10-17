@@ -68,6 +68,13 @@
   messages its parent through `send_message`, runs the tests and reports;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
   long-lived on the fake runtime, and messages `parser` twice;
+  `agentsend` and `codexagentsend` open `parser` on `agentchild` and send
+  it a short message and a long markdown one, as Claude and Codex do;
+  `agentsendrefused` sends the long one to `parser` without opening it,
+  so chord refuses it;
+  `agentprose` and `codexagentprose` open `parser` on `prosechild` and
+  `codexprosechild` and send it long Cyrillic and ASCII paragraphs, as
+  Claude and Codex do; both child scenarios send those paragraphs back;
   `agentchild` runs the tests twice, messaging its parent after each;
   `agentsheld` opens `docs` alone and messages it while it waits on its
   permission; `agentclose` closes `parser` and then messages it, which chord refuses;

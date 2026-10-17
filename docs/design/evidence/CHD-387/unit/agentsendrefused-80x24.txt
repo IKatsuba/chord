@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.Wa6uhfjq2r
+ ▀▀     ? for shortcuts · /help
+
+ › agentsendrefused
+
+ → to @parser
+   ⎿  CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:
+
+      1. The fold counts the blank line after the list; drop it, as
+        foldMessage already does for a received message.
+      2. foldMessage runs on every render; keep its lines in the same useMemo
+        as the markdown.
+      … +6 lines (ctrl+o to expand)
+      No agent parser is open in this session; list_sessions names them
+
+ ⏺ parser is not open, so I will review it myself.
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

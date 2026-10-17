@@ -1,7 +1,8 @@
 /**
  * What a message from another agent, or chord, reads as, kept out of the
- * component: its header, and its text folded after six lines, twice a tool
- * call's three, as a message is words meant to be read.
+ * component: its header, and its text whole, every line of it, as the owner
+ * reads a message in full (CHD-387); a monitor's event, which is a
+ * command's output, folds after six lines, twice a tool call's three.
  */
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
@@ -14,7 +15,7 @@ import type {
 } from '../../session/transcript/types.ts';
 import type { Tone } from './tools/tools.ts';
 
-/** How many lines of a message show before it folds. */
+/** How many lines of a monitor's event, or a task's prompt, show before it folds. */
 export const MESSAGE_LINES = 6;
 
 /**
@@ -103,6 +104,11 @@ export interface Folded {
   readonly sentence?: string;
 }
 
+/** A message's lines laid out already, whole, with no blank line last. */
+export function wholeMessage(lines: readonly string[]): readonly string[] {
+  return lines.join('\n').replace(/\s+$/, '').split('\n');
+}
+
 /**
  * The lines of a message laid out already, the first `MESSAGE_LINES` of them
  * unless `expanded`, and how many were left out.
@@ -112,7 +118,7 @@ export function foldMessage(
   expanded: boolean,
 ): Folded {
   // A last blank line would hide a line for nothing.
-  const kept = lines.join('\n').replace(/\s+$/, '').split('\n');
+  const kept = wholeMessage(lines);
 
   if (expanded || kept.length <= MESSAGE_LINES) {
     return { lines: kept, hidden: 0 };

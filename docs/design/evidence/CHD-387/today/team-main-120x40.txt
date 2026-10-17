@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.0qoahIis32
+ ▀▀     ? for shortcuts · /help
+
+ › team
+
+ ⏺ List teams
+   ⎿  1 team · bugfix
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  Issue 214: a string at the end of a line loses its closing quote. readString in src/parse/tokenize.ts stops at
+      the newline before it consumes the quote. Add a test that fails for that reason, fix it, and have the diff
+      reviewed. Report to me when it is done.
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+ ← from @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window · medium
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ✓ replied 15s ago
+    ├─ tester  fake · Fake Small · medium                                  ● permission 13s
+    └─ coder   fake · Fake Large with a 1M context window · medium         ✓ replied 14s ago

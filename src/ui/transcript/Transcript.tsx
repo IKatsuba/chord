@@ -30,7 +30,6 @@ import { CUT, DIM, DIM_BORDER, fg, FILL, TEXT } from '../theme/text.ts';
 import { compactionLine, inSpinner } from './compaction.ts';
 import { markdown, QUOTE_INSET } from './markdown.ts';
 import {
-  foldMessage,
   inArrow,
   messageHeader,
   monitorMessage,
@@ -43,6 +42,7 @@ import {
   Failure,
   Folded,
   Gutter,
+  MessageBody,
   Outcome,
   Tool,
   Under,
@@ -263,10 +263,11 @@ function SelfStarted({
 
 /**
  * A message another agent, or chord, sent the session: `←` and who sent it,
- * then what it said as markdown, as a reply is, folded after six lines. Never
- * the person's `›`, so nothing an agent wrote reads as theirs. The body hangs
- * under `⎿`, dim, as a tool's result and the outgoing `→` row's do, so a long
- * instruction reads as quoted next to the agent's own bright replies.
+ * then what it said as markdown, as a reply is, whole; a monitor's event
+ * folds after six lines. Never the person's `›`, so nothing an agent wrote
+ * reads as theirs. The body hangs under `⎿`, dim, as a tool's result and
+ * the outgoing `→` row's do, so a long instruction reads as quoted next to
+ * the agent's own bright replies.
  */
 function Message({
   from,
@@ -279,33 +280,8 @@ function Message({
   expanded: boolean;
   width: number;
 }) {
-  const colours = useColours();
   const sender = useAgentColour(from.name);
   const { word, name, rest } = messageHeader(from);
-  const monitor = from.monitor !== undefined;
-  const blocks = useMemo(
-    () =>
-      monitor
-        ? []
-        : // An agent's own escapes are text, not styling chord answers for.
-          markdown(stripAnsi(text), Math.max(width - 5, 1), undefined, colours),
-    [monitor, text, width, colours],
-  );
-  const { lines, hidden, sentence } = monitor
-    ? monitorMessage(text, {
-        ended: from.monitor?.end !== undefined,
-        expanded,
-        width: Math.max(width - 5, 1),
-      })
-    : foldMessage(
-        blocks.flatMap((block, index) => [
-          ...(index === 0 ? [] : ['']),
-          ...block.text.split('\n'),
-        ]),
-        expanded,
-      );
-  const failed = from.note === 'failed';
-  const selectable = useSelectable();
 
   return (
     <box marginTop={1} flexShrink={0}>
@@ -321,6 +297,52 @@ function Message({
           </span>
         </text>
       </box>
+      {from.monitor === undefined ? (
+        <MessageBody
+          text={text}
+          width={width}
+          failed={from.note === 'failed'}
+        />
+      ) : (
+        <MonitorBody
+          text={text}
+          ended={from.monitor.end !== undefined}
+          expanded={expanded}
+          width={width}
+          failed={from.note === 'failed'}
+        />
+      )}
+    </box>
+  );
+}
+
+/**
+ * A monitor's event under its `←`: the lines it printed, verbatim and
+ * folded, then chord's sentence on its end, dim and never folded.
+ */
+function MonitorBody({
+  text,
+  ended,
+  expanded,
+  width,
+  failed,
+}: {
+  text: string;
+  ended: boolean;
+  expanded: boolean;
+  width: number;
+  failed: boolean;
+}) {
+  const colours = useColours();
+  const selectable = useSelectable();
+  const { lines, hidden, sentence } = monitorMessage(text, {
+    ended,
+    expanded,
+    width: Math.max(width - 5, 1),
+  });
+
+  return (
+    <>
       {lines.map((line, index) => (
         <Under key={index} first={index === 0}>
           <text
@@ -340,7 +362,7 @@ function Message({
           </text>
         </Under>
       )}
-    </box>
+    </>
   );
 }
 

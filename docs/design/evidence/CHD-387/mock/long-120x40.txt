@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+ › sendlong
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ → to @parser
+   ⎿  Run the parser tests now and tell me only what fails.
+
+ ← from @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ → to @parser · queued
+   ⎿  CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:
+      
+      1. The fold counts the blank line after the list; drop it, as foldMessage already does for a received message.
+      2. foldMessage runs on every render; keep its lines in the same useMemo as the markdown.
+      3. The hint names ctrl+o even when the person has rebound it; take the key from useHintKey.
+      4. The refusal goes after the body, in the error colour, never folded.
+     … +2 lines (ctrl+o to expand)
+
+ ⏺ Waiting on parser.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main    fake
+    parser  fake                           ● working

@@ -15,7 +15,7 @@ import { Chalk } from 'chalk';
 import { type Run, runs } from '../../theme/text.ts';
 import { brush } from '../highlight.ts';
 import type { CodeTones } from '../../theme/theme.ts';
-import { chordHeadline, chordLines, chordWraps } from './chord.ts';
+import { chordHeadline, chordLines, chordWraps, sentText } from './chord.ts';
 import { wrapLine } from '../message.ts';
 
 /**
@@ -296,6 +296,31 @@ export function toneOf(call: ToolCall): Tone {
     default:
       return 'pending';
   }
+}
+
+/** A sent message's body: the text it sent, then what said it failed. */
+export interface SentBody {
+  readonly text: string;
+  /** chord's refusal, or `Failed`, drawn after the fold. */
+  readonly ending?: string;
+}
+
+/**
+ * A `send_message` call's text, drawn under its `→` as a received message's
+ * is, in every state, so what was sent reads as what came in; a refused or
+ * failed one keeps it, as the message most worth reading, and says why after
+ * it. None for any other call or an empty text, whose own lines say it.
+ */
+export function sentBody(call: ToolCall): SentBody | undefined {
+  const text = call.chord === undefined ? undefined : sentText(call.chord);
+
+  if (text === undefined) {
+    return undefined;
+  }
+
+  return toneOf(call) === 'failed'
+    ? { text, ending: call.chord?.error ?? 'Failed' }
+    : { text };
 }
 
 /**

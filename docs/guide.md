@@ -570,7 +570,12 @@ the last but the working tree and what main was told. `/resume` lists its
 lead and members like any child. A task agent gets no command on quit.
 chord's own calls draw as `List agents`, `List sessions`, `Open(parser)`
 and `Close(parser)`, and a message sent as `→ to @main` or `→ to @parser`,
-in Claude and Codex sessions. Older Codex records keep their earlier display.
+in Claude and Codex sessions. Messages sent or received, from agents or
+chord, show their whole text as markdown wrapped to the window, on resume
+too, with no fold or ctrl+o hint. A pending send shows its text at once;
+a refused send keeps it, then shows the refusal in the error colour.
+Monitor events keep their six-line fold. Older Codex records keep their
+earlier display.
 A name after an arrow takes `@` where `send_message` reaches
 it, `main` and a long-lived child; a task, named by its title, and chord's
 own `← from chord` stay bare. `/mcp` lists chord's server first,

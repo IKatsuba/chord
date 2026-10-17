@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import stripAnsi from 'strip-ansi';
 import type { ToolCall } from '../../../session/transcript/types.ts';
 import {
   ChordServerName,
@@ -20,7 +21,12 @@ import { Ansi } from '../../theme/Ansi.tsx';
 import { colour, CUT, DIM, fg, FILL, TEXT } from '../../theme/text.ts';
 import type { Palette } from '../../theme/theme.ts';
 import { markdown } from '../markdown.ts';
-import { type ArrowTone, outArrow, wrapLine } from '../message.ts';
+import {
+  type ArrowTone,
+  outArrow,
+  wholeMessage,
+  wrapLine,
+} from '../message.ts';
 import { diffHeadline, type DiffView } from './diff.ts';
 import {
   agentRows,
@@ -42,6 +48,7 @@ import {
   type Headline,
   headline,
   headlineRows,
+  sentBody,
   summary,
   type Tone,
   toneOf,
@@ -64,8 +71,10 @@ function toneColour(tone: Tone, colours: Palette): string | undefined {
  * `⏺ Read(src/main.tsx)` and what it produced under `⎿`, then each edit's
  * diff. The headline is drawn whole, wrapped to the row's `width`; the lines
  * under it are cut at the window's edge rather than wrapped, so a long
- * source line stays one row, but what Open and Team handed over wraps. A call left running in a turn
- * or a subagent that has `ended` no longer blinks or says it waits.
+ * source line stays one row, but what Open and Team handed over wraps, and
+ * what a message sent says is drawn whole, as a received one's is. A call
+ * left running in a turn or a subagent that has `ended` no longer blinks or
+ * says it waits.
  */
 export function Tool({
   call,
@@ -95,6 +104,7 @@ export function Tool({
     // The `⎿` and its gutter take five columns.
     Math.max(width - 5, 1),
   );
+  const sent = sentBody(call);
   // Rows drawn ahead of each terminal's, so only the first row of all has `⎿`.
   const ahead = terminals.reduce<number[]>(
     (counts, view, index) => [
@@ -121,7 +131,11 @@ export function Tool({
           width={Math.max(width - 5, 1)}
         />
       )}
+      {sent !== undefined && (
+        <MessageBody text={sent.text} width={width} ending={sent.ending} />
+      )}
       {proposal === undefined &&
+        sent === undefined &&
         lines.map((line, index) => (
           <Under key={index} first={index === 0}>
             <text
@@ -133,7 +147,7 @@ export function Tool({
             </text>
           </Under>
         ))}
-      {hidden > 0 && <Folded hidden={hidden} />}
+      {sent === undefined && hidden > 0 && <Folded hidden={hidden} />}
       {terminals.map((view, index) => (
         <TerminalOutput key={index} view={view} first={ahead[index] === 0} />
       ))}
@@ -145,6 +159,64 @@ export function Tool({
         />
       ))}
     </box>
+  );
+}
+
+/**
+ * A message's text under its arrow, `←` or `→` alike, so the two never
+ * drift apart: as markdown at the row's `width` less the gutter, whole,
+ * never folded or cut, as the owner reads a message in full (CHD-387), dim,
+ * or in the error colour when it `failed`; then `ending`, why a send
+ * failed, in the error colour.
+ */
+export function MessageBody({
+  text,
+  width,
+  failed = false,
+  ending,
+}: {
+  text: string;
+  /** Cells beside the marker. */
+  width: number;
+  failed?: boolean;
+  ending?: string | undefined;
+}) {
+  const colours = useColours();
+  const selectable = useSelectable();
+  const blocks = useMemo(
+    () =>
+      // An agent's own escapes are text, not styling chord answers for.
+      markdown(stripAnsi(text), Math.max(width - 5, 1), undefined, colours),
+    [text, width, colours],
+  );
+  const lines = wholeMessage(
+    blocks.flatMap((block, index) => [
+      ...(index === 0 ? [] : ['']),
+      ...block.text.split('\n'),
+    ]),
+  );
+
+  return (
+    <>
+      {lines.map((line, index) => (
+        <Under key={index} first={index === 0}>
+          <text
+            {...FILL}
+            {...selectable}
+            {...(failed ? fg(colours.error) : { attributes: DIM })}
+          >
+            <Ansi text={line === '' ? ' ' : line} />
+          </text>
+        </Under>
+      ))}
+      {ending !== undefined && (
+        <Under first={lines.length === 0}>
+          <text {...FILL} {...selectable} {...fg(colours.error)}>
+            {ending}
+          </text>
+        </Under>
+      )}
+    </>
   );
 }
 

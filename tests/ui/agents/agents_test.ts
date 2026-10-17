@@ -99,8 +99,16 @@ test('the states read most urgent first, as the strip and the picker word them',
   expect(
     state({ asking: { on: { kind: 'input', message: 'Go?' }, since: NOW } }),
   ).toStrictEqual('● input 0s (warning)');
-  expect(state({}, { failed: true })).toStrictEqual('✗ failed (error)');
+  expect(state({}, { failed: true })).toStrictEqual(
+    '✗ failed to start (error)',
+  );
   expect(state({ exited: true })).toStrictEqual('✗ exited (error)');
+  // A failed turn leaves the agent open: the turn failed, not the agent.
+  expect(
+    state({
+      unseen: { kind: 'failed', since: NOW - 12_000, failure: 'turn' },
+    }),
+  ).toStrictEqual('✗ turn failed 12s ago (error)');
   expect(
     state({ unseen: { kind: 'replied', since: NOW - 120_000 } }),
   ).toStrictEqual('✓ replied 2m ago (success)');
@@ -486,7 +494,7 @@ test("a folded lead's own state is its own, and a lead with no member open folds
     drawn(teamRows([main!, failed, ...members.slice(1, 3)], { fold: true }), {
       limit: 9,
     })[1],
-  ).toStrictEqual('  bugfix       team · claude · 3 agents  ✗ failed');
+  ).toStrictEqual('  bugfix       team · claude · 3 agents  ✗ failed to start');
   expect(teamRows([main!, lead!], { fold: true })[1]).toStrictEqual(lead);
 });
 
@@ -506,4 +514,83 @@ test("a folded member's time keeps the list ticking while its lead is idle and s
       ),
     ),
   ).toStrictEqual(false);
+});
+
+test('the three failures read apart, an exit outranking the turn it cut short, then never starting, then a failed turn; a seen failed turn clears', () => {
+  const words = (wait: Partial<TabWait>, more: Partial<AgentRow> = {}) =>
+    agentState(row('x', { ...more, wait: { watch: emptyWatch, ...wait } }), NOW)
+      ?.words;
+  const turn = {
+    kind: 'failed' as const,
+    since: NOW - 60_000,
+    failure: 'turn' as const,
+  };
+
+  expect(words({ unseen: turn })).toStrictEqual('turn failed 1m ago');
+  expect(words({ unseen: turn, exited: true })).toStrictEqual('exited');
+  expect(words({ unseen: turn }, { failed: true })).toStrictEqual(
+    'failed to start',
+  );
+  expect(words({ exited: true }, { failed: true })).toStrictEqual('exited');
+  // Asking still comes first.
+  expect(
+    words({
+      unseen: turn,
+      exited: true,
+      asking: { on: { kind: 'permission' }, since: NOW },
+    }),
+  ).toStrictEqual('permission 0s');
+  // Seen, a failed turn says nothing, and the agent reads idle and open.
+  expect(words({})).toStrictEqual(undefined);
+  // An exit and never starting stay until the agent is closed, seen or not.
+  expect(words({ exited: true })).toStrictEqual('exited');
+  expect(words({}, { failed: true })).toStrictEqual('failed to start');
+  // A failed turn's time goes on counting.
+  expect(
+    listTimed([row('x', { wait: { watch: emptyWatch, unseen: turn } })]),
+  ).toStrictEqual(true);
+});
+
+test('a folded lead names the member whose failure it shows, gravest first', () => {
+  const [main, lead, ...members] = team('main');
+  const quiet = (each: AgentRow): AgentRow => ({
+    ...each,
+    wait: { watch: emptyWatch },
+  });
+  const rows = [
+    main!,
+    quiet(lead!),
+    ...members.map((member) =>
+      member.name === 'tester'
+        ? {
+            ...member,
+            wait: {
+              watch: emptyWatch,
+              unseen: {
+                kind: 'failed' as const,
+                since: NOW - 12_000,
+                failure: 'turn' as const,
+              },
+            },
+          }
+        : member.name === 'coder'
+          ? { ...member, wait: { watch: emptyWatch, exited: true as const } }
+          : quiet(member),
+    ),
+  ];
+
+  expect(
+    drawn(teamRows(rows, { fold: true }), { limit: 9, width: 116 })[1],
+  ).toStrictEqual('  bugfix       team · claude · 4 agents  ✗ coder: exited');
+  expect(
+    drawn(
+      teamRows(
+        rows.map((each) => (each.name === 'coder' ? quiet(each) : each)),
+        { fold: true },
+      ),
+      { limit: 9, width: 116 },
+    )[1],
+  ).toStrictEqual(
+    '  bugfix       team · claude · 4 agents  ✗ tester: turn failed 12s ago',
+  );
 });

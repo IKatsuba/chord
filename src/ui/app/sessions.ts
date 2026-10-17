@@ -75,6 +75,7 @@ import {
 import {
   agentOf,
   askingChild,
+  waitingChild,
   type Child,
   childEnded,
   type ChildInfo,
@@ -2382,7 +2383,7 @@ export function useSessions(
       const first = all.sessions[tab.key]?.transcript.entries.find(
         (entry) => entry.kind === 'user',
       );
-      const waiter = askingChild(tab)?.name;
+      const waiter = waitingChild(tab)?.name;
 
       return {
         agent: tab.agent,

@@ -15,7 +15,7 @@ import {
   windowDirectory,
   windowSummary,
 } from '../../session/windows.ts';
-import type { TabWait } from '../../session/tabs.ts';
+import { failureOf, type TabWait } from '../../session/tabs.ts';
 import { homePath } from '../../settings.ts';
 import { visibleRange } from '../prompt/commands.ts';
 import { GLYPHS } from '../app/strip.ts';
@@ -193,7 +193,7 @@ export interface TabRow {
   readonly prompt: string | undefined;
   /** How many long-lived agents it has open; none or 0 for none. */
   readonly agents?: number;
-  /** The child whose wait `wait` is, named before its words. */
+  /** The child whose asking or failure `wait` is, named before its words. */
   readonly waiter?: string;
 }
 
@@ -205,8 +205,9 @@ function briefly(ms: number): string {
 /**
  * Where a session stands, as the sessions picker words it: `here` for the one
  * in front, then what its tab's glyph says, in the same order, with how long:
- * `● permission 41s`, `● input 41s`, `✗ failed`, `✓ replied 2m ago`,
- * `working 12s`, and `idle` for the rest.
+ * `● permission 41s`, `● input 41s`, `✗ parser: turn failed 1m`,
+ * `✗ exited`, `✗ failed to start`, `✓ replied 2m ago`, `working 12s`, and
+ * `idle` for the rest.
  */
 export function tabState(tab: TabRow, now: number): string {
   const { wait } = tab;
@@ -223,8 +224,16 @@ export function tabState(tab: TabRow, now: number): string {
     )}`;
   }
 
-  if (wait.unseen?.kind === 'failed') {
-    return `${GLYPHS.failed} failed`;
+  const failure = failureOf(wait);
+
+  if (failure !== undefined && wait.unseen !== undefined) {
+    return `${GLYPHS.failed} ${tab.waiter === undefined ? '' : `${tab.waiter}: `}${
+      failure === 'exited'
+        ? 'exited'
+        : failure === 'start'
+          ? 'failed to start'
+          : `turn failed ${briefly(now - wait.unseen.since)}`
+    }`;
   }
 
   if (wait.unseen) {

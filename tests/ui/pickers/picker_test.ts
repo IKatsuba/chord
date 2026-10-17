@@ -377,8 +377,38 @@ test('a session in the sessions picker says where it stands, and since when', ()
     tabState(wait({ unseen: { kind: 'replied', since: at(125) } }), now),
   ).toStrictEqual('✓ replied 2m ago');
   expect(
-    tabState(wait({ unseen: { kind: 'failed', since: at(5) } }), now),
-  ).toStrictEqual('✗ failed');
+    tabState(wait({ unseen: { kind: 'failed', since: at(65) } }), now),
+  ).toStrictEqual('✗ turn failed 1m');
+  // A child's failure names the child, as a folded lead does.
+  expect(
+    tabState(
+      {
+        ...wait({
+          unseen: { kind: 'failed', since: at(65), failure: 'turn' },
+        }),
+        waiter: 'parser',
+      },
+      now,
+    ),
+  ).toStrictEqual('✗ parser: turn failed 1m');
+  expect(
+    tabState(
+      {
+        ...wait({
+          unseen: { kind: 'failed', since: at(5), failure: 'exited' },
+          exited: true,
+        }),
+        waiter: 'parser',
+      },
+      now,
+    ),
+  ).toStrictEqual('✗ parser: exited');
+  expect(
+    tabState(
+      wait({ unseen: { kind: 'failed', since: at(5), failure: 'start' } }),
+      now,
+    ),
+  ).toStrictEqual('✗ failed to start');
   // In front it is here, whatever it waits on.
   expect(
     tabState(

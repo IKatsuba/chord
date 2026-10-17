@@ -9,6 +9,7 @@ import {
   childName,
   closeChild,
   closeTab,
+  failureOf,
   frontTab,
   goTo,
   hear,
@@ -33,6 +34,7 @@ import {
   tabName,
   tabOf,
   type Tabs,
+  waitingChild,
 } from '../../src/session/tabs.ts';
 
 /** Tabs for `agents`, opened in order, the last in front. */
@@ -269,7 +271,7 @@ test('a turn ending in front is not unseen', () => {
   expect(tabOf(tabs, 2)?.wait.unseen).toStrictEqual(undefined);
 });
 
-test('a failed turn or an agent that never came up is unseen as failed', () => {
+test('a failed turn or an agent that never came up is unseen as failed, each with its cause', () => {
   const turn = heard(opened('a', 'b'), 1, [up, prompt('t1'), failed('t1')]);
   const start = heard(opened('a', 'b'), 1, [
     {
@@ -282,16 +284,52 @@ test('a failed turn or an agent that never came up is unseen as failed', () => {
   expect(tabOf(turn, 1)?.wait.unseen).toStrictEqual({
     kind: 'failed',
     since: 2000,
+    failure: 'turn',
   });
   expect(tabOf(start, 1)?.wait.unseen).toStrictEqual({
     kind: 'failed',
     since: 0,
+    failure: 'start',
   });
   // A reply after it does not hide the failure, nor move when it began.
   expect(tabOf(later, 1)?.wait.unseen).toStrictEqual({
     kind: 'failed',
     since: 2000,
+    failure: 'turn',
   });
+});
+
+test("an exit after a failed turn, or one that cuts a turn short, is the failure's cause: the agent went", () => {
+  const exitedAfter = heard(opened('a', 'b'), 1, [
+    up,
+    prompt('t1'),
+    failed('t1'),
+    { type: 'disconnected', turnId: 't1' },
+  ]);
+  const cutShort = heard(opened('a', 'b'), 1, [
+    up,
+    prompt('t1'),
+    { type: 'disconnected', turnId: 't1' },
+    failed('t1'),
+  ]);
+
+  for (const tabs of [exitedAfter, cutShort]) {
+    const wait = tabOf(tabs, 1)!.wait;
+
+    expect([wait.unseen?.failure, failureOf(wait), wait.exited]).toStrictEqual([
+      'exited',
+      'exited',
+      true,
+    ]);
+  }
+
+  // A failed turn alone leaves the agent open.
+  expect(
+    failureOf(
+      tabOf(heard(opened('a', 'b'), 1, [up, prompt('t1'), failed('t1')]), 1)!
+        .wait,
+    ),
+  ).toStrictEqual('turn');
 });
 
 test('a cancelled turn, or one a queued prompt follows, is not unseen', () => {
@@ -851,4 +889,21 @@ test('a member is named with its run only while another run has one of its name'
   expect(notifiedName(tabs, key('t2'))).toStrictEqual('tester (bugfix 2)');
   expect(notifiedName(tabs, key('two'))).toStrictEqual('bugfix 2');
   expect(notifiedName(tabs, 1)).toStrictEqual('claude');
+});
+
+test("the child a tab's wait belongs to: the one asking, else the one whose failure is oldest; none for the tab's own", () => {
+  let tabs = withChildren(opened('claude'), 1, 'parser', 'docs');
+
+  tabs = heard(tabs, 2, [up, prompt('p'), failed('p')]);
+
+  expect(waitingChild(tabOf(tabs, 1)!)?.name).toStrictEqual('parser');
+
+  tabs = heard(tabs, 3, [up, prompt('d'), asked('d', 'q')], 5000);
+
+  expect(waitingChild(tabOf(tabs, 1)!)?.name).toStrictEqual('docs');
+  expect(
+    waitingChild(
+      tabOf(heard(opened('claude'), 1, [up, prompt('t'), failed('t')]), 1)!,
+    ),
+  ).toStrictEqual(undefined);
 });

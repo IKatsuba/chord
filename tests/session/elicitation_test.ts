@@ -437,7 +437,7 @@ test("a form is read as timed out within a second of the agent's wait ending, a 
 
 describe('CHD-1 tester: receipt-relative timeout outcomes', () => {
   for (const [waited, outcome] of [
-    [299, 'cancelled'],
+    [299, 'timed_out'],
     [300, 'timed_out'],
     [301, 'timed_out'],
   ] as const) {

@@ -5,8 +5,9 @@ import type {
   SessionConfigOption,
   SessionUpdate,
 } from '@agentclientprotocol/sdk';
-import { enricherRelay, FILLED } from '../../src/session/enrich.ts';
+import { enricherRelay, FILLED, MCP_CALL } from '../../src/session/enrich.ts';
 import {
+  codexMcpCall,
   costFromTokens,
   ENRICHERS,
   modeReadBack,
@@ -300,6 +301,64 @@ test("a tool call's title and kind are carried onto updates that leave them out"
   expect(
     updates(update({ sessionUpdate: 'tool_call_update', toolCallId: 'other' })),
   ).toStrictEqual([{ sessionUpdate: 'tool_call_update', toolCallId: 'other' }]);
+});
+
+test("Codex's MCP call has its tool and arguments filed beside its rawInput, which stays as sent", () => {
+  const { update } = relayOn([codexMcpCall]);
+  const rawInput = {
+    server: 'chord',
+    tool: 'send_message',
+    arguments: { to: 'ship', text: 'ready' },
+  };
+
+  expect(
+    updates(
+      update({
+        sessionUpdate: 'tool_call',
+        toolCallId: 'exec-1',
+        title: 'mcp.chord.send_message',
+        kind: 'execute',
+        status: 'in_progress',
+        rawInput,
+        _meta: { is_mcp_tool_call: true },
+      }),
+    ),
+  ).toStrictEqual([
+    {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'exec-1',
+      title: 'mcp.chord.send_message',
+      kind: 'execute',
+      status: 'in_progress',
+      rawInput,
+      _meta: {
+        is_mcp_tool_call: true,
+        [FILLED]: [MCP_CALL],
+        [MCP_CALL]: {
+          tool: 'send_message',
+          arguments: { to: 'ship', text: 'ready' },
+        },
+      },
+    },
+  ]);
+
+  // Claude's shape, and a command that is no MCP call, are left alone.
+  for (const call of [
+    { title: 'mcp__chord__list_agents', kind: 'other', rawInput: {} },
+    {
+      title: 'Run a.sh',
+      kind: 'execute',
+      rawInput: { server: 'x', tool: 'y', arguments: {} },
+    },
+  ] as const) {
+    const sent: SessionUpdate = {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'other',
+      ...call,
+    };
+
+    expect(updates(update(sent))).toStrictEqual([sent]);
+  }
 });
 
 test('a permission asked about a known call names it', () => {

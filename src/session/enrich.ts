@@ -30,6 +30,13 @@ import { isModelState } from './models.ts';
  */
 export const FILLED = 'chord/filled';
 
+/**
+ * The `_meta` key on a tool call where chord files an MCP call's tool and
+ * arguments, `{tool, arguments}`, when the agent wrapped them in its
+ * `rawInput` rather than sending the arguments as `rawInput` itself.
+ */
+export const MCP_CALL = 'chord/mcp';
+
 /** What the chain knows of one session. */
 export interface SessionWire {
   /** What the agent has said of the session: its options, models, modes. */

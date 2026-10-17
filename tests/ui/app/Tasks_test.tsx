@@ -408,6 +408,35 @@ test("chord's own calls draw by what chord served: the lists, and a task refused
   }
 });
 
+test("chord's own calls as Codex sends them draw as Claude's do; another server's with the same arguments does not tie", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'codexchordcalls');
+        await window.shows('Listed as Codex.');
+
+        const frame = window.frame();
+
+        // The rows a Claude session draws for the same calls (chordcalls).
+        expect(frame).toContain('List agents\n');
+        expect(frame).toContain('1 runtime · fake');
+        expect(frame).toContain('List sessions');
+        expect(frame).toContain('1 open · 1 fake (you)');
+        expect(!frame.includes('mcp.chord.')).toBeTruthy();
+        // The other server's call stays the agent's own row.
+        expect(frame).toContain('Bash(mcp.notes.list_notes)');
+        expect(frame).toContain('no notes');
+      },
+      { server, runtimes: ['fake'], rows: 60, columns: 120 },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
 test('Esc stops a running task agent, which sends no report, takes the queued prompt back, and its message goes at once', async () => {
   const server = serveChord();
 

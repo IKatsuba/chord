@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { MCP_CALL } from '../../../src/session/enrich.ts';
 import { taskUpdate } from '../../../src/session/tasks.ts';
 import type {
   ChordCall,
@@ -504,4 +505,73 @@ test("chord's own question leaves no record of its answer: the call says it", ()
 
   expect(kinds(transcript)).toStrictEqual(['user']);
   expect(transcript.turn.status).toStrictEqual('working');
+});
+
+/** A call as codex-acp sends one of an MCP server's, once enriched. */
+function wrapped(
+  id: string,
+  server: string,
+  tool: string,
+  args: Record<string, unknown>,
+): TranscriptAction {
+  return {
+    type: 'update',
+    turnId: 't1',
+    update: {
+      sessionUpdate: 'tool_call',
+      toolCallId: id,
+      title: `mcp.${server}.${tool}`,
+      kind: 'execute',
+      status: 'in_progress',
+      rawInput: { server, tool, arguments: args },
+      _meta: {
+        is_mcp_tool_call: true,
+        [MCP_CALL]: { tool, arguments: args },
+      },
+    },
+  };
+}
+
+test("a request chord served ties to Codex's call by the tool and arguments it wrapped", () => {
+  const message: ChordCall = {
+    tool: 'send_message',
+    input: { to: 'ship', text: 'Tester ready.' },
+    answer: { to: 'ship' },
+  };
+  const listed: ChordCall = { tool: 'list_agents', input: {}, answer: {} };
+  const transcript = fold([
+    { type: 'prompt', turnId: 't1', text: 'go', at: 0 },
+    wrapped(
+      'exec-1',
+      'chord',
+      'send_message',
+      message.input as Record<string, unknown>,
+    ),
+    served(message),
+    // Served before its call came, as list_agents can be.
+    served(listed),
+    wrapped('exec-2', 'chord', 'list_agents', {}),
+  ]);
+  const calls = transcript.entries.flatMap((entry) =>
+    entry.kind === 'tool' ? [entry.call] : [],
+  );
+
+  expect(calls.map((call) => call.chord)).toStrictEqual([message, listed]);
+  expect(transcript.served).toStrictEqual(undefined);
+});
+
+test('a call of another tool with the same arguments is not tied, whatever server it names', () => {
+  const listed: ChordCall = { tool: 'list_agents', input: {}, answer: {} };
+  const transcript = fold([
+    { type: 'prompt', turnId: 't1', text: 'go', at: 0 },
+    wrapped('exec-1', 'notes', 'list_notes', {}),
+    wrapped('exec-2', 'chord', 'list_sessions', {}),
+    served(listed),
+  ]);
+  const calls = transcript.entries.flatMap((entry) =>
+    entry.kind === 'tool' ? [entry.call] : [],
+  );
+
+  expect(calls.map((call) => call.chord)).toStrictEqual([undefined, undefined]);
+  expect(transcript.served).toStrictEqual([listed]);
 });

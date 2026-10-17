@@ -5,6 +5,7 @@
 import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
 import { z } from '@zod/zod';
 import { OUTPUT_LIMIT } from '../context.ts';
+import { MCP_CALL } from '../enrich.ts';
 import {
   EMPTY_TEXT,
   plainText,
@@ -63,6 +64,7 @@ export function mergeToolCall(
   const status = nextStatus(before.status, update.status ?? undefined);
   const { title, kind, locations, content, rawInput, rawOutput } = update;
   const terminals = foldTerminals(before.terminals, update);
+  const mcp = mcpOf(update);
   const call: ToolCall = {
     ...before,
     ...(title ? { title } : {}),
@@ -73,6 +75,7 @@ export function mergeToolCall(
     ...(rawInput === undefined ? {} : { rawInput }),
     ...(rawOutput === undefined ? {} : { rawOutput }),
     ...(terminals === undefined ? {} : { terminals }),
+    ...(mcp === undefined ? {} : { mcp }),
   };
 
   if (found?.kind !== 'tool') {
@@ -86,6 +89,22 @@ export function mergeToolCall(
     ...state,
     entries: state.entries.with(index, { ...found, call }),
   };
+}
+
+/** The MCP call chord's enrichers filed under the update's `_meta`, if any. */
+function mcpOf(update: { _meta?: unknown }): ToolCall['mcp'] | undefined {
+  const filed =
+    typeof update._meta === 'object' && update._meta !== null
+      ? (update._meta as Record<string, unknown>)[MCP_CALL]
+      : undefined;
+
+  if (typeof filed !== 'object' || filed === null) {
+    return undefined;
+  }
+
+  const { tool, arguments: input } = filed as Record<string, unknown>;
+
+  return typeof tool === 'string' ? { tool, input } : undefined;
 }
 
 const TERMINAL_ID = z.object({ terminal_id: z.string() });

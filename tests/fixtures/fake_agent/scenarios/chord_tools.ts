@@ -58,6 +58,23 @@ export async function chordClient(turn: Turn): Promise<Client | undefined> {
  * arguments, then the answer as the call's update. The answer's text, or
  * none when it was refused.
  */
+/**
+ * An MCP call as codex-acp sends one: a command by its dotted name, the
+ * arguments wrapped with the server and the tool in `rawInput`.
+ */
+export function codexCall(
+  server: string,
+  tool: string,
+  args: Record<string, unknown>,
+) {
+  return {
+    title: `mcp.${server}.${tool}`,
+    kind: 'execute' as const,
+    rawInput: { server, tool, arguments: args },
+    _meta: { is_mcp_tool_call: true },
+  };
+}
+
 export async function callChord(
   turn: Turn,
   client: Client,
@@ -65,16 +82,18 @@ export async function callChord(
   args: Record<string, unknown>,
   /** How long to wait for the answer, the SDK's 60 s if not said. */
   timeout?: number,
+  /** Whose adapter's shape the call is in: Claude's, or Codex's. */
+  shape: 'claude' | 'codex' = 'claude',
 ): Promise<string | undefined> {
   const toolCallId = turn.callId(name);
 
   await turn.send({
     sessionUpdate: 'tool_call',
     toolCallId,
-    title: `mcp__chord__${name}`,
-    kind: 'other',
     status: 'pending',
-    rawInput: args,
+    ...(shape === 'claude'
+      ? { title: `mcp__chord__${name}`, kind: 'other', rawInput: args }
+      : codexCall('chord', name, args)),
   });
 
   const result = await client.callTool(

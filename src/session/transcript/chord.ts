@@ -120,13 +120,22 @@ export function awaitedCall(state: Transcript, toolCallId: string): Transcript {
   };
 }
 
-/** Whether `call` is the one `chord` served: the arguments are the same. */
+/**
+ * Whether `call` is the one `chord` served: the arguments are the same, as
+ * its `rawInput` holds them or, where the agent wrapped them, as chord's
+ * enrichers filed them with the tool's name, which must be the same too;
+ * which server the agent named is not read (owner, 2026-10-17, CHD-377 Q9).
+ */
 function sameCall(call: ToolCall, chord: ChordCall): boolean {
-  return (
-    call.chord === undefined &&
-    call.rawInput !== undefined &&
-    isDeepStrictEqual(call.rawInput, chord.input)
-  );
+  if (call.chord !== undefined) {
+    return false;
+  }
+
+  return call.mcp === undefined
+    ? call.rawInput !== undefined &&
+        isDeepStrictEqual(call.rawInput, chord.input)
+    : call.mcp.tool === chord.tool &&
+        isDeepStrictEqual(call.mcp.input, chord.input);
 }
 
 /**

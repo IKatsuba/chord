@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { idle } from '../../../src/session/tabs.ts';
 import {
   choiceKey,
@@ -558,4 +558,32 @@ test("a numbered list's keys move round, pick, and leave shift+arrows alone", ()
   expect(
     choiceKey('', { ...key, upArrow: true, shift: true }, 1, 3),
   ).toBeUndefined();
+});
+
+describe('CHD-264 tester: picker failure identity', () => {
+  test('a child failure uses its own failure time and owner while the front tab still reads here', () => {
+    const now = 1_000_000;
+    const child: TabRow = {
+      ...idleTab,
+      waiter: 'parser',
+      wait: {
+        ...idle,
+        unseen: {
+          kind: 'failed',
+          failure: 'turn',
+          since: now - 120_000,
+          failedAt: now - 12_000,
+        },
+      },
+    };
+
+    expect(tabState(child, now)).toBe('✗ parser: turn failed 12s');
+    expect(
+      tabState({ ...child, wait: { ...child.wait, exited: true } }, now),
+    ).toBe('✗ parser: exited');
+    expect(tabState({ ...child, front: true }, now)).toBe('here');
+    expect(tabState({ ...idleTab, wait: child.wait }, now)).toBe(
+      '✗ turn failed 12s',
+    );
+  });
 });

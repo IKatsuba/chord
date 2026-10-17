@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { emptyWatch } from '../../../src/notify.ts';
 import type { TabWait } from '../../../src/session/tabs.ts';
 import {
@@ -593,4 +593,30 @@ test('a folded lead names the member whose failure it shows, gravest first', () 
   ).toStrictEqual(
     '  bugfix       team · claude · 4 agents  ✗ tester: turn failed 12s ago',
   );
+});
+
+describe('CHD-264 tester: failure age and row fallback', () => {
+  test('the failure clock ignores older news, and a narrow row retains its error glyph', () => {
+    const failed = row('parser', {
+      wait: {
+        unseen: {
+          kind: 'failed',
+          failure: 'turn',
+          since: NOW - 120_000,
+          failedAt: NOW - 12_000,
+        },
+      },
+    });
+
+    expect(agentState(failed, NOW)?.words).toBe('turn failed 12s ago');
+    expect(agentState(failed, NOW + 2000)?.words).toBe('turn failed 14s ago');
+    expect(drawn([MAIN, failed], { width: 76 }).join(' ')).toContain(
+      '✗ turn failed 12s ago',
+    );
+    expect(drawn([MAIN, failed], { width: 20 }).join(' ')).toContain('✗');
+    expect(
+      agentState({ ...failed, wait: { ...failed.wait, exited: true } }, NOW)
+        ?.words,
+    ).toBe('exited');
+  });
 });

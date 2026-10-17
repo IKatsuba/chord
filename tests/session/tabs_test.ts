@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { ConversationEvent } from '../../src/session/conversation.ts';
 import {
   agentOf,
@@ -966,4 +966,57 @@ test("the child a tab's wait belongs to: the one asking, else the one whose fail
       tabOf(heard(opened('claude'), 1, [up, prompt('t'), failed('t')]), 1)!,
     ),
   ).toStrictEqual(undefined);
+});
+
+describe('CHD-264 tester: child failure lifecycle', () => {
+  test('showing the parent does not acknowledge a child; picking it clears only its failure and a later failure gets a fresh time', () => {
+    const base = withChildren(opened('a', 'b'), 1, 'parser', 'docs');
+    const both = heard(
+      heard(base, 3, [up, prompt('p'), failed('p')]),
+      4,
+      [up, prompt('d'), failed('d')],
+      5000,
+    );
+    const parent = show(both, 1);
+
+    expect(attentionOrder(parent)).toStrictEqual([3, 4]);
+
+    const seen = pick(parent, 3);
+
+    expect(agentOf(seen, 3)?.child?.wait.unseen).toBeUndefined();
+    expect(attentionOrder(seen)).toStrictEqual([4]);
+    expect(
+      agentOf(show(show(seen, 2), 1), 3)?.child?.wait.unseen,
+    ).toBeUndefined();
+
+    const later = heard(
+      pick(seen, 1),
+      3,
+      [prompt('next'), failed('next')],
+      20_000,
+    );
+
+    expect(failedSince(agentOf(later, 3)!.child!.wait)).toBe(21_000);
+    expect(attentionOrder(later)).toStrictEqual([4, 3]);
+  });
+
+  test('acknowledging an exited child clears attention while preserving its exited state across tab switches', () => {
+    const base = withChildren(opened('a', 'b'), 1, 'parser');
+    const gone = heard(base, 3, [
+      up,
+      prompt('p'),
+      failed('p'),
+      { type: 'disconnected', turnId: 'p' },
+    ]);
+    const seen = pick(gone, 3);
+    const returned = show(show(seen, 2), 1);
+    const wait = agentOf(returned, 3)!.child!.wait;
+
+    expect(wait.exited).toBe(true);
+    expect(wait.unseen).toBeUndefined();
+    expect(attentionOrder(returned)).toStrictEqual([]);
+    expect(agentOf(returned, 3)?.child?.conversation).toBe(
+      'conversation of parser',
+    );
+  });
 });

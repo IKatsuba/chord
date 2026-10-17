@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import {
   contextUsed,
@@ -490,4 +490,27 @@ test('with no gradient the spinner dims all but the lit mark, in the one tone', 
     { colour: 'green', dim: true },
     { colour: 'green', dim: false },
   ]);
+});
+
+describe('CHD-264 tester: grouped failures', () => {
+  test('a stale turn cause with an exited process counts as exited, and the narrow notice preserves both groups', () => {
+    const turn = {
+      unseen: { kind: 'failed' as const, failure: 'turn' as const, since: 1 },
+    };
+    const entries = [
+      behind(1, 'fake', turn),
+      behind(2, 'fake', { ...turn, exited: true }),
+    ];
+    const notice = waitsNotice(entries, 'ctrl+x a');
+
+    expect(notice?.text).toBe('✗ 1 exited · 1 turn failed');
+    expect(waitsNotice([...entries].reverse(), 'ctrl+x a')).toStrictEqual(
+      notice,
+    );
+    expect(text({ ...facts, waits: notice }, 76)).toContain(
+      '✗ 1 exited · 1 turn failed · ctrl+x a',
+    );
+    expect(notice?.text).not.toContain('sessions');
+    expect(waitsNotice([behind(2, 'fake', { exited: true })])).toBeUndefined();
+  });
 });

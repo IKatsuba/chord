@@ -8,17 +8,19 @@
   `scenarios/`: `text.ts`
   (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `longresults`,
+  `overlap`, `overlapfail`,
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
   `mcpnote`, `codexmcpnote`),
-  `permissions.ts` (`permission`, `twins`, `mcpask`, `bigask`, `bigasktwice`),
+  `permissions.ts` (`permission`, `twins`, `mcpask`, `bigask`, `bigasktwice`,
+  `overlapask`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
   `shell.ts` (`shell`,
   `shellcut`, `bash`), `compaction.ts` (`compact`, `codexcompact`,
   `compactfail`), `modes.ts` (`status`, `exitplan`, `mode`, `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
-  `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`),
+  `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`, `subagentcall`),
   `chord_tools.ts`
-  (`chordtools`), `tasks.ts` (`codexchordcalls`) and
+  (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts` (`codexchordcalls`) and
   `misbehaving.ts` (`error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
@@ -27,7 +29,8 @@
   effort with the config options that offer them.
   A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `stepslater`, `calls`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
-  `longcommand`,
+  `longcommand`, `overlap`, `overlapfail`, `overlapask`, `subagentcall`,
+  `cutcalls`, `cutcallsback`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `plan`, `proposal`,
   `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
   `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
@@ -37,6 +40,10 @@
   its mounted tail in one turn, and `stepslater` the same after a second;
   `longresults` plays an MCP result, command output, an edit and terminal
   output with long lines, to check wrapping;
+  `overlap` opens two calls in turn, then ends the first while the second
+  still runs; `overlapfail` fails the first instead; `overlapask` asks for
+  a write's permission while another call stays open; `subagentcall` runs
+  one subagent's call with no call of the parent's open;
   `headlines` plays a heredoc, a long one-line command, an MCP call and a
   300-line heredoc; `heredoc` and `longcommand` play the Bash calls from
   the Claude Code capture in `docs/design/CHD-393.md`, and `mcpnote` its
@@ -66,6 +73,12 @@
   adapter titles them, then a `spawn_task` on a runtime chord does not
   know; `codexchordcalls` lists agents and sessions as Codex does, after
   another server's call with the same arguments as the first;
+  `cutcalls` cuts off `send_message` and `open_agent` before they reach
+  chord, with empty errors, and cancels a command beside them;
+  `cutcallsback` adds `list_sessions`, ends the calls in reverse order and
+  repeats the message's failure. A prompt preceded by chord's note about
+  cut calls is answered with `Received chord's note:` and its first line,
+  then plays the prompt as if it came alone;
   `task` starts `taskchild` as a task agent on the fake runtime and
   works on a while, and `taskask` one whose job is `askclaude`, after a
   call of its own that, played first, shares the task's call id `ask-1`; `taskchild` makes two calls, asks permission to edit,

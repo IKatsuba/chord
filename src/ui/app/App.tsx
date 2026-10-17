@@ -111,7 +111,13 @@ import { useMouse, usePasted, usePress } from './input.ts';
 import { Clip } from './Clip.tsx';
 import { useMeasured } from './layout.ts';
 import { useTimers } from './timers.ts';
-import { AgentColours, COLOUR, Colours, Keys } from './context.ts';
+import {
+  AgentColours,
+  ChordServerName,
+  COLOUR,
+  Colours,
+  Keys,
+} from './context.ts';
 import { ElicitationForm } from '../dialogs/Form.tsx';
 import { QuestionBox } from '../dialogs/Questions.tsx';
 import { LinkPrompt } from '../dialogs/Link.tsx';
@@ -755,429 +761,439 @@ export function App({
   return (
     <Colours.Provider value={colours}>
       <AgentColours.Provider value={agentColours}>
-        <Keys.Provider value={state.keys}>
-          {splashing && (
-            <Splash
-              agent={frontAgent}
-              armed={armed}
-              closing={state.connection.status === 'closing'}
-              columns={columns}
-              rows={rows}
-            />
-          )}
-          {/* Under the splash the window is laid out but not drawn, so the
+        <ChordServerName.Provider
+          value={conversation()?.session?.chordServer?.name}
+        >
+          <Keys.Provider value={state.keys}>
+            {splashing && (
+              <Splash
+                agent={frontAgent}
+                armed={armed}
+                closing={state.connection.status === 'closing'}
+                columns={columns}
+                rows={rows}
+              />
+            )}
+            {/* Under the splash the window is laid out but not drawn, so the
         keys pressed meanwhile land in it as if typed there. */}
-          <box
-            // Always given, so a window shown again is not left hidden.
-            visible={!splashing}
-            width={columns}
-            height={rows}
-            {...mouse}
-          >
-            {/* One session has no row above the header: the header already
+            <box
+              // Always given, so a window shown again is not left hidden.
+              visible={!splashing}
+              width={columns}
+              height={rows}
+              {...mouse}
+            >
+              {/* One session has no row above the header: the header already
         names chord, the agent and the directory. */}
-            {strip && <Strip view={strip} />}
-            {/* Only this box gives way when the window is full. Everything else and
+              {strip && <Strip view={strip} />}
+              {/* Only this box gives way when the window is full. Everything else and
         every entry is pinned with flexShrink={0}, because OpenTUI boxes shrink by
         default and Yoga would squeeze entries and the prompt box instead of
         letting the transcript run past the view, to be scrolled back to. */}
-            {/* Its basis is nothing, so when the rows under it run out it
+              {/* Its basis is nothing, so when the rows under it run out it
         has none to keep, and a permission request taller than what is left
         gives way only after the transcript is gone (CHD-246). */}
-            <Clip flexGrow={1} flexShrink={1} flexBasis={0} paddingX={1}>
-              {/* Following, the transcript hangs from the top while it fits,
+              <Clip flexGrow={1} flexShrink={1} flexBasis={0} paddingX={1}>
+                {/* Following, the transcript hangs from the top while it fits,
           the header on the window's first row, or under the tab strip, and
           once it overflows it sits on the bottom and new rows push the old
           ones up; scrolled back, it hangs from the row on top, so new rows
           land below the view and nothing on screen moves. */}
-              <Clip
-                ref={viewport}
-                flexGrow={1}
-                flexShrink={1}
-                justifyContent={
-                  state.scroll.following ? 'flex-end' : 'flex-start'
-                }
-              >
-                <box
-                  ref={content}
-                  flexShrink={0}
-                  onSizeChange={measure}
-                  renderAfter={measure}
+                <Clip
+                  ref={viewport}
+                  flexGrow={1}
+                  flexShrink={1}
+                  justifyContent={
+                    state.scroll.following ? 'flex-end' : 'flex-start'
+                  }
                 >
-                  {/* The transcript's start, drawn only with its first
+                  <box
+                    ref={content}
+                    flexShrink={0}
+                    onSizeChange={measure}
+                    renderAfter={measure}
+                  >
+                    {/* The transcript's start, drawn only with its first
               entry, as the entries above the window are not mounted. */}
-                  {first > 0 ? null : child ? (
-                    <ChildLine
-                      child={child}
-                      model={
-                        state.models === undefined
-                          ? child.model
-                          : (state.startedModel ?? child.model)
-                      }
-                    />
-                  ) : (
-                    <Header
-                      facts={{
-                        version: manifest.version,
-                        agent: frontAgent,
-                        model: state.startedModel,
-                        directory,
-                        helpKey: hintKey(state.keys, 'help:toggle'),
-                        resumed: state.resumed && {
-                          lastUsedAt: state.resumed.lastUsedAt,
-                          // A child is known by its name, as its first
-                          // prompt is its parent's; an agent's replay is
-                          // all there is of a session chord has no record
-                          // of.
-                          title:
-                            state.resumed.name ??
-                            state.resumed.prompt ??
-                            (firstPrompt?.kind === 'user'
-                              ? promptLine(firstPrompt.text)
-                              : undefined),
-                        },
-                      }}
-                      columns={columns}
-                    />
-                  )}
-                  {first === 0 && state.connection.status === 'failed' && (
-                    <Failure
-                      text={`${frontAgent} did not start: ${state.connection.message}`}
-                    />
-                  )}
-                  {state.transcript.entries.slice(first).map((entry, at) => {
-                    const index = first + at;
-                    const group = agentGroup(state.transcript.entries, index);
+                    {first > 0 ? null : child ? (
+                      <ChildLine
+                        child={child}
+                        model={
+                          state.models === undefined
+                            ? child.model
+                            : (state.startedModel ?? child.model)
+                        }
+                      />
+                    ) : (
+                      <Header
+                        facts={{
+                          version: manifest.version,
+                          agent: frontAgent,
+                          model: state.startedModel,
+                          directory,
+                          helpKey: hintKey(state.keys, 'help:toggle'),
+                          resumed: state.resumed && {
+                            lastUsedAt: state.resumed.lastUsedAt,
+                            // A child is known by its name, as its first
+                            // prompt is its parent's; an agent's replay is
+                            // all there is of a session chord has no record
+                            // of.
+                            title:
+                              state.resumed.name ??
+                              state.resumed.prompt ??
+                              (firstPrompt?.kind === 'user'
+                                ? promptLine(firstPrompt.text)
+                                : undefined),
+                          },
+                        }}
+                        columns={columns}
+                      />
+                    )}
+                    {first === 0 && state.connection.status === 'failed' && (
+                      <Failure
+                        text={`${frontAgent} did not start: ${state.connection.message}`}
+                      />
+                    )}
+                    {state.transcript.entries.slice(first).map((entry, at) => {
+                      const index = first + at;
+                      const group = agentGroup(state.transcript.entries, index);
 
-                    // Each entry keeps a box of its own, an empty one for a
-                    // subagent its group draws, so scrolling counts entries
-                    // as the transcript does.
-                    return (
-                      <box key={index} ref={place(index)} flexShrink={0}>
-                        {group === undefined ? (
-                          <TranscriptEntry
-                            entry={entry}
-                            turn={state.transcript.turn}
-                            agent={frontAgent}
-                            expanded={state.expanded}
-                            width={columns - TRANSCRIPT_INSET}
-                          />
-                        ) : (
-                          group.length > 0 && (
-                            <Agents
-                              agents={group}
+                      // Each entry keeps a box of its own, an empty one for a
+                      // subagent its group draws, so scrolling counts entries
+                      // as the transcript does.
+                      return (
+                        <box key={index} ref={place(index)} flexShrink={0}>
+                          {group === undefined ? (
+                            <TranscriptEntry
+                              entry={entry}
                               turn={state.transcript.turn}
                               agent={frontAgent}
-                              open={state.expanded}
+                              expanded={state.expanded}
                               width={columns - TRANSCRIPT_INSET}
                             />
-                          )
-                        )}
-                      </box>
-                    );
-                  })}
-                </box>
-                {/* Takes the rows a short transcript leaves, so that it stays
+                          ) : (
+                            group.length > 0 && (
+                              <Agents
+                                agents={group}
+                                turn={state.transcript.turn}
+                                agent={frontAgent}
+                                open={state.expanded}
+                                width={columns - TRANSCRIPT_INSET}
+                              />
+                            )
+                          )}
+                        </box>
+                      );
+                    })}
+                  </box>
+                  {/* Takes the rows a short transcript leaves, so that it stays
             on top; it has none to take once the transcript overflows, and
             flex-end then puts the overflow above the view. */}
-                <box flexGrow={1} flexShrink={1} />
+                  <box flexGrow={1} flexShrink={1} />
+                </Clip>
+                <Below scroll={state.scroll} width={columns - 2} />
               </Clip>
-              <Below scroll={state.scroll} width={columns - 2} />
-            </Clip>
-            <Working
-              turn={state.transcript.turn}
-              asking={inputAsked !== undefined}
-              compacting={state.transcript.entries.some((entry) =>
-                inSpinner(entry, state.transcript.turn),
+              <Working
+                turn={state.transcript.turn}
+                asking={inputAsked !== undefined}
+                compacting={state.transcript.entries.some((entry) =>
+                  inSpinner(entry, state.transcript.turn),
+                )}
+              />
+              {state.transcript.plan.length > 0 && (
+                <Plan
+                  plan={state.transcript.plan}
+                  limit={planRowLimit(rows)}
+                  running={state.transcript.turn.status !== 'idle'}
+                />
               )}
-            />
-            {state.transcript.plan.length > 0 && (
-              <Plan
-                plan={state.transcript.plan}
-                limit={planRowLimit(rows)}
-                running={state.transcript.turn.status !== 'idle'}
-              />
-            )}
-            {state.queue.length > 0 && (
-              <Queue queue={state.queue} limit={queueRowLimit(rows)} />
-            )}
-            {asked && !listingSessions && (
-              <PermissionPrompt
-                key={asked.id}
-                wait={asked}
-                asker={
-                  asked.subagentId === undefined
-                    ? []
-                    : subagentPath(state.transcript.entries, asked.subagentId)
-                }
-                {...(childShown === undefined ? {} : { child: childShown })}
-                width={columns - 4}
-                active={listening && !state.agentsFocus}
-                onChoose={(optionId) =>
-                  conversation()?.choose(asked.id, optionId)
-                }
-                scroller={requestScroller}
-                onOverflow={(overflows) =>
-                  dispatch({
-                    type: 'request_overflowed',
-                    id: asked.id,
-                    overflows,
-                  })
-                }
-              />
-            )}
-            {picking && (
-              <ModelPicker
-                models={state.models}
-                rows={menuRows}
-                agent={frontAgent}
-                active={listening}
-                onPick={sessions.pickModel}
-              />
-            )}
-            {configuring && (
-              <ConfigPicker
-                options={state.options}
-                option={configOption(state)}
-                from={state.configPicker?.from}
-                rows={menuRows}
-                agent={frontAgent}
-                active={listening}
-                onOpen={(id) => dispatch({ type: 'config_option_opened', id })}
-                onPick={sessions.pickOption}
-              />
-            )}
-            {listingSessions && (
-              <SessionsPicker
-                tabs={sessions.tabRows()}
-                start={sessions.listFrom()}
-                directory={directory}
-                rows={menuRows}
-                active={listening}
-                onPick={sessions.pickTab}
-              />
-            )}
-            {resumingShown && state.resumePicker && (
-              <ResumePicker
-                // A fresh list for each scope, its highlight on the first row.
-                key={String(state.resumePicker.everywhere)}
-                picker={state.resumePicker}
-                open={sessions.openTabs()}
-                rows={menuRows}
-                agent={frontAgent}
-                home={home}
-                active={listening}
-                onPick={(chosen) => sessions.pickResume(chosen, columns)}
-              />
-            )}
-            {theming && (
-              <ThemePicker
-                current={state.theme}
-                background={background}
-                windowRows={rows}
-                active={listening}
-                onMove={(theme) => dispatch({ type: 'theme_previewed', theme })}
-                onPick={commands.keepTheme}
-              />
-            )}
-            {listingTeams && state.teamsPicker && (
-              <TeamsPicker
-                listing={state.teamsPicker}
-                rows={menuRows}
-                columns={columns - 4}
-                active={listening}
-                onPick={(found) => {
-                  const text = pickedDraft(found);
-
-                  if (text === undefined) {
-                    return;
+              {state.queue.length > 0 && (
+                <Queue queue={state.queue} limit={queueRowLimit(rows)} />
+              )}
+              {asked && !listingSessions && (
+                <PermissionPrompt
+                  key={asked.id}
+                  wait={asked}
+                  asker={
+                    asked.subagentId === undefined
+                      ? []
+                      : subagentPath(state.transcript.entries, asked.subagentId)
                   }
+                  {...(childShown === undefined ? {} : { child: childShown })}
+                  width={columns - 4}
+                  active={listening && !state.agentsFocus}
+                  onChoose={(optionId) =>
+                    conversation()?.choose(asked.id, optionId)
+                  }
+                  scroller={requestScroller}
+                  onOverflow={(overflows) =>
+                    dispatch({
+                      type: 'request_overflowed',
+                      id: asked.id,
+                      overflows,
+                    })
+                  }
+                />
+              )}
+              {picking && (
+                <ModelPicker
+                  models={state.models}
+                  rows={menuRows}
+                  agent={frontAgent}
+                  active={listening}
+                  onPick={sessions.pickModel}
+                />
+              )}
+              {configuring && (
+                <ConfigPicker
+                  options={state.options}
+                  option={configOption(state)}
+                  from={state.configPicker?.from}
+                  rows={menuRows}
+                  agent={frontAgent}
+                  active={listening}
+                  onOpen={(id) =>
+                    dispatch({ type: 'config_option_opened', id })
+                  }
+                  onPick={sessions.pickOption}
+                />
+              )}
+              {listingSessions && (
+                <SessionsPicker
+                  tabs={sessions.tabRows()}
+                  start={sessions.listFrom()}
+                  directory={directory}
+                  rows={menuRows}
+                  active={listening}
+                  onPick={sessions.pickTab}
+                />
+              )}
+              {resumingShown && state.resumePicker && (
+                <ResumePicker
+                  // A fresh list for each scope, its highlight on the first row.
+                  key={String(state.resumePicker.everywhere)}
+                  picker={state.resumePicker}
+                  open={sessions.openTabs()}
+                  rows={menuRows}
+                  agent={frontAgent}
+                  home={home}
+                  active={listening}
+                  onPick={(chosen) => sessions.pickResume(chosen, columns)}
+                />
+              )}
+              {theming && (
+                <ThemePicker
+                  current={state.theme}
+                  background={background}
+                  windowRows={rows}
+                  active={listening}
+                  onMove={(theme) =>
+                    dispatch({ type: 'theme_previewed', theme })
+                  }
+                  onPick={commands.keepTheme}
+                />
+              )}
+              {listingTeams && state.teamsPicker && (
+                <TeamsPicker
+                  listing={state.teamsPicker}
+                  rows={menuRows}
+                  columns={columns - 4}
+                  active={listening}
+                  onPick={(found) => {
+                    const text = pickedDraft(found);
 
-                  dispatch({ type: 'teams_picker_closed' });
-                  showDraft(text, endOf(text));
-                }}
-              />
-            )}
-            {listingMcp && (
-              <McpPanel
-                servers={here.mcpServers}
-                ignored={here.mcpIgnored}
-                agent={frontAgent}
-                windowRows={rows}
-                {...(server === undefined
-                  ? {}
-                  : {
-                      chord: chordRow(
-                        conversation()?.session?.chordServer,
-                        child !== undefined,
-                      ),
-                    })}
-              />
-            )}
-            {inputAsked?.mode === 'form' &&
-            inputAsked.questions !== undefined &&
-            !listingSessions ? (
-              <QuestionBox
-                key={inputAsked.id}
-                wait={inputAsked}
-                questions={inputAsked.questions}
-                filled={
-                  state.answering?.id === inputAsked.id
-                    ? state.answering.state
-                    : undefined
-                }
-                agent={frontAgent}
-                windowRows={rows}
-                width={columns}
-                active={listening && !state.agentsFocus}
-                onFill={(answering) =>
-                  dispatch({
-                    type: 'questions_answered',
-                    id: inputAsked.id,
-                    state: answering,
-                  })
-                }
-                onAnswer={(response) =>
-                  conversation()?.answer(inputAsked.id, response)
-                }
-              />
-            ) : inputAsked?.mode === 'form' && !listingSessions ? (
-              <ElicitationForm
-                key={inputAsked.id}
-                wait={inputAsked}
-                filled={
-                  state.filling?.id === inputAsked.id
-                    ? state.filling.form
-                    : undefined
-                }
-                agent={frontAgent}
-                windowRows={rows}
-                width={columns}
-                active={listening && !state.agentsFocus}
-                onFill={(form) =>
-                  dispatch({ type: 'form_filled', id: inputAsked.id, form })
-                }
-                onAnswer={(response) =>
-                  conversation()?.answer(inputAsked.id, response)
-                }
-              />
-            ) : inputAsked?.mode === 'url' && !listingSessions ? (
-              <LinkPrompt
-                key={inputAsked.id}
-                wait={inputAsked}
-                agent={frontAgent}
-                active={listening && !state.agentsFocus}
-                onAnswer={(answer) =>
-                  answerLink(openUrl, conversation(), inputAsked, answer)
-                }
-              />
-            ) : (
-              <PromptInput
-                key={state.search ? `search:${state.search.match}` : inputKey}
-                value={boxText}
-                cursor={found === undefined ? cursor : endOf(boxText)}
-                rows={promptRows(rows)}
-                chords={liveChords(state, draft, cursor)}
-                {...(state.search && found !== undefined
-                  ? { highlight: state.search.query }
-                  : {})}
-                // The list's ↑ and ↓ are the window's, as a recalled prompt's are
-                // history's: the textarea leaves them alone.
-                walking={
-                  walking(history, typedText(state.bash, draft)) ||
-                  menu !== undefined ||
-                  finder !== undefined
-                }
-                bash={
-                  found === undefined ? state.bash : foundCommand !== undefined
-                }
-                // The input lets go of the keys an effect after the permission
-                // prompt or the model picker is drawn; a key in between is not the
-                // draft's either.
-                onChange={(value) =>
-                  !asked &&
-                  !choosing &&
-                  !chordKey.current &&
-                  play(changeSteps(value, context()))
-                }
-                // While a permission is asked or a model picked, the keys are that
-                // list's, not the draft's.
-                focus={boxKeys && state.vim?.mode !== 'normal'}
-                {...(childShown === undefined ? {} : { agent: childShown })}
-                width={columns}
-                // Normal mode's cursor stands only where the box would
-                // otherwise have the keys, so no dialog's own input loses them.
-                normal={boxKeys && state.vim?.mode === 'normal'}
-                onCursorChange={(at) => {
-                  if (
+                    if (text === undefined) {
+                      return;
+                    }
+
+                    dispatch({ type: 'teams_picker_closed' });
+                    showDraft(text, endOf(text));
+                  }}
+                />
+              )}
+              {listingMcp && (
+                <McpPanel
+                  servers={here.mcpServers}
+                  ignored={here.mcpIgnored}
+                  agent={frontAgent}
+                  windowRows={rows}
+                  {...(server === undefined
+                    ? {}
+                    : {
+                        chord: chordRow(
+                          conversation()?.session?.chordServer,
+                          child !== undefined,
+                        ),
+                      })}
+                />
+              )}
+              {inputAsked?.mode === 'form' &&
+              inputAsked.questions !== undefined &&
+              !listingSessions ? (
+                <QuestionBox
+                  key={inputAsked.id}
+                  wait={inputAsked}
+                  questions={inputAsked.questions}
+                  filled={
+                    state.answering?.id === inputAsked.id
+                      ? state.answering.state
+                      : undefined
+                  }
+                  agent={frontAgent}
+                  windowRows={rows}
+                  width={columns}
+                  active={listening && !state.agentsFocus}
+                  onFill={(answering) =>
+                    dispatch({
+                      type: 'questions_answered',
+                      id: inputAsked.id,
+                      state: answering,
+                    })
+                  }
+                  onAnswer={(response) =>
+                    conversation()?.answer(inputAsked.id, response)
+                  }
+                />
+              ) : inputAsked?.mode === 'form' && !listingSessions ? (
+                <ElicitationForm
+                  key={inputAsked.id}
+                  wait={inputAsked}
+                  filled={
+                    state.filling?.id === inputAsked.id
+                      ? state.filling.form
+                      : undefined
+                  }
+                  agent={frontAgent}
+                  windowRows={rows}
+                  width={columns}
+                  active={listening && !state.agentsFocus}
+                  onFill={(form) =>
+                    dispatch({ type: 'form_filled', id: inputAsked.id, form })
+                  }
+                  onAnswer={(response) =>
+                    conversation()?.answer(inputAsked.id, response)
+                  }
+                />
+              ) : inputAsked?.mode === 'url' && !listingSessions ? (
+                <LinkPrompt
+                  key={inputAsked.id}
+                  wait={inputAsked}
+                  agent={frontAgent}
+                  active={listening && !state.agentsFocus}
+                  onAnswer={(answer) =>
+                    answerLink(openUrl, conversation(), inputAsked, answer)
+                  }
+                />
+              ) : (
+                <PromptInput
+                  key={state.search ? `search:${state.search.match}` : inputKey}
+                  value={boxText}
+                  cursor={found === undefined ? cursor : endOf(boxText)}
+                  rows={promptRows(rows)}
+                  chords={liveChords(state, draft, cursor)}
+                  {...(state.search && found !== undefined
+                    ? { highlight: state.search.query }
+                    : {})}
+                  // The list's ↑ and ↓ are the window's, as a recalled prompt's are
+                  // history's: the textarea leaves them alone.
+                  walking={
+                    walking(history, typedText(state.bash, draft)) ||
+                    menu !== undefined ||
+                    finder !== undefined
+                  }
+                  bash={
+                    found === undefined
+                      ? state.bash
+                      : foundCommand !== undefined
+                  }
+                  // The input lets go of the keys an effect after the permission
+                  // prompt or the model picker is drawn; a key in between is not the
+                  // draft's either.
+                  onChange={(value) =>
                     !asked &&
                     !choosing &&
                     !chordKey.current &&
-                    !cutting.current
-                  ) {
-                    setCursor(at);
+                    play(changeSteps(value, context()))
                   }
-                }}
-                onSubmit={submit}
-                onPaste={(text) => play(emptyPasteSteps(text, context()))}
-                wordCut={(before) => placeholderBefore(before, state.images)}
-                onOlder={() => play(olderSteps(context()))}
-                onNewer={() => play(newerSteps(context()))}
-              />
-            )}
-            {state.search ? (
-              <SearchLine search={state.search} />
-            ) : finder ? (
-              <FileList finder={finder} rows={menuRows} />
-            ) : menu ? (
-              <CommandList menu={menu} rows={menuRows} width={columns} />
-            ) : state.help ? (
-              <Shortcuts width={columns} />
-            ) : (
-              // Reserved even when blank, so a message never moves the transcript.
-              // Column 2, where Claude Code's status lines and the panel start.
-              <box flexDirection='row' paddingX={2} height={1} flexShrink={0}>
-                {state.pendingKeys === undefined ? (
-                  <StatusLine
-                    state={state}
-                    agent={frontAgent}
-                    // The shown session's, main's or the picked child's, read
-                    // where the list's row reads it.
-                    effort={
-                      sessions.conversation()?.session?.efforts()?.current
+                  // While a permission is asked or a model picked, the keys are that
+                  // list's, not the draft's.
+                  focus={boxKeys && state.vim?.mode !== 'normal'}
+                  {...(childShown === undefined ? {} : { agent: childShown })}
+                  width={columns}
+                  // Normal mode's cursor stands only where the box would
+                  // otherwise have the keys, so no dialog's own input loses them.
+                  normal={boxKeys && state.vim?.mode === 'normal'}
+                  onCursorChange={(at) => {
+                    if (
+                      !asked &&
+                      !choosing &&
+                      !chordKey.current &&
+                      !cutting.current
+                    ) {
+                      setCursor(at);
                     }
-                    // While the list has the keys, the line says what they
-                    // do; its rows show what waits.
-                    waits={state.agentsFocus ? undefined : waits}
-                    armed={armed}
-                    draft={draft}
-                    width={columns - 4}
-                    {...(state.agentsFocus
-                      ? {
-                          hint: (monitorFocused ? monitorHint : agentsHint)(
-                            columns - 4,
-                            hintKey(state.keys, 'agents:close'),
-                          ),
-                        }
-                      : {})}
-                  />
-                ) : (
-                  <LeaderLine
-                    held={state.pendingKeys}
-                    bindings={pendingBindings(state, draft, cursor)}
-                    width={columns - 4}
-                  />
-                )}
-              </box>
-            )}
-            <AgentsList
-              rows={listRows}
-              limit={agentsLimit}
-              width={columns - 4}
-              focused={state.agentsFocus === true}
-            />
-          </box>
-        </Keys.Provider>
+                  }}
+                  onSubmit={submit}
+                  onPaste={(text) => play(emptyPasteSteps(text, context()))}
+                  wordCut={(before) => placeholderBefore(before, state.images)}
+                  onOlder={() => play(olderSteps(context()))}
+                  onNewer={() => play(newerSteps(context()))}
+                />
+              )}
+              {state.search ? (
+                <SearchLine search={state.search} />
+              ) : finder ? (
+                <FileList finder={finder} rows={menuRows} />
+              ) : menu ? (
+                <CommandList menu={menu} rows={menuRows} width={columns} />
+              ) : state.help ? (
+                <Shortcuts width={columns} />
+              ) : (
+                // Reserved even when blank, so a message never moves the transcript.
+                // Column 2, where Claude Code's status lines and the panel start.
+                <box flexDirection='row' paddingX={2} height={1} flexShrink={0}>
+                  {state.pendingKeys === undefined ? (
+                    <StatusLine
+                      state={state}
+                      agent={frontAgent}
+                      // The shown session's, main's or the picked child's, read
+                      // where the list's row reads it.
+                      effort={
+                        sessions.conversation()?.session?.efforts()?.current
+                      }
+                      // While the list has the keys, the line says what they
+                      // do; its rows show what waits.
+                      waits={state.agentsFocus ? undefined : waits}
+                      armed={armed}
+                      draft={draft}
+                      width={columns - 4}
+                      {...(state.agentsFocus
+                        ? {
+                            hint: (monitorFocused ? monitorHint : agentsHint)(
+                              columns - 4,
+                              hintKey(state.keys, 'agents:close'),
+                            ),
+                          }
+                        : {})}
+                    />
+                  ) : (
+                    <LeaderLine
+                      held={state.pendingKeys}
+                      bindings={pendingBindings(state, draft, cursor)}
+                      width={columns - 4}
+                    />
+                  )}
+                </box>
+              )}
+              <AgentsList
+                rows={listRows}
+                limit={agentsLimit}
+                width={columns - 4}
+                focused={state.agentsFocus === true}
+              />
+            </box>
+          </Keys.Provider>
+        </ChordServerName.Provider>
       </AgentColours.Provider>
     </Colours.Provider>
   );

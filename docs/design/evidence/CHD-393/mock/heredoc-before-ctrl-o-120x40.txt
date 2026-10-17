@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+ › heredoc
+
+ ⏺ Bash(cat <<'EOF' > notes.md && wc -l notes.md
+   # Release notes
+
+   - Added a greeting helper module
+   - Introduced add and sub math utilities
+   - Improved error messages for invalid input
+   - Updated dependencies to latest versions
+   - Fixed a typo in the README
+   - Reduced startup time by caching config
+   - Added unit tests for greet
+   - Removed deprecated farewell API
+   EOF)
+   ⎿        10 notes.md
+
+ ⏺ Done.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                  Fake Large with a 1M context window · medium effort · 1% context used

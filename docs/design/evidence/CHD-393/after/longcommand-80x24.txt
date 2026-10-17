@@ -1,0 +1,24 @@
+   - Fixed a typo in the README
+   - Reduced startup time by caching config
+   - Added unit tests for greet
+   - Removed deprecated farewell API
+   EOF)
+   ⎿        10 notes.md
+
+ ⏺ Done.
+
+ › longcommand
+
+ ⏺ Bash(echo "This morning the weather started out cool and misty with a thin
+   layer of fog rolling over the hills, but by noon the sun had burned through
+   the clouds, the temperature climbed steadily, a light breeze came in from
+   the west, and forecasters warned that scattered thunderstorms could arrive
+   late in the evening" | tr a-z A-Z | wc -c)
+   ⎿  309
+
+ ⏺ Done.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

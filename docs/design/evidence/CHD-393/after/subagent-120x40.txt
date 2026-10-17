@@ -1,0 +1,40 @@
+   line 292 of the long command
+   line 293 of the long command
+   line 294 of the long command
+   line 295 of the long command
+   line 296 of the long command
+   line 297 of the long command
+   line 298 of the long command
+   EOF)
+   ⎿  (no output)
+
+ ⏺ Four calls with long headlines.
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses
+   │  ⎿  Write(notes/routing.md) · waiting for permission
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) · 2 tool uses · 0s
+      ⎿  Failed
+
+ ››› Waiting for permission… (7s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Find the session layer) asks                                                                                   │
+│ Write notes/routing.md                                                                                               │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

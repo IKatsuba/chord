@@ -1,8 +1,15 @@
-import { TextAttributes } from '@opentui/core';
 import { useTerminalDimensions } from '@opentui/react';
-import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
+import {
+  Fragment,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import type { ToolCall } from '../../../session/transcript/types.ts';
 import {
+  ChordServerName,
   paint,
   useAgentColour,
   useColours,
@@ -31,7 +38,14 @@ import {
   type TableLine,
 } from './proposal.ts';
 import type { TerminalView } from './terminal.ts';
-import { headline, summary, type Tone, toneOf } from './tools.ts';
+import {
+  type Headline,
+  headline,
+  headlineRows,
+  summary,
+  type Tone,
+  toneOf,
+} from './tools.ts';
 
 function toneColour(tone: Tone, colours: Palette): string | undefined {
   switch (tone) {
@@ -48,9 +62,9 @@ function toneColour(tone: Tone, colours: Palette): string | undefined {
 
 /**
  * `⏺ Read(src/main.tsx)` and what it produced under `⎿`, then each edit's
- * diff. Every line is cut at the window's edge rather than wrapped, so a long
- * command or source line stays one row; given the row's `width`, what Open
- * and Team handed over wraps under `⎿` instead. A call left running in a turn
+ * diff. The headline is drawn whole, wrapped to the row's `width`; the lines
+ * under it are cut at the window's edge rather than wrapped, so a long
+ * source line stays one row, but what Open and Team handed over wraps. A call left running in a turn
  * or a subagent that has `ended` no longer blinks or says it waits.
  */
 export function Tool({
@@ -62,14 +76,11 @@ export function Tool({
   call: ToolCall;
   expanded: boolean;
   ended?: boolean;
-  width?: number;
+  /** Cells beside the marker. */
+  width: number;
 }) {
-  const { name, arg, more = [], note, sent } = headline(call);
-  // Each line of a long argument is a row of its own: OpenTUI measures a
-  // text that breaks lines beside the marker short, and the transcript
-  // under it would be laid out past its end.
-  const shown = expanded ? more : [];
-  const recipient = useAgentColour(name);
+  const line = headline(call, useContext(ChordServerName));
+  const recipient = useAgentColour(line.name);
   const live = toneOf(call);
   const tone = ended && live === 'running' ? 'pending' : live;
   const colours = useColours();
@@ -82,7 +93,7 @@ export function Tool({
     colours.code,
     ended,
     // The `⎿` and its gutter take five columns.
-    width === undefined ? undefined : Math.max(width - 5, 1),
+    Math.max(width - 5, 1),
   );
   // Rows drawn ahead of each terminal's, so only the first row of all has `⎿`.
   const ahead = terminals.reduce<number[]>(
@@ -96,49 +107,18 @@ export function Tool({
   return (
     <box marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
-        {sent ? (
+        {line.sent ? (
           <Arrow glyph='→' tone={outArrow(tone)} colour={recipient} />
         ) : (
           <ToolMarker tone={tone} />
         )}
-        <text {...CUT} {...selectable}>
-          {sent && <span attributes={DIM}>to </span>}
-          <span
-            attributes={TextAttributes.BOLD}
-            {...fg(sent ? recipient : undefined)}
-          >
-            <Ansi text={sent ? `@${name}` : name} />
-          </span>
-          {arg !== undefined && (
-            <Ansi text={`(${arg}${more.length > 0 ? '' : ')'}`} />
-          )}
-          {more.length > 0 && !expanded && (
-            <>
-              <span attributes={DIM}>{` … +${more.length} ${
-                more.length === 1 ? 'line' : 'lines'
-              }`}</span>
-              )
-            </>
-          )}
-          {note !== undefined && (
-            <span attributes={DIM}>
-              <Ansi text={note} />
-            </span>
-          )}
-        </text>
+        <HeadlineText line={line} width={width} colour={recipient} />
       </box>
-      {shown.map((line, index) => (
-        <box key={index} paddingLeft={2}>
-          <text {...CUT} {...selectable}>
-            <Ansi text={`${line}${index === shown.length - 1 ? ')' : ''}`} />
-          </text>
-        </box>
-      ))}
       {proposal !== undefined && (
         <Proposal
           view={proposal}
           expanded={expanded}
-          width={Math.max((width ?? 80) - 5, 1)}
+          width={Math.max(width - 5, 1)}
         />
       )}
       {proposal === undefined &&
@@ -165,6 +145,45 @@ export function Tool({
         />
       ))}
     </box>
+  );
+}
+
+/**
+ * A headline beside its marker, whole, in the rows `headlineRows` lays out
+ * in `width` cells: the name bold, a recipient's in its `colour`, the note
+ * dim. Each row ends in a line break of the text's own, so OpenTUI wraps
+ * nothing and measures the text as tall as its rows.
+ */
+export function HeadlineText({
+  line,
+  width,
+  colour,
+}: {
+  line: Headline;
+  width: number;
+  colour?: string | undefined;
+}) {
+  const selectable = useSelectable();
+  const rows = headlineRows(line, width, colour);
+
+  return (
+    <text {...FILL} wrapMode='none' {...selectable}>
+      {rows.map((row, index) => (
+        <Fragment key={index}>
+          {index > 0 && <span>{'\n'}</span>}
+          {row.map((run, at) => (
+            <span
+              key={at}
+              {...(run.fg === undefined ? {} : { fg: run.fg })}
+              {...(run.bg === undefined ? {} : { bg: run.bg })}
+              attributes={run.attributes}
+            >
+              {run.text}
+            </span>
+          ))}
+        </Fragment>
+      ))}
+    </text>
   );
 }
 

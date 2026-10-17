@@ -4,8 +4,12 @@ import { draw } from '../../harness.tsx';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import type { TurnState } from '../../../../src/session/transcript/types.ts';
+import { ChordServerName } from '../../../../src/ui/app/context.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
-import { CTRL_O, send, withWindow } from '../../app/render.tsx';
+import { CTRL_O, END, send, until, withWindow } from '../../app/render.tsx';
+import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 test('tool calls draw their status, their output and a failure', () =>
   withWindow(async (window) => {
@@ -225,7 +229,8 @@ test('a call its turn left unfinished waits on nothing once the turn has ended',
     for (const status of ['pending', 'in_progress']) {
       const frame = await shown(turn, status);
 
-      expect(frame).toContain('⏺ Tool(mcp__chord__spawn_task)');
+      // No server is named chord's here, so the title reads as any MCP call's.
+      expect(frame).toContain('⏺ chord - spawn_task (MCP)');
       expect(
         !frame.includes('Waiting…'),
         `${turn.status} still waits`,
@@ -288,7 +293,7 @@ test("an agent's escapes in a call colour it, folded and open, the rest go", asy
   }
 });
 
-test('a command of many lines leaves the transcript under it in reach', async () => {
+test('a command of many lines is drawn whole and leaves the transcript under it in reach', async () => {
   const title = [
     "cat >> notes.md <<'EOF'",
     ...Array.from({ length: 40 }, (_, line) => `## ${line}. A decision`),
@@ -324,17 +329,142 @@ test('a command of many lines leaves the transcript under it in reach', async ()
     return frame;
   };
 
-  const folded = await shown(false);
+  // The headline is whole either way; ctrl+o does not change it.
+  for (const expanded of [false, true]) {
+    const frame = await shown(expanded);
 
-  expect(folded).toContain("⏺ Bash(cat >> notes.md <<'EOF' … +41 lines)");
-  expect(folded).toContain('the reply after them');
-
-  const whole = await shown(true);
-
-  expect(whole).toContain('  ## 39. A decision');
-  expect(whole).toContain('  EOF)');
-  expect(whole).toContain('the reply after them');
+    expect(frame).toContain('  ## 39. A decision');
+    expect(frame).toContain('  EOF)');
+    expect(frame).toContain('the reply after them');
+  }
 });
+
+/** The rows of `frame` from the one holding `from` to the one holding `to`. */
+function rowsBetween(frame: string, from: string, to: string): string[] {
+  const lines = frame.split('\n').map((line) => line.trimEnd());
+  const start = lines.findIndex((line) => line.includes(from));
+  const end = lines.findIndex(
+    (line, index) => index >= start && line.includes(to),
+  );
+
+  return lines.slice(start, end + 1);
+}
+
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
+] as const) {
+  test(`a long command's headline wraps under its name, the ⎿ under its last row, at ${columns}×${rows}`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'longcommand');
+        await window.shows('Done.');
+
+        // The design's mocks, docs/design/evidence/CHD-393/mock/.
+        expect(
+          rowsBetween(stripAnsi(window.frame()), '⏺ Bash(echo', '⎿'),
+        ).toStrictEqual(
+          columns === 80
+            ? [
+                ' ⏺ Bash(echo "This morning the weather started out cool and misty with a thin',
+                '   layer of fog rolling over the hills, but by noon the sun had burned through',
+                '   the clouds, the temperature climbed steadily, a light breeze came in from',
+                '   the west, and forecasters warned that scattered thunderstorms could arrive',
+                '   late in the evening" | tr a-z A-Z | wc -c)',
+                '   ⎿  309',
+              ]
+            : [
+                ' ⏺ Bash(echo "This morning the weather started out cool and misty with a thin layer of fog rolling over the hills, but',
+                '   by noon the sun had burned through the clouds, the temperature climbed steadily, a light breeze came in from the',
+                '   west, and forecasters warned that scattered thunderstorms could arrive late in the evening" | tr a-z A-Z | wc -c)',
+                '   ⎿  309',
+              ],
+        );
+      },
+      { columns, rows },
+    ));
+
+  test(`a heredoc's every line is drawn, an empty one too, at ${columns}×${rows}`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'heredoc');
+        await window.shows('Done.');
+
+        const [first, ...rest] = NOTES_COMMAND.split('\n');
+        const drawn = [
+          ` ⏺ Bash(${first}`,
+          ...rest.map((line, index) =>
+            `   ${line}${index === rest.length - 1 ? ')' : ''}`.trimEnd(),
+          ),
+          '   ⎿        10 notes.md',
+        ];
+
+        expect(
+          rowsBetween(stripAnsi(window.frame()), '⏺ Bash(cat', '⎿'),
+        ).toStrictEqual(drawn);
+      },
+      { columns, rows },
+    ));
+}
+
+test('a command of 300 lines is drawn whole, its output and the reply under it', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'headlines');
+      await window.shows('Four calls with long headlines.');
+
+      expect(
+        rowsBetween(stripAnsi(window.frame()), 'line 297 of', 'Four calls'),
+      ).toStrictEqual([
+        '   line 297 of the long command',
+        '   line 298 of the long command',
+        '   EOF)',
+        '   ⎿  (no output)',
+        '',
+        ' ⏺ Four calls with long headlines.',
+      ]);
+    },
+    { columns: 80, rows: 24 },
+  ));
+
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
+] as const) {
+  test(`an MCP call's arguments wrap under its name as the design's mock does, at ${columns}×${rows}`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'mcpnote');
+        await window.shows('Done.');
+
+        const mock = (
+          await readFile(
+            join(
+              import.meta.dir,
+              `../../../../docs/design/evidence/CHD-393/mock/mcp-after-${columns}x${rows}.txt`,
+            ),
+            'utf8',
+          )
+        ).split('\n');
+        const from = (lines: string[]) => {
+          const start = lines.findIndex((line) =>
+            line.includes('⏺ notes - save_note'),
+          );
+          const end = lines.findIndex(
+            (line, index) => index > start && line.includes('⎿'),
+          );
+
+          // The headline's rows; the ⎿ line under it is cut as it always was.
+          return lines.slice(start, end).map((line) => line.trimEnd());
+        };
+
+        expect(from(stripAnsi(window.frame()).split('\n'))).toStrictEqual(
+          from(mock),
+        );
+      },
+      { columns, rows },
+    ));
+}
 
 describe('CHD-1 tester: original question result visibility', () => {
   for (const columns of [80, 120]) {
@@ -399,5 +529,151 @@ describe('CHD-1 tester: original question result visibility', () => {
         }
       }
     });
+  }
+});
+
+describe('CHD-393 tester: long headline navigation', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`every numbered line remains reachable with paging at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'headlines');
+          await window.shows('Four calls with long headlines.');
+          await until(
+            'the headline turn to finish',
+            () => !window.frame().includes('Working'),
+          );
+
+          const tail = rowsBetween(
+            stripAnsi(window.frame()),
+            'line 298 of',
+            'Four calls',
+          );
+
+          await window.press(CTRL_O);
+          expect(
+            rowsBetween(stripAnsi(window.frame()), 'line 298 of', 'Four calls'),
+          ).toEqual(tail);
+          await window.press(CTRL_O);
+          await window.press('\x1b[H');
+          await window.shows('› headlines');
+
+          const seen = new Set<number>();
+
+          for (let page = 0; page < 40; page++) {
+            const frame = window.frame();
+
+            for (const match of frame.matchAll(
+              /line (\d+) of the long command/g,
+            )) {
+              seen.add(Number(match[1]));
+            }
+
+            if (frame.includes('Four calls with long headlines.')) {
+              break;
+            }
+
+            await window.press('\x1b[6~');
+          }
+
+          expect([...seen].sort((a, b) => a - b)).toEqual(
+            Array.from({ length: 298 }, (_, index) => index + 1),
+          );
+          await window.press(END);
+          await window.shows('EOF)');
+          await window.shows('Four calls with long headlines.');
+        },
+        { columns, rows },
+      ));
+  }
+});
+
+describe('CHD-415 tester: MCP context and view changes', () => {
+  test('a chord-2 context distinguishes own and external calls before rawInput arrives', async () => {
+    const drawn = await draw(
+      <ChordServerName.Provider value='chord-2'>
+        {['chord', 'chord-2'].map((server) => (
+          <TranscriptEntry
+            key={server}
+            entry={{
+              kind: 'tool',
+              turnId: 't',
+              call: {
+                id: server,
+                title: `mcp__${server}__monitor`,
+                status: 'completed',
+              },
+            }}
+            turn={{ status: 'idle' }}
+            agent='fake'
+            expanded={false}
+            width={76}
+          />
+        ))}
+      </ChordServerName.Provider>,
+      { columns: 80, rows: 12 },
+    );
+
+    try {
+      const frame = stripAnsi(drawn.frame());
+
+      expect(frame).toContain('⏺ chord - monitor (MCP)');
+      expect(frame).toContain('⏺ Monitor');
+      expect(frame).not.toContain('chord-2 - monitor');
+      expect(frame).not.toContain('undefined');
+    } finally {
+      await drawn.unmount();
+    }
+  });
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`MCP arguments survive verbose toggle and resize from ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'mcpnote');
+          await window.shows('Done.');
+          await until(
+            'the MCP turn to finish',
+            () => !window.frame().includes('Working'),
+          );
+
+          const before = rowsBetween(
+            stripAnsi(window.frame()),
+            '⏺ notes - save_note',
+            '⎿',
+          ).slice(0, -1);
+
+          await window.press(CTRL_O);
+          expect(
+            rowsBetween(
+              stripAnsi(window.frame()),
+              '⏺ notes - save_note',
+              '⎿',
+            ).slice(0, -1),
+          ).toEqual(before);
+          await window.resize({ columns: columns === 80 ? 120 : 80, rows: 40 });
+
+          const after = rowsBetween(
+            stripAnsi(window.frame()),
+            '⏺ notes - save_note',
+            '⎿',
+          ).slice(0, -1);
+          const joined = (lines: string[]) =>
+            lines.map((line) => line.trim()).join(' ');
+
+          expect(joined(after)).toBe(joined(before));
+          expect(joined(after)).toEndWith(
+            '["ui-test","tool-rendering","mcp","terminal","claude-code"])',
+          );
+          expect(after.length).not.toBe(before.length);
+        },
+        { columns, rows },
+      ));
   }
 });

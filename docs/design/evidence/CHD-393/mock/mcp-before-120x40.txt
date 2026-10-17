@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+ › mcpnote
+
+ ⏺ Tool(mcp__notes__save_note)
+   ⎿  saved "Tool-call rendering test: long titles, wrapped bodies, and multiple tags in one note" (411 chars)
+
+ ⏺ Done.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                  Fake Large with a 1M context window · medium effort · 1% context used

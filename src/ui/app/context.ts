@@ -73,6 +73,13 @@ export function useCloseHint(words = 'to close'): string | undefined {
  */
 export const AgentColours = createContext<Readonly<Record<string, string>>>({});
 
+/**
+ * The name chord's own MCP server went to the agent by, `chord` or, beside
+ * a server of the person's of that name, `chord-2`; none when it was not
+ * passed. A call to it is chord's own from its first update (CHD-415).
+ */
+export const ChordServerName = createContext<string | undefined>(undefined);
+
 /** The colour of the agent `name`; none for one with no colour. */
 export function useAgentColour(name: string): string | undefined {
   return useContext(AgentColours)[name];

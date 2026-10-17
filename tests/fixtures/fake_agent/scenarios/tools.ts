@@ -1,11 +1,17 @@
 /**
  * Tool calls: a read, calls as a screen shows them, calls out of order,
- * edits with their diffs, and a turn of many calls.
+ * edits with their diffs, a turn of many calls, and headlines longer than a
+ * row, an MCP call's among them.
  */
 import * as acp from '@agentclientprotocol/sdk';
 import { EDIT_NEW, EDIT_OLD, REWRITE_NEW, REWRITE_OLD } from '../../edits.ts';
+import {
+  NOTE_ARGUMENTS,
+  NOTES_COMMAND,
+  WEATHER_COMMAND,
+} from '../../headlines.ts';
 import { STEP_MS } from '../options.ts';
-import { pause, type Play } from '../turn.ts';
+import { pause, type Play, type Turn } from '../turn.ts';
 
 /** Calls in a `steps` turn, each an entry of the transcript. */
 const STEPS = 150;
@@ -27,6 +33,69 @@ const steps: Play = async (turn) => {
 
   return 'end_turn';
 };
+
+/** A heredoc command, a heading and a list in it, as Claude writes notes. */
+const HEREDOC = [
+  "cat >> notes.md <<'EOF'",
+  '## Decisions',
+  '',
+  'The headline shows the whole command:',
+  '',
+  '- every line of a heredoc',
+  '- wrapped to the width',
+  '- with no ctrl+o',
+  '',
+  '### Left',
+  '',
+  '1. a cap, if ever',
+  'EOF',
+].join('\n');
+
+/** A command of one line, over 200 characters. */
+const ONE_LINE =
+  'cd apps/editor && grep -rn "headline" src/ui/transcript/tools/ ' +
+  '--include="*.ts" --include="*.tsx" | grep -v "_test" | sort | uniq -c | ' +
+  'sort -rn | head -20; git log --oneline -n 5 -- src/ui/transcript/tools/';
+
+/** Lines of the `headlines` scenario's longest command. */
+const LONG_COMMAND = 300;
+
+/** A heredoc of `LONG_COMMAND` lines: its opener, numbered lines, `EOF`. */
+const LONG = [
+  "cat > lines.txt <<'EOF'",
+  ...Array.from(
+    { length: LONG_COMMAND - 2 },
+    (_, line) => `line ${line + 1} of the long command`,
+  ),
+  'EOF',
+].join('\n');
+
+/** A command Bash ran, as Claude's adapter titles it, that wrote `output`. */
+async function ran(
+  turn: Turn,
+  command: string,
+  output: string,
+): Promise<acp.StopReason> {
+  const toolCallId = turn.callId('bash');
+
+  await turn.send({
+    sessionUpdate: 'tool_call',
+    toolCallId,
+    title: `\`${command}\``,
+    kind: 'execute',
+    status: 'in_progress',
+    rawInput: { command },
+  });
+  await turn.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId,
+    status: 'completed',
+    content: [{ type: 'content', content: { type: 'text', text: output } }],
+  });
+  await turn.say('Done.');
+
+  return 'end_turn';
+}
 
 export const TOOLS = {
   steps,
@@ -248,6 +317,116 @@ export const TOOLS = {
       ],
     });
     await turn.say('Rewrote the table.');
+
+    return 'end_turn';
+  },
+
+  // Headlines longer than a row: a heredoc, a long one-line command, an MCP
+  // call as Claude's adapter titles one, by its name with the arguments in
+  // `rawInput`, and a command of 300 lines; each answered with a line.
+  async headlines(turn) {
+    const calls: readonly [acp.ToolCall, string][] = [
+      [
+        {
+          toolCallId: turn.callId('bash'),
+          title: `\`${HEREDOC}\``,
+          kind: 'execute',
+          rawInput: { command: HEREDOC },
+        },
+        '(no output)',
+      ],
+      [
+        {
+          toolCallId: turn.callId('bash'),
+          title: `\`${ONE_LINE}\``,
+          kind: 'execute',
+          rawInput: { command: ONE_LINE },
+        },
+        '     12 src/ui/transcript/tools/tools.ts',
+      ],
+      [
+        {
+          toolCallId: turn.callId('send'),
+          title: 'mcp__chord__send_message',
+          kind: 'other',
+          rawInput: {
+            to: 'reviewer',
+            text:
+              'CHD-393 U1 is done: the headlines scenario plays a heredoc, ' +
+              'a long one-line command, this call and a command of 300 ' +
+              'lines; nothing of chord changes, so it goes to you directly.',
+          },
+        },
+        'Delivered to reviewer.',
+      ],
+      [
+        {
+          toolCallId: turn.callId('bash'),
+          title: `\`${LONG}\``,
+          kind: 'execute',
+          rawInput: { command: LONG },
+        },
+        '(no output)',
+      ],
+    ];
+
+    for (const [call, output] of calls) {
+      await turn.send({
+        sessionUpdate: 'tool_call',
+        ...call,
+        status: 'in_progress',
+      });
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: call.toolCallId,
+        status: 'completed',
+        content: [{ type: 'content', content: { type: 'text', text: output } }],
+      });
+    }
+
+    await turn.say('Four calls with long headlines.');
+
+    return 'end_turn';
+  },
+
+  // The calls of the Claude Code capture in docs/design/CHD-393.md.
+  heredoc: (turn) => ran(turn, NOTES_COMMAND, '      10 notes.md'),
+  longcommand: (turn) => ran(turn, WEATHER_COMMAND, '309'),
+
+  // The capture's MCP call, as claude-agent-acp sends one: titled by its
+  // name, its arguments in rawInput alone, first empty then whole.
+  async mcpnote(turn) {
+    const toolCallId = turn.callId('save_note');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: 'mcp__notes__save_note',
+      kind: 'other',
+      status: 'pending',
+      rawInput: {},
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'in_progress',
+      rawInput: NOTE_ARGUMENTS,
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'completed',
+      content: [
+        {
+          type: 'content',
+          content: {
+            type: 'text',
+            text: `saved "${NOTE_ARGUMENTS.title}" (${NOTE_ARGUMENTS.body.length} chars)`,
+          },
+        },
+      ],
+    });
+    await turn.say('Done.');
 
     return 'end_turn';
   },

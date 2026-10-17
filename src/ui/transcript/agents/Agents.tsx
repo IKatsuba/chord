@@ -7,6 +7,7 @@ import type {
 } from '../../../session/transcript/types.ts';
 import {
   AgentColours,
+  ChordServerName,
   useColours,
   useHintKey,
   useSelectable,
@@ -17,11 +18,18 @@ import { Ansi } from '../../theme/Ansi.tsx';
 import { CUT, DIM, DIM_BORDER, fg, FILL, TEXT } from '../../theme/text.ts';
 import { TranscriptEntry } from '../Transcript.tsx';
 import type { Headline } from '../tools/tools.ts';
-import { Gutter, Outcome, Tool, ToolMarker, Under } from '../tools/Tool.tsx';
 import {
+  Gutter,
+  HeadlineText,
+  Outcome,
+  Tool,
+  ToolMarker,
+  Under,
+} from '../tools/Tool.tsx';
+import {
+  agentHeadline,
   agentTone,
   blockFold,
-  blockHeadline,
   endedLine,
   endingOf,
   groupHeader,
@@ -103,7 +111,7 @@ function sameAgents(
  * component, so the line's `<text>` holds every run and cuts them as one.
  */
 function headlineText(
-  { name, arg, note, sent }: Headline,
+  { name, arg, tag, note, sent }: Headline,
   { error, agents }: HeadlineColours,
   arrow: ArrowTone = 'plain',
 ): ReactNode {
@@ -129,6 +137,7 @@ function headlineText(
       >
         <Ansi text={sent ? `@${name}` : name} />
       </span>
+      {tag !== undefined && <span attributes={DIM}>{tag}</span>}
       {arg !== undefined && <Ansi text={`(${arg})`} />}
       {note !== undefined && (
         <span attributes={DIM}>
@@ -178,19 +187,15 @@ function AgentBlock({
   open: boolean;
   width: number;
 }) {
-  const fold = blockFold(subagent, waitsOf(turn));
+  const fold = blockFold(subagent, waitsOf(turn), useContext(ChordServerName));
   const key = useHintKey('app:toggleTranscript');
   const ended = endedLine(subagent);
-  const colours = useHeadlineColours();
-  const selectable = useSelectable();
 
   return (
     <box marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
         <ToolMarker tone={agentTone(subagent.state)} />
-        <text {...CUT} {...selectable}>
-          {headlineText(blockHeadline(subagent, width), colours)}
-        </text>
+        <HeadlineText line={agentHeadline(subagent)} width={width} />
       </box>
       {open ? (
         <>
@@ -268,6 +273,7 @@ function AgentGroup({
   const colours = useHeadlineColours();
   const { error } = colours;
   const waits = waitsOf(turn);
+  const chordServer = useContext(ChordServerName);
   const selectable = useSelectable();
 
   return (
@@ -285,7 +291,7 @@ function AgentGroup({
         const last = index === agents.length - 1;
         // The row's glyphs take three cells after the block's two.
         const row = groupRow(subagent, width - 3);
-        const line = rowLine(subagent, waits);
+        const line = rowLine(subagent, waits, chordServer);
         // Its counts are on its row, so its ending is the word alone.
         const ending = endingOf(subagent.state);
 
@@ -408,6 +414,7 @@ function Work({
         call={item.entry.call}
         expanded
         ended={endingOf(subagent.state) !== undefined}
+        width={width}
       />
     ) : (
       <TranscriptEntry

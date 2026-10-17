@@ -140,7 +140,7 @@ Inside the window:
 | `alt+←` / `alt+→` | move by word in the prompt                    |
 | `cmd+←` / `cmd+→` | line start/end, where the terminal passes it  |
 | `shift+tab`       | cycle the permission mode                    |
-| `ctrl+o`          | expand tool calls and subagents              |
+| `ctrl+o`          | expand tool output and subagents             |
 | `ctrl+x c` / `/new codex` | open another session as a tab        |
 | `ctrl+x 1`…`9`    | go to a tab                                  |
 | `esc`             | interrupt the turn                           |

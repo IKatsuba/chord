@@ -4,22 +4,29 @@
  * `⎿` lines and diffs that show what it produced.
  */
 import type { ToolCallContent, ToolKind } from '@agentclientprotocol/sdk';
-import type { ToolCall, TurnState } from '../../../session/transcript/types.ts';
+import type {
+  ChordTool,
+  ToolCall,
+  TurnState,
+} from '../../../session/transcript/types.ts';
 import { type DiffView, diffView } from './diff.ts';
 import { isEmpty, type TerminalView, terminalView } from './terminal.ts';
+import { Chalk } from 'chalk';
+import { type Run, runs } from '../../theme/text.ts';
+import { brush } from '../highlight.ts';
 import type { CodeTones } from '../../theme/theme.ts';
 import { chordHeadline, chordLines, chordWraps } from './chord.ts';
 import { wrapLine } from '../message.ts';
 
-/** `Read(src/main.tsx)`: the tool's name, and its argument when it has one. */
+/**
+ * `Read(src/main.tsx)`: the tool's name, and its argument when it has one,
+ * whole: a heredoc command keeps every line, as Claude Code draws it.
+ */
 export interface Headline {
   readonly name: string;
   readonly arg?: string;
-  /**
-   * The argument's lines past its first, which only ctrl+o's view shows: a
-   * headline is one row, so a heredoc command does not fill the transcript.
-   */
-  readonly more?: readonly string[];
+  /** Said dim right after the name, before the argument: ` (MCP)`. */
+  readonly tag?: string;
   /** Said dim after it: a task's runtime, a message that waited. */
   readonly note?: string;
   /**
@@ -55,18 +62,148 @@ const VERB_FIRST = /^([A-Z][A-Za-z]*) (.+)$/;
 /**
  * ACP sends a free-text title (`Read README.md`, `` `ls -la` ``), so the
  * headline is read out of it: a leading capitalised verb becomes the name,
- * otherwise the call's kind names the tool and the title is its argument,
- * cut to its first line.
+ * otherwise the call's kind names the tool and the title is its argument.
+ * An MCP call, titled `mcp__<server>__<tool>` with its arguments only in
+ * `rawInput`, is drawn as Claude Code draws it, its name alone until they
+ * come; one to chord's own server,
+ * by the name the session gave it, `chordServer`, as chord's own call even
+ * before chord has tied it to the request it served.
  */
-export function headline(call: ToolCall): Headline {
+export function headline(call: ToolCall, chordServer?: string): Headline {
   if (call.chord !== undefined) {
     return chordHeadline(call.chord);
   }
 
-  const read = titleHeadline(call);
-  const [first = '', ...more] = read.arg?.split('\n') ?? [];
+  const mcp = MCP_TITLE.exec(call.title?.trim() ?? '');
 
-  return more.length === 0 ? read : { ...read, arg: first.trimEnd(), more };
+  if (mcp === null) {
+    return titleHeadline(call);
+  }
+
+  const [, server = '', tool = ''] = mcp;
+
+  if (server === chordServer && isChordTool(tool)) {
+    return chordHeadline({ tool, input: call.rawInput ?? {} });
+  }
+
+  const arg = mcpArguments(call.rawInput);
+
+  return {
+    name: `${server} - ${tool}`,
+    tag: ' (MCP)',
+    ...(arg === undefined ? {} : { arg }),
+  };
+}
+
+/** `mcp__<server>__<tool>`: the server up to the next `__`, the tool the rest. */
+const MCP_TITLE = /^mcp__(.+?)__(.+)$/s;
+
+const CHORD_TOOLS: ReadonlySet<string> = new Set<ChordTool>([
+  'list_agents',
+  'list_sessions',
+  'spawn_task',
+  'open_agent',
+  'send_message',
+  'close_agent',
+  'monitor',
+  'stop_monitor',
+  'list_monitors',
+  'list_teams',
+  'run_team',
+  'propose_team',
+]);
+
+function isChordTool(tool: string): tool is ChordTool {
+  return CHORD_TOOLS.has(tool);
+}
+
+/**
+ * An MCP call's arguments as Claude Code writes them: `key: value` joined
+ * by `, `, the key bare and the value as JSON, so a newline in a string is
+ * `\n` and never breaks the row; none for no arguments, none yet or
+ * `null`, and anything else but an object as JSON whole. The C1 controls JSON leaves as they are are escaped
+ * too, as Claude Code escapes them.
+ */
+export function mcpArguments(input: unknown): string | undefined {
+  if (input === undefined || input === null) {
+    return undefined;
+  }
+
+  const text =
+    input === null || typeof input !== 'object' || Array.isArray(input)
+      ? JSON.stringify(input)
+      : Object.entries(input)
+          .map(
+            ([key, value]) =>
+              `${JSON.stringify(key).slice(1, -1)}: ${JSON.stringify(value)}`,
+          )
+          .join(', ');
+
+  return text === '' || text === undefined
+    ? undefined
+    : text.replace(
+        /[\u007f-\u009f]/g,
+        (char) => `\\u${char.charCodeAt(0).toString(16).padStart(4, '0')}`,
+      );
+}
+
+/**
+ * A headline for a row that stays one row, a subagent's latest calls and
+ * the sessions list's: its argument's first line.
+ */
+export function firstLine(line: Headline): Headline {
+  const [first = ''] = line.arg?.split('\n') ?? [];
+
+  return line.arg === undefined ? line : { ...line, arg: first.trimEnd() };
+}
+
+/**
+ * Styles a headline is built with before it is wrapped: every colour as
+ * itself, as wrap-ansi carries the codes across the rows it breaks, and
+ * `runs` reads them back into OpenTUI's spans.
+ */
+const STYLE = new Chalk({ level: 3 });
+
+/**
+ * A headline laid out in rows of `width` cells, each row its styled runs:
+ * the name bold, a recipient's in its `colour`, the `to` and the note dim.
+ * It is built as one string with those codes and wrapped by `wrapLine`, so
+ * each line of its argument starts a row, a line wider than the room breaks
+ * between words, and the `)` and the note follow the argument's last word.
+ */
+export function headlineRows(
+  { name, arg, tag, note, sent }: Headline,
+  width: number,
+  colour?: string,
+): Run[][] {
+  const named = brush(STYLE, sent ? colour : undefined);
+  const text = [
+    sent ? STYLE.dim('to ') : '',
+    STYLE.bold(named(sent ? `@${name}` : name)),
+    tag === undefined ? '' : STYLE.dim(tag),
+    arg === undefined ? '' : `(${arg})`,
+    note === undefined ? '' : STYLE.dim(note),
+  ].join('');
+  const wrapped = text
+    .split('\n')
+    .flatMap((line) => wrapLine(line, width))
+    .join('\n');
+  const rows: Run[][] = [[]];
+
+  // Read as one, so a style the agent opened on a line holds on the next.
+  for (const run of runs(wrapped)) {
+    const [first = '', ...rest] = run.text.split('\n');
+
+    if (first !== '') {
+      rows.at(-1)!.push({ ...run, text: first });
+    }
+
+    for (const row of rest) {
+      rows.push(row === '' ? [] : [{ ...run, text: row }]);
+    }
+  }
+
+  return rows;
 }
 
 function titleHeadline(call: ToolCall): Headline {

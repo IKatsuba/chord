@@ -173,6 +173,46 @@ test('a task whose record has gone says so where its work would be, only when op
   expect(await shown(false)).toContain('⎿  Cancelled (9s)');
 });
 
+test("a lone block's headline wraps whole, its runtime, model and effort after the `)`", async () => {
+  const drawn = await draw(
+    <Agents
+      agents={[
+        {
+          id: 's1',
+          title: 'Fix the tokenizer so a heredoc reaches the shell whole',
+          state: 'completed',
+          entries: [],
+          plan: [],
+          startedAt: 0,
+          endedAt: 9_000,
+          task: {
+            name: 'Fix the tokenizer',
+            runtime: 'codex',
+            model: 'gpt-5.3-codex',
+            effort: 'high',
+          },
+        },
+      ]}
+      turn={{ status: 'idle' }}
+      agent='fake'
+      open={false}
+      width={36}
+    />,
+    { columns: 40, rows: 10 },
+  );
+  const frame = stripAnsi(drawn.frame());
+
+  await drawn.unmount();
+
+  expect(frame).toContain(
+    [
+      '⏺ Agent(Fix the tokenizer so a heredoc',
+      '  reaches the shell whole) · codex ·',
+      '  gpt-5.3-codex · high',
+    ].join('\n'),
+  );
+});
+
 describe('tester: selectable group titles', () => {
   for (const [columns, rows] of [
     [120, 40],
@@ -353,9 +393,16 @@ describe('tester: subagentstates keys and terminal sizes', () => {
 
             await window.press(ESC);
             await window.shows('Interrupted by user');
-            await window.shows(
-              phase === 'pair' ? '2 agents ended · 2 cancelled' : 'Cancelled',
-            );
+
+            if (phase === 'pair') {
+              // The worker may finish before Esc reaches the pair; only
+              // children still running then are cancelled.
+              await window.shows('2 agents ended');
+              expect(window.frame()).toMatch(/2 agents ended · [12] cancelled/);
+            } else {
+              await window.shows('Cancelled');
+            }
+
             expect(window.frame()).not.toContain('Running 2 agents');
             expect(window.frame()).not.toContain('still running');
           },

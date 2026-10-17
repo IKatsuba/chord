@@ -1,10 +1,18 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { ToolCall } from '../../../../src/session/transcript/types.ts';
+import { TextAttributes } from '@opentui/core';
+import stringWidth from 'string-width';
+import type { Run } from '../../../../src/ui/theme/text.ts';
 import {
+  firstLine,
+  type Headline,
   headline,
+  headlineRows,
+  mcpArguments,
   summary,
   toneOf,
 } from '../../../../src/ui/transcript/tools/tools.ts';
+import { NOTES_COMMAND, WEATHER_COMMAND } from '../../../fixtures/headlines.ts';
 
 function text(value: string): NonNullable<ToolCall['content']>[number] {
   return { type: 'content', content: { type: 'text', text: value } };
@@ -41,18 +49,267 @@ test('a bare command or description is named by its kind', () => {
   expect(headline({ id: 'a', kind: 'fetch' })).toStrictEqual({ name: 'Fetch' });
 });
 
-test("a title of several lines keeps its first; the rest is ctrl+o's", () => {
+test('a title of several lines is the argument whole, every line kept', () => {
+  const title = "cat >> notes.md <<'EOF'  \n## 1. One\n\n  - indented\nEOF";
+
+  expect(headline({ id: 'a', title, kind: 'execute' })).toStrictEqual({
+    name: 'Bash',
+    arg: title,
+  });
+});
+
+test("a row that stays one row takes the argument's first line", () => {
   expect(
+    firstLine({ name: 'Bash', arg: "cat <<'EOF'  \n## 1. One\nEOF" }),
+  ).toStrictEqual({ name: 'Bash', arg: "cat <<'EOF'" });
+  expect(firstLine({ name: 'Bash' })).toStrictEqual({ name: 'Bash' });
+});
+
+/** The rows' text, each row's pieces joined. */
+function rowsText(line: Headline, width: number): string[] {
+  return headlineRows(line, width).map((row) =>
+    row.map((run) => run.text).join(''),
+  );
+}
+
+test("a long command wraps between words as the design's mocks do at 80 and 120 columns", () => {
+  const line = { name: 'Bash', arg: WEATHER_COMMAND };
+
+  // An entry's width is the window's less four cells.
+  expect(rowsText(line, 76)).toStrictEqual([
+    'Bash(echo "This morning the weather started out cool and misty with a thin',
+    'layer of fog rolling over the hills, but by noon the sun had burned through',
+    'the clouds, the temperature climbed steadily, a light breeze came in from',
+    'the west, and forecasters warned that scattered thunderstorms could arrive',
+    'late in the evening" | tr a-z A-Z | wc -c)',
+  ]);
+  expect(rowsText(line, 116)).toStrictEqual([
+    'Bash(echo "This morning the weather started out cool and misty with a thin layer of fog rolling over the hills, but',
+    'by noon the sun had burned through the clouds, the temperature climbed steadily, a light breeze came in from the',
+    'west, and forecasters warned that scattered thunderstorms could arrive late in the evening" | tr a-z A-Z | wc -c)',
+  ]);
+});
+
+test('each line of a heredoc starts a row, an empty one too, the `)` after the last', () => {
+  const [first, ...rest] = NOTES_COMMAND.split('\n');
+
+  expect(rowsText({ name: 'Bash', arg: NOTES_COMMAND }, 76)).toStrictEqual([
+    `Bash(${first}`,
+    ...rest.slice(0, -1),
+    'EOF)',
+  ]);
+});
+
+test('a line keeps its indent; a word wider than the room breaks at the edge', () => {
+  expect(rowsText({ name: 'Bash', arg: 'f\n    two words' }, 10)).toStrictEqual(
+    ['Bash(f', '    two', 'words)'],
+  );
+  expect(
+    rowsText({ name: 'Fetch', arg: 'https://example.com/a' }, 10),
+  ).toStrictEqual(['Fetch(http', 's://exampl', 'e.com/a)']);
+});
+
+/** Each row's runs as their text and how they are drawn. */
+function styled(rows: Run[][]): [string, string][][] {
+  return rows.map((row) =>
+    row.map((run) => [
+      run.text,
+      [
+        run.attributes & TextAttributes.BOLD ? 'bold' : '',
+        run.attributes & TextAttributes.DIM ? 'dim' : '',
+        run.fg === undefined ? '' : 'fg',
+      ]
+        .filter(Boolean)
+        .join(' '),
+    ]),
+  );
+}
+
+test('the note follows the `)`; the name keeps its bold and colour, the `to` and the note their dim, on every row', () => {
+  expect(
+    styled(
+      headlineRows(
+        {
+          name: 'tester',
+          arg: 'run the suite',
+          note: ' · waited 2s',
+          sent: true,
+        },
+        18,
+        '#6cb6ff',
+      ),
+    ),
+  ).toStrictEqual([
+    [
+      ['to ', 'dim'],
+      ['@tester', 'bold fg'],
+      ['(run the', ''],
+    ],
+    [
+      ['suite)', ''],
+      [' · waited 2s', 'dim'],
+    ],
+  ]);
+});
+
+test("an agent's colour in an argument is kept on each row it wraps to", () => {
+  expect(
+    styled(
+      headlineRows(
+        { name: 'Bash', arg: '\x1b[31mred words here\x1b[0m plain' },
+        13,
+      ),
+    ),
+  ).toStrictEqual([
+    [
+      ['Bash', 'bold'],
+      ['(', ''],
+      ['red', 'fg'],
+    ],
+    [['words here', 'fg']],
+    [['plain)', '']],
+  ]);
+});
+
+test('an argument wrap-ansi writes otherwise is drawn whole, its `)` kept', () => {
+  // A decomposed é, which wrap-ansi composes, four times (CHD-393 review).
+  const accents = rowsText({ name: 'Bash', arg: 'e\u0301'.repeat(4) }, 76);
+
+  expect(accents.join('').normalize('NFC')).toStrictEqual(
+    `Bash(${'é'.repeat(4)})`,
+  );
+
+  // A tab, which wrap-ansi lays out as spaces, then the rest of the line.
+  const tabbed = rowsText({ name: 'Bash', arg: 'printf "a\tb" | cat' }, 76);
+
+  expect(tabbed).toHaveLength(1);
+  expect(tabbed[0]).toStartWith('Bash(printf "a');
+  expect(tabbed[0]).toEndWith('b" | cat)');
+});
+
+test("an MCP call's headline is Claude Code's: the server, the tool, (MCP), its arguments", () => {
+  const call = (rawInput?: unknown): ToolCall => ({
+    id: 'a',
+    title: 'mcp__notes__save_note',
+    kind: 'other',
+    ...(rawInput === undefined ? {} : { rawInput }),
+  });
+
+  expect(headline(call({ title: 'A "quoted" note', limit: 3 }))).toStrictEqual({
+    name: 'notes - save_note',
+    tag: ' (MCP)',
+    arg: 'title: "A \\"quoted\\" note", limit: 3',
+  });
+  // No arguments yet, as the adapter sends the call first: the name alone.
+  expect(headline(call({}))).toStrictEqual({
+    name: 'notes - save_note',
+    tag: ' (MCP)',
+  });
+
+  // The title alone makes an MCP call: no arguments at all, or null, is
+  // the name alone as {} is.
+  for (const input of [undefined, null]) {
+    expect(headline(call(input))).toStrictEqual({
+      name: 'notes - save_note',
+      tag: ' (MCP)',
+    });
+  }
+
+  // The server runs to the next `__`; the tool is the rest.
+  expect(
+    headline({ ...call({}), title: 'mcp__my_files__write__file' }).name,
+  ).toStrictEqual('my_files - write__file');
+});
+
+test('MCP arguments: strings quoted, the rest bare or compact JSON, a newline as \\n', () => {
+  expect(
+    mcpArguments({
+      timeout_ms: 600000,
+      follow: true,
+      since: null,
+      paths: ['src/a.ts', 'src/b.ts'],
+      options: { depth: 2, ignore: ['node_modules'] },
+      content: '# Notes\n\n- one\t',
+    }),
+  ).toStrictEqual(
+    'timeout_ms: 600000, follow: true, since: null, ' +
+      'paths: ["src/a.ts","src/b.ts"], ' +
+      'options: {"depth":2,"ignore":["node_modules"]}, ' +
+      'content: "# Notes\\n\\n- one\\t"',
+  );
+  expect(mcpArguments({})).toStrictEqual(undefined);
+  expect(mcpArguments('just text')).toStrictEqual('"just text"');
+  expect(mcpArguments(['a', 1])).toStrictEqual('["a",1]');
+  // A key is JSON with its quotes dropped; C1 controls are escaped.
+  expect(mcpArguments({ 'say "hi"': 'a\u0085b' })).toStrictEqual(
+    'say \\"hi\\": "a\\u0085b"',
+  );
+});
+
+test("a call to chord's own server is chord's own from its first update, by the name the session gave it", () => {
+  const call = (server: string): ToolCall => ({
+    id: 'a',
+    title: `mcp__${server}__send_message`,
+    kind: 'other',
+    rawInput: { to: 'reviewer', text: 'hi' },
+  });
+
+  expect(headline(call('chord'), 'chord')).toStrictEqual({
+    name: 'reviewer',
+    sent: true,
+  });
+  // Beside a server of the person's called chord, chord's is chord-2.
+  expect(headline(call('chord-2'), 'chord-2')).toStrictEqual({
+    name: 'reviewer',
+    sent: true,
+  });
+  // chord's own from its first update, before any arguments come.
+  expect(
+    headline({ id: 'a', title: 'mcp__chord__monitor', kind: 'other' }, 'chord'),
+  ).toStrictEqual({ name: 'Monitor' });
+  expect(headline(call('chord'), 'chord-2')).toStrictEqual({
+    name: 'chord - send_message',
+    tag: ' (MCP)',
+    arg: 'to: "reviewer", text: "hi"',
+  });
+});
+
+test("an MCP headline wraps as one long line, (MCP) dim, the design's rows at 80 columns", () => {
+  const rows = (rawInput: unknown) =>
     headline({
       id: 'a',
-      title: "cat >> notes.md <<'EOF'  \n## 1. One\n\nEOF",
-      kind: 'execute',
-    }),
-  ).toStrictEqual({
-    name: 'Bash',
-    arg: "cat >> notes.md <<'EOF'",
-    more: ['## 1. One', '', 'EOF'],
-  });
+      title: 'mcp__files__write_file',
+      kind: 'other',
+      rawInput,
+    });
+
+  expect(
+    rowsText(
+      rows({
+        paths: ['src/a.ts', 'src/b.ts'],
+        options: { depth: 2, ignore: ['node_modules'] },
+      }),
+      76,
+    ),
+  ).toStrictEqual([
+    'files - write_file (MCP)(paths: ["src/a.ts","src/b.ts"], options:',
+    '{"depth":2,"ignore":["node_modules"]})',
+  ]);
+  expect(
+    rowsText(
+      rows({ path: 'notes.md', content: '# Notes\n\n- one\n- two\n' }),
+      76,
+    ),
+  ).toStrictEqual([
+    'files - write_file (MCP)(path: "notes.md", content: "# Notes\\n\\n- one\\n-',
+    'two\\n")',
+  ]);
+  expect(styled(headlineRows(rows({}), 76))).toStrictEqual([
+    [
+      ['files - write_file', 'bold'],
+      [' (MCP)', 'dim'],
+    ],
+  ]);
 });
 
 test('the status picks the tone; no status is pending', () => {
@@ -282,5 +539,94 @@ test("a call whose questions the box answered reads Asking(…), whatever its ti
   ).toStrictEqual({
     name: 'Asking',
     arg: 'Which language should helper scripts use?',
+  });
+});
+
+describe('CHD-393 tester: styled headline boundaries', () => {
+  test('keeps an open colour across a real newline and resets it before plain text', () => {
+    const rows = headlineRows(
+      { name: 'Bash', arg: '\x1b[31mone\ntwo three four\x1b[0m plain' },
+      13,
+    );
+    const pieces = rows.flat();
+
+    expect(
+      pieces
+        .filter((run) => run.fg)
+        .map((run) => run.text)
+        .join(' '),
+    ).toBe('one two three four');
+    expect(
+      pieces.find((run) => run.text.includes('plain'))?.fg,
+    ).toBeUndefined();
+    expect(rows.map((row) => row.map((run) => run.text).join(''))).toEqual([
+      'Bash(one',
+      'two three',
+      'four plain)',
+    ]);
+  });
+
+  for (const width of [3, 13, 76]) {
+    test(`keeps Unicode, tab suffix and closing punctuation within ${width} cells`, () => {
+      const rows = headlineRows(
+        { name: 'Bash', arg: 'e\u0301漢👩‍💻\tEND' },
+        width,
+      ).map((row) => row.map((run) => run.text).join(''));
+
+      expect(rows.join('').replace(/\s/g, '').normalize('NFC')).toBe(
+        'Bash(é漢👩‍💻END)',
+      );
+      expect(rows.every((row) => stringWidth(row) <= width)).toBe(true);
+    });
+  }
+});
+
+describe('CHD-415 tester: MCP identity and control boundaries', () => {
+  test('own-server collision routing is stable before arguments and served identity wins', () => {
+    for (const rawInput of [undefined, null, {}]) {
+      expect(
+        headline(
+          { id: 'a', title: 'mcp__chord-2__monitor', rawInput },
+          'chord-2',
+        ),
+      ).toEqual({ name: 'Monitor' });
+      expect(
+        headline(
+          { id: 'a', title: 'mcp__chord__monitor', rawInput },
+          'chord-2',
+        ),
+      ).toEqual({ name: 'chord - monitor', tag: ' (MCP)' });
+    }
+
+    expect(
+      headline(
+        {
+          id: 'a',
+          title: 'mcp__other__monitor',
+          rawInput: { to: 'wrong' },
+          chord: {
+            tool: 'send_message',
+            input: { to: 'alias', text: 'hello' },
+            answer: { to: 'reviewer' },
+          },
+        },
+        'chord-2',
+      ),
+    ).toEqual({ name: 'reviewer', sent: true });
+    expect(
+      headline(
+        { id: 'a', title: 'mcp__chord-2__custom', rawInput: {} },
+        'chord-2',
+      ),
+    ).toEqual({ name: 'chord-2 - custom', tag: ' (MCP)' });
+  });
+
+  test('primitive inputs and escaped control keys remain visible JSON text', () => {
+    expect(mcpArguments(false)).toBe('false');
+    expect(mcpArguments(0)).toBe('0');
+    expect(mcpArguments('')).toBe('""');
+    expect(mcpArguments({ 'line\n\u007f': 'left\u009bright\u009f' })).toBe(
+      'line\\n\\u007f: "left\\u009bright\\u009f"',
+    );
   });
 });

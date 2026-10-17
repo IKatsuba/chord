@@ -13,7 +13,6 @@ import {
   agentHeadline,
   askerRow,
   blockFold,
-  blockHeadline,
   groupRow,
 } from '../../../src/ui/transcript/agents/subagents.ts';
 import {
@@ -183,24 +182,13 @@ test('a message never folds on a blank line; the blank goes into the count', () 
   });
 });
 
-test('a task block says its runtime and model after the title, the model dropped first, the runtime never', () => {
+test('a task block says its runtime and model after the title; a row of a group drops the model first', () => {
   const subagent = TASK;
 
   expect(agentHeadline(subagent)).toStrictEqual({
     name: 'Agent',
     arg: 'Fix the tokenizer',
     note: ' · codex · gpt-5.3-codex',
-  });
-  expect(blockHeadline(subagent, 80)).toStrictEqual(agentHeadline(subagent));
-  expect(blockHeadline(subagent, 32)).toStrictEqual({
-    name: 'Agent',
-    arg: 'Fix the tokenizer',
-    note: ' · codex',
-  });
-  expect(blockHeadline(subagent, 22)).toStrictEqual({
-    name: 'Agent',
-    arg: 'Fix th…',
-    note: ' · codex',
   });
   expect(groupRow(subagent, 46)).toStrictEqual({
     headline: { name: 'Agent', arg: 'Fix the tokenizer', note: ' · codex' },
@@ -213,7 +201,7 @@ test('a task block says its runtime and model after the title, the model dropped
   ).toStrictEqual('Agent(Fix the tokenizer) · codex asks');
 });
 
-test('a task block says its effort after its model, both dropped before the title is cut', () => {
+test('a task block says its effort after its model, left out where the model is', () => {
   const subagent = { ...TASK, task: { ...TASK.task, effort: 'high' } };
 
   expect(agentHeadline(subagent)).toStrictEqual({
@@ -221,7 +209,7 @@ test('a task block says its effort after its model, both dropped before the titl
     arg: 'Fix the tokenizer',
     note: ' · codex · gpt-5.3-codex · high',
   });
-  expect(blockHeadline(subagent, 32)).toStrictEqual({
+  expect(agentHeadline(subagent, false)).toStrictEqual({
     name: 'Agent',
     arg: 'Fix the tokenizer',
     note: ' · codex',

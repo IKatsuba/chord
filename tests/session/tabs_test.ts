@@ -1044,8 +1044,10 @@ test('a reply to a message counts its age from the reply, while the message keep
   });
   expect(repliedSince(wait)).toStrictEqual(24_000);
 
-  // A second reply before a look keeps the first reply's time.
+  // A second reply before a look is the newest, and names the age; the
+  // news still began with the message.
   const again = heard(replied, 1, [prompt('t2'), ended('t2')], 40_000);
 
-  expect(repliedSince(tabOf(again, 1)!.wait)).toStrictEqual(24_000);
+  expect(repliedSince(tabOf(again, 1)!.wait)).toStrictEqual(41_000);
+  expect(tabOf(again, 1)!.wait.unseen?.since).toStrictEqual(1000);
 });

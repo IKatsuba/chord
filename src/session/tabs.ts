@@ -46,8 +46,8 @@ export interface TabWait {
          */
         readonly failedAt?: number;
         /**
-         * When a reply came, which its age counts from (CHD-364): set as the
-         * news becomes a reply, apart from `since`, which orders it.
+         * When the newest reply came, which its age counts from (CHD-364),
+         * apart from `since`, which orders the news.
          */
         readonly repliedAt?: number;
       }
@@ -896,10 +896,8 @@ function waitAfter(
         ? {
             kind: 'replied' as const,
             since: before.unseen?.since ?? now,
-            repliedAt:
-              before.unseen?.kind === 'replied'
-                ? (before.unseen.repliedAt ?? before.unseen.since)
-                : now,
+            // The newest reply: a reply has no first to look into.
+            repliedAt: now,
           }
         : {
             kind: 'failed' as const,

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › @s                                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  package.json
+  README.md
+  tsconfig.json
+  docs/decisions.md
+  docs/FEATURES.md
+  docs/guide.md
+  scripts/compile.ts
+  src/files.ts
+  src/main.tsx
+  type 2 characters to search

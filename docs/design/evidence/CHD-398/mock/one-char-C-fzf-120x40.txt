@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › @s                                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  src/files.ts
+  src/main.tsx
+  src/settings.ts
+  scripts/compile.ts
+  src/ui/app/App.tsx
+  src/ui/app/keys.ts
+  tests/settings_test.ts
+  src/session/session.ts
+  src/ui/app/terminal.ts
+  src/ui/prompt/state.ts

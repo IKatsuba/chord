@@ -57,6 +57,9 @@ export const LONG_INSTRUCTION = [
 /** What `agentcall` tells `parser` while its call is open. */
 export const HELD_MESSAGE = 'Then the docs, once the tests pass.';
 
+/** What `agentcalltwice` tells `parser` after `HELD_MESSAGE`, in the same call. */
+export const HELD_AGAIN = 'And the changelog after the docs.';
+
 /** A short message to `parser`, sent before `LONG_MESSAGE`. */
 export const SHORT_MESSAGE = 'Start on the tokenizer; the printer can wait.';
 
@@ -210,6 +213,41 @@ async function sendProse(
     await turn.say('Both sent back.');
   } finally {
     await client?.close();
+  }
+
+  return 'end_turn';
+}
+
+/**
+ * Opens `parser` on `callchild` and, a moment into its call, tells it each
+ * of `texts` in turn, so each is told while that call is open.
+ */
+async function tellParserDuringCall(
+  turn: Turn,
+  texts: readonly string[],
+): Promise<'end_turn'> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
+  }
+
+  try {
+    await callChord(turn, client, 'open_agent', {
+      ...PARSER_ARGS,
+      prompt: 'callchild',
+    });
+    await pause(turn.signal, AGENT_STEP_MS * 2);
+
+    for (const text of texts) {
+      await callChord(turn, client, 'send_message', { to: 'parser', text });
+    }
+
+    await turn.say('Waiting on parser.');
+  } finally {
+    await client.close();
   }
 
   return 'end_turn';
@@ -370,32 +408,11 @@ export const AGENTS = {
 
   // Opens `parser` on `callchild` and, while its call is open, tells it
   // `HELD_MESSAGE`, which a steering adapter that cuts calls holds.
-  async agentcall(turn) {
-    const client = await chordClient(turn);
+  agentcall: (turn) => tellParserDuringCall(turn, [HELD_MESSAGE]),
 
-    if (client === undefined) {
-      await turn.say('No chord server in this session.');
-
-      return 'end_turn';
-    }
-
-    try {
-      await callChord(turn, client, 'open_agent', {
-        ...PARSER_ARGS,
-        prompt: 'callchild',
-      });
-      await pause(turn.signal, AGENT_STEP_MS * 2);
-      await callChord(turn, client, 'send_message', {
-        to: 'parser',
-        text: HELD_MESSAGE,
-      });
-      await turn.say('Waiting on parser.');
-    } finally {
-      await client.close();
-    }
-
-    return 'end_turn';
-  },
+  // The same with `HELD_AGAIN` after it, both told during that one call.
+  agentcalltwice: (turn) =>
+    tellParserDuringCall(turn, [HELD_MESSAGE, HELD_AGAIN]),
 
   // One call open from the turn's start for about 3 s, long enough for a
   // message held behind it to be seen, then the answer.

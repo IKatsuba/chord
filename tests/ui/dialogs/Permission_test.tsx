@@ -17,6 +17,7 @@ import {
   END,
   ESC,
   left,
+  leader,
   send,
   until,
   UP,
@@ -574,4 +575,133 @@ describe('CHD-246 tester: long-title paging regression', () => {
       await drawn.unmount();
     }
   });
+});
+
+describe('CHD-246 tester: request lifecycle and small rooms', () => {
+  for (const [key, outcome] of [
+    ['1', 'allow'],
+    ['2', 'always'],
+    ['3', 'deny'],
+    [ESC, 'deny'],
+  ] as const) {
+    test(`answers ${outcome} at the unread top with ${JSON.stringify(key)}`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'bigask');
+          await asked(window);
+          expect(window.frame()).toContain('↓ 37 lines below');
+          expect(window.frame()).not.toContain('mode: overwrite');
+          await window.press(key);
+          await window.shows(`Permission: ${outcome}.`);
+          expect(window.frame()).not.toContain('Do you want to proceed?');
+        },
+        { columns: 80, rows: 24 },
+      ));
+  }
+
+  test('two sessions answer their own overflowing requests independently', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'bigask');
+        await asked(window);
+        await window.press(END);
+        await window.shows('mode: overwrite');
+        await leader(window, 'c');
+        await window.shows('Fake Large with a 1M context window');
+        await send(window, 'bigask');
+        await asked(window);
+        expect(window.frame()).toContain('path: docs/release.md');
+        expect(window.frame()).not.toContain('mode: overwrite');
+        await window.press(PAGE_DOWN);
+        await window.shows('lines above');
+        await leader(window, '1');
+        await asked(window);
+        await window.press('1');
+        await window.shows('Permission: allow.');
+        await leader(window, '2');
+        await asked(window);
+        expect(window.frame()).not.toContain('Permission: allow.');
+        await window.press(ESC);
+        await window.shows('Permission: deny.');
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('resizing signals every hidden side and keeps every row reachable', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'bigask');
+        await asked(window);
+        await window.resize({ rows: 19 });
+        await window.shows('↓ 41 lines below');
+        await window.press(END);
+        await window.shows('mode: overwrite');
+        await window.resize({ columns: 120, rows: 40 });
+        await until('resize leaves a signalled request', () => {
+          const box = boxRows(window.frame()).join('\n');
+
+          return (
+            (box.includes('path: docs/release.md') ||
+              box.includes('lines above')) &&
+            (box.includes('mode: overwrite') || box.includes('lines below'))
+          );
+        });
+
+        expect(window.frame()).toContain('3. No, and tell Claude');
+        expect(window.frame()).toContain('Esc to reject');
+        await window.press(END);
+        await window.shows('mode: overwrite');
+        expect(boxRows(window.frame()).join('\n')).not.toContain('lines below');
+        await window.press(HOME);
+        await window.shows('path: docs/release.md');
+        expect(boxRows(window.frame()).join('\n')).not.toContain('lines above');
+        await window.resize({ rows: 120 });
+        await until('the whole request fits', () => {
+          const box = boxRows(window.frame()).join('\n');
+
+          return (
+            box.includes('path: docs/release.md') &&
+            box.includes('mode: overwrite') &&
+            !box.includes('lines above')
+          );
+        });
+
+        await window.press('1');
+        await window.shows('Permission: allow.');
+      },
+      { columns: 80, rows: 24 },
+    ));
+});
+
+describe('CHD-246 tester: queued large permission requests', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`the second concurrent request opens at the top after the first ends at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'bigasktwice');
+          await asked(window);
+          expect(window.frame()).toContain('path: docs/release.md');
+          await window.press(END);
+          await window.shows('mode: overwrite');
+          await window.press('1');
+          await window.shows('path: docs/changes.md');
+          await asked(window);
+
+          const next = boxRows(window.frame()).join('\n');
+
+          expect(next).toContain('content: # Release 0.56.0');
+          expect(next).toContain('lines below');
+          expect(next).not.toContain('lines above');
+          expect(next).not.toContain('mode: append');
+          await window.press(ESC);
+          await window.shows('Permission: deny.');
+          await window.shows('Permission: allow.');
+          expect(window.frame()).not.toContain('Do you want to proceed?');
+        },
+        { columns, rows },
+      ));
+  }
 });

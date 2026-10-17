@@ -97,7 +97,9 @@ export interface BackgroundAgent {
 /**
  * The tab's items, oldest first, each keeping its place as it changes: the
  * running ones, and those ended after `clearedAt`, the person's last prompt
- * in the tab.
+ * in the tab. Two that started in the same millisecond keep the order of
+ * their agents, then of each agent's monitors by id and tasks as its
+ * transcript has them, which no change of state moves.
  */
 export function backgroundItems(
   agents: readonly BackgroundAgent[],
@@ -125,6 +127,8 @@ function monitorItems(agent: BackgroundAgent): BackgroundItem[] {
     events: monitor.events,
   });
 
+  // In id order, which is start order, so two started in the same
+  // millisecond keep their places whichever ends first.
   return [
     ...agent.endedMonitors.map((monitor): BackgroundItem => ({
       ...base(monitor),
@@ -138,7 +142,12 @@ function monitorItems(agent: BackgroundAgent): BackgroundItem[] {
       ...base(monitor),
       status: { group: 'running' },
     })),
-  ];
+  ].sort((a, b) => monitorNumber(a.id) - monitorNumber(b.id));
+}
+
+/** `m12`'s 12. */
+function monitorNumber(id: string): number {
+  return Number(id.slice(1)) || 0;
 }
 
 /** A monitor's end as a group: exit 0 is done, a stop stopped, else failed. */

@@ -613,6 +613,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // with its images.
       return {
         ...initialAppState,
+        // Every tab's, which another tab's clear leaves be.
+        backgroundCleared: state.backgroundCleared,
         expanded: state.expanded,
         theme: state.theme,
         draft: state.draft,

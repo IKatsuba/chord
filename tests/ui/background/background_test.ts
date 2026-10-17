@@ -270,6 +270,47 @@ describe('the items', () => {
     expect(brief(items)).toStrictEqual(['task Inner task 1 running']);
   });
 
+  test('items started in the same millisecond keep their places whichever ends first', () => {
+    const one = running('m1', 'one', 100);
+    const two = running('m2', 'two', 100);
+    const tasks = [task('task-a', 'a', 100), task('task-b', 'b', 100)];
+    const order = (
+      more: Partial<BackgroundAgent>,
+      other: Partial<BackgroundAgent>,
+    ) =>
+      backgroundItems([
+        agent(1, { transcript: withEntries(tasks), ...more }),
+        agent(2, { owner: { name: 'parser', colour: 0 }, ...other }),
+      ]).map(({ name }) => name);
+    const before = order(
+      { monitors: [one, two] },
+      { monitors: [running('m1', 'three', 100)] },
+    );
+
+    expect(before).toStrictEqual(['one', 'two', 'a', 'b', 'three']);
+    // m2 and the other agent's ended first, then m1.
+    expect(
+      order(
+        {
+          monitors: [],
+          endedMonitors: [
+            ended(two, { kind: 'stopped' }, 150),
+            ended(one, { kind: 'exit', code: 0 }, 160),
+          ],
+          transcript: withEntries([
+            tasks[0]!,
+            task('task-b', 'b', 100, { state: 'completed', endedAt: 120 }),
+          ]),
+        },
+        {
+          endedMonitors: [
+            ended(running('m1', 'three', 100), { kind: 'stopped' }, 110),
+          ],
+        },
+      ),
+    ).toStrictEqual(before);
+  });
+
   test("the person's prompt clears what ended before it; what runs or asks stays", () => {
     const items = backgroundItems(
       [

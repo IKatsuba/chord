@@ -1,0 +1,40 @@
+ parser · fake · Fake Small · opened by main 3s ago
+
+ ← from @main
+   ⎿  agentchild
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  Running…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (3s · esc to interrupt)
+ ← from @main · after the running calls: I changed how a string at the end of ...ests now and tell me only what fails.
+ ← from @main · after the running calls: The printer is fixed too; run the whole parser suite once more.
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts                           Fake Small · medium effort
+    main    fake · Fake Large with a 1M context window · medium  ✻ working 3s
+    parser  fake · Fake Small · medium                           ✻ working 2s
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 2s

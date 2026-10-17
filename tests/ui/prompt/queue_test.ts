@@ -77,6 +77,33 @@ test("a message held for the person's answer says so in its header, ahead of the
   ]);
 });
 
+test("a message held behind the running turn's calls says so in its header, one note only, among the others in their order", () => {
+  const main = { name: 'main', reachable: true } as const;
+
+  expect(
+    queueRows(
+      [
+        { turnId: 't1', text: 'Run the tests.', from: main, afterCalls: true },
+        { turnId: 't2', text: 'Then the docs.', from: main, afterAnswer: true },
+        { turnId: 't3', text: 'Done.', from: main },
+      ],
+      5,
+    ),
+  ).toStrictEqual([
+    {
+      kind: 'message',
+      header: 'from @main · after the running calls: ',
+      text: 'Run the tests.',
+    },
+    {
+      kind: 'message',
+      header: 'from @main · after your answer: ',
+      text: 'Then the docs.',
+    },
+    { kind: 'message', header: 'from @main: ', text: 'Done.' },
+  ]);
+});
+
 describe('CHD-385 tester: queued sender identity', () => {
   test('task, monitor and reachable senders retain their own name forms', () => {
     expect(
@@ -121,5 +148,33 @@ describe('CHD-385 tester: queued sender identity', () => {
         text: 'Stopped. …',
       },
     ]);
+  });
+});
+
+describe('CHD-423 tester: held queue overflow', () => {
+  test('held agent rows keep oldest-first limits and are excluded from the restored draft', () => {
+    const from = { name: 'main', reachable: true } as const;
+    const held = Array.from({ length: 6 }, (_, index) => ({
+      turnId: `held-${index}`,
+      text: `Message ${index}.\nSecond line.`,
+      from,
+      afterCalls: true as const,
+    }));
+    const rows = queueRows(held, queueRowLimit(24));
+
+    expect(rows).toStrictEqual([
+      ...[0, 1, 2].map((index) => ({
+        kind: 'message' as const,
+        header: 'from @main · after the running calls: ',
+        text: `Message ${index}. …`,
+      })),
+      { kind: 'more', count: 3 },
+    ]);
+    expect(
+      restoredDraft(
+        [...held, { turnId: 'mine', text: 'My queued prompt.' }],
+        'typing',
+      ),
+    ).toBe('My queued prompt.\ntyping');
   });
 });

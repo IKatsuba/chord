@@ -3,15 +3,20 @@
  * opened under the prompt, picked, written to, messaged both ways and
  * closed.
  */
-import { expect, setSystemTime, test } from 'bun:test';
+import { describe, expect, setSystemTime, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CHILD_MESSAGES,
   CRASH_WORDS,
   DOCS_MESSAGE,
+  GATE,
+  GATE_RELEASE,
+  HELD_AGAIN,
+  HELD_MESSAGE,
   MAIN_MESSAGES,
 } from '../../fixtures/fake_agent/scenarios/agents.ts';
 import { TASK_REPORT } from '../../fixtures/fake_agent/scenarios/tasks.ts';
@@ -318,6 +323,49 @@ test("a queued message's row keeps its header whole on a narrow window and cuts 
   }
 });
 
+test("a message held behind the child's running call waits in its queue until it goes in, then the row is gone", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        // The child's call stays open until the test releases it.
+        await send(window, 'agentcallgated');
+        await window.shows('Open(parser)');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('╭─ parser ─');
+        await window.shows(
+          `← from @main · after the running calls: ${HELD_AGAIN}`,
+        );
+        expect(window.frame()).toContain(
+          `← from @main · after the running calls: ${HELD_MESSAGE}`,
+        );
+        // Not in the turn yet: its call still runs.
+        expect(window.frame()).toContain('Running…');
+        await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
+        await window.shows('The tests pass.');
+
+        const frame = window.frame();
+
+        expect(frame).toContain(`← from @main\n   ⎿  ${HELD_MESSAGE}`);
+        expect(frame).toContain(`← from @main\n   ⎿  ${HELD_AGAIN}`);
+        expect(frame).not.toContain('after the running calls');
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        server,
+        runtimes: ['fake'],
+        rows: 40,
+        columns: 120,
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
 test('/clear with a child picked is refused, and on main it closes the children with the session', () =>
   withAgents(async (window) => {
     await opened(window);
@@ -512,3 +560,105 @@ test("a picked child's opening line goes on aging with the TUI idle", () =>
       setSystemTime();
     }
   }));
+
+describe('CHD-423 tester: two held messages on screen', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`the background marker and both foreground rows last until taken at ${columns}x${rows}`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'agentcallgated');
+            await window.shows('← message from @main');
+            expect(window.frame()).not.toContain('after the running calls');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.shows('╭─ parser ─');
+            await window.shows(
+              `← from @main · after the running calls: ${HELD_AGAIN}`,
+            );
+
+            const held = window.frame();
+
+            expect(held).toContain(
+              `← from @main · after the running calls: ${HELD_MESSAGE}`,
+            );
+            expect(held.indexOf(HELD_MESSAGE)).toBeLessThan(
+              held.indexOf(HELD_AGAIN),
+            );
+            expect(held).toContain('Running…');
+            await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
+            await window.shows('The tests pass.');
+            await until(
+              'held rows taken',
+              () => !window.frame().includes('after the running calls'),
+            );
+            expect(window.frame()).toContain(HELD_AGAIN);
+            expect(window.frame()).not.toContain('after your answer');
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+
+  for (const action of ['cancel', 'close'] as const) {
+    test(`${action} cleans up a call whose release gate was never opened`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'agentcallgated');
+            await window.shows('← message from @main');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.shows(
+              `← from @main · after the running calls: ${HELD_AGAIN}`,
+            );
+            expect(window.frame()).toContain('Running…');
+            expect(window.pids.length >= 2).toBe(true);
+
+            if (action === 'cancel') {
+              await window.press('\r');
+              await window.press(ESC);
+              await window.shows('Interrupted');
+              await until(
+                'cancelled hold removed',
+                () => !window.frame().includes('after the running calls'),
+              );
+            }
+
+            expect(await readdir(join(window.dir, GATE))).not.toContain(
+              GATE_RELEASE,
+            );
+            // withWindow closes the parent and child and proves their PIDs gone.
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns: 80,
+            rows: 24,
+            agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

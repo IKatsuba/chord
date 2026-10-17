@@ -466,6 +466,10 @@ message to a working Claude or Codex session goes into its running turn
 through ACP's `_session/steering`, drawn among its calls. Claude waits for
 the tool calls open when the message arrived to end, so steering does not
 cut them off; calls opened later can still be running when it goes in.
+In the recipient's view, each held message waits above the prompt as
+`← from @main · after the running calls: …`, in arrival order, until it
+goes into the turn and leaves the queue. The agents list marks a recipient
+in the background with `← message from @main`, as for any queued message.
 Codex takes it at once, since its steering does not cut calls. While the
 turn waits on your answer to a permission, form or link, it waits under the
 working line as `← from @main · after your answer: …` and goes in once you

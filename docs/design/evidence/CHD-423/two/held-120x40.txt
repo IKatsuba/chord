@@ -1,0 +1,40 @@
+ parser · fake · Fake Small · opened by main 5s ago
+
+ ← from @main
+   ⎿  callchild
+
+ ⏺ Bash(deno task test)
+   ⎿  Running…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (4s · esc to interrupt)
+ ← from @main · after the running calls: Then the docs, once the tests pass.
+ ← from @main · after the running calls: And the changelog after the docs.
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                           Fake Small · medium effort
+    main    fake · Fake Large with a 1M context window · medium  ✓ replied 3s ago
+    parser  fake · Fake Small · medium                           ✻ working 4s

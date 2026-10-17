@@ -30,6 +30,11 @@ export interface Queued {
    * rather than for the turn's end.
    */
   readonly afterAnswer?: true;
+  /**
+   * A message waiting for the running turn's open tool calls to end before
+   * it goes into the turn (CHD-423).
+   */
+  readonly afterCalls?: true;
 }
 
 export type QueueRow =
@@ -82,15 +87,24 @@ export function queueRowLimit(rows: number): number {
  * `… +N more`, since the oldest goes next.
  */
 export function queueRows(queue: readonly Queued[], limit: number): QueueRow[] {
-  const rows = queue.map(({ text, from, afterAnswer }): QueueRow => {
-    if (from !== undefined) {
-      return { kind: 'message', ...queuedMessage(from, text, afterAnswer) };
-    }
+  const rows = queue.map(
+    ({ text, from, afterAnswer, afterCalls }): QueueRow => {
+      if (from !== undefined) {
+        return {
+          kind: 'message',
+          ...queuedMessage(
+            from,
+            text,
+            afterAnswer ? 'answer' : afterCalls ? 'calls' : undefined,
+          ),
+        };
+      }
 
-    const [first = '', ...rest] = text.split('\n');
+      const [first = '', ...rest] = text.split('\n');
 
-    return { kind: 'prompt', text: rest.length > 0 ? `${first} …` : first };
-  });
+      return { kind: 'prompt', text: rest.length > 0 ? `${first} …` : first };
+    },
+  );
 
   if (rows.length <= limit) {
     return rows;

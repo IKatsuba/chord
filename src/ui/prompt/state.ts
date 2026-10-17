@@ -284,6 +284,7 @@ export function reducePrompt(
           text: action.text,
           from: action.from,
           ...(action.afterAnswer ? { afterAnswer: action.afterAnswer } : {}),
+          ...(action.afterCalls ? { afterCalls: action.afterCalls } : {}),
         };
 
         return {

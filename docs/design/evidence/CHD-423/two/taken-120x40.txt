@@ -1,0 +1,40 @@
+ parser · fake · Fake Small · opened by main 3s ago
+
+ ← from @main
+   ⎿  callchild
+
+ ⏺ Bash(deno task test)
+   ⎿  214 passed, 0 failed
+
+ ← from @main
+   ⎿  Then the docs, once the tests pass.
+
+ ← from @main
+   ⎿  And the changelog after the docs.
+
+ ⏺ Read the message from main.
+
+   Read the message from main.
+
+   The tests pass.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                         Fake Small · medium effort · 1% context used
+    main    fake · Fake Large with a 1M context window · medium
+    parser  fake · Fake Small · medium

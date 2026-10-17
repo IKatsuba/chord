@@ -761,3 +761,70 @@ test('/vim turns vim mode on in insert mode, and off', () => {
     ready,
   );
 });
+
+describe('CHD-423 tester: held queue replacement', () => {
+  test('reasons replace in place, fallback drops the reason, and only taken rows leave', () => {
+    const from = { name: 'main', reachable: true } as const;
+    let state = after(
+      { type: 'connected', sessionId: 'session-1' },
+      { type: 'prompt', turnId: 't1', text: 'working', at: 0 },
+      {
+        type: 'queued',
+        turnId: 'first',
+        text: 'First.',
+        from,
+        afterCalls: true,
+      },
+      {
+        type: 'queued',
+        turnId: 'second',
+        text: 'Second.',
+        from,
+        afterAnswer: true,
+      },
+      { type: 'queued', turnId: 'third', text: 'My prompt.' },
+      {
+        type: 'queued',
+        turnId: 'second',
+        text: 'Second.',
+        from,
+        afterCalls: true,
+      },
+    );
+
+    expect(state.queue).toStrictEqual([
+      { turnId: 'first', text: 'First.', from, afterCalls: true },
+      { turnId: 'second', text: 'Second.', from, afterCalls: true },
+      { turnId: 'third', text: 'My prompt.' },
+    ]);
+
+    state = reduceApp(state, {
+      type: 'queued',
+      turnId: 'first',
+      text: 'First.',
+      from,
+    });
+
+    expect(state.queue[0]).toStrictEqual({
+      turnId: 'first',
+      text: 'First.',
+      from,
+    });
+
+    state = reduceApp(state, {
+      type: 'prompt',
+      turnId: 'second',
+      text: 'Second.',
+      from,
+      into: 't1',
+      at: 1,
+    });
+
+    expect(state.queue.map(({ turnId }) => turnId)).toStrictEqual([
+      'first',
+      'third',
+    ]);
+    expect(state.draft).not.toContain('First.');
+    expect(state.draft).not.toContain('Second.');
+  });
+});

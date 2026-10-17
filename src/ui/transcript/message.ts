@@ -183,21 +183,33 @@ export function wrapLine(line: string, width: number): string[] {
 }
 
 /**
+ * What a message held to go into the running turn waits on: the person's
+ * answer, or the turn's tool calls open as it came (CHD-423).
+ */
+export type QueueHold = 'answer' | 'calls';
+
+/** How a held message's header says what it waits on. */
+const HOLDS: Readonly<Record<QueueHold, string>> = {
+  answer: ' · after your answer',
+  calls: ' · after the running calls',
+};
+
+/**
  * A queued message's row after its `←`: its header, `from @parser · codex: `,
  * and its first line apart, as the row draws the header whole and cuts only
  * the text to the width, so a long name never cuts away why it waits. One
- * held for the person's answer says so in its header.
+ * held to go into the running turn says in its header what it waits on.
  */
 export function queuedMessage(
   from: MessageFrom,
   text: string,
-  afterAnswer = false,
+  held?: QueueHold,
 ): { readonly header: string; readonly text: string } {
   const [first = '', ...rest] = text.split('\n');
   const { word, name, rest: after } = messageHeader(from);
 
   return {
-    header: `${word}${name}${after}${afterAnswer ? ' · after your answer' : ''}: `,
+    header: `${word}${name}${after}${held === undefined ? '' : HOLDS[held]}: `,
     text: rest.length > 0 ? `${first} …` : first,
   };
 }

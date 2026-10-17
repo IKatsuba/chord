@@ -85,6 +85,13 @@
   messages its parent through `send_message`, runs the tests and reports;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
   long-lived on the fake runtime, and messages `parser` twice;
+  `agentcall` opens `parser` on `callchild` and messages it during its
+  running call; `agentcalltwice` sends two messages during that call, to
+  check their queue order. `callchild` runs one call for about three
+  seconds, then reports that the tests pass;
+  `agentcallgated` sends two messages to `parser` on `callchildgated` only
+  after its call opens (`<cwd>/.fake-gate/open`); the call stays open until
+  the test writes `<cwd>/.fake-gate/release`;
   `agentsend` and `codexagentsend` open `parser` on `agentchild` and send
   it a short message and a long markdown one, as Claude and Codex do;
   `agentsendrefused` sends the long one to `parser` without opening it,

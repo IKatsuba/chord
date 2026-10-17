@@ -1,0 +1,24 @@
+      Edit(src/parse/tokenize.ts) · waiting for permission
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ››› Waiting for permission… (6s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Fix the tokenizer) · fake asks                                         │
+│ Edit src/parse/tokenize.ts                                                   │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 2% used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Large with a 1M context window  ✓ replied 10s ago
+    background  ● 1 task asking · 4 monitors running

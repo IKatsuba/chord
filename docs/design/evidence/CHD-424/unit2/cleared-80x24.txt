@@ -1,0 +1,24 @@
+   ⎿  childmonitor
+
+ ⏺ Monitor(parser tests)
+   ⎿  $ sleep 1; echo "ok 1 - parse a string at the end of a line"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ Watching the parser tests.
+
+ ← from parser tests · monitor
+   ⎿  ok 1 - parse a string at the end of a line
+
+ ⏺ Received the message from parser tests · monitor.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main    fake · Fake Large with a 1M context window · medium
+    parser  fake · Fake Large with a 1M context window · medium
+    background  4 monitors running

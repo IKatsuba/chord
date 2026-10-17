@@ -118,10 +118,17 @@ export function chordHeadline(call: ChordCall): Headline {
   }
 }
 
-/** What a `send_message` sent, none for another call or an empty text. */
+/**
+ * What a `send_message` sent, as it was sent, so its markdown reads as a
+ * received message's does, a leading indent's code block included; none
+ * for another call or an empty text.
+ */
 export function sentText(call: ChordCall): string | undefined {
-  return call.tool === 'send_message'
-    ? text(record(call.input).text)
+  const sent =
+    call.tool === 'send_message' ? record(call.input).text : undefined;
+
+  return typeof sent === 'string' && text(sent) !== undefined
+    ? sent
     : undefined;
 }
 

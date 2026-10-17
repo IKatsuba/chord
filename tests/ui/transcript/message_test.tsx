@@ -165,6 +165,17 @@ test('a message sent is drawn as one received is: markdown, wrapped to the row a
   expect(!whole.some((row) => row.includes('to expand'))).toBeTruthy();
 });
 
+test('a message sent that opens with an indented code block keeps it, as the same message received does', async () => {
+  const code = '    const answer = 42;\n\nThat is the fix.';
+  const sentShown = await frame(sent({ input: { to: 'parser', text: code } }));
+  const cameShown = await frame(
+    came({ name: 'parser', reachable: true }, code),
+  );
+
+  expect(body(sentShown)).toStrictEqual(body(cameShown));
+  expect(sentShown).toContain('│ const answer = 42; │');
+});
+
 test('a message sent draws its text at once, with no Waiting… while it goes, and an empty one only its failure', async () => {
   for (const status of ['pending', 'in_progress']) {
     const shown = await frame(sent({}, status));

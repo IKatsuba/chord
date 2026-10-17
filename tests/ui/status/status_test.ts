@@ -514,3 +514,26 @@ describe('CHD-264 tester: grouped failures', () => {
     expect(waitsNotice([behind(2, 'fake', { exited: true })])).toBeUndefined();
   });
 });
+
+test("a tab behind names a child's failure for the child, in the tab; only its own main's is the tab's", () => {
+  const failed = (failure: 'turn' | 'start' | 'exited') => ({
+    unseen: { kind: 'failed' as const, since: 30, failure },
+  });
+  const child = (failure: 'turn' | 'start' | 'exited'): TabBehind => ({
+    ...behind(2, 'fake', failed(failure)),
+    waiter: 'parser',
+  });
+
+  expect(waitsNotice([child('exited')])?.text).toStrictEqual(
+    '✗ parser exited in 2 fake',
+  );
+  expect(waitsNotice([child('turn')])?.text).toStrictEqual(
+    "✗ parser's turn failed in 2 fake",
+  );
+  expect(waitsNotice([child('start')])?.text).toStrictEqual(
+    '✗ parser failed to start in 2 fake',
+  );
+  expect(waitsNotice([behind(2, 'fake', failed('turn'))])?.text).toStrictEqual(
+    "✗ 2 fake's turn failed",
+  );
+});

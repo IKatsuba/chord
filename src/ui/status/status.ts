@@ -144,6 +144,11 @@ export interface TabBehind {
    * the prompt already shows it.
    */
   readonly name?: string;
+  /**
+   * A tab behind's child or member whose wait its own is, by its name: a
+   * failure of one is named for it, in the tab (CHD-264).
+   */
+  readonly waiter?: string;
 }
 
 /** A failure's words after a name, `parser's turn failed`, and in a count. */
@@ -226,10 +231,17 @@ export function waitsNotice(
   }
 
   if (failed[0]) {
+    const tab = failed[0];
+    const words = FAILURE_WORDS[failureOf(tab.wait) ?? 'turn'];
+
+    // A child's in a tab behind is its own, in that tab: `parser exited in
+    // 2 fake`, never the tab's, which would read as a count.
     return notice(
-      `${GLYPHS.failed} ${FAILURE_WORDS[
-        failureOf(failed[0].wait) ?? 'turn'
-      ].named(named(failed[0]))}`,
+      `${GLYPHS.failed} ${
+        tab.waiter === undefined
+          ? words.named(named(tab))
+          : `${words.named(tab.waiter)} in ${named(tab)}`
+      }`,
       'ended',
     );
   }

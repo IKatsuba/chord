@@ -118,6 +118,13 @@ export function chordHeadline(call: ChordCall): Headline {
   }
 }
 
+/** What a `send_message` sent, none for another call or an empty text. */
+export function sentText(call: ChordCall): string | undefined {
+  return call.tool === 'send_message'
+    ? text(record(call.input).text)
+    : undefined;
+}
+
 /**
  * Whether the lines under the call are wrapped at the window's edge rather
  * than cut: what an agent or a team was handed is read as a message is, and
@@ -216,8 +223,9 @@ export function chordLines(call: ChordCall): string[] {
 
       return [`${plural(teams.length, 'team', 'teams')} · ${names(teams)}`];
     }
+    // None for an empty text, so the row says the call's state instead.
     case 'send_message':
-      return (text(input.text) ?? '').split('\n');
+      return text(input.text)?.split('\n') ?? [];
     // Drawn as a table by its own component once served.
     case 'propose_team':
       return [];

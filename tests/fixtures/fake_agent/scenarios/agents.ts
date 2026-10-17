@@ -2,9 +2,10 @@
  * Long-lived agents: a session that opens two on the fake runtime through
  * chord's `open_agent` and messages one of them twice, the child's first
  * turn, which messages its parent twice, a session that closes one and is
- * refused when it messages it after, and sessions that open one on a long
- * instruction, or whose first turn starts a task agent, or whose agent exits
- * or turn fails in it.
+ * refused when it messages it after, sessions that send one a short and a
+ * long message as Claude and Codex do, or one never opened, and sessions
+ * that open one on a long instruction, or whose first turn starts a task
+ * agent, or whose agent exits or turn fails in it.
  */
 import process from 'node:process';
 import * as acp from '@agentclientprotocol/sdk';
@@ -53,6 +54,28 @@ export const LONG_INSTRUCTION = [
   'Tell me only what failed, if anything.',
 ].join('\n');
 
+/** A short message to `parser`, sent before `LONG_MESSAGE`. */
+export const SHORT_MESSAGE = 'Start on the tokenizer; the printer can wait.';
+
+/**
+ * A review sent as a message, with a numbered list, weight and code in it,
+ * longer than a message's six lines at 120 columns, so the sent body folds.
+ */
+export const LONG_MESSAGE = [
+  'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
+  '',
+  '1. The fold counts the blank line after the list; drop it, as ' +
+    '`foldMessage` already does for a received message.',
+  '2. `foldMessage` runs on every render; keep its lines in the same ' +
+    '`useMemo` as the markdown.',
+  '3. The hint names ctrl+o even when the person has rebound it; take the ' +
+    'key from `useHintKey`.',
+  '4. The refusal goes after the body, in the error colour, **never** folded.',
+  '',
+  'Commit each as its own fix, run the targeted tests, and tell me when ' +
+    "the check passes and I'll look again.",
+].join('\n');
+
 /** What a child's last words are when its agent exits mid-turn. */
 export const CRASH_WORDS =
   'fatal: out of memory reading tests/parse/fixtures/huge.json';
@@ -80,6 +103,45 @@ async function openParserOn(turn: Turn, prompt: string): Promise<'end_turn'> {
 
   try {
     await callChord(turn, client, 'open_agent', { ...PARSER_ARGS, prompt });
+    await turn.say('Waiting on parser.');
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn';
+}
+
+/**
+ * Opens `parser` on `agentchild`, which answers, and sends it
+ * `SHORT_MESSAGE` then `LONG_MESSAGE`, its calls in `shape`'s adapter's.
+ */
+async function sendParser(
+  turn: Turn,
+  shape: 'claude' | 'codex',
+): Promise<'end_turn'> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
+  }
+
+  try {
+    await callChord(turn, client, 'open_agent', PARSER_ARGS, undefined, shape);
+
+    for (const text of [SHORT_MESSAGE, LONG_MESSAGE]) {
+      await callChord(
+        turn,
+        client,
+        'send_message',
+        { to: 'parser', text },
+        undefined,
+        shape,
+      );
+      await pause(turn.signal, AGENT_STEP_MS * 10);
+    }
+
     await turn.say('Waiting on parser.');
   } finally {
     await client.close();
@@ -234,6 +296,34 @@ export const AGENTS = {
         text: 'Are you still there?',
       });
       await turn.say('parser is closed, so I will run the tests myself.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // A short message and a long one to `parser`, which answers: Claude's
+  // calls, then Codex's, wrapped as its adapter wraps another server's.
+  agentsend: (turn) => sendParser(turn, 'claude'),
+  codexagentsend: (turn) => sendParser(turn, 'codex'),
+
+  // `LONG_MESSAGE` to `parser`, which was never opened: chord refuses it.
+  async agentsendrefused(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'send_message', {
+        to: 'parser',
+        text: LONG_MESSAGE,
+      });
+      await turn.say('parser is not open, so I will review it myself.');
     } finally {
       await client.close();
     }

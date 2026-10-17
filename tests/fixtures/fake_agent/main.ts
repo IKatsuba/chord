@@ -146,7 +146,9 @@
  * on the fake runtime, and messages `parser` twice; `agentchild` messages
  * its parent twice; `agentsheld` opens `docs` alone and messages it while
  * it waits on its permission; `agentclose` closes `parser` and messages it
- * after;
+ * after; `agentsend` opens `parser` and sends it a short message and a long
+ * markdown one, `codexagentsend` the same in Codex's calls, and
+ * `agentsendrefused` sends the long one to `parser` unopened;
  * `agentlong` opens `parser` on a long markdown instruction;
  * `agenttask`, `agentexit` and `agentfail` open `parser` on `task`, on
  * `crash`, whose agent writes its last words to stderr and exits mid-turn,
@@ -289,6 +291,9 @@ const SCENARIOS = [
   'agentsheld',
   'agentchild',
   'agentclose',
+  'agentsend',
+  'codexagentsend',
+  'agentsendrefused',
   'agentlong',
   'agenttask',
   'agentexit',

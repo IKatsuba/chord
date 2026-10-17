@@ -19,13 +19,13 @@ import {
 } from '../../../src/ui/transcript/message.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
 
-async function frame(entry: Entry): Promise<string> {
+async function frame(entry: Entry, expanded = false): Promise<string> {
   const drawn = await draw(
     <TranscriptEntry
       entry={entry}
       turn={{ status: 'idle' }}
       agent='fake'
-      expanded={false}
+      expanded={expanded}
       width={80}
     />,
   );
@@ -107,11 +107,102 @@ test('a message sent is → to and its recipient, not a call, queued or refused'
   expect(await frame(sent({}, 'in_progress'))).toContain('→ to @parser\n');
   expect(
     await frame(sent({ error: 'parser is closed; it takes no more messages' })),
-  ).toContain('→ to @parser\n  ⎿  parser is closed; it takes no more messages');
+  ).toContain(
+    '→ to @parser\n  ⎿  Run the parser tests.\n     parser is closed; it takes no more messages',
+  );
   // A child's, inside its task block, goes to main.
   expect(
     await frame(sent({ input: { text: 'Found it' }, queued: true })),
   ).toContain('→ to @main · queued');
+});
+
+/** A review of eleven rows at 80 columns, its list items wrapping. */
+const REVIEW = [
+  'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
+  '',
+  '1. The fold counts the blank line after the list; drop it, as ' +
+    '`foldMessage` already does for a received message.',
+  '2. The hint names ctrl+o even when the person has rebound it.',
+  '3. The refusal goes after the body, **never** folded.',
+  '',
+  "Tell me when the check passes and I'll look again.",
+].join('\n');
+
+/** The rows from the entry's `⎿` on, the gutter cut off. */
+function body(shown: string): string[] {
+  const rows = shown.split('\n');
+
+  return rows
+    .slice(rows.findIndex((row) => row.includes('⎿')))
+    .map((row) => row.slice(5).trimEnd())
+    .filter((row, index, rows) => rows.slice(index).some((r) => r !== ''));
+}
+
+test('a message sent is drawn as one received is: markdown, wrapped to the row and folded after six lines', async () => {
+  const input = { to: 'parser', text: REVIEW };
+  const sentRows = body(await frame(sent({ input })));
+  const cameRows = body(
+    await frame(came({ name: 'parser', reachable: true }, REVIEW)),
+  );
+
+  expect(sentRows).toStrictEqual(cameRows);
+  expect(sentRows).toStrictEqual([
+    'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
+    '',
+    '1. The fold counts the blank line after the list; drop it, as foldMessage',
+    '  already does for a received message.',
+    '2. The hint names ctrl+o even when the person has rebound it.',
+    '3. The refusal goes after the body, never folded.',
+    '… +2 lines (ctrl+o to expand)',
+  ]);
+  expect(!sentRows.some((row) => row.includes('...'))).toBeTruthy();
+
+  const whole = body(await frame(sent({ input }), true));
+
+  expect(whole.at(-1)).toStrictEqual(
+    "Tell me when the check passes and I'll look again.",
+  );
+  expect(!whole.some((row) => row.includes('to expand'))).toBeTruthy();
+});
+
+test('a message sent draws its text at once, with no Waiting… while it goes, and an empty one only its failure', async () => {
+  for (const status of ['pending', 'in_progress']) {
+    const shown = await frame(sent({}, status));
+
+    expect(shown).toContain('→ to @parser\n  ⎿  Run the parser tests.');
+    expect(!shown.includes('Waiting…')).toBeTruthy();
+    expect(!shown.includes('Running…')).toBeTruthy();
+  }
+
+  const empty = { to: 'parser', text: '  ' };
+
+  expect(body(await frame(sent({ input: empty }, 'failed')))).toStrictEqual([
+    'Failed',
+  ]);
+  expect(
+    body(await frame(sent({ input: empty, error: 'parser is closed' }))),
+  ).toStrictEqual(['parser is closed']);
+});
+
+test("a refused message keeps its text, folded, and chord's refusal comes after the fold, never folded", async () => {
+  const refusal = 'No agent parser is open in this session';
+  const rows = body(
+    await frame(
+      sent({ input: { to: 'parser', text: REVIEW }, error: refusal }),
+    ),
+  );
+
+  expect(rows.slice(0, 1)).toStrictEqual([
+    'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
+  ]);
+  expect(rows.slice(-2)).toStrictEqual([
+    '… +2 lines (ctrl+o to expand)',
+    refusal,
+  ]);
+  expect(body(await frame(sent({}, 'failed')))).toStrictEqual([
+    'Run the parser tests.',
+    'Failed',
+  ]);
 });
 
 test("a child's message inside its task block is → to @main, not Message(main)", async () => {

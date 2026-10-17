@@ -9,6 +9,7 @@ import {
   headline,
   headlineRows,
   mcpArguments,
+  sentBody,
   summary,
   toneOf,
 } from '../../../../src/ui/transcript/tools/tools.ts';
@@ -517,12 +518,12 @@ test('a failing exit is the failure, in words, without Failed', () => {
   expect(summary(failed(0), false).lines).toStrictEqual(['Failed']);
 });
 
-test('what Team and Open handed over wraps to the row and folds after three lines; a message stays cut', () => {
+test('what Team and Open handed over wraps to the row and folds after three lines', () => {
   const job =
     'Issue 214: a string at the end of a line loses its closing ' +
     'quote. readString stops at the newline before it consumes the quote. ' +
     'Add a test that fails for that reason, fix it, and have it reviewed.';
-  const call = (tool: 'run_team' | 'open_agent' | 'send_message') => ({
+  const call = (tool: 'run_team' | 'open_agent') => ({
     id: 'a',
     status: 'completed' as const,
     chord: {
@@ -550,10 +551,41 @@ test('what Team and Open handed over wraps to the row and folds after three line
     expect(whole.lines.join(' ')).toStrictEqual(job);
     expect(whole.hidden).toStrictEqual(0);
   }
+});
 
+test("a sent message's body is its text in every state, a refusal or Failed after it, and none for an empty text or another call", () => {
+  const call = (status: string, text: string, error?: string): ToolCall => ({
+    id: 'a',
+    status,
+    chord: {
+      tool: 'send_message',
+      input: { to: 'parser', text },
+      ...(error === undefined ? {} : { error }),
+    },
+  });
+
+  for (const status of ['pending', 'in_progress', 'completed'] as const) {
+    expect(sentBody(call(status, 'one\n\ntwo'))).toStrictEqual({
+      text: 'one\n\ntwo',
+    });
+  }
+
+  expect(sentBody(call('completed', 'Hi', 'parser is closed'))).toStrictEqual({
+    text: 'Hi',
+    ending: 'parser is closed',
+  });
+  expect(sentBody(call('failed', 'Hi'))).toStrictEqual({
+    text: 'Hi',
+    ending: 'Failed',
+  });
+  expect(sentBody(call('failed', '  '))).toBeUndefined();
   expect(
-    summary(call('send_message'), false, undefined, false, 40).lines,
-  ).toStrictEqual([job]);
+    sentBody({
+      id: 'b',
+      status: 'completed',
+      chord: { tool: 'close_agent', input: { to: 'parser' } },
+    }),
+  ).toBeUndefined();
 });
 
 test('a call whose questions the box answered draws none of its own lines until ctrl+o', () => {

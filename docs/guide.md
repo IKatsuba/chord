@@ -335,7 +335,8 @@ Release copies it through the system clipboard, or OSC 52 over SSH;
 the highlight stays until a key or click. Clicking the prompt takes the
 keys back from the agents list or background summary without changing
 which agent receives your typing. A picked child's name and colour stay
-on the border.
+on the border. A permission, form, question, picker or ctrl+r search keeps
+the keys when you click the prompt.
 `"copyOnSelect": false` leaves the copy to ctrl+c. To use your
 terminal's own selection instead, hold its modifier while you drag: option in iTerm2, fn in
 Terminal.app, shift in most others. Inside tmux, the wheel and drags

@@ -14,8 +14,14 @@ It builds on the CHD-432 study at the same registry pins,
 [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md), and on
 [`design/CHD-1.md`](design/CHD-1.md) for forms and permissions. Nothing was
 run against a model. Packages, release notes, docs and public repositories
-were read only, and a bundle whose licence forbids decoding was read as plain
-text.
+were read only.
+
+For an agent whose licence limits reverse-engineering (bob, cursor, nova,
+auggie, factory-droid, poolside), the owner's rule of 2026-10-18, recorded on
+CHD-433, holds: its bundle is read as plain text only for what crosses the
+wire, the messages, fields and capabilities it sends and accepts. These pages
+name none of its internals and quote none of its code, cite its docs and
+release notes first where they state a fact, and nothing is deobfuscated.
 
 ## 1. Summary
 
@@ -35,34 +41,34 @@ columns; section 3 uses them too.
 | Agent | Protocol version | SDK | Surfaces |
 | --- | --- | --- | --- |
 | agoragentic-acp | echoes the client's, 1 c [ag1] | none, own JSON-RPC c [ag2] | `initialize` only c [ag3] |
-| auggie |  |  |  |
-| autohand |  |  |  |
+| auggie | ? | TS SDK copy, ? c [au1] | v1 + unstable c [au2] |
+| autohand | 1, the client's echoed c [ah1] | SDK 0.12.0 c [ah2] | v1 + unstable c [ah3] |
 | bob | ? [bo1] | ? [bo2] | v1 + private `_bob/*` n [bo3] |
-| claude-acp |  |  |  |
+| claude-acp | 1, fixed; 2 behind an env c [cl1] | SDK 1.9.0, pinned c [cl2] | v1 + unstable, RFDs, own c [cl3] |
 | cline | 1, whatever is asked c [ci1] | SDK 0.16.1 c [ci2] | v1 + `set_model` c [ci3] |
-| codebuddy-code |  |  |  |
-| codex-acp |  |  |  |
-| deepagents |  |  |  |
-| dimcode |  |  |  |
-| dirac |  |  |  |
-| factory-droid |  |  |  |
-| fast-agent |  |  |  |
-| gemini |  |  |  |
-| github-copilot-cli |  |  |  |
-| glm-acp-agent |  |  |  |
-| grok-build |  |  |  |
-| kilo |  |  |  |
-| minimax-code |  |  |  |
-| minion-code |  |  |  |
-| nova |  |  |  |
-| pi-acp |  |  |  |
-| qoder |  |  |  |
-| qwen-code |  |  |  |
-| sigit |  |  |  |
-| cursor | 1 c (bundle) | SDK 0.14.1 c (bundle) [cu1] | v1 + unstable c (bundle) [cu2] |
+| codebuddy-code | 1 c [cb1] | SDK 1.7.0 c [cb2] | v1 + `set_model`, `resume` c [cb3] |
+| codex-acp | 1; v2 reverted in 2.1.0 c [cx1] | SDK 1.5.0 c [cx2] | v1 + unstable, drafts, own c [cx3] |
+| deepagents | 1, the client's echoed c [da1] | SDK ^0.17.0 (0.17.1) c [da2] | v1 only c [da3] |
+| dimcode | 1 c [dm1] | SDK 0.21.1 c [dm2] | v1 + unstable, `_lody/*` c [dm3] |
+| dirac | 1, always c [di1] | SDK 1.3.0 c [di2] | v1 + unstable and drafts c [di3] |
+| factory-droid | 1 c [dr1] | SDK 1.5 c [dr2] | v1 + `set_model` c [dr3] |
+| fast-agent | 1, the client's echoed c [fa1] | Python acp 0.10.1 c [fa2] | v1 + `userMessageId` c [fa3] |
+| gemini | 1 c [ge1] | SDK 0.16.1, exact pin c [ge2] | v1 + `set_model` c [ge3] |
+| github-copilot-cli | ?; v1 methods n [co1] | ? native, not named n [co1] | v1 + `github.com/copilot/*` n [co2] |
+| glm-acp-agent | 1 c [gl1] | SDK 0.20.0, pinned c [gl2] | v1 + unstable fork, set_model c [gl3] |
+| grok-build | 1 c [gr1] | Rust crate 0.10.4 c [gr2] | v1 + unstable, 300+ `x.ai/*` c [gr3] |
+| kilo | 1, whatever is asked c [ki1] | SDK 0.21.0 c [ki2] | v1 + fork, set_model c [ki3] |
+| minimax-code | 1, whatever is asked c [mm1] | SDK 1.x (≤ 1.4.0), bundled c [mm2] | v1 + fork, `plan_update` c [mm3] |
+| minion-code | min(asked, 1) c [mi1] | Python acp ≥ 0.7.0, unbounded c [mi2] | v1; unstable unreachable c [mi3] |
+| nova | 1 to chord, 2 if asked c [no1] | none, own JSON-RPC c [no2] | v1, a v2 permission, own c [no3] |
+| pi-acp | 1, whatever is asked c [pi1] | SDK 0.26.0 c [pi2] | v1 + terminal auth c [pi3] |
+| qoder | 1, whatever is asked c [qo1] | own schema copy, version ? c [qo2] | v1 + `set_model` c [qo3] |
+| qwen-code | 1 c [qw1] | SDK 0.14.1 c [qw2] | v1 + unstable, large own c [qw3] |
+| sigit | 1 c [si1] | Rust crate 2.2.0 c [si2] | v1 + unstable fork c [si3] |
+| cursor | 1 c | SDK 0.14.1 c [cu1] | v1 + unstable c [cu2] |
 | devin | ? | ? (Rust, crate unknown) n [dv1] | v1, rest ? n [dv2] |
-| fx |  |  |  |
-| goose |  |  |  |
+| fx | 1, whatever is asked c [fx1] | none, own Zig layer c [fx2] | v1 + list, resume, close, RFDs c [fx3] |
+| goose | 1, even if 2 is offered c [go1] | Rust crate 2.2.0 c [go2] | v1 + list, delete, close c [go3] |
 | junie | ? n [ju1] | ? (JVM app) n [ju2] | ◐ "ACP V1" · "ACP V2" n [ju3] |
 | kimi | 1 c [km1] | SDK ^1.3.0 c [km2] | v1 + fork, set_model c [km3] |
 | kiro | 1 n [kr1] | ? · V3 Node @kiro/agent n [kr2] | v1 · V3 adds list, fork n [kr3] |
@@ -76,34 +82,34 @@ columns; section 3 uses them too.
 | Agent | New | Load | Resume | List | Fork | Delete · close |
 | --- | --- | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ Method not found c [ag4] | ✗ c | ✗ c | ✗ c | ✗ c | ✗ · ✗ c |
-| auggie |  |  |  |  |  |  |
-| autohand |  |  |  |  |  |  |
-| bob | ✓ needs login n [bo4] | ✓ full replay n [bo5] | ✓ no replay n [bo5] | ✓ paged n [bo6] | ✗ c (bundle) [bo6] | ✓ · ✓ n, c (bundle) [bo6] |
-| claude-acp |  |  |  |  |  |  |
-| cline | ✓ needs a login c [ci4] | ✓ model back to default c [ci5] | ✗ c [ci6] | ✗ c [ci6] | ✗ c [ci6] | ✗ · ✗ c [ci6] |
-| codebuddy-code |  |  |  |  |  |  |
-| codex-acp |  |  |  |  |  |  |
-| deepagents |  |  |  |  |  |  |
-| dimcode |  |  |  |  |  |  |
-| dirac |  |  |  |  |  |  |
-| factory-droid |  |  |  |  |  |  |
-| fast-agent |  |  |  |  |  |  |
-| gemini |  |  |  |  |  |  |
-| github-copilot-cli |  |  |  |  |  |  |
-| glm-acp-agent |  |  |  |  |  |  |
-| grok-build |  |  |  |  |  |  |
-| kilo |  |  |  |  |  |  |
-| minimax-code |  |  |  |  |  |  |
-| minion-code |  |  |  |  |  |  |
-| nova |  |  |  |  |  |  |
-| pi-acp |  |  |  |  |  |  |
-| qoder |  |  |  |  |  |  |
-| qwen-code |  |  |  |  |  |  |
-| sigit |  |  |  |  |  |  |
-| cursor | ✓ c (bundle) [cu3] | ✓ c (bundle) [cu4] | ✗ c (bundle) | ✓ unstable c (bundle) [cu5] | ✗ c (bundle) | ✗ · ✗ c (bundle) |
+| auggie | ✓; `authRequired` c [au3] | ✓ no plans c [au4] | ✗ c | ✓ cwd filter c [au4] | ✗ c | ✗ · ✗ c |
+| autohand | ✓; `authRequired` r [ah4] | ✓ text only r [ah5] | ◐ the CLI's ids only r [ah6] | ◐ lists turns c [ah6] | ◐ this process only r [ah6] | ✗ · ✗ c |
+| bob | ✓ needs login n [bo4] | ✓ full replay n [bo5] | ✓ no replay n [bo5] | ✓ paged n [bo6] | ✗ c [bo6] | ✓ · ✓ n, c [bo6] |
+| claude-acp | ✓ + `_meta`, no `models` c [cl4] | ✓ replays subagents c [cl5] | ✓ r [cl5] | ✓ paged, cwd filter n [cl6] | ✓; fork point by `_meta` c [cl7] | ✓ · ✓ n [cl8] |
+| cline | ✓ needs a login c [ci4] | ✓ model back to default r [ci5] | ✗ r [ci5] | ✗ c [ci6] | ✗ c [ci6] | ✗ · ✗ c [ci6] |
+| codebuddy-code | ✓ c [cb4] | ✓ full replay c [cb5] | ◐ served, not advertised c [cb6] | ✗ c [cb3] | ✗ c [cb3] | ✗ · ✗ c [cb3] |
+| codex-acp | ✓; roots marked trusted c [cx4] | ✓ with child tree, tasks n [cx5] | ✓ survives a restart r [cx5] | ✓ the person's other threads c [cx6] | ✓; fork point by `_meta` c [cx7] | ◐ archives · ✓ c [cx8] |
+| deepagents | ✓ c [da4] | ◐ memory only r [da5] | ✗ c | ✗ c | ✗ c | ✗ · ✗ c |
+| dimcode | ✓ read-only preset c [dm4] | ✓ c [dm5] | ✓ no replay c [dm5] | ✓ paged c [dm6] | ✓ unstable, at a turn c [dm7] | ✗ · ✓ c [dm8] |
+| dirac | ✓; worktree opt-in c [di4] | ✓ replays its journal c [di5] | ✗ advertised, -32601 c [di6] | ✗ not reachable c [di7] | ✗ c | ✓ · ✓ c [di8] |
+| factory-droid | ✓ signed in only c [dr4] | ✓ full replay c [dr5] | ✓ no replay c [dr6] | ✓ 50 a page c [dr7] | ✗ c | ✗ · ✗ c |
+| fast-agent | ✓ r | ✓ replays text r [fa4] | ◐ alias for load, replays r [fa4] | ✓ cwd filter, paged c [fa5] | ✗ slash command only r [fa6] | ✗ · ✗ slash only r [fa6] |
+| gemini | ✓; signs in itself r [ge4] | ✓ replays history r [ge5] | ✗ c | ✗ c | ✗ c | ✗ · ✗ c |
+| github-copilot-cli | ✓ n [co3] | ✓ since 0.0.410 n [co4] | ✓ n [co5] | ◐ named, not confirmed n [co6] | ? n [co6] | ? · ✓ since 1.0.78 n [co7] |
+| glm-acp-agent | ✓ c [gl4] | ✓ text only c [gl5] | ✓ no replay c [gl5] | ✓ no paging c [gl6] | ◐ unstable, latest only c [gl7] | ✗ · ✓ c [gl8] |
+| grok-build | ✓ no `modes` c [gr4] | ✓ replays history c [gr5] | ✓ unstable, no extra dirs c [gr5] | ✓ not in chat mode c [gr6] | ✗; own `x.ai/session/fork` c [gr6] | ✗ own method · ✓ c [gr6] |
+| kilo | ✓ r [ki4] | ✓ with replay r [ki4] | ✓ no replay r [ki4] | ✓ 100 per page c [ki5] | ✓ last 20 replayed c [ki6] | ✗ · ✓ r [ki4] |
+| minimax-code | ✓ needs a login c [mm4] | ✓ stored cwd only c [mm5] | ✓ stored cwd only c [mm5] | ✓ no subagent sessions c [mm6] | ✓ unstable, stored cwd c [mm5] | ✗ · ✓ c [mm7] |
+| minion-code | ✓ needs a key or login c [mi4] | ✗ in memory only c [mi5] | ✗ unreachable c [mi3] | ✗ unreachable c [mi3] | ✗ unreachable c [mi3] | ✗ · ✗ c [mi5] |
+| nova | ✓ + `systemPrompt` c [no4] | ✓ c [no4] | ✓ c [no4] | ✓ + own search c [no4] | ◐ advertised c [no4] | ✓ · ◐ c [no4] |
+| pi-acp | ✓ absolute cwd c [pi4] | ✓ no thoughts c [pi5] | ✗ c [pi6] | ✓ by cwd, 50 a page c [pi6] | ✗ c [pi6] | ✓ · ✗ c [pi6] |
+| qoder | ✓ needs a login c [qo4] | ✓ replay may trail answer c [qo5] | ✗ no handler c [qo3] | ✓ by cwd, with titles c [qo6] | ✗ no handler c [qo3] | ✗ · ✗ c [qo3] |
+| qwen-code | ✓ c [qw4] | ✓ c [qw4] | ✓ unstable c [qw4] | ✓ unstable c [qw4] | ✗; own `fork_agent` c [qw4] | ✗ · ✗; own methods c [qw4] |
+| sigit | ✓ c [si4] | ✓ full replay c [si5] | ✓ saved sessions only c [si6] | ✓ paged c [si7] | ✓ unstable, latest only c [si8] | ✓ · ✓ c [si9] |
+| cursor | ✓ c [cu3] | ✓ c [cu4] | ✗ c | ✓ unstable c [cu5] | ✗ c | ✗ · ✗ c |
 | devin | ✓ n [dv3] | ✓ n [dv4] | ? n [dv5] | ✓ n [dv6] | ? n [dv7] | ? · ? |
-| fx |  |  |  |  |  |  |
-| goose |  |  |  |  |  |  |
+| fx | ✓ c [fx4] | ✓ full replay c [fx5] | ✓ c [fx5] | ✓ across workspaces c [fx6] | ✗ c | ✗ · ✓ c [fx7] |
+| goose | ✓ needs a provider c [go4] | ✓ full replay c [go5] | ✗ c | ✓ c [go6] | ◐ not advertised c [go7] | ✓ · ✓ c [go8] |
 | junie | ✓ n [ju4] | ? n [ju5] | ? | ? | ? n [ju5] | ? · ? |
 | kimi | ✓ c [km4] | ✓ c [km5] | ✓ c | ✓ c [km6] | ✓ unstable c [km7] | ✓ · ✓ c [km8] |
 | kiro | ✓ n | ◐ n [kr4] | ✗ n [kr5] | ✗ · V3 ✓ n [kr5] | ✗ · V3 ✓ n [kr5] | ✗ · ✗ n [kr5] |
@@ -117,34 +123,34 @@ columns; section 3 uses them too.
 | Agent | Modes | Models | Config options | Effort |
 | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ c | ✗ c | ✗ c | ✗ c |
-| auggie |  |  |  |  |
-| autohand |  |  |  |  |
-| bob | ✓ `set_mode` n, c (bundle) [bo7] | ✗ n [bo8] | ? [bo8] | ✗ c (bundle) [bo8] |
-| claude-acp |  |  |  |  |
-| cline | ✓ plan · act c [ci7] | ◐ `provider` select first c [ci8] | ✓ five, one boolean c [ci8] | ✗ `--thinking` flag only c [ci9] |
-| codebuddy-code |  |  |  |  |
-| codex-acp |  |  |  |  |
-| deepagents |  |  |  |  |
-| dimcode |  |  |  |  |
-| dirac |  |  |  |  |
-| factory-droid |  |  |  |  |
-| fast-agent |  |  |  |  |
-| gemini |  |  |  |  |
-| github-copilot-cli |  |  |  |  |
-| glm-acp-agent |  |  |  |  |
-| grok-build |  |  |  |  |
-| kilo |  |  |  |  |
-| minimax-code |  |  |  |  |
-| minion-code |  |  |  |  |
-| nova |  |  |  |  |
-| pi-acp |  |  |  |  |
-| qoder |  |  |  |  |
-| qwen-code |  |  |  |  |
-| sigit |  |  |  |  |
-| cursor | agent · plan · ask c (bundle) [cu6] | ✓ c (bundle) [cu7] | mode · model c (bundle) [cu7] | ◐ opt-in `_meta` c (bundle) [cu7] |
+| auggie | default · ask c [au5] | ✓ legacy, may be null c [au5] | ✗ c | ✗ over ACP c [au5] |
+| autohand | ✓ six, legacy r [ah7] | ✓ legacy, next run r [ah7] | ✓ nine selects r [ah7] | ◐ no `thought_level` r [ah8] |
+| bob | ✓ `set_mode` n, c [bo7] | ✗ n [bo8] | ? [bo8] | ✗ c [bo8] |
+| claude-acp | ✓ five, `auto` per model n [cl9] | ◐ option only, no set_model c [cl3] | ✓ five incl. effort, fast c [cl10] | ✓ `thought_level` c [cl10] |
+| cline | ✓ plan · act r [ci7] | ◐ `provider` select first c [ci8] | ✓ five, one boolean c [ci8] | ✗ `--thinking` flag only c [ci9] |
+| codebuddy-code | ✓ seven permission modes c [cb7] | ✓ c [cb7] | ✓ six selects and more c [cb7] | ✓ `thought_level` c [cb7] |
+| codex-acp | ✓ four, `agent` default c [cx9] | ✓ + `set_model` c [cx10] | ✓ five incl. Plan, Fast c [cx11] | ✓ `thought_level` c [cx11] |
+| deepagents | ◐ three, no effect r [da6] | ✗ fixed by `--model` r [da6] | ✗ r | ✗ r |
+| dimcode | agent · goal c [dm9] | ✓ c [dm10] | mode, model, effort, permission c [dm11] | ✓ per model c [dm11] |
+| dirac | plan · act c [di9] | ✗; `model` option c [di10] | mode, model, effort, booleans c [di11] | ◐ two `thought_level` c [di11] |
+| factory-droid | 5, org-capped c [dr8] | ✓ c [dr9] | autonomy · model · effort c [dr8] | ✓ per model c [dr8] |
+| fast-agent | ◐ one per agent r [fa7] | ✗ `/model` only r [fa7] | ✗ r | ✗ fixed by the env var r [fa7] |
+| gemini | 4 by `set_mode`; text update c [ge6] | ✓ `models`, `auto` + ids r [ge7] | ✗ r | ✗ r |
+| github-copilot-cli | agent · plan · autopilot n [co8] | ✓ option, with metadata n [co9] | model, effort, agent… n [co10] | ✓ option; `--effort` flag n [co11] |
+| glm-acp-agent | default · accept_edits · bypass r [gl9] | ✓ r [gl10] | thought_level · mode · model c [gl11] | ✓ per model c [gl11] |
+| grok-build | ◐ undeclared, `plan` works c [gr7] | ✓ unstable `models` c [gr8] | model · reasoning_effort c [gr9] | ✓ five levels c [gr9] |
+| kilo | ✓ as option `mode` r [ki7] | ✓ as option `model` r [ki7] | ✓ model, effort, mode c [ki8] | ✓ `thought_level` r [ki7] |
+| minimax-code | ◐ default · plan, next prompt c [mm8] | ✓ `model` option c [mm9] | ✓ three, one process-wide c [mm10] | ✓ `thinkingEffort` c [mm10] |
+| minion-code | ✓ five, legacy c [mi6] | ◐ after login; `set_model` ✗ c [mi7] | ✗ c | ✗ c |
+| nova | ◐ set_mode taken c [no5] | ◐ set_model taken c [no5] | ✗ r [no6] | ✗ r [no6] |
+| pi-acp | ◐ thinking levels c [pi7] | ✓ `model` option c [pi8] | ✓ model · thought_level c [pi8] | ✓ `thought_level` c [pi8] |
+| qoder | ✓ four, legacy c, n [qo7] | ✓ legacy + `set_model` c [qo8] | ◐ only in a set's answer c [qo9] | ✗ c [qo9] |
+| qwen-code | ✓ `set_mode` and option c [qw5] | ✓; inside change private c [qw5] | mode, model, effort c [qw5] | ◐ `thought_level`, per model c [qw5] |
+| sigit | Manual · Auto · Plan c [si10] | ◐ config option only c [si11] | model · inference · mode c [si12] | ✗ c |
+| cursor | agent · plan · ask n, c [cu6] | ✓ c [cu7] | mode · model c [cu7] | ◐ opt-in `_meta` c [cu7] |
 | devin | ✓ six, shape ? n [dv8] | ✓ config option n [dv9] | model · effort · speed · dirs n [dv10] | ✓ option, category ? n [dv11] |
-| fx |  |  |  |  |
-| goose |  |  |  |  |
+| fx | auto · ask · full-access c [fx8] | ✗ set_model; config only c [fx9] | provider · model · mode · effort c [fx9] | ✓ `effort` c [fx10] |
+| goose | auto · approve · smart · chat c [go9] | ✗ set_model; config only c [go10] | provider · mode · model · effort c [go10] | ✓ `thinking_effort` c [go11] |
 | junie | ◐ /plan, /goal as text n [ju6] | ✓ config option n [ju7] | ◐ model · brave_mode n [ju8] | ? n [ju9] |
 | kimi | default · plan · auto · yolo c [km9] | ◐ option only c [km10] | model · thinking · mode c [km11] | ✓ `thinking` c [km11] |
 | kiro | ✓ agent configs n [kr6] | ✓ · V3 option only n [kr7] | ? · V3 ✓ n [kr8] | flag only · V3 ◐ n [kr8] |
@@ -158,34 +164,34 @@ columns; section 3 uses them too.
 | Agent | Text | Image | Audio | Resource | Resource link |
 | --- | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ no `session/prompt` c [ag4] | ✗ c | ✗ c | ✗ c | ✗ c |
-| auggie |  |  |  |  |  |
-| autohand |  |  |  |  |  |
-| bob | ✓ n | ✓ n [bo9] | ? [bo9] | ✓ c (bundle) [bo9] | ? [bo9] |
-| claude-acp |  |  |  |  |  |
+| auggie | ✓ c | ✓ c | ✗ c | not advertised; ? c [au6] | ◐ "file mentions" n [au6] |
+| autohand | ✓ c | ◐ never reaches the model c [ah9] | ✗ placeholder text c [ah9] | ✓ inlined c [ah10] | ✓ read, inlined c [ah10] |
+| bob | ✓ n | ✓ n [bo9] | ? [bo9] | ✓ c [bo9] | ? [bo9] |
+| claude-acp | ✓ c [cl11] | ✓ base64 · URL c [cl11] | ✗ dropped c [cl11] | ◐ text only c [cl11] | ◐ as a markdown link c [cl11] |
 | cline | ✓ c [ci10] | ✗ though advertised c [ci10] | ✗ c [ci10] | ✗ c [ci10] | ✗ c [ci10] |
-| codebuddy-code |  |  |  |  |  |
-| codex-acp |  |  |  |  |  |
-| deepagents |  |  |  |  |  |
-| dimcode |  |  |  |  |  |
-| dirac |  |  |  |  |  |
-| factory-droid |  |  |  |  |  |
-| fast-agent |  |  |  |  |  |
-| gemini |  |  |  |  |  |
-| github-copilot-cli |  |  |  |  |  |
-| glm-acp-agent |  |  |  |  |  |
-| grok-build |  |  |  |  |  |
-| kilo |  |  |  |  |  |
-| minimax-code |  |  |  |  |  |
-| minion-code |  |  |  |  |  |
-| nova |  |  |  |  |  |
-| pi-acp |  |  |  |  |  |
-| qoder |  |  |  |  |  |
-| qwen-code |  |  |  |  |  |
-| sigit |  |  |  |  |  |
-| cursor | ✓ c (bundle) | ✓ c (bundle) | ✗ c (bundle) | ✓ inlined c (bundle) [cu8] | ✓ inlined c (bundle) [cu8] |
+| codebuddy-code | ✓ c [cb8] | ✓ base64 or http c [cb8] | ✗ dropped silently c [cb8] | ◐ text only c [cb8] | ◐ as link text c [cb8] |
+| codex-acp | ✓ c [cx12] | ✓ c [cx12] | ✗ dropped c [cx12] | ✓ text · blobs c [cx12] | ◐ text link only c [cx12] |
+| deepagents | ✓ c | ◐ always `image/png` c [da7] | ✗ c | ✓ inlined c [da8] | ✗ `[object Object]` c [da8] |
+| dimcode | ✓ c | ✓ c [dm12] | ✗ refused c [dm12] | ✓ inlined c [dm12] | ◐ name only c [dm12] |
+| dirac | ✓ c | ✓ c | ✗ c | ◐ text dropped c [di12] | ✗ dropped c [di12] |
+| factory-droid | ✓ c | ✓ c | ✗ dropped c [dr10] | ✓ as text c [dr10] | ✓ as text c [dr10] |
+| fast-agent | ✓ c | ✓ c [fa8] | ✗ placeholder text c [fa8] | ✓ text inlined c [fa8] | ◐ path not decoded c [fa9] |
+| gemini | ✓ c | ✓ c [ge8] | ✓ inline c [ge8] | ✓ joins the prompt c [ge8] | ◐ `file://` only; may ask c [ge8] |
+| github-copilot-cli | ✓ n [co12] | ? | ? | ◐ `embeddedContext` named n [co12] | ? |
+| glm-acp-agent | ✓ c | ✓ c [gl12] | ✗ a text note c [gl12] | ✓ text c [gl12] | ◐ name only c [gl12] |
+| grok-build | ✓ c | ◐ taken, not advertised c [gr10] | ✗ invalid_params c [gr10] | ✓ c | ✓ also as `@path` c [gr10] |
+| kilo | ✓ c [ki9] | ✓ c [ki9] | ✗ c [ki9] | ✓ c [ki9] | ✓ `file://`, `zed://` c [ki9] |
+| minimax-code | ✓ c [mm11] | ✗ refused c [mm11] | ✗ refused c [mm11] | ✗ refused c [mm11] | ◐ as a text line c [mm11] |
+| minion-code | ✓ joined by newlines c [mi8] | ✗ dropped c [mi8] | ✗ dropped c [mi8] | ✗ dropped c [mi8] | ✗ dropped c [mi8] |
+| nova | ✓ c [no7] | ✓ c [no7] | ✗ c [no7] | ✓ c [no7] | ? [no7] |
+| pi-acp | ✓ no separator c [pi9] | ✓ c [pi9] | ✗ marker text c [pi9] | ◐ inlined, opt-in c [pi9] | ◐ `[Context] <uri>` c [pi9] |
+| qoder | ✓ c [qo10] | ✓ c, n [qo10] | ✓ as inline data c [qo10] | ◐ as an `@uri` mention c [qo10] | ✓ `file://` read, else text c [qo10] |
+| qwen-code | ✓ c | ✓ c [qw6] | ✓ inline, clamped c [qw6] | ✓ embedded c [qw6] | ◐ `file://` as @-path c [qw6] |
+| sigit | ✓ c | ✓ if the model takes it c [si13] | ✓ if the model takes it c [si13] | ✓ inlined c [si13] | ✓ `file:` read from disk c [si13] |
+| cursor | ✓ c | ✓ c | ✗ c | ✓ inlined c [cu8] | ✓ inlined c [cu8] |
 | devin | ✓ n | ? | ? | ? | ◐ inferred n [dv12] |
-| fx |  |  |  |  |  |
-| goose |  |  |  |  |  |
+| fx | ✓ c | ✓ c | ✗ c | ✓ inlined c [fx11] | ✗ dropped silently c [fx11] |
+| goose | ✓ c | ✓ c | ✗ dropped c [go12] | ◐ text only c [go12] | ✓ inlined if readable c [go12] |
 | junie | ✓ n [ju10] | ? | ? | ? | ? |
 | kimi | ✓ c | ✓ c | ✗ c | ✓ text only c [km12] | ◐ as a path c [km12] |
 | kiro | ✓ n | ✓ n [kr1] | ? | ? | ? |
@@ -199,34 +205,34 @@ columns; section 3 uses them too.
 | Agent | Kinds | `rawInput` | `rawOutput` | Content: text · diff · terminal | Locations | Status lifecycle |
 | --- | --- | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ no updates sent c [ag5] | ✗ c | ✗ c | ✗ · ✗ · ✗ c | ✗ c | ✗ c |
-| auggie |  |  |  |  |  |  |
-| autohand |  |  |  |  |  |  |
-| bob | ? [bo10] | ✓ c (bundle) [bo10] | ✓ `{result}` c (bundle) [bo10] | ◐ · ✓ · ✗ n, c (bundle) [bo10] | ◐ edits n [bo10] | ◐ can stick `pending` c (bundle) [bo11] |
-| claude-acp |  |  |  |  |  |  |
-| cline | all but `switch_mode` c [ci11] | ✓ c [ci11] | ✓ only at the end c [ci11] | ✗ · ✗ · ✗ c [ci11] | ✗ c [ci11] | `in_progress` only if asked c [ci12] |
-| codebuddy-code |  |  |  |  |  |  |
-| codex-acp |  |  |  |  |  |  |
-| deepagents |  |  |  |  |  |  |
-| dimcode |  |  |  |  |  |  |
-| dirac |  |  |  |  |  |  |
-| factory-droid |  |  |  |  |  |  |
-| fast-agent |  |  |  |  |  |  |
-| gemini |  |  |  |  |  |  |
-| github-copilot-cli |  |  |  |  |  |  |
-| glm-acp-agent |  |  |  |  |  |  |
-| grok-build |  |  |  |  |  |  |
-| kilo |  |  |  |  |  |  |
-| minimax-code |  |  |  |  |  |  |
-| minion-code |  |  |  |  |  |  |
-| nova |  |  |  |  |  |  |
-| pi-acp |  |  |  |  |  |  |
-| qoder |  |  |  |  |  |  |
-| qwen-code |  |  |  |  |  |  |
-| sigit |  |  |  |  |  |  |
-| cursor | 9, `switch_mode` too c (bundle) [cu9] | ✓ trimmed c (bundle) [cu9] | ✓ per tool c (bundle) [cu9] | ◐ · ✓ · ✗ c (bundle) [cu9] | ✓ c (bundle) | pending → completed c (bundle) [cu10] |
+| auggie | `other`; rest ? c [au7] | ? | ✓ output only here c [au7] | ◐ · ✓ · ✗ c [au7] | ? | pending → completed c [au8] |
+| autohand | 8 from a name map c [ah11] | ✓ c [ah11] | ✓ result text c [ah11] | ✓ · ✗ · ◐ c [ah12] | ◐ path as given c [ah11] | pending → completed/failed c [ah13] |
+| bob | ? [bo10] | ✓ c [bo10] | ✓ `{result}` c [bo10] | ◐ · ✓ · ✗ n, c [bo10] | ◐ edits n [bo10] | ◐ can stick `pending` c [bo11] |
+| claude-acp | 8 incl. `switch_mode` n [cl12] | ✓ `{}` first, then partial n [cl12] | ✓ n [cl12] | ✓ · ✓ · ✗ for chord n [cl12] | ✓ n [cl12] | Bash `pending` to the end r [cl13] |
+| cline | all but `switch_mode` c [ci11] | ✓ c [ci11] | ✓ only at the end c [ci11] | ✗ · ✗ · ✗ c [ci11] | ✗ c [ci11] | `in_progress` if approved c [ci12] |
+| codebuddy-code | seven of ten c [cb9] | ✓ c [cb9] | ✓ Bash output only here c [cb10] | ✓ · ✓ · ◐ background only c [cb10] | ✓ path, line c [cb9] | ✓ Bash `in_progress` 1 s c [cb10] |
+| codex-acp | 8 incl. `switch_mode` n [cx13] | ✓ n [cx13] | ✓ n [cx13] | ✓ · ✓ · id, no terminal n [cx13] | ✓ n [cx13] | `in_progress` while asking n [cx13] |
+| deepagents | read, search, edit, execute… c [da9] | ✗ sent as `input` c [da9] | ✗ sent as `output` c [da9] | ◐ · ✗ · ✗ c [da9] | ✓ read, write, edit c [da9] | ends `error` or `cancelled` c [da10] |
+| dimcode | 10, guessed from name c [dm13] | ✓ c [dm13] | ✓ whole result c [dm13] | ✓ · ✗ · ✓ if declared c [dm13] | ◐ permission only c [dm13] | in_progress → end c [dm13] |
+| dirac | edit, read, search, execute… c [di13] | ✓ c [di13] | ✓ c [di13] | ✗ · ✓ · ✗ c [di13] | ✓ path and line c [di13] | full; cancel ends `failed` c [di13] |
+| factory-droid | 6, by tool name c [dr11] | ✓ c | ◐ c [dr11] | ✓ · ✓ · opt-in `_meta` c [dr12] | ◐ edit and read c [dr11] | pending → completed c [dr13] |
+| fast-agent | inferred from the name c [fa10] | ✓ c [fa10] | ✓ text or error c [fa10] | ✓ · ◐ · ✗ c [fa10] | ✗ c [fa10] | ◐ r [fa11] |
+| gemini | 10 kinds; agent is `think` c [ge9] | ✗ c [ge9] | ✗ c [ge9] | ✓ · ✓ `_meta.kind` · ✗ c [ge9] | ✓ c [ge9] | asked: `pending` → end c [ge9] |
+| github-copilot-cli | ? | ◐ named n [co13] | ◐ named n [co13] | ? · ✓ every edit · ? n [co13] | ◐ named n [co13] | ? |
+| glm-acp-agent | read, edit, execute, fetch, other c [gl13] | ✓ elided c [gl13] | ✓ elided c [gl13] | ✓ · ✗ · ✗ c [gl13] | ✓ files, URLs c [gl13] | pending → in_progress → end c [gl13] |
+| grok-build | 7, no delete or move c [gr11] | ✓ c [gr11] | ◐ some tools c [gr11] | ✓ · ✓ · ✗ c [gr12] | ✓ file tools c [gr11] | pending → in_progress → end c [gr11] |
+| kilo | execute, edit, read, search… c [ki10] | ✓ + workdir c [ki10] | ✓ c [ki10] | ✓ · ✓ · ✗ c [ki10] | ✓ c [ki10] | pending → in_progress → end c [ki10] |
+| minimax-code | all ten, from the name c [mm12] | ✓ c [mm12] | ✓ output only here c [mm12] | ◐ · ◐ excerpts · ✗ c [mm12] | ✓ c [mm12] | ✓; ids restart each turn c [mm13] |
+| minion-code | six + `other` c [mi9] | ✓ c [mi9] | ✓ output only here c [mi9] | ◐ code calls · ✗ · ✗ c [mi9] | ✗ c [mi9] | in_progress → completed c [mi10] |
+| nova | ? [no8] | ✓ c [no8] | ? [no8] | ? · ? · ✗ c [no8] | ✓ c [no8] | ? `pending` at an ask c [no8] |
+| pi-acp | read · edit · execute · other c [pi10] | ✓ streamed c [pi10] | ✓ not on edits c [pi10] | ✓ · ✓ · ✓ c [pi10] | ✓ from path args c [pi10] | pending → completed c [pi10] |
+| qoder | ACP kinds, one as `think` c [qo11] | ✓ c [qo11] | ✓ result as a string c [qo11] | ✓ · ◐ in asks · ? c [qo11] | ✓ from path args c [qo11] | late; live status ? c [qo12] |
+| qwen-code | core's kinds, `switch_mode` c [qw7] | ✓ c [qw7] | ✓ when shown c [qw7] | ✓ · ✓ · ✗ c [qw7] | ✓ c [qw7] | full; extra `_meta` update c [qw7] |
+| sigit | 8 kinds, status as `think` c [si14] | ✓ c [si14] | ✓ c [si14] | ✓ · ✓ · ✓ if declared c [si14] | ✓ file tools c [si14] | full, `failed` too c [si14] |
+| cursor | 9, `switch_mode` too c [cu9] | ✓ trimmed c [cu9] | ✓ per tool c [cu9] | ◐ · ✓ · ✗ c [cu9] | ✓ c | pending → completed c [cu10] |
 | devin | ? | ? | ? | ? · ? · ◐ n [dv13] | ? | ◐ n [dv14] |
-| fx |  |  |  |  |  |  |
-| goose |  |  |  |  |  |  |
+| fx | 6 kinds, skills `other` c [fx12] | ✓ c | ✗ c [fx12] | ✓ · ✗ · ✗ c [fx13] | ✗ c | pending → in_progress → done c [fx14] |
+| goose | none on its own calls c [go13] | ✓ c | ✓ c | ✓ · ✗ · ✗ c [go13] | ✓ c [go13] | pending → done c [go14] |
 | junie | ? | ? | ? | ? · ? · ? | ? | ✓ pending first n [ju11] |
 | kimi | 6, by tool name c [km13] | ✓ c | ✓ c | ✓ · ✓ · ◐ c [km14] | ✓ absolute c | full, `pending` lazy c [km13] |
 | kiro | ? | ? n [kr9] | ? n [kr9] | ? · ? · ? | ? | ? · V3 failureReason n [kr9] |
@@ -240,34 +246,34 @@ columns; section 3 uses them too.
 | Agent | Permission options | On cancel or timeout | Elicitation: form · URL | Plan |
 | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ no requests sent c [ag5] | ✗ c | ✗ · ✗ c | ✗ c |
-| auggie |  |  |  |  |
-| autohand |  |  |  |  |
-| bob | once · always · reject n [bo12] | cancelled c (bundle) [bo12] | ✓ · ? c (bundle) [bo13] | ✓ n [bo14] |
-| claude-acp |  |  |  |  |
-| cline | once · always · reject c [ci13] | reject · no timeout c [ci13] | ✗ · ✗ c [ci14] | ✗ c [ci15] |
-| codebuddy-code |  |  |  |  |
-| codex-acp |  |  |  |  |
-| deepagents |  |  |  |  |
-| dimcode |  |  |  |  |
-| dirac |  |  |  |  |
-| factory-droid |  |  |  |  |
-| fast-agent |  |  |  |  |
-| gemini |  |  |  |  |
-| github-copilot-cli |  |  |  |  |
-| glm-acp-agent |  |  |  |  |
-| grok-build |  |  |  |  |
-| kilo |  |  |  |  |
-| minimax-code |  |  |  |  |
-| minion-code |  |  |  |  |
-| nova |  |  |  |  |
-| pi-acp |  |  |  |  |
-| qoder |  |  |  |  |
-| qwen-code |  |  |  |  |
-| sigit |  |  |  |  |
-| cursor | once · always · reject c (bundle) [cu11] | rejected; no timeout c (bundle) [cu11] | ✗ · ✗ c (bundle) [cu12] | ◐ CreatePlan only c (bundle) [cu13] |
+| auggie | once · reject c [au9] | error denies c [au9] | ✗ · ✗ c | ✓ task-list tools c [au10] |
+| autohand | once · always · reject, opt-in r [ah14] | ?; chord's SDK refuses all r [ah14] | ✗ · ✗ r | ✓ todo and plan tools r [ah15] |
+| bob | once · always · reject n [bo12] | cancelled c [bo12] | ✓ · ? c [bo13] | ✓ n [bo14] |
+| claude-acp | once · always · reject once n [cl14] | aborts tool · no timeout n [cl14] | ✓ · ✓ c [cl15] | ✓ + `plan_update` r [cl16] |
+| cline | once · always · reject c [ci13] | reject · no timeout c [ci13] | ✗ · ✗ r [ci14] | ✗ r [ci15] |
+| codebuddy-code | ◐ allow · reject r [cb11] | ? · timeout ends the turn c [cb12] | ✓ · ✗ c [cb13] | ✓ from `TodoWrite` c [cb14] |
+| codex-acp | all four kinds n [cx14] | fails closed · no timeout n [cx14] | ✓ · ✓ c [cx15] | ✓ + `plan_update` n [cx16] |
+| deepagents | never asks r [da11] | never asks r [da11] | ✗ · ✗ r | ✗ never sent r [da12] |
+| dimcode | all four c [dm14] | rejected; no timeout c [dm14] | ✓ standard · ✗ c [dm15] | ✓ from TodoWrite c [dm16] |
+| dirac | all four; always to a file c [di14] | rejected; no timeout c [di14] | ✓ · ✗ c [di15] | ◐ plan cards only c [di16] |
+| factory-droid | once · always · reject c [dr14] | not withdrawn c [dr14] | ✓ · sign-in only c, r [dr15] | ✓ always sent c [dr16] |
+| fast-agent | four kinds r [fa12] | ? | ✗ · ✗ r | ✗ r |
+| gemini | once · always · reject_once c [ge10] | call fails; no timeout c [ge10] | ✗ · ✗ r [ge11] | ✗ r [ge11] |
+| github-copilot-cli | once · always; reject ? n [co14] | ? | ? · ? n [co15] | ✓ live plan n [co16] |
+| glm-acp-agent | once · reject r [gl14] | rejected; no timeout c [gl14] | ✗ · ✗ r [gl15] | ✗ todos as a tool call r [gl16] |
+| grok-build | once · always · reject c [gr13] | cancelled; backstop timeout n [gr14] | ✗ · ✗; own `x.ai/mcp/elicit` c [gr15] | ✓ todo list c [gr16] |
+| kilo | once · always · reject r [ki11] | reject r [ki11] | ✗ · ✗ r [ki12] | ✗ r [ki13] |
+| minimax-code | once · always · reject c [mm14] | deny · no timeout c [mm14] | ✓ · ✗ c [mm15] | ◐ markdown `plan_update` c [mm16] |
+| minion-code | once · always · reject c [mi11] | **allow** · no timeout c [mi11] | ✗ · ✗ c | ✗ `todo_write` is a call c [mi12] |
+| nova | once · reject r [no9] | rejected; timeout ? c [no10] | ✗ · ✗; own method r [no11] | ◐ one entry r [no12] |
+| pi-acp | none for tools c [pi11] | ? | ✗ · ✗ c [pi11] | ✗ c |
+| qoder | once · always · Reject c [qo13] | rejects after 30 s c [qo13] | ✗ · ✗ c [qo14] | ✗ plan in a permission c [qo15] |
+| qwen-code | once · always ×3 · reject c [qw8] | cancel; no timeout c [qw8] | ✗ · ✗; questions in `_meta` c [qw8] | ✓ from its todos c [qw9] |
+| sigit | all four c [si15] | cancelled ends turn; no timeout c [si15] | ✗ · ◐ in authenticate c [si16] | ✓ c [si17] |
+| cursor | once · always · reject n, c [cu11] | rejected; no timeout c [cu11] | ✗ · ✗ n, c [cu12] | ◐ plan mode only c [cu13] |
 | devin | once · session · 2 always n [dv15] | ? | ✓ · ? n [dv16] | ? |
-| fx |  |  |  |  |
-| goose |  |  |  |  |
+| fx | once · session · reject c [fx15] | deny; no timeout c [fx15] | ◐ · ◐ MCP servers only c [fx16] | ✗ c |
+| goose | all four kinds c [go15] | tool cancelled; no timeout c [go15] | ✓ · ✗ cancelled inside c [go16] | ✗ c [go17] |
 | junie | once · always n [ju12] | ? | ◐ · ? n [ju13] | ? |
 | kimi | once · always · reject c [km15] | cancelled; no timeout c [km15] | ✓ · ✗ c [km16] | ✓ todo list c [km17] |
 | kiro | own _meta · V3 all four n [kr10] | ? n [kr10] | ? · ? n [kr11] | ? n [kr11] |
@@ -281,34 +287,34 @@ columns; section 3 uses them too.
 | Agent | Cancel stops | Steering | Subagents | Usage: meter · answer · cost |
 | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ error line with no id c [ag6] | ✗ c | ✗ c | ✗ · ✗ · ✗ c |
-| auggie |  |  |  |  |
-| autohand |  |  |  |  |
-| bob | ◐ turn, pending ask c (bundle) [bo12] | ✗ refused c (bundle) [bo15] | as one call c (bundle) [bo16] | ✗ · ✗ · ✗ c (bundle) [bo17] |
-| claude-acp |  |  |  |  |
-| cline | ◐ lost after a 2nd prompt c [ci16] | ✗ queued c [ci16] | flat in parent c [ci17] | ✗ · ✗ · ✗ c [ci18] |
-| codebuddy-code |  |  |  |  |
-| codex-acp |  |  |  |  |
-| deepagents |  |  |  |  |
-| dimcode |  |  |  |  |
-| dirac |  |  |  |  |
-| factory-droid |  |  |  |  |
-| fast-agent |  |  |  |  |
-| gemini |  |  |  |  |
-| github-copilot-cli |  |  |  |  |
-| glm-acp-agent |  |  |  |  |
-| grok-build |  |  |  |  |
-| kilo |  |  |  |  |
-| minimax-code |  |  |  |  |
-| minion-code |  |  |  |  |
-| nova |  |  |  |  |
-| pi-acp |  |  |  |  |
-| qoder |  |  |  |  |
-| qwen-code |  |  |  |  |
-| sigit |  |  |  |  |
-| cursor | turn and subagents c (bundle) [cu14] | ✗; a prompt cancels c (bundle) [cu15] | draft shape c (bundle) [cu16] | ✗ · ✗ · ✗ c (bundle) |
+| auggie | the whole loop c [au11] | ✗; a prompt runs twice c [au11] | as one call c [au12] | ✗ · ✗ · ✗ c |
+| autohand | kills the CLI run r [ah16] | ✗ queued r [ah16] | ✗ r | ✗ · ✗ · ✗ r [ah17] |
+| bob | ◐ turn, pending ask c [bo12] | ✗ refused c [bo15] | as one call c [bo16] | ✗ · ✗ · ✗ c [bo17] |
+| claude-acp | ◐ foreground only n [cl17] | ✓ `_session/steering` c [cl18] | RFD subagent_update r [cl19] | ✓ · ✓ · at the end c [cl20] |
+| cline | ◐ lost after a 2nd prompt r [ci16] | ✗ queued r [ci16] | flat in parent r [ci17] | ✗ · ✗ · ✗ r [ci18] |
+| codebuddy-code | ◐ turn; background ? c [cb15] | ✗ queued c [cb16] | flat, `parentToolCallId` r c [cb17] | ✓ · ✗ · ✗ r c [cb18] |
+| codex-acp | ◐ root turn only c [cx17] | ✓; ignores `promptRequired` c [cx18] | draft subagent_spawned n [cx19] | last call · whole turn · ✗ c [cx20] |
+| deepagents | newest stream c [da13] | ✗; a prompt runs alongside r [da13] | as one call r [da14] | ✗ · ✗ · ✗ r |
+| dimcode | ◐ run, permissions, terminals c [dm17] | own `_lody`; a prompt refused c [dm18] | as one call; `_lody` opt-in c [dm19] | ✓ · ✗ · ✓ 0 if unpriced c [dm20] |
+| dirac | turn, asks, subagents c [di17] | own `whisper`; busy refused c [di18] | ◐ one call, flat c [di19] | ✓ · ◐ session total · ◐ c [di20] |
+| factory-droid | turn c [dr17] | ✗ refused c [dr18] | as one call c [dr19] | ✗ · ✗ · ✗ c [dr20] |
+| fast-agent | the newest turn task r [fa13] | ✗; a prompt runs alongside r [fa13] | ◐ flat, `parentToolCallId` r [fa14] | ✗ · ✗ · ✗; `_meta` line r [fa15] |
+| gemini | prompt, tool, subagent c [ge12] | ✗; 2nd prompt aborts r [ge13] | as one `think` call r [ge14] | ✓ · ✓ no thinking · ✗ r [ge15] |
+| github-copilot-cli | the turn; scope ? n [co17] | ? | ◐ subagent ids n [co18] | ✓ · ✓ · ? n [co19] |
+| glm-acp-agent | turn, stream, permission c [gl17] | ✗; a prompt aborts the turn c [gl18] | ✗ r [gl19] | ✗ · ✓ turn sum · ✗ c [gl20] |
+| grok-build | turn and subagents c [gr17] | queued; own `sendNow` c [gr18] | own notification c [gr19] | ✗ · ✗ · ✗; `_meta` only c [gr20] |
+| kilo | ✓ aborts the run c [ki14] | ◐ supersedes at next step r [ki15] | as one call, asks dropped r [ki16] | ✓ · ✓ · ✓ at turn end r [ki17] |
+| minimax-code | ◐ turn; subagents ? c [mm17] | ✗ refused; own `steer` c [mm18] | own extension, opt-in c [mm19] | ✓ · ✗ · ✓ c [mm20] |
+| minion-code | ◐ between chunks only c [mi13] | ✗ 2nd prompt runs at once c [mi14] | as one call c [mi15] | ✗ · ✗ · ✗ c |
+| nova | ✓ process tree n [no13] | ✗ not offered c | ? r [no14] | ✗ · ✗ · ✗ r [no15] |
+| pi-acp | ✓ queue cleared, `abort` c [pi12] | ✗ queued in adapter c [pi13] | ✗ c | ✓ · ✗ · ✗ c [pi14] |
+| qoder | ◐ may end `end_turn` c [qo16] | ✗ 2nd prompt aborts 1st c [qo17] | ? n [qo18] | ? · `_meta.quota` · ✗ c [qo19] |
+| qwen-code | prompt and waiting ones c [qw10] | own `drainMidTurnQueue` c [qw11] | own `_meta`, flat r [qw12] | ✓ · ✗ · ✗; `_meta.usage` c [qw13] |
+| sigit | turn, foreground command c [si18] | ✗; a prompt waits c [si19] | ◐ one call, mostly off c [si20] | ✓ · ✗ · ✗ c [si21] |
+| cursor | turn and subagents n, c [cu14] | ✗; a prompt cancels c [cu15] | draft shape n, c [cu16] | ✗ · ✗ · ✗ c |
 | devin | ◐ parks subagents n [dv17] | ? (CLI steers) n [dv18] | fore- and background, shape ? n [dv19] | ? · ? · ? n [dv20] |
-| fx |  |  |  |  |
-| goose |  |  |  |  |
+| fx | turn, tools, subagents c [fx17] | own `_meta.fx.steer` c [fx18] | flat, on the parent id c [fx19] | ✓ · ✓ · ✗ since 0.0.14 c [fx20] |
+| goose | turn and subagents c [go18] | own `_goose/unstable` c [go19] | as one call c [go20] | ✓ · ✓ · ◐ when known c [go21] |
 | junie | ? n [ju14] | ? (CLI steers) n [ju15] | ? (CLI has them) n [ju16] | ? · ◐ · ? n [ju17] |
 | kimi | main turn only c [km18] | ✗; refused -32600 c [km19] | as one call c [km20] | ◐ · ✗ · ✗ c [km21] |
 | kiro | ✓ turn n [kr12] | own _session/steer n [kr13] | own _session/spawn n [kr14] | ✗ · ✗ · ✗ n [kr15] |
@@ -322,34 +328,34 @@ columns; section 3 uses them too.
 | Agent | Available commands | Session title | Login (`authenticate`) | Client `fs` · `terminal` | MCP: stdio · http · sse |
 | --- | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ c [ag5] | ✗ c | ✗ malformed method c [ag7] | ✗ · ✗ c [ag5] | ✗ · ✗ · ✗ c |
-| auggie |  |  |  |  |  |
-| autohand |  |  |  |  |  |
-| bob | ✓ c (bundle) [bo18] | ✓ after a turn n [bo19] | ◐ `sso`, browser n [bo20] | ? · ✗ n [bo21] | ✓ · ✓ · ✗ n [bo22] |
-| claude-acp |  |  |  |  |  |
+| auggie | ✓ before a prompt c [au13] | ? | **needed** c [au14] | ✗ · ✗ c | ? · ✗ · ✗ c [au15] |
+| autohand | ✓ 24 by default c [ah18] | ✗ on purpose c [ah19] | **needed**, terminal-auth r [ah20] | ◐ · ◐ if declared c [ah21] | ✗ · ✗ · ✗ dropped c [ah22] |
+| bob | ✓ c [bo18] | ✓ after a turn n [bo19] | ◐ `sso`, browser n [bo20] | ? · ✗ n [bo21] | ✓ · ✓ · ✗ n [bo22] |
+| claude-acp | ✓ the CLI's + 2 own c [cl21] | ✓ a model call per session c [cl22] | ✗ none offered to chord c [cl23] | ✗ · ✗ c [cl24] | ✓ · ✓ · ✓ c [cl25] |
 | cline | ✗ c [ci19] | ◐ `updatedAt`, no title c [ci20] | 3 agent-run OAuth c [ci21] | ✗ · ✗ c [ci22] | ✗ · ✗ · ✗ ignored c [ci23] |
-| codebuddy-code |  |  |  |  |  |
-| codex-acp |  |  |  |  |  |
-| deepagents |  |  |  |  |  |
-| dimcode |  |  |  |  |  |
-| dirac |  |  |  |  |  |
-| factory-droid |  |  |  |  |  |
-| fast-agent |  |  |  |  |  |
-| gemini |  |  |  |  |  |
-| github-copilot-cli |  |  |  |  |  |
-| glm-acp-agent |  |  |  |  |  |
-| grok-build |  |  |  |  |  |
-| kilo |  |  |  |  |  |
-| minimax-code |  |  |  |  |  |
-| minion-code |  |  |  |  |  |
-| nova |  |  |  |  |  |
-| pi-acp |  |  |  |  |  |
-| qoder |  |  |  |  |  |
-| qwen-code |  |  |  |  |  |
-| sigit |  |  |  |  |  |
-| cursor | ✓ c (bundle) | ✓ c (bundle) | **needed** c (bundle) [cu17] | ✗ · ✗ c (bundle) | ✓ · ✓ · ✓ c (bundle) |
+| codebuddy-code | ✓ c [cb19] | ✓ c [cb20] | 4 agent-run, no `type` c [cb21] | ✓ · ✓ if declared c [cb22] | ✓ · ✓ · ✓ c [cb23] |
+| codex-acp | ✓ 11 + `$skill` c [cx21] | ✓ a model call per session c [cx22] | 3 agent-run methods c [cx23] | ✗ · ✗ c [cx3] | ✓ · ✓ · ✗ fails new c [cx24] |
+| deepagents | ✓ five + custom c [da15] | ✗ c | env key only, no-op r [da16] | ✗ · ✗ c [da17] | ✗ · ✗ · ✗ never read c [da18] |
+| dimcode | ✓ `/help`, `/compact` c [dm21] | ✓ c [dm22] | terminal, opt-in c [dm23] | ✓ · ✓ if declared c [dm24] | ✗ dropped · ✓ · ✓ c [dm25] |
+| dirac | ✓ before every prompt c [di21] | ✓ once c [di22] | only with no provider c [di23] | ✓ · ✓ if declared c [di24] | ✗ · ✗ · ✗ c [di25] |
+| factory-droid | ✓ skills c [dr21] | ✗ c [dr22] | **needed** c [dr23] | ✗ · ✗ c | ✓ · ✓ · ✓ c [dr24] |
+| fast-agent | ✓ after new c [fa16] | ◐ on load only c [fa17] | not called; Codex login c [fa18] | ✓ · ✓ if declared c [fa19] | ✓ · ✓ · ✓ c [fa20] |
+| gemini | ✓ five, after new and load c [ge16] | ✗ c | 4 methods, `_meta` keys c [ge17] | ✓ if declared · ✗ c [ge18] | ✓ · ✓ · ✓ c [ge19] |
+| github-copilot-cli | ✓ with hints and skills n [co20] | ✓ since 1.0.81 n [co21] | `copilot-login`, terminal n [co22] | ? · ? | ✓ · ✓ · ✓ n [co23] |
+| glm-acp-agent | ✓ from `.claude/` c [gl21] | ✓ after each turn c [gl22] | not needed r [gl23] | ◐ fs if declared · ✗ c [gl24] | ✓ · ✓ · ✗ fails session c [gl25] |
+| grok-build | ✓ c [gr21] | ✓ c [gr22] | 4 agent methods c [gr23] | ✓ · ✓ if declared c [gr24] | ✓ · ✓ · ✓ c [gr25] |
+| kilo | ✓ no input hint c [ki18] | ✗ titles in list only c [ki19] | `kilo-login`, no-op c [ki20] | ◐ write, undeclared · ✗ r [ki21] | ✓ · ✓ · ✓ c [ki22] |
+| minimax-code | ✓ ten, answered locally c [mm21] | ✓ also outside turns c [mm22] | 1 terminal, if declared c [mm23] | ✗ · ✗ c [mm24] | ✓ · ✓ · ✓ c [mm25] |
+| minion-code | ✗ c | ✗ c | 1 agent-run OAuth c [mi16] | ✗ · ✗ c [mi17] | ✗ · ✗ · ✗ ignored c [mi18] |
+| nova | ✓ likely c [no16] | ✗ c [no17] | terminal method c [no18] | ✗ · ✗; own `file/write` c [no19] | ✓ · ✓ · ✓ c [no20] |
+| pi-acp | ✓ pi's + built-ins c [pi15] | ◐ after `/name` only c [pi16] | 1 terminal, a no-op c [pi17] | ✗ · ✗ c [pi18] | ✗ · ✗ · ✗ ignored c [pi19] |
+| qoder | ✓ after new, load c, n [qo20] | ? [qo21] | agent-run · env_var c, n [qo22] | fs if declared · ? c [qo23] | ✓ · ✓ · ✓ c, n [qo24] |
+| qwen-code | ✓ with skills c [qw14] | ✓ c [qw15] | terminal by `_meta` c [qw16] | ✓ if declared · ✗ c [qw17] | ✓ · ✓ · ✓ c [qw18] |
+| sigit | ✓ c [si22] | ✓ c [si23] | optional, agent type c [si24] | ✓ · ✓ if declared c [si25] | ✓ · ✓ · ✗ ignored c [si26] |
+| cursor | ✓ c | ✓ c | **needed** n, c [cu17] | ✗ · ✗ c | ✓ · ✓ · ✓ c |
 | devin | ✓ n [dv21] | ? n [dv22] | ✓ n [dv23] | ? · ? | ✓ · ✓ · ✓ n [dv24] |
-| fx |  |  |  |  |  |
-| goose |  |  |  |  |  |
+| fx | ◐ always `[]` c [fx21] | ✓ c [fx22] | ✗ `fx login` outside c [fx23] | ✗ · ✗ c [fx24] | ✓ · ✓ · ✓, + `acp` c [fx25] |
+| goose | ✓ c | ✓ c [go22] | ◐ no-op `agent` method c [go23] | ✓ · ✓ when declared c [go24] | ✓ · ✓ · ✗ c [go25] |
 | junie | ✓ n [ju18] | ? n [ju19] | ? n [ju20] | ◐ · ? n [ju21] | ? · ? · ? n [ju22] |
 | kimi | ✓ c [km22] | ✓ c | **needed** c [km23] | ✓ · ✓ if declared c [km24] | ✓ · ✓ · ✓ c |
 | kiro | ✗ own · V3 ✓ n [kr16] | ✗ · V3 ◐ n [kr17] | CLI login · V3 optional n [kr18] | ? · ? (V3 terminal ✓) n [kr19] | ? · ? · ? n [kr20] |
@@ -363,34 +369,34 @@ columns; section 3 uses them too.
 | Agent | Agent capabilities advertised | Client capabilities read |
 | --- | --- | --- |
 | agoragentic-acp | `loadSession: false` only c [ag8] | none c [ag9] |
-| auggie |  |  |
-| autohand |  |  |
-| bob | ◐ `bob/extensions` n, c (bundle) [bo23] | elicitation only c (bundle) [bo24] |
-| claude-acp |  |  |
+| auggie | load, image, list c [au16] | `terminal-auth` only c [au14] |
+| autohand | load, list, resume, fork, http… c [ah23] | fs, terminal, terminal-auth c [ah24] |
+| bob | ◐ `bob/extensions` n, c [bo23] | elicitation only c [bo24] |
+| claude-acp | load, image, sse, fork +13 c [cl26] | form, url, plan, AIR +10 c [cl27] |
 | cline | load, image c [ci1] | none c [ci1] |
-| codebuddy-code |  |  |
-| codex-acp |  |  |
-| deepagents |  |  |
-| dimcode |  |  |
-| dirac |  |  |
-| factory-droid |  |  |
-| fast-agent |  |  |
-| gemini |  |  |
-| github-copilot-cli |  |  |
-| glm-acp-agent |  |  |
-| grok-build |  |  |
-| kilo |  |  |
-| minimax-code |  |  |
-| minion-code |  |  |
-| nova |  |  |
-| pi-acp |  |  |
-| qoder |  |  |
-| qwen-code |  |  |
-| sigit |  |  |
-| cursor | load, list, image c (bundle) [cu18] | `subagents`, `_meta` c (bundle) [cu18] |
+| codebuddy-code | load, image, embedded +5 c [cb24] | fs, terminal, form, `_meta` c [cb25] |
+| codex-acp | load, image, http, fork +11 c [cx25] | form, url, plan, AIR +7 c [cx26] |
+| deepagents | load, image, embedded c [da19] | fs, terminal (unused) c [da17] |
+| dimcode | load, image, http, sse, list… c [dm26] | fs, terminal, form, `_meta.lody` c [dm27] |
+| dirac | load, resume, close, delete… c [di26] | fs, terminal, form, auth c [di27] |
+| factory-droid | load, list, resume, image c [dr25] | `elicitation`, `_meta` c [dr26] |
+| fast-agent | load, image, embedded, http… c [fa21] | fs, terminal, `_meta` c [fa22] |
+| gemini | load, prompt ×3, MCP ×2 c [ge20] | fs only c [ge18] |
+| github-copilot-cli | ? load, prompt, MCP named n [co24] | ? n [co24] |
+| glm-acp-agent | load, http, image, list, fork… c [gl26] | `fs` only c [gl27] |
+| grok-build | load, list, resume, close c [gr26] | fs, terminal, own `_meta` c [gr27] |
+| kilo | load, image, http, sse, list… c [ki1] | `_meta` terminal-auth only c [ki1] |
+| minimax-code | load, http, sse, 4 session c [mm26] | auth, form, plan, `_meta` c [mm27] |
+| minion-code | `streaming` only: defaults c [mi19] | none c [mi19] |
+| nova | load, sse, list, fork… c [no21] | version, auth, delegation c [no22] |
+| pi-acp | load, image, list, delete c [pi20] | `terminal-auth` only c [pi21] |
+| qoder | load, list, prompt, MCP c [qo25] | `fs` c [qo26] |
+| qwen-code | load, list, resume, prompt ×3 c [qw19] | fs, own `_meta` keys c [qw17] |
+| sigit | load, audio, http, list, fork… c [si27] | fs, terminal, URL, boolean c [si28] |
+| cursor | load, list, image c [cu18] | `subagents`, `_meta` c [cu18] |
 | devin | ? n [dv25] | elicitation, rest ? n [dv26] |
-| fx |  |  |
-| goose |  |  |
+| fx | load, list, resume, close c [fx26] | elicitation, notices, `_meta` c [fx27] |
+| goose | load, list, delete, close c [go26] | fs, terminal, form, `_meta` c [go27] |
 | junie | ? | fs, form n [ju23] |
 | kimi | load, all session caps c [km25] | fs, terminal, form c [km25] |
 | kiro | loadSession, image n [kr1] | ? · V3 terminal, _meta.kiro n [kr19] |
@@ -408,34 +414,34 @@ rest.
 | Agent | Extensions | Opt-in needed | chord uses |
 | --- | --- | --- | --- |
 | agoragentic-acp | MCP `tools/*` and 3 more c [ag10] | MCP calls on the ACP pipe | none |
-| auggie |  |  |  |
-| autohand |  |  |  |
+| auggie | history, terminal-auth, indexing | ext method, `_meta`, flag | none |
+| autohand | terminal-auth, terminal `_meta` | `_meta`, env | none |
 | bob | `bob/extensions`, `_bob/task/*`, `bob/mode` | `_meta`, flag, form | none |
-| claude-acp |  |  |  |
+| claude-acp | SDK options, AIR, usage +7 c [cl28] | `_meta`; AIR for most | steering, `nonExecutionKind` +2 |
 | cline | `--thinking`, `provider` +2 c [ci24] | flag; config options | `provider`, read as the model |
-| codebuddy-code |  |  |  |
-| codex-acp |  |  |  |
-| deepagents |  |  |  |
-| dimcode |  |  |  |
-| dirac |  |  |  |
-| factory-droid |  |  |  |
-| fast-agent |  |  |  |
-| gemini |  |  |  |
-| github-copilot-cli |  |  |  |
-| glm-acp-agent |  |  |  |
-| grok-build |  |  |  |
-| kilo |  |  |  |
-| minimax-code |  |  |  |
-| minion-code |  |  |  |
-| nova |  |  |  |
-| pi-acp |  |  |  |
-| qoder |  |  |  |
-| qwen-code |  |  |  |
-| sigit |  |  |  |
+| codebuddy-code | terminal, question +6 c [cb26] | `_meta` capability; C3 none | none |
+| codex-acp | `/mcp`, `/status`, AIR +8 c [cx27] | none · `_meta` · AIR capability | steering, `_meta.codex`, MCP flag |
+| deepagents | `input`/`output`, own statuses, flags | own keys, flags | none |
+| dimcode | `_lody/*`, `_dimcode/*`, `_meta` | none, or `_meta.lody` capability | `_meta.lody.elicitation` |
+| dirac | `dev.dirac/*`, providers, worktrees | call or `_meta` | none |
+| factory-droid | `terminal_output`, `set_model`, … | `_meta`, `elicitation.url` | none |
+| fast-agent | structuredOutput, metrics, parent id | `_meta`, flags | none |
+| gemini | `_meta.quota`, `[MODE_UPDATE]`, auth | `_meta`; parse text | none |
+| github-copilot-cli | `github.com/copilot/sessionEvent` | ?; launch flags | none |
+| glm-acp-agent | none; off-spec behaviour only | none | none |
+| grok-build | `x.ai/*`: questions, plan, 300+ more | none: questions on by default | none |
+| kilo | terminal-auth, fs write +2 c [ki23] | `_meta`, env | none |
+| minimax-code | `mcode/*`, `permissionMode` +3 c [mm28] | `_meta` capability; methods | `permissionMode` in `/config` |
+| minion-code | `agent-auth`, skip flag, stubs c [mi20] | none; flag | none |
+| nova | `_meta.compass`, peers, delegation… | `_meta`, version 2, methods | none |
+| pi-acp | `terminal_*`, `piAcp` +4 c [pi22] | none; env, `_meta` | `terminal_output`, misread |
+| qoder | `_meta.quota`, hidden opts +5 c [qo27] | none; `_meta`, env | none |
+| qwen-code | `_qwencode/*` turns, `qwen/*` [qw20] | none for turns; call | none |
+| sigit | `_meta.sigit`, out-of-band commands | none | none |
 | cursor | `cursor/*` methods, picker `_meta` | answer methods, `_meta` | none |
 | devin | tool _meta, timestamps n [dv27] | ? | none |
-| fx |  |  |  |
-| goose |  |  |  |
+| fx | `_meta.fx.steer` and 11 more c [fx28] | `_meta`, flag, capability | none |
+| goose | `_goose/unstable/*`, `_meta` c [go28] | methods, capability `_meta` | none |
 | junie | brave_mode, late chunks n [ju24] | config option | none |
 | kimi | `session/set_model`, `terminal-auth` | none | none |
 | kiro | _kiro.dev/* · V3 _kiro/* n [kr21] | none · V3 flag, capability | none |
@@ -714,7 +720,113 @@ another agent, which is the person's choice.
 - Run as: `npx -y @augmentcode/auggie@0.36.0 --acp`
 - Source: <https://github.com/augmentcode/auggie>
 
-Not yet filled.
+Read at `@augmentcode/auggie` 0.36.0, the ACP Registry's pin, unchanged since
+CHD-432. The package is one minified bundle with its own copy of the ACP
+SDK. Its `LICENSE.md` is proprietary: §2 says "The CLI must not be
+reverse-engineered, decompiled, or modified", and use is tied to an Augment
+subscription. Under the owner's rule for licence-restricted agents, the
+bundle was read as plain text only for the ACP contract: the messages,
+fields and capabilities auggie sends and accepts, and what it does on the
+wire. Nothing internal is named or cited, and where Augment's docs or
+changelog state a fact they are cited first. The cells rest on CHD-432's
+reading (`docs/design/registry-2026-10-17.md`) and on the docs; cells
+neither settles stay `?`. The registry sets `AUGMENT_DISABLE_AUTO_UPDATE=1`,
+which stops self-update.
+
+**Footnotes.**
+
+- **au1.** The package ships a copy of the TypeScript ACP SDK; its version
+  was not read (auggie 0.36.0).
+- **au2.** v1 plus `session/set_model` and `session/list`, and two
+  extension methods: `augment/session/history` ("ACP integrations can now
+  access CLI session history", `CHANGELOG.md:181`) and IDE inline-completion
+  methods (auggie 0.36.0). No v2.
+- **au3.** When not signed in, `session/new` fails `authRequired` with
+  "Auggie does not currently support authenticating over ACP. Please run
+  `auggie login` from your terminal" (auggie 0.36.0).
+- **au4.** Load replays user and agent text, thought summaries and tool
+  calls, not plans. `session/list` answers `title`, `cwd`, `updatedAt` and
+  `_meta.messageCount`, filtered by cwd; paging was not established
+  (auggie 0.36.0).
+- **au5.** Legacy `models`, which may be null, and `session/set_model`.
+  Legacy modes `default` and `ask`; `ask` answers read-only. No config
+  options and no effort over ACP (auggie 0.36.0).
+- **au6.** `promptCapabilities` has `image` only; `embeddedContext` is not
+  advertised, and what auggie does with an embedded resource was not
+  established. The changelog names "file mentions and image support" for
+  ACP (`CHANGELOG.md:638`), but not how a `resource_link` is read.
+- **au7.** A subagent's call has kind `other`; other kinds were not
+  recorded. Shell, file-view, process and MCP results arrive only in
+  `rawOutput.output`, with empty `content`; edits send diffs and some
+  searches text. No terminal content (auggie 0.36.0).
+- **au8.** `tool_call` goes out with no status, so pending, then one
+  `tool_call_update` with `completed` or `failed`; never `in_progress`
+  (auggie 0.36.0).
+- **au9.** A tool permission offers `allow_once` "Allow" and `reject_once`
+  "Deny"; an error answer counts as denied. Right after `session/new`, with
+  no turn running and no `tool_call`, it asks a workspace-indexing
+  permission with four options: always or session, enable or disable. The
+  first prompt waits on the answer (auggie 0.36.0). `--allow-indexing`
+  skips it (`CHANGELOG.md:622`).
+- **au10.** Its task list goes out as a whole `plan`: depth sets priority,
+  cancelled tasks are dropped (auggie 0.36.0).
+- **au11.** `session/cancel` interrupts the whole turn, subagents with it.
+  A second `session/prompt` mid-turn runs a second loop over the same
+  session at once; no `_meta.steering` (auggie 0.36.0).
+- **au12.** A subagent is one `tool_call` titled with its name and task,
+  closed with its final text; its own calls are not sent and it has no
+  session id (auggie 0.36.0).
+- **au13.** `available_commands_update` from `.augment/commands/`, sent
+  before the first prompt (auggie 0.36.0).
+- **au14.** Terminal login for ACP is in the changelog (`CHANGELOG.md:610`).
+  `authMethods` is empty unless the client sends
+  `clientCapabilities._meta["terminal-auth"]: true`; then it lists
+  `auggie-login`, which runs `auggie login`. `authenticate` does nothing.
+  That key is the only client capability read; auggie makes no `fs/*` or
+  `terminal/*` call (auggie 0.36.0).
+- **au15.** No `mcpCapabilities`, so http and sse are not offered. The
+  changelog fixed "MCP server initialization timing in ACP mode"
+  (`CHANGELOG.md:306`); whether servers a client passes are used was not
+  established.
+- **au16.** `{loadSession: true, promptCapabilities: {image: true},
+  sessionCapabilities: {list: {}}}` (auggie 0.36.0).
+
+**Custom.**
+
+- `_meta["terminal-auth"]`: gives an `auggie-login` method. A client must
+  declare the key and run the command in a terminal; otherwise there is no
+  method and `session/new` fails `authRequired`.
+- Workspace-indexing permission: gives consent to upload the workspace to
+  Augment's index. A client must answer a permission outside any turn,
+  naming no known call; the first prompt waits until it does. A
+  skip-permissions client agrees to indexing. `--allow-indexing` answers it
+  at launch.
+- `augment/session/history`: the history as plain text. A client must call
+  the method; private coupling.
+- IDE inline-completion methods: for editors only.
+- `_meta.messageCount` in `session/list`: free to read.
+
+**In chord.** chord asks for nothing auggie offers in `_meta`, so it gets no
+login method; without `auggie login` beforehand every start fails
+`authRequired`. The indexing permission comes before any turn, so chord
+rejects it unseen with `reject_once`, which is the session-disable option:
+the workspace is not indexed for that session, and the person is not told.
+The first prompt does not hang. Shell, file-view and MCP results are only in
+`rawOutput`, which chord keeps but never draws, and a running call is a grey
+`Waiting…` until it ends. Subagents read as one call. No usage arrives, so
+chord estimates nothing. chord reopens with `session/load`, as auggie has no
+resume, and never calls `session/list`. chord's own MCP server is left out,
+since auggie advertises no `mcpCapabilities.http`; the person's servers are
+passed, and whether auggie uses them is unknown. A mid-turn prompt is
+queued, which keeps a second loop from starting.
+
+**Sources.**
+
+- `@augmentcode/auggie` 0.36.0, npm; its `LICENSE.md`.
+- https://docs.augmentcode.com/cli/acp and
+  https://docs.augmentcode.com/cli/acp/clients.
+- https://github.com/augmentcode/auggie, `CHANGELOG.md`.
+- CHD-432's reading, `docs/design/registry-2026-10-17.md` (au1-au7).
 
 #### autohand
 
@@ -723,7 +835,132 @@ Not yet filled.
 - Run as: `npx -y @autohandai/autohand-acp@0.2.1`
 - Source: <https://github.com/autohandai/autohand-acp>
 
-Not yet filled.
+Read at `@autohandai/autohand-acp` 0.2.1, the ACP Registry's pin, unchanged
+since CHD-432: the npm package, plain `tsc` output, Apache-2.0, with nothing
+restricting reading. Paths are in that package; `dist/acp-agent.js` unless
+named. It is an adapter: each `session/prompt` spawns the separate `autohand`
+CLI (`autohand-cli`, not read), which must be installed globally beside the
+npx package. The registry launches it with no arguments and no environment,
+so it never asks permission (ah14) and its telemetry stays on (Custom).
+
+**Footnotes.**
+
+- **ah1.** `initialize` answers `params.protocolVersion ?? 1` (`:271`), so 1
+  to chord; it echoes whatever a client asks for, on a v1 SDK.
+- **ah2.** `@agentclientprotocol/sdk` 0.12.0, exact pin (`package.json`).
+- **ah3.** v1 plus the SDK's unstable handlers `unstable_setSessionModel`
+  (`:444`), `unstable_setSessionConfigOption` (`:455`),
+  `unstable_forkSession` (`:481`), `unstable_resumeSession` (`:557`) and
+  `unstable_listSessions` (`:1115`). No v2.
+- **ah4.** `session/new` and prompts throw `authRequired` with "run
+  `autohand login`" when the CLI is not signed in (CHD-432).
+- **ah5.** Load replays user and assistant text only and answers `{}`
+  (CHD-432).
+- **ah6.** Each turn is a fresh CLI run. Resume needs an id in the CLI's
+  index, which chord's ids are not; fork copies in-memory sessions of this
+  process (CHD-432 ah3). `session/list` lists the CLI's per-turn sessions,
+  titled `Session <8 chars>`, filtered by cwd, never paged (`:1115-1134`).
+- **ah7.** Six legacy modes with `current_mode_update`; legacy `models`,
+  where `set_model` stores the id for the next CLI run; nine select options
+  (thinking level, auto-commit, history, auto-mode and its caps,
+  temperature, streaming), answered but never sent as `config_option_update`
+  (CHD-432).
+- **ah8.** `thinking_level` carries no `thought_level` category (CHD-432 ah2).
+- **ah9.** `promptToText` turns an image into the lines `[Image 1]`,
+  `Type: …`, `Size: ~N KB`; the data never reaches the CLI (`:2325-2343`,
+  "Future enhancement" at `:766-768`). Audio is advertised only under
+  `AUTOHAND_SUPPORTS_AUDIO` and becomes placeholder text.
+- **ah10.** An embedded resource is pasted as `[resource: <uri>]` and its
+  text. A `file:` `resource_link` is read through `fs/read_text_file` when
+  the client declares it, else from disk by the adapter, then inlined the
+  same way (`:2078-2124`, `:2187`).
+- **ah11.** Kinds `read`, `search`, `edit`, `move`, `delete`, `execute`,
+  `think`, `other` from a tool-name map (`:121-159`). `rawInput` is the
+  call's args, `rawOutput` its result text. Locations are
+  `[{path: args.path}]` as given, possibly relative (`:2909-2918`).
+- **ah12.** Content is text only, no diff. To a client with `terminal`,
+  `run_command` gets `terminal` content with an id that was never created,
+  and output as `_meta.terminal_output` (`:1916-2004`); to one without, each
+  update resends the whole output as text (CHD-432 ah5).
+- **ah13.** `pending`, then `in_progress` only when output streams, then
+  `completed` or `failed`; `failed` is guessed by a regex (`:1909-2070`).
+- **ah14.** Asks only under `AUTOHAND_PERMISSION_MODE=external`, through a
+  localhost permission server (`dist/permission-server.js:76-170`); the
+  registry does not set it. Every request lacks `toolCall`, so chord's SDK
+  refuses it and the CLI hears "denied" (CHD-432 ah4).
+- **ah15.** `plan` from `todo_write` and `plan` tools (CHD-432).
+- **ah16.** Cancel kills the CLI child; a prompt sent meanwhile is queued and
+  runs next (CHD-432).
+- **ah17.** No usage; the CLI's token line is scraped into reply text
+  (CHD-432 ah1).
+- **ah18.** 24 default commands, or a JSON list from the environment, after
+  `session/new` (via `setImmediate`) and after load; some run in the adapter,
+  the rest go to the CLI as text (`:65-90`, `:404-411`, `:1239`).
+- **ah19.** Titles are made from the first message but never sent, being
+  "not a valid ACP notification type in Zed" (`:622`, `:750`).
+- **ah20.** `_meta["terminal-auth"]` methods `autohand-install` and
+  `autohand-login` (`:236-266`, `:290-313`).
+- **ah21.** `fs/read_text_file` only for links (ah10) and `terminal/*` only
+  when declared; `fs.writeTextFile` is read but its only user,
+  `delegatedWriteFile`, is never called (`:824`, `:1420`, `:2094-2110`,
+  `:2212`).
+- **ah22.** `parseMcpServers` keeps name, type and URL (for stdio only the
+  command, no args or env) on the session, and nothing ever reads them or
+  passes them to the CLI (`:2702-2717`).
+- **ah23.** `{promptCapabilities: {embeddedContext: true, image: true,
+  audio: <env> | undefined}, loadSession: true, mcpCapabilities: {http:
+  true, sse: true}, sessionCapabilities: {list: {}, resume: {}, fork: {}}}`,
+  `agentInfo._meta.cliVersion`, and top-level `_meta.{warning, installUrl}`
+  when the CLI is missing (`:216-286`).
+- **ah24.** `fs.readTextFile`, `fs.writeTextFile`, `terminal`,
+  `_meta["terminal-auth"]` (`:298`, `:326`), and `clientInfo`, passed to the
+  CLI as environment. Elicitation, plan and subagents are not read.
+
+**Custom.**
+
+- `_meta["terminal-auth"]` methods: a login and an install run in a
+  terminal. A client must declare the key, run the command, then call
+  `authenticate`. Without it every start fails `authRequired`.
+- `_meta.terminal_info` and `_meta.terminal_output` on tool calls: live
+  command output under a terminal id that does not exist. A client must
+  declare `terminal` and read the keys.
+- `AUTOHAND_PERMISSION_MODE=external`: approvals, selects and confirms as
+  permissions without `toolCall`; text inputs are always denied. A client
+  must set the variable and accept the off-spec shape.
+- Telemetry to `https://api.autohand.ai/v1/telemetry`, on by default
+  (`dist/telemetry.js:10-22`, `:146-200`; `:403`, `:1077`, `:1248`): a device
+  id kept in the home directory, session start and end, model and
+  slash-command names, OS and Node versions, all labelled
+  `clientType: "zed"` whatever the client. A client stops it only with
+  `AUTOHAND_TELEMETRY=false` or `0` in the agent's environment.
+- Unprompted text: a "Hey <name>!" welcome after `session/new`
+  (`:412-421`) and a feedback request after turns 5 to 10.
+- `agentInfo._meta.cliVersion` and `_meta.{warning, installUrl}`: the CLI's
+  version and an install hint. Free to read.
+- History: turns share no memory unless `include_history` is on, which
+  pastes the last 6 turns, up to 8000 characters, as text.
+
+**In chord.** chord sends each @-mention as a `resource_link`; chord
+declares no `fs`, so the adapter reads the file from disk itself and pastes
+it in. A pasted image goes out because `image` is advertised, but the model
+gets only `[Image 1]` and a size, and the person is not told. autohand drops
+every MCP server: chord adds its own over http because `mcpCapabilities.http`
+is true, and the person's servers go too, and none reach the CLI. No
+permission ever reaches the person under the registry launch, and with the
+variable set chord's SDK would refuse each request. Effort is not found,
+having no category. Command output arrives as whole-output resends. No usage
+arrives, so chord estimates nothing. chord reopens a recorded session with
+`session/resume`, which the CLI's index does not know; it never calls
+`session/list`. Without `autohand-cli` on PATH, `initialize` offers only an
+install method and the first `session/new` fails. The welcome and feedback
+lines show as agent text. chord does not see the telemetry.
+
+**Sources.**
+
+- `@autohandai/autohand-acp` 0.2.1, npm, and
+  https://github.com/autohandai/autohand-acp.
+- `@agentclientprotocol/sdk` 0.12.0, npm.
+- CHD-432's reading, `docs/design/registry-2026-10-17.md` (ah1-ah5).
 
 #### bob
 
@@ -737,14 +974,16 @@ npm package. The package ships `ACP.md`, `README.md`, a single bundle
 `dist/bob.js` and the licence under `dist/ibm-licence/`. That licence is the
 IBM International License Agreement for Non-Warranted Programs (ILAN), which
 forbids "reverse assembling, reverse compiling, translating, or reverse
-engineering the Program" (`dist/ibm-licence/license.txt:61`), and the
-question whether its bundle may be read is with the owner. For this part the
-bundle was not read: cells marked `n` come from IBM's own `ACP.md` and
-`README.md`. CHD-432 did read `dist/bob.js`
+engineering the Program" (`dist/ibm-licence/license.txt:61`). Under the
+owner's rule of 2026-10-18, recorded on CHD-433, the bundle was read as plain
+text only for the ACP contract: the messages, fields and capabilities bob
+sends and accepts, and how it behaves. Nothing was deobfuscated. Cells
+marked `n` come from IBM's own `ACP.md` and `README.md`, which are cited
+first. Cells marked `c` rest on CHD-432's plain-text read of `dist/bob.js`
+in `@ibm/bob` 2.0.8
 ([`design/registry-2026-10-17.md`](design/registry-2026-10-17.md), its bob
-notes at lines 696-747), so every cell resting on what it took from the
-bundle is marked `c (bundle)`, and so should its bob rows in that study's
-section 2 tables be read. A cell that would need the bundle again says `?`.
+notes at lines 696-747) and state only that contract; this part did not
+read the bundle again. A cell that would need more says `?`.
 
 **Footnotes.**
 
@@ -852,7 +1091,167 @@ section 2 tables be read. A cell that would need the bundle again says `?`.
 - Run as: `npx -y @agentclientprotocol/claude-agent-acp@0.93.0`
 - Source: <https://github.com/agentclientprotocol/claude-agent-acp>
 
-Not yet filled.
+`@agentclientprotocol/claude-agent-acp` 0.93.0, the registry pin, read from
+the npm package's `dist/` (plain `tsc` output) and the repository at tag
+`v0.93.0` for `README.md` and `docs/`. Paths are relative to the package root
+(`dist/…`) or the repository root (`docs/…`). The adapter is Apache-2.0, no
+limits on reading. It drives `@anthropic-ai/claude-agent-sdk` 0.3.300 under
+Anthropic's terms, which spawns the Claude Code CLI; neither was read, only
+the adapter's calls into them. Several cells correct CHD-432
+([`design/registry-2026-10-17.md`](design/registry-2026-10-17.md)): its own
+usage and session titles reach every client, and its `/mcp` is hidden by
+chord's.
+
+**Footnotes.**
+
+- **cl1.** `dist/acp-agent.js:1413` answers `protocolVersion: 1` whatever is
+  asked. With `CLAUDE_AGENT_ACP_EXPERIMENTAL_V2=1` a router answers 2 to a
+  client asking 2 or more (`dist/index.js:81-83`, `dist/serve.js:19-42`).
+- **cl2.** `package.json:68` pins `@agentclientprotocol/sdk` 1.9.0; chord
+  runs 1.8.0.
+- **cl3.** The handler list `dist/acp-agent.js:10420-10447`: v1 methods plus
+  `session/fork`, `providers/*`, `logout`, the subagents RFD, `notice`,
+  `plan_update`, and own `_session/steering`, `_session/async_task/stop`,
+  `_session/goal`, `_session/list/*`, `_session/rename·archive·unarchive`,
+  `_auth/status_update`, `_claude/sdkMessage`. There is no
+  `session/set_model`; models are only the `model` config option.
+- **cl4.** `session/new` takes `additionalDirectories`, `systemPrompt` and
+  many `_meta` keys (Custom), and answers modes and config options, no
+  `models` (`dist/acp-agent.js:8290-8512`).
+- **cl5.** Load replays the history, subagents under their live ids; resume
+  is offered. From CHD-432 (C16).
+- **cl6.** Pages of up to 1000 with `nextCursor` and a cwd filter
+  (`docs/air-extensions.md:74-77`).
+- **cl7.** The whole session, or up to one message given in
+  `_meta.jetbrains.air.fork` (`dist/fork-session.js:6-24`), see Custom.
+- **cl8.** For a client that is not AIR, delete is a real delete; close of an
+  unloaded session answers `{}` (`docs/air-extensions.md:1468-1478`).
+- **cl9.** `default`, `acceptEdits`, `plan`, `auto` when the model has it,
+  `bypassPermissions` unless barred (`docs/air-extensions.md:688-697`).
+- **cl10.** `mode`, `model`, `effort` (category `thought_level`), `fast`
+  (category `model_config`, a select unless booleans are declared) and
+  `agent` when the person has agents (`dist/acp-agent.js:9446-9582`,
+  `dist/session-effort.js:91`).
+- **cl11.** `dist/acp-agent.js:9680-9745`: audio is dropped; a resource keeps
+  its text as a `<context ref>` block and drops a blob; a `resource_link`
+  becomes the text `[@name](file://…)` for the model to read itself.
+- **cl12.** `docs/air-extensions.md:297-331` (the column for clients that
+  are not AIR). Kinds `execute`, `read`, `edit`, `search`, `fetch`, `think`,
+  `switch_mode`, `other`. Terminal content goes only to a client declaring
+  `_meta.terminal_output`; chord declares `terminal_output_delta` and gets a
+  command's output once, at the end.
+- **cl13.** A Bash call stays `pending` until done; an unfinished call ends
+  `failed` with a reason line (CHD-432 C6, cl6).
+- **cl14.** `allow_once`, `allow_always`, `reject_once`, never
+  `reject_always`. A cancelled outcome or a signal abort stops the tool use;
+  the request is raced against the tool's signal, with no timeout of its own
+  (`docs/air-extensions.md:621-646,711-722`).
+- **cl15.** AskUserQuestion, MCP form elicitation and the refusal-fallback
+  dialog as forms; MCP URL elicitation and MCP OAuth as URLs
+  (`dist/acp-agent.js:8358-8370,8487-8503,1063-1150`). Without `form`,
+  AskUserQuestion is off.
+- **cl16.** Entries from TodoWrite and Task*, and a markdown `plan_update` of
+  an approved plan to a client declaring `plan` (CHD-432 cl5, C8).
+- **cl17.** The turn and its foreground subagents stop; background subagents
+  and commands keep running (`README.md`, "Subagent sessions").
+- **cl18.** `dist/acp-agent.js:2600-2636`: answers `injected`,
+  `startedNewTurn`, and `promptRequired` when idle and asked so. A
+  concurrent `session/prompt` is queued (`promptQueueing`).
+- **cl19.** RFD `subagent_update` and `session_message` to a client
+  declaring `subagents`; a cancel on a child id stops that child (CHD-432
+  C1, C15).
+- **cl20.** `usage_update` used and size; cost (`total_cost_usd`) only at
+  the turn's end (`dist/acp-agent.js:5003-5011`); `PromptResponse.usage`.
+  Its own usage `_meta` comes too, see Custom.
+- **cl21.** Claude Code's commands and skills minus `clear`, `cost`,
+  `keybindings-help`, `login`, `logout`, `output-style:new`,
+  `release-notes`, `todos`; MCP prompts as `mcp:<server>:<cmd>`; plus the
+  adapter's `/mcp` and `/remote-control` (`dist/acp-agent.js:9604-9662`).
+- **cl22.** A title generated once per session through the CLI's
+  `generate_session_title`, a model call, else the stored custom title, as
+  `session_info_update` to every client (`dist/session-titles.js:136-175`).
+  CHD-432's "Session titles —" for claude is wrong.
+- **cl23.** Terminal login methods only to a client declaring `auth.terminal`
+  or `_meta["terminal-auth"]`, gateway only with `auth._meta.gateway`;
+  chord declares none and gets `authMethods: []`
+  (`dist/acp-agent.js:1305-1400`).
+- **cl24.** `readTextFile` and `writeTextFile` have no caller in `dist/`;
+  Claude Code's own tools touch the disk.
+- **cl25.** All three kept with headers (`dist/acp-agent.js:8290-8312`); a
+  server that needs OAuth gets a URL elicitation at startup.
+- **cl26.** `dist/acp-agent.js:1396-1470`: `loadSession`, image and embedded
+  context, MCP http and sse, `sessionCapabilities` list, resume, fork,
+  close, delete, `additionalDirectories`, `systemPrompt`;
+  `_meta.steering.supported`, `promptQueueing`, `authStatus`.
+  `subagents` only to AIR.
+- **cl27.** `elicitation` form and URL, `plan`, `session.compaction`,
+  `session.notices`, boolean config options, `subagents`, `auth.terminal`,
+  the gateway, and the `_meta` keys `terminal-auth`, `terminal_output`,
+  `terminal_output_delta`, `subagent-transcript`, `jetbrains.air`. Not
+  `fs` or `terminal`.
+- **cl28.** Ten, each a bullet under Custom below.
+
+**Custom.**
+
+- `_meta.claudeCode.options` on `session/new` and again on load or resume:
+  any Agent SDK option (`maxBudgetUsd`, `maxTurns`, `allowedTools`,
+  `settings`, `promptSuggestions`…). Costs coupling to Anthropic's option
+  names; a typo is ignored, and the adapter overrides `cwd`, `mcpServers`,
+  `permissionMode`, `hooks` (`dist/acp-agent.js:8462-8512`).
+- Prompt suggestions: one predicted next prompt per turn in
+  `session_info_update._meta.promptSuggestions`, published only to an AIR
+  client. They are requested for every client, so chord pays for one each
+  turn it never sees. `_meta.claudeCode.options.promptSuggestions: false` on
+  `session/new` turns them off (`dist/acp-agent.js:8462-8468,2500-2525`).
+- `/remote-control [name|off]`: the session can also be driven from
+  claude.ai or the mobile app. A plain prompt; chord passes it through.
+- Instructions: the RFD field `systemPrompt`, `_meta.systemPrompt`, and
+  `_meta.jetbrains.air.customInstructions`, read with no AIR declaration
+  (`dist/acp-agent.js:8314-8337`).
+- Usage and account `_meta`, to every client: `PromptResponse._meta.quota`
+  per model, `usage_update._meta["_claude/model"]`, `_claude/origin`,
+  `_claude/rateLimit` (the account's rate-limit window), and the
+  `_auth/status_update` notification (`dist/acp-agent.js:9014-9020,
+  2925-2937,5960-5972`). CHD-432's "Own usage or cost ✗" for claude is
+  wrong.
+- Its own `/mcp`: server status, reconnect, enable, disable, OAuth by URL
+  (`dist/mcp-command.js:1-40`). Same name as chord's `/mcp`, so a chord
+  user cannot reach it.
+- `_session/steering`, announced by `_meta.steering.supported`; off-spec,
+  shared with codex.
+- Fork point: `session/fork` with `_meta.jetbrains.air.fork {version: 1,
+  messageId}` forks up to that message, with no AIR declaration
+  (`dist/fork-session.js:6-24`). The key sits in AIR's namespace.
+- AIR (`_meta.jetbrains.air` declared): async tasks with their own stop,
+  `_session/goal`, `diffPatch`, `planFile`, `sessionFailure`, the session
+  index and more (`docs/air-extensions.md`). Declaring AIR at all switches
+  subagents to the earlier draft `subagent_spawned` shape and drops Edit's
+  `old_string`/`new_string` and Write's `content` from `rawInput`; the
+  update kinds are not in ACP's schema.
+- `_meta.claudeCode.emitRawSDKMessages`: every SDK message as
+  `_claude/sdkMessage`, in Claude Code's private wire format.
+
+**In chord.** chord sends `session/new` with no `_meta`, so it pays for a
+prompt suggestion every turn and a title call every session, and shows
+neither (`session_info_update` is dropped). It sets model and effort through
+the config options and never needs `session/set_model`, which 0.93.0 lacks;
+the comment at `src/acp/connection.ts:58-61` that the adapter answers it is
+stale. Fast mode shows in `/config` as an on/off select. It reads the RFD
+subagents but never cancels one on its own id, though claude would honour
+it. `_meta.quota`, `_claude/rateLimit` and `_auth/status_update` are
+ignored. Warnings arrive as `**Warning:**` reply text, as chord does not
+declare `session.notices`. chord's `/mcp` hides claude's, a second agent for
+U8 beside codex. With `authMethods: []` and no `authenticate` call, login
+stays outside chord. Fork, delete, close and list are never called.
+
+**Sources.**
+
+- `@agentclientprotocol/claude-agent-acp` 0.93.0 on npm;
+  <https://github.com/agentclientprotocol/claude-agent-acp/tree/v0.93.0>,
+  `README.md` and `docs/air-extensions.md`.
+- CHD-432's notes in
+  [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md)
+  (cl1–cl8, C1–C16).
 
 #### cline
 
@@ -865,67 +1264,82 @@ Cline 3.0.73, the registry pin, read at tag `cli-v3.0.73` (c718573) of
 <https://github.com/cline/cline> (Apache-2.0, no limits on reading). Paths
 are relative to the repository root; `acp/` stands for `apps/cli/src/acp/`,
 and the runtime behind it is `sdk/packages/core/` (`@cline/core` 0.0.95).
-The image cell corrects CHD-432's: cline advertises images but drops them.
+Cells marked `r` are CHD-432's reading of the same tag. The image cell
+corrects CHD-432's: cline advertises images but drops them, and resource
+links with them.
 
 **Footnotes.**
 
 - **ci1.** `acp/acpAgent.ts:130-152`: `initialize(_params)` never reads the
   request and answers `PROTOCOL_VERSION`, `loadSession: true`,
   `promptCapabilities {image: true, audio: false, embeddedContext: false}`,
-  no `sessionCapabilities` or `mcpCapabilities`.
-- **ci2.** `apps/cli/package.json:71`, `bun.lock:859`; transport
-  `acp/index.ts:12-31`.
-- **ci3.** `unstable_setSessionModel` at `acp/acpAgent.ts:438`; no
-  `extMethod`, `extNotification` or `_meta` in `acp/`.
+  no `sessionCapabilities` or `mcpCapabilities`, and `authMethods` as
+  `{id, name}` only.
+- **ci2.** `apps/cli/package.json:71` (`^0.16.1`), `bun.lock:859` resolves
+  0.16.1; transport `acp/index.ts:12-31`.
+- **ci3.** `unstable_setSessionModel` at `acp/acpAgent.ts:438`; mode,
+  config-option and session-info updates at `acp/session-updates.ts:162-193`.
+  No `extMethod`, `extNotification` or `_meta` in `acp/`.
 - **ci4.** `session/new` and `session/load` throw `auth_required` without
   `CLINE_API_KEY` or a stored login (`acp/acpAgent.ts:154-168`, `:639-650`).
-- **ci5.** `session/load` replays the stored conversation
+- **ci5.** CHD-432: `session/load` replays the stored conversation
   (`acp/acpAgent.ts:249-326`); provider and model come back as defaults
-  (`:262-286`).
-- **ci6.** The agent's methods (`acp/acpAgent.ts:130-594`) have no resume,
-  list, fork, close or delete.
-- **ci7.** `plan` and `act` as `modes` and as a `mode` option, with
+  (`:262-286`). No resume handler.
+- **ci6.** The agent's methods (`acp/acpAgent.ts:130-594`) are `initialize`,
+  `newSession`, `loadSession`, `prompt`, `cancel`, `setSessionMode`,
+  `unstable_setSessionModel`, `setSessionConfigOption`, `authenticate` and
+  `shutdown`: no list, fork, close or delete.
+- **ci7.** CHD-432: `plan` and `act` as `modes` and as a `mode` option, with
   `current_mode_update` (`acp/acpAgent.ts:170-184`, `:421-436`).
-- **ci8.** The options are `provider` (select, category `model`, first),
-  `model` (select, category `model`), `mode`, auto-approve (`boolean`) and
-  organization (category `account`, Cline accounts only)
-  (`acp/acpAgent.ts:865-941`, `acp/auto-approve.ts:9`,
-  `acp/organizations.ts:92-97`). `models` is in the answer too.
-  `config_option_update` follows each set (`acp/acpAgent.ts:572`).
+- **ci8.** `buildAllConfigOptions` (`acp/acpAgent.ts:925-941`) puts
+  `provider` first, a select of category `model` over the three login
+  providers (`:862-881`); then `model`, also category `model` (`:883-899`),
+  `mode`, auto-approve (`boolean`, `acp/auto-approve.ts:9`) and, for Cline
+  accounts, organization (category `account`, `acp/organizations.ts:92-97`).
+  `models` is in the `session/new` answer too (`acp/acpAgent.ts:226-247`).
+  `config_option_update` follows each set (`:572`).
 - **ci9.** `--thinking <none|low|medium|high|xhigh>`
   (`apps/cli/src/commands/program.ts:40-41`, `apps/cli/src/main.ts:804-815`);
   the registry passes only `--acp`.
-- **ci10.** `extractTextFromContentBlocks` keeps text only
-  (`acp/acpAgent.ts:943-948`); a prompt with no text answers `end_turn` at
-  once (`:333-336`).
-- **ci11.** Kinds in `acp/tool-utils.ts:4-25`. `tool_call` with `rawInput`
+- **ci10.** `extractTextFromContentBlocks` keeps `text` blocks only
+  (`acp/acpAgent.ts:943-948`), so images and resource links are dropped
+  though `image: true` is advertised; a prompt with no text answers
+  `end_turn` at once (`:333-336`).
+- **ci11.** Kinds `read search edit delete move execute fetch think other`
+  (`acp/tool-utils.ts:4-25`). `tool_call` with `rawInput`
   (`acp/session-updates.ts:66-80`); the end carries `rawOutput` only
-  (`:137-147`). No `content` or `locations` is ever set.
+  (`:137-147`). No `content` or `locations` is ever set; generated images go
+  out as message chunks (`:110-136`).
 - **ci12.** `pending`, then `in_progress` only after the person approves
-  (`acp/permissions.ts:105-130`), then `completed` or `failed`.
+  (`acp/permissions.ts:105-130`), then `completed` or `failed`; a rejected
+  call goes `failed`.
 - **ci13.** `acp/permissions.ts:15-31`; `allow_always` acts as once,
   `cancelled` and a failed request reject (`:57-90`, `:114-118`). No timeout.
-- **ci14.** Core's `ask_question` tool needs an executor the ACP layer never
-  passes (`sdk/packages/core/src/extensions/tools/definitions.ts:970-972`).
-- **ci15.** No `plan` update (`acp/session-updates.ts:26-152`).
-- **ci16.** A second `session/prompt` is queued and answered `end_turn` at
-  once, then runs with no prompt open; it also clears the abort controller,
-  so a later cancel stops nothing (`acp/acpAgent.ts:339-402`,
+- **ci14.** CHD-432: core's `ask_question` tool needs an executor the ACP
+  layer never passes
+  (`sdk/packages/core/src/extensions/tools/definitions.ts:970-972`).
+- **ci15.** CHD-432: no `plan` update (`acp/session-updates.ts:26-152`).
+- **ci16.** CHD-432: a second `session/prompt` is queued and answered
+  `end_turn` at once, then runs with no prompt open; it also clears the
+  abort controller, so a later cancel stops nothing
+  (`acp/acpAgent.ts:339-402`,
   `sdk/packages/core/src/runtime/host/local-runtime-host.ts:1142-1190`).
-- **ci17.** `spawn_agent` is a `think` call; the child's events land in the
-  parent session unmarked
+- **ci17.** CHD-432: `spawn_agent` is a `think` call; the child's events land
+  in the parent session unmarked, with no id of their own
   (`sdk/packages/core/src/runtime/host/local/spawn-tool.ts:50`).
-- **ci18.** Usage events are dropped (`acp/session-updates.ts:36-39`); the
-  answer is `{stopReason}` only (`acp/acpAgent.ts:402`).
+- **ci18.** CHD-432: usage events are dropped
+  (`acp/session-updates.ts:36-39`); the answer is `{stopReason}` only
+  (`acp/acpAgent.ts:402`).
 - **ci19.** No `available_commands_update` in `apps/cli/src/`.
 - **ci20.** `session_info_update` after every turn with `updatedAt` only
-  (`acp/acpAgent.ts:387-389`).
-- **ci21.** `cline`, `cline-pass`, `openai-codex` (`acp/auth.ts:12-16`);
-  `authenticate` opens a browser from the agent process (`:32-106`).
+  (`acp/acpAgent.ts:387-389`); no caller passes a `title`.
+- **ci21.** `cline`, `cline-pass`, `openai-codex`, with no `type`, so ACP's
+  default `agent` (`acp/auth.ts:12-16`); `authenticate` opens a browser OAuth
+  from the agent process (`acp/acpAgent.ts:576-592`, `acp/auth.ts:32-106`).
 - **ci22.** The only request to the client is `session/request_permission`
   (`acp/permissions.ts:115`).
 - **ci23.** `mcpServers` is stored, never read (`acp/acpAgent.ts:81`,
-  `:211`, `:276`); the CLI's own MCP settings file applies.
+  `:211`, `:276`); the CLI's own `cline_mcp_settings.json` applies.
 - **ci24.** Four, each a bullet under Custom below.
 
 **Custom.**
@@ -936,22 +1350,23 @@ The image cell corrects CHD-432's: cline advertises images but drops them.
   ClinePass, a ChatGPT subscription and others. A client must tell it from
   the model; two selects share the category.
 - Auto-approve, a `boolean` option: skips every permission request. A
-  client must draw a boolean option.
+  client must draw a boolean option; once set, nothing is asked.
 - Organization select, category `account`: personal or an organization for
   Cline billing.
 
 **In chord.** `/model` lists providers: chord takes the first select of
-category `model` and prefers it over the `models` field
-(`src/session/models.ts:73-82`), so it shows and sets `provider`, and the
+category `model` or id `model` (`src/session/models.ts:72-82`) and prefers it
+over the `models` field (`:24-36`), so it shows and sets `provider`, and the
 status line names the provider. The real `model` option is left out of
-`/config`, which drops category `model` (`src/session/config.ts:28-40`,
-`:60-62`). So the model cannot be chosen in chord. Pasted images vanish, and
-an image-only prompt ends at once; @-mentions survive only as the path in
-the text. Command output arrives only in `rawOutput`, which chord does not
-draw. Without a login or `CLINE_API_KEY` the start fails with
-`auth_required`, as chord never calls `authenticate`. chord's MCP server is
-not offered, and `mcpServers` would be ignored. chord queues its own
-mid-turn prompts, so the queued-prompt path is not reached. Ignored: the
+`/config`, which drops category and id `model`
+(`src/session/config.ts:28-40`, `:60-62`). So the model cannot be chosen in
+chord. Pasted images vanish, and an image-only prompt ends at once with
+nothing said; @-mentions survive only as the path in the text. Command
+output arrives only in `rawOutput`, which chord does not draw. Without a
+login or `CLINE_API_KEY` the start fails with `auth_required`, as chord never
+calls `authenticate`. chord's MCP server is not offered, and `mcpServers`
+would be ignored. chord queues its own mid-turn prompts, so the
+queued-prompt path is reached only by a second client. Ignored: the
 auto-approve boolean and `session_info_update`.
 
 **Sources.**
@@ -969,7 +1384,144 @@ auto-approve boolean and `session_info_update`.
 - Run as: `npx -y @tencent-ai/codebuddy-code@2.168.2 --acp`
 - Source: <https://www.codebuddy.cn/cli/>
 
-Not yet filled.
+`@tencent-ai/codebuddy-code` 2.168.2, the registry pin, dated 2026-10-16 in
+its `CHANGELOG.md:10`, read from the npm package. Under `--acp`,
+`bin/codebuddy` loads `dist/codebuddy-headless.js` (`bin/codebuddy:186-189`),
+a minified, not obfuscated bundle; `H39:28046` below means line 39, column
+28046 of that file, and `types/` means `dist-server/types/node/acp/`, the
+authors' own declarations. `LICENSE.txt` is MIT, so no reading limit
+applies; nothing was decoded or run. The entry is the one agent here whose
+successful shell output never leaves `rawOutput`, and it starts model turns
+of its own when a background task ends.
+
+**Footnotes.**
+
+- **cb1.** `initialize` answers the bundled SDK's `PROTOCOL_VERSION`, 1
+  (`H39:28046`, `H4585:53022`).
+- **cb2.** `package.json` pins `@agentclientprotocol/sdk` 1.7.0 exactly;
+  `CHANGELOG.md:196` (2.164.0). stdio by default, `--acp-transport
+  streamable-http` the other choice (`H269:12563`).
+- **cb3.** The agent has `session/resume` (unstable) and `session/set_model`
+  (`H39:43746`, `H41:24535`); a search finds no list, fork, close or delete
+  handler in the ACP agent. Fork exists only as a Mod-page extension.
+- **cb4.** `session/new` returns `models`, `modes` and `configOptions`
+  (`H39:44954`); `_meta["codebuddy.ai/continue"]` continues the last session.
+- **cb5.** `loadSession: true`; history is replayed between
+  `session_info_update` markers `_meta["codebuddy.ai/historyReplay"]`
+  (`H39:44954`, `H52:58524`).
+- **cb6.** `session/resume` is served (`H39:43746`), but the answer has no
+  `sessionCapabilities`.
+- **cb7.** `getConfigOptions` (`H39:19710`): modes `default`, `acceptEdits`,
+  `plan`, `auto`, `dontAsk`, `bypassPermissions`, `fullAccess`; selects
+  `mode`, `model`, `thought_level`, `context_window`, `sandbox`, `agent`;
+  `session/set_mode` and `set_model` work too.
+- **cb8.** `promptToUserMessage` (`H3226:10873`) has cases for text, image,
+  `resource` with text (a blob is dropped) and `resource_link` (the model
+  gets the link); no audio case.
+- **cb9.** Kinds `read`, `edit`, `execute`, `fetch`, `search`, `think`,
+  `other`, with `rawInput` and `locations` (`H3226:4650`).
+- **cb10.** `H3224:34057`: a successful Bash or PowerShell result carries no
+  `content`, only `rawOutput`; a failed one gets its output as a code block.
+  While it runs, a 1 s timer sends `in_progress` updates with `rawOutput`
+  only (`H2704:4910`, `H2667:589`). A backgrounded call ends with a
+  `terminal` block, opt-in or not.
+- **cb11.** CHD-432's note cb3: Code Mode approvals offer Allow and Reject.
+- **cb12.** How a `cancelled` answer reads was not traced. A sandbox approval
+  that times out ends the turn with cancel reason `sandbox_approval_timeout`
+  (`H4028:4429`).
+- **cb13.** Forms need `elicitation.form` (`H479:4502`): A2A approvals,
+  WeixinPay cards, MCP-forwarded requests and `AskUserForStructuredInput`,
+  which is off unless `CODEBUDDY_ENABLE_ASK_USER_FOR_STRUCTURED_INPUT` is
+  set (`H2904:58247`). No URL mode.
+- **cb14.** `TodoWrite` becomes a `plan` update (`H3224:33960`).
+- **cb15.** `session/cancel` aborts the running turn and reads
+  `_meta["codebuddy.ai/cancelReason"]` (`H41:24535`, `H46:47984`); whether
+  it also stops background tasks was not traced.
+- **cb16.** No `_session/steering`; prompts are queued (`H46:79285`).
+- **cb17.** CHD-432's cb1; subagent calls stay in the parent session with
+  `_meta["codebuddy.ai/parentToolCallId"]` (`H3224:33960`). No stop per
+  subagent.
+- **cb18.** `usage_update` with `_meta["codebuddy.ai/usageByCategory"]`,
+  whose parts sum to `used` (`H52:64628`, `types/acp-protocol.d.ts:1005`);
+  no usage in the answer and no cost, as CHD-432 found.
+- **cb19.** Sent on new, load and resume, and when settings change
+  (`H39:25718`, `H39:10483`).
+- **cb20.** `session_info_update` with `title` after a turn and on replay
+  (`H46:65616`).
+- **cb21.** `iOA`, `external`, `internal`, `selfhosted`, none with a `type`,
+  so the agent runs the login itself (`H39:27700-28046`).
+- **cb22.** With `fs.*TextFile` declared its file tools go through `fs/*`;
+  with `terminal` its Bash runs through `terminal/create` (`H44:27885`,
+  `H44:30614`, `H44:31133`).
+- **cb23.** `H3226:4650`: an entry without `type` is stdio; `http` and `sse`
+  pass; an entry with an explicit `type: "stdio"` is skipped.
+- **cb24.** `H39:28046`: `promptCapabilities {image, embeddedContext}`,
+  `mcpCapabilities {http, sse}`, `loadSession`, and five keys outside the
+  spec (`delegateToolsSupport`, `mainAgentSupport`, `multitaskSupport`,
+  `metaPromptSupport`, `processDefaults`). No `sessionCapabilities`.
+- **cb25.** `H39:27171-27700` and the checks cited under Custom: `fs`,
+  `terminal`, `elicitation.form`, `clientInfo.name`, and nine keys under
+  `_meta["codebuddy.ai"]`. `elicitation.url`, `plan`, `subagents` and
+  `_meta.terminal_output_delta` are not read.
+- **cb26.** Eight, each a bullet under Custom below.
+
+**Custom.**
+
+- Terminal output, `_meta["codebuddy.ai"].terminalOutput` and
+  `.terminalOutputChunk`: `terminal_update` (command, cwd, exit, end reason)
+  and `terminal_output_chunk` (base64, 250 ms frames, cut at 2 MiB) for
+  background commands only, cast from the draft v2 RFD onto v1
+  (`H38:37681`, `H52:31339`, `types/acp-terminal-types.d.ts`). The client
+  declares both keys; the authors plan to drop the gate with SDK v2.
+- `_codebuddy.ai/session/cancelBackgroundTask {sessionId, terminalId}`:
+  stops one background task, answering `cancelled`, `already_exited`,
+  `not_found` or `cancel_failed`, and starts no model call (`H38:53717`,
+  `CHANGELOG.md:116`). The `terminalId` comes on the call's `terminal` block.
+- Unsolicited turns: when a background task ends and the session is idle,
+  the agent sends `session_info_update` with
+  `_meta["codebuddy.ai/unsolicitedTurn"] {requestId, reason:
+  "background_drain"}`, runs a model turn with no `session/prompt` open, and
+  ends it with a non-standard `session_end` update (`H82:16892`,
+  `H46:65981`, `H38:40648`). `/goal` and cron use the same path. No opt-in;
+  it spends model tokens nobody asked for.
+- `_codebuddy.ai/question`: a request with multiple-choice questions, sent
+  only to a client declaring `_meta["codebuddy.ai"].question: true`.
+  Without it the `AskUserQuestion` tool is disabled (`H44:34209`,
+  `H2614:101494`), so the model cannot ask.
+- `_meta` on standard messages: tool names and failures, PromptResponse
+  cancel and finish reasons, prompt suggestions (opt-in
+  `promptSuggestion`), usage by category.
+- Notifications to every client: `_codebuddy.ai/checkpoint`, `command`,
+  `authUrl`, `fileDirectoryApproval/committed`; the SDK drops them.
+- About 80 client-to-agent methods for its WorkBuddy and Mod pages, among
+  them the unprefixed `session/set_agent` and `session/set_multitask`.
+- Launch flags beyond `--acp`: `--permission-mode`, `--model`, `--effort`,
+  `--agent`, `--sandbox*` and others (`H269`).
+
+**In chord.** chord loads sessions with a full replay, since resume is not
+advertised. Text, images and `@` links reach the model, the links as link
+text. Modes, models, `thought_level` effort, plans, permissions, commands
+and usage work. chord's own MCP server goes in over http, and its stdio
+entries carry no `type`, so none is skipped. A successful foreground Bash
+shows no output, live or final: chord keeps `rawOutput` but never draws it,
+and codebuddy does not read `terminal_output_delta`. A backgrounded command
+ends with an empty terminal block that chord filters out, so the call reads
+as done with nothing said, and its end never arrives. The unsolicited turn
+that follows is folded under the last turn on screen with no working line,
+as CHD-426 describes for Claude; `session_end` falls to the reducer's
+default. A permission request or form in that turn comes with no turn
+running, so chord refuses it unseen (CHD-158). chord does not declare
+`question`, so the model has no `AskUserQuestion` tool. Subagents show flat.
+Ignored: titles, the custom `_meta`, the notifications and the extra
+capability keys.
+
+**Sources.**
+
+- `@tencent-ai/codebuddy-code` 2.168.2 on npm, its `CHANGELOG.md` and
+  shipped declarations; <https://www.codebuddy.cn/cli/>.
+- CHD-432's notes in
+  [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md)
+  (cb1–cb4).
 
 #### codex-acp
 
@@ -978,7 +1530,171 @@ Not yet filled.
 - Run as: `npx -y @agentclientprotocol/codex-acp@2.2.2`
 - Source: <https://github.com/agentclientprotocol/codex-acp>
 
-Not yet filled.
+`@agentclientprotocol/codex-acp` 2.2.2 (2026-10-10), the registry pin, read
+in the repository at tag `v2.2.2` (commit `202e66e`) and checked against the
+npm package's `dist/index.js` (esbuild, not minified). Paths are relative to
+the repository root (`src/…`, `docs/…`) or the package root (`dist/…`).
+Apache-2.0, no limits on reading. It runs `@openai/codex` 0.160.1 as an
+app-server over JSON-RPC; Codex itself was not read, only the adapter's
+calls into it. Several cells correct CHD-432
+([`design/registry-2026-10-17.md`](design/registry-2026-10-17.md)): the
+answer's `usage` is now the whole turn, titles and its own usage reach every
+client, and its `/status` is hidden by chord's as well as its `/mcp`.
+
+**Footnotes.**
+
+- **cx1.** `src/CodexAcpServer.ts:484`, bundled as `PROTOCOL_VERSION = 1`
+  (`dist/index.js:4241`); no v2 router. `CHANGELOG.md` 2.1.0 adds ACP v2 and
+  reverts it in the same release.
+- **cx2.** `package.json` `^1.5.0`, locked and bundled at 1.5.0.
+- **cx3.** Methods `src/CodexAcpServer.ts:453-4004`, `extMethod` switch
+  `:557-688`: v1 plus `session/fork`, `session/set_model`, `providers/*`,
+  `logout`, draft subagents, `compaction_update`, `notice`, `plan_update`,
+  and own `_session/steering`, `_session/async_task/stop`, `_session/goal`,
+  `_codex/hooks/list·trust`, `_session/rename·archive·unarchive·list/*`,
+  `authentication/status·logout`. The only requests to the client are
+  `session/request_permission`, `elicitation/create` and
+  `elicitation/complete`; no `fs/*` or `terminal/*`.
+- **cx4.** `session/new` answers `models`, `modes` and config options, and
+  marks every session root `trust_level: "trusted"` in the Codex config it
+  passes (`src/CodexAcpClient.ts:940-998`, `:958-962`).
+- **cx5.** Load replays the history, the child tree and async tasks
+  (`docs/subagent-sessions.md`); resume survives an app-server restart
+  (CHD-432 X4).
+- **cx6.** Cwd filter and cursor over Codex threads from `cli`, `vscode`,
+  `exec`, `appServer` and `unknown`, so the person's Codex CLI and VS Code
+  sessions too (`src/CodexAcpClient.ts:1272-1320`). chord never calls it.
+- **cx7.** The whole thread, or up to the turn holding the message given in
+  `_meta.jetbrains.air.fork` (`src/SessionFork.ts:74-125`), see Custom.
+- **cx8.** For a client that is not AIR, `session/delete` archives the
+  thread (`thread/archive`), it does not delete it
+  (`src/CodexAcpServer.ts:1273-1345`, `docs/air-extensions.md:1137-1140`).
+  Close interrupts the turn and clears async tasks.
+- **cx9.** `read-only`, `workspace-write`, `agent` (the default: Codex's
+  model reviewer approves) and `agent-full-access` (`src/AgentMode.ts:39-100`).
+- **cx10.** `models` with ids `model[effort]`, legacy `session/set_model`,
+  and the `model` config option (`src/CodexAcpServer.ts:1967-2010`).
+- **cx11.** `mode`, `collaboration_mode` (Default or Plan), `model`,
+  `reasoning_effort` (category `thought_level`, the model's efforts) and
+  `fast-mode` (a select unless booleans are declared)
+  (`src/CodexAcpServer.ts:2272-2300`, `src/ModelConfigOption.ts:72-95`).
+- **cx12.** `src/CodexAcpClient.ts:1361-1391`: audio is dropped; a resource
+  keeps its text as `<context ref>`, an image blob as an image, another blob
+  as base64; a `resource_link` is a text link only.
+- **cx13.** `docs/air-extensions.md:237-348` (the column for other
+  clients). Kinds `execute`, `read`, `search`, `edit`, `fetch`, `think`,
+  `switch_mode`, `other`. Every command carries `terminal` content with an
+  id though no client terminal exists; output streams in
+  `_meta.terminal_output_delta`. A call is `in_progress` also while it waits
+  on an approval.
+- **cx14.** `allow_once`, `allow_always`, `reject_once`, `reject_always`
+  from Codex's decisions. Cancelled, an unknown option, a transport failure
+  or a malformed answer fail closed; no timeout
+  (`docs/air-extensions.md:538-632`).
+- **cx15.** `request_user_input` with `_meta.codex` and MCP forms; MCP URL
+  elicitation, MCP OAuth and the device-code login as URLs
+  (`src/CodexElicitationHandler.ts:290-306,419-480`).
+- **cx16.** Standard `plan` entries, and plan-mode markdown as `plan_update`
+  to a client declaring `plan` (`docs/air-extensions.md:636-674`).
+- **cx17.** `turn/interrupt` on the root thread only; a child id stops
+  nothing, and background terminals keep running
+  (`src/CodexAcpServer.ts:3994-4004`, `docs/subagent-sessions.md`).
+- **cx18.** `src/CodexAcpServer.ts:2029-2147` answers `injected`,
+  `startedNewTurn` or `failed`; there is no `idleBehavior` in `src/`, so a
+  steer with no turn running starts one.
+- **cx19.** Draft `subagent_spawned` and `subagent_state_update` to a client
+  declaring `subagents`; no targeted cancel or close
+  (`docs/subagent-sessions.md`).
+- **cx20.** `usage_update.used` is the last request's tokens, `size` the
+  context window; no cost. `PromptResponse.usage` is the whole turn: the
+  thread's total at the end minus at the start, else the summed per-request
+  counts (`src/TokenCount.ts:106-150`, `src/CodexAcpServer.ts:3926-3955`,
+  shipped at `dist/index.js:45367-45384`). CHD-432 lists CHD-374 as
+  unaffected; that is wrong.
+- **cx21.** `/plan`, `/mcp`, `/skills`, `/status`, `/review`,
+  `/review-branch`, `/review-commit`, `/compact`, `/goal`, `/rename`,
+  `/logout`, and `$skill` commands (`src/CodexCommands.ts:138-210`).
+- **cx22.** After the first turn the adapter asks a model for a title
+  (`gpt-5.6-luna`, an ephemeral thread, the first message cut to 4000
+  characters) and sends it as `session_info_update` to every client
+  (`src/TitleGenerator.ts:4-148`). CHD-432's "Session titles —" for codex is
+  wrong.
+- **cx23.** `api-key`, `chat-gpt` (a browser), `chat-gpt-device-code` (with
+  `elicitation.url`), `gateway` (with `auth._meta.gateway`); none of type
+  `terminal`. chord would get the first three (`src/CodexAuthMethod.ts:1-90`).
+- **cx24.** An SSE server fails `session/new` with "Codex doesn't support
+  MCP SSE transport protocol"; a server whose name the person's Codex config
+  already has is skipped as a failed startup call
+  (`src/CodexAcpClient.ts:965-998,1043-1063`).
+- **cx25.** `src/CodexAcpServer.ts:474-540`: `loadSession`, image and
+  embedded context, MCP http (not sse), `sessionCapabilities` resume, list,
+  close, delete, fork, `additionalDirectories`, `subagents`; `auth.logout`,
+  `providers`, `_meta.authStatus`, `_meta.steering.supported`.
+- **cx26.** `elicitation` form and URL, `plan`, `session.compaction`,
+  `session.notices`, boolean config options, `subagents`,
+  `auth._meta.gateway`, `_meta.terminal_output`,
+  `_meta.terminal_output_delta`, `_meta.jetbrains.air`
+  (`src/tool-calls/ClientCapabilities.ts:65-92`). Not `fs` or `terminal`.
+- **cx27.** Eleven, each a bullet under Custom below.
+
+**Custom.**
+
+- Its own `/mcp` and `/mcp reconnect`: server status, and MCP OAuth by URL
+  elicitation (`src/mcp/McpCommand.ts:18-80`). Hidden by chord's `/mcp`.
+- Its own `/status`: token usage and the account's rate limits, which are
+  never pushed (`src/CodexCommands.ts:464-540`). Hidden by chord's
+  `/status`, so the rate limits are unreachable from chord.
+- Usage and account `_meta`, to every client: `PromptResponse._meta.quota`
+  per model, the `_auth/status_update` notification (kind, label, plan) and
+  `session_info_update._meta.codex.threadStatus`
+  (`src/CodexAcpServer.ts:3926-3940,1838`). CHD-432's "Own usage or cost ✗"
+  for codex is wrong for usage; there is still no cost.
+- Instructions and other `session/new` `_meta`:
+  `_meta.jetbrains.air.customInstructions`, read with no AIR declaration,
+  new sessions only (`src/AirExtension.ts:101-108`), and
+  `_meta.mcpStartupAwaitTimeoutMs`, which waits for the passed MCP servers.
+- `_session/steering`, announced by `_meta.steering.supported`; no
+  `promptRequired`, so a late steer starts and spends a turn.
+- `_session/goal` and `/goal`: a long-running objective that keeps spending
+  between prompts. The method works for any client; its snapshots are
+  AIR-only (`src/CodexAcpServer.ts:592-650`).
+- `_codex/hooks/list` and `_codex/hooks/trust`: registered for every
+  client; trusting writes into the person's `$CODEX_HOME/config.toml`.
+- Fork point: `session/fork` with `_meta.jetbrains.air.fork {version: 1,
+  messageId}` keeps whole turns up to that message, with no AIR declaration.
+- AIR (`_meta.jetbrains.air` declared): async tasks for background shell
+  commands with their own stop, the session index with real delete,
+  `diffPatch`, `sessionFailure` and more (`docs/air-extensions.md`).
+  Declaring it changes every update's shape: unchanged `_meta` keys
+  dropped, `_meta.codex.*` removed, fewer fields on permission requests.
+- `terminal` content with an id on every command, and `_meta.terminal_info`
+  and `terminal_exit`, Zed's convention, with no client terminal.
+- Plan review as a `session/request_permission` of kind `switch_mode` with
+  options `implement_plan` and `revise_plan`.
+
+**In chord.** chord sets model and effort through the config options and
+mode with `set_mode`, and an enricher fills in the mode Codex leaves out
+after it. Draft subagents are reshaped into the RFD shape by an enricher.
+chord never cancels a child on its own id, which would stop nothing on codex
+anyway. It reads `PromptResponse.usage`, which is now the whole turn, and
+estimates the cost. It drops the generated title, though codex spends a
+model call on it, and ignores `_meta.quota` and `_auth/status_update`. The
+default `agent` mode sends approvals to Codex's model reviewer, more spend
+chord does not show. chord's `/mcp` and `/status` hide codex's, so Codex's
+MCP sign-in and rate limits cannot be reached. chord passes the person's MCP
+servers as they are, never checked against `mcpCapabilities.sse: false`, so
+an SSE server in the person's settings fails `session/new`. Steering carries
+only messages from other agents; a late one starts a turn on codex. List,
+fork, delete and close are never called.
+
+**Sources.**
+
+- `@agentclientprotocol/codex-acp` 2.2.2 on npm;
+  <https://github.com/agentclientprotocol/codex-acp/tree/v2.2.2>, `README.md`,
+  `CHANGELOG.md`, `docs/air-extensions.md`, `docs/subagent-sessions.md`.
+- CHD-432's notes in
+  [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md)
+  (cx1–cx7, X1–X4, U8).
 
 #### deepagents
 
@@ -987,7 +1703,98 @@ Not yet filled.
 - Run as: `npx -y deepagents-acp@0.1.7`
 - Source: <https://github.com/langchain-ai/deepagentsjs>
 
-Not yet filled.
+Read at `deepagents-acp` 0.1.7, the ACP Registry's pin, unchanged since
+CHD-432: the npm package, MIT, with nothing restricting reading. Its bin is
+`dist/cli.js`, a readable tsdown bundle; line numbers below are in that file.
+It wraps `deepagents` 1.8.8 on `@agentclientprotocol/sdk` `^0.17.0`, which
+resolves to 0.17.1 today. The registry passes no flags, so the model
+(`claude-sonnet-4-5-20250929` by default) and its provider key
+(`ANTHROPIC_API_KEY`) are set outside chord.
+
+**Footnotes.**
+
+- **da1.** `initialize` echoes the client's version, a number or parsed,
+  else 1 (`:662`), so 1 to chord.
+- **da2.** `package.json`; `PROTOCOL_VERSION = 1` in the SDK.
+- **da3.** Handlers for initialize, authenticate, new, load, prompt, cancel
+  and set_mode only (`:632-642`). No unstable method, no v2.
+- **da4.** `session/new` also reads the off-spec `params.mode` and
+  `params.configOptions.agent` (`:696-712`).
+- **da5.** Sessions live in memory; after a restart load answers "Session
+  not found" (CHD-432 da3).
+- **da6.** Three modes that change nothing; the model is fixed by `--model`
+  (CHD-432 da2).
+- **da7.** It reads `block.mediaType`, but ACP's field is `mimeType`, so
+  every image goes to the model labelled `image/png` (`:275-276`). A JPEG so
+  labelled may be refused by the provider; not run.
+- **da8.** `acpContentToLangChain` handles text, image and resource; an
+  embedded resource becomes `[Resource: <uri>]` and its text. Anything else
+  becomes `String(block)` (`:261-296`), so a `resource_link` beside text is
+  the literal text `[object Object]`. A replayed user message keeps only its
+  first block (`:1160`).
+- **da9.** Kinds `read`, `search`, `edit`, `execute`, `think`, `other`
+  (`:348-366`). Arguments and results go under the non-ACP keys `input` and
+  `output` (`:1190`, `:1206`), not `rawInput` or `rawOutput`. Content is one
+  text block on `completed` only; no diff, no terminal. Locations for read,
+  write and edit (`:392`).
+- **da10.** `pending`, `in_progress`, then `completed`, or the non-ACP
+  `"error"` on failure and `"cancelled"` on abort (`:864-869`, `:982`,
+  `:1180-1215`).
+- **da11.** Nothing calls its permission request: every tool, writes
+  included, runs without asking (CHD-432 da4).
+- **da12.** `write_todos` never reaches a `plan` update (CHD-432 da5).
+- **da13.** Cancel aborts the newest turn's stream and marks its open calls
+  `"cancelled"` (`:834-837`). A second prompt starts its own stream, and the
+  first can then not be cancelled (CHD-432 da1).
+- **da14.** A subagent is one `Delegating:` call (CHD-432).
+- **da15.** `/plan`, `/agent`, `/ask`, `/clear`, `/status` plus an agent
+  config's own commands, after new and load, before the answer
+  (`:721-731`, `:754-763`).
+- **da16.** Environment-variable methods; `authenticate` does nothing
+  (CHD-432).
+- **da17.** `fs.readTextFile`, `fs.writeTextFile` and `terminal` are
+  recorded (`:652-659`), but the CLI always uses its own filesystem
+  (`:1576`), and `executeWithTerminal` is never called; it has no shell at
+  all (CHD-432 da6). The dead fs path would also call `readTextFile`
+  without a `sessionId` (`:1295-1296`).
+- **da18.** `mcpServers` is never read anywhere in the file.
+- **da19.** `{loadSession: true, promptCapabilities: {image: true, audio:
+  false, embeddedContext: true}, mcpCapabilities: {http: false, sse: false},
+  sessionCapabilities: {modes: true, commands: true}}`; the last two are not
+  ACP fields (`:667-683`).
+
+**Custom.**
+
+- `input` and `output` on tool calls: arguments and results under keys of
+  its own. A client must read them; a standard one loses the arguments and
+  sees results only on success.
+- Statuses `"error"` and `"cancelled"`: nothing a client can rely on; a
+  strict client shows the call unfinished.
+- `session/new` params `mode` and `configOptions.agent`: a start mode and a
+  named agent config. A client must send them; private coupling.
+- Launch flags `--model`, `--workspace`, `--skills`, `--memory`, `--name`,
+  `--description`, `--debug`, `--log-file` (`:1408-1465`): set in the launch;
+  the registry passes none.
+
+**In chord.** chord sends every @-mention as a `resource_link`, never
+embedded, though deepagents advertises `embeddedContext`; deepagents turns
+each link into `[object Object]`, and the path survives only because the
+prompt's own text names it. Images go out with the right `mimeType`, and
+reach the model labelled PNG. chord reads `rawInput` and `rawOutput`, so tool
+rows show titles and the completed text only. A failed or cancelled call
+keeps reading `Waiting…`, as chord knows neither status. Every tool runs
+without asking, writes included. Modes show and do nothing; no model or
+effort list. Load fails after the agent restarts. No usage arrives, so
+chord estimates nothing. chord's own MCP server is left out, as `http` is
+false, and the person's servers are passed and ignored. A mid-turn prompt
+is queued, which keeps a second stream from starting. chord never calls
+`session/list`.
+
+**Sources.**
+
+- `deepagents-acp` 0.1.7, npm, and https://github.com/langchain-ai/deepagentsjs.
+- `@agentclientprotocol/sdk` 0.17.1, npm.
+- CHD-432's reading, `docs/design/registry-2026-10-17.md` (da1-da7).
 
 #### dimcode
 
@@ -996,7 +1803,149 @@ Not yet filled.
 - Run as: `npx -y dimcode@0.5.19 acp`
 - Source: <https://dimcode.dev/docs/acp.html>
 
-Not yet filled.
+Read at 0.5.19, the registry's pin, from the npm wrapper `dimcode@0.5.19`
+and its `dimcode-darwin-arm64@0.5.19`, a Bun-compiled binary whose bundled
+JavaScript stands in it as plain text with `// <path>` module markers. Cites
+name the module path from those markers (`../agent/…` as the marker has it),
+with lines counted from the marker. The bundler's output is not obfuscated;
+it was read as text, not decoded. The package names a LICENSE it does not
+ship, and there is no public repository. Other platforms' binaries were not
+read. Two findings correct the CHD-432 study: usage with cost comes as a
+standard `usage_update` with no opt-in, and the question form is standard
+`elicitation/create`, which `_lody` only adds extras to.
+
+**Footnotes.**
+
+- **dm1.** `src/acp/capabilities.ts:58-66`: invalidParams for a non-integer
+  or a version below 1, and 1 for anything above.
+- **dm2.** `@agentclientprotocol/sdk` 0.21.1 from the pnpm path in the
+  bundle; `AgentSideConnection` on `ndJsonStream`
+  (`src/acp/connection.ts:11-19`).
+- **dm3.** `src/acp/server.ts:10-89`: stable v1 methods plus, unstable in
+  0.21.1, `session/fork`, `session/set_model`, `elicitation/create`,
+  `document/did*` as no-ops and `userMessageId`; `_lody/*` and `_dimcode/*`.
+- **dm4.** `src/acp/session-bridge.ts:134-181`: a new session gets
+  permission preset `read-only`, and answers `configOptions`, `modes` and
+  `models`. Without provider credentials it fails `auth_required`.
+- **dm5.** Load replays chunks and tool calls with `_meta.lody.turnId` after
+  the answer (`session-bridge.ts:362-404`); resume has no replay (`:405-437`).
+- **dm6.** `session-bridge.ts:183-206`: `cwd` filter, cursor, newest first;
+  an `additionalDirectories` filter is refused.
+- **dm7.** `session-bridge.ts:207-245`: same cwd only; with
+  `_meta.lody.forkAtTurn {turnId}` it forks at that assistant message.
+- **dm8.** No delete. `session/close` cancels the run, its permissions and
+  terminals (`session-bridge.ts:438-445`).
+- **dm9.** `src/acp/config-options.ts:8-11`: `agent` and `goal` (C7).
+- **dm10.** `config-options.ts:69-75,186-205`: `provider/model` ids as
+  `models` and as the `model` option.
+- **dm11.** `config-options.ts:2-38,262-312`: `mode`, `model`,
+  `thought_level` (alias `reasoning_effort`, levels from the model), and
+  `permission`: `read-only`, `workspace-write`, `full-access`.
+- **dm12.** `src/acp/prompt-bridge.ts:266-405`: images saved as
+  attachments; audio refused with invalidParams; embedded text inlined as
+  `<resource>`; a `resource_link` becomes the text `<resource name uri />`,
+  never read for the model.
+- **dm13.** `src/acp/event-bridge.ts`: kind guessed from the tool name
+  (`:583-604`), title the bare name (`:245`), rawInput at start, rawOutput the
+  whole result; content text, image, link, or `terminal` with a client
+  terminal, never a `diff` (`:453-492`). Locations only on the permission's
+  call (`src/acp/permission-bridge.ts:198-209`). Calls start `in_progress`
+  and end `completed` or `failed`; one that asks goes `pending` first.
+- **dm14.** `permission-bridge.ts:2-23,140-146`: four options, "always"
+  kept for the session, `cancelled` a deny, no timeout. Under the default
+  `read-only` preset writes, network and commands are denied without asking
+  (`src/core/permission-policy.ts:19-27`); `workspace-write` asks for
+  commands and network, `full-access` never asks.
+- **dm15.** `src/acp/elicitation.ts:2-78`: with `elicitation.form` declared,
+  its question tool becomes a standard form, `oneOf` or `anyOf` per question
+  and a `__custom_<i>` field, tagged `_meta.lody.elicitation` whether or not
+  the client opts in. No URL mode.
+- **dm16.** `event-bridge.ts:252-265,544-579`: TodoWrite results as `plan`,
+  the call hidden.
+- **dm17.** `session-bridge.ts:692-714`: interrupts the run, aborts its
+  permissions, kills its client terminals. Whether external subagents, run
+  as background tasks, stop too was not traced.
+- **dm18.** `prompt-bridge.ts:5-10`: a second `session/prompt` is refused
+  with "ACP session already has an active prompt". No `_meta.steering`;
+  steering only by `_lody/session/steer` (C3).
+- **dm19.** `event-bridge.ts:37-67,330-358`: by default a `think` call
+  `subagent:<childSessionId>` with output in rawOutput deltas and
+  `_meta.lody.task`; with `_meta.lody.subagentEvents` declared, that call is
+  replaced by `_lody/subagents/event`. No `subagent_update`.
+- **dm20.** `event-bridge.ts:74-102,302-320`: standard `usage_update` with
+  `used`, `size` and the session's total cost, sent with no opt-in. The cost
+  is `COALESCE(SUM(cost), 0)`
+  (`../agent/src/storage/sqlite-session-catalog.ts:192`),
+  so an unpriced model sends 0. No `PromptResponse.usage`.
+- **dm21.** `src/acp/slash-commands.ts:2-19`: `/help`, and `/compact` where
+  that plugin loads; sent after new, load, resume, fork and each command.
+- **dm22.** `event-bridge.ts:302-326`: `title` and `updatedAt` at start and
+  on change; also `_meta.lody.goal` and MCP warnings in `_meta.lody.notice`.
+- **dm23.** `src/acp/auth.ts:3-56`: a `terminal` method only to a client
+  declaring `auth.terminal` or `_meta["terminal-auth"]`, else `[]`; without
+  credentials session/new fails "Provider credentials are required".
+- **dm24.** `src/acp/client-tool-backend.ts:23-330`: `fs/*` for read, write
+  and edit, `terminal/*` for exec, only when declared.
+- **dm25.** `src/acp/mcp-bridge.ts:17-50`: stdio servers dropped with a
+  warning sent only as `_meta.lody.notice`; http and sse taken.
+- **dm26.** `capabilities.ts:7-38`: `loadSession`, prompt `{image,
+  embeddedContext}`, `mcpCapabilities {http, sse}`, session `{fork, list,
+  resume, close}`, and `_meta.lody` and `_meta["dimcode.extensions"]`.
+- **dm27.** `client-tool-backend.ts:23-26`, `prompt-bridge.ts:118-120`,
+  `auth.ts:48-51`, `src/acp/lody.ts:33-45`: `fs`, `terminal`,
+  `elicitation.form`, `auth.terminal`, three `_meta.lody` keys; never `plan`,
+  `subagents` or `elicitation.url`.
+
+**Custom.**
+
+- `_meta.lody` on standard updates, always on: turn ids, tool names, task
+  state, title source, goal and MCP warnings. Nothing to declare; a client
+  that ignores it loses the warnings and the goal.
+- `_lody/session/usage_update`: per-model and per-turn tokens and cost.
+  Needs `_meta.lody.usage` or any `_lody` call; its `usage` is a delta or a
+  total depending on the case.
+- `_lody/session/steer` and `steer_applied`: a second steering protocol,
+  answered without opt-in; calling it turns the private usage on.
+- `_lody/subagents/list|cancel|output`: a stop and the output per subagent,
+  by the `taskId` in `_meta.lody.task`.
+- `_lody/subagents/event`: needs `_meta.lody.subagentEvents`, and then the
+  standard subagent call is no longer sent.
+- `_lody/rate_limits/get|update`: quota windows; queries the provider.
+- Goal mode, by mode `goal` or `_meta.lody.goalControl` on a prompt: dimcode
+  keeps working on its own, so more turns and more spend.
+- `_lody/session/history/read`, and `_dimcode/*` file rewind and reapply,
+  which change the person's files.
+- External CLIs as subagents, on by default since 0.5.19
+  (`../agent/src/agent-type/registry-meta.ts:2-24`, `drivers/`): each
+  session probes PATH for 18 CLIs, claude, codex, cursor (`agent`), droid,
+  pi-acp and others, and the model may start them with their approvals
+  bypassed (claude with `bypassPermissions`, ACP CLIs answered
+  `allow_always`), on the person's own accounts. It presents itself to devin
+  as `windsurf`. No ACP switch turns it off; only dimcode's config or the
+  `permission` option gates its `agent` tool.
+- `PromptResponse._meta.dimcode.error` on a failed run, which otherwise
+  reads as stopReason `refusal`.
+
+**In chord.** chord opens, reopens by resume or load, cancels, and sets mode,
+model, effort and the `permission` option as plain config options. The
+standard `usage_update` brings the session's cost; for an unpriced model it
+is 0, which stops chord's estimate and reads $0.00 (CHD-380). Questions
+reach chord's form because chord declares `elicitation.form`, and
+`dimcodeQuestions` reads `_meta.lody.elicitation.customAnswerFor`; a
+question whose own id is `__custom_<n>` would miss that match. A fresh
+session is `read-only`, so writes and commands are denied with no prompt
+until the person changes the option. Tool rows read the bare tool name with
+no diff, and a subagent is one `think` row. @ mentions reach the model as a
+bare name and URI. Without credentials the start fails `auth_required`, and
+chord has no hint to give. A mid-turn prompt is queued, so dimcode's refusal
+of a second prompt never comes up. chord drops titles, `_meta.lody` and
+`_meta.dimcode.error`, never calls `session/list`, fork or close, and calls
+no `_lody` method.
+
+**Sources.**
+
+- npm `dimcode@0.5.19` and `dimcode-darwin-arm64@0.5.19`.
+- `docs/design/registry-2026-10-17.md` (CHD-432), `docs/design/CHD-1.md`.
 
 #### dirac
 
@@ -1005,7 +1954,140 @@ Not yet filled.
 - Run as: `npx -y dirac-cli@0.5.21 --acp`
 - Source: <https://github.com/dirac-run/dirac>
 
-Not yet filled.
+Read at `dirac-cli` 0.5.21, the ACP Registry's pin, from the repository
+https://github.com/dirac-run/dirac at tag v0.5.21 (2026-10-14), checked
+against the npm package's `dist/cli.mjs`; paths below are in the repository.
+Apache-2.0, with nothing restricting reading. `@agentclientprotocol/sdk`
+1.3.0 was read beside it to see how the SDK routes requests, which is what
+shows resume unreachable (di6) and corrects CHD-432's "resume goes through
+load" (`docs/design/registry-2026-10-17.md`).
+
+**Footnotes.**
+
+- **di1.** It answers the SDK's `PROTOCOL_VERSION`, 1, whatever the client
+  asks (`cli/src/agent/DiracAgent.ts:1164-1165`).
+- **di2.** Exact pin (`cli/package.json:96`, `package-lock.json:212-214`).
+- **di3.** v1 `AgentSideConnection`, no v2. Unstable or draft: form
+  elicitation, close, delete, `providers/*`, `logout`, boolean config
+  options, `session_info_update`, `usage_update`, and auth types `env_var`
+  and `terminal` (`cli/src/acp/AcpAgent.ts:120-130`, `:367-460`).
+- **di4.** A random UUID id; `_meta["dev.dirac/worktree"]` makes a git
+  worktree first. Answers `modes` and `configOptions`; commands and options
+  follow by `setImmediate` (`DiracAgent.ts:1277-1337`, `:1472-1485`).
+- **di5.** Replays its journal of sent updates, then `usage_update`. It
+  refuses a session with no runtime record, one whose history is gone, and
+  one whose worktree is gone (`DiracAgent.ts:1345-1452`, `:2134-2207`).
+- **di6.** `sessionCapabilities.resume` is advertised, but only
+  `unstable_resumeSession` is defined (`cli/src/acp/AcpAgent.ts:367-373`).
+  SDK 1.3.0 registers `session/resume` only for `resumeSession`
+  (`dist/acp.js:1024-1025`), and the bundle's router does the same, so the
+  request gets method-not-found. Dirac's tests call the method directly
+  (`AcpAgent.test.ts:256-264`). Not checked live.
+- **di7.** `unstable_listSessions` exists (`AcpAgent.ts:375-378`), but the
+  SDK registers `session/list` only for `listSessions`; not advertised.
+- **di8.** `closeSession` frees resources; `deleteSession` also removes the
+  history and worktree; both also as `dev.dirac/session.*`
+  (`AcpAgent.ts:283-286`, `:408-426`).
+- **di9.** `plan` and `act` by `set_mode` and the `mode` option, with
+  `current_mode_update` and `config_option_update` (`DiracAgent.ts:1944-1997`).
+- **di10.** No `set_model` and no `models`; `model` is a config option over
+  the provider's catalogue (`cli/src/agent/sessionConfig.ts:218-226`).
+- **di11.** `mode`, booleans `auto_approve` and `yolo` (category `mode`,
+  sent without the client's `sessionConfigOptions.boolean`), `provider`
+  (`_provider`), `model`, `inference_speed`, and two `thought_level`
+  selects: `reasoning_effort`, always, and `thinking_budget`, except on
+  deepseek (`sessionConfig.ts:150-250`).
+- **di12.** Only an embedded resource's `uri` is kept; a `resource_link` is
+  dropped silently (`cli/src/agent/promptContent.ts:9-24`).
+- **di13.** Kinds `edit`, `read`, `search`, `delete`, `think`, `execute`,
+  `other`. `rawInput` is the tool's input; `rawOutput` the same, or
+  `{reason}` or `{error}` on failure. Content is `diff` only. Locations
+  carry path and line. `pending`, `in_progress`, `completed` or `failed`;
+  cancel closes open calls `failed` (`cli/src/agent/messageTranslator.ts:23-53`,
+  `:290-358`).
+- **di14.** `allow_once`, `allow_always`, `reject_once`, `reject_always`.
+  "Always" is written to the project's `.dirac/permissions.json`, for every
+  session in that workspace. Asked only inside a prompt, one at a time;
+  `cancelled`, an RPC error or cancel rejects and fails the call; no
+  timeout (`cli/src/agent/permissionHandler.ts:38-84`,
+  `DiracAgent.ts:1011-1035`).
+- **di15.** A question is a form with a required `optionId` and an "Other
+  answer" that opens a second form (CHD-1). Only with `elicitation.form`;
+  never URL (`cli/src/agent/taskMessageBridge.ts:550-640`).
+- **di16.** A `plan` only from a plan-response card, its lines as entries
+  (`DiracAgent.ts:2209-2255`).
+- **di17.** Cancel rejects a pending permission, cancels a form, aborts the
+  task and its subagents, closes calls `failed`, then answers `cancelled`
+  (`DiracAgent.ts:1853-1931`).
+- **di18.** Steering is its own `dev.dirac/whisper` notification, taken only
+  mid-turn, reported by `dev.dirac/steering_status`; no `_session/steering`.
+  A second prompt on a busy session fails "busy"; prompts of other sessions
+  in the process wait their turn (`DiracAgent.ts:403-439`, `:1576-1602`).
+- **di19.** `use_subagents` is one call of kind `other`; children have no
+  session, their approvals come as the parent's, and they stop only with it
+  (`taskMessageBridge.ts:255-298`; CHD-432 di1).
+- **di20.** `usage_update {used, size, cost?}`, `cost` cumulative and only
+  when the provider gives one. `PromptResponse.usage` is the session's
+  running total since it was opened or loaded, not the turn's as the spec
+  says (`taskMessageBridge.ts:115-232`).
+- **di21.** After new, load and resume, and before every prompt
+  (`DiracAgent.ts:2257-2299`).
+- **di22.** Once, on the first prompt with text: a summary title and
+  `updatedAt` (`DiracAgent.ts:2301-2316`).
+- **di23.** Offered only with no provider set up: browser setup, ChatGPT
+  sign-in, `env_var` `DIRAC_*`, and `terminal` under `auth.terminal`. With no
+  provider a prompt fails with a plain error, not `authRequired`
+  (`cli/src/agent/AcpAuthenticationManager.ts:36-103`).
+- **di24.** `fs/*` only when both fs flags are set, `terminal/*` when
+  `terminal` is; otherwise its own (`DiracAgent.ts:1241-1260`).
+- **di25.** `mcpServers` is never read and no `mcpCapabilities` is sent
+  (`DiracAgent.ts:1277-1337`).
+- **di26.** `loadSession`, `sessionCapabilities {resume, close, delete}`,
+  `promptCapabilities {image, embeddedContext}`, `auth.logout`, `providers`,
+  and 18 `dev.dirac/*` keys in `_meta`, 19 under `--listen`
+  (`DiracAgent.ts:1164-1214`).
+- **di27.** `fs.readTextFile` and `fs.writeTextFile`, `terminal`,
+  `elicitation.form`, `auth.terminal`, `_meta["terminal-auth"]`; nothing
+  else (`cli/src/acp/ACPTextFileAccess.ts:14-31`).
+
+**Custom.** Each sits behind a key in `agentCapabilities._meta`; a client
+opts in by calling it.
+
+- `dev.dirac/whisper` and `dev.dirac/steering_status`: steering, reported
+  `queued` then `sent`. Dropped silently outside a turn.
+- `dev.dirac/seq` on every update: an ordering number for replay. Free.
+- `dev.dirac/client_annotation`: client events kept and replayed on load.
+- `dev.dirac/permissions.list` and `.delete`: the stored "always" rules,
+  which outlive the session.
+- `dev.dirac/checkpoints.list` and `.restore`: rewrite workspace files.
+- `dev.dirac/messages.pin`, `.unpin`, `.pinned`: pinned context, by an
+  internal message id ACP never carries.
+- `dev.dirac/worktree.provision` and `.integrate`: a session in its own git
+  worktree, merged back on request.
+- `providers/*` (draft): pick the provider from the client.
+- `dev.dirac/permission.effect_previews`: advertised; nothing implements it.
+- `--listen <socket>`: sessions outlive a disconnected client.
+
+**In chord.** chord resumes whenever the agent offers `resume` and chord has
+its own record, so every reopen of a dirac session chord recorded hits
+method-not-found; only a session chord never recorded goes through load.
+chord reads `PromptResponse.usage` as the turn's, so dirac's session totals
+show as growing turns, and chord's estimate, made when dirac sends no cost
+and the model has a price, adds the totals up and overcounts. chord's effort
+control takes the first `thought_level` select, `reasoning_effort`;
+`thinking_budget` is a plain option. `provider` shows as an ordinary option.
+The booleans `auto_approve` and `yolo` are dropped. chord's @-mention links
+are dropped; the prompt text still names the path. chord's own MCP server is
+left out and the person's servers are ignored. Forms and the four permission
+kinds work, with the "Other answer" enricher. A mid-turn prompt is queued,
+which avoids dirac's busy error. Titles, close, delete and every
+`dev.dirac/*` extension go unused; chord never calls `session/list`.
+
+**Sources.**
+
+- https://github.com/dirac-run/dirac, tag v0.5.21; `dirac-cli` 0.5.21, npm.
+- `@agentclientprotocol/sdk` 1.3.0, npm.
+- CHD-432's reading, `docs/design/registry-2026-10-17.md` (di1-di2).
 
 #### factory-droid
 
@@ -1014,7 +2096,138 @@ Not yet filled.
 - Run as: `npx -y droid@0.244.0 exec --output-format acp-daemon`
 - Source: <https://factory.ai/product/cli>
 
-Not yet filled.
+Read at 0.244.0, the registry pin, released 2026-10-16 by Factory's
+changelog. npm `droid@0.244.0` is only a shim and installer; the program is
+the native binary `bin/droid` of `@factory/cli-darwin-arm64@0.244.0`, which
+the installer takes from that optional dependency or from its npm tarball.
+The package says only `"license": "UNLICENSED"`, and its source is private.
+The binary is a `bun build --compile` executable that embeds minified JS.
+Under the owner's rule of 2026-10-18, recorded on CHD-433, that JS was read
+as plain text only for the ACP contract: the messages, fields and
+capabilities droid sends and accepts, and how it behaves. Nothing was
+decompiled, deobfuscated or beautified, and the binary was never run. Where
+Factory's changelog or docs state a fact, they are cited first; the rest is
+from `@factory/cli-darwin-arm64` 0.244.0. chord launches
+`exec --output-format acp-daemon`; `--output-format acp` runs the same
+daemon.
+
+**Footnotes.**
+
+- **dr1.** `initialize` answers 1 whatever version the client sends.
+- **dr2.** The package metadata embedded in 0.244.0 declares
+  `@agentclientprotocol/sdk` `^1.5.0`, and droid knows the client methods
+  `mcp/connect` and `mcp/disconnect`, which 1.6.0 drops: so 1.5. The patch
+  level is not established from the wire contract.
+- **dr3.** droid answers initialize, authenticate, session new, load,
+  resume, list, prompt, set_mode, set_config_option and `session/set_model`,
+  and takes `session/cancel`. Any other request, fork, close and delete
+  included, gets -32601.
+- **dr4.** Without a login `session/new` fails `authRequired`; it takes
+  `mcpServers` and answers `models`, `modes` and `configOptions`.
+- **dr5.** Replays every message, tool calls as `completed`.
+- **dr6.** Resume sends no replay.
+- **dr7.** `session/list` takes the cwd and a cursor and answers 50 a page;
+  entries carry `title`, `updatedAt` and `_meta.messageCount`.
+- **dr8.** Modes `normal` ("Auto (Off)"), `spec`, `auto-low`,
+  `auto-medium`, `auto-high`, cut to the org's maximum autonomy. Options
+  `autonomy_level` (category `mode`), `model` and `reasoning_effort`
+  (`thought_level`), its values the efforts the model supports.
+  `current_mode_update` and `config_option_update` follow a change.
+- **dr9.** `availableModels` in the session answer; `session/set_model`
+  refuses a model not enabled.
+- **dr10.** One user message: a `resource` becomes `<context ref="…">` text,
+  a `resource_link` a `[@name](uri)` link, and `audio` is dropped.
+- **dr11.** Kind chosen from the tool name: `edit`, `execute`, `read`,
+  `search`, `think`, `other`. `rawOutput` only at completion, and on a
+  running shell command's updates. `locations` only for file create, edit
+  (path) and read (path and line). Some tools are never announced; which is
+  not established.
+- **dr12.** `diff` for file create and edit, text for the rest. `terminal`
+  content and `_meta.terminal_*` only when the client declares
+  `_meta.terminal_output: true` (Custom).
+- **dr13.** A live call starts `pending`; only a running shell command sends
+  `in_progress`; it ends `completed` or `failed`. A shell command still open
+  when the turn ends is closed `failed` with no text.
+- **dr14.** Options `allow_once`, `allow_always` and `reject_once`, with
+  droid's own labels. One request covers a batch of tool uses but names only
+  the last as `toolCall`, with `rawInput` and a title like `` `cmd` (low) ``.
+  A `session/cancel` does not withdraw it; an error or `cancelled` counts as
+  droid's cancel. No timeout.
+- **dr15.** Form: `elicitation/create` when `elicitation.form` is declared,
+  withdrawn with the turn (the `question_<i>` shape of
+  `docs/design/CHD-1.md`). URL: only the sign-in link, sent outside any
+  session while new, load, resume or `authenticate` waits.
+- **dr16.** The todo tool's use becomes a `plan` update and no tool call,
+  whatever the client declares.
+- **dr17.** `session/cancel` stops the turn; the prompt answers `cancelled`.
+  That background delegated tasks and commands end with it is in release
+  notes .239 and .240 only (`n`).
+- **dr18.** A second `session/prompt` is refused -32600 "A prompt is already
+  running for this session". No steering method or `_meta`.
+- **dr19.** A child session's updates never reach the client, so the parent's
+  tool use stays one call; a child's permissions are asked under the parent.
+  No stop per child.
+- **dr20.** The prompt answers only `stopReason`; no `usage_update`.
+- **dr21.** The enabled skills, right after new, load or resume, outside a
+  turn; no built-in slash commands.
+- **dr22.** No `session_info_update`; titles only in `session/list`.
+- **dr23.** Factory's IDE integration docs name browser login and
+  `FACTORY_API_KEY`. The methods are `device-pairing`, `factory-api-key`, or
+  `customer-prem` on such a deployment. Without a login, new, load and
+  resume fail `authRequired` (Custom, sign-in).
+- **dr24.** stdio, http and sse servers are taken, but `mcpCapabilities` is
+  not advertised, so a client reads http and sse as false; `acp` transport is
+  refused.
+- **dr25.** `loadSession`, list, resume, image, `embeddedContext` and
+  `_meta["terminal-auth"]`; no `mcpCapabilities`, no audio.
+- **dr26.** Only `elicitation.form`, `elicitation.url` and
+  `_meta.terminal_output`.
+
+**Custom.**
+
+- `_meta.terminal_output` opt-in: a running shell command gets `terminal`
+  content and `_meta.terminal_info`, `terminal_output` and `terminal_exit`.
+  `terminal_output.data` is only the new part, under the name Claude's
+  adapter uses for the whole output. On that path `rawOutput` is dropped.
+  Without the opt-in every update resends the whole output so far.
+- Sign-in by a URL elicitation with no `sessionId`, tied by `requestId` to
+  the request it holds up. A client must declare `elicitation.url` and
+  answer it while that request waits. Declined or cancelled, the request
+  fails `authRequired` "Sign-in was cancelled. Retry to sign in."
+- `session/set_model`: the same as the `model` option.
+- `_meta.messageCount` on `session/list` entries.
+- `_meta["terminal-auth"]: true`: no method or auth method here uses it;
+  what it gives is unknown.
+- A failed turn sends "Error: …" as reply text before the JSON-RPC error.
+- The registry's `DROID_DISABLE_AUTO_UPDATE` occurs nowhere in the binary;
+  `FACTORY_DROID_AUTO_UPDATE_ENABLED=false` turns auto-update off alone.
+
+**In chord.** chord declares `elicitation.url`, so a droid that is not signed
+in sends its sign-in link during `session/new`. chord subscribes to a
+session's elicitations only in `#setUp`, after `session/new` has answered
+(`src/session/conversation.ts:505-519, 1901-1904`), and a request nobody
+listens to is answered `cancel` (`src/session/elicitations.ts:120-121`). So a
+first run without a login or `FACTORY_API_KEY` fails to start with "Sign-in
+was cancelled". This is read from droid 0.244.0 and chord's code, not
+run. chord declares
+`terminal_output_delta`, not `terminal_output`, so droid resends the whole
+shell output as text on every update; chord draws it, at quadratic traffic.
+If chord declared `terminal_output`, it would read droid's deltas as whole
+replacements (`src/session/transcript/tools.ts:151-153, 170-205`) and show
+only the last chunk. droid advertises no `mcpCapabilities`, so chord's own
+server never goes in. Mode, model and effort work through the three options.
+Forms reach the question box; permissions carry the real command in their
+title and `rawInput`. A permission open at cancel is answered `cancelled` by
+chord, which droid reads as `cancel`. chord queues a mid-turn prompt, which
+droid would refuse anyway. No usage, so no meter and no estimate. Shell calls
+still open at the turn's end read failed. chord never calls `session/list`,
+so titles and message counts go unused, and it ignores `terminal-auth`.
+
+**Sources.**
+
+- npm `droid@0.244.0` and `@factory/cli-darwin-arm64@0.244.0`.
+- `@agentclientprotocol/sdk` 1.5.0 to 1.8.0, for the version match.
+- Factory's CLI changelog, 0.237 to 0.244, and its IDE integration docs.
 
 #### fast-agent
 
@@ -1023,7 +2236,116 @@ Not yet filled.
 - Run as: `uvx fast-agent-acp@0.10.1 -x`
 - Source: <https://github.com/evalstate/fast-agent>
 
-Not yet filled.
+Read at `fast-agent-acp` 0.10.1, the ACP Registry's pin, unchanged since
+CHD-432, run through `uvx` with `-x` and `FAST_AGENT_MODEL=codexplan`. The
+shim wheel requires `fast-agent-mcp==0.10.1`, which holds all the code;
+paths below are in its `fast_agent/` package. Apache-2.0, with nothing
+restricting reading. It does start on current uv, which corrects CHD-432:
+`docs/design/registry-2026-10-17.md` has it as "May not start", saying it
+pins a pre-release `uvx` will not resolve without `--prerelease=allow` and
+that the shim's script points at a module it does not ship. With uv 0.13.1
+(2026-10-13) it resolves with no flag, `fastmcp-slim==4.0.0b1` included, and
+a fresh install's `fast-agent-acp` imports `fast_agent.cli.commands.acp`,
+which the wheel ships. uv 0.6.12 still refuses without the flag, so whether
+it starts depends on the person's uv. Installed, never run.
+
+**Footnotes.**
+
+- **fa1.** "Echo back the client's version"
+  (`acp/server/agent_acp_server.py:364`), so 1 to chord.
+- **fa2.** Python `agent-client-protocol` 0.10.1, exact pin (the wheel's
+  `METADATA`); its `PROTOCOL_VERSION` is 1.
+- **fa3.** v1: initialize, authenticate, new, load, list, resume, prompt,
+  cancel, set_mode (`agent_acp_server.py:593-809`). It echoes
+  `userMessageId` in the prompt answer (`acp/server/prompt_flow.py:383-386`).
+  No set_model, config options, fork or close. No v2.
+- **fa4.** Load replays text, `session_info_update` first; resume is an
+  alias for load and replays too (CHD-432 fa5).
+- **fa5.** `sessionId`, `cwd`, `title`, `updatedAt`, a cwd filter and cursor
+  paging (`acp/server/session_store.py:316-375`).
+- **fa6.** Fork, delete and title exist only as `/session` slash commands
+  (CHD-432).
+- **fa7.** Modes are its agents. Models change only by `/model`. Effort is
+  fixed by the environment: `codexplan` means `reasoning=high` (CHD-432).
+- **fa8.** Images go on as `input_image` with the data; audio becomes
+  `[Unsupported audio content]`; an embedded resource's text is inlined
+  (`acp/content_conversion.py:33-145`).
+- **fa9.** A `resource_link` becomes an `input_file` with the link's URI;
+  the Codex provider reads a `file://` path from disk and inlines it
+  (`llm/provider/openai/codex_responses.py:115-150`). The path is cut from
+  the URL with no percent-decoding
+  (`llm/provider/openai/responses_files.py:134`), so a path with a space or
+  a non-ASCII character is not found and the raw URL goes to the API.
+  Whether the ChatGPT backend takes source files as `input_file` was not
+  checked.
+- **fa10.** Kinds inferred from words in the tool name
+  (`acp/tool_kind_inference.py:22-58`). `rawInput` is the arguments,
+  `rawOutput` the text parts or the error. Content is text, images and
+  resources from MCP results; a diff only from its client-fs write tool
+  (`acp/filesystem_runtime.py:468-490`); no terminal content. Locations are
+  never set (`acp/tool_progress.py:240-262`, `:860-900`).
+- **fa11.** `in_progress` is sent for some calls only (CHD-432).
+- **fa12.** All four option kinds, each id equal to its kind (CHD-432).
+- **fa13.** Cancel stops the session's newest turn task. A second prompt
+  runs a second turn at once on the same history (CHD-432 fa2).
+- **fa14.** Agents-as-tools send the child's calls flat in the parent with
+  `_meta.parentToolCallId` (CHD-432 fa1).
+- **fa15.** No usage; a text status line in `_meta["openhands.dev/metrics"]`
+  on the answer and on an empty chunk (CHD-432 fa3).
+- **fa16.** After `session/new`, as a background task: `/status`, `/tools`,
+  `/model`, `/history`, `/clear`, `/session`, `/mcp` and ten more, plus the
+  current agent's and plugins' (`acp/slash_commands.py:300-460`).
+- **fa17.** Sent only on load and resume, with the stored title and
+  `updatedAt`; never during a session (`session_store.py:261-283`).
+- **fa18.** One `type: agent` method that returns hints. `codexplan` needs
+  the Codex OAuth token the Codex CLI's login writes, or `fast-agent auth
+  provider login codex`; without it the first prompt fails `auth_required`
+  (`llm/provider/openai/codex_oauth.py:219-228`, `:416-437`).
+- **fa19.** `fs/read_text_file` and `fs/write_text_file` as tools and
+  `terminal/*` as the shell, each only when declared
+  (`acp/server/session_runtime.py:1032-1120`).
+- **fa20.** stdio, http and sse, with env and headers, become its own server
+  settings per session (`acp/server/mcp_server_conversion.py:15-40`).
+- **fa21.** `{_meta: {"co.huggingface": {structuredOutput: true}},
+  promptCapabilities: {image: true, embeddedContext: true, audio: false},
+  loadSession: true, mcpCapabilities: {http: S, sse: S}, sessionCapabilities:
+  {list: {}, resume: {}}}`, S true when an agent uses MCP, as the default
+  does (`agent_acp_server.py:314-345`).
+- **fa22.** `fs.readTextFile`, `fs.writeTextFile`, `terminal`, and `_meta`,
+  stored for status reports (`agent_acp_server.py:276-300`).
+
+**Custom.**
+
+- `_meta["co.huggingface"].structuredOutput` on `session/prompt`: a
+  JSON-schema-shaped answer. A client must send a schema; slash commands
+  refuse it.
+- `_meta["openhands.dev/metrics"].status_line`: tokens and tools as text. A
+  client must read `_meta`; a standard client gets no usage.
+- `_meta.parentToolCallId`: a tree of agents-as-tools calls. A client must
+  nest by it; otherwise the calls are flat and mixed.
+- `auth_required` errors carry `envVars` and `docsUrl` in `data`.
+- Launch flags `-x` (the registry's shell), `--no-permissions`,
+  `--subagents`, agent cards.
+
+**In chord.** chord sends every @-mention as a `resource_link`, never
+embedded, though fast-agent advertises `embeddedContext`. fast-agent reads
+the file from the link's path but does not decode it, and chord's links are
+percent-encoded: a path with a space or a non-ASCII character reaches the
+model as a bare `file://` URL. chord's own MCP server goes in, as `http` is
+true, and so do the person's servers. chord reopens a recorded session with
+`session/resume`, which replays, and chord, not expecting a replay, draws the
+past twice. It never calls `session/list`. Usage is only in the `_meta`
+line, which chord ignores, so there is no meter and no estimate. The
+`parentToolCallId` tree reads flat, and titles sent on load are dropped.
+Without a Codex login the first prompt fails `auth_required`. A mid-turn
+prompt is queued, which keeps a second turn from running at once.
+
+**Sources.**
+
+- `fast-agent-acp` 0.10.1 and `fast-agent-mcp` 0.10.1 wheels, PyPI, and
+  https://github.com/evalstate/fast-agent.
+- uv 0.13.1 and 0.6.12, for the install check.
+- CHD-432's reading, `docs/design/registry-2026-10-17.md` (fa1-fa6).
 
 #### gemini
 
@@ -1032,7 +2354,127 @@ Not yet filled.
 - Run as: `npx -y @google/gemini-cli@0.64.0 --acp`
 - Source: <https://github.com/google-gemini/gemini-cli>
 
-Not yet filled.
+Read at `@google/gemini-cli` 0.64.0, the ACP Registry's pin, from the
+repository https://github.com/google-gemini/gemini-cli at tag v0.64.0; paths
+below are relative to `packages/cli/src/`, where `acp/` is the ACP layer.
+CHD-432 compared the npm bundle of the same version. Apache-2.0, with nothing
+restricting reading. Cells marked `r` come from CHD-432's reading
+(`docs/design/registry-2026-10-17.md`, gemini ge1-ge9 and "gemini 0.63.0 →
+0.64.0"). This reading adds one finding CHD-432 did not have: a mention
+outside the workspace makes gemini ask a permission before its turn starts,
+for a call chord has never seen (ge8).
+
+**Footnotes.**
+
+- **ge1.** It answers the SDK's `PROTOCOL_VERSION`
+  (`acp/acpRpcDispatcher.ts:85`).
+- **ge2.** `packages/cli/package.json:33`; `package-lock.json:92-94` resolves
+  0.16.1.
+- **ge3.** The dispatcher has `initialize`, `authenticate`, `newSession`,
+  `loadSession`, `cancel`, `prompt`, `setSessionMode` and
+  `unstable_setSessionModel`, and no `_` extension method
+  (`acp/acpRpcDispatcher.ts:40-236`). No list, resume, fork, close or delete
+  handler.
+- **ge4.** `session/new` signs in from a saved login or `GEMINI_API_KEY`,
+  else answers -32000 (CHD-432 ge6).
+- **ge5.** Replays the history after its answer; 0.64.0 resolves the exact
+  saved id. With no saved login it answers `authRequired` (CHD-432 ge6 and
+  "gemini 0.63.0 → 0.64.0").
+- **ge6.** `default`, `autoEdit`, `yolo` and `plan` (when enabled) through
+  `session/set_mode`. A change from inside comes as an
+  `agent_message_chunk` reading `[MODE_UPDATE] <mode>`, never as
+  `current_mode_update` (`acp/acpSession.ts:179-189`).
+- **ge7.** The `models` field and `unstable_setSessionModel`, with `auto`
+  and fixed ids; no config options and no effort (CHD-432 ge5).
+- **ge8.** Images and audio go to the model as inline data. An embedded
+  resource's text joins the prompt, the block as `@uri`. A `file://`
+  `resource_link` is read by gemini itself; a path outside the workspace
+  first sends `session/request_permission` with a tool call id of its own
+  that no `tool_call` announced, before the model turn starts. Any other uri
+  becomes the text `@uri` (`acp/acpSession.ts:955-1113`, the ask at
+  `1079-1113`).
+- **ge9.** Kinds `read`, `edit`, `execute`, `search`, `delete`, `move`,
+  `think`, `fetch`, `switch_mode`, `other`; a subagent is `think`
+  (`acp/acpUtils.ts:202-222`). Text and diff content, the diff with
+  `_meta.kind` add, delete or modify, and locations
+  (`acp/acpSession.ts:710-761`). No `rawInput` or `rawOutput`. A call that
+  asks goes `pending`, then to its end with no `in_progress` (CHD-432 ge9).
+- **ge10.** `allow_once` and `reject_once`, plus `allow_always` for edit,
+  exec, MCP and info calls; option ids are its own strings such as
+  `proceed_once`, kinds are standard. `cancelled` cancels the tool and the
+  call ends `failed`. No timeout (`acp/acpSession.ts:763-800`,
+  `acp/acpUtils.ts:85-200`).
+- **ge11.** No elicitation: its `ask_user` tool is off in ACP mode. No `plan`
+  update; leaving plan mode is an Allow or Reject permission (CHD-432 ge7,
+  ge8).
+- **ge12.** One abort signal stops the model stream and the running tool, a
+  subagent included (`acp/acpSession.ts:206-213`). With no turn running it
+  throws inside the notification; an unknown session is -32602
+  (`acp/acpRpcDispatcher.ts:189-198`).
+- **ge13.** No steering. A second `session/prompt` aborts the running turn
+  and runs alone (CHD-432 ge3).
+- **ge14.** One tool call of kind `think`, no progress inside, no session of
+  its own (CHD-432 ge1).
+- **ge15.** `usage_update` `used` per model call and `size` the token limit;
+  `PromptResponse.usage` with `totalTokens` = input + output, thinking
+  outside it; no cost (CHD-432 ge4, "gemini 0.63.0 → 0.64.0").
+- **ge16.** `memory`, `extensions`, `init`, `restore`, `about`, as
+  `{name, description}` with no input hint. A prompt that starts with one is
+  run by the agent and answered with zero usage
+  (`acp/acpSession.ts:228-242`, `:355-371`; `acp/acpCommandHandler.ts:25-37`).
+- **ge17.** `oauth-personal`, `gemini-api-key`, `vertex-ai` and `gateway`,
+  none with a `type`, so all agent-run. `authenticate` also takes an API key
+  in `_meta["api-key"]` or a gateway in `_meta.gateway`
+  (`acp/acpRpcDispatcher.ts:47-140`). The ids are core's `AuthType` values,
+  confirmed in the npm bundle's strings.
+- **ge18.** `fs/read_text_file` and `fs/write_text_file`, each only when the
+  client declares it, else its own files; never `terminal/*`
+  (`acp/acpSessionManager.ts:126-136`, `acp/acpFileSystemService.ts:51-80`).
+  `fs` is the only client capability it reads (`acp/acpRpcDispatcher.ts:43-45`).
+- **ge19.** `sse` and `http` with headers, stdio with `env` and the session's
+  `cwd`, merged over the person's own settings by name, so a client server
+  replaces one of the same name (`acp/acpSessionManager.ts:380-425`).
+- **ge20.** `loadSession`, `promptCapabilities` image, audio and
+  `embeddedContext`, `mcpCapabilities` http and sse; no
+  `sessionCapabilities`; `agentInfo` `gemini-cli`
+  (`acp/acpRpcDispatcher.ts:91-102`).
+
+**Custom.**
+
+- `_meta.quota` on the prompt answer: input and output tokens and a
+  per-model split. A client reads it; only the per-model split is beyond
+  ACP's `usage` (`acp/acpSession.ts:365-405`).
+- `[MODE_UPDATE] <mode>` reply text: the only word of a mode change from
+  inside. A client must parse reply text; one that does not shows it and
+  keeps a stale mode.
+- `_meta["api-key"]` and `_meta.gateway` on `authenticate`: sign in from the
+  client. The secret passes through the client.
+- `_meta.kind` on diff content: add, delete or modify without comparing
+  texts. Free.
+- Off-spec: a concurrent prompt aborts the running one; thinking tokens sit
+  outside `totalTokens`.
+
+**In chord.** chord creates and loads sessions, sets models through
+`session/set_model` and modes through `session/set_mode`, sends images, and
+draws the context meter and answer usage. chord's estimate prices the
+answer's tokens, but thinking tokens go unpriced and `auto` has no price, so
+the default model shows no cost. `[MODE_UPDATE] plan` is drawn as reply text
+and chord's mode stays where it was. Permissions work by kind. Commands show
+as slash commands. chord's http MCP server goes in, and the person's sse
+servers work. chord declares no `fs`, so gemini reads and writes its own
+files. chord queues a mid-turn prompt, which avoids gemini's abort. chord
+sends each `@` mention as a `resource_link`, which gemini reads; one outside
+the workspace brings a permission before the turn's first update, for a
+tool call chord has no `tool_call` for, and how that box and its answer read
+in chord is not checked. chord never calls `authenticate`, so a load with no
+saved login fails with gemini's message. `_meta.quota` and diff `_meta.kind`
+are ignored; chord never calls `session/list`.
+
+**Sources.**
+
+- https://github.com/google-gemini/gemini-cli, tag v0.64.0.
+- `@google/gemini-cli` 0.64.0, npm.
+- CHD-432's reading, `docs/design/registry-2026-10-17.md` (ge1-ge9).
 
 #### github-copilot-cli
 
@@ -1041,7 +2483,119 @@ Not yet filled.
 - Run as: `npx -y @github/copilot@1.0.98 --acp`
 - Source: <https://github.com/github/copilot-cli>
 
-Not yet filled.
+Read at `@github/copilot` 1.0.98, the ACP Registry's pin; the display name is
+now Copilot. No source is public: the ACP server is inside the package's
+native runtime. The package's licence, the GitHub Copilot CLI License,
+allows installing, running and redistributing it unmodified, and forbids
+modification, adaptation and derivative works, so nothing was decompiled.
+Every cell rests on GitHub's ACP server docs, the release notes shipped in
+the package's `changelog.json` (cited as "changelog" and a version), and,
+for wire names only, the plain strings of the 1.0.98 runtime; no internals
+are kept. A name found in the strings shows the runtime knows it, not when
+it is sent, so such cells are `◐` or `?`. Every cell is `n`. CHD-432's
+`_meta.quota` cell for Copilot (`docs/design/registry-2026-10-17.md`) has
+no source; this reading found none, so its cost is `?` (co19).
+
+**Footnotes.**
+
+- **co1.** The docs: `copilot --acp` speaks NDJSON over stdio, or a port
+  with `--port`, `initialize` first, in public preview. The protocol number
+  and the ACP library are not stated; the method names are v1's.
+- **co2.** v1 sessions, modes, config options, list, load, resume and
+  close, plus a private `github.com/copilot/sessionEvent` notification
+  carrying the runtime's own events (changelog 1.0.81, "raw event
+  subscriptions"; runtime strings).
+- **co3.** The docs: `initialize`, then a session, then prompts.
+- **co4.** Changelog 0.0.410.
+- **co5.** Resume is named in the runtime's strings; `--context` is applied
+  again on resume (changelog 1.0.95).
+- **co6.** `listSessions` and `nextCursor` appear in the strings, also used
+  by the runtime's own host protocol, so ACP's list is not confirmed. No
+  fork method name was found.
+- **co7.** `closeSession` since changelog 1.0.78; no delete was found.
+- **co8.** Modes `agent`, `plan` and `autopilot`, each linked to ACP's
+  session-modes page; `current_mode_update` named (runtime strings).
+  Autopilot is experimental and enables allow-all.
+- **co9.** Model changes in a session (changelog 0.0.400); a model option
+  with description, usage multiplier and enablement (0.0.403, 1.0.37);
+  options sent again when the model changes (1.0.48).
+- **co10.** Reasoning effort (changelog 0.0.421), custom agents (1.0.40),
+  allow-all (1.0.39, 1.0.60), option descriptions (1.0.62);
+  `config_option_update` named (runtime strings).
+- **co11.** `--effort` or `--reasoning-effort`, `low` to `max`, sets every
+  session's effort (docs, changelog 1.0.60).
+- **co12.** Prompts take text (docs). `embeddedContext` is named beside the
+  prompt capabilities; image, audio and links are not established.
+- **co13.** `rawInput`, `rawOutput`, a diff's `oldText` and `locations` are
+  named in the strings; every edit tool sends a diff (changelog 1.0.49).
+- **co14.** `allow_once` and `allow_always` with "Allow once" and "Always
+  allow" (runtime strings); no reject option name was found. What
+  `cancelled` or a timeout does is not known.
+- **co15.** SDK clients answer elicitations (changelog 1.0.10, 1.0.14). The
+  runtime's strings say its question tool declines when the client cannot
+  take elicitation; CHD-1 read that as declining under ACP. Whether a
+  client declaring `elicitation.form`, as chord does, gets
+  `elicitation/create` is not known.
+- **co16.** A live plan since changelog 1.0.40, from its todo list.
+- **co17.** A client's cancel aborts the turn (runtime strings); what else
+  stops is not known.
+- **co18.** "ACP clients receive subagent IDs" (changelog 1.0.81); the shape
+  is not known.
+- **co19.** `usage_update` named; token usage in prompt results since
+  changelog 1.0.78, with thought and cache-write tokens named. No cost was
+  found. CHD-432's "✓ `_meta.quota` n" for Copilot has no source in the
+  notes, docs or strings read here.
+- **co20.** Commands with descriptions and argument hints, skills as
+  commands (changelog 1.0.39, 1.0.40); among them `/compact`, `/context`,
+  `/usage`, `/plan`, `/review` (docs).
+- **co21.** Live title updates (changelog 1.0.81).
+- **co22.** One method, `copilot-login`, "Run `copilot login` in the
+  terminal", marked `terminal-auth` (runtime strings); `authenticate`
+  succeeds only after a Copilot login (changelog 1.0.69). Bring-your-own
+  keys go by environment or config (0.0.401).
+- **co23.** Servers taken when starting or loading a session (changelog
+  1.0.25); MCP OAuth in ACP mode (1.0.14).
+- **co24.** `loadSession`, `mcpCapabilities`, `promptCapabilities`,
+  `embeddedContext`, `agentInfo` and `authMethods` are named together, and
+  `clientCapabilities`; their values and what it reads are not known.
+
+**Custom.**
+
+- `github.com/copilot/sessionEvent`: the runtime's own events beside ACP's
+  updates. How a client subscribes is not known; the shape is unpublished
+  and the stream drops events when the client falls behind.
+- `terminal-auth` on `copilot-login`: a login for the client to run in a
+  terminal.
+- Launch flags: `--effort`, `--available-tools`, `--excluded-tools`,
+  `--context`, `--allow-all-*` or `--yolo`, `--autopilot`, `--port`. Each is
+  per process; the registry passes only `--acp`.
+- `autopilot` mode and allow-all: no asks reach the person; autopilot
+  answers permissions and questions itself (changelog 1.0.64).
+- Model metadata, usage multiplier and enablement, on the model option.
+- It reads `clientInfo` for usage attribution and turns it off when two
+  clients name different editors (runtime strings).
+
+**In chord.** Nothing here was run, so this is what chord would do with what
+the notes describe. chord creates, loads and resumes sessions, and never
+calls `session/list`. Modes `agent`, `plan` and `autopilot` come as modes;
+model, effort and agent as config options, with effort shown only if its
+category is `thought_level`; allow-all, if a boolean, is not listed. chord
+draws the plan, the context meter, answer usage and commands, and answers
+permissions by kind. chord's http MCP server goes in only if Copilot
+advertises `mcpCapabilities.http`, which is not known. Copilot's new model
+ids are not in genai-prices, so no cost is estimated (CHD-381), and Copilot
+bills premium requests, which no token price models. Ignored: titles,
+`github.com/copilot/sessionEvent`, subagent ids, `terminal-auth`. Whether
+Copilot's questions reach chord as forms, now that chord declares
+`elicitation.form`, is open. README.md still says `GitHub Copilot`.
+
+**Sources.**
+
+- `@github/copilot` 1.0.98, npm: `changelog.json`, `LICENSE.md`, and the
+  runtime's plain strings for wire names.
+- https://docs.github.com/en/copilot/reference/copilot-cli-reference/acp-server
+- Release notes 1.0.94-1.0.98, https://github.com/github/copilot-cli/releases
+- CHD-432's reading, `docs/design/registry-2026-10-17.md` (co1).
 
 #### glm-acp-agent
 
@@ -1050,7 +2604,132 @@ Not yet filled.
 - Run as: `npx -y glm-acp-agent@1.15.0`
 - Source: <https://github.com/stefandevo/glm-acp-agent>
 
-Not yet filled.
+Read at 1.15.0, the registry's pin, from the npm package
+`glm-acp-agent@1.15.0` (tsc output, plain per-module JS with source maps),
+which matches the repository's tag `v1.15.0`. Cites are relative to the
+package root; `sdk/` stands for the package `@agentclientprotocol/sdk@0.20.0`.
+Apache-2.0, so nothing limits reading it. glm is pinned to that old pre-1.0
+SDK: `^0.20.0` allows only 0.20.x, and the tag's lock resolves 0.20.0, while
+chord is on 1.8.0. It has no `_meta` and no extension method anywhere.
+
+**Footnotes.**
+
+- **gl1.** `dist/protocol/agent.js:170` answers the client's version when it
+  is at most the SDK's, else the SDK's; `sdk/dist/schema/index.js:44` has
+  `PROTOCOL_VERSION = 1`. chord sends 1. A client sending 0 gets 0 back.
+- **gl2.** `package.json` `^0.20.0`; the repository's `package-lock.json` at
+  `v1.15.0` resolves 0.20.0. Transport `AgentSideConnection` on
+  `ndJsonStream` (`dist/protocol/connection.js:2,23-24`).
+- **gl3.** Stable v1 methods plus, unstable in SDK 0.20, `session/fork`,
+  `session/set_model`, the `env_var` auth method and the `userMessageId`
+  echo (`sdk/dist/acp.js:61,108`;
+  `dist/protocol/agent.js:194-206,337,601-609,1043`).
+- **gl4.** `dist/protocol/agent.js:240-306` answers `models`, `modes` and
+  `configOptions`. Any MCP server whose client creation or `listTools` fails
+  rejects the whole call (`dist/tools/session-mcp-client.js:85-101,131-134`).
+- **gl5.** Load replays user and assistant text only, no tool calls and no
+  thoughts (`dist/protocol/agent.js:1636-1686`, comment at `:1676`). Resume
+  restores with no replay (`:1201-1203`).
+- **gl6.** `dist/protocol/agent.js:997-1037`: disk store merged with memory,
+  `cwd` filter, newest first, `title` and `updatedAt`, no `nextCursor`.
+- **gl7.** `dist/protocol/agent.js:1043-1061`: copies the whole session, no
+  fork point, and aborts the source's running prompt first.
+- **gl8.** `session/close` at `dist/protocol/agent.js:797`; SDK 0.20 has no
+  delete method.
+- **gl9.** From the registry study (`docs/design/registry-2026-10-17.md`
+  §2): `default`, `accept_edits`, `bypass_permissions`.
+- **gl10.** The registry study §2: a `models` state, `session/set_model`,
+  and the `model` config option.
+- **gl11.** `dist/protocol/agent.js:412-453`: three select options with
+  categories `thought_level`, `mode`, `model`. Levels depend on the model and
+  are clamped on a switch (`dist/llm/glm-client.js:66-91`); the default is
+  the model's highest (`agent.js:264`).
+- **gl12.** `dist/protocol/agent.js:2083-2160`. Images are off when
+  `ACP_GLM_PROMPT_IMAGES` is `false` or `0`; a model without vision gets them
+  through `npx @z_ai/mcp-server@latest`
+  (`dist/tools/vision-mcp-client.js:129-138`).
+  Audio becomes the text `[unsupported audio block]`; a resource blob becomes
+  a link line; a `resource_link` becomes `[name](uri)`, nothing fetched.
+- **gl13.** `dist/tools/executor.js` (kinds and statuses at `:287-293`,
+  `:793-809`, `:1266-1301`, among others). Never `delete`, `move`, `search`,
+  `think` or `switch_mode`. rawInput and rawOutput cut strings over 240
+  characters (`:18-33,90-110`); the permission request carries the full
+  rawInput (`:1191-1194`). Content is text only, capped at 16 KiB: no `diff`
+  for write or edit, no `terminal`. Asking calls go `pending`, then
+  `in_progress`, then `completed` or `failed`; others start `in_progress`.
+- **gl14.** The registry study §2, and `dist/tools/executor.js:1168-1245`:
+  `allow_once` "Allow" and `reject_once` "Skip"; any outcome but allow is a
+  reject, and the request is dropped when the turn aborts.
+- **gl15.** The registry study §2 and `docs/design/CHD-1.md`: it never asks.
+- **gl16.** The registry study's gl4: `todowrite` is a completed `other` call.
+- **gl17.** `dist/protocol/agent.js:793-796` aborts the turn's controller:
+  the model stream, a pending permission, fs reads in flight.
+- **gl18.** `dist/protocol/agent.js:581-583,599-618`: a concurrent
+  `session/prompt` aborts the running turn, which answers `cancelled`, then
+  runs. No `_session/steering`.
+- **gl19.** The registry study §2: no subagents.
+- **gl20.** No `usage_update`. `PromptResponse.usage` sums every model call
+  of the turn, a cancelled one too: input, output, total, cache, thought
+  (`dist/protocol/agent.js:691-694,1697-1712`). No cost.
+- **gl21.** `dist/protocol/agent.js:308-335` sends the list on the next tick
+  after new, load, resume or fork; `dist/protocol/slash-commands.js:1-40`
+  reads `.claude/commands/**.md` and `.claude/skills/*/SKILL.md` under the
+  cwd and the home directory, up to 200. The agent expands `/name` itself.
+- **gl22.** `dist/protocol/agent.js:668-690`: after each turn that ends
+  normally, `updatedAt`, and `title` the first time (the first prompt's first
+  80 characters); `updatedAt` also on a model change (`:379-386`).
+- **gl23.** The registry study's gl3: methods `z-ai-api-key` (agent) and
+  `env_var` `Z_AI_API_KEY`; `authenticate` does nothing.
+- **gl24.** `dist/tools/executor.js:496-560`: `fs/read_text_file` and
+  `fs/write_text_file` only when the client declares them; commands run
+  locally (`:818-863`), never `terminal/*`.
+- **gl25.** `dist/tools/session-mcp-client.js:138-145`: `http` and stdio
+  taken, `sse` throws "not supported yet", which fails session/new, load and
+  resume as a whole (`:85-101`).
+- **gl26.** `dist/protocol/agent.js:208-229`: `loadSession`,
+  `mcpCapabilities.http`, `promptCapabilities {embeddedContext, image}`,
+  `sessionCapabilities {close, list, fork, resume}`. No `_meta`.
+- **gl27.** `dist/tools/executor.js:300,497,512-513,523` read only
+  `fs.readTextFile` and `fs.writeTextFile`; the rest is stored, never read.
+
+**Custom.**
+
+- A concurrent `session/prompt` aborts the running turn (gl18). A client gets
+  it by sending one; the turn ends `cancelled` with its tool work cut.
+- `session/fork` aborts the source's running turn (gl7); forking a busy
+  session cancels it.
+- Claude Code's command and skill folders read as slash commands (gl21). It
+  reads the person's own `.claude` tree, and inlines a body of up to 16 KiB.
+- `AGENTS.md` or `CLAUDE.md` goes into the system prompt, up to 8 KiB
+  (`dist/protocol/agent.js:29-33`): input tokens every turn.
+- `web_search`, `web_reader` and vision call Z.AI services
+  (`dist/tools/zai-mcp-client.js:6-7`): spend on the Z.AI plan, and vision
+  installs `@z_ai/mcp-server@latest` from npm at run time, unpinned.
+- `ACP_GLM_*` variables, `Z_AI_API_KEY` and `--max-turns` tune it; a client
+  must set them itself. The turn cap answers `max_turn_requests`.
+- A `messageId` is echoed as `userMessageId` (unstable); nothing to pay.
+
+**In chord.** chord asks for version 1 and gets it, and adds its own http MCP
+server because glm offers `mcpCapabilities.http`. It also passes the person's
+MCP servers as they are: one `sse` entry, or any server whose tool listing
+fails, chord's own included, fails glm's session/new, load or resume as a
+whole. chord reopens with resume when it holds a record, else load, which
+replays text only. Model, effort and mode come from glm's config options.
+Usage comes only in the prompt answer, so there is no live meter; there is
+no cost, so chord estimates one. Edits arrive with no diff, only a title,
+paths and an elided rawInput, and rawOutput is never drawn. @ mentions reach
+the model as `[name](uri)`, so it opens files with its own tool. chord queues
+a mid-turn prompt, which keeps glm from aborting the running turn. chord
+drops glm's `session_info_update` titles, never calls `session/list`, fork
+or close, sends no `messageId`, and declares no `fs`, so glm edits on disk
+itself.
+
+**Sources.**
+
+- npm `glm-acp-agent@1.15.0`; <https://github.com/stefandevo/glm-acp-agent>,
+  tag `v1.15.0`.
+- npm `@agentclientprotocol/sdk@0.20.0`.
+- `docs/design/registry-2026-10-17.md` (CHD-432), `docs/design/CHD-1.md`.
 
 #### grok-build
 
@@ -1059,7 +2738,172 @@ Not yet filled.
 - Run as: `npx -y @xai-official/grok@1.0.63 agent stdio`
 - Source: <https://x.ai/cli>
 
-Not yet filled.
+Read at two versions, kept apart. The registry pins `@xai-official/grok`
+1.0.63 (2026-10-17), a JavaScript wrapper that unpacks a native Rust binary
+from `@xai-official/grok-<platform>`. The last public source is 1.0.45, at
+https://github.com/xai-org/grok-build main `2bdd1d6a` (2026-09-29); nothing
+after it is published as source. Cells marked `c` were read in that 1.0.45
+source and checked against the 1.0.63 binary's strings: the darwin-arm64
+binary was read as plain text only, never run, disassembled or decoded. The
+binary embeds grok's user guide as markdown, and where the guide or x.ai's
+per-version release notes (1.0.46 to 1.0.63) state a fact, they are cited
+first. Apache-2.0 for the wrapper, the platform packages and the source, so
+reading is not restricted; only wire facts are taken from the binary. Paths
+are relative to the 1.0.45 repository, under
+`crates/codegen/xai-grok-shell/src/` unless they begin with `crates/`. This
+part corrects CHD-432's gr4 and `docs/design/CHD-1.md:41`: grok's question
+request is on by default, not opt-in.
+
+**Footnotes.**
+
+- **gr1.** `initialize` answers version 1 whatever is asked
+  (`agent/mvp_agent/acp_agent.rs:566`); the guide's TypeScript client sends 1.
+- **gr2.** `agent-client-protocol` 0.10.4 with feature `unstable`, schema
+  crate 0.11.4 (`Cargo.toml:123`, `Cargo.lock`). The 1.0.63 strings still
+  name crate 0.10.4; the schema version is not visible there.
+- **gr3.** v1 methods plus unstable `session/resume`, `session/close` and
+  `session/set_model`; no `session/fork`, no `elicitation/create`, no
+  `usage_update` (`agent/mvp_agent/acp_agent.rs:125-2381`). Over 300 `x.ai/*`
+  extension names, sent with a leading `_`; the guide calls the set
+  non-exhaustive and to be discovered from `initialize`.
+- **gr4.** Answers `models`, `configOptions` and a large `_meta`, and no
+  `modes` (`agent/mvp_agent/session_setup.rs:888-921`).
+- **gr5.** Load replays the history and re-asks a pending plan approval
+  (`agent/mvp_agent/session_setup.rs:1370-1392`). Resume refuses chat
+  sessions and `additionalDirectories` (`:1997-2018`).
+- **gr6.** `sessionCapabilities` close always, list and resume outside chat
+  mode (`agent/mvp_agent/acp_agent.rs:552-560`); 1.0.51 notes: "supports
+  listing sessions via ACP". Fork, delete and rename are `x.ai/session/*`
+  methods (`:2035-2036`), still in 1.0.63's strings.
+- **gr7.** No `availableModes` in any answer, yet `session/set_mode` takes
+  `plan` and `default` and sends `current_mode_update`, also when the model
+  enters plan mode itself (`session/acp_session_impl/session_mode.rs:44-56`).
+- **gr8.** Unstable `models` and `session/set_model`. With no list, the
+  public `Auto` id is used (1.0.51 notes), which has no price (CHD-432 gr2).
+- **gr9.** Guide, "Session config options": `model` (category `model`) and
+  `reasoning_effort` (`thought_level`: `minimal`, `low`, `medium`, `high`,
+  `xhigh`, only for a model with `supportsReasoningEffort`); the answer is
+  the complete list, mirrored by `config_option_update`; boolean values are
+  refused. Source: `agent/session_config.rs:15-16, 111`.
+- **gr10.** Images are accepted but `promptCapabilities.image` is not set;
+  audio is refused with `invalid_params`; a `resource_link` with no `_meta`
+  is also put into the text as `@path` and expanded as a file reference
+  (`session/prompt_parser.rs:131-150`).
+- **gr11.** Kinds `read`, `edit`, `search`, `execute`, `fetch`, `think`,
+  `other`. rawInput on every call; rawOutput for shell and some other tools;
+  locations for file tools; `pending`, `in_progress`, then `completed` or
+  `failed` (`session/acp_session_impl/tool_calls.rs:2321-2741`). Every
+  update's `_meta` carries `totalTokens`, `promptId` and more
+  (`session/acp_session_impl/updates.rs:282-315`).
+- **gr12.** Text and `diff` (`session/acp_conversion.rs:1235`); no `terminal`
+  content anywhere.
+- **gr13.** `allow_once`, `allow_always`, `reject_once`, `reject_always` by
+  prompt type (`crates/codegen/xai-grok-workspace/src/permission/prompter.rs`);
+  web fetches get always and never allow-domain options (1.0.51 notes).
+- **gr14.** A `cancelled` answer is cancelled
+  (`crates/codegen/xai-grok-workspace/src/permission/prompter.rs:783`). The
+  1.0.63 strings describe a backstop deadline that times an unanswered
+  permission request out, and a re-send when the client re-attaches; the
+  length is not visible.
+- **gr15.** No ACP elicitation. MCP servers' form and URL elicitation is
+  relayed as `x.ai/mcp/elicit` (`session/mcp_elicitation.rs:59-140`).
+- **gr16.** The todo tool sends `plan` updates
+  (`session/acp_session_impl/tool_calls.rs:3050`).
+- **gr17.** `session/cancel` stops subagents too unless
+  `_meta.cancelSubagents: false`; opt-in `_meta.rewindIfNoOutput`
+  (`agent/mvp_agent/acp_agent.rs:1878-1943`). 1.0.51 notes: a cancel no
+  longer reverts workspace files.
+- **gr18.** A concurrent `session/prompt` is queued by grok;
+  `_meta.sendNow: true` sends it now and may cancel the running turn;
+  `x.ai/queue/interject` turns a queued prompt into an interjection
+  (`agent/mvp_agent/acp_agent.rs:1204-1209, 1392-1418`). No
+  `_session/steering`.
+- **gr19.** `x.ai/session_notification` on the parent's session id with
+  `subagent_spawned`, `subagent_progress` and `subagent_finished`, whose
+  subagent id is the child's session id (`agent/subagent/spawn.rs:570-598`).
+  Stop one with `x.ai/subagent/cancel` or `x.ai/task/kill`.
+- **gr20.** No `usage_update` and no `PromptResponse.usage`. Usage and cost
+  exist only in `PromptResponse._meta`: tokens of the last model call, and
+  `usage` for the whole prompt with `costUsdTicks`, 1e10 ticks to the dollar,
+  left out when partial (`agent/mvp_agent/acp_agent.rs:1740-1760`,
+  `extensions/notification.rs:104`). The guide's `grok usage` gives the same
+  tick unit.
+- **gr21.** Sent at start, on load and when skills or workflows change;
+  `_meta.tools` lists tool names (`session/acp_session_impl/session_setup.rs:246-300`).
+- **gr22.** `title` on automatic and manual renames, with
+  `_meta["x.ai/titleIsManual"]` (`session/summary.rs:126-185`).
+- **gr23.** `xai.api_key`, `cached_token`, `grok.com` and `oidc`, all of
+  type `agent`; the default is in `initialize._meta.defaultAuthMethodId`
+  (`agent/auth_method.rs:330-382`). Whether `session/new` works without
+  `authenticate` was not read.
+- **gr24.** `fs/*` only when both fs capabilities are declared, `terminal/*`
+  only with `terminal`; otherwise its own files and PTY
+  (`agent/mvp_agent/agent_ops.rs:4193-4234`).
+- **gr25.** `mcpCapabilities` http and sse (`agent/mvp_agent/acp_agent.rs:578-580`).
+- **gr26.** `loadSession`, `embeddedContext`, MCP http and sse,
+  `sessionCapabilities` close, list and resume, and `_meta` with hooks and
+  tool overrides (`agent/mvp_agent/acp_agent.rs:552-583`); 1.0.63's strings
+  have the same `_meta` keys.
+- **gr27.** `fs` (read and write together) and `terminal`, plus `_meta` keys
+  such as `x.ai/fs_notify` and `x.ai/folderTrust`
+  (`agent/mvp_agent/agent_ops.rs:4114-4285`). `elicitation`, `plan`,
+  `subagents` and `session` are never read.
+
+**Custom.**
+
+- `x.ai/ask_user_question`, agent to client: the model's question tool, with
+  `questions` and a `mode`. It is on by default: the guide's config table
+  gives `features.ask_user_question` "Default true", also
+  `GROK_ASK_USER_QUESTION`. Only `session/new` `_meta.askUserQuestion: false`
+  takes the tool away (`agent/mvp_agent/agent_ops.rs:4689-4697`); the key is
+  in 1.0.63's strings. A method-not-found becomes a tool error to the model,
+  and the person never sees the question
+  (`crates/codegen/xai-grok-tools/src/implementations/grok_build/ask_user_question/mod.rs:484-497`).
+  The guide sets a 30-minute answer timeout by default.
+- `x.ai/exit_plan_mode`, agent to client: plan approval, answered approved,
+  abandoned or revise. No opt-in. Any error but a failed send,
+  method-not-found included, ends the turn as cancelled with grok still in
+  plan mode (`session/acp_session_impl/tool_calls.rs:2014-2215`). The guide
+  says the model's `enter_plan_mode` asks the person first; 1.0.45 did not.
+- `x.ai/session_notification`: about 60 kinds, among them subagents, turn
+  usage, retries, compaction and model switches. Sent to every client.
+- `x.ai/mcp/elicit`: MCP servers' forms; a failure cancels them toward the
+  server.
+- `PromptResponse._meta`: tokens and `costUsdTicks` (gr20).
+- `_meta` on `session/new` (guide): `rules`, `systemPromptOverride`,
+  `agentProfile`, `yoloMode`, `autoMode`; also `askUserQuestion`. On the
+  prompt `sendNow`, on the cancel `cancelSubagents`.
+- Client-to-agent methods for queue, fork, delete, rename, rewind and
+  subagent stops; `x.ai/requestingSessionId` on permission requests (1.0.52).
+- Launch flags `--always-approve`, `-m`, `--no-subagents`, and env
+  `GROK_CONFIG`, `XAI_API_KEY` (guide); the registry passes only
+  `agent stdio`.
+
+**In chord.** chord starts grok, adds its own MCP server over http, reopens
+with resume, and takes models and effort from the config options. grok uses
+its own files and PTY, as chord declares neither. Questions break: the
+question tool is on by default, chord answers it method-not-found, and the
+model gets an error while the person sees nothing. If grok enters plan mode,
+its plan approval gets method-not-found and the turn ends cancelled with grok
+still in plan mode. grok sends `current_mode_update` without offering modes;
+how chord draws that was not checked. Images are never sent, as grok does not
+advertise them. A mention reaches grok both as chord's text and as an
+`@path` it expands. chord shows no agent usage or cost: grok's are only in
+`PromptResponse._meta`, which chord does not read, and its estimate has no
+price for `Auto`. Titles, subagent events, MCP elicitation and the other
+`x.ai/*` traffic are dropped. A background subagent's approval with no turn
+running is refused (CHD-158). chord queues a mid-turn prompt itself, never
+calls `session/list` or `authenticate`, and leaves close, fork and delete
+unused.
+
+**Sources.**
+
+- `@xai-official/grok` and `@xai-official/grok-darwin-arm64` 1.0.63 on
+  npm, with the user guide embedded in the binary.
+- https://github.com/xai-org/grok-build at `2bdd1d6a` (1.0.45).
+- x.ai's Grok Build release notes, 1.0.46 to 1.0.63.
+- `agent-client-protocol` 0.10.4 and `agent-client-protocol-schema` 0.11.4
+  on crates.io.
 
 #### kilo
 
@@ -1068,7 +2912,124 @@ Not yet filled.
 - Run as: `npx -y @kilocode/cli@7.8.12 acp`
 - Source: <https://github.com/Kilo-Org/kilocode>
 
-Not yet filled.
+Kilo CLI 7.8.12, the registry pin (`@kilocode/cli`), read at tag `v7.8.12` of
+<https://github.com/Kilo-Org/kilocode> (MIT, a fork of opencode, no limits on
+reading). The ACP layer is `packages/opencode/src/acp/` with
+`packages/opencode/src/kilocode/acp/`, started in process by
+`packages/opencode/src/cli/cmd/acp.ts`. Paths are relative to
+`packages/opencode/src/` unless they start with `packages/`. Cells marked `r`
+are CHD-432's reading at 7.8.8; no ACP path changed up to 7.8.12. The
+terminal login it names is opencode's command, not kilo's.
+
+**Footnotes.**
+
+- **ki1.** `acp/service.ts:94-141`: `protocolVersion: 1` (`:114`);
+  `loadSession`, `mcpCapabilities {http, sse}`,
+  `promptCapabilities {embeddedContext, image}`, `sessionCapabilities {close,
+  fork, list, resume}`; `agentInfo {name: "Kilo"}`. One auth method,
+  `kilo-login`, described as "Run `kilo auth login` in the terminal"
+  (`:97-101`). The only client capability read is
+  `_meta["terminal-auth"]`, which adds a `terminal-auth` `_meta` naming
+  `command: "opencode", args: ["auth", "login"]` (`:104-112`).
+- **ki2.** `packages/opencode/package.json:72`, `"0.21.0"`, exact.
+- **ki3.** `acp/agent.ts:33-85` handles `initialize`, `authenticate`, new,
+  load, list, resume, close, `unstable_forkSession`, the three setters with
+  `unstable_setSessionModel`, `prompt` and `cancel`; no `_` methods.
+- **ki4.** CHD-432: load replays every message (`acp/service.ts:213-246`),
+  resume replays nothing (`:294-330`), close drops the session from the
+  connection and aborts it (`:343-351`). No delete.
+- **ki5.** `acp/service.ts:248-292`: 100 root sessions a page with a time
+  cursor, each with its `title` (`:266`).
+- **ki6.** `acp/service.ts:358-401`: a server-side copy that replays its last
+  20 messages; MCP servers are registered for new, load and resume only
+  (`:198`, `:235`, `:320`), not for a fork.
+- **ki7.** CHD-432: only `configOptions` in the answers, no `models` or
+  `modes` field (`acp/service.ts:200-209`); `session/set_mode` and
+  `unstable_setSessionModel` work too (`:459-482`). No
+  `current_mode_update` or `config_option_update` is ever sent.
+- **ki8.** `acp/config-option.ts:38-41`, `:59-63`, `:77-80`: `model`
+  (category `model`), `effort` (category `thought_level`, the model's
+  variants, absent when it has none), `mode` (category `mode`, the server's
+  agents).
+- **ki9.** `acp/content.ts:29-115`: image as base64, `data:` or http(s) uri;
+  audio dropped (not advertised); a text resource inlined as `[uri]` and its
+  text, a blob as a file; a `file://` or `zed://` link becomes a file part,
+  any other its uri as text (`:152-186`).
+- **ki10.** Kinds `execute fetch edit search read think other`
+  (`acp/tool.ts:40-69`); locations from file path, shell workdir or search
+  path (`:72-100`); shell `rawInput` gains its workdir (`:270-272`); the end
+  carries `content` and `rawOutput` (`:186-198`); edits as diffs
+  (`:324-337`). A running `bash` call repeats its whole output so far as text
+  content (`acp/event.ts:390-426`), not an ACP terminal.
+- **ki11.** CHD-432: `allow_once`, `allow_always` (kept in the server's
+  store) and `reject_once` (`acp/permission.ts:21-25`); skill shell batches
+  and sandbox escalations offer once and reject only
+  (`kilocode/acp/permission.ts:5-8`). A cancelled answer rejects.
+- **ki12.** CHD-432: the `question` tool is off for `acp` clients unless
+  `KILO_ENABLE_QUESTION_TOOL` is set (`tool/registry.ts:272`, `:313`), and the
+  ACP layer has no handler for its events (`acp/event.ts:109-125`).
+- **ki13.** CHD-432: no `plan` update in `acp/`.
+- **ki14.** `acp/service.ts:353-357` aborts the session's run.
+- **ki15.** CHD-432: no `_session/steering`. A concurrent `session/prompt` is
+  queued and the running turn stops at its next step boundary, "superseded"
+  (`session/prompt.ts:1487-1514`, `:1952-1964`).
+- **ki16.** CHD-432: `task` is one call of kind `think` (`acp/tool.ts:65-66`);
+  the child session is not in the ACP map, so its parts and its permission
+  asks are dropped (`acp/event.ts:243-244`, `acp/permission.ts:54-55`).
+- **ki17.** CHD-432: `usage_update` once the turn ends, with `cost` as the
+  whole session's sum in USD, skipped when the context limit is unknown
+  (`acp/usage.ts:205-221`); `PromptResponse.usage` carries token counts
+  (`acp/service.ts:826-843`).
+- **ki18.** `acp/service.ts:937-955`, after new, load and resume, as
+  `{name, description}` with no `input`.
+- **ki19.** No `session_info_update` in `acp/`; titles only in
+  `session/list` (`acp/service.ts:266`).
+- **ki20.** `authenticate` accepts `kilo-login` and does nothing
+  (`acp/service.ts:143-148`); see ki1 for the terminal command.
+- **ki21.** CHD-432: after an approved edit the agent sends
+  `fs/write_text_file` without checking `clientCapabilities.fs`, fire and
+  forget, before passing the approval on (`acp/permission.ts:93-97`,
+  `:110-126`). Never `fs/read_text_file` or `terminal/*`.
+- **ki22.** `acp/service.ts:1015-1028`: an entry with a `type` becomes one
+  `remote` server (http and sse alike), one without a `local` command.
+- **ki23.** Four, each a bullet under Custom below.
+
+**Custom.**
+
+- `_meta["terminal-auth"]` on the auth method: a command to log in from a
+  terminal, given when the client sends
+  `clientCapabilities._meta["terminal-auth"] = true`. It names
+  `opencode auth login`, while the package installs `kilo` and `kilocode`
+  (`packages/opencode/package.json:19-22`), so a client running it starts
+  another program or none.
+- `fs/write_text_file` after an approved edit, undeclared: an editor client
+  sees the write. A client that declares no `fs` answers method-not-found;
+  the agent ignores the answer, so nothing waits on it.
+- `KILO_ENABLE_QUESTION_TOOL`: gives the model its `question` tool, but no
+  question reaches an ACP client.
+- Supersede-on-prompt: a second `session/prompt` redirects the turn at the
+  next step. Not ACP steering.
+
+**In chord.** chord uses new, load and resume (resume when it has its own
+record), the `model`, `effort` and `mode` options, `usage_update` and
+`PromptResponse.usage`, `available_commands_update`, permissions, images,
+and offers its own http MCP server. @-mentions go as `resource_link` and
+kilo reads them as files, so they reach the model. Every approved edit
+brings an `fs/write_text_file` that chord refuses with method-not-found;
+the edit itself is not lost. A mode or model kilo changes on its own is
+never reported, so the status line can lag. The cost is the session's sum,
+which is what ACP's `usage_update` means; a free model's 0 stops chord's
+estimate (CHD-380). A subagent's own asks are dropped by kilo, so a `task`
+that needs approval is never shown to the person. chord ignores list, fork,
+close, the titles and `terminal-auth`.
+
+**Sources.**
+
+- Kilo `v7.8.12`, <https://github.com/Kilo-Org/kilocode/tree/v7.8.12>;
+  `@kilocode/cli` 7.8.12 on npm.
+- CHD-432's notes in
+  [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md)
+  (ki1–ki7).
 
 #### minimax-code
 
@@ -1077,7 +3038,129 @@ Not yet filled.
 - Run as: `npx -y @minimax-ai/code@0.2.7 acp`
 - Source: <https://agent.minimax.io>
 
-Not yet filled.
+`@minimax-ai/code` 0.2.7, the registry pin, published 2026-08-28; npm's
+`latest` is 0.6.12, which was not read. Read from the npm package (MIT,
+nothing obfuscated). The ACP server is `chunks/run-acp-command-X52GQQTB.js`,
+minified with the SDK bundled in; `L<n>` below is a line of that file once
+laid out by Prettier with default options. Notes named "the registry page's
+mmN" are CHD-432's in
+[`design/registry-2026-10-17.md`](design/registry-2026-10-17.md).
+
+**Footnotes.**
+
+- **mm1.** `initialize` answers the constant `1` (L82, L17873) whatever the
+  client asks.
+- **mm2.** The bundled method tables (L36-82) match
+  `@agentclientprotocol/sdk` 1.0.0 to 1.4.0, with the client methods
+  `mcp/connect` and `mcp/disconnect` that 1.8.0 dropped; handlers use 1.x's
+  `onRequest` builder. The package predates 1.5, so the SDK is at most
+  1.4.0; the patch release was not pinned down.
+- **mm3.** Unstable in 1.4.0's schema and used: `session/fork` (L18047) and
+  `plan_update` (L18683). The only client calls are `session/update`,
+  `session/request_permission` and `elicitation/create` (L17216, L17249,
+  L17673); `mcp/connect` is unused.
+- **mm4.** Every session call fails `auth_required` without a login (the
+  registry page's mm8 notes). A creation over the concurrency limit is
+  refused `requestCancelled` (L17912); `additionalDirectories` is refused.
+- **mm5.** Load replays history; load, resume and fork work only from the
+  session's stored cwd (CHD-432's reading).
+- **mm6.** Lists archived sessions, leaves out subagent sessions.
+- **mm7.** `session/close` drops the attachment, aborts the prompt and
+  clears the session's MCP servers (L18266-18287). No delete handler, so the
+  SDK answers method-not-found.
+- **mm8.** Legacy modes `default` and `plan`, plan only when the runtime
+  allows it. The `set_mode` answer carries
+  `_meta["minimax-code/transition"]: "next_prompt"` (L18312).
+- **mm9.** The `model` config option; no `models` field. SDK 1.x has no
+  `session/set_model` route (L36-63).
+- **mm10.** `model`, `thinkingEffort` (`thought_level`, per model) and
+  `permissionMode` (category `_permission`, scope `process`, L16239).
+- **mm11.** `gS` (L19271-19282) keeps text and turns a `resource_link` into
+  "Referenced resource: <name> (<uri>)" without fetching it; any other block
+  is `invalid_params`.
+- **mm12.** `Cd` (L16752) guesses the kind from substrings of the tool name.
+  Each `tool_call` has a non-standard `name` (L16743). A diff is rebuilt from
+  hunk and context lines, so `oldText`/`newText` are excerpts
+  (L16815-16833); other content is file or summary text. Shell output is
+  only in `rawOutput`.
+- **mm13.** `gx` maps to `pending`, `in_progress`, `completed`, `failed`
+  (L16772-16781). A call with no runtime id gets `minimax-code-tool-<n>`,
+  restarting each turn (the registry page's mm7).
+- **mm14.** `Nx` (L17212-17237) reads only `allow-once` and `allow-always`;
+  anything else, `cancelled` included, is deny. A request resolved elsewhere
+  is withdrawn by `$/cancel_request` (L17200). Its `toolCallId` is the
+  runtime's request id, not the call's (the registry page's mm4).
+- **mm15.** Form when `elicitation.form` is declared (L17245), with
+  `<id>__other` for Other; otherwise only the first step, as a permission.
+- **mm16.** A markdown `plan_update` by id for plan review, under
+  `clientCapabilities.plan` (L18656); no entries.
+- **mm17.** Cancel aborts the prompt's controller and the coordinator
+  (L18591-18604); a cancel with no turn makes the next prompt answer
+  `cancelled` at once. Whether delegated children stop was not read.
+- **mm18.** A second `session/prompt` is refused `invalid_params` "A prompt
+  is already active" (L18438-18442). `mcode/session/steer` steers text in
+  (L16395-16436).
+- **mm19.** Subagents are internal sessions, seen only through
+  `mcode/session/delegation_update`; their asks go to the root session. Only
+  the whole delegation can be stopped.
+- **mm20.** `usage_update` with `used`, `size` and `cost` in USD after each
+  prompt; no `PromptResponse.usage`.
+- **mm21.** Ten commands (L15867-15878, L19067-19078), sent twice after new,
+  load, resume or fork; the adapter answers them itself as one message chunk
+  (L18446-18458).
+- **mm22.** `title` and `updatedAt` on runtime events, also outside a turn
+  (L18612-18633).
+- **mm23.** `minimax-code-login`, `type: "terminal"`, args `["login"]`
+  (L17880-17890), sent only when the client declares `auth.terminal` or
+  `_meta["terminal-auth"]` (L17871).
+- **mm24.** No `fs/*` or `terminal/*` call (see mm3).
+- **mm25.** `qd` (L19032-19066) passes stdio, http and sse on; any other
+  transport is `invalid_params`.
+- **mm26.** L17868-17905: `loadSession`, `mcpCapabilities {http, sse}`, all
+  prompt flags false, `sessionCapabilities {list, fork, resume, close}`,
+  plus `_meta["minimax-code/extensions"]`.
+- **mm27.** `clientCapabilities` is read at L17871 (auth), L17245
+  (`elicitation.form`), L18656 (`plan`) and L16556 (the extensions key).
+- **mm28.** Five, each a bullet under Custom below.
+
+**Custom.**
+
+- `mcode/session/*` notifications (delegation, queue, goal, current
+  session): subagent activity and server-side state. A client declares
+  `clientCapabilities._meta["minimax-code/extensions"]` (L16556) and reads
+  private shapes; without it, subagent work is invisible but for its asks.
+- `mcode/session/steer`, `queue/*`, `goal/*`, `delegation/{get,stop}` and
+  `session/activate`: steering text into a turn, a follow-up queue, goals
+  with a token budget, a stop of the whole delegation. Always registered;
+  a client calls private methods. Goals can spend against a budget.
+- `permissionMode` option: default, auto or bypass from the client. It is
+  process-wide, so a change in one tab reaches every attached session.
+- `next_prompt` transition `_meta` on `set_mode`: says when the mode
+  applies. A client must hold its label until the next prompt.
+- Off-spec: the `name` on `tool_call`, the permission's runtime id, and the
+  one-step fallback for questions. A client cannot tie an ask to its card.
+
+**In chord.** chord resumes when it has a record and loads otherwise; it
+never calls list, fork or close. Modes, the `model` and `thinkingEffort`
+options, and `permissionMode` in `/config` work; the mode label runs ahead
+of the next-prompt switch. chord declares the form capability, so questions
+come as real forms, and `plan`, so the markdown plan is drawn as reply text.
+The agent's cost stops chord's estimate. chord's own MCP server goes in
+over http (`mcpCapabilities.http` is true; CHD-432's table left the cell
+blank). What reads wrong: a permission is not tied to its card, shell output
+only in `rawOutput` is not drawn, and restarted tool ids land on old cards.
+Titles, every `mcode/*` extension and the login method are ignored; chord
+declares no terminal auth, so `authMethods` never arrives, and without a
+prior login the start fails. chord queues its own mid-turn prompts, so the
+refusal is not hit, and `session/set_model` is never reached.
+
+**Sources.**
+
+- `@minimax-ai/code` 0.2.7 on npm.
+- `@agentclientprotocol/sdk` 1.0.0 to 1.4.0 on npm, for the method tables
+  and the schema's stability marks.
+- CHD-432's notes in
+  [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md).
 
 #### minion-code
 
@@ -1086,7 +3169,111 @@ Not yet filled.
 - Run as: `uvx minion-code@0.1.44 acp`
 - Source: <https://github.com/femto/minion-code>
 
-Not yet filled.
+`minion-code` 0.1.44, the registry pin, uploaded to PyPI 2026-03-15; the
+newest, 0.1.45 (2026-10-05), was read for its metadata only. Read from the
+PyPI wheel, plain Python source with no restriction met; paths are relative
+to the wheel root, and SDK paths to the `agent-client-protocol` wheel of
+the version named. The pin likely does not start under `uvx` today (mi2).
+That is inferred from code and a dependency resolution that installed and
+ran nothing; the agent was not run. The cells describe 0.1.44 on
+`agent-client-protocol` 0.8.1, the newest it can import. Upstream is
+<https://github.com/femto/minion-code>. Notes named "the registry page's
+miN" are CHD-432's in
+[`design/registry-2026-10-17.md`](design/registry-2026-10-17.md).
+
+**Footnotes.**
+
+- **mi1.** `min(client's, PROTOCOL_VERSION)`
+  (`minion_code/acp_server/agent.py:142`), which is 1 in 0.8.1
+  (`acp/meta.py:28`) and 0.12.1.
+- **mi2.** `agent-client-protocol>=0.7.0`, no upper bound
+  (`minion_code-0.1.44.dist-info/METADATA:13`). On 2026-10-18 `uv pip
+  compile` resolves 0.12.1. `acp_server/agent.py:24-55` imports
+  `AuthMethod`, `ModelInfo`, `SessionModelState` and
+  `SetSessionModelResponse` from `acp.schema` at module level, and
+  `acp_server/main.py:46` imports that module at module level. 0.12.1 has
+  none of the four (`acp/schema.py:991-1073` has `AuthMethodAgent` and
+  kin, and no module `__getattr__`); `AuthMethod` went in 0.9.0, the model
+  types in 0.11, and 0.8.1 is the last with all four (`acp/schema.py:33`).
+  So `minion-code acp` should die with an `ImportError` before
+  `initialize`. A uv cache from the 0.8.1 days could still start it.
+  0.1.45 requires `agent-client-protocol>=0.12.1`.
+- **mi3.** `run_agent` is called without `use_unstable_protocol`
+  (`acp_server/main.py:208`). 0.8.1 routes list, `set_model`, fork and
+  resume as unstable (`acp/agent/router.py:40`, `:50-56`, `:71-72`), and
+  then answers method-not-found (`acp/router.py:38-42`). This corrects the
+  registry page's mi2 and mi3: the handlers that answer without doing
+  anything are never reached.
+- **mi4.** `auth_required` without OpenRouter credentials or
+  `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` or `OPENROUTER_API_KEY` (CHD-432's
+  reading).
+- **mi5.** `loadSession` is not advertised; the handler finds only
+  in-memory sessions. No close or delete handler.
+- **mi6.** Five legacy modes, `default` to `bypass-permissions`, with
+  `current_mode_update`.
+- **mi7.** The legacy `models` field comes only after an OpenRouter login.
+  `session/set_model` is method-not-found (mi3); 0.12.1 has no route for it.
+- **mi8.** `acp_server/agent.py:361-373` joins text blocks with `\n` and
+  drops every other block silently.
+- **mi9.** `TOOL_KIND_MAP` (`acp_server/hooks.py:37-53`): `read`, `edit`,
+  `search`, `execute`, `fetch`, `think`, else `other`. Output goes only to
+  `rawOutput`, at the end. Content only for Python code calls. A permission
+  carries a fresh `toolCallId` titled `Permission: <tool>`.
+- **mi10.** `in_progress`, then `completed` or `failed`.
+- **mi11.** It fails open: a `cancelled` answer, which chord sends on Esc,
+  or an exception counts as allow. No timeout.
+- **mi12.** No plan update.
+- **mi13.** Cancel sets an event checked only between stream chunks
+  (`acp_server/agent.py:448-453`), so a running tool goes on; background
+  `bash`, `TaskCreate` and subagents are not stopped.
+- **mi14.** `prompt` clears the cancel event and runs another
+  `run_prompt` on the same agent, with no lock (`acp_server/agent.py:345-381`).
+  An exception becomes "Error: …" text with `stopReason: "refusal"`
+  (`:382-390`), as does an unknown session id (`:351-354`).
+- **mi15.** Subagents run inside one `TaskCreate` call; the children send
+  nothing and never ask permission.
+- **mi16.** `openrouter-oauth`, no `type`, `_meta {"agent-auth": true}`. It
+  opens a browser and waits up to 300 s on localhost:3000; a failure
+  answers success.
+- **mi17.** Only `session/update` and `session/request_permission`
+  (`acp_server/hooks.py:185`).
+- **mi18.** `mcpServers` is stored (`acp_server/agent.py:482`) and never
+  given to the agent (`:521-531`).
+- **mi19.** `AgentCapabilities(streaming=True)` (`acp_server/agent.py:140-157`):
+  not an ACP field, so the wire carries the defaults, plus `authMethods`
+  and `agentInfo`. `client_capabilities` is never read.
+- **mi20.** Three, each a bullet under Custom below.
+
+**Custom.**
+
+- `_meta {"agent-auth": true}` on the auth method: the agent runs the
+  OAuth. A client calls `authenticate` and waits up to 300 s; the browser
+  opens on the agent's machine, and a failed login reads as success.
+- `--dangerously-skip-permissions`: starts in `bypass-permissions`. A client
+  adds the flag; the registry does not. No asks at all.
+- `ext_method` and `ext_notification` answer every `_foo` request `{}`
+  (`acp_server/agent.py:455-461`), so any extension request seems to work.
+
+**In chord.** The start likely fails at import, and chord shows the start
+failure with the stderr tail. If it starts: without a key, `auth_required`,
+as chord never calls `authenticate`. After an OpenRouter login chord sets
+the model by `session/set_model`, there being no `model` option, and gets a
+method-not-found error. A session cannot be reopened: no `loadSession`, no
+resume. Esc answers `cancelled`, and minion runs the tool. Output only in
+`rawOutput` is not drawn. Mentions are dropped as links, though chord's
+prompt text names the files. chord's own MCP server is not offered, and the
+person's servers are ignored. chord queues its own mid-turn prompts and
+sends no steering, so neither the second-prompt path nor the stubs are
+reached. It logs full prompts to a file in the home directory (CHD-432's
+reading).
+
+**Sources.**
+
+- `minion-code` 0.1.44 and 0.1.45 (metadata) on PyPI.
+- `agent-client-protocol` 0.8.1, 0.9.0, 0.10.1, 0.11.1, 0.12.0 and 0.12.1
+  on PyPI.
+- CHD-432's notes in
+  [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md).
 
 #### nova
 
@@ -1095,7 +3282,123 @@ Not yet filled.
 - Run as: `npx -y @compass-ai/nova@1.1.55 acp`
 - Source: <https://github.com/Compass-Agentic-Platform/nova>
 
-Not yet filled.
+Read at 1.1.55, the registry's pin, from the npm package
+`@compass-ai/nova@1.1.55`. The public repository
+<https://github.com/Compass-Agentic-Platform/nova> holds only a README, a
+CHANGELOG to v1.0.66 and a licence for its docs; there is no source and no
+ACP doc. The package's `LICENSE` ("Nova Proprietary Software License") and
+`README.md:237` forbid reverse-engineering, decompiling or defeating
+obfuscation, and `dist/cli.js` is obfuscated. Under the owner's rule of
+2026-10-18, recorded on CHD-433, the bundle was read as plain text only for
+the ACP contract: method names, fields and capabilities that stand there as
+literals, and what they show of nova's behaviour. Nothing was deobfuscated,
+decoded, beautified or run, and no copy is kept. Where the README or the
+CHANGELOG state a fact, they are cited first. Cells that only decoding could
+settle stay `?`. The launcher `scripts/bin-wrapper.mjs` falls back to
+`node dist/cli.js acp`, as no platform package is a dependency.
+
+**Footnotes.**
+
+- **no1.** nova answers `initialize` with version 2 when the client's version
+  is 2 or more, else 1. chord sends 1, so nova answers 1.
+- **no2.** `package.json` has `vscode-jsonrpc` 8.2.1 and no ACP package, and
+  no ACP SDK ships in the package; nova frames JSON-RPC itself.
+- **no3.** nova accepts the v1 methods, the aliases `newSession`,
+  `loadSession`, `listSessions`, `resumeSession`, `session/setModel` and
+  `unstable_*`, its own `session/search` and `session/peer_identity/status`,
+  and further methods whose names are not readable as plain text. At
+  version 2 its permission request takes the v2 shape (no10).
+- **no4.** New and load take `{cwd, mcpServers, systemPrompt}`; resume
+  `{sessionId, cwd, mcpServers}`; list `{cwd, cursor}`; `session/search
+  {query, cwd, limit, cursor}`; `session/delete`. Fork and close are
+  advertised; that nova answers them as `session/fork` and `session/close`
+  is not established from the wire contract or docs.
+- **no5.** `session/set_mode {modeId}` and `session/set_model {modelId}` are
+  accepted; which modes and models the session answer lists is not
+  established.
+- **no6.** The registry study (`docs/design/registry-2026-10-17.md`) §2: no
+  config options, so no effort.
+- **no7.** `promptCapabilities {embeddedContext: true, image: true}`, no
+  audio; `README.md:48` says voice input is unavailable over ACP. How a
+  `resource_link` is handled is not established.
+- **no8.** A permission request's `toolCall` carries `toolCallId`,
+  `status: 'pending'`, `title`, `kind`, `rawInput` and `locations`, the
+  paths it touches. The kinds, content types, `rawOutput` and status changes
+  of tool call updates are not established from the wire contract or docs.
+- **no9.** The registry study's no2: "Always allow" was dropped in 1.1.55,
+  leaving `allow_once` and `reject_once`.
+- **no10.** At version 2 or more nova asks with `session/request_permission`
+  in the v2 shape (`title`, `subject`). At version 1 the method it sends is
+  not established: `permission/request` stands in the bundle as the
+  candidate, and whether it goes out under that name cannot be read without
+  decoding. Any outcome but `selected` rejects. A timeout is not established
+  from the wire contract or docs. Requests carry
+  `_meta.compass.permissionScope`.
+- **no11.** The registry study's no3 and CHD-383: no `elicitation`; it asks
+  through `session/requestUserInput`.
+- **no12.** The registry study's no4: a one-entry plan that replaces itself.
+- **no13.** CHANGELOG v1.0.64: abort kills the whole process tree, and plan
+  cancellation works over ACP. `session/cancel` is taken as request or
+  notification.
+- **no14.** The registry study's no1: no plain-text sign of subagents.
+- **no15.** The registry study §2: no usage, answer usage or cost.
+- **no16.** `README.md:209` lists `/help`, `/model`, `/plan` and others, and
+  `available_commands_update` stands once in the bundle; its payload is not
+  established.
+- **no17.** No `session_info_update` appears; the registry study §2 agrees.
+- **no18.** `authMethods` holds one `type: "terminal"` method, "Nova Setup",
+  only with `ACP_REQUIRE_AUTH=true` or no stored login; CHANGELOG v1.0.65
+  gates sessions on it, and the README says to run `nova setup` first.
+- **no19.** No `fs/*` or `terminal/*` request appears. nova can send a
+  `file/write` notification; when is not established.
+- **no20.** `mcpCapabilities {http: true, sse: true}`; CHANGELOG v1.0.65
+  fixed SSE parsing.
+- **no21.** `loadSession`, http and sse, image and embedded context, session
+  `{fork, list, search, resume, close, delete, tools.list, agents.list}`,
+  and `_meta` with `ownerApprovalRequired`, `sessionSkillScopeEnforced`,
+  `sessionInstructionRefresh` and `peerIdentity`.
+- **no22.** nova reads the protocol version, an auth-terminal flag and a
+  delegation flag in `clientCapabilities._meta`; the flags' keys are not
+  readable as plain text. Nothing readable on `fs`, `terminal`,
+  `elicitation`, `plan` or `subagents`.
+
+**Custom.**
+
+- `_meta.compass.permissionScope` on approvals: operation, project root,
+  paths, risk level. A client reads it; a private key, nothing lost if not.
+- The permission method switches on the protocol version (no10). At 1 a
+  standard client may never see an approval; at 2 it needs the v2 shape.
+- Peer identity: sessions label themselves and message each other, each
+  send asking permission; the setup method's name is not readable.
+- `session/delegate`: nova hands work to the client, behind a `_meta` key
+  that is not readable; the client then owns the double-submit risk.
+- `session/requestUserInput`: questions; unanswered, they are lost.
+- `systemPrompt` on new and load, a top-level off-spec parameter.
+- Own session search, tool and agent lists, `file/write`,
+  `session/suggestion`, a client-sent model or mode update, and method
+  aliases; shapes partly unreadable.
+
+**In chord.** chord negotiates version 1, so nova takes its version-1
+permission path, and chord answers anything but `session/request_permission`
+and `elicitation/create` with method-not-found. If that path sends
+`permission/request`, every nova approval fails in chord without being
+shown; one live check would settle it. Version 2 is no easy way out: chord
+parses v1 only. Its questions through `session/requestUserInput` get
+method-not-found (CHD-383). chord reopens by resume when it holds a record,
+else load, adds its http MCP server, sends images, reads commands and sets
+mode and model. It never calls `session/list`, fork, delete or close, sends
+@ mentions as `resource_link` though nova takes embedded context, and ignores
+`_meta.compass`, peers, delegation and `systemPrompt`. chord never calls
+`authenticate`: without `nova setup` first, session/new may be refused. No
+usage, title or config option comes, so the meter, the title and the effort
+picker stay empty.
+
+**Sources.**
+
+- npm `@compass-ai/nova@1.1.55`: `LICENSE`, `README.md`, `CHANGELOG.md`,
+  `package.json`, `scripts/bin-wrapper.mjs`, and `dist/cli.js` as plain text.
+- <https://github.com/Compass-Agentic-Platform/nova> (README, CHANGELOG).
+- `docs/design/registry-2026-10-17.md` (CHD-432), `docs/design/CHD-1.md`.
 
 #### pi-acp
 
@@ -1104,7 +3407,121 @@ Not yet filled.
 - Run as: `npx -y pi-acp@0.0.34`
 - Source: <https://github.com/svkozak/pi-acp>
 
-Not yet filled.
+`pi-acp` 0.0.34, the registry pin and npm's newest (last modified
+2026-09-24), read from the npm package and at tag `v0.0.34` of
+<https://github.com/svkozak/pi-acp> (MIT, plain source). Paths are relative
+to the repository root; SDK paths to the `@agentclientprotocol/sdk` 0.26.0
+package. It is an adapter: it drives `pi` (`@earendil-works/pi-coding-agent`)
+over pi's RPC mode, and `pi` must already be on PATH and logged in. Notes
+named "the registry page's piN" are CHD-432's in
+[`design/registry-2026-10-17.md`](design/registry-2026-10-17.md).
+
+**Footnotes.**
+
+- **pi1.** `src/acp/agent.ts:236-242` answers `1` whatever is asked.
+- **pi2.** `package.json:49` asks `^0.26.0`, which resolves to 0.26.0, the
+  only 0.26.x; it is not bundled, so npx installs it.
+- **pi3.** List and delete are stable in 0.26 (`dist/acp.js:57-71`);
+  `usage_update`, `session_info_update` and the unstable
+  `type: "terminal"` auth method are used. 0.26 has no `session/set_model`
+  route, and pi-acp has no `extMethod`, so its `unstable_setSessionModel`
+  (`src/acp/agent.ts:1153`) is unreachable (`dist/acp.js:171-175`).
+- **pi4.** Needs an absolute cwd; answers models, modes and config
+  options. Startup info arrives as an agent message outside a turn.
+- **pi5.** Replays text and tool results, not thoughts.
+- **pi6.** No resume, fork or close. List reads pi's session files for the
+  cwd, 50 a page, with `title` and `updatedAt`
+  (`src/acp/agent.ts:909-936`). Delete unlinks pi's file and is idempotent.
+- **pi7.** The legacy modes are pi's thinking levels ("Thinking: <level>");
+  pi has no modes of its own.
+- **pi8.** Config options `model` (ids `provider/model`) and
+  `thought_level`, plus the legacy `models`. `session/set_model` is
+  method-not-found (pi3).
+- **pi9.** `src/acp/translate/prompt.ts:9-68`: text blocks joined with no
+  separator; a `resource_link` becomes `\n[Context] <uri>`, unread; an
+  embedded text resource is inlined, a blob named with its size, and only
+  under `PI_ACP_ENABLE_EMBEDDED_CONTEXT=true`; audio becomes a marker text.
+- **pi10.** `src/acp/session.ts:486-505`, `:625-673`, `:764-830`,
+  `:1066-1078`. Kinds `read`, `edit` (`write`, `edit`), `execute` (`bash`),
+  `other`. `rawInput` streams as arguments arrive; `rawOutput` on all but
+  file edits. Bash content is `{type: "terminal", terminalId}` with
+  `_meta.terminal_info`, `terminal_output` and `terminal_exit`. Status runs
+  `pending`, `in_progress`, `completed` or `failed`, never back.
+- **pi11.** pi asks no tool permissions. Its extensions' `confirm` comes
+  as `allow_once`/`reject_once`, and `select` as one `allow_once` per
+  choice. No elicitation.
+- **pi12.** Cancel drops queued prompts ("Cleared queued prompts."), sends
+  pi `abort`, and the turn answers `cancelled`
+  (`src/acp/session.ts:396-416`).
+- **pi13.** A second prompt is queued in the adapter with "Queued message
+  (position N)." as agent text. pi's own steering is only the `/steering`
+  and `/follow-up` commands; `/steering` sets pi's `steeringMode`
+  (`src/acp/agent.ts:572-600`).
+- **pi14.** `usage_update` with `used` and `size`; no usage in the answer;
+  cost only in `/session`'s text.
+- **pi15.** pi's prompts and skills, or file templates as a fallback, plus
+  `/compact`, `/autocompact`, `/export`, `/session`, `/name`, `/steering`,
+  `/follow-up` and `/changelog`; sent after new and load, outside a turn
+  (`src/acp/agent.ts:60-100`, `:399-435`, `:1100-1120`).
+- **pi16.** `title` and `updatedAt` only after `/name <name>`
+  (`src/acp/agent.ts:552-558`). Other `session_info_update`s carry only
+  `_meta.piAcp` (see Custom).
+- **pi17.** `pi_terminal_login`, `type: "terminal"`, args
+  `["--terminal-login"]`, always offered; `authenticate` does nothing
+  (`src/acp/auth.ts:13-41`).
+- **pi18.** The only client calls are `requestPermission` and
+  `sessionUpdate`.
+- **pi19.** `mcpServers` is stored and unused ("Pi doesn't support
+  mcpServers", `src/acp/agent.ts:281-288`).
+- **pi20.** `src/acp/agent.ts:241-268`: `loadSession`, image, embedded
+  context per the env var, `mcpCapabilities` http and sse false,
+  `sessionCapabilities {list, delete}`, `authMethods` always.
+- **pi21.** Only `clientCapabilities._meta["terminal-auth"]`
+  (`src/acp/agent.ts:250-252`).
+- **pi22.** Six, each a bullet under Custom below.
+
+**Custom.**
+
+- `_meta.terminal_info`, `terminal_output`, `terminal_exit` on Bash calls,
+  sent to every client: live shell output. `terminal_output.data` is a
+  delta under the key chord reads as the whole output.
+- `_meta.piAcp {queueDepth, running}` on `session_info_update` at each turn
+  start, end, queue and cancel (`src/acp/session.ts:380-384`, `:407-411`,
+  `:478-481`, `:546-549`, `:572-575`): the adapter's queue. Private.
+- `_meta["terminal-auth"]` on the auth method, for a client that declares
+  it: a `{command, args, label}` launch spec. Runs `pi` interactively.
+- Slash commands `/steering`, `/follow-up`, `/name`, `/export`, `/session`,
+  `/compact`, `/autocompact`, `/changelog`: steering mode, a title, an HTML
+  export (a `resource_link` in the reply, `src/acp/agent.ts:840-858`), cost
+  text. `/export` writes a file.
+- `PI_ACP_ENABLE_EMBEDDED_CONTEXT` and `PI_ACP_PI_COMMAND` (`src/index.ts:7`,
+  `README.md:118`): embedded resources and the pi binary. The registry's
+  `env` is empty.
+- Off-spec: extension questions as permissions, prompts queued in the
+  adapter, and errors folded into `end_turn`
+  (`src/acp/agent.ts:897-898`).
+
+**In chord.** chord loads to reopen, there being no resume; it never calls
+list or delete. The `model` and `thought_level` options work, and thinking
+levels show again as modes. Images go in; `@` mentions arrive as
+`[Context] file://…` lines glued to the text, while chord's text names the
+files already. `usage_update` fills the meter; pi sends no cost. Commands
+are read. Live shell output shows only its latest chunk, because chord
+reads each `terminal_output` delta as the whole. Titles from `/name` and
+the `piAcp` meta are dropped. chord declares no terminal auth and never
+calls `authenticate` (a no-op here), so pi must be logged in already.
+chord's own MCP server is not offered; the person's servers are passed and
+unused. Under `--dangerously-skip-permissions` a select question gets its
+first choice. An extension's prompt with no turn running is rejected
+unseen (CHD-158). Failures end `end_turn`. chord queues its own mid-turn
+prompts, so the adapter's queue is not reached.
+
+**Sources.**
+
+- `pi-acp` 0.0.34 on npm, and <https://github.com/svkozak/pi-acp/tree/v0.0.34>.
+- `@agentclientprotocol/sdk` 0.26.0 on npm.
+- CHD-432's notes in
+  [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md).
 
 #### qoder
 
@@ -1113,7 +3530,142 @@ Not yet filled.
 - Run as: `npx -y @qoder-ai/qodercli@0.2.14 --acp`
 - Source: <https://qoder.com>
 
-Not yet filled.
+`@qoder-ai/qodercli` 0.2.14, the registry pin, published 2026-05-13; npm's
+`latest` is 1.1.73, about 60 releases on, and was not read. Read from the
+npm package: one 38 MB bundle, `bundle/qodercli.js`, minified with its
+strings partly behind a lookup table. 0.2.14 is Apache-2.0 (`LICENSE`,
+`package.json`), so it is not under the bundle rule and its cells take a
+plain `c`; 1.1.73's npm metadata has no licence field. This pass read the
+bundle as shipped, as plain text, and decoded nothing; a fact hidden behind
+the string table is `?`. The `repository` in `package.json` does not
+resolve, so there is no public source. CHD-432's reader ran `webcrack` over
+the obfuscated bundle; that is the owner's to weigh, and every fact that
+rested only on that deobfuscated copy was dropped under the owner's rule.
+The registry page's qoder notes stand here only where the shipped bundle
+or Qoder's docs confirm them.
+
+**Footnotes.**
+
+- **qo1.** `initialize` answers a constant `1` (`bundle/qodercli.js:3992`,
+  `:4006`) and stores `clientCapabilities` without reading the version.
+- **qo2.** The ACP schema and method tables are a copy inside the bundle,
+  in a Gemini-CLI-derived tree (`:3992`); `package.json` lists no
+  dependencies. Which SDK release it was copied from is not stated.
+- **qo3.** The agent (`:4006`) handles `initialize`, `authenticate`,
+  `session/new`, `load`, `list`, `prompt`, `cancel`, `set_mode`,
+  `set_config_option` and the unstable `session/set_model`; the copied
+  tables name resume, fork and close, and no handler exists for them.
+- **qo4.** `new`, `load` and `prompt` throw `authRequired` (-32000) unless
+  `authenticate` succeeded or a persisted login was restored at start
+  (`:4006`).
+- **qo5.** `session/load` starts streaming the history without awaiting it
+  and then answers (`:4006`).
+- **qo6.** `{sessionId, cwd, title, updatedAt}` for the cwd asked, else the
+  target directory (`:4006`).
+- **qo7.** `default`, `acceptEdits`, `bypassPermissions`, and `plan` when
+  plan is enabled (`:4016`). Qoder's ACP page names only Default and Bypass
+  Permissions.
+- **qo8.** `models` in the new and load answers; descriptions read like
+  "Reasoning · Vision · 1x Credit" (`:4006`).
+- **qo9.** `mode` and `model` select options come only in the answer to
+  `session/set_config_option`, never in new or load (`:4006`, `:4016`). No
+  effort option.
+- **qo10.** Text as is; image and audio as inline data; a `file://`
+  `resource_link` is read by the agent, asking leave for a path outside the
+  project; another link becomes `@<uri>` text; an embedded resource becomes
+  an `@<uri>` mention, with its content collected apart (`:4007`). Qoder's
+  ACP page says "Supports images".
+- **qo11.** A `tool_call` carries the tool's own name as title, `kind`
+  from the ACP set (one tool kind maps to `think`), `rawInput`, and
+  locations from path arguments. The result comes as `tool_call_update`
+  with text content and the same text as `rawOutput` (`:4007`, `:4016`).
+  Diffs (`path`, `oldText`, `newText`) appear only in permission requests
+  (`:3999`). No terminal content was seen.
+- **qo12.** The live `tool_call` is sent from the finished model message,
+  not while arguments stream; its status sits behind the string table. The
+  update ends `completed` or `failed` (`:4007`).
+- **qo13.** Per kind of confirmation an `allow_always` ("Always allow …"),
+  then "Allow" (`allow_once`) and "Reject", whose kind is behind the string
+  table (`:4016`). A request unanswered after 30 s (`:3999`) rejects the
+  tool; nothing withdraws the request. `cancelled` reads as cancel, and a
+  turn's abort aborts the ask (`:4006`).
+- **qo14.** The copied client-method table holds `fs/*`, `terminal/*`,
+  `session/request_permission` and `session/update`; no
+  `elicitation/create` (`:3992`).
+- **qo15.** A plan comes as the text of a permission request (`:3999-4006`); no
+  `plan` update was seen.
+- **qo16.** Cancel aborts the running prompt; the loop then breaks and
+  answers `end_turn` with its usage, or `cancelled` when the abort surfaces
+  as an error. A cancel with no turn throws "Not currently generating"
+  (`:4006`, `:4007`).
+- **qo17.** A new `session/prompt` aborts the pending one before it starts
+  (`:4007`).
+- **qo18.** Qoder's ACP page lists "Subagent ✅"; how a subagent reaches
+  the wire was not found in the plain text.
+- **qo19.** The answer carries `_meta.quota {token_count {input_tokens,
+  output_tokens}, model_usage [{model, token_count}]}`, zeros for a slash
+  command (`:4007`). No `usage_update` was seen; `PromptResponse.usage`
+  is not set. No cost.
+- **qo20.** Sent right after new and load (`:4006`). Qoder's ACP page lists
+  `/init`, `/memory`, `/about` and `/help`. A prompt starting with `/` or
+  `$` is tried as a command first and ends `end_turn` (`:4007`).
+- **qo21.** `session_info_update` appears in plain text only in the copied
+  schema; updates whose kind is behind the string table leave it open.
+- **qo22.** A qodercli login method with no `type` (a device flow: the
+  agent opens the browser by shell command and waits 180 s) and
+  `type: "env_var"` for `QODER_PERSONAL_ACCESS_TOKEN`, which is read only
+  when that method is authenticated (`:4006`). At start only a persisted
+  login is restored. Qoder's ACP page says the CLI detects the variable
+  "to complete authentication at startup", so a client can set it "to allow
+  Qoder CLI to automatically log in"; the page tracks 1.1.x.
+- **qo23.** With `clientCapabilities.fs` declared, file access goes through
+  the client (`:4006`). `terminal/*` is in the copied table; a use was not
+  seen. The ACP page claims "File Operations or Terminal" through the IDE.
+- **qo24.** stdio, http and sse servers are mapped into the session's
+  config (`:4006`); the ACP page says "Stdio, SSE, Streamable HTTP".
+- **qo25.** `loadSession`, `sessionCapabilities {list}`,
+  `promptCapabilities` image, audio and embeddedContext all true,
+  `mcpCapabilities` http and sse true (`:4006`).
+- **qo26.** `clientCapabilities.fs` is the only field read in plain text
+  (`:4006`).
+- **qo27.** Seven, each a bullet under Custom below.
+
+**Custom.**
+
+- `_meta.quota` on the prompt answer: tokens per turn and per model. A
+  client reads a private key; no cost and no context size.
+- Config options only in `set_config_option`'s answer: a client must set
+  one blind to discover them.
+- The 30 s permission timeout: the agent rejects and goes on, and the
+  client is not told; a late answer is ignored. Fails closed.
+- A plan as a permission's text: the plan reads as Allow and Reject.
+- A concurrent prompt aborts the running turn: its work is lost.
+- The `env_var` login method, with `NO_BROWSER` and `QODER_CONFIG_DIR` from
+  the README: headless login, a token in the agent's environment.
+- Slash commands and the `$` prefix: `/init` writes `AGENTS.md` into the
+  project; a prompt starting with `$` is taken as a command.
+
+**In chord.** chord loads to reopen (no resume offered) and never calls
+list. It sets models through `session/set_model`, there being no `model`
+option in the new answer, and uses legacy modes. Images go in; `@`
+mentions go as `file://` links, which qoder reads itself. chord's own MCP
+server goes in over http. `_meta.quota` is ignored, so a qoder session
+shows no usage. chord never calls `authenticate`, so without a prior
+qodercli login the start fails `authRequired`. chord declares no `fs`, so
+qoder uses its own. What reads wrong: after 30 s the permission box stays
+open while the tool is already rejected; a plan comes as a permission; a
+load's replay may arrive after the answer; a cancel may read as
+`end_turn`; live titles are raw tool names. chord queues its own mid-turn
+prompts, so the abort on a second prompt is not hit.
+
+**Sources.**
+
+- `@qoder-ai/qodercli` 0.2.14 on npm (`bundle/qodercli.js`, `README.md`,
+  `LICENSE`); 1.1.73's npm metadata.
+- Qoder's ACP page, <https://docs.qoder.com/en/cli/acp>, read 2026-10-18.
+- CHD-432's notes in
+  [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md), kept
+  only where confirmed above.
 
 #### qwen-code
 
@@ -1122,7 +3674,149 @@ Not yet filled.
 - Run as: `npx -y @qwen-code/qwen-code@0.25.2 --acp --experimental-skills`
 - Source: <https://github.com/QwenLM/qwen-code>
 
-Not yet filled.
+Read at `@qwen-code/qwen-code` 0.25.2, the ACP Registry's pin, from the
+repository https://github.com/QwenLM/qwen-code at tag v0.25.2; paths below
+are relative to `packages/cli/src/acp-integration/`, except those starting
+`acp-bridge/`, which are under `packages/acp-bridge/src/`. Apache-2.0, with
+nothing restricting reading. The two largest files, `acpAgent.ts` and
+`session/Session.ts`, were read by search and around each hit, not end to
+end; the `qwen/*` control methods were listed, not read one by one. The
+registry passes `--experimental-skills`. Two findings correct CHD-432
+(`docs/design/registry-2026-10-17.md`): qwen sends no `_meta.quota` (qw13),
+and its own turns bring requests with no turn of chord's running (qw20).
+
+**Footnotes.**
+
+- **qw1.** It answers the SDK's `PROTOCOL_VERSION`
+  (`acpAgent.ts:5508`).
+- **qw2.** `packages/cli/package.json:45` `^0.14.1`; `pnpm-lock.yaml`
+  resolves 0.14.1.
+- **qw3.** v1 plus `unstable_resumeSession`, `unstable_listSessions`,
+  `unstable_setSessionModel` and `session_info_update`. Its own: the
+  `_qwencode/*` turn methods, `craft/drainMidTurnQueue`, `deleteSession`,
+  about 50 `qwen/*` methods and 11 `qwen/notify/*` notifications
+  (`acpAgent.ts:5466-7181`, `:9646`; names in `acp-bridge/status.ts:129-260`).
+- **qw4.** `session/new` answers modes, models and config options. Load,
+  resume and list are handled (`acpAgent.ts:5751`, `:5909`, `:6483`,
+  `:6786`). No standard fork, close or delete; its own `deleteSession`,
+  `qwen/control/session/close` and `qwen/control/session/fork_agent`
+  (`acpAgent.ts:9639`, `:12100`, `:13048`).
+- **qw5.** Config options `mode`, `model` and, for models that support it, a
+  reasoning effort of category `thought_level` (`acpAgent.ts:16677-16816`);
+  no `config_option_update`. A mode change from inside sends
+  `current_mode_update`, then `qwen/notify/session/mode-update`; a model
+  change from inside sends only `qwen/notify/session/model-update`
+  (`session/Session.ts:13073`, `:13312-13350`).
+- **qw6.** Image and audio as inline data, clamped in size. An embedded
+  resource goes in, the block as `@uri`. A `file://` `resource_link` is read
+  as an @-path; any other uri, and any link over SSH, becomes text
+  (`session/Session.ts:17655-17730`).
+- **qw7.** Kinds from core's map, `switch_mode` for entering and leaving plan
+  mode. `rawInput` always, `rawOutput` when the result has one; text and
+  diff content, locations; `pending`, `in_progress`, then `completed` or
+  `failed`. Each call also gets an update carrying only
+  `_meta.toolLifecycle` (`session/emitters/tool-call-emitter.ts:219-512`,
+  `acp-bridge/transcript-replay.ts:966-1017`).
+- **qw8.** `allow_once`, also as "once and switch to default" when leaving
+  plan mode; `allow_always` per kind, for the session, project or user;
+  `reject_once`. `cancelled` cancels the call; an option not offered throws;
+  requests go one at a time; no timeout. Its `ask_user_question` tool comes
+  as a permission with the questions in `toolCall._meta.qwenQuestions`
+  (`session/permissionUtils.ts:19-330`, `session/Session.ts:12856-12880`).
+- **qw9.** A `plan` from its todo tool, with plan ids in `_meta`
+  (`session/emitters/PlanEmitter.ts:27-41`).
+- **qw10.** Cancel aborts the running prompt and any prompt waiting at
+  admission; with no turn running it is ignored (`acpAgent.ts:7181-7200`).
+  Subagent lifecycle updates go on for up to 30 s after (CHD-432 QW3).
+- **qw11.** Between tool batches it asks the client for queued input with
+  `craft/drainMidTurnQueue`, with a timeout and no capability gate;
+  method-not-found switches it off for the session
+  (`session/Session.ts:10003-10050`). A concurrent `session/prompt` waits
+  until the turn ends.
+- **qw12.** Subagents ride in its own `_meta` on the parent's updates; no
+  `subagent_update`, no child session (CHD-432 qw1).
+- **qw13.** `usage_update` `used` and `size` per main-session model round.
+  No `usage` on `PromptResponse` and no cost. Per-round tokens also come in
+  `_meta.usage` on an empty `agent_message_chunk`
+  (`session/emitters/MessageEmitter.ts:300-345`,
+  `acp-bridge/transcript-replay.ts:522-548`). No `quota` anywhere in the ACP
+  layer or the bundle's ACP chunk. This corrects CHD-432's `_meta.quota`
+  for qwen, which looks carried over from gemini.
+- **qw14.** Commands and skills, skills also in `_meta.availableSkills`;
+  held back while automatic work is held (`session/Session.ts:12825-12842`).
+- **qw15.** `session_info_update` with `title` when a title is recorded,
+  after a turn or `/rename`, then `qwen/notify/session/title-update`
+  (`session/Session.ts:11466-11496`).
+- **qw16.** One method, `openai`, with
+  `_meta {type: "terminal", args: ["--auth-type=openai"]}`, not ACP's
+  `type`; the reply is followed by an `authenticate/update` notification
+  (`authMethods.ts:10-35`, `acpAgent.ts:5656`).
+- **qw17.** `fs/read_text_file` and `fs/write_text_file`, each only when
+  declared, else its own files; never `terminal/*`
+  (`acpAgent.ts:15984-15990`, `service/filesystem.ts:142-235`). It also
+  reads `_meta["qwen.goalProposals"]` and private `initialize._meta` keys
+  (`acpAgent.ts:5468-5501`, `:15570`).
+- **qw18.** Session servers above the person's settings; none in agent-host
+  read-only mode (`acpAgent.ts:15381-15450`).
+- **qw19.** `loadSession`, `promptCapabilities` image, audio and
+  `embeddedContext`, `sessionCapabilities` list and resume,
+  `mcpCapabilities` http and sse, `_meta.imageCapability`
+  (`acpAgent.ts:5515-5535`).
+- **qw20.** When a background agent, shell, monitor or workflow ends, or a
+  cron job fires, qwen starts a turn of its own. It first sends the request
+  `_qwencode/start_turn`; `{accepted: false}` defers the turn, and a -32601
+  answer counts as admitted. The turn's updates and permissions follow, each
+  permission with `_meta.backgroundTurn`, then `_qwencode/end_turn`. Goal
+  turns send both as notifications. No capability gate
+  (`session/Session.ts:3407-3413`, `:11340-11600`, `:12250-12360`,
+  `:12716-12853`).
+
+**Custom.**
+
+- `_qwencode/start_turn` and `end_turn` (qw20): the agent reacts to finished
+  background work by itself. A client needs nothing to get it; to manage it
+  it must answer `start_turn`, show a turn it did not start, and answer
+  permissions outside its own turns. It spends the model when the person
+  did not ask.
+- `craft/drainMidTurnQueue` (qw11): steering served by the client. One
+  refused round trip per session for a client without it.
+- `_meta.qwenQuestions` on a permission (qw8): the model's multiple-choice
+  questions; answers have no ACP slot.
+- `_meta.toolLifecycle`, `executionLifecycle`, `usage` and subagent keys:
+  timing, provenance, per-round tokens; some ride on empty chunks.
+- `qwen/notify/session/*` notifications: the only word of a model change
+  from inside, plus titles, prompt suggestions, PR links and more.
+- `_meta.availableSkills` on the commands: skills as commands. Free.
+- About 50 `qwen/*` control methods, `deleteSession` and private
+  `initialize._meta` keys: a daemon's control plane, some only for a
+  trusted private parent.
+
+**In chord.** chord creates, loads and resumes qwen sessions, and never calls
+`session/list`. Modes, models and effort go through config options; chord
+finds the `model` option and the `thought_level` effort. chord draws
+`current_mode_update`, `plan`, the context meter, commands and permissions,
+sends images and `resource_link` mentions, which qwen reads, and gives
+qwen its http MCP server. With no `PromptResponse.usage` chord has no answer
+tokens to price, so no cost shows. Requests with no turn running: ✓, which
+corrects CHD-432's ✗. chord answers `_qwencode/start_turn` with
+method-not-found, as it does every extension request, and qwen takes that
+as admitted. The background turn's updates land under chord's last turn, and
+its permissions arrive with no turn running, so chord refuses them unseen
+(CHD-158). This corrects CHD-432's line that qwen does not widen CHD-158: it
+does, for each background task that ends between turns. chord refuses
+`craft/drainMidTurnQueue` once per session. Ignored: `_qwencode/end_turn`,
+every `qwen/notify/*` (an inside model change never reaches chord's status
+line), titles, `_meta.usage`, skills in `_meta`, and `_meta.qwenQuestions`,
+so a question shows as a bare permission (CHD-383). Subagent updates after a
+cancel can hold a queued prompt up to 5 s (CHD-432 QW3). chord never calls
+`authenticate`; qwen's one method runs in a terminal.
+
+**Sources.**
+
+- https://github.com/QwenLM/qwen-code, tag v0.25.2.
+- `@qwen-code/qwen-code` 0.25.2, npm, its ACP chunk searched only.
+- CHD-432's reading, `docs/design/registry-2026-10-17.md` (qw1-qw7,
+  QW1-QW4).
 
 #### sigit
 
@@ -1131,7 +3825,139 @@ Not yet filled.
 - Run as: `npx -y @smbcloud/sigit@1.7.0`
 - Source: <https://github.com/getsigit/sigit>
 
-Not yet filled.
+Read at 1.7.0, the registry's pin, in the npm wrapper `@smbcloud/sigit@1.7.0`
+and the Rust source of <https://github.com/getsigit/sigit> at tag `v1.7.0`;
+cites are relative to that repository, under `crates/cli/src/` unless named.
+Apache-2.0, so nothing limits reading it. Inference runs on the device by
+default through the `onde` engine, on a GGUF model from Hugging Face
+(Qwen2.5-3B, a 1–2 GB first download); cloud tiers need a sigit.si sign-in,
+and an `OPENAI_BASE_URL` endpoint spends on that account. The registry's
+empty args start ACP because stdin is a pipe (`main.rs:6705-6714`), but they
+do not load the model: the first prompt answers "No on-device model is
+loaded. Run `/load`…" (`main.rs:3474-3490`). At every start it connects to
+an MCP server at `https://sigit.si/api/v1/mcp`, signed in or not
+(`mcp.rs:24-27,452-477`). The CHD-432 study had list, fork, resume, close and
+delete unread; sigit offers all five.
+
+**Footnotes.**
+
+- **si1.** `main.rs:2236` answers `ProtocolVersion::V1` whatever the client
+  asks; `README.md:139-153` says draft v2 is not enabled.
+- **si2.** `agent-client-protocol` 2.2.0 and schema crate 1.9.1
+  (`Cargo.lock:22-24,56-58`), with its own handlers (`main.rs:6084-6420`).
+  The workspace's `ed-acp` does not serve the binary.
+- **si3.** `schema::v1` (`main.rs:77-100`) and the one feature
+  `unstable_session_fork` (`Cargo.toml`). No `session/set_model`, and no
+  `PromptResponse.usage`, which needs a feature it leaves off.
+- **si4.** `main.rs:3173-3211`: absolute `cwd` checked, MCP servers
+  connected, `configOptions` and `modes` answered, commands sent.
+- **si5.** `main.rs:620-716`: user chunks under one `messageId`, thoughts,
+  messages, `write_todos` as `plan`, each other call as a finished
+  `tool_call` with rawInput and rawOutput.
+- **si6.** `main.rs:2888-2909`: no replay. A session is saved only after a
+  turn completes (`main.rs:2738-2766`), so after a restart one with no
+  finished turn answers `ResourceNotFound` "session <id> not found".
+- **si7.** `main.rs:2799-2861`: saved sessions with a cwd and a message,
+  optional absolute `cwd` filter, its own cursor, `title` and `updatedAt`.
+- **si8.** `main.rs:3098-3171`: the whole current conversation under a new
+  id, no fork point, replayed on the new id; grants and plan mode not carried.
+- **si9.** `session/close` (`main.rs:3021-3066`) cancels the turn and drops
+  state, MCP servers, grants and background commands; history stays.
+  `session/delete` (`main.rs:3069-3077`) also removes it from the store.
+- **si10.** `main.rs:4991-5064`, also as option `sigit-permission-mode`
+  (category `mode`); `set_mode` works mid-turn (`main.rs:4538-4558`).
+- **si11.** No `models` field and no `set_model`; option `sigit-model`,
+  category `model` (`main.rs:5208-5217`): local GGUF picks and 15 cloud tiers.
+  Picking an uncached model starts a download.
+- **si12.** `main.rs:5086-5218`: `sigit-model`, `sigit-local-inference` (a
+  boolean for a client that declares boolean options, else a `Local`/`Cloud`
+  select) and `sigit-permission-mode`; `config_option_update` on change.
+- **si13.** `main.rs:3305-3420,3509-3545`: media the backend cannot take is
+  dropped with a notice; embedded text is inlined between fences; a
+  `file://` link is read from disk by sigit, any other becomes a text line.
+- **si14.** Kinds edit, delete, execute, read, search, fetch, think, other
+  (`main.rs:361-374`); model loading and status lines are `think` calls
+  (`main.rs:1412-1418`). Content: arguments as fenced JSON, then a `diff` for
+  a write and the fenced result (`main.rs:423-451,3747-3760`), or `terminal`
+  content when the client runs it. Locations for file tools
+  (`main.rs:455-480`). `pending` when it will ask, else `in_progress`; ends
+  `completed` or `failed` (`main.rs:3715-3721,3923-3933`). Also sets `name`.
+- **si15.** `allow_once`, `allow_always`, `reject_once`, `reject_always`
+  (`main.rs:4207-4219`). `cancelled` ends the turn `cancelled` and fails the
+  round's later calls (`main.rs:3862-3906`); an error is a denial naming
+  `SIGIT_PERMISSIONS=allow`. It waits with no timeout.
+- **si16.** URL elicitation only inside `authenticate`, with
+  `elicitation/complete` on success (`main.rs:6421-6479`); never a form.
+- **si17.** `write_todos` becomes `plan`, live and replayed
+  (`main.rs:3727-3733`); an empty list clears it.
+- **si18.** `main.rs:4302-4316` stops the turn and its foreground command
+  (`tools.rs:2949-2953`); background commands run on until `kill_command`,
+  close or exit. `$/cancel_request` acts the same.
+- **si19.** A second `session/prompt` waits on the session lock
+  (`main.rs:2452-2466,6324`). No steering.
+- **si20.** One `task` call running a nested read-only loop; in ACP it works
+  only under an endpoint override and otherwise answers "not available
+  on-device yet" (`tools.rs:741-758`; `main.rs:6139-6150`).
+- **si21.** `usage_update {used, size}` after each model response, estimated
+  when the endpoint gives no count (`main.rs:4141-4159`). No cost.
+- **si22.** `main.rs:1738-1823`: 18 built-ins (`/load`, `/login`, `/models`…)
+  and `.sigit/commands/*.md`, each run as prompt text.
+- **si23.** `main.rs:2768-2790`: after each save, `updatedAt`, and `title`
+  when it changed.
+- **si24.** One `agent` method, "Sign in to siGit Code" (`main.rs:2229-2234`),
+  a loopback browser flow (`main.rs:2303-2366`); optional on the device.
+  `logout` too.
+- **si25.** `fs/*` and `terminal/*` for foreground commands, only when the
+  client declares them (`main.rs:2176-2200`); else its own.
+- **si26.** `main.rs:2094-2130`: stdio and Streamable HTTP; `sse` is logged
+  and ignored. The sigit.si server, and `smb`/`asc` when on PATH, come on top.
+- **si27.** `main.rs:2241-2294`: `loadSession`, `auth.logout`, prompt
+  `{image, audio, embeddedContext}`, `mcpCapabilities.http`, session
+  `{fork, list, additionalDirectories, resume, close, delete}`. No steering.
+- **si28.** `main.rs:2176-2222`: `fs`, `terminal`, `elicitation.url`,
+  `session.configOptions.boolean`; never `plan`, `subagents` or `_meta`.
+
+**Custom.**
+
+- `_meta.sigit.active_model` in the initialize answer (`main.rs:905-951`):
+  the start model before a session. A client reads `_meta`; the same comes
+  as the `sigit-model` option once a session is open.
+- Slash commands acting outside the protocol (`main.rs:5298,5757-5780`):
+  `/login` opens a browser on the machine itself, and `/login <email>
+  <password>` sends a password as prompt text. A client only passes text on;
+  the password then sits in the client's record.
+- `/load` loads the model, downloading it first (`main.rs:1395-1420`): disk,
+  network and memory, before the first real prompt.
+- Built-in MCP servers, on by default (`mcp.rs:24-37`): a connection to
+  sigit.si at every start, with the token when signed in. Off with
+  `SIGIT_MCP_OFFICIAL=off`.
+- `SIGIT_*` variables and config files set permissions, model, endpoint and
+  the client fs and terminal use; the registry passes no environment.
+- One live session per process, others parked (`main.rs:2520-2600`); the
+  `Inference` toggle is saved machine-wide (`settings.rs:209-213`).
+
+**In chord.** chord asks for version 1, adds its http MCP server, opens
+with session/new and reopens with resume when it holds a record, else load.
+It never calls `session/list`, fork, close or delete, though sigit offers
+them all; without close, parked state and background commands live until
+the process exits. Mode and model come from sigit's options by category;
+`/config` shows `Inference` as a select, since chord declares no boolean
+options, and reads per session though it is machine-wide. `usage_update`
+drives the meter with no cost, so chord estimates one. Plans and the four
+permission kinds work. chord never calls `authenticate`, so the URL sign-in
+never comes; `/login` and `/load` pass through as commands. A fresh start
+answers the first prompt with the `/load` hint as an ordinary reply. A
+resume refused after a restart names the id twice (CHD-139). chord declares
+no `fs` or `terminal`, so command output comes as fenced text at the end.
+chord drops titles and `_meta.sigit`, and does not draw `name`.
+
+**Sources.**
+
+- npm `@smbcloud/sigit@1.7.0`; <https://github.com/getsigit/sigit>, tag
+  `v1.7.0`.
+- crates.io `agent-client-protocol` 2.2.0, `agent-client-protocol-schema`
+  1.9.1.
+- `docs/design/registry-2026-10-17.md` (CHD-432).
 
 ### Own CLIs (`src/clis.ts`)
 
@@ -1144,71 +3970,76 @@ Not yet filled.
 Read at 2026.10.16-e3cb207, the release `https://cursor.com/install` named on
 2026-10-18 and the ACP Registry's pin, from the archive
 `https://downloads.cursor.com/lab/2026.10.16-e3cb207/darwin/arm64/agent-cli-package.tar.gz`,
-with 2026.08.11-e8db854 beside it for comparison. The CLI is a minified Node
-webpack bundle; its ACP layer is the chunk `5300.index.js`, and the cites name
-the webpack module inside it. It was read as plain text only, with grep and a
-split at `;`: nothing beautified, renamed or decoded, no copy kept. Cursor's
-Terms of Service §1.5(i) forbid any attempt to "reverse engineer,
-disassemble, decompile, decode, or otherwise attempt to derive or gain access
-to the source code" of the Service, and reading the shipped JS may fall under
-it, as with qoder. Every cell here rests on the bundle and is marked
-`c (bundle)`: the owner has to weigh whether these cells stay, and they are
-kept for now. The registry's `cursor` is a proprietary binary archive; chord
-takes only npx and uvx registry entries, so it starts the person's own
-`agent`.
+with 2026.08.11-e8db854 beside it for comparison, and from Cursor's ACP docs
+and CLI changelog. The CLI is a minified Node bundle. Cursor's Terms of
+Service §1.5(i) forbid any attempt to "reverse engineer, disassemble,
+decompile, decode, or otherwise attempt to derive or gain access to the
+source code" of the Service. Under the owner's rule of 2026-10-18, recorded
+on CHD-433, the bundle was read as plain text only for the ACP contract: the
+messages, fields and capabilities it sends and accepts, and how it behaves.
+Nothing was deobfuscated, beautified or decoded, and no copy is kept. Where
+the docs or the changelog state a fact, they are cited first; the rest is
+from Cursor CLI 2026.10.16-e3cb207. The registry's `cursor` is a proprietary
+binary archive; chord takes only npx and uvx registry entries, so it starts
+the person's own `agent`.
 
 **Footnotes.**
 
-- **cu1.** `@agentclientprotocol/sdk@0.14.1`, pre-1.0, from the pnpm store
-  paths in the bundle.
+- **cu1.** Cursor CLI 2026.10.16-e3cb207 ships
+  `@agentclientprotocol/sdk` 0.14.1, a pre-1.0 release.
 - **cu2.** v1 plus `unstable_listSessions` and `unstable_setSessionModel`, the
-  draft subagent shape (ACP PR #1992) on request, and `cursor/*` methods.
-- **cu3.** `./src/acp/cursor-acp-agent.ts`: answers `modes`, `models` and
-  `configOptions`; refuses with `authRequired` when not signed in (cu17).
-- **cu4.** Replays chunks and tool calls, then past subagents
-  (`./src/acp/subagent-history.ts`); one still running replays
-  `disconnected`.
+  draft subagent shape (ACP PR #1992) when the client asks for it, and
+  `cursor/*` methods both ways. No v2.
+- **cu3.** The answer carries `modes`, `models` and `configOptions`. Without
+  a login it is refused with `authRequired` (cu17).
+- **cu4.** Replays message and thought chunks and tool calls, then past
+  subagents; one still running replays `disconnected`.
 - **cu5.** The cwd filter must be absolute; a pagination `cursor` is refused
   with invalidParams.
-- **cu6.** `mapAcpModeToCliMode` also takes `code`, `architect` and `chat`;
-  each change sends `current_mode_update`. Also https://cursor.com/docs/cli/acp.
-- **cu7.** Options `mode` and `model`; `unstable_setSessionModel` goes through
-  `model`. Only with `clientCapabilities._meta.parameterizedModelPicker` does
-  `buildModelParameterConfigOptions` add per-parameter options, among them
-  `thought_level`; otherwise effort is baked into one long `model` list. No
-  `config_option_update`.
+- **cu6.** https://cursor.com/docs/cli/acp. `session/set_mode` also takes
+  `code`, `architect` and `chat`; each change sends `current_mode_update`.
+- **cu7.** Options `mode` and `model`; `unstable_setSessionModel` sets
+  `model`. Only a client that declares
+  `clientCapabilities._meta.parameterizedModelPicker: true` gets one option
+  per model parameter, effort among them as `thought_level`; otherwise effort
+  is baked into one long `model` list. No `config_option_update`.
 - **cu8.** An embedded `resource` is inlined as text though `embeddedContext`
   is false. A `file:` link inside the project is read and inlined, cut at
   20 000 characters; any other link is named only.
 - **cu9.** Kinds `execute`, `edit`, `delete`, `read`, `search`, `fetch`,
-  `think`, `switch_mode`, `other` (`./src/acp/types.ts`). `rawOutput` per
-  tool, shell `{exitCode, stdout, stderr}`. Content: a `diff` for edit and
-  delete, text only for plan progress and `Watching:` calls, never `terminal`
-  (`./src/acp/agent-session.ts`).
-- **cu10.** `sendToolCall` sends `pending`, completion sends `completed`;
-  nothing sends `failed`, so a failed command is `completed` with a non-zero
+  `think`, `switch_mode`, `other`. `rawInput` is a trimmed object per tool,
+  shell `{command}`. `rawOutput` per tool, shell `{exitCode, stdout,
+  stderr}`. Content: a `diff` for edit and delete, text only for plan
+  progress and `Watching:` calls, never `terminal`.
+- **cu10.** Every tool call starts `pending` and ends `completed`; none is
+  sent `failed`, so a failed command is `completed` with a non-zero
   `exitCode`. Only plan and `Watching:` calls send `in_progress`.
-- **cu11.** Asked for write, shell, delete, read, MCP and web. `cancelled` or a
-  failed request is rejected. `requestPermission` in
-  `./src/acp/session-resources.ts` returns `{approved: true}` unasked when the
-  request has no `toolCallId`; which operations do that is unread.
+- **cu11.** https://cursor.com/docs/cli/acp. Asked for write, shell,
+  delete, read (new at 2026.10.16), MCP and web. `cancelled` or a failed
+  request is rejected. An approval that has no `toolCallId` is approved
+  without asking the client, at 2026.08.11 too; which operations come that
+  way is not established.
 - **cu12.** No `elicitation/create`; questions go through
-  `cursor/ask_question` (`./src/acp/interaction-handlers/ask-question-handler.ts`).
-- **cu13.** A `plan` only when the model calls CreatePlan in plan mode
-  (`./src/acp/interaction-handlers/create-plan-handler.ts`); todos go only to
-  `cursor/update_todos`.
-- **cu14.** With `subagents` declared it aborts the turn's subagents, waits
-  up to a timeout and marks the rest `disconnected`; watched shells keep
-  running (`./src/acp/background-completion-drain.ts`).
-- **cu15.** `handlePrompt` calls `pendingPromptCancel` first, so a second
-  `session/prompt` cancels the running one. No `_session/steering`.
-- **cu16.** With `subagents` declared, since v2026.09.15: `subagent_spawned`,
-  the child on its own session id, then `subagent_state_update` (`completed`,
-  `failed`, `cancelled`, `disconnected`); `capabilities: {}`, so no stop.
-  Without it, one `Task: …` call and a `cursor/task` request.
-- **cu17.** `run.ts`: new, load and list throw `authRequired` unless a stored
-  login, `CURSOR_API_KEY` or a token exists; `authenticate` (`cursor_login`)
-  opens a browser login.
+  `cursor/ask_question` (Custom), documented at
+  https://cursor.com/docs/cli/acp.
+- **cu13.** A `plan` update only when the model makes a plan in plan mode;
+  todos go only to `cursor/update_todos`.
+- **cu14.** Changelog v2026.09.15 and v2026.10.08. Cancel answers
+  `cancelled`. With `subagents` declared it aborts the turn's subagents,
+  waits up to a timeout and marks the rest `disconnected`; watched shells
+  keep running.
+- **cu15.** A second `session/prompt` cancels the running one. No
+  `_session/steering`; the CLI's own steering (changelog v2026.08.11) is
+  interactive only.
+- **cu16.** Changelog v2026.09.15. With `subagents` declared:
+  `subagent_spawned`, the child on its own session id, then
+  `subagent_state_update` (`completed`, `failed`, `cancelled`,
+  `disconnected`); `capabilities: {}`, so no stop. Without it, one
+  `Task: …` call and a `cursor/task` request.
+- **cu17.** https://cursor.com/docs/cli/acp: `agent login` or
+  `CURSOR_API_KEY`. New, load and list fail `authRequired` without a stored
+  login, a key or a token; `authenticate` (`cursor_login`) opens a browser
+  login.
 - **cu18.** Advertises `loadSession`, MCP http and sse, image, and
   `sessionCapabilities` list (plus `subagents` when the client declares it).
   Reads `subagents`, `_meta.subagents`, `_meta.parameterizedModelPicker` and
@@ -1372,7 +4203,139 @@ are ignored.
 - Run as: `fx acp`, from PATH
 - Install: <https://github.com/vercel-labs/fx>
 
-Not yet filled.
+fx v0.0.14, released 2026-10-16 and still the latest release on 2026-10-18,
+read at tag `v0.0.14` (commit 1a070af3) of <https://github.com/vercel-labs/fx>
+(Apache-2.0, plain Zig, no limits on reading). It is not in the ACP Registry;
+chord starts it from its own CLI table as `fx acp`. Paths are relative to the
+repository root; `CHANGELOG.md` and <https://fx.sh/docs/using-fx/acp> are the
+notes. `main` at c7f5a38a (2026-10-17, unreleased) changes only how replayed
+tool rows are titled. The docs page still names a `code` mode, which 0.0.14
+replaced with `auto`.
+
+**Footnotes.**
+
+- **fx1.** `src/acp/types.zig:19`, `:315`; any integer from the client is
+  answered with 1 (`src/acp/server.zig:2462-2466`).
+- **fx2.** Its own JSON-RPC and ACP types (`src/acp/jsonrpc.zig`,
+  `src/acp/types.zig`); no SDK.
+- **fx3.** `sessionCapabilities {list, resume, close, systemPrompt}`, v1
+  session `notice` updates, `$/cancel_request` both ways, `mcpCapabilities.acp`
+  (MCP over ACP) and form and URL elicitation (`src/acp/types.zig:313-332`).
+- **fx4.** The answer carries `configOptions` and `modes`
+  (`src/acp/sessions.zig:664-708`).
+- **fx5.** Load replays history as chunks and tool calls
+  (`src/acp/sessions.zig:1945-2264`); resume at `src/acp/server.zig:99`.
+- **fx6.** Pages of 100 with saved titles, across workspaces when `cwd` is
+  left out (`src/acp/sessions.zig:1736`; 0.0.7 in `CHANGELOG.md`).
+- **fx7.** No fork method. `session/close` works; `session/remove` answers only
+  in the wasm core (`src/acp/server.zig:102`, `:1438`, `:1479`).
+- **fx8.** `src/builtins/modes.zig:11-23`. `auto` is the default: a safety
+  model reviews a call instead of asking. `set_mode` answers `null` and no
+  `current_mode_update` follows (`src/acp/server.zig:3962`). Since 0.0.14 a
+  mode set over ACP becomes the person's saved fx mode, CLI included
+  (`CHANGELOG.md:53`, `:103`).
+- **fx9.** No `models` field and no `session/set_model` (method enum
+  `src/acp/server.zig:68-115`). Options in order: `provider` and `model`
+  (both category `model`), `mode`, `effort` (`thought_level`), then `fast`
+  and `ultrafast` (category `model`) when the model has them
+  (`src/acp/sessions.zig:664-695`, `:2345-2530`). No `config_option_update`;
+  the new set comes in the `set_config_option` answer.
+- **fx10.** `auto` first, then the model's levels
+  (`src/acp/sessions.zig:2519-2545`).
+- **fx11.** `promptCapabilities {image: true, audio: false, embeddedContext:
+  true}`. A `file://` `resource` is inlined; `resource_link` has no branch and
+  is skipped (`src/acp/prompt.zig:1735-1832`).
+- **fx12.** Kinds read, edit, search, execute, fetch and other
+  (`src/acp/tool_call_presentation.zig:23-38`). No `rawOutput`; extra
+  top-level `name` and `command_result` (`src/acp/types.zig:243-299`).
+- **fx13.** Text content only. Command output streams as one
+  `tool_call_update` per chunk carrying only the newest chunk
+  (`src/acp/prompt.zig:3302-3306`), so it replaces what came before.
+- **fx14.** `in_progress` is sent at once (`src/acp/prompt.zig:2545-2546`).
+- **fx15.** `allow_once`, `allow_always` ("Allow for this session"),
+  `reject_once` (`src/acp/prompt.zig:2431-2436`). `cancelled`, an error or an
+  unknown id denies (`src/acp/server.zig:1028-1043`, `:1364-1372`). It asks
+  only in `ask` mode or under an ask rule; in `auto` a "caution" verdict
+  denies without asking (`src/core/agent/runtime/tool_admission.zig:97-140`).
+- **fx16.** Only MCP servers' elicitations, when the client declares the mode
+  (`src/acp/prompt.zig:734-743`, `:3355-3470`); a URL one is followed by
+  `elicitation/complete` (`:3720-3730`). fx's own question tool refuses under
+  ACP (`src/tools/agent/ask_user_question.zig:94-96`).
+- **fx17.** One cancel flag per turn covers its tools and subagents
+  (`src/acp/server.zig:1383-1386`, `:3123-3133`); stopping work since 0.0.8.
+- **fx18.** A mid-turn `session/prompt` joins only with `_meta.fx.steer:
+  true`; without it the answer is `invalid_request` "Prompt already in
+  progress" (`src/acp/server.zig:1425-1431`, `:1640-1700`).
+- **fx19.** A child's tool calls and permissions come on the parent's session
+  id (`src/acp/prompt.zig:1283-1291`); one child cannot be stopped
+  (`src/tools/agent/subagent.zig:103-114`).
+- **fx20.** `usage_update {used, size}` after each turn
+  (`src/acp/sessions.zig:2307-2324`); answer usage has input, output, cache
+  and reasoning tokens and no `totalTokens` (`src/acp/types.zig:396-417`).
+  "ACP usage updates report context use and no longer include costs"
+  (`CHANGELOG.md:108`).
+- **fx21.** Sent once, empty (`src/acp/sessions.zig:707`).
+- **fx22.** `{title, updatedAt}` after each turn and on load
+  (`src/acp/types.zig:426-432`).
+- **fx23.** `authMethods: []`; a provider auth failure mid-turn is agent text
+  (`src/acp/prompt.zig:3282-3296`).
+- **fx24.** The client's `fs` and `terminal` flags are stored and never read
+  (`src/acp/server.zig:2811-2813`).
+- **fx25.** `src/acp/mcp_servers.zig`; a given server that needs OAuth fails
+  the session (`:186-199`).
+- **fx26.** `src/acp/types.zig:313-332`, also `_meta.fx.steering: true`.
+- **fx27.** `src/acp/server.zig:2453-2510`. `notice` is sent only with
+  `clientCapabilities.session.notices` (`:2484-2488`), else as agent text.
+- **fx28.** Twelve extensions, each a bullet under Custom below.
+
+**Custom.**
+
+- `_meta.fx.steer` on a mid-turn prompt, announced as
+  `initialize._meta.fx.steering`: the message joins the running turn; text
+  only, up to 64 KiB, its answer deferred to the turn's end. Private to fx.
+- `systemPrompt` on `session/new` (RFD) or `_meta.fx.systemPrompt`:
+  append-only instructions up to 64 KiB (`src/acp/client_instructions.zig`).
+- `_meta.fx.toolCall {internal, mcp}` and top-level `name` on `tool_call`:
+  hides fx's bookkeeping calls and names the MCP server and tool.
+- `command_result` on the last `tool_call_update`: exit code, signal, timeout
+  and byte counts (`src/acp/types.zig:498-520`). Off-spec, top level.
+- `session_info_update._meta.fx.modelResponseRecovery`: retry state while a
+  provider fails (`src/acp/types.zig:43-92`).
+- `_meta.fx.profileMcpServers: true`: also loads the person's own fx MCP
+  servers into the session.
+- `_meta.fx.alwaysLoaded` per MCP server: eager or lazy tool schemas.
+- `mcpCapabilities.acp` and `mcp/message`: MCP servers hosted by the client
+  over the ACP connection.
+- `_meta.fx.attachment` on image blocks: attach by reference.
+- `stopReason` values `max_output_tokens`, `max_model_turns`, `refused`,
+  `yielded` (`src/acp/types.zig:94-118`), outside ACP's set.
+- `session/remove`, wasm core only; `libfx/*` methods, libfx builds only.
+- Launch flags `--model`, `--ultrafast`, `--add-dir`, `--log-file`; the
+  ultrafast tier is priced higher (0.0.13).
+
+**In chord.** The model picker lists providers. chord takes the first select
+option of category `model` (`src/session/models.ts:72-82`), which in fx is
+`provider`, so the picker sets the provider and the status line names it.
+fx's real `model` option, and `fast` and `ultrafast`, are left out of
+`/config` because their category is `model` (`src/session/config.ts:33-38`,
+`:60`); a person cannot pick an fx model in chord. With no cost from fx,
+chord's estimate prices the model it holds (`src/session/enrichers.ts:794-795`),
+the provider id, so no price is found (inferred). @-mentions go as
+`resource_link` (`src/files.ts:50`) and fx drops them, so file contents never
+reach the model. fx's steering key differs from `_meta.steering.supported`,
+so messages from other agents queue. Subagents are flat; their permissions
+come on the parent. A command's live output shows only the newest chunk. A
+mode picked in chord becomes the person's fx default outside chord. Notices
+arrive as agent text, since chord does not declare `session.notices`.
+Non-standard stop reasons read as completed (`src/session/session.ts:579`).
+Ignored: titles, the empty command list, `elicitation/complete`, every
+`_meta.fx` key and `command_result`.
+
+**Sources.**
+
+- fx v0.0.14, <https://github.com/vercel-labs/fx/tree/v0.0.14>, and `main` at
+  c7f5a38a; its `CHANGELOG.md`.
+- <https://fx.sh/docs/using-fx/acp>.
 
 #### goose
 
@@ -1380,7 +4343,131 @@ Not yet filled.
 - Run as: `goose acp`, from PATH
 - Install: <https://goose-docs.ai/docs/getting-started/installation>
 
-Not yet filled.
+goose v1.55.0, released 2026-10-16 and still the latest release on
+2026-10-18, read at tag `v1.55.0` (commit 2bcb8583) of
+<https://github.com/block/goose> (release notes now link `aaif-goose/goose`;
+Apache-2.0, plain Rust, no limits on reading). chord starts it from its own
+CLI table as `goose acp`, from PATH. The ACP Registry lists goose 1.55.0 as
+binary archives only, so chord's npx-only registry leaves it out; since v1.50
+goose is also on npm as `@aaif/goose-acp` (bin `goose`), which the registry
+entry does not use. Paths are relative to `crates/goose/src/` unless they
+start with `crates/` or `ui/`; the notes are the GitHub release notes.
+
+**Footnotes.**
+
+- **go1.** `acp/server.rs:1824`; a test stamps v1 when the client offers v2
+  (`:3624-3668`).
+- **go2.** `agent-client-protocol` 2.2.0, `agent-client-protocol-schema`
+  =1.9.1 (`Cargo.toml:24-26`); the V1 SDK pinned since v1.47.
+- **go3.** `sessionCapabilities {list, delete, close}`; fork handled but not
+  advertised; a private `_goose/unstable/*` method set. No resume, no v2.
+- **go4.** Answers `modes` and `configOptions`, then `usage_update` and
+  `available_commands_update` (`acp/response_builder.rs:113-129`,
+  `:486-504`). With no provider configured it fails `auth_required`
+  (`acp/server.rs:175-181`).
+- **go5.** Full replay, `_meta.replayTail` honoured
+  (`acp/server/load_session.rs:102-210`). With tool confirmations pending it
+  starts a turn on its own after the answer and sends
+  `session/request_permission` (`load_session.rs:251-379`, `:450-470`).
+- **go6.** User, scheduled and ACP sessions; subagent and hidden ones are
+  left out (`acp/server/list_sessions.rs:68`, `:175`).
+- **go7.** `acp/server/dispatch.rs:432-470`, `acp/server/fork_session.rs`.
+- **go8.** `acp/server/manage_sessions.rs:88`, `acp/server.rs:2597`.
+- **go9.** `auto` (approve everything, the default unless `GOOSE_MODE` says
+  otherwise), `approve`, `smart_approve`, `chat`
+  (`crates/goose-provider-types/src/goose_mode.rs:22-32`). `set_mode` sends
+  `current_mode_update` (`acp/server/dispatch.rs:358-385`).
+- **go10.** No `models` field and no `session/set_model`. Options in order:
+  `provider` (no category), `mode`, `model` (category `model`),
+  `thinking_effort` (`thought_level`) (`acp/response_builder.rs:304-333`).
+  `config_option_update` follows a set, a provider refresh and an effort
+  change (`acp/server/dispatch.rs:152-210`, `:306-311`).
+- **go11.** off, low, medium, high, max, or the provider's own levels
+  (`acp/response_builder.rs:337-372`).
+- **go12.** Audio dropped. A text `resource` is inlined, a blob dropped
+  silently; a readable `file://` `resource_link` is inlined, others stay a
+  link line (`acp/server.rs:648-669`, `:1307-1345`).
+- **go13.** Its own tool calls carry no `kind`; only the client-backed fs and
+  terminal tools set one (`acp/server/tool_calls/conversion.rs:117-145`).
+  Content is text and image (`conversion.rs:235-271`); `locations` unless
+  the tool is "ACP-aware" (`:308-321`).
+- **go14.** `in_progress` only when an MCP notification arrives for the call
+  (`conversion.rs:118`, `:293-299`).
+- **go15.** `allow_always`, `allow_once`, `reject_once`, `reject_always`, ids
+  and names the kind string (`acp/server.rs:1567-1580`). `cancelled`, an
+  unknown id or an error cancels the tool (`acp/common.rs:55-65`). Asked only
+  in `approve` and `smart_approve`.
+- **go16.** Only MCP servers' elicitations, as forms, when the client
+  declares `elicitation.form` (`acp/server/elicitation.rs:206-214`). URL
+  ones are cancelled inside goose, "ACP URL elicitation is not supported"
+  (`elicitation.rs:60-77`).
+- **go17.** `todo_write` keeps free text, shown as a plain tool call
+  (`agents/platform_extensions/todo.rs:17-90`).
+- **go18.** Cancels the run's token, subagents included
+  (`acp/server.rs:2388-2405`, `agents/state_machine/ops_subagent.rs:199-230`).
+- **go19.** A mid-turn `session/prompt` is refused `invalid_params`
+  (`acp/server.rs:1890-1898`); steering goes through
+  `_goose/unstable/session/steer` with the run id (`:1959-2007`).
+- **go20.** The `delegate` tool
+  (`agents/platform_extensions/summon.rs:395-526`); a child's permissions
+  and forms come on the parent's id (`agents/subagent_handler.rs:144-170`). One child cannot be stopped.
+- **go21.** `usage_update` after new, load, every provider call and the turn
+  (`acp/server.rs:2195-2213`); answer `{totalTokens, inputTokens,
+  outputTokens}` (`:719-724`); `cost` only when goose knows it (`:760-790`).
+- **go22.** A generated title after a turn (`acp/server.rs:371-405`).
+- **go23.** One `agent` method, "Configure Provider"; `authenticate` answers
+  `{}` and does nothing (`acp/server/dispatch.rs:37-41`).
+- **go24.** Client-backed tools replace its own when `fs` or `terminal` is
+  declared (`acp/server.rs:1056-1100`, `acp/fs.rs:29-375`).
+- **go25.** `mcpCapabilities {http: true}`; an SSE server fails
+  `session/new`, "SSE is unsupported" (`acp/server.rs:482-518`).
+- **go26.** `acp/server.rs:359-369`, `:1808-1831`; also image, embedded
+  context and `_meta.goose`.
+- **go27.** `acp/server.rs:1781-1806`, `:411-463`. Not read: `elicitation.url`,
+  `plan`, `subagents`, `session.compaction`.
+- **go28.** Eight extensions, each a bullet under Custom below.
+
+**Custom.**
+
+- `_goose/unstable/session/steer` with `session_info_update._meta.goose
+  .activeRunId`: steering into the running turn. Unstable private name.
+- `_goose/unstable/session/update`, after declaring
+  `_meta.goose.customNotifications`: subagent notices, accumulated and
+  per-message tokens and cost (`acp/server.rs:1697-1773`).
+- `tool_call_update._meta.toolNotification`: live shell output every 150 ms
+  with no `content` (`acp/server/tool_notifications.rs:26-69`); unread, a
+  running command shows nothing until it ends.
+- `_meta.goose.toolCall {toolName, extensionName}`: tool identity.
+- `_meta.goose.toolCallLabelEnrichment`, declared: generated tool titles, at
+  the cost of extra model calls (inferred).
+- `session/new` `_meta` (`hidden`, `provider`, `sessionTitle`,
+  `enabledExtensions`, `recipe…`) and `_meta.replayTail` on load.
+- `_goose/unstable/providers/*`, `schedules/*`, recipes and system prompt:
+  provider setup with a device-code OAuth, cron recipes, instructions.
+- Launch flags `--with-builtin` and `--enable-scheduler`; env `GOOSE_MODE`,
+  `GOOSE_DISABLE_SESSION_NAMING` (`crates/goose-cli/src/cli.rs:831-847`).
+
+**In chord.** Models, modes and effort fit: chord's first `model`-category
+select is goose's `model` (`src/session/models.ts:72-82`), and `provider`,
+having no category, shows in `/config` (`src/session/config.ts:33-38`). The
+first start fails with a bare start error until the person runs
+`goose configure` outside chord. The default `auto` mode never asks. A
+reopened session with approvals pending makes goose ask with no turn
+running; chord rejects such a request unseen (CHD-158) and goose cancels the
+tool (inferred from both code paths, not run). An SSE server in the person's
+settings fails `session/new`, since chord passes servers unchecked. Live
+shell output never shows; URL elicitations never reach chord; subagents are
+one long call that Esc stops whole. goose's own tool rows have no kind. A
+cost of 0, if goose sends one for an unpriced model, would stop chord's
+estimate (CHD-380; whether goose sends 0 or nothing was not traced).
+Ignored: titles, `_meta.goose.*`, `replayTail`; a mid-turn prompt is queued.
+
+**Sources.**
+
+- goose v1.55.0, <https://github.com/block/goose/tree/v1.55.0>, and its
+  release notes v1.46 to v1.55.
+- `@aaif/goose-acp` 1.55.0 on npm.
+- <https://goose-docs.ai/docs/gdk/acp/>.
 
 #### junie
 
@@ -2009,10 +5096,11 @@ read from <https://github.com/poolsideai/pool> at `main` fcabc59
 (2026-08-18), which holds only `README.md`, `CHANGELOG.md`, `LICENSE.md` and
 third-party notices, and from <https://docs.poolside.ai>. The agent is a
 closed native binary under the Poolside End User License Agreement, whose
-§2.2(3) forbids reverse engineering or otherwise discovering its source. The
-licence question is with the owner. Nothing was downloaded or inspected,
-strings included, so no cell rests on the binary and none says
-`c (bundle)`: every cell is `n` or `?`. The registry lists the same version
+§2.2(3) forbids reverse engineering or otherwise discovering its source.
+The owner's rule of 2026-10-18, recorded on CHD-433, allows a plain-text
+read of such a binary only for the ACP contract. For this part the binary
+was not downloaded or read at all, so nothing was deobfuscated and no cell
+rests on it: every cell is `n` or `?`. The registry lists the same version
 as a binary archive; chord runs the `pool` on PATH.
 
 **Footnotes.**
@@ -2226,4 +5314,17 @@ here.
 
 ## Sources
 
-Not yet filled.
+Each agent's part names what was read for it, by package and version or
+public repository and tag, and its docs and release notes. Beside those:
+
+- chord at HEAD 287fedc3 for section 2: `src/acp/`, `src/session/`,
+  `src/headless.ts`, `src/agents.ts`, `src/clis.ts`, `src/registry.ts`, and
+  `@agentclientprotocol/sdk` 1.8.0 as chord pins it.
+- [`design/registry-2026-10-17.md`](design/registry-2026-10-17.md), CHD-432's
+  study at the same registry pins, reused where a cell is marked `r` and
+  corrected where this reading found otherwise.
+- [`design/CHD-1.md`](design/CHD-1.md) for the forms and permissions of the
+  agents it covers, and [`decisions.md`](decisions.md).
+- The ACP Registry as fetched on 2026-10-17 (`src/registry.ts`), and on
+  2026-10-18 for the entries chord does not take (`kimi`, `devin`).
+- The ACP specification and schema at <https://agentclientprotocol.com>.

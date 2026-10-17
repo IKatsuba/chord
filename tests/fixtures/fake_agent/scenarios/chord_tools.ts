@@ -136,6 +136,43 @@ export const CHORD_TOOLS = {
   // send_message to main and an open_agent, each failed `interrupted` with
   // an empty error and nothing asked of chord's server, and a command
   // beside them cancelled with Claude Code's words for a stopped call.
+  // As `cutcalls`, with a list_sessions({}) after the two, cut off in the
+  // reverse of the order they were made, the send_message's twice.
+  async cutcallsback(turn) {
+    const calls = [
+      ['send_message', { to: 'main', text: CUT_MESSAGE }],
+      ['open_agent', CUT_OPEN],
+      ['list_sessions', {}],
+    ] as const;
+    const ids = calls.map(([tool]) => turn.callId(tool));
+
+    for (const [index, [tool, input]] of calls.entries()) {
+      await turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId: ids[index]!,
+        title: `mcp__chord__${tool}`,
+        kind: 'other',
+        status: 'pending',
+        rawInput: input,
+      });
+    }
+
+    await pause(turn.signal, STEP_MS * 20);
+
+    for (const index of [2, 1, 0, 0]) {
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: ids[index]!,
+        status: 'failed',
+        _meta: { claudeCode: { nonExecutionKind: 'interrupted' } },
+      });
+    }
+
+    await turn.say('I have stopped.');
+
+    return 'end_turn';
+  },
+
   async cutcalls(turn) {
     const chord = (tool: string, input: Record<string, unknown>) => ({
       id: turn.callId(tool),

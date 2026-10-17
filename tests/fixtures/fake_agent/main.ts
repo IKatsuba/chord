@@ -294,6 +294,7 @@ const SCENARIOS = [
   'subagentstates',
   'chordtools',
   'cutcalls',
+  'cutcallsback',
   'task',
   'chordcalls',
   'codexchordcalls',

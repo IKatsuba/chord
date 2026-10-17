@@ -1925,6 +1925,162 @@ test('a cut call chord served after all reached it, and the note names only the 
   );
 });
 
+test('cut calls are told once each, in the order they were made, whatever order they failed in', async () => {
+  const sent: string[] = [];
+
+  await onFake(
+    ['--steering', 'claude'],
+    async (conversation, events) => {
+      conversation.send('cutcallsback');
+      await ended(events, 1);
+      conversation.send('text');
+      await ended(events, 2);
+
+      expect(sent[1]).toStrictEqual(
+        `<message from="chord">\n${cutNote([
+          { tool: 'send_message', input: { to: 'main', text: CUT_MESSAGE } },
+          { tool: 'open_agent', input: CUT_OPEN },
+          { tool: 'list_sessions', input: {} },
+        ])}\n</message>\n\ntext`,
+      );
+    },
+    noting(sent),
+  );
+});
+
+test('a cut call is told though chord served another tool with the same arguments', async () => {
+  const sent: string[] = [];
+
+  await onFake(
+    ['--steering', 'claude'],
+    async (conversation, events) => {
+      conversation.send('cutcallsback');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call' &&
+            event.update.title === 'mcp__chord__list_sessions',
+        ),
+      );
+      // list_agents({}) served: the cut list_sessions({}) is not it.
+      conversation.served({ tool: 'list_agents', input: {}, answer: {} });
+      await ended(events, 1);
+      conversation.send('text');
+      await ended(events, 2);
+
+      expect(sent[1]).toContain(
+        'Your list_sessions call was cut off before it reached chord',
+      );
+    },
+    noting(sent),
+  );
+});
+
+test('a note a prompt never took stays with its session, never the one clear starts after it', async () => {
+  const opened: {
+    prompts: string[];
+    update: (update: SessionUpdate) => void;
+    turns: {
+      went: (links: readonly never[] | undefined) => void;
+      end: () => void;
+    }[];
+  }[] = [];
+  const open = () => {
+    const { session } = heldSession();
+    const own: (typeof opened)[number] = {
+      prompts: [],
+      update: () => {},
+      turns: [],
+    };
+
+    opened.push(own);
+
+    return Promise.resolve(
+      Object.assign(session, {
+        chordServer: {
+          type: 'http' as const,
+          name: 'chord',
+          url: 'http://127.0.0.1:1/mcp',
+          headers: [],
+        },
+        steers: () => false,
+        cutsCallsOnSteer: () => true,
+        subscribe: (listener: (update: SessionUpdate) => void) => {
+          own.update = listener;
+
+          return () => {};
+        },
+        prompt: (text: string) => {
+          const sent = Promise.withResolvers<readonly never[] | undefined>();
+          const result = Promise.withResolvers<TurnResult>();
+
+          own.prompts.push(text);
+          own.turns.push({
+            went: sent.resolve,
+            end: () =>
+              result.resolve({ status: 'completed', stopReason: 'end_turn' }),
+          });
+
+          return {
+            id: text,
+            sent: sent.promise,
+            result: result.promise,
+            cancel: () => Promise.resolve(),
+          };
+        },
+      }),
+    );
+  };
+
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(open, (event) => events.push(event));
+  const connected = (count: number) =>
+    until(
+      () =>
+        events.filter((event) => event.type === 'connected').length === count,
+    );
+
+  conversation.start();
+  await connected(1);
+
+  const [first] = opened;
+
+  conversation.send('first');
+  await until(() => first!.turns.length === 1);
+  first!.turns[0]!.went([]);
+  await went();
+  first!.update({
+    sessionUpdate: 'tool_call',
+    toolCallId: 'cut',
+    title: 'mcp__chord__send_message',
+    status: 'pending',
+    rawInput: { to: 'main', text: 'Hi' },
+  });
+  first!.update({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: 'cut',
+    status: 'failed',
+    _meta: { claudeCode: { nonExecutionKind: 'interrupted' } },
+  });
+  first!.turns[0]!.end();
+  await ended(events, 1);
+
+  // The next prompt takes the note but has not gone when clear starts anew.
+  conversation.send('second');
+  await until(() => first!.turns.length === 2);
+  expect(first!.prompts[1]).toContain('Your send_message to @main');
+  conversation.clear();
+  await connected(2);
+  first!.turns[1]!.went(undefined);
+  first!.turns[1]!.end();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  conversation.send('third');
+  await until(() => opened[1]!.prompts.length === 1);
+  expect(opened[1]!.prompts).toStrictEqual(['third']);
+});
+
 describe('CHD-417 tester: held steer lifecycle', () => {
   test('serialized messages keep separate snapshots when the second call opens between them', () =>
     onFake(['--steering', 'claude'], async (conversation, events) => {

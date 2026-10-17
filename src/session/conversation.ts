@@ -360,9 +360,18 @@ export class Conversation {
   #servedNow: ChordCall[] = [];
   /**
    * Calls of chord's tools cut off before they reached chord, which the
-   * agent is told of ahead of its next turn (CHD-417).
+   * agent is told of ahead of its next turn (CHD-417), each once, with the
+   * place it was made in among the calls.
    */
-  #cut: CutCall[] = [];
+  #cut: {
+    readonly id: string;
+    readonly made: number;
+    readonly call: CutCall;
+  }[] = [];
+  /** When each of the turn's calls was made, by id, from `#made`. */
+  #madeAt = new Map<string, number>();
+  /** Counts the calls made, never reset, so older ones always come first. */
+  #made = 0;
   /**
    * Wakes the steers waiting on the person's answer or the turn's open
    * calls: something they wait on changed, a question answered, the last
@@ -540,6 +549,7 @@ export class Conversation {
     this.#steering = Promise.resolve();
     this.#openCalls = new Set();
     this.#calls = emptyTranscript;
+    this.#madeAt = new Map();
     this.#servedNow = [];
     this.#cut = [];
 
@@ -2025,6 +2035,10 @@ export class Conversation {
 
     if (this.#turn !== undefined) {
       this.#calls = mergeToolCall(this.#calls, this.#turn.id, update);
+
+      if (!this.#madeAt.has(update.toolCallId)) {
+        this.#madeAt.set(update.toolCallId, this.#made++);
+      }
     }
 
     if (update.status === 'failed') {
@@ -2055,18 +2069,31 @@ export class Conversation {
       (each) => each.kind === 'tool' && each.call.id === id,
     );
 
-    if (this.#turn === undefined || entry?.kind !== 'tool' || !entry.call.cut) {
+    if (
+      this.#turn === undefined ||
+      entry?.kind !== 'tool' ||
+      !entry.call.cut ||
+      this.#cut.some((cut) => cut.id === id)
+    ) {
       return;
     }
 
     const { call } = entry;
     const chord = chordCallOf(call, session.chordServer?.name);
 
+    // Served is that tool with those arguments: another tool chord served
+    // the same arguments for is not this call.
     if (
       chord !== undefined &&
-      !this.#servedNow.some((served) => servedFor(call, served))
+      !this.#servedNow.some(
+        (served) => served.tool === chord.tool && servedFor(call, served),
+      )
     ) {
-      this.#cut.push(chord);
+      this.#cut.push({
+        id,
+        made: this.#madeAt.get(id) ?? this.#made++,
+        call: chord,
+      });
     }
   }
 
@@ -2232,13 +2259,17 @@ export class Conversation {
 
     // chord's note of the calls cut off since the last turn goes ahead of
     // whatever starts this one, a message or the person's prompt.
-    const cut = this.#cut.splice(0);
+    const cut = this.#cut.splice(0).sort((a, b) => a.made - b.made);
     const prompt =
       cut.length === 0
         ? next.prompt
-        : [wrapMessage({ name: 'chord' }, cutNote(cut)), next.prompt].join(
-            '\n\n',
-          );
+        : [
+            wrapMessage(
+              { name: 'chord' },
+              cutNote(cut.map((each) => each.call)),
+            ),
+            next.prompt,
+          ].join('\n\n');
 
     try {
       const turn = session.prompt(prompt, next.attachments, next.mentions);
@@ -2246,6 +2277,7 @@ export class Conversation {
       this.#turn = { id: turnId, turn };
       this.#openCalls = new Set();
       this.#calls = emptyTranscript;
+      this.#madeAt = new Map();
       this.#servedNow = [];
       this.#lastTurnId = turnId;
       this.#selfTurnId = undefined;
@@ -2276,8 +2308,9 @@ export class Conversation {
       result = { status: 'failed', error: { message: messageOf(error) } };
     }
 
-    // A prompt a cancel kept back never took the note: the next one does.
-    if (!went && cut.length > 0) {
+    // A prompt a cancel kept back never took the note: the next one does,
+    // in this session, never one `clear` started since.
+    if (!went && cut.length > 0 && this.#session === session) {
       this.#cut = [...cut, ...this.#cut];
     }
 

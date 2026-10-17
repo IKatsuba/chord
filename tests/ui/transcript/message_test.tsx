@@ -640,19 +640,17 @@ describe('CHD-387 tester: sent body boundaries', () => {
     }
   });
 
-  test('a failed long body keeps its final sentence only after expansion, before Failed', async () => {
+  test('a failed long body keeps its final sentence before Failed in both views', async () => {
     const entry = sent({ input: { to: 'parser', text: REVIEW } }, 'failed');
-    const folded = body(await frame(entry));
+    const compact = body(await frame(entry));
     const expanded = body(await frame(entry, true));
 
-    expect(folded.slice(-2)).toStrictEqual([
-      '… +2 lines (ctrl+o to expand)',
-      'Failed',
-    ]);
-    expect(expanded.slice(-2)).toStrictEqual([
+    expect(compact.slice(-2)).toStrictEqual([
       "Tell me when the check passes and I'll look again.",
       'Failed',
     ]);
-    expect(expanded.join('\n')).not.toContain('to expand');
+    expect(expanded).toStrictEqual(compact);
+    expect(compact.join('\n')).not.toContain('to expand');
+    expect(compact.join('\n')).not.toContain('… +');
   });
 });

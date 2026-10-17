@@ -508,7 +508,7 @@ describe('CHD-377 tester: Codex call session isolation', () => {
 });
 
 describe('CHD-387 tester: sent messages in the window', () => {
-  test('a rebound key expands a refused body and cancellation keeps its text and refusal', async () => {
+  test('a refused body is whole before and after the rebound transcript key, and cancellation keeps it', async () => {
     const server = serveChord();
 
     try {
@@ -517,9 +517,10 @@ describe('CHD-387 tester: sent messages in the window', () => {
           await ready(window);
           await send(window, 'agentsendrefused');
           await window.shows('parser is not open, so I will review it myself.');
-          await window.shows('(ctrl+y to expand)');
+          await window.shows("the check passes and I'll look again.");
           await window.shows('No agent parser is open in this session');
-          expect(window.frame()).not.toContain('(ctrl+o to expand)');
+          expect(window.frame()).not.toContain('to expand)');
+          expect(window.frame()).not.toContain('… +');
 
           await window.press('\x19');
           await window.shows("the check passes and I'll look again.");

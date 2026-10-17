@@ -197,24 +197,41 @@ export const SHORTCUTS: readonly Shortcut[] = [
     prompt: ['cmd + ←', 'cmd + →'],
   },
   // ↓ past the newest prompt, on an empty draft, goes into the list under
-  // the prompt of the session's agents, while a child is open, and the
-  // monitors they run; there ↑ ↓ or j k move, enter and esc go back, which
-  // the status line names as a picker's last line does. The panel still
-  // fits 80x24 with the line for x.
+  // the prompt of the session's agents, while a child is open, and on to
+  // the background's summary line; there ↑ ↓ or j k move, enter and esc go
+  // back, which the status line names as a picker's last line does, and in
+  // the background view ↑ ↓ or j k move between its rows. The panel still
+  // fits 80x24 with the lines for x and enter.
   {
     key: '↑ ↓',
-    does: 'for prompts, agents and monitors',
-    commands: ['agents_up', 'agents_down', 'agents_leave'],
+    does: 'for prompts, agents, background',
+    commands: [
+      'agents_up',
+      'agents_down',
+      'agents_leave',
+      'background_up',
+      'background_down',
+    ],
     presses: ['↑', '↓', 'j', 'k', 'esc'],
     prompt: ['↑', '↓'],
     actions: ['history:previous', 'history:next'],
   },
-  // One action on the focused row, whichever kind it is.
+  // One action on the focused row, whichever kind it is, in the list or in
+  // the background view: a rebinding moves both.
   {
     key: 'x',
-    does: 'to close an agent or stop a monitor',
-    commands: ['close_agent'],
+    does: 'to close an agent, stop background',
+    commands: ['close_agent', 'stop_background'],
     actions: ['agents:close'],
+  },
+  // Enter on the summary line opens the background view, and on one of its
+  // rows goes to the call that started it; not rebindable, as a picker's
+  // Enter is not. The key test presses no bare Enter on the window, so its
+  // own test does (`open_background`, `go_to_call`).
+  {
+    key: 'enter',
+    does: 'to open background or a call',
+    commands: [],
   },
   // Again while it is open, the next older match.
   {
@@ -413,10 +430,14 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: ['reject_permission'],
     actions: ['confirm:no'],
   },
+  // One line for both, the background view counting as a picker, so the
+  // panel keeps to 40 lines, 20 rows a column at 80x24.
   {
     key: 'esc',
-    does: 'to close a picker',
+    does: 'to close a picker or shortcuts',
     commands: [
+      'close_help',
+      'close_background',
       'close_model_picker',
       'close_resume_picker',
       'close_sessions_picker',
@@ -425,7 +446,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'close_mcp',
       'close_teams_picker',
     ],
-    actions: ['select:cancel'],
+    actions: ['select:cancel', 'help:dismiss'],
   },
   // Claude Code's key and words in its own /resume.
   {
@@ -481,12 +502,6 @@ export const SHORTCUTS: readonly Shortcut[] = [
     does: 'for shortcuts',
     commands: ['toggle_help'],
     actions: ['help:toggle'],
-  },
-  {
-    key: 'esc',
-    does: 'to close shortcuts',
-    commands: ['close_help'],
-    actions: ['help:dismiss'],
   },
 ];
 

@@ -271,6 +271,19 @@ const STATES: Record<string, AppState> = {
     { type: 'agents_focused', focused: true },
     { type: 'agent_close_armed', key: 2 },
   ),
+  // On to the background's summary line, the list's last stop.
+  summary: after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'agents_focused', focused: true },
+    { type: 'summary_focused', focused: true },
+  ),
+  // Enter there opened the background view, which takes every key.
+  'background view': after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'agents_focused', focused: true },
+    { type: 'summary_focused', focused: true },
+    { type: 'background_opened' },
+  ),
   // The leader's next key is its own over a permission and a form, so a
   // digit never picks one of their choices.
   'leader, asked': after(
@@ -1854,6 +1867,24 @@ test('a copy key that types, or begins a chord that does, beats a form and the s
       name,
     ).not.toStrictEqual('key_pending');
   }
+});
+
+test("enter opens the background view from the summary line and goes to a row's call in it, as the panel's enter line says", () => {
+  const enter: KeyPress = { ctrl: false, escape: false, return: true };
+
+  expect(keyCommand('\r', enter, STATES.summary!, '')).toStrictEqual(
+    'open_background',
+  );
+  expect(keyCommand('\r', enter, STATES['background view']!, '')).toStrictEqual(
+    'go_to_call',
+  );
+  // On an agent row, enter goes back to the box as before.
+  expect(keyCommand('\r', enter, STATES.agents!, '')).toStrictEqual(
+    'agents_leave',
+  );
+  expect(shortcuts().map(shortcutLine)).toContain(
+    'enter to open background or a call',
+  );
 });
 
 describe('CHD-386 tester: movement panel entries', () => {

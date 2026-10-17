@@ -1660,11 +1660,18 @@ function backgroundCommand(
     return 'stop_background';
   }
 
-  if (key.upArrow || (input === 'k' && !key.ctrl && !key.meta)) {
+  // shift+↑ ↓ scroll the transcript elsewhere; the view has none.
+  if (
+    (key.upArrow && !key.shift) ||
+    (input === 'k' && !key.ctrl && !key.meta)
+  ) {
     return 'background_up';
   }
 
-  if (key.downArrow || (input === 'j' && !key.ctrl && !key.meta)) {
+  if (
+    (key.downArrow && !key.shift) ||
+    (input === 'j' && !key.ctrl && !key.meta)
+  ) {
     return 'background_down';
   }
 

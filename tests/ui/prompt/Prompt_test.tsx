@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
+import { matchFiles } from '../../../src/ui/prompt/mentions.ts';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import stringWidth from 'string-width';
-import { Queue } from '../../../src/ui/prompt/Prompt.tsx';
+import { FileList, Queue } from '../../../src/ui/prompt/Prompt.tsx';
 import { draw } from '../harness.tsx';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -404,6 +405,101 @@ test('Enter in the finder adds the file rather than sending', () =>
     );
     expect(!window.frame().includes('⏺'), 'the prompt was sent').toBeTruthy();
   }));
+
+test("Enter before a path's match is back picks the file its whole query matches, not the last list's first", () => {
+  // The match for the whole path is held, so Enter comes while it runs.
+  let release: (found: readonly string[]) => void = () => {};
+
+  const held = (files: readonly string[], query: string) =>
+    query === 'mentions.ts'
+      ? new Promise<readonly string[]>((resolve) => {
+          release = resolve;
+        })
+      : matchFiles(files, query);
+
+  return withWindow(
+    async (window) => {
+      // docs/mentions.txt comes first for "mentions.t", and the "s" leaves it.
+      await files(window, 'docs/mentions.txt', 'src/ui/prompt/mentions.ts');
+      await window.type('@');
+      await window.shows('docs/mentions.txt');
+
+      for (const key of 'mentions.ts') {
+        await window.type(key);
+      }
+
+      await window.press('\r');
+      // Waiting: the list for "mentions.t" stays, nothing is picked yet.
+      expect(promptRow(window)).toContain('› @mentions.ts');
+      release(['src/ui/prompt/mentions.ts']);
+      await until(
+        'the path',
+        () =>
+          promptRow(window)?.includes('› @src/ui/prompt/mentions.ts') ?? false,
+      );
+      expect(!window.frame().includes('⏺'), 'the prompt was sent').toBeTruthy();
+    },
+    { match: held },
+  );
+});
+
+test('the searching marker takes the last row, never the highlighted file, and the list never grows for it', async () => {
+  const rowsOf = async (files: string[], highlighted: number) => {
+    const drawn = await draw(
+      <FileList
+        finder={{
+          mention: { query: 'x', line: 0, column: 0 },
+          files,
+          highlighted,
+          top: 0,
+          pending: true,
+          searching: true,
+        }}
+        rows={6}
+      />,
+      { columns: 40, rows: 10 },
+    );
+    const rows = stripAnsi(drawn.frame())
+      .split('\n')
+      .map((row) => row.trim())
+      .filter((row) => row !== '');
+
+    await drawn.unmount();
+
+    return rows;
+  };
+
+  const eight = Array.from({ length: 8 }, (_, at) => `file${at}.ts`);
+
+  // The highlight on the sixth file: the list moves a row, file5 stays above.
+  expect(await rowsOf(eight, 5)).toStrictEqual([
+    'file1.ts',
+    'file2.ts',
+    'file3.ts',
+    'file4.ts',
+    'file5.ts',
+    'searching…',
+  ]);
+  expect(await rowsOf(eight, 0)).toStrictEqual([
+    'file0.ts',
+    'file1.ts',
+    'file2.ts',
+    'file3.ts',
+    'file4.ts',
+    'searching…',
+  ]);
+  // A short list keeps its height: the marker takes its last row.
+  expect(await rowsOf(eight.slice(0, 3), 0)).toStrictEqual([
+    'file0.ts',
+    'file1.ts',
+    'searching…',
+  ]);
+  expect(await rowsOf(eight.slice(0, 3), 2)).toStrictEqual([
+    'file1.ts',
+    'file2.ts',
+    'searching…',
+  ]);
+});
 
 test('Esc puts the finder away and keeps what was typed', () =>
   withWindow(async (window) => {
@@ -1823,4 +1919,195 @@ describe('CHD-386 tester: cursor move boundaries', () => {
       },
     );
   });
+});
+
+describe('CHD-398 tester: held match lifecycle', () => {
+  for (const key of ['\r', TAB]) {
+    test(`${key === TAB ? 'Tab' : 'Enter'} waits after an empty previous result, then picks the new first row`, async () => {
+      let emptyMatched = false;
+      let release: (found: readonly string[]) => void = () => {};
+
+      const match = (paths: readonly string[], query: string) =>
+        query === 'nonex'
+          ? new Promise<readonly string[]>((resolve) => {
+              release = resolve;
+            })
+          : query === 'none'
+            ? Promise.resolve([]).then((found) => {
+                emptyMatched = true;
+
+                return found;
+              })
+            : matchFiles(paths, query);
+
+      await withWindow(
+        async (window) => {
+          await files(window, 'src/target.ts');
+          await window.type('@none');
+          await until(
+            'the previous empty result closes its list',
+            () => emptyMatched && !window.frame().includes('src/target.ts'),
+          );
+          await window.type('x');
+          await window.press(key);
+          expect(promptRow(window)).toContain('› @nonex');
+          expect(window.frame()).not.toContain('⏺');
+          release(['src/target.ts']);
+          await until(
+            'the awaited path',
+            () => promptRow(window)?.includes('› @src/target.ts') ?? false,
+          );
+          expect(window.frame()).not.toContain('⏺');
+        },
+        { match },
+      );
+    });
+  }
+
+  test('typing changes the awaited mention and a late old result never inserts a path', async () => {
+    const releases = new Map<string, (found: readonly string[]) => void>();
+    const match = (paths: readonly string[], query: string) =>
+      ['al', 'alp'].includes(query)
+        ? new Promise<readonly string[]>((resolve) => {
+            releases.set(query, resolve);
+          })
+        : matchFiles(paths, query);
+
+    await withWindow(
+      async (window) => {
+        await files(window, 'src/alpha.ts');
+        await window.type('@al');
+        await until('the first held query', () => releases.has('al'));
+        await window.press('\r');
+        await window.type('p');
+        await until('the edited held query', () => releases.has('alp'));
+        releases.get('al')?.(['src/alpha.ts']);
+        releases.get('alp')?.(['src/alpha.ts']);
+        await window.press('');
+        expect(promptRow(window)).toContain('› @alp');
+        expect(promptRow(window)).not.toContain('@src/alpha.ts');
+        expect(window.frame()).not.toContain('⏺');
+      },
+      { match },
+    );
+  });
+
+  for (const action of ['switch', 'close'] as const) {
+    test(`a pending pick is dropped on session ${action}, even for the same mention`, async () => {
+      const releases: ((found: readonly string[]) => void)[] = [];
+      const match = (paths: readonly string[], query: string) =>
+        query === 'target'
+          ? new Promise<readonly string[]>((resolve) => {
+              releases.push(resolve);
+            })
+          : matchFiles(paths, query);
+
+      await withWindow(
+        async (window) => {
+          await files(window, 'src/target.ts');
+          await window.type('@target');
+          await until('the first session match', () => releases.length > 0);
+
+          if (action === 'switch') {
+            await window.press('\r');
+          }
+
+          await window.press('\x18');
+          await window.press('c');
+          await ready(window);
+          await window.type('@target');
+
+          if (action === 'close') {
+            await window.press(TAB);
+            await window.press('\x18');
+            await window.press('k');
+          }
+
+          for (const release of releases) {
+            release(['src/target.ts']);
+          }
+
+          await window.press('');
+          expect(promptRow(window)).toContain('› @target');
+          expect(promptRow(window)).not.toContain('@src/target.ts');
+
+          if (action === 'switch') {
+            await window.press('\x18');
+            await window.press('1');
+
+            for (const release of releases) {
+              release(['src/target.ts']);
+            }
+
+            await window.press('');
+            expect(promptRow(window)).toContain('› @target');
+            expect(promptRow(window)).not.toContain('@src/target.ts');
+          }
+        },
+        { match },
+      );
+    });
+  }
+
+  test('Esc keeps a pending match dismissed when its result arrives', async () => {
+    let started = false;
+    let release: (found: readonly string[]) => void = () => {};
+
+    const match = () =>
+      new Promise<readonly string[]>((resolve) => {
+        release = resolve;
+        started = true;
+      });
+
+    await withWindow(
+      async (window) => {
+        await files(window, 'src/target.ts');
+        await window.type('@target');
+        await until('the dismissed match was started', () => started);
+        await window.press(ESC);
+        release(['src/target.ts']);
+        await window.press('');
+        expect(promptRow(window)).toContain('› @target');
+        expect(window.frame()).not.toContain('  src/target.ts');
+        expect(window.frame()).not.toContain('searching…');
+      },
+      { match },
+    );
+  });
+
+  for (const count of [1, 8]) {
+    test(`the pending marker keeps the last highlight visible with ${count} files`, async () => {
+      const paths = Array.from(
+        { length: count },
+        (_, index) => `file-${index}.ts`,
+      );
+      const drawn = await draw(
+        <FileList
+          finder={{
+            mention: { query: 'x', line: 0, column: 0 },
+            files: paths,
+            highlighted: count - 1,
+            top: 0,
+            pending: true,
+            searching: true,
+          }}
+          rows={6}
+        />,
+        { columns: 80, rows: 10 },
+      );
+
+      try {
+        const rows = stripAnsi(drawn.frame())
+          .split('\n')
+          .map((row) => row.trim())
+          .filter(Boolean);
+
+        expect(rows).toContain(`file-${count - 1}.ts`);
+        expect(rows.at(-1)).toBe('searching…');
+        expect(rows).toHaveLength(count === 1 ? 2 : 6);
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
 });

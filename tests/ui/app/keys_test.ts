@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  awaitedSteps,
   changeSteps,
   emptyPasteSteps,
   type KeyContext,
@@ -9,7 +10,12 @@ import {
   type Step,
   submitSteps,
 } from '../../../src/ui/app/keys.ts';
-import { type AppAction, reduceApp } from '../../../src/ui/app/state.ts';
+import {
+  type AppAction,
+  keyCommand,
+  reduceApp,
+} from '../../../src/ui/app/state.ts';
+import { fileFinder } from '../../../src/ui/prompt/state.ts';
 import { emptyHistory, recorded } from '../../../src/ui/prompt/history.ts';
 import { endOf, START } from '../../../src/ui/prompt/prompt.ts';
 import { readKeybindings } from '../../../src/ui/shortcuts/bindings.ts';
@@ -333,5 +339,113 @@ describe('tester: selection dispatch precedence', () => {
 
       expect(steps.some((step) => step.type === 'clear_selection')).toBe(false);
     }
+  });
+});
+
+describe("Enter or Tab while the mention's match runs", () => {
+  const files = reduceApp(ready, {
+    type: 'files_listed',
+    files: ['docs/mentions.txt', 'src/ui/prompt/mentions.ts'],
+  });
+  const typed = typing('@mentions.ts', files);
+  const mention = { query: 'mentions.ts', line: 0, column: 0 };
+  const matched = (state: typeof typed, found: string[]) =>
+    reduceApp(state, {
+      type: 'files_matched',
+      files: state.files!,
+      query: 'mentions.ts',
+      matched: found,
+    });
+
+  test('an unmoved highlight waits for the match and picks its first file', () => {
+    expect(submitSteps('@mentions.ts', context(typed))).toStrictEqual([
+      dispatched({ type: 'pick_awaited', mention, enter: true }),
+    ]);
+
+    const waiting = reduceApp(typed, {
+      type: 'pick_awaited',
+      mention,
+      enter: true,
+    });
+
+    // Nothing while the match runs.
+    expect(awaitedSteps(context(waiting))).toStrictEqual([]);
+    expect(
+      awaitedSteps(context(matched(waiting, ['src/ui/prompt/mentions.ts']))),
+    ).toStrictEqual([
+      dispatched({ type: 'pick_settled' }),
+      {
+        type: 'show_draft',
+        text: '@src/ui/prompt/mentions.ts ',
+        cursor: [0, 27],
+      },
+    ]);
+  });
+
+  test('after an empty match, with no list on screen yet, Enter and Tab wait all the same', () => {
+    const empty = reduceApp(files, {
+      type: 'files_matched',
+      files: files.files!,
+      query: 'mentions.t',
+      matched: [],
+    });
+    const next = typing('@mentions.ts', empty);
+
+    expect(fileFinder(next, next.draft, next.cursor)).toStrictEqual(undefined);
+    expect(submitSteps('@mentions.ts', context(next))).toStrictEqual([
+      dispatched({ type: 'pick_awaited', mention, enter: true }),
+    ]);
+    expect(
+      keyCommand(
+        '',
+        { ctrl: false, escape: false, tab: true },
+        next,
+        next.draft,
+      ),
+    ).toStrictEqual('complete_mention');
+  });
+
+  test('a moved highlight picks its row at once', () => {
+    const moved = reduceApp(typed, {
+      type: 'finder_moved',
+      step: 1,
+      count: 2,
+      rows: 6,
+    });
+
+    expect(submitSteps('@mentions.ts', context(moved))).toStrictEqual([
+      {
+        type: 'show_draft',
+        text: '@src/ui/prompt/mentions.ts ',
+        cursor: [0, 27],
+      },
+    ]);
+  });
+
+  test('a mention changed while waiting drops the pick; an empty match sends on Enter, nothing on Tab', () => {
+    const waiting = reduceApp(typed, {
+      type: 'pick_awaited',
+      mention,
+      enter: true,
+    });
+
+    expect(
+      awaitedSteps(context(typing('@mentions.tsx', waiting))),
+    ).toStrictEqual([dispatched({ type: 'pick_settled' })]);
+
+    const sent = awaitedSteps(context(matched(waiting, [])));
+
+    expect(sent[0]).toStrictEqual(dispatched({ type: 'pick_settled' }));
+    expect(sent).toContainEqual({ type: 'send', text: '@mentions.ts' });
+
+    const tabbed = reduceApp(typed, {
+      type: 'pick_awaited',
+      mention,
+      enter: false,
+    });
+
+    expect(awaitedSteps(context(matched(tabbed, [])))).toStrictEqual([
+      dispatched({ type: 'pick_settled' }),
+    ]);
   });
 });

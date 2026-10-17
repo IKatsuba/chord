@@ -1,0 +1,24 @@
+
+ ▐▛███▛█   Claude Code v2.1.302
+▝▜██████▀  Opus 5.5 · Claude Max
+ ▝▝   ▝▝   /tmp/chord-qa · /rc
+
+
+
+
+
+
+
+
+
+
+    + src/
+    * statusline-setup (agent) – Use this agent to configure the user's Claud…
+    * code-simplifier:code-simplifier (agent) – Simplifies and refines code f…
+    * general-purpose (agent) – General-purpose agent for researching complex…
+    * impeccable:impeccable-asset-producer (agent) – Produces clean reusable …
+────────────────────────────────────────────────────────────────────────────────
+❯ @s
+────────────────────────────────────────────────────────────────────────────────
+  Context: N/A
+  ⏵⏵ auto mode on (shift+tab to cycle)

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { listFiles } from '../../../src/files.ts';
 import {
   insertMention,
+  firstFiles,
   matchFiles,
   mentionAt,
   mentionsIn,
@@ -46,14 +47,14 @@ const FILES = [
   'tests/state_test.ts',
 ];
 
-test('the files match fuzzily, the shorter path first on a tie', () => {
-  expect(matchFiles(FILES, 'stt')).toStrictEqual([
+test('the files match fuzzily, the shorter path first on a tie', async () => {
+  expect(await matchFiles(FILES, 'stt')).toStrictEqual([
     'src/ui/state.ts',
     'tests/state_test.ts',
   ]);
-  expect(matchFiles(FILES, 'APP')[0]).toStrictEqual('src/ui/App.tsx');
-  expect(matchFiles(FILES, 'zzz')).toStrictEqual([]);
-  expect(matchFiles(FILES, '')).toStrictEqual(FILES);
+  expect((await matchFiles(FILES, 'APP'))?.[0]).toStrictEqual('src/ui/App.tsx');
+  expect(await matchFiles(FILES, 'zzz')).toStrictEqual([]);
+  expect(firstFiles(FILES)).toStrictEqual(FILES);
 });
 
 test('a picked file takes the place of the mention, with a space after', () => {
@@ -138,29 +139,55 @@ test('a picked path reads back as the one mention it is', () => {
   }
 });
 
-describe('the finder matches once per files and query', () => {
-  const files = ['src/main.ts', 'src/ui/App.tsx', 'README.md'];
+test('a newer match cancels the one still running, which comes back as none', async () => {
+  // More files than AsyncFzf scores in one step, so the first find yields.
+  const many = Array.from({ length: 5000 }, (_, at) => `src/file${at}.ts`);
+  const first = matchFiles(many, 'file1');
+  const second = matchFiles(many, 'file42');
 
-  test('the same files array and query give back the same result', () => {
-    const first = matchFiles(files, 'src');
+  expect(await first).toStrictEqual(undefined);
+  expect((await second)?.[0]).toStrictEqual('src/file42.ts');
+});
 
-    expect(matchFiles(files, 'src')).toBe(first);
-    expect(matchFiles(files, '')).toBe(matchFiles(files, ''));
+test('the match runs off the call that starts it: the call returns before the scoring ends', () => {
+  const many = Array.from({ length: 50_000 }, (_, at) => `src/file${at}.ts`);
+  let done = false;
+
+  void matchFiles(many, 'fl9').then(() => {
+    done = true;
   });
 
-  test('a new query or a new files array is matched again', () => {
-    const first = matchFiles(files, 'src');
-    const other = matchFiles(files, 'app');
+  // AsyncFzf scores a step, then yields: nothing has come back yet.
+  expect(done).toStrictEqual(false);
+});
 
-    expect(other).not.toBe(first);
-    expect(other).toStrictEqual(['src/ui/App.tsx']);
+describe('CHD-398 tester: async matching yields and cancels', () => {
+  const paths = Array.from(
+    { length: 20_001 },
+    (_, index) => `src/package-${index % 37}/token-${index}.ts`,
+  );
 
-    const again = matchFiles([...files], 'app');
+  test('a large in-memory match lets a timer run before its result', async () => {
+    let ticks = 0;
+    const timer = setInterval(() => {
+      ticks++;
+    }, 1);
 
-    expect(again).not.toBe(other);
-    expect(again).toStrictEqual(other);
-    // Back to a query matched before scores it again, as before the change.
-    expect(matchFiles(files, 'src')).not.toBe(first);
-    expect(matchFiles(files, 'src')).toStrictEqual(first);
+    try {
+      const result = await matchFiles(paths, 'src');
+
+      expect(result?.length).toBe(100);
+      expect(ticks).toBeGreaterThan(0);
+    } finally {
+      clearInterval(timer);
+    }
+  });
+
+  test('a newer query cancels real AsyncFzf work, without returning old paths', async () => {
+    const old = matchFiles(paths, 'src');
+    const current = matchFiles(paths, 'token-19999');
+
+    expect(await old).toBeUndefined();
+    expect((await current)?.[0]).toEndWith('/token-19999.ts');
   });
 });

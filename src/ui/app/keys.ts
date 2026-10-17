@@ -15,7 +15,7 @@ import {
   recorded,
 } from '../prompt/history.ts';
 import { cutPlaceholder, namesImage, pastedText } from '../prompt/images.ts';
-import { insertMention } from '../prompt/mentions.ts';
+import { insertMention, mentionAt } from '../prompt/mentions.ts';
 import {
   broken,
   continued,
@@ -32,7 +32,12 @@ import {
   searched,
   searchedOlder,
 } from '../prompt/search.ts';
-import { commandMenu, fileFinder, runningShell } from '../prompt/state.ts';
+import {
+  commandMenu,
+  fileFinder,
+  pendingMention,
+  runningShell,
+} from '../prompt/state.ts';
 import {
   typedAt,
   type Vim,
@@ -188,9 +193,20 @@ function recall(history: History, text: string): Step[] {
   ];
 }
 
-/** The highlighted file into the draft in place of the `@` being typed. */
-function mention({ state }: KeyContext): Step[] {
+/**
+ * The highlighted file into the draft in place of the `@` being typed. A
+ * highlight not moved since the list came, while the mention's own match
+ * runs, waits for that match and picks its first file (`awaitedSteps`).
+ */
+function mention({ state }: KeyContext, enter: boolean): Step[] {
   const finder = fileFinder(state, state.draft, state.cursor);
+  // With no list on screen yet, after an empty one, it waits all the same.
+  const waiting = pendingMention(state, state.draft, state.cursor);
+
+  if (waiting !== undefined && (finder === undefined || !state.finder.moved)) {
+    return [dispatch({ type: 'pick_awaited', mention: waiting, enter })];
+  }
+
   const path = finder?.files[finder.highlighted];
 
   if (finder && path !== undefined) {
@@ -200,6 +216,54 @@ function mention({ state }: KeyContext): Step[] {
   }
 
   return [];
+}
+
+/**
+ * What an awaited pick does once the state moves: nothing while its match
+ * runs; dropped if the draft's mention is no longer the one Enter or Tab
+ * was pressed on; else the match's first file in its place, or, with none,
+ * Enter sends the draft as typed and Tab does nothing.
+ */
+export function awaitedSteps(context: KeyContext): Step[] {
+  const { state } = context;
+  const pick = state.awaitedPick;
+
+  if (pick === undefined) {
+    return [];
+  }
+
+  const now = mentionAt(state.draft, state.cursor);
+  const settled = dispatch({ type: 'pick_settled' });
+
+  if (
+    now === undefined ||
+    now.query !== pick.mention.query ||
+    now.line !== pick.mention.line ||
+    now.column !== pick.mention.column ||
+    state.finder.dismissed
+  ) {
+    return [settled];
+  }
+
+  const done =
+    state.matched?.files === state.files &&
+    state.matched?.query === pick.mention.query;
+
+  if (!done) {
+    return [];
+  }
+
+  const path = state.matched?.matched[0];
+
+  if (path === undefined) {
+    return pick.enter
+      ? [settled, ...submitSteps(state.draft, context)]
+      : [settled];
+  }
+
+  const next = insertMention(state.draft, state.cursor, now, path);
+
+  return [settled, show(next.text, next.cursor)];
 }
 
 /** ↑ on the first line, or `k` there in normal mode: an older prompt. */
@@ -254,9 +318,13 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
   const { state, history, home } = context;
   const { draft, cursor } = state;
 
-  // Enter in the finder picks, as Tab does, rather than sending.
-  if (fileFinder(state, draft, cursor)) {
-    return mention(context);
+  // Enter in the finder picks, as Tab does, rather than sending; a match
+  // still running waits to pick, list or none.
+  if (
+    fileFinder(state, draft, cursor) ||
+    pendingMention(state, draft, cursor)
+  ) {
+    return mention(context, true);
   }
 
   // In normal mode the cursor is on a character, not after a `\`.
@@ -575,7 +643,7 @@ function commandSteps(
     case 'close_teams_picker':
       return [dispatch({ type: 'teams_picker_closed' })];
     case 'complete_mention':
-      return mention(context);
+      return mention(context, false);
     case 'finder_up':
     case 'finder_down':
       return finder

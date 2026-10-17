@@ -1,5 +1,6 @@
 /** The window on the fake agent, rendered for the tests of every feature it draws. */
 import { execFile } from 'node:child_process';
+import type { matchFiles } from '../../../src/ui/prompt/mentions.ts';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { expect } from 'bun:test';
@@ -104,6 +105,7 @@ export async function withWindow(
     editor,
     clipboard,
     readImage,
+    match,
     openUrl,
     mcpServers,
     mcpIgnored,
@@ -136,6 +138,8 @@ export async function withWindow(
     editor?: (draft: string) => Promise<EditorEnd>;
     clipboard?: ClipboardReader;
     readImage?: ImageFileReader;
+    /** How `@` matches its files; fzf's, unless a test holds the match. */
+    match?: typeof matchFiles;
     openUrl?: LinkOpener;
     mcpServers?: readonly DefinedServer[];
     mcpIgnored?: readonly Ignored[];
@@ -212,6 +216,7 @@ export async function withWindow(
       {...(editor ? { editor } : {})}
       {...(clipboard ? { clipboard } : {})}
       {...(readImage ? { readImage } : {})}
+      {...(match ? { match } : {})}
       // Never the system's browser: a test opens no link.
       openUrl={openUrl ?? (() => Promise.resolve('no browser in tests'))}
       settingsFile='~/.config/chord/settings.json'

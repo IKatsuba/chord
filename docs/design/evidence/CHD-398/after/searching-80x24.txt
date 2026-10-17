@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › @s                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  src/vs/accessibility/accessibility/a...mon/accessibilityworkbenchService0.ts
+  src/vs/accessibility/accessibility/a...on/accessibilityworkbenchService20.ts
+  src/vs/accessibility/accessibility/a...common/browsereditorGroupsService8.ts
+  src/vs/accessibility/accessibility/a...0/common/codeEditorcontribService1.ts
+  src/vs/accessibility/accessibility/a.../common/codeEditorcontribService21.ts
+  searching…

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › @sr                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  src/vs/browser/browser/browserFeature0/common/servicescontribService1.ts
+  src/vs/browser/browser/platformFeature3/common/browserbrowserService0.ts
+  src/vs/browser/browser/servicesFeature1/common/browsercontribService0.ts
+  src/vs/browser/contrib/browserFeature0/common/browsernotebookService2.ts
+  src/vs/browser/contrib/browserFeature0/common/notebookcontribService1.ts
+  searching…

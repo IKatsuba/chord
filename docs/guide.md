@@ -184,6 +184,19 @@ and under the row of tabs with more, and the conversation grows down from it;
 once the conversation fills the window the header scrolls away, and `home`
 brings it back.
 
+Tool-call headlines show every line, wrapped to the width with no cap:
+a Bash heredoc is visible in full in the transcript. Continuation rows
+start under the name, at column 3, and `⎿` results follow the last row.
+ctrl+o expands output and diffs; the headline is the same in both views.
+An Agent call shows its description, with its prompt in ctrl+o.
+
+An MCP call titled `mcp__server__tool` reads
+`server - tool (MCP)(key: JSON, …)`, with its arguments whole and wrapped.
+Strings are quoted, with newlines written as `\n`; arrays and objects are
+compact JSON. Until arguments arrive, or with none, it shows the name
+alone. Calls to chord's own server keep their own rows, such as
+`List agents` and `→ to @reviewer`.
+
 `/theme` chooses chord's colours: Auto, Dark, Light, each of those two
 colour-blind friendly, or in the terminal's own 16 colours. Moving through
 the list shows the whole window in the highlighted theme; Enter keeps it and

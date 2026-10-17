@@ -1296,17 +1296,21 @@ describe('CHD-377 tester: wrapped MCP enrichment boundaries', () => {
       is_mcp_tool_call: true,
       [FILLED]: ['existing', MCP_CALL],
       untouched: { keep: true },
-      [MCP_CALL]: { tool: 'send_message', arguments: rawInput.arguments },
+      [MCP_CALL]: {
+        server: 'chord-2',
+        tool: 'send_message',
+        arguments: rawInput.arguments,
+      },
     });
     expect(updates(update(enriched))).toEqual([enriched]);
   });
 
-  test('missing tool or arguments and unmarked wrappers remain unfilled', () => {
+  test('missing server or tool and unmarked wrappers remain unfilled', () => {
     const { update } = relayOn([codexMcpCall]);
 
     for (const rawInput of [
       undefined,
-      { tool: 7, arguments: {} },
+      { server: 'chord-2', tool: 7, arguments: {} },
       { tool: 'send_message' },
     ]) {
       const sent: SessionUpdate = {
@@ -1323,7 +1327,61 @@ describe('CHD-377 tester: wrapped MCP enrichment boundaries', () => {
       const sent: SessionUpdate = {
         sessionUpdate: 'tool_call_update',
         toolCallId: 'guard',
-        rawInput: { tool: 'send_message', arguments: {} },
+        rawInput: { server: 'chord-2', tool: 'send_message', arguments: {} },
+        _meta: { is_mcp_tool_call: marked },
+      };
+
+      expect(updates(update(sent))).toEqual([sent]);
+    }
+  });
+});
+
+describe('CHD-419 tester: optional wrapper arguments and replay', () => {
+  test('missing, null and empty arguments retain their wire shape through replay', () => {
+    for (const extra of [{}, { arguments: null }, { arguments: {} }]) {
+      const { update } = relayOn([codexMcpCall]);
+
+      const rawInput = Object.freeze({
+        server: 'my.notes',
+        tool: 'notes.v2',
+        ...extra,
+      });
+      const sent: SessionUpdate = {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'optional',
+        rawInput,
+        _meta: { is_mcp_tool_call: true },
+      };
+      const [enriched] = updates(update(sent));
+
+      assert(enriched?.sessionUpdate === 'tool_call_update');
+      expect(enriched.rawInput).toBe(rawInput);
+      expect(enriched._meta?.[MCP_CALL]).toEqual({
+        server: 'my.notes',
+        tool: 'notes.v2',
+        arguments: 'arguments' in extra ? extra.arguments : undefined,
+      });
+
+      const replay = JSON.parse(JSON.stringify(enriched)) as SessionUpdate;
+
+      expect(updates(update(replay))).toEqual([replay]);
+    }
+  });
+
+  test('malformed server or tool and an unmarked valid wrapper stay untouched', () => {
+    const { update } = relayOn([codexMcpCall]);
+
+    for (const [rawInput, marked] of [
+      [{ tool: 'list' }, true],
+      [{ server: null, tool: 'list' }, true],
+      [{ server: 3, tool: 'list' }, true],
+      [{ server: 'notes', tool: null }, true],
+      [{ server: 'notes', tool: 'list' }, false],
+    ] as const) {
+      const sent: SessionUpdate = {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guard',
+        rawInput,
         _meta: { is_mcp_tool_call: marked },
       };
 

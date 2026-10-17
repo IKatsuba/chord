@@ -680,3 +680,55 @@ describe('CHD-415 tester: MCP identity and control boundaries', () => {
     );
   });
 });
+
+describe('CHD-419 tester: wrapper authority and legacy title fallback', () => {
+  test('dotted wrapper names override a contradictory title and raw input', () => {
+    const call: ToolCall = {
+      id: 'dotted',
+      title: 'mcp__wrong__wrong',
+      kind: 'execute',
+      rawInput: {
+        server: 'wrong',
+        tool: 'wrong',
+        arguments: { ignored: true },
+      },
+      mcp: { server: 'my.notes', tool: 'notes.v2', input: { title: 'kept' } },
+    };
+
+    expect(headline(call)).toEqual({
+      name: 'my.notes - notes.v2',
+      tag: ' (MCP)',
+      arg: 'title: "kept"',
+    });
+    expect(
+      headline({
+        ...call,
+        chord: { tool: 'list_agents', input: {}, answer: {} },
+      }),
+    ).toEqual({ name: 'List agents' });
+  });
+
+  test('a server-less filed record follows its old title and raw arguments', () => {
+    const call: ToolCall = {
+      id: 'old',
+      title: 'mcp__notes__save_note',
+      rawInput: { title: 'legacy' },
+      mcp: { tool: 'ignored', input: { title: 'wrong' } },
+    };
+
+    expect(headline(call)).toEqual({
+      name: 'notes - save_note',
+      tag: ' (MCP)',
+      arg: 'title: "legacy"',
+    });
+    expect(
+      headline(
+        {
+          ...call,
+          mcp: { server: 'chord-2', tool: 'list_agents', input: undefined },
+        },
+        'chord-2',
+      ),
+    ).toEqual({ name: 'List agents' });
+  });
+});

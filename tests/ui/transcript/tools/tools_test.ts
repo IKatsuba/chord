@@ -792,6 +792,46 @@ describe('CHD-419 tester: wrapper authority and legacy title fallback', () => {
   });
 });
 
+test("a chord call cut off before it reached chord keeps what it asked for, and says it did nothing after it, read on chord's server alone", () => {
+  const cut = (tool: string, rawInput: unknown): ToolCall => ({
+    id: 'a',
+    title: `mcp__chord__${tool}`,
+    status: 'failed',
+    rawInput,
+    cut: true,
+    content: [text(`Error calling tool (mcp__chord__${tool}): `)],
+  });
+
+  expect(
+    sentBody(cut('send_message', { to: 'main', text: 'Hi' }), 'chord'),
+  ).toStrictEqual({
+    text: 'Hi',
+    ending:
+      'Not delivered: cut off before it reached chord. chord tells the agent at its next turn.',
+  });
+  expect(
+    summary(
+      cut('open_agent', { name: 'parser', prompt: 'agentchild' }),
+      false,
+      undefined,
+      false,
+      undefined,
+      'chord',
+    ).lines,
+  ).toStrictEqual([
+    'agentchild',
+    'Cut off before it reached chord, so it did nothing. chord tells the agent at its next turn.',
+  ]);
+  // Not chord's server: the agent's own error, as any failed call says it.
+  expect(
+    summary(cut('open_agent', {}), false, undefined, false, undefined, 'other')
+      .lines,
+  ).toStrictEqual(['Error: Error calling tool (mcp__chord__open_agent):']);
+  expect(
+    sentBody(cut('send_message', { text: 'Hi' }), 'other'),
+  ).toBeUndefined();
+});
+
 describe('CHD-422 tester: wrapped result styling', () => {
   test('a coloured result stays coloured across all wrapped rows and resets for the following line', () => {
     const coloured = 'one two three four five six seven eight nine ten';

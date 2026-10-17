@@ -54,6 +54,10 @@ import type {
   TurnResult,
 } from './transcript/types.ts';
 import type { TokenUsage } from './usage.ts';
+import { type CutCall, cutNote } from './cut_off.ts';
+import { chordCallOf, servedFor } from './transcript/chord.ts';
+import { mergeToolCall } from './transcript/tools.ts';
+import { emptyTranscript, type Transcript } from './transcript/types.ts';
 
 /**
  * What a conversation reports: the transcript reducer's actions, plus the
@@ -350,6 +354,15 @@ export class Conversation {
    * steer back on an agent whose steer cuts them off.
    */
   #openCalls = new Set<string>();
+  /** The turn's own calls as its updates have merged them, to tell a cut one. */
+  #calls: Transcript = emptyTranscript;
+  /** What chord served to the turn on screen, which a cut call never was. */
+  #servedNow: ChordCall[] = [];
+  /**
+   * Calls of chord's tools cut off before they reached chord, which the
+   * agent is told of ahead of its next turn (CHD-417).
+   */
+  #cut: CutCall[] = [];
   /**
    * Wakes the steers waiting on the person's answer or the turn's open
    * calls: something they wait on changed, a question answered, the last
@@ -526,6 +539,9 @@ export class Conversation {
     this.#steers = new Set();
     this.#steering = Promise.resolve();
     this.#openCalls = new Set();
+    this.#calls = emptyTranscript;
+    this.#servedNow = [];
+    this.#cut = [];
 
     this.#rouse();
 
@@ -1256,6 +1272,7 @@ export class Conversation {
    */
   served(call: ChordCall): void {
     if (this.#session && !this.#closing) {
+      this.#servedNow.push(call);
       this.#emit({ type: 'served', turnId: this.#stamp(), call });
     }
   }
@@ -1978,7 +1995,7 @@ export class Conversation {
     this.#heardAt = performance.now();
 
     if (subagentId === undefined) {
-      this.#track(update);
+      this.#track(session, update);
     }
 
     this.#emit({
@@ -1998,12 +2015,20 @@ export class Conversation {
    * Keeps the turn's open calls as its updates say; each one ending wakes
    * the steers held behind it.
    */
-  #track(update: SessionUpdate): void {
+  #track(session: Session, update: SessionUpdate): void {
     if (
       update.sessionUpdate !== 'tool_call' &&
       update.sessionUpdate !== 'tool_call_update'
     ) {
       return;
+    }
+
+    if (this.#turn !== undefined) {
+      this.#calls = mergeToolCall(this.#calls, this.#turn.id, update);
+    }
+
+    if (update.status === 'failed') {
+      this.#cutOff(session, update.toolCallId);
     }
 
     if (update.status === 'completed' || update.status === 'failed') {
@@ -2016,6 +2041,32 @@ export class Conversation {
     ) {
       // An adapter may name a call first in an update, as Codex's can.
       this.#openCalls.add(update.toolCallId);
+    }
+  }
+
+  /**
+   * Keeps call `id` for the note ahead of the next turn when it is one of
+   * chord's that the agent cut off and chord served nothing for: it never
+   * reached chord. Only in a turn running now, so a past one a load replays
+   * is never told again.
+   */
+  #cutOff(session: Session, id: string): void {
+    const entry = this.#calls.entries.findLast(
+      (each) => each.kind === 'tool' && each.call.id === id,
+    );
+
+    if (this.#turn === undefined || entry?.kind !== 'tool' || !entry.call.cut) {
+      return;
+    }
+
+    const { call } = entry;
+    const chord = chordCallOf(call, session.chordServer?.name);
+
+    if (
+      chord !== undefined &&
+      !this.#servedNow.some((served) => servedFor(call, served))
+    ) {
+      this.#cut.push(chord);
     }
   }
 
@@ -2179,11 +2230,23 @@ export class Conversation {
     let result: TurnResult;
     let went = false;
 
+    // chord's note of the calls cut off since the last turn goes ahead of
+    // whatever starts this one, a message or the person's prompt.
+    const cut = this.#cut.splice(0);
+    const prompt =
+      cut.length === 0
+        ? next.prompt
+        : [wrapMessage({ name: 'chord' }, cutNote(cut)), next.prompt].join(
+            '\n\n',
+          );
+
     try {
-      const turn = session.prompt(next.prompt, next.attachments, next.mentions);
+      const turn = session.prompt(prompt, next.attachments, next.mentions);
 
       this.#turn = { id: turnId, turn };
       this.#openCalls = new Set();
+      this.#calls = emptyTranscript;
+      this.#servedNow = [];
       this.#lastTurnId = turnId;
       this.#selfTurnId = undefined;
 
@@ -2200,7 +2263,7 @@ export class Conversation {
       if (links !== undefined && this.#session === session) {
         this.#recording?.sent(
           turnId,
-          next.prompt,
+          prompt,
           next.attachments.length,
           links,
           at,
@@ -2211,6 +2274,11 @@ export class Conversation {
       result = await turn.result;
     } catch (error) {
       result = { status: 'failed', error: { message: messageOf(error) } };
+    }
+
+    // A prompt a cancel kept back never took the note: the next one does.
+    if (!went && cut.length > 0) {
+      this.#cut = [...cut, ...this.#cut];
     }
 
     // The turn has answered: nothing goes into it any more, and a steer

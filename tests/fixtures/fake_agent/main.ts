@@ -293,6 +293,7 @@ const SCENARIOS = [
   'subagentupdate',
   'subagentstates',
   'chordtools',
+  'cutcalls',
   'task',
   'chordcalls',
   'codexchordcalls',
@@ -420,6 +421,14 @@ const prompted = new Map<string, Promise<unknown>>();
  */
 const HELD_NOTES =
   /^(?:<message from="[^"]*"(?: monitor="[^"]*")?>\n[\s\S]*?\n<\/message>\n\n)+/;
+
+/**
+ * chord's note that calls of its tools were cut off, sent ahead of the next
+ * prompt (CHD-417): answered first, its first line quoted, and the prompt
+ * behind it played as if it came alone.
+ */
+const CUT_NOTE =
+  /^<message from="chord">\n(Your \S+ (?:to @\S+ )?(?:call )?was cut off before it reached chord[\s\S]*?)\n<\/message>\n\n/;
 
 /**
  * A prompt that starts with one of `FAKE_COMMANDS`: `greet` answers with a
@@ -600,7 +609,10 @@ async function playPrompt(
 
   turns.set(params.sessionId, controller);
 
-  const { runs, text } = splitContext(promptText(params.prompt));
+  const { runs, text: whole } = splitContext(promptText(params.prompt));
+  const cutNote = CUT_NOTE.exec(whole.trimStart());
+  const text =
+    cutNote === null ? whole : whole.trimStart().slice(cutNote[0].length);
   const asked = text.trim();
   const scenario = isScenario(asked) ? asked : fallback;
 
@@ -612,6 +624,12 @@ async function playPrompt(
 
     if (alongside) {
       await turn.say('Started alongside a turn still playing. ');
+    }
+
+    if (cutNote !== null) {
+      await turn.say(
+        `Received chord's note: ${cutNote[1]!.split('\n')[0]}\n\n`,
+      );
     }
 
     for (const run of runs) {

@@ -86,7 +86,8 @@ export function Tool({
   /** Cells beside the marker. */
   width: number;
 }) {
-  const line = headline(call, useContext(ChordServerName));
+  const chordServer = useContext(ChordServerName);
+  const line = headline(call, chordServer);
   const recipient = useAgentColour(line.name);
   const live = toneOf(call);
   const tone = ended && live === 'running' ? 'pending' : live;
@@ -101,8 +102,9 @@ export function Tool({
     ended,
     // The `⎿` and its gutter take five columns.
     Math.max(width - 5, 1),
+    chordServer,
   );
-  const sent = sentBody(call);
+  const sent = sentBody(call, chordServer);
   // Rows drawn ahead of each terminal's, so only the first row of all has `⎿`.
   const ahead = terminals.reduce<number[]>(
     (counts, view, index) => [

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { MCP_CALL } from '../../../src/session/enrich.ts';
+import { chordCallOf } from '../../../src/session/transcript/chord.ts';
 import { taskUpdate } from '../../../src/session/tasks.ts';
 import type {
   ChordCall,
@@ -719,4 +720,48 @@ describe('CHD-377 tester: neutral MCP matching isolation', () => {
     ).toEqual([message]);
     expect(after.served).toEqual([message]);
   });
+});
+
+test("chord's call is read from a call not served yet, as Claude and Codex send it, on chord's server alone", () => {
+  const input = { to: 'main', text: 'Hi' };
+
+  expect(
+    chordCallOf(
+      { id: 'a', title: 'mcp__chord__send_message', rawInput: input },
+      'chord',
+    ),
+  ).toStrictEqual({ tool: 'send_message', input });
+  expect(
+    chordCallOf(
+      {
+        id: 'a',
+        title: 'mcp.chord.send_message',
+        mcp: { server: 'chord', tool: 'send_message', input },
+      },
+      'chord',
+    ),
+  ).toStrictEqual({ tool: 'send_message', input });
+  // Another server's tool of the same name, or a tool chord has not.
+  expect(
+    chordCallOf(
+      { id: 'a', title: 'mcp__notes__send_message', rawInput: input },
+      'chord',
+    ),
+  ).toBeUndefined();
+  expect(
+    chordCallOf({ id: 'a', title: 'mcp__chord__delete_all' }, 'chord'),
+  ).toBeUndefined();
+  expect(
+    chordCallOf(
+      { id: 'a', title: 'mcp__chord__send_message', rawInput: input },
+      undefined,
+    ),
+  ).toBeUndefined();
+
+  // Once served, what chord served.
+  const served = { tool: 'send_message' as const, input, answer: {} };
+
+  expect(chordCallOf({ id: 'a', chord: served }, 'chord')).toStrictEqual(
+    served,
+  );
 });

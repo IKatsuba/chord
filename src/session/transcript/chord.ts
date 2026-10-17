@@ -9,12 +9,75 @@ import { isDeepStrictEqual } from 'node:util';
 import { changeSubagent } from './subagents.ts';
 import type {
   ChordCall,
+  ChordTool,
   Entry,
   Subagent,
   ToolCall,
   Transcript,
   TranscriptAction,
 } from './types.ts';
+
+/** `mcp__<server>__<tool>`: the server up to the next `__`, the tool the rest. */
+export const MCP_TITLE = /^mcp__(.+?)__(.+)$/s;
+
+const CHORD_TOOLS: ReadonlySet<string> = new Set<ChordTool>([
+  'list_agents',
+  'list_sessions',
+  'spawn_task',
+  'open_agent',
+  'send_message',
+  'close_agent',
+  'monitor',
+  'stop_monitor',
+  'list_monitors',
+  'list_teams',
+  'run_team',
+  'propose_team',
+]);
+
+export function isChordTool(tool: string): tool is ChordTool {
+  return CHORD_TOOLS.has(tool);
+}
+
+/**
+ * The call of chord's own tools `call` asked for, served or not: the
+ * request chord served for it, or else the tool and arguments read from
+ * the call as the agent sent it, Codex's wrapper as chord's enrichers filed
+ * it or Claude's `mcp__<server>__<tool>` title with its `rawInput`, on
+ * the server the session gave chord's, `chordServer`; none for any other.
+ */
+export function chordCallOf(
+  call: ToolCall,
+  chordServer: string | undefined,
+): Pick<ChordCall, 'tool' | 'input'> | undefined {
+  if (call.chord !== undefined) {
+    return call.chord;
+  }
+
+  const [server, tool, input] =
+    call.mcp === undefined
+      ? (() => {
+          const [, named, wrapped = ''] =
+            MCP_TITLE.exec(call.title?.trim() ?? '') ?? [];
+
+          return [named, wrapped, call.rawInput ?? {}] as const;
+        })()
+      : [call.mcp.server, call.mcp.tool, call.mcp.input ?? {}];
+
+  return chordServer !== undefined &&
+    server === chordServer &&
+    isChordTool(tool)
+    ? { tool, input }
+    : undefined;
+}
+
+/**
+ * Whether `chord` is what chord served for `call`, a call not tied to one
+ * yet: by the arguments both carry, as a request served is tied to its call.
+ */
+export function servedFor(call: ToolCall, chord: ChordCall): boolean {
+  return sameCall(call, chord);
+}
 
 /**
  * A request served: tied to its call where that is already in the

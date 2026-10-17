@@ -65,6 +65,7 @@ export function mergeToolCall(
   const { title, kind, locations, content, rawInput, rawOutput } = update;
   const terminals = foldTerminals(before.terminals, update);
   const mcp = mcpOf(update);
+  const cut = cutOf(update);
   const call: ToolCall = {
     ...before,
     ...(title ? { title } : {}),
@@ -76,6 +77,7 @@ export function mergeToolCall(
     ...(rawOutput === undefined ? {} : { rawOutput }),
     ...(terminals === undefined ? {} : { terminals }),
     ...(mcp === undefined ? {} : { mcp }),
+    ...(cut ? { cut } : {}),
   };
 
   if (found?.kind !== 'tool') {
@@ -89,6 +91,23 @@ export function mergeToolCall(
     ...state,
     entries: state.entries.with(index, { ...found, call }),
   };
+}
+
+/**
+ * Whether the update says the agent cut the call off before it ran: Claude's
+ * adapter marks one a steer interrupted `_meta.claudeCode.nonExecutionKind`
+ * `interrupted`.
+ */
+function cutOf(update: { _meta?: unknown }): true | undefined {
+  const claude = record(record(update._meta).claudeCode);
+
+  return claude.nonExecutionKind === 'interrupted' ? true : undefined;
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
 }
 
 /** The MCP call chord's enrichers filed under the update's `_meta`, if any. */

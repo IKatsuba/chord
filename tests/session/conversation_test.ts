@@ -27,6 +27,11 @@ import {
 } from '../../src/session/transcript/types.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { cutNote } from '../../src/session/cut_off.ts';
+import {
+  CUT_MESSAGE,
+  CUT_OPEN,
+} from '../fixtures/fake_agent/scenarios/chord_tools.ts';
 
 /**
  * A session with one option, `effort`, held in memory, that answers a change
@@ -1817,6 +1822,107 @@ test('a message told while the prompt waits to go, as one with mentions does, is
   ).toMatchObject({ turnId: firstTurn(events) });
   expect(!events.some((event) => event.type === 'self_started')).toBeTruthy();
   await conversation.close();
+});
+
+/**
+ * A session on the fake that names chord's server `chord`, as the window
+ * gives it one, and keeps every prompt it sends the agent in `sent`.
+ */
+function noting(sent: string[]) {
+  return (session: Session): Session => {
+    const prompt = session.prompt.bind(session);
+
+    return Object.assign(session, {
+      chordServer: {
+        type: 'http' as const,
+        name: 'chord',
+        url: 'http://127.0.0.1:1/mcp',
+        headers: [],
+      },
+      prompt: ((text, ...rest) => {
+        sent.push(text);
+
+        return prompt(text, ...rest);
+      }) as Session['prompt'],
+    });
+  };
+}
+
+/** Until `count` turns have ended among `events`. */
+function ended(events: readonly ConversationEvent[], count: number) {
+  return until(
+    () => events.filter((event) => event.type === 'result').length === count,
+  );
+}
+
+test("chord's calls the agent cut off before they reached chord are told to it ahead of its next turn, once, a line each", async () => {
+  const sent: string[] = [];
+
+  await onFake(
+    ['--steering', 'claude'],
+    async (conversation, events) => {
+      conversation.send('cutcalls');
+      await ended(events, 1);
+      conversation.send('text');
+      await ended(events, 2);
+      conversation.send('text');
+      await ended(events, 3);
+
+      expect(sent[1]).toStrictEqual(
+        `<message from="chord">\n${cutNote([
+          { tool: 'send_message', input: { to: 'main', text: CUT_MESSAGE } },
+          { tool: 'open_agent', input: CUT_OPEN },
+        ])}\n</message>\n\ntext`,
+      );
+      expect(sent[2]).toStrictEqual('text');
+      expect(saidIn(events)).toContain(
+        "Received chord's note: Your send_message to @main",
+      );
+      // The person's prompt is drawn as they typed it.
+      expect(
+        events.flatMap((event) =>
+          event.type === 'prompt' ? [event.text] : [],
+        ),
+      ).toStrictEqual(['cutcalls', 'text', 'text']);
+    },
+    noting(sent),
+  );
+});
+
+test('a cut call chord served after all reached it, and the note names only the calls that did not', async () => {
+  const sent: string[] = [];
+  const input = { to: 'main', text: CUT_MESSAGE };
+
+  await onFake(
+    ['--steering', 'claude'],
+    async (conversation, events) => {
+      conversation.send('cutcalls');
+      // The send_message\'s arguments came: chord serves it as the batch waits.
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call_update' &&
+            JSON.stringify(event.update.rawInput) === JSON.stringify(input),
+        ),
+      );
+      conversation.served({
+        tool: 'send_message',
+        input,
+        answer: { delivered: 'sent', to: 'main' },
+      });
+      await ended(events, 1);
+      conversation.send('text');
+      await ended(events, 2);
+
+      expect(sent[1]).toStrictEqual(
+        `<message from="chord">\n${cutNote([
+          { tool: 'open_agent', input: CUT_OPEN },
+        ])}\n</message>\n\ntext`,
+      );
+    },
+    noting(sent),
+  );
 });
 
 describe('CHD-417 tester: held steer lifecycle', () => {

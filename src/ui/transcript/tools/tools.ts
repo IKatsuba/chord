@@ -4,18 +4,19 @@
  * `⎿` lines and diffs that show what it produced.
  */
 import type { ToolCallContent, ToolKind } from '@agentclientprotocol/sdk';
-import type {
-  ChordTool,
-  ToolCall,
-  TurnState,
-} from '../../../session/transcript/types.ts';
+import type { ToolCall, TurnState } from '../../../session/transcript/types.ts';
 import { type DiffView, diffView } from './diff.ts';
 import { isEmpty, type TerminalView, terminalView } from './terminal.ts';
 import { Chalk } from 'chalk';
 import { type Run, runs } from '../../theme/text.ts';
 import { brush } from '../highlight.ts';
 import type { CodeTones } from '../../theme/theme.ts';
-import { chordHeadline, chordLines, sentText } from './chord.ts';
+import { chordHeadline, chordLines, cutLine, sentText } from './chord.ts';
+import {
+  chordCallOf,
+  isChordTool,
+  MCP_TITLE,
+} from '../../../session/transcript/chord.ts';
 import { wrapLine } from '../message.ts';
 
 /**
@@ -115,28 +116,6 @@ function mcpHeadline(
     tag: ' (MCP)',
     ...(arg === undefined ? {} : { arg }),
   };
-}
-
-/** `mcp__<server>__<tool>`: the server up to the next `__`, the tool the rest. */
-const MCP_TITLE = /^mcp__(.+?)__(.+)$/s;
-
-const CHORD_TOOLS: ReadonlySet<string> = new Set<ChordTool>([
-  'list_agents',
-  'list_sessions',
-  'spawn_task',
-  'open_agent',
-  'send_message',
-  'close_agent',
-  'monitor',
-  'stop_monitor',
-  'list_monitors',
-  'list_teams',
-  'run_team',
-  'propose_team',
-]);
-
-function isChordTool(tool: string): tool is ChordTool {
-  return CHORD_TOOLS.has(tool);
 }
 
 /**
@@ -309,18 +288,39 @@ export interface SentBody {
  * A `send_message` call's text, drawn under its `→` as a received message's
  * is, in every state, so what was sent reads as what came in; a refused or
  * failed one keeps it, as the message most worth reading, and says why after
- * it. None for any other call or an empty text, whose own lines say it.
+ * it; one cut off before it reached chord, read from the call as the agent
+ * sent it to `chordServer`, says it was not delivered. None for any other
+ * call or an empty text, whose own lines say it.
  */
-export function sentBody(call: ToolCall): SentBody | undefined {
-  const text = call.chord === undefined ? undefined : sentText(call.chord);
+export function sentBody(
+  call: ToolCall,
+  chordServer?: string,
+): SentBody | undefined {
+  const cut = cutChord(call, chordServer);
+  const chord = call.chord ?? cut;
+  const text = chord === undefined ? undefined : sentText(chord);
 
   if (text === undefined) {
     return undefined;
   }
 
+  if (cut !== undefined) {
+    return { text, ending: cutLine(cut.tool) };
+  }
+
   return toneOf(call) === 'failed'
     ? { text, ending: call.chord?.error ?? 'Failed' }
     : { text };
+}
+
+/**
+ * The call of chord's tools `call` asked for when the agent cut it off
+ * before it reached chord: nothing served for it, so it did nothing.
+ */
+function cutChord(call: ToolCall, chordServer: string | undefined) {
+  return call.cut === true && call.chord === undefined
+    ? chordCallOf(call, chordServer)
+    : undefined;
 }
 
 /**
@@ -361,6 +361,7 @@ export function summary(
   tones?: CodeTones,
   ended = false,
   width?: number,
+  chordServer?: string,
 ): Summary {
   // A box of questions' record under the call says what was asked and
   // answered; ctrl+o shows the call's own lines too.
@@ -369,11 +370,15 @@ export function summary(
   }
 
   const content = call.content ?? [];
-  // chord's own say what was sent or answered, not the answer's JSON.
+  const cut = cutChord(call, chordServer);
+  // chord's own say what was sent or answered, not the answer's JSON; one
+  // cut off what it asked for and that it did nothing, not the agent's error.
   const lines =
-    call.chord === undefined
-      ? content.flatMap(contentLines)
-      : chordLines(call.chord);
+    cut !== undefined
+      ? [...chordLines(cut), cutLine(cut.tool)]
+      : call.chord === undefined
+        ? content.flatMap(contentLines)
+        : chordLines(call.chord);
   const diffs = content.flatMap((item) =>
     item.type === 'diff'
       ? [diffView(item.path, item.oldText, item.newText, true, tones)]
@@ -408,7 +413,10 @@ export function summary(
 
   // chord's refusal is its own sentence, said as it is.
   const shown =
-    tone === 'failed' && lines.length > 0 && call.chord === undefined
+    tone === 'failed' &&
+    lines.length > 0 &&
+    call.chord === undefined &&
+    cut === undefined
       ? withError(lines)
       : lines;
 

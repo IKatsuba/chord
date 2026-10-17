@@ -375,3 +375,61 @@ test("a call's title keeps every line and its length, as the headline draws it w
   assert(entry?.kind === 'tool');
   expect(entry.call.title).toStrictEqual(title);
 });
+
+test("a call Claude's adapter cut off before it ran is marked cut, live and from the record; a cancelled one is not", () => {
+  const updates: SessionUpdate[] = [
+    {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'a',
+      title: 'mcp__chord__send_message',
+      status: 'pending',
+      rawInput: { to: 'main', text: 'Hi' },
+    },
+    {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'a',
+      status: 'failed',
+      _meta: { claudeCode: { nonExecutionKind: 'interrupted' } },
+    },
+    {
+      sessionUpdate: 'tool_call',
+      toolCallId: 'b',
+      title: '`ls`',
+      status: 'pending',
+    },
+    {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'b',
+      status: 'failed',
+      _meta: { claudeCode: { nonExecutionKind: 'cancelled' } },
+    },
+  ];
+  const cuts = (state: ReturnType<typeof fold>) =>
+    state.entries.flatMap((entry) =>
+      entry.kind === 'tool' ? [[entry.call.id, entry.call.cut]] : [],
+    );
+  const live = fold([
+    { type: 'prompt', turnId: 't1', text: 'cutcalls', at: 0 },
+    ...updates.map((update): TranscriptAction => ({
+      type: 'update',
+      turnId: 't1',
+      update,
+    })),
+  ]);
+  const recorded = fold(
+    recordActions([
+      { type: 'prompt', turnId: 't1', at: 0, prompt: 'cutcalls', images: 0 },
+      ...updates.map((update) => ({
+        type: 'update' as const,
+        turnId: 't1',
+        update,
+      })),
+    ]).flatMap((action) => (action.type === 'usage' ? [] : [action])),
+  );
+
+  expect(cuts(live)).toStrictEqual([
+    ['a', true],
+    ['b', undefined],
+  ]);
+  expect(cuts(recorded)).toStrictEqual(cuts(live));
+});

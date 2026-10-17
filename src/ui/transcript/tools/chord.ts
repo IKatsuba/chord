@@ -6,7 +6,10 @@
  */
 import { formatElapsed } from '../../../session/elapsed.ts';
 import { timeoutWords } from '../../../session/monitors.ts';
-import type { ChordCall } from '../../../session/transcript/types.ts';
+import type {
+  ChordCall,
+  ChordTool,
+} from '../../../session/transcript/types.ts';
 import { MESSAGE_LINES } from '../message.ts';
 import type { Headline } from './tools.ts';
 
@@ -119,11 +122,24 @@ export function chordHeadline(call: ChordCall): Headline {
 }
 
 /**
+ * What a call of chord's that the agent cut off before it reached chord
+ * says after its body: that it did nothing, and that chord tells the agent
+ * (docs/design/CHD-417.md).
+ */
+export function cutLine(tool: ChordTool): string {
+  return tool === 'send_message'
+    ? 'Not delivered: cut off before it reached chord. chord tells the agent at its next turn.'
+    : 'Cut off before it reached chord, so it did nothing. chord tells the agent at its next turn.';
+}
+
+/**
  * What a `send_message` sent, as it was sent, so its markdown reads as a
  * received message's does, a leading indent's code block included; none
  * for another call or an empty text.
  */
-export function sentText(call: ChordCall): string | undefined {
+export function sentText(
+  call: Pick<ChordCall, 'tool' | 'input'>,
+): string | undefined {
   const sent =
     call.tool === 'send_message' ? record(call.input).text : undefined;
 

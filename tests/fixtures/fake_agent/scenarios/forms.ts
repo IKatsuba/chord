@@ -155,9 +155,8 @@ export const FORMS = {
   async askcodexwait(turn) {
     const wait = 300;
     const timer = new AbortController();
-    // Withdrawn a little after the wait, as the request's way here and the
-    // cancel's may take unlike times, and chord counts from when it got it.
-    const timeout = setTimeout(() => timer.abort(), wait + 50);
+    // Withdrawn as the wait ends, with no margin, as codex withdraws it.
+    const timeout = setTimeout(() => timer.abort(), wait);
     const answer = await turn.client
       .request(
         'elicitation/create',

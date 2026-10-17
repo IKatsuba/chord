@@ -411,7 +411,7 @@ describe('CHD-1 tester: question request round trips', () => {
   }
 });
 
-test("a form is read as timed out only once the agent's whole wait has passed", () => {
+test("a form is read as timed out within a second of the agent's wait ending, a cancel before", () => {
   const wait = (expiresInMs?: number): ElicitationWait => ({
     id: 'e',
     mode: 'form',
@@ -422,18 +422,22 @@ test("a form is read as timed out only once the agent's whole wait has passed", 
       : { questions: { agent: 'codex', questions: [], expiresInMs } }),
   });
 
-  expect(ranOut(wait(300_000), 299_100)).toStrictEqual(false);
+  // The request reached chord late, so its countdown ends after the agent's.
+  expect(ranOut(wait(300_000), 298_999)).toStrictEqual(false);
+  expect(ranOut(wait(300_000), 299_000)).toStrictEqual(true);
+  expect(ranOut(wait(300_000), 299_950)).toStrictEqual(true);
   expect(ranOut(wait(300_000), 300_000)).toStrictEqual(true);
   expect(ranOut(wait(300_000), 301_000)).toStrictEqual(true);
-  // A wait shorter than a second: withdrawn before it ends is a cancel.
-  expect(ranOut(wait(300), 10)).toStrictEqual(false);
-  expect(ranOut(wait(300), 300)).toStrictEqual(true);
+  // Withdrawn well before the end: the agent cancelled it.
+  expect(ranOut(wait(300_000), 10_000)).toStrictEqual(false);
+  // A wait of under a second is within the tolerance from the start.
+  expect(ranOut(wait(300), 10)).toStrictEqual(true);
   expect(ranOut(wait(), 1_000_000)).toStrictEqual(false);
 });
 
 describe('CHD-1 tester: receipt-relative timeout outcomes', () => {
   for (const [waited, outcome] of [
-    [299, 'cancelled'],
+    [299, 'timed_out'],
     [300, 'timed_out'],
     [301, 'timed_out'],
   ] as const) {

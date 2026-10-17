@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import stringWidth from 'string-width';
 import type { Team } from '../../../../src/teams.ts';
 import {
   agentRows,
@@ -93,23 +94,11 @@ test("the table's columns fit the width: the role and then agent · model wrap i
     'coder   codex · gpt-5.3-codex  auto         Writes the fix, in the',
     '                                            files the lead names',
   ]);
-  expect(proposalTable(rows, 44).map((line) => line.text)).toStrictEqual([
-    'lead    claude · opus  default      Splits the',
-    '                                    job, says',
-    '                                    who edits',
-    '                                    which files,',
-    '                                    reports to',
-    '                                    main',
-    'tester  claude ·       acceptEdits  Writes the',
-    '        sonnet                      failing',
-    '                                    test, then',
-    '                                    proves the',
-    '                                    fix',
-    'coder   codex ·        auto         Writes the',
-    '        gpt-5.3-codex               fix, in the',
-    '                                    files the',
-    '                                    lead names',
-  ]);
+  // Where agent · model's longest word and the role's least do not fit
+  // beside the other cells, the table is laid out as opened.
+  expect(proposalTable(rows, 44)).toStrictEqual(
+    proposalTable(rows, 44, false, true),
+  );
 });
 
 test('opened, each role is whole on lines of its own under its row, to the right edge', () => {
@@ -552,33 +541,9 @@ test('a changed effort says the one it had, dim, and folded drops that before ag
   );
   expect(wide[0]!.effortWas).toStrictEqual(undefined);
 
-  const narrowAll = proposalTable(rows, 74, true);
-  const narrow = firsts(narrowAll);
-
-  expect(narrowAll.map((line) => line.text)).toStrictEqual([
-    '   lead      claude · opus  high   default                            Splits the',
-    '                                                                      job, says',
-    '                                                                      who edits',
-    '                                                                      which files,',
-    '                                                                      reports to',
-    '                                                                      main',
-    '~  tester    claude ·       high   acceptEdits was bypassPermissions  Writes the',
-    '             sonnet                                                   failing',
-    '                                                                      test, then',
-    '                                                                      proves the',
-    '                                                                      fix',
-    '~  coder     codex ·        xhigh  auto                               Writes the',
-    '             gpt-5.3-codex                                            fix, in the',
-    '                                                                      files the',
-    '                                                                      lead names',
-    '~  reviewer  claude · opus  —      plan was read-only                 Reads the',
-    '                                                                      diff and',
-    '                                                                      edits',
-    '                                                                      nothing',
-  ]);
-  expect(narrow.some((line) => line.effortWas !== undefined)).toBeFalsy();
-  expect(narrow[1]!.text.slice(...narrow[1]!.was!)).toStrictEqual(
-    ' was bypassPermissions',
+  // Too narrow for its columns beside the changed cells, laid out as opened.
+  expect(proposalTable(rows, 74, true)).toStrictEqual(
+    proposalTable(rows, 74, true, true),
   );
 });
 
@@ -642,7 +607,7 @@ test('opened, a changed cell that wraps breaks before was, and the effort wraps 
 test('narrow, every word of agent · model and of the role is kept, each wrapping in its column', () => {
   const rows = agentRows(EFFORTS, EFFORTS_BEFORE);
 
-  for (const width of [74, 60, 44]) {
+  for (const width of [74, 60]) {
     const lines = proposalTable(rows, width, true);
     const read = lines.map((line) => line.text).join(' ');
 
@@ -653,5 +618,23 @@ test('narrow, every word of agent · model and of the role is kept, each wrappin
     }
 
     expect(lines.some((line) => line.text.includes('…'))).toBeFalsy();
+  }
+});
+
+test('no row of a narrow table is wider than its width, so every word stays in its column', () => {
+  for (const [rows, marked] of [
+    [agentRows(EFFORTS, EFFORTS_BEFORE), true],
+    [agentRows(TEAM), false],
+  ] as const) {
+    for (let width = 70; width >= 48; width--) {
+      const lines = proposalTable(rows, width, marked);
+
+      for (const line of lines) {
+        expect(
+          stringWidth(line.text) <= width,
+          `${width}: ${line.text}`,
+        ).toBeTruthy();
+      }
+    }
   }
 });

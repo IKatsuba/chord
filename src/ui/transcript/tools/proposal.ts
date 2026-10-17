@@ -282,19 +282,24 @@ export function proposalTable(
   }
 
   if (!whole) {
-    // A cell that wraps keeps its longest word whole where the row has room,
-    // agent · model before the role, which wraps in what is left.
+    // The two cells that wrap share what the row leaves, and the row is
+    // never wider than `width`: agent · model keeps its longest word whole
+    // and the role its least, wrapping in the rest. Where they cannot, the
+    // table is laid out as opened, the role under its row and the other
+    // cells wrapping in their columns, so no word leaves its column.
+    const shared = width - fixed - PADDING;
+    const runtimeWord = widestWord(rows.map((row) => row.runtime));
+
+    if (shared < Math.min(runtimeWord, runtimes) + leastRole) {
+      return proposalTable(rows, width, marked, true);
+    }
+
     const runtimeColumn = Math.min(
       runtimes,
-      Math.max(widestWord(rows.map((row) => row.runtime)), runtimeRoom),
+      Math.max(runtimeWord, runtimeRoom),
+      shared - leastRole,
     );
-    const roleColumn = Math.max(
-      1,
-      Math.min(
-        roles,
-        Math.max(leastRole, width - fixed - runtimeColumn - PADDING),
-      ),
-    );
+    const roleColumn = Math.max(1, Math.min(roles, shared - runtimeColumn));
     const effortAt = named + names + PADDING + runtimeColumn + PADDING;
     const before = effortAt + (efforts ? effortsWidth + PADDING : 0);
     // The role and agent · model are a tool result's words, so each wraps

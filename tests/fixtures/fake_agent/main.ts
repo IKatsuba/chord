@@ -118,7 +118,10 @@
  * no turn playing, Claude's answers `promptRequired` and does nothing where
  * the request's `_meta.steering.idleBehavior` asks for that, and otherwise,
  * as Codex's always does, plays it as a turn of its own and answers
- * `startedNewTurn`. Without it, the method is not found. With
+ * `startedNewTurn`. As Claude's, it names itself in `agentInfo` as that
+ * adapter does, whose steer cuts the turn's open calls off; the fake cuts
+ * none, so a test sees what chord holds back. Without it, the method is not
+ * found. With
  * `--steer-late`, or `CHORD_FAKE_STEER_LATE=1`, a steer lands only once the
  * turn playing has ended, as one that meets a turn's end does. As Codex's, a
  * prompt that comes while a turn plays opens with `Started alongside a turn
@@ -724,7 +727,15 @@ const connection = acp
               ...(RESUME_ONLY ? { resume: {} } : {}),
             },
           },
-          agentInfo: { name: 'chord-fake-agent', version: '0.0.0' },
+          // Steering as Claude's adapter, it names itself as that adapter does,
+          // whose steer cuts the turn's open calls off.
+          agentInfo: {
+            name:
+              STEERING === 'claude'
+                ? '@agentclientprotocol/claude-agent-acp'
+                : 'chord-fake-agent',
+            version: '0.0.0',
+          },
           ...(STEERING === undefined
             ? {}
             : { _meta: { steering: { supported: true } } }),

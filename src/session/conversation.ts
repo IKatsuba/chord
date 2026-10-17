@@ -346,8 +346,14 @@ export class Conversation {
    */
   #steering = Promise.resolve();
   /**
-   * Wakes the steers waiting on the person's answer: something they wait on
-   * changed, a question answered, the turn ended, or the session let go.
+   * The tool calls of the turn on screen not ended yet, by id, which hold a
+   * steer back on an agent whose steer cuts them off.
+   */
+  #openCalls = new Set<string>();
+  /**
+   * Wakes the steers waiting on the person's answer or the turn's open
+   * calls: something they wait on changed, a question answered, the last
+   * call ended, the turn ended, or the session let go.
    */
   #wake = Promise.withResolvers<void>();
   /**
@@ -519,6 +525,7 @@ export class Conversation {
     this.#queued = [];
     this.#steers = new Set();
     this.#steering = Promise.resolve();
+    this.#openCalls = new Set();
 
     this.#rouse();
 
@@ -725,6 +732,15 @@ export class Conversation {
   }
 
   /**
+   * Whether a steer now would cut off a tool call the turn has open: held
+   * until they have all ended, it goes into the same turn between its calls
+   * (the owner's answer on CHD-417).
+   */
+  #cuts(session: Session): boolean {
+    return this.#openCalls.size > 0 && session.cutsCallsOnSteer();
+  }
+
+  /**
    * Puts a message into turn `into`, drawn and recorded there once the agent
    * has taken it; refused, it goes as the next turn, as a message queued
    * behind the turn does, and `queued` is called.
@@ -760,7 +776,10 @@ export class Conversation {
         });
       }
 
-      while (this.#steerable(session) === into && this.#waitsOnPerson()) {
+      while (
+        this.#steerable(session) === into &&
+        (this.#waitsOnPerson() || this.#cuts(session))
+      ) {
         await this.#wake.promise;
       }
 
@@ -1952,6 +1971,10 @@ export class Conversation {
 
     this.#heardAt = performance.now();
 
+    if (subagentId === undefined) {
+      this.#track(update);
+    }
+
     this.#emit({
       type: 'update',
       turnId: this.#stamp(),
@@ -1962,6 +1985,34 @@ export class Conversation {
 
     if (subagentId === undefined && STATE_UPDATES.has(update.sessionUpdate)) {
       this.#report(session);
+    }
+  }
+
+  /**
+   * Keeps the turn's open calls as its updates say; the last one ending
+   * wakes a steer held behind them.
+   */
+  #track(update: SessionUpdate): void {
+    if (
+      update.sessionUpdate !== 'tool_call' &&
+      update.sessionUpdate !== 'tool_call_update'
+    ) {
+      return;
+    }
+
+    if (update.status === 'completed' || update.status === 'failed') {
+      if (
+        this.#openCalls.delete(update.toolCallId) &&
+        this.#openCalls.size === 0
+      ) {
+        this.#rouse();
+      }
+    } else if (
+      this.#turn !== undefined &&
+      (update.sessionUpdate === 'tool_call' || update.status !== undefined)
+    ) {
+      // An adapter may name a call first in an update, as Codex's can.
+      this.#openCalls.add(update.toolCallId);
     }
   }
 
@@ -2129,6 +2180,7 @@ export class Conversation {
       const turn = session.prompt(next.prompt, next.attachments, next.mentions);
 
       this.#turn = { id: turnId, turn };
+      this.#openCalls = new Set();
       this.#lastTurnId = turnId;
       this.#selfTurnId = undefined;
 

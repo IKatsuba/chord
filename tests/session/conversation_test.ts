@@ -1156,6 +1156,112 @@ test('a message held for an answer goes as the next turn when Esc interrupts the
     ).not.toHaveProperty('afterAnswer');
   }));
 
+/**
+ * The order of a call's end, the messages that went into the turn and the
+ * turn's end among `events`.
+ */
+function steerOrder(events: readonly ConversationEvent[]): string[] {
+  return events.flatMap((event) =>
+    event.type === 'update' &&
+    event.update.sessionUpdate === 'tool_call_update' &&
+    event.update.status === 'completed'
+      ? ['call ended']
+      : event.type === 'prompt' && event.into !== undefined
+        ? [`into: ${event.text}`]
+        : event.type === 'result'
+          ? ['ended']
+          : [],
+  );
+}
+
+/** Until the turn on the fake has its call open. */
+async function callOpen(events: readonly ConversationEvent[]): Promise<void> {
+  await until(() =>
+    events.some(
+      (event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'tool_call_update' &&
+        event.update.status === 'in_progress',
+    ),
+  );
+}
+
+test("on Claude's adapter, a message told while the turn's call is open is held until the call ends, then goes into the same turn", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+
+    let queued = 0;
+
+    expect(
+      conversation.tell(MAIN, 'Then the docs.', () => (queued += 1)),
+    ).toStrictEqual('sent');
+    expect(
+      !events.some((event) => event.type === 'prompt' && event.into),
+    ).toBeTruthy();
+    await until(() => events.some((event) => event.type === 'result'));
+
+    expect(steerOrder(events)).toStrictEqual([
+      'call ended',
+      'into: Then the docs.',
+      'ended',
+    ]);
+    expect(saidIn(events)).toContain('Read the message from main.');
+    // Held for the call, not the person: nothing says it waits on an answer.
+    expect(!events.some((event) => event.type === 'queued')).toBeTruthy();
+    expect(queued).toStrictEqual(0);
+  }));
+
+test("on Claude's adapter, two messages held behind an open call go into the turn in the order they were told", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+    conversation.tell(MAIN, 'Run the tests.');
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    expect(steerOrder(events)).toStrictEqual([
+      'call ended',
+      'into: Run the tests.',
+      'into: Then the docs.',
+      'ended',
+    ]);
+  }));
+
+test("on Claude's adapter, a message held behind an open call goes as the next turn when the turn ends first", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+
+    let queued = 0;
+
+    conversation.tell(MAIN, 'Then the docs.', () => (queued += 1));
+    conversation.interrupt();
+    await until(
+      () => events.filter((event) => event.type === 'result').length === 2,
+    );
+
+    expect(promptsIn(events)).toStrictEqual([
+      ['bash', undefined],
+      ['Then the docs.', undefined],
+    ]);
+    expect(queued).toStrictEqual(1);
+  }));
+
+test("on Codex's adapter, whose steer cuts nothing, a message told while the turn's call is open goes into it at once", () =>
+  onFake(['--steering', 'codex'], async (conversation, events) => {
+    conversation.send('bash');
+    await callOpen(events);
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    expect(steerOrder(events)).toStrictEqual([
+      'into: Then the docs.',
+      'call ended',
+      'ended',
+    ]);
+  }));
+
 /** Each prompt's text among `events`, with the turn it went into. */
 function promptsIn(
   events: readonly ConversationEvent[],

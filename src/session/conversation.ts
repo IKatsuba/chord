@@ -2220,16 +2220,26 @@ function answerOf(response: ElicitationReply): ElicitationAnswer {
 }
 
 /**
+ * How long before the countdown's end a withdrawal still reads as the
+ * agent's wait running out. chord counts from when the request reached it,
+ * later than the agent sent it by however long the way took, so its
+ * countdown ends after the agent's; codex withdraws at its own end, with
+ * no margin (the owner, 2026-10-17, CHD-413 Q10).
+ */
+export const RAN_OUT_TOLERANCE_MS = 1_000;
+
+/**
  * Whether a request withdrawn after `waited` ms was withdrawn because the
  * wait its agent gave for an answer ran out, as codex's does: chord sees
- * only the withdrawal, so it reads one that came once the countdown, on the
- * same clock, had reached 0 as that, and any earlier one as a cancel.
+ * only the withdrawal, so it reads one that came within
+ * `RAN_OUT_TOLERANCE_MS` of the countdown's end, on its own clock, or
+ * after it as that, and any earlier one as a cancel.
  */
 export function ranOut(wait: ElicitationWait, waited: number): boolean {
   const expires =
     wait.mode === 'form' ? wait.questions?.expiresInMs : undefined;
 
-  return expires !== undefined && waited >= expires;
+  return expires !== undefined && waited >= expires - RAN_OUT_TOLERANCE_MS;
 }
 
 /** Whether two readings name the same commands, described the same way. */

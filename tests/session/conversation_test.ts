@@ -1291,6 +1291,51 @@ test("a message held behind an open call that the turn's end refuses waits in th
     ]);
   }));
 
+test("on Claude's adapter, every message held behind an open call waits in the queue at once, in the order told, before the call ends", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    // A call open for seconds, so both are told while it is.
+    conversation.send('callchild');
+    await until(() =>
+      events.some(
+        (event) =>
+          event.type === 'update' && event.update.sessionUpdate === 'tool_call',
+      ),
+    );
+    conversation.tell(MAIN, 'Run the tests.');
+    conversation.tell(MAIN, 'Then the docs.');
+
+    // Both shown before anything moved: the second behind the first too.
+    expect(
+      events.flatMap((event) =>
+        event.type === 'queued' ? [[event.text, event.afterCalls]] : [],
+      ),
+    ).toStrictEqual([
+      ['Run the tests.', true],
+      ['Then the docs.', true],
+    ]);
+    await until(() => events.some((event) => event.type === 'result'));
+
+    expect(
+      events.flatMap((event) =>
+        event.type === 'queued'
+          ? [`queued: ${event.text}`]
+          : event.type === 'update' &&
+              event.update.sessionUpdate === 'tool_call_update' &&
+              event.update.status === 'completed'
+            ? ['call ended']
+            : event.type === 'prompt' && event.into !== undefined
+              ? [`into: ${event.text}`]
+              : [],
+      ),
+    ).toStrictEqual([
+      'queued: Run the tests.',
+      'queued: Then the docs.',
+      'call ended',
+      'into: Run the tests.',
+      'into: Then the docs.',
+    ]);
+  }));
+
 test("on Claude's adapter, two messages held behind an open call go into the turn in the order they were told", () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
     conversation.send('bash');

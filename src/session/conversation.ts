@@ -794,32 +794,45 @@ export class Conversation {
       Promise.withResolvers<void>();
     let outcome: SteerOutcome;
 
+    // What its queue row says it waits on, once it has one.
+    let shown: 'answer' | 'calls' | undefined;
+    const show = (why: 'answer' | 'calls') => {
+      if (shown === why) {
+        return;
+      }
+
+      shown = why;
+
+      this.#emit({
+        type: 'queued',
+        turnId: next.turnId,
+        text: next.text,
+        ...(next.from === undefined ? {} : { from: next.from }),
+        ...(why === 'answer' ? { afterAnswer: true } : { afterCalls: true }),
+      });
+    };
+
     this.#steers.add(steer);
 
     this.#steering = answered;
+
+    // Held for the calls open as it came, it waits in the queue at once, in
+    // its order among the messages before it, as one held for an answer
+    // does, until it goes in (CHD-423).
+    if (this.#steerable(session) === into && open()) {
+      show('calls');
+    }
 
     try {
       await ahead;
 
       // The steer ahead may have found the turn over, or the person may have
       // been asked something while it was out.
-      // Held for the calls open as it came, it waits in the queue as one
-      // held for an answer does, until it goes in.
       if (this.#steerable(session) === into) {
-        const why = this.#waitsOnPerson()
-          ? ({ afterAnswer: true } as const)
-          : open()
-            ? ({ afterCalls: true } as const)
-            : undefined;
-
-        if (why !== undefined) {
-          this.#emit({
-            type: 'queued',
-            turnId: next.turnId,
-            text: next.text,
-            ...(next.from === undefined ? {} : { from: next.from }),
-            ...why,
-          });
+        if (this.#waitsOnPerson()) {
+          show('answer');
+        } else if (open()) {
+          show('calls');
         }
       }
 

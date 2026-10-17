@@ -567,6 +567,8 @@ export interface PermissionWait {
   readonly id: string;
   /** The subagent that asks, when the session's own agent does not. */
   readonly subagentId?: string;
+  /** When a subagent's request reached chord, epoch milliseconds. */
+  readonly at?: number;
   readonly toolCallId?: string;
   readonly title?: string;
   readonly kind?: ToolKind;

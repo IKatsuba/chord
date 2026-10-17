@@ -16,10 +16,12 @@ import type {
 export function permissionRequested(
   state: Transcript,
   turnId: string,
-  permission: PermissionWait,
+  asked: PermissionWait,
   at = 0,
 ): Transcript {
   const { turn } = state;
+  // A subagent's request keeps when it came, which a task's row counts from.
+  const permission = asked.subagentId === undefined ? asked : { ...asked, at };
 
   // A task agent outlives the turn that started it, and may ask between
   // turns; the session waits on the person until it is answered.

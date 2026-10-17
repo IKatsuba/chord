@@ -127,6 +127,12 @@ import {
   moveListFocus,
   stopFocused,
 } from '../agents/agents.ts';
+import {
+  type BackgroundAgent,
+  type BackgroundItem,
+  backgroundItems,
+  type ItemOwner,
+} from '../background/background.ts';
 import { stripLayout, tabGlyph } from './strip.ts';
 import {
   headlineText,
@@ -1895,6 +1901,18 @@ export function useSessions(
   };
 
   /**
+   * The person's prompt to session `key`: its tab's ended background items
+   * go, as a message between agents never clears them.
+   */
+  const backgroundCleared = (key: number) => {
+    const tab = agentOf(sessions.tabs, key)?.tab;
+
+    if (tab !== undefined) {
+      dispatch({ type: 'background_cleared', tab: tab.key, at: Date.now() });
+    }
+  };
+
+  /**
    * `/team new`: `typed` drawn as the person's
    * prompt in the front tab's `main`, `prompt` what its agent gets, with
    * the shell output held there ahead of it.
@@ -1909,6 +1927,7 @@ export function useSessions(
       canSend(now, typed) &&
       conversationAt(key)?.send(typed, withContext(heldContext(now), prompt))
     ) {
+      backgroundCleared(key);
       dispatch({
         type: 'in_session',
         key,
@@ -2026,6 +2045,45 @@ export function useSessions(
       ],
       state.monitorFocus,
       limit,
+    );
+  };
+
+  /**
+   * The front tab's background: every monitor and task of its `main` and
+   * its children, those ended since the person's last prompt there kept.
+   */
+  const background = (): BackgroundItem[] => {
+    const tab = front();
+
+    if (tab === undefined) {
+      return [];
+    }
+
+    const agentIn = (key: number, owner?: ItemOwner): BackgroundAgent[] => {
+      const session = all.sessions[key];
+
+      return session === undefined
+        ? []
+        : [
+            {
+              key,
+              ...(owner === undefined ? {} : { owner }),
+              since: session.since,
+              monitors: session.monitors,
+              endedMonitors: session.endedMonitors,
+              transcript: session.transcript,
+            },
+          ];
+    };
+
+    return backgroundItems(
+      [
+        ...agentIn(tab.key),
+        ...tab.children.flatMap((child) =>
+          agentIn(child.key, { name: child.name, colour: child.colour }),
+        ),
+      ],
+      all.window.backgroundCleared[tab.key],
     );
   };
 
@@ -2173,6 +2231,7 @@ export function useSessions(
         mentionsIn(text),
       )
     ) {
+      backgroundCleared(key);
       inSession({ type: 'context_sent', held: now.held });
       inSession({ type: 'images_sent', keeping: left });
       host.remember(text, imagesIn(text, sending));
@@ -2772,6 +2831,7 @@ export function useSessions(
     clearFront,
     agentRows,
     listed,
+    background,
     picked,
   };
 }

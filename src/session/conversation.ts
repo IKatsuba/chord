@@ -16,6 +16,7 @@ import {
   MonitorRun,
   type MonitorsPast,
   monitorsPast,
+  type EndedMonitor,
   type RunCommand,
   runMonitorCommand,
   type RunningMonitor,
@@ -172,11 +173,13 @@ export type ConversationEvent =
     }
   /**
    * The session's monitors still running, whenever one starts, hands on an
-   * event or ends; the window's alone, as none is restarted on a resume.
+   * event or ends, and those ended since it came up, in the order they
+   * ended; the window's alone, as none is restarted on a resume.
    */
   | {
       readonly type: 'monitors';
       readonly monitors: readonly RunningMonitor[];
+      readonly ended: readonly EndedMonitor[];
     }
   | { readonly type: 'closing' };
 
@@ -445,6 +448,8 @@ export class Conversation {
   #monitorsPast: MonitorsPast = NO_PAST;
   /** How each monitor ended since, by id, as its end's word says it. */
   readonly #monitorsEnded = new Map<string, string>();
+  /** The monitors ended since the session came up, as the window shows them. */
+  #endedMonitors: EndedMonitor[] = [];
   /** The last monitor id's number given out. */
   #monitorCount = 0;
   /** Monitors stopping, which a close waits for to be gone. */
@@ -593,6 +598,7 @@ export class Conversation {
 
     this.#monitorsEnded.clear();
 
+    this.#endedMonitors = [];
     this.#monitorCount = 0;
 
     this.#emit({ type: 'cleared' });
@@ -1122,6 +1128,8 @@ export class Conversation {
       this.#ending.set(id, monitoring);
     }
 
+    this.#endedMonitor(running, { kind: 'stopped' });
+
     this.#showMonitors();
     this.#stopping(monitoring.run, by);
 
@@ -1166,7 +1174,23 @@ export class Conversation {
   }
 
   #showMonitors(): void {
-    this.#show({ type: 'monitors', monitors: this.monitors });
+    this.#show({
+      type: 'monitors',
+      monitors: this.monitors,
+      ended: this.#endedMonitors,
+    });
+  }
+
+  /** Keeps `monitor`'s end for the window, once: a stop's comes first. */
+  #endedMonitor(monitor: RunningMonitor, end: MonitorEnd): void {
+    if (this.#endedMonitors.some((ended) => ended.id === monitor.id)) {
+      return;
+    }
+
+    this.#endedMonitors = [
+      ...this.#endedMonitors,
+      { ...monitor, end, endedAt: this.#now() },
+    ];
   }
 
   /** `run`'s place in `among`, if it still has one there under its id. */
@@ -1240,6 +1264,7 @@ export class Conversation {
     this.#monitors.delete(info.id);
     this.#ending.delete(info.id);
     this.#monitorsEnded.set(info.id, endWord(end));
+    this.#endedMonitor(monitoring.run.running, end);
     this.#showMonitors();
 
     const from: MessageFrom = {

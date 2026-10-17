@@ -11,7 +11,7 @@ import {
   sameModels,
 } from '../../session/models.ts';
 import { type AgentMode, nextMode } from '../../session/modes.ts';
-import type { RunningMonitor } from '../../session/monitors.ts';
+import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { EarlierWindow } from '../../session/windows.ts';
 import { addTurn, type Spent } from '../../session/usage.ts';
@@ -43,6 +43,12 @@ import {
   type ShortcutsAction,
   type ShortcutsState,
 } from '../shortcuts/state.ts';
+import {
+  type BackgroundAction,
+  type BackgroundState,
+  initialBackground,
+  reduceBackground,
+} from '../background/state.ts';
 import {
   askedInput,
   asksPerson,
@@ -159,6 +165,11 @@ export interface SessionState extends PromptSession, ViewSession, DialogsState {
    * order; the agent list draws them.
    */
   readonly monitors: readonly RunningMonitor[];
+  /**
+   * Those that ended since the session came up, in the order they ended;
+   * the background view draws them until the person's next prompt.
+   */
+  readonly endedMonitors: readonly EndedMonitor[];
 }
 
 /**
@@ -166,7 +177,12 @@ export interface SessionState extends PromptSession, ViewSession, DialogsState {
  * how it is drawn, how keys work, and what is open over the prompt box.
  */
 export interface WindowState
-  extends PromptWindow, ViewWindow, PickersState, ShortcutsState {
+  extends
+    PromptWindow,
+    ViewWindow,
+    PickersState,
+    ShortcutsState,
+    BackgroundState {
   /**
    * ctrl+c, or ctrl+d or `/exit` with sessions busy, was pressed once, and
    * which, for the line to name it; a second press of either quits.
@@ -227,6 +243,7 @@ export type AppAction =
   | PromptAction
   | PickersAction
   | ShortcutsAction
+  | BackgroundAction
   | DialogsAction
   /** ctrl+c, or with `by` ctrl+d or `/exit`, asks for a second press. */
   | { readonly type: 'quit_armed'; readonly by?: 'ctrl+d' }
@@ -293,10 +310,12 @@ export const initialAppState: AppState = {
   modes: [],
   options: [],
   monitors: [],
+  endedMonitors: [],
   ...initialPrompt,
   ...initialView,
   ...initialPickers,
   ...initialShortcuts,
+  ...initialBackground,
 };
 
 /**
@@ -448,6 +467,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'help_opened':
     case 'keys_pending':
       return reduceShortcuts(state, action) as AppState;
+    case 'background_cleared':
+      return reduceBackground(state, action) as AppState;
     case 'expanded_toggled':
       // Rewrapped, its cells would hold other characters.
       return reduceView(withoutSelection(state), action) as AppState;
@@ -582,7 +603,11 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // For the record; the command drew it.
       return state;
     case 'monitors':
-      return { ...state, monitors: action.monitors };
+      return {
+        ...state,
+        monitors: action.monitors,
+        endedMonitors: action.ended,
+      };
     case 'cleared':
       // A new session: only what is the window's own stays, and the draft
       // with its images.
@@ -853,6 +878,7 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   modes: true,
   modeAsked: true,
   monitors: true,
+  endedMonitors: true,
   queue: true,
   bash: true,
   held: true,

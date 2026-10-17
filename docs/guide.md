@@ -96,8 +96,15 @@ names the keys that can follow, and Esc lets it go. A session behind that
 asks for permission or a form, or ends its turn, never comes to the front by
 itself: the status line says so
 (`● 2 claude needs your permission · ctrl+x a`), and ctrl+x a goes to the one
-that has waited longest, then the next on each press. ctrl+x k closes the
-session in front, the one to its left coming forward; one that is working
+that has waited longest, then the next on each press. An unseen exit is
+news even when the agent was idle. A failure names its agent, such as
+`✗ parser's turn failed · ctrl+x a to go`, and its tab when behind,
+`✗ parser exited in 2 fake`. Several failures count each state separately:
+`✗ 1 exited · 1 turn failed · ctrl+x a to go`. Seen failures leave the
+status line. ctrl+x w lists open tabs with the same failure words, naming
+the child or member when it is theirs: `✗ parser: turn failed 1m`.
+ctrl+x k closes the session in front, the one to its left coming forward;
+one that is working
 or running a `!` command, waits on you, has prompts queued, or task agents
 running or long-lived agents working or waiting asks for a
 second ctrl+x k first, and its command stops with it. Its long-lived agents
@@ -455,7 +462,11 @@ a list of its agents sits under the status line, `main` and each child in
 the order it opened, each child in a colour of its own, with its runtime,
 model, the effort it is on (`open_agent` takes one as `spawn_task` does)
 and state (`✻ working 41s`, `● permission 12s`, `← message from
-@main`, `✓ replied 2m ago`). ↓ on an empty prompt that is not walking
+@main`, `✓ replied 2m ago`). A failed turn reads `✗ turn failed 12s ago`
+until you look at the child; it stays open for prompts and messages.
+`✗ failed to start` means the agent never came up, and `✗ exited` means
+its process is gone. Those rows keep their state until closed; an exit
+outranks a failed turn. ↓ on an empty prompt that is not walking
 history moves into the list, where ↑ ↓ or j k pick; Enter or Esc goes back
 to the box with the pick kept. The picked agent's chat fills the window,
 the box takes its colour and its name on the top border, and the status line
@@ -512,8 +523,10 @@ directly. In the list the lead's row reads `team · claude · Opus` and its
 open members are nested under it (`├─ tester`); when the list does not fit
 its rows, each team folds to its lead's row, `team · claude · 4 agents` and
 its most urgent state with the member's name (`● tester: permission 12s`),
-and the team you are in unfolds. A member picked has its box read `tester ·
-bugfix`; its permissions are yours to answer, as a child's are, the
+and the team you are in unfolds. A failure names the member with the same
+words as its own row, such as `✗ tester: turn failed 12s ago`. A member
+picked has its box read `tester · bugfix`; its permissions are yours to
+answer, as a child's are, the
 notification says `tester (bugfix) needs your permission`, and with two
 runs open the status line says which run's `tester` asks. `x` on a lead
 closes the team, members and all, twice while any of it works, and chord

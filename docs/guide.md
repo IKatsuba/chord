@@ -332,8 +332,11 @@ way.
 chord reads the mouse, so the wheel and the trackpad scroll the
 transcript (or an overflowing permission request), and a drag selects text.
 Release copies it through the system clipboard, or OSC 52 over SSH;
-the highlight stays until a key or
-a click. `"copyOnSelect": false` leaves the copy to ctrl+c. To use your
+the highlight stays until a key or click. Clicking the prompt takes the
+keys back from the agents list or background summary without changing
+which agent receives your typing. A picked child's name and colour stay
+on the border.
+`"copyOnSelect": false` leaves the copy to ctrl+c. To use your
 terminal's own selection instead, hold its modifier while you drag: option in iTerm2, fn in
 Terminal.app, shift in most others. Inside tmux, the wheel and drags
 reach chord only with `set -g mouse on`, and over SSH a copy reaches

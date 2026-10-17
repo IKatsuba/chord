@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › @s                                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/accessibilityworkbenchService0.ts
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/accessibilityworkbenchService20.ts
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/browsereditorGroupsService8.ts
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/codeEditorcontribService1.ts
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/codeEditorcontribService21.ts
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/configurationtelemetryService14.ts
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/contribplatformService6.ts
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/diffEditornotebookService2.ts
+  src/vs/accessibility/accessibility/accessibilityFeature0/common/diffEditornotebookService22.ts
+  searching…

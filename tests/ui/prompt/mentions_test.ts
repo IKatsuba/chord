@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -159,4 +159,35 @@ test('the match runs off the call that starts it: the call returns before the sc
 
   // AsyncFzf scores a step, then yields: nothing has come back yet.
   expect(done).toStrictEqual(false);
+});
+
+describe('CHD-398 tester: async matching yields and cancels', () => {
+  const paths = Array.from(
+    { length: 20_001 },
+    (_, index) => `src/package-${index % 37}/token-${index}.ts`,
+  );
+
+  test('a large in-memory match lets a timer run before its result', async () => {
+    let ticks = 0;
+    const timer = setInterval(() => {
+      ticks++;
+    }, 1);
+
+    try {
+      const result = await matchFiles(paths, 'src');
+
+      expect(result?.length).toBe(100);
+      expect(ticks).toBeGreaterThan(0);
+    } finally {
+      clearInterval(timer);
+    }
+  });
+
+  test('a newer query cancels real AsyncFzf work, without returning old paths', async () => {
+    const old = matchFiles(paths, 'src');
+    const current = matchFiles(paths, 'token-19999');
+
+    expect(await old).toBeUndefined();
+    expect((await current)?.[0]).toEndWith('/token-19999.ts');
+  });
 });

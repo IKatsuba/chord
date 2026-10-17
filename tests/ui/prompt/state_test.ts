@@ -236,10 +236,14 @@ const finderFiles = (state: AppState, draft: string) =>
 
 describe('CHD-398 finder cache invalidation', () => {
   test('a new walk replaces matching paths while the query stays unchanged', () => {
-    const old = reduceApp(ready, {
-      type: 'files_listed',
-      files: ['old/state.ts', 'README.md'],
-    });
+    const old = matchedIn(
+      reduceApp(ready, {
+        type: 'files_listed',
+        files: ['old/state.ts', 'README.md'],
+      }),
+      'state',
+      ['old/state.ts'],
+    );
 
     expect(finderFiles(old, '@state')).toStrictEqual(['old/state.ts']);
 
@@ -248,18 +252,29 @@ describe('CHD-398 finder cache invalidation', () => {
       files: ['new/state.ts', 'README.md'],
     });
 
-    expect(finderFiles(refreshed, '@state')).toStrictEqual(['new/state.ts']);
-    expect(finderFiles(refreshed, '@state')).toBe(
-      finderFiles(refreshed, '@state'),
-    );
+    // A new walk shows its own first files until its async match arrives.
+    expect(fileFinder(refreshed, '@state', [0, 6])).toMatchObject({
+      files: ['new/state.ts', 'README.md'],
+      pending: true,
+    });
+    expect(
+      reduceApp(refreshed, {
+        type: 'files_matched',
+        files: old.files!,
+        query: 'state',
+        matched: ['old/state.ts'],
+      }),
+    ).toBe(refreshed);
+
+    const matched = matchedIn(refreshed, 'state', ['new/state.ts']);
+
+    expect(finderFiles(matched, '@state')).toStrictEqual(['new/state.ts']);
+    expect(fileFinder(matched, '@state', [0, 6])?.pending).toBe(false);
     expect(finderFiles(old, '@state')).toStrictEqual(['old/state.ts']);
   });
 
   test('empty and missing matches do not survive a new walk or query', () => {
-    const before = reduceApp(ready, {
-      type: 'files_listed',
-      files: [],
-    });
+    const before = reduceApp(ready, { type: 'files_listed', files: [] });
 
     expect(finderFiles(before, '@state')).toBeUndefined();
 
@@ -267,13 +282,24 @@ describe('CHD-398 finder cache invalidation', () => {
       type: 'files_listed',
       files: ['state.ts', 'README.md'],
     });
+    const found = matchedIn(listed, 'state', ['state.ts']);
 
-    expect(finderFiles(listed, '@state')).toStrictEqual(['state.ts']);
-    expect(finderFiles(listed, '@missing')).toBeUndefined();
-    expect(finderFiles(listed, '@')).toStrictEqual(['state.ts', 'README.md']);
-    expect(finderFiles(listed, '@state')).toStrictEqual(['state.ts']);
+    expect(finderFiles(found, '@state')).toStrictEqual(['state.ts']);
+    // While the next query runs, the previous result stays visible.
+    expect(fileFinder(found, '@missing', [0, 8])).toMatchObject({
+      files: ['state.ts'],
+      pending: true,
+    });
+
+    const missing = matchedIn(found, 'missing', []);
+
+    expect(finderFiles(missing, '@missing')).toBeUndefined();
+    expect(finderFiles(missing, '@')).toStrictEqual(['state.ts', 'README.md']);
     expect(
-      finderFiles(reduceApp(listed, { type: 'files_listed', files: [] }), '@'),
+      finderFiles(matchedIn(missing, 'state', ['state.ts']), '@state'),
+    ).toStrictEqual(['state.ts']);
+    expect(
+      finderFiles(reduceApp(found, { type: 'files_listed', files: [] }), '@'),
     ).toBeUndefined();
   });
 

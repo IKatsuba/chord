@@ -1,0 +1,40 @@
+       4 - 2. tester writes a test that fails for the bug's own reason, in `tests/`.
+       5 - 3. coder fixes the code so that test passes, and never edits `tests/`.
+       3 + 1. The lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+       4 + 2. tester writes a test that fails for the bug's own reason. It edits `tests/` only, and reports the
+           failure.
+       5 + 3. coder fixes the code so that test passes. It edits only the files the lead named for it, and never
+           `tests/`.
+       6 + 4. reviewer reads the diff and edits nothing. If it finds a problem, the lead hands it back to coder.
+       7 + 5. tester runs the whole suite once more, and the lead reports to main.
+       8
+       9   ## Who edits what
+      10
+       9 - - One writer per file at a time; a member asks a file's owner directly.
+      10 - - Another run of a team may be working here: the leads agree on files.
+      11 + - One writer per file at a time. Before a member starts, the lead tells it which files are its own.
+      12 + - A member that needs a file it does not own asks its owner directly, and tells the lead what they agreed.
+      13 + - Another run of a team may be working in this directory: the leads agree on files among themselves.
+      14 + - Nobody commits. The person commits.
+      15
+      16   ## Reporting
+      17
+      14 - The lead writes to main when the job is done or cannot be done.
+      18 + The lead writes to main when it needs a decision only the person can make, when the job is done, and when
+           it cannot be done.
+
+ ››› Waiting for you… (8s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                                                                 │
+│                                                                                                                      │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                                                                  │
+│   2. No, tell fake what to change                                                                                    │
+│                                                                                                                      │
+│ Esc to tell fake what to change                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

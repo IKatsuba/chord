@@ -1,0 +1,24 @@
+       8
+       9   ## Who edits what
+      10
+       9 - - One writer per file at a time; a member asks a file's owner
+           directly.
+      10 - - Another run of a team may be working here: the leads agree on
+           files.
+ ── ↓ 13 lines below · end to jump to the bottom ──────────────────────────────
+
+ ››› Waiting for you… (10s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                         │
+│                                                                              │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                          │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

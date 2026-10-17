@@ -1,0 +1,24 @@
+      bugfix.md's body · 10 additions, 6 removals
+       1   # How bugfix works
+       2
+       3 - 1. The lead reads the job and names who may edit which files.
+       4 - 2. tester writes a test that fails for the bug's own reason, in
+           `tests/`.
+       5 - 3. coder fixes the code so that test passes, and never edits
+ ── ↓ 31 lines below · end to jump to the bottom ──────────────────────────────
+
+ ››› Waiting for you… (13s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Replace team bugfix?                                                         │
+│                                                                              │
+│ ❯ 1. Yes, in .chord/teams/bugfix.md                                          │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

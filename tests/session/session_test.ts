@@ -1120,3 +1120,69 @@ test("chord's server takes the first free name when the user's has chord's", () 
     { ...CHORD_SERVER, name: 'chord-3' },
   ]);
 });
+
+describe('CHD-246 tester: large MCP permission fixture', () => {
+  test.each(['allow', 'always', 'deny', 'cancel'])(
+    'preserves the complete request when the answer is %s',
+    (answer) =>
+      withSession(async (session) => {
+        let request: PendingPermission | undefined;
+        const unsubscribe = session.permissions.subscribe((pending) => {
+          request = pending;
+
+          setTimeout(() => {
+            if (answer === 'cancel') {
+              void session.cancel();
+            } else {
+              pending.resolve(answer);
+            }
+          }, 10);
+        });
+
+        try {
+          const { updates, result } = await run(session, 'bigask');
+
+          assert(request);
+          expect(request.toolCall.title).toBe('mcp__files__write_file');
+          expect(request.toolCall.toolCallId).toBe('write_file-1');
+          expect(request.toolCall.content).toBeUndefined();
+
+          const input = request.toolCall.rawInput as {
+            path: string;
+            content: string;
+            mode: string;
+          };
+
+          expect(input.path).toBe('docs/release.md');
+          expect(input.mode).toBe('overwrite');
+          expect(input.content.split('\n')).toHaveLength(37);
+          expect(input.content).toStartWith('# Release 0.56.0\n\n');
+          expect(input.content.split('\n')[2]?.length).toBeGreaterThan(200);
+          expect(input.content).toEndWith(
+            '- Change 30: tests run in parallel\n',
+          );
+          expect(request.options.map((option) => option.optionId)).toEqual([
+            'allow',
+            'always',
+            'deny',
+          ]);
+          expect(request.options[1]?.name).toContain('files - write_file');
+          expect(session.permissions.pending()).toEqual([]);
+
+          if (answer === 'cancel') {
+            expect(result.status).toBe('cancelled');
+            expect(request.signal.aborted).toBe(true);
+            expect(said(updates)).toEqual([]);
+          } else {
+            expect(result.status).toBe('completed');
+            expect(calls(updates).at(-1)?.status).toBe(
+              answer === 'deny' ? 'failed' : 'completed',
+            );
+            expect(said(updates)).toEqual([`Permission: ${answer}.`]);
+          }
+        } finally {
+          unsubscribe();
+        }
+      }),
+  );
+});

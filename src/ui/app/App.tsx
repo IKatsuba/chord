@@ -42,7 +42,7 @@ import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
 import { askedPermission } from '../dialogs/permission.ts';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import { placeholderBefore } from '../prompt/images.ts';
-import { mentionAt } from '../prompt/mentions.ts';
+import { matchFiles, mentionAt } from '../prompt/mentions.ts';
 import { planRowLimit } from '../plan/plan.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { type Cursor, endOf, promptRows } from '../prompt/prompt.ts';
@@ -90,6 +90,7 @@ import {
   changeSteps,
   emptyPasteSteps,
   type KeyContext,
+  awaitedSteps,
   keySteps,
   newerSteps,
   olderSteps,
@@ -101,6 +102,7 @@ import {
   answerLink,
   useEditor,
   useFiles,
+  useMatch,
   useImages,
   useNotify,
   useSelection,
@@ -202,6 +204,8 @@ export interface AppProps {
   resumedNote?: string | undefined;
   /** The files `@` offers; the working directory's, walked, by default. */
   files?: (cwd: string) => Promise<readonly string[]>;
+  /** How the files are matched against what follows `@`; fzf's, by default. */
+  match?: typeof matchFiles;
   /** How a bash-mode command runs; the user's shell, by default. */
   shell?: (command: string, options: ShellOptions) => ShellProcess;
   /**
@@ -327,6 +331,7 @@ export function App({
   resumedFront,
   resumedNote,
   files = listFiles,
+  match = matchFiles,
   shell = runShell,
   editor = editInEditor,
   clipboard = readClipboardImage,
@@ -544,6 +549,16 @@ export function App({
 
   useFiles(files, here.cwd, mentioning, dispatch);
 
+  const query = mentioning ? mentionAt(draft, cursor)?.query : undefined;
+
+  useMatch(
+    state.files,
+    query,
+    state.matched?.files === state.files && state.matched?.query === query,
+    dispatch,
+    match,
+  );
+
   // The names `/team show`, `run` and `stop` offer, read afresh each time
   // the draft comes to one, as a team file may be saved at any time.
   const namingTeam = teamQuery(draft)?.form;
@@ -707,6 +722,14 @@ export function App({
   const play = (steps: readonly Step[]) => steps.forEach(playOne);
 
   const submit = (value: string) => play(submitSteps(value, context()));
+
+  // Enter or Tab that waits for a match acts once it is back, or lets go
+  // once the mention it was pressed on has changed.
+  useEffect(() => {
+    if (state.awaitedPick !== undefined) {
+      play(awaitedSteps(context()));
+    }
+  });
 
   // A key of chord's that would also type is kept from the textarea.
   usePress((input, key) => {

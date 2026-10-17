@@ -409,6 +409,10 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'team_names_listed':
     case 'finder_moved':
     case 'finder_dismissed':
+    case 'files_matched':
+    case 'match_slow':
+    case 'pick_awaited':
+    case 'pick_settled':
     case 'draft_set':
     case 'bash_mode':
     case 'context_sent':

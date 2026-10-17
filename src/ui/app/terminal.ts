@@ -30,7 +30,9 @@ import {
   type PastedImage,
   takeImagePaths,
 } from '../prompt/images.ts';
+import { matchFiles } from '../prompt/mentions.ts';
 import { type Cursor, endOf, unholdable } from '../prompt/prompt.ts';
+import { SLOW_MATCH_MS } from '../prompt/state.ts';
 import { useApp, useStdout } from './renderer.tsx';
 import { type Copy, copies } from './selection.ts';
 import type { AppAction, AppState, WindowedAction } from './state.ts';
@@ -380,6 +382,59 @@ export function answerLink(
   conversation?.answer(wait.id, {
     action: answer === 'open' ? 'accept' : answer,
   });
+}
+
+/**
+ * Starts the match for `query` over `files`, off the key that typed it:
+ * its result comes back by dispatch unless what it returns, called first,
+ * says a newer query or files list took its place; the list says it is
+ * searching once it has run for `SLOW_MATCH_MS`.
+ */
+export function startMatch(
+  files: readonly string[],
+  query: string,
+  dispatch: Dispatch<WindowedAction>,
+  match: typeof matchFiles = matchFiles,
+): () => void {
+  let current = true;
+  const slow = setTimeout(
+    () => current && dispatch({ type: 'match_slow', query }),
+    SLOW_MATCH_MS,
+  );
+
+  void match(files, query).then((found) => {
+    clearTimeout(slow);
+
+    if (current && found !== undefined) {
+      dispatch({ type: 'files_matched', files, query, matched: found });
+    }
+  });
+
+  return () => {
+    current = false;
+
+    clearTimeout(slow);
+  };
+}
+
+/**
+ * The match for the query typed after an `@`, as `startMatch` runs it;
+ * none for an empty query, whose list needs none, or one already matched.
+ */
+export function useMatch(
+  files: readonly string[] | undefined,
+  query: string | undefined,
+  matched: boolean,
+  dispatch: Dispatch<WindowedAction>,
+  match: typeof matchFiles = matchFiles,
+): void {
+  useEffect(() => {
+    if (files === undefined || query === undefined || query === '' || matched) {
+      return;
+    }
+
+    return startMatch(files, query, dispatch, match);
+  }, [files, query, matched, dispatch, match]);
 }
 
 /**

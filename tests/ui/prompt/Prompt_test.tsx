@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { matchFiles } from '../../../src/ui/prompt/mentions.ts';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import stringWidth from 'string-width';
@@ -404,6 +405,43 @@ test('Enter in the finder adds the file rather than sending', () =>
     );
     expect(!window.frame().includes('⏺'), 'the prompt was sent').toBeTruthy();
   }));
+
+test("Enter before a path's match is back picks the file its whole query matches, not the last list's first", () => {
+  // The match for the whole path is held, so Enter comes while it runs.
+  let release: (found: readonly string[]) => void = () => {};
+
+  const held = (files: readonly string[], query: string) =>
+    query === 'mentions.ts'
+      ? new Promise<readonly string[]>((resolve) => {
+          release = resolve;
+        })
+      : matchFiles(files, query);
+
+  return withWindow(
+    async (window) => {
+      // docs/mentions.txt comes first for "mentions.t", and the "s" leaves it.
+      await files(window, 'docs/mentions.txt', 'src/ui/prompt/mentions.ts');
+      await window.type('@');
+      await window.shows('docs/mentions.txt');
+
+      for (const key of 'mentions.ts') {
+        await window.type(key);
+      }
+
+      await window.press('\r');
+      // Waiting: the list for "mentions.t" stays, nothing is picked yet.
+      expect(promptRow(window)).toContain('› @mentions.ts');
+      release(['src/ui/prompt/mentions.ts']);
+      await until(
+        'the path',
+        () =>
+          promptRow(window)?.includes('› @src/ui/prompt/mentions.ts') ?? false,
+      );
+      expect(!window.frame().includes('⏺'), 'the prompt was sent').toBeTruthy();
+    },
+    { match: held },
+  );
+});
 
 test('Esc puts the finder away and keeps what was typed', () =>
   withWindow(async (window) => {

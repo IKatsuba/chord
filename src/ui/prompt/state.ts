@@ -20,7 +20,7 @@ import {
   visibleRange,
 } from './commands.ts';
 import { imagesIn, type PastedImage } from './images.ts';
-import { matchFiles, type Mention, mentionAt } from './mentions.ts';
+import { firstFiles, type Mention, mentionAt } from './mentions.ts';
 import { type Cursor, START } from './prompt.ts';
 import type { Queued } from './queue.ts';
 import type { Search } from './search.ts';
@@ -68,7 +68,27 @@ export interface PromptWindow {
    */
   readonly files?: readonly string[];
   /** The `@` file finder's highlight and scroll, and whether Esc shut it. */
-  readonly finder: MenuState;
+  readonly finder: MenuState & {
+    /** ↑ or ↓ moved the highlight since the list on screen arrived. */
+    readonly moved?: true;
+  };
+  /**
+   * The last match that came back for the files walked: the query it was
+   * for and the files it found. It stays on screen while the next one runs.
+   */
+  readonly matched?: {
+    readonly files: readonly string[];
+    readonly query: string;
+    readonly matched: readonly string[];
+  };
+  /** The query whose match has run longer than `SLOW_MATCH_MS`. */
+  readonly matchSlow?: string;
+  /**
+   * Enter or Tab on an unmoved highlight while a match ran: the mention it
+   * was pressed on, picked from once that match comes back, if the draft's
+   * mention is still the same, and whether it was Enter.
+   */
+  readonly awaitedPick?: { readonly mention: Mention; readonly enter: boolean };
   /** The agents `/new` offers by name, as the window can start them. */
   readonly agents?: readonly CommandItem[];
   /**
@@ -147,6 +167,23 @@ export type PromptAction =
     }
   /** Esc puts the finder away, keeping the text, until the next edit. */
   | { readonly type: 'finder_dismissed' }
+  /** A match came back, for `query` over `files`, still the current one. */
+  | {
+      readonly type: 'files_matched';
+      readonly files: readonly string[];
+      readonly query: string;
+      readonly matched: readonly string[];
+    }
+  /** The match for `query` has run longer than `SLOW_MATCH_MS`. */
+  | { readonly type: 'match_slow'; readonly query: string }
+  /** Enter or Tab waits for the match running, to pick its first file. */
+  | {
+      readonly type: 'pick_awaited';
+      readonly mention: Mention;
+      readonly enter: boolean;
+    }
+  /** The awaited pick was made, or the mention changed under it. */
+  | { readonly type: 'pick_settled' }
   /** The draft was typed in; the list starts again from its first item. */
   | { readonly type: 'draft_edited' }
   /**
@@ -287,7 +324,43 @@ export function reducePrompt(
     case 'team_names_listed':
       return { ...state, teamNames: action.names };
     case 'finder_moved':
-      return { ...state, finder: moved(state.finder, action) };
+      return {
+        ...state,
+        finder: { ...moved(state.finder, action), moved: true },
+      };
+    case 'files_matched': {
+      if (action.files !== state.files) {
+        return state;
+      }
+
+      const { matchSlow, ...left } = state;
+
+      return {
+        ...left,
+        ...(matchSlow === undefined || matchSlow === action.query
+          ? {}
+          : { matchSlow }),
+        matched: {
+          files: action.files,
+          query: action.query,
+          matched: action.matched,
+        },
+        // The highlight goes to the first row of the list that came.
+        finder: { ...initialMenu, dismissed: state.finder.dismissed },
+      };
+    }
+    case 'match_slow':
+      return { ...state, matchSlow: action.query };
+    case 'pick_awaited':
+      return {
+        ...state,
+        awaitedPick: { mention: action.mention, enter: action.enter },
+      };
+    case 'pick_settled': {
+      const { awaitedPick: _, ...left } = state;
+
+      return left;
+    }
     case 'finder_dismissed':
       return state.finder.dismissed
         ? state
@@ -442,7 +515,17 @@ export interface FileFinder {
   readonly highlighted: number;
   /** The first file shown, when there are more than fit. */
   readonly top: number;
+  /**
+   * The mention's own match has not come back yet: `files` are the last
+   * match's, kept on screen meanwhile.
+   */
+  readonly pending: boolean;
+  /** It has run longer than `SLOW_MATCH_MS`, which the list says. */
+  readonly searching: boolean;
 }
+
+/** How long a match runs before the list says it is searching. */
+export const SLOW_MATCH_MS = 150;
 
 /**
  * The `@` file finder the draft opens: the cursor at the end of an `@` and
@@ -469,16 +552,30 @@ export function fileFinder(
     return undefined;
   }
 
-  const files = matchFiles(state.files, mention.query);
+  // An empty query shows the walk's first files at once, matching nothing;
+  // any other waits for its match, the last one's list kept meanwhile.
+  const current =
+    state.matched?.files === state.files ? state.matched : undefined;
+  const pending = mention.query !== '' && current?.query !== mention.query;
+  const files =
+    mention.query === ''
+      ? firstFiles(state.files)
+      : (current?.matched ?? firstFiles(state.files));
+  const searching = pending && state.matchSlow === mention.query;
 
-  if (files.length === 0) {
+  if (files.length === 0 && !searching) {
     return undefined;
   }
 
   return {
     mention,
     files,
-    highlighted: Math.min(state.finder.highlighted, files.length - 1),
+    highlighted: Math.min(
+      state.finder.highlighted,
+      Math.max(files.length - 1, 0),
+    ),
     top: state.finder.top,
+    pending,
+    searching,
   };
 }

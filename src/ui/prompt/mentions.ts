@@ -3,7 +3,7 @@
  * it matches, and what picking one does to the draft. The window walks the
  * files, draws the list and dispatches; nothing here touches a terminal.
  */
-import { byLengthAsc, Fzf } from 'fzf';
+import { AsyncFzf, byLengthAsc } from 'fzf';
 import type { Cursor } from './prompt.ts';
 
 /** An `@` and the path typed after it, up to the cursor. */
@@ -42,51 +42,54 @@ export function mentionAt(
  */
 const MATCH_LIMIT = 100;
 
+/** The files an empty query shows: the walk's first, in its order. */
+export function firstFiles(files: readonly string[]): readonly string[] {
+  return files.slice(0, MATCH_LIMIT);
+}
+
 /**
- * The last files list matched, the Fzf built over it and the last query's
- * result. Every key typed after an `@` asks for the same match several
- * times, and on a large tree each build and each scoring blocks the window.
+ * The AsyncFzf built over the last files list. fzf's own async finder
+ * scores in chunks and yields between them, so a key typed after an `@`
+ * on a large tree never blocks the window; a newer find cancels the one
+ * still running.
  */
-let last:
+let finder:
   | {
       readonly files: readonly string[];
-      readonly fzf: Fzf<readonly string[]> | undefined;
-      readonly query: string;
-      readonly matched: readonly string[];
+      readonly fzf: AsyncFzf<readonly string[]>;
     }
   | undefined;
 
 /**
  * The files `query` matches, best first, by fzf's scoring: the letters in
  * order anywhere in the path, the shorter path first on a tie, whatever the
- * case. The files in their order for an empty query. The same files array
- * and query give back the same result without scoring again.
+ * case. None when a newer match cancelled this one before it finished.
  */
-export function matchFiles(
+export async function matchFiles(
   files: readonly string[],
   query: string,
-): readonly string[] {
-  if (last?.files === files && last.query === query) {
-    return last.matched;
+): Promise<readonly string[] | undefined> {
+  if (finder?.files !== files) {
+    finder = {
+      files,
+      fzf: new AsyncFzf(files, {
+        casing: 'case-insensitive',
+        limit: MATCH_LIMIT,
+        tiebreakers: [byLengthAsc],
+      }),
+    };
   }
 
-  let fzf = last?.files === files ? last.fzf : undefined;
-  let matched: readonly string[];
+  try {
+    return (await finder.fzf.find(query)).map(({ item }) => item);
+  } catch (error) {
+    // AsyncFzf rejects the find a newer one took the place of.
+    if (error === 'search cancelled') {
+      return undefined;
+    }
 
-  if (query === '') {
-    matched = files.slice(0, MATCH_LIMIT);
-  } else {
-    fzf ??= new Fzf(files, {
-      casing: 'case-insensitive',
-      limit: MATCH_LIMIT,
-      tiebreakers: [byLengthAsc],
-    });
-    matched = fzf.find(query).map(({ item }) => item);
+    throw error;
   }
-
-  last = { files, fzf, query, matched };
-
-  return matched;
 }
 
 /**

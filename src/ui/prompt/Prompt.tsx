@@ -624,7 +624,7 @@ export function FileList({
   finder: FileFinder;
   rows: number;
 }) {
-  const { files, highlighted } = finder;
+  const { files, highlighted, searching } = finder;
   const { permission } = useColours();
   const { start, end } = visibleRange(
     files.length,
@@ -632,10 +632,15 @@ export function FileList({
     rows,
     finder.top,
   );
+  // A match running long says so in the list's last row, not one more.
+  const shown = files.slice(
+    start,
+    searching && end - start >= rows ? end - 1 : end,
+  );
 
   return (
     <box paddingX={PANEL_PADDING} flexShrink={0}>
-      {files.slice(start, end).map((path, index) => (
+      {shown.map((path, index) => (
         <text
           key={path}
           {...CUT}
@@ -646,6 +651,11 @@ export function FileList({
           {path}
         </text>
       ))}
+      {searching && (
+        <text {...CUT} attributes={DIM}>
+          searching…
+        </text>
+      )}
     </box>
   );
 }

@@ -6,12 +6,15 @@
 import { describe, expect, setSystemTime, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CHILD_MESSAGES,
   CRASH_WORDS,
   DOCS_MESSAGE,
+  GATE,
+  GATE_RELEASE,
   HELD_AGAIN,
   HELD_MESSAGE,
   MAIN_MESSAGES,
@@ -327,21 +330,27 @@ test("a message held behind the child's running call waits in its queue until it
     await withWindow(
       async (window) => {
         await ready(window);
-        await send(window, 'agentcall');
+        // The child's call stays open until the test releases it.
+        await send(window, 'agentcallgated');
         await window.shows('Open(parser)');
         await window.press(DOWN);
         await window.press(DOWN);
         await window.shows('╭─ parser ─');
         await window.shows(
+          `← from @main · after the running calls: ${HELD_AGAIN}`,
+        );
+        expect(window.frame()).toContain(
           `← from @main · after the running calls: ${HELD_MESSAGE}`,
         );
         // Not in the turn yet: its call still runs.
         expect(window.frame()).toContain('Running…');
+        await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
         await window.shows('The tests pass.');
 
         const frame = window.frame();
 
         expect(frame).toContain(`← from @main\n   ⎿  ${HELD_MESSAGE}`);
+        expect(frame).toContain(`← from @main\n   ⎿  ${HELD_AGAIN}`);
         expect(frame).not.toContain('after the running calls');
       },
       {

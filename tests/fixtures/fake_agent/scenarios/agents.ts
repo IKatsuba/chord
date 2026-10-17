@@ -7,9 +7,12 @@
  * never opened, and sessions that open one on a long instruction, or whose
  * first turn starts a task agent, or whose agent exits or turn fails in it.
  */
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import process from 'node:process';
 import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
+import { cwds } from '../sessions.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
@@ -53,6 +56,24 @@ export const LONG_INSTRUCTION = [
   '',
   'Tell me only what failed, if anything.',
 ].join('\n');
+
+/**
+ * The directory, in a session's own, where `callchildgated` and
+ * `agentcallgated` meet a test: `GATE_OPEN` is written once the child's
+ * call is open, and the call ends only once the test writes `GATE_RELEASE`.
+ */
+export const GATE = '.fake-gate';
+export const GATE_OPEN = 'open';
+export const GATE_RELEASE = 'release';
+
+/** Until `file` is in the gate of `turn`'s session, or the turn is stopped. */
+async function gated(turn: Turn, file: string): Promise<void> {
+  const at = join(cwds.get(turn.sessionId) ?? '.', GATE, file);
+
+  while (!existsSync(at) && !turn.signal.aborted) {
+    await pause(turn.signal, STEP_MS * 2);
+  }
+}
 
 /** What `agentcall` tells `parser` while its call is open. */
 export const HELD_MESSAGE = 'Then the docs, once the tests pass.';
@@ -219,12 +240,14 @@ async function sendProse(
 }
 
 /**
- * Opens `parser` on `callchild` and, a moment into its call, tells it each
- * of `texts` in turn, so each is told while that call is open.
+ * Opens `parser` on `child` and, a moment into its call, or once a gated
+ * child says it is open, tells it each of `texts` in turn, so each is told
+ * while that call is open.
  */
 async function tellParserDuringCall(
   turn: Turn,
   texts: readonly string[],
+  child = 'callchild',
 ): Promise<'end_turn'> {
   const client = await chordClient(turn);
 
@@ -237,9 +260,15 @@ async function tellParserDuringCall(
   try {
     await callChord(turn, client, 'open_agent', {
       ...PARSER_ARGS,
-      prompt: 'callchild',
+      prompt: child,
     });
-    await pause(turn.signal, AGENT_STEP_MS * 2);
+
+    // The gated child says when its call is open; the other is given a moment.
+    if (child === 'callchildgated') {
+      await gated(turn, GATE_OPEN);
+    } else {
+      await pause(turn.signal, AGENT_STEP_MS * 2);
+    }
 
     for (const text of texts) {
       await callChord(turn, client, 'send_message', { to: 'parser', text });
@@ -409,6 +438,44 @@ export const AGENTS = {
   // Opens `parser` on `callchild` and, while its call is open, tells it
   // `HELD_MESSAGE`, which a steering adapter that cuts calls holds.
   agentcall: (turn) => tellParserDuringCall(turn, [HELD_MESSAGE]),
+
+  // As `agentcalltwice`, gated for a test: `parser` plays
+  // `callchildgated`, and both messages are told only once its call is
+  // open, which then stays open until the test releases it.
+  agentcallgated: (turn) =>
+    tellParserDuringCall(turn, [HELD_MESSAGE, HELD_AGAIN], 'callchildgated'),
+
+  // One call open from the turn's start, `GATE_OPEN` written in the gate
+  // once it is, until `GATE_RELEASE` is there, then the answer.
+  async callchildgated(turn) {
+    const toolCallId = turn.callId('execute');
+    const gate = join(cwds.get(turn.sessionId) ?? '.', GATE);
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: '`deno task test`',
+      kind: 'execute',
+      status: 'in_progress',
+    });
+    mkdirSync(gate, { recursive: true });
+    writeFileSync(join(gate, GATE_OPEN), '');
+    await gated(turn, GATE_RELEASE);
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'completed',
+      content: [
+        {
+          type: 'content',
+          content: { type: 'text', text: '214 passed, 0 failed' },
+        },
+      ],
+    });
+    await turn.say('The tests pass.');
+
+    return 'end_turn';
+  },
 
   // The same with `HELD_AGAIN` after it, both told during that one call.
   agentcalltwice: (turn) =>

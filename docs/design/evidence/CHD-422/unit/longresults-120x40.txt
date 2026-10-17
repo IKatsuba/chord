@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.vs3Cr57wAz
+ ▀▀     ? for shortcuts · /help
+
+ › longresults
+
+ ⏺ notes - export_notes (MCP)
+   ⎿  {"status":"completed","result":"# Long MCP result\n\nEvery note in the vault, exported with its tags, its links
+      and the date it was last changed, so the agent can read them without opening each file.\n\nEnd of the long
+      result.","logs":[]}
+
+ ⏺ Bash(bun dev compile --all)
+   ⎿  Building chord for darwin-arm64, linux-x64, linux-arm64, windows-x64 and darwin-x64 with bun build --compile,
+      the native library embedded for each target, and the binaries laid out under dist/.
+      Done.
+
+ ⏺ Edit(src/greeting.ts)
+   ⎿  Updated src/greeting.ts with 2 additions and 1 removal
+      1 - export const greeting = 'Hello';
+      1 + export const greeting = 'Hello, and welcome to chord, the terminal ' +
+      2 +   'client for coding agents that speak the Agent Client Protocol, ' + 'run from source';
+
+ ⏺ Run(deno task test)
+   ⎿  error: tests/parse/tokenize_test.ts:42 expected the closing quote of a string at the end of a line to be kept,
+      but the token ended one character early and the quote was read as the start of the next one
+      Exit code 1
+
+ ⏺ Four long results.
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

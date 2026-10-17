@@ -246,6 +246,9 @@ test("a child's agent that exits tells the parent with a message from chord, its
     // The message starts the parent's turn, as every message does.
     await window.shows('Received the message from chord.');
     expect(count(window, '← from chord')).toStrictEqual(1);
+    // Behind, its row and the status line say the agent went, not its turn.
+    expect(window.frame()).toMatch(/ {4}parser {2}fake.* {2}✗ exited$/m);
+    await window.shows('✗ parser exited · ctrl+x a to go');
   }));
 
 test("a child's turn that fails tells the parent, and the child stays open", () =>
@@ -258,6 +261,19 @@ test("a child's turn that fails tells the parent, and the child stays open", () 
     );
     await window.shows('Received the message from chord.');
     expect(window.frame()).toContain('    parser  fake');
+    // Behind, its row says its turn failed and since when, not that it is
+    // gone, and so does the status line.
+    expect(window.frame()).toMatch(
+      / {4}parser {2}fake.* {2}✗ turn failed \d+s ago$/m,
+    );
+    await window.shows("✗ parser's turn failed · ctrl+x a to go");
+    // Once looked at, the failed turn clears, and parser reads open and idle.
+    await leader(window, 'a');
+    await window.shows('╭─ parser ');
+    await until(
+      'the failed turn cleared',
+      () => !window.frame().includes('turn failed'),
+    );
   }));
 
 /** How many `closed` lines the records in `dir`'s state hold. */

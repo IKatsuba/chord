@@ -1,0 +1,40 @@
+      кода, запуск проверок или работу с файлами: оно предназначено только для проверки доставки и отображения
+      большого объёма текста.
+
+      Представим небольшую обсерваторию на вершине холма. Каждое утро смотритель открывает деревянные ставни,
+      проверяет журнал наблюдений и ставит чайник на старую плиту. За окном медленно расходится туман, на дорожке
+      появляются первые солнечные пятна, а в саду перекликаются птицы.
+
+ → to @parser · queued
+   ⎿  The printer is fixed, and every case in tests/parse/printer_test.ts passes now. The tokenizer still drops
+      a closing quote when a string ends the line, so I left a failing case for it beside the others and wrote down
+      what I found in the notes, with the input that shows it and the line in src/parse/tokenize.ts where the quote
+      is lost.
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Это длинное тестовое сообщение для проверки передачи текста между агентами. В нём нет задания на изменение
+      кода, запуск проверок или работу с файлами: оно предназначено только для проверки доставки и отображения
+      большого объёма текста.
+
+      Представим небольшую обсерваторию на вершине холма. Каждое утро смотритель открывает деревянные ставни,
+      проверяет журнал наблюдений и ставит чайник на старую плиту. За окном медленно расходится туман, на дорожке
+      появляются первые солнечные пятна, а в саду перекликаются птицы.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  The printer is fixed, and every case in tests/parse/printer_test.ts passes now. The tokenizer still drops
+      a closing quote when a string ends the line, so I left a failing case for it beside the others and wrote down
+      what I found in the notes, with the input that shows it and the line in src/parse/tokenize.ts where the quote
+      is lost.
+
+ ⏺ Received the message from parser · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main    fake · Fake Large with a 1M context window · medium
+    parser  fake · Fake Small · medium                           ✓ replied 5s ago

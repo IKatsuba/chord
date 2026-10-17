@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.1hgWMqO7Ir
+ ▀▀     ? for shortcuts · /help
+
+ › agentsendrefused
+
+ → to @parser
+   ⎿  CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:
+
+      1. The fold counts the blank line after the list; drop it, as
+        foldMessage already does for a received message.
+      2. foldMessage runs on every render; keep its lines in the same useMemo
+        as the markdown.
+      3. The hint names ctrl+o even when the person has rebound it; take
+        the key from useHintKey.
+      4. The refusal goes after the body, in the error colour, never folded.
+
+ ── ↓ 5 lines below · end to jump to the bottom ───────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

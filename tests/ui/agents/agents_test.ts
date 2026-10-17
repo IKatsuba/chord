@@ -1,7 +1,6 @@
 import { expect, test } from 'bun:test';
 import { emptyWatch } from '../../../src/notify.ts';
 import type { TabWait } from '../../../src/session/tabs.ts';
-import type { RunningMonitor } from '../../../src/session/monitors.ts';
 import {
   type AgentRow,
   agentsHint,
@@ -10,16 +9,17 @@ import {
   agentState,
   childLine,
   leftOpenLine,
-  type ListRow,
   listRows,
   listTimed,
-  monitorHint,
   moveListFocus,
-  stopFocused,
+  summaryHint,
   teamRows,
 } from '../../../src/ui/agents/agents.ts';
 
 const NOW = 100_000;
+
+/** No summary line under the agents. */
+const NO_SUMMARY = { summary: false, onSummary: false };
 
 function row(
   name: string,
@@ -41,7 +41,7 @@ function row(
 
 /** The rows as the list draws them, without the colours. */
 function drawn(
-  rows: readonly ListRow[],
+  rows: readonly AgentRow[],
   { limit = 4, width = 116, focused = false } = {},
 ): string[] {
   const layout = agentsLayout(rows, { limit, width, focused, now: NOW });
@@ -49,9 +49,7 @@ function drawn(
   return [
     ...layout.rows.map((laid) =>
       `${laid.mark}${laid.branch ?? ''}${laid.name}  ${laid.detail}${
-        laid.state === undefined
-          ? ''
-          : `  ${laid.state.text}${laid.state.owner?.text ?? ''}`
+        laid.state === undefined ? '' : `  ${laid.state.text}`
       }`.trimEnd(),
     ),
     ...(layout.more > 0 ? [`  … +${layout.more} more`] : []),
@@ -280,219 +278,44 @@ test("the closing note counts each team run as one item, with its agents, and na
   );
 });
 
-/** A running monitor, `minutes` old, with `events` delivered. */
-function monitor(
-  id: string,
-  description: string,
-  command: string,
-  minutes: number,
-  events: number,
-): RunningMonitor {
-  return {
-    id,
-    description,
-    command,
-    startedAt: NOW - minutes * 60_000,
-    timeoutMs: 600_000,
-    events,
-  };
-}
+test('↑ ↓ move the ❯ through the agents on to the summary line, its last stop; with no agents it is the one stop', () => {
+  const rows = listRows([MAIN, PARSER]);
+  const on = { summary: true, onSummary: true };
+  const off = { summary: true, onSummary: false };
 
-const ERRORS = monitor(
-  'm1',
-  'dev server errors',
-  'tail -f dev.log | grep --line-buffered -E "ERROR|WARN"',
-  6,
-  3,
-);
-const CI = monitor(
-  'm2',
-  'CI run 4812',
-  'gh run watch 4812 --exit-status --compact',
-  1,
-  0,
-);
-
-test("monitors follow the agents, each its description, $ command and how long it ran, as CHD-243's mocks draw them", () => {
-  const rows = listRows(
-    [],
-    [
-      { key: 1, monitor: ERRORS },
-      { key: 1, monitor: CI },
-    ],
-    undefined,
-  );
-
-  expect(drawn(rows, { width: 116 })).toStrictEqual([
-    '  dev server errors  $ tail -f dev.log | grep --line-buffered -E "ERROR|WARN"  running 6m · 3 events',
-    '  CI run 4812        $ gh run watch 4812 --exit-status --compact               running 1m · no events',
-  ]);
-  // At 80 columns the commands are cut, and nothing else is.
-  expect(drawn(rows, { width: 76 })).toStrictEqual([
-    '  dev server errors  $ tail -f dev.log | grep --lin…  running 6m · 3 events',
-    '  CI run 4812        $ gh run watch 4812 --exit-sta…  running 1m · no events',
-  ]);
-  // Narrower, the time goes before the command is cut below $ and twelve.
-  expect(drawn(rows, { width: 50 })).toStrictEqual([
-    '  dev server errors  $ tail -f dev.log…  3 events',
-    '  CI run 4812        $ gh run watch 48…  no events',
-  ]);
-});
-
-test("a child's monitor ends with its name, and shares the columns with the agents", () => {
-  const PARSER_TESTS = monitor(
-    'm1',
-    'parser tests',
-    'deno test --watch=src/parse tests/parse',
-    2,
-    1,
-  );
-  const rows = listRows(
-    [MAIN, { ...PARSER, model: undefined }],
-    [
-      { key: 1, monitor: ERRORS },
-      {
-        key: 2,
-        owner: { name: 'parser', colour: 0 },
-        monitor: PARSER_TESTS,
-      },
-    ],
-    undefined,
-  );
-
-  expect(drawn(rows, { width: 76 })).toStrictEqual([
-    '  main               claude · Opus',
-    '  parser             codex                     ✻ working 41s',
-    '  dev server errors  $ tail -f dev.log | gre…  running 6m · 3 events',
-    '  parser tests       $ deno test --watch=src…  running 2m · 1 event · parser',
-  ]);
-});
-
-test('monitors run in the order they started, whichever agent started them', () => {
-  const rows = listRows(
-    [],
-    [
-      { key: 1, monitor: ERRORS },
-      { key: 2, owner: { name: 'parser', colour: 0 }, monitor: CI },
-    ],
-    undefined,
-  );
-
-  expect(rows.map((row) => ('id' in row ? row.id : ''))).toStrictEqual([
-    'm1',
-    'm2',
-  ]);
+  expect(moveListFocus(rows, 1, off)).toStrictEqual({ kind: 'agent', key: 6 });
+  expect(moveListFocus(rows, 2, off)).toStrictEqual({ kind: 'summary' });
+  // The last stays the last.
+  expect(moveListFocus(rows, 1, on)).toStrictEqual({ kind: 'summary' });
+  // ↑ from it goes back to the last agent row.
+  expect(moveListFocus(rows, -1, on)).toStrictEqual({ kind: 'agent', key: 6 });
+  // No summary line drawn: the agents alone, the last staying the last.
   expect(
-    listRows(
-      [],
-      [
-        { key: 1, monitor: CI },
-        { key: 1, monitor: ERRORS },
-      ],
-      undefined,
-    ).map((row) => ('id' in row ? row.id : '')),
-  ).toStrictEqual(['m1', 'm2']);
-});
-
-test('the ❯ is on the monitor focused, else the agent picked, else the first monitor', () => {
-  const both = (focus?: { key: number; id: string }) =>
-    drawn(
-      listRows(
-        [MAIN, PARSER],
-        [
-          { key: 1, monitor: ERRORS },
-          { key: 1, monitor: CI },
-        ],
-        focus,
-      ),
-      { focused: true },
-    )
-      .map((line) => line.slice(0, 2))
-      .join('');
-
-  expect(both()).toStrictEqual('❯       ');
-  expect(both({ key: 1, id: 'm2' })).toStrictEqual('      ❯ ');
-  // A focused monitor that has ended leaves the ❯ to the agent picked.
-  expect(both({ key: 1, id: 'm9' })).toStrictEqual('❯       ');
-
-  const alone = drawn(listRows([], [{ key: 1, monitor: ERRORS }], undefined), {
-    focused: true,
-  });
-
-  expect(alone[0]!.slice(0, 2)).toStrictEqual('❯ ');
-});
-
-test('↑ ↓ move the ❯ through agents and monitors; an agent is picked, a monitor only focused', () => {
-  const rows = (focus?: { key: number; id: string }) =>
-    listRows(
-      [MAIN, PARSER],
-      [
-        { key: 1, monitor: ERRORS },
-        { key: 1, monitor: CI },
-      ],
-      focus,
-    );
-
-  expect(moveListFocus(rows(), 1)).toStrictEqual({ kind: 'agent', key: 6 });
-  expect(moveListFocus(rows(), 2)).toStrictEqual({
-    kind: 'monitor',
-    key: 1,
-    id: 'm1',
-  });
-  expect(moveListFocus(rows({ key: 1, id: 'm2' }), 1)).toStrictEqual({
-    kind: 'monitor',
-    key: 1,
-    id: 'm2',
-  });
-  expect(moveListFocus(rows({ key: 1, id: 'm1' }), -1)).toStrictEqual({
-    kind: 'agent',
-    key: 6,
-  });
+    moveListFocus(rows, 2, { summary: false, onSummary: false }),
+  ).toStrictEqual({ kind: 'agent', key: 6 });
   // Above the first row, the keys go back to the box.
-  expect(moveListFocus(rows(), -1)).toStrictEqual(undefined);
+  expect(moveListFocus(rows, -1, off)).toStrictEqual(undefined);
+  expect(moveListFocus([], 1, off)).toStrictEqual({ kind: 'summary' });
+  expect(moveListFocus([], -1, off)).toStrictEqual(undefined);
   expect(
-    moveListFocus(listRows([], [{ key: 1, monitor: ERRORS }], undefined), -1),
+    moveListFocus([], 1, { summary: false, onSummary: false }),
   ).toStrictEqual(undefined);
 });
 
-test('x stops the focused monitor and the ❯ goes to the row above, or the new first row, or the box', () => {
-  const monitors = [
-    { key: 1, monitor: ERRORS },
-    { key: 1, monitor: CI },
-  ];
+test('the ❯ leaves the agent rows while the summary line has it, the agent staying picked', () => {
+  const rows = listRows([MAIN, PARSER]);
 
+  expect(drawn(rows, { focused: true })[0]!.slice(0, 2)).toStrictEqual('❯ ');
   expect(
-    stopFocused(listRows([MAIN, PARSER], monitors, undefined)),
-  ).toStrictEqual(undefined);
-  expect(
-    stopFocused(listRows([MAIN, PARSER], monitors, { key: 1, id: 'm1' })),
-  ).toStrictEqual({
-    stop: { key: 1, id: 'm1' },
-    then: { kind: 'agent', key: 6 },
-  });
-  expect(
-    stopFocused(listRows([], monitors, { key: 1, id: 'm2' })),
-  ).toStrictEqual({
-    stop: { key: 1, id: 'm2' },
-    then: { kind: 'monitor', key: 1, id: 'm1' },
-  });
-  expect(
-    stopFocused(listRows([], monitors, { key: 1, id: 'm1' })),
-  ).toStrictEqual({
-    stop: { key: 1, id: 'm1' },
-    then: { kind: 'monitor', key: 1, id: 'm2' },
-  });
-  expect(stopFocused(listRows([], [monitors[0]!], undefined))).toStrictEqual({
-    stop: { key: 1, id: 'm1' },
-  });
+    drawn(rows, { focused: false }).map((line) => line.slice(0, 2)),
+  ).toStrictEqual(['  ', '  ']);
 });
 
-test("a monitor's row has its own hint: it is stopped, not written to", () => {
-  expect(monitorHint(116, 'x')).toStrictEqual(
-    '↑ ↓ to pick · x to stop it · enter esc to go back',
+test("the summary line's hint says it opens, shorter at 80 columns", () => {
+  expect(summaryHint(116)).toStrictEqual(
+    '↑ ↓ to move · enter to open · esc to go back',
   );
-  expect(monitorHint(76, 'x')).toStrictEqual('↑ ↓ pick · x stop · esc back');
-  expect(monitorHint(56, undefined)).toStrictEqual('↑ ↓ pick · esc back');
+  expect(summaryHint(76)).toStrictEqual('↑ ↓ move · enter open · esc back');
 });
 
 /**
@@ -529,22 +352,18 @@ function team(picked = 'main'): AgentRow[] {
 }
 
 test("a team's members nest under its lead with CHD-149's branches, as 120-4-team-list.txt draws them", () => {
-  expect(drawn(listRows(team(), [], undefined, 6), { limit: 6 })).toStrictEqual(
-    [
-      '  main         claude · Opus',
-      '  bugfix       team · claude · Opus   ✓ replied 40s ago',
-      '  ├─ tester    claude · Sonnet        ● permission 12s',
-      '  ├─ coder     codex · gpt-5.3-codex',
-      '  └─ reviewer  claude · Opus          ✓ replied 1m ago',
-      '  parser       codex · gpt-5.3-codex  ✻ working 9s',
-    ],
-  );
+  expect(drawn(listRows(team(), 6), { limit: 6 })).toStrictEqual([
+    '  main         claude · Opus',
+    '  bugfix       team · claude · Opus   ✓ replied 40s ago',
+    '  ├─ tester    claude · Sonnet        ● permission 12s',
+    '  ├─ coder     codex · gpt-5.3-codex',
+    '  └─ reviewer  claude · Opus          ✓ replied 1m ago',
+    '  parser       codex · gpt-5.3-codex  ✻ working 9s',
+  ]);
 });
 
 test('a list that does not fit folds each team to its lead, its size and its most urgent state naming the member', () => {
-  expect(
-    drawn(listRows(team(), [], undefined, 4), { limit: 4, width: 76 }),
-  ).toStrictEqual([
+  expect(drawn(listRows(team(), 4), { limit: 4, width: 76 })).toStrictEqual([
     '  main         claude · Opus',
     '  bugfix       team · claude · 4 agents  ● tester: permission 12s',
     '  parser       codex · gpt-5.3-codex     ✻ working 9s',
@@ -559,22 +378,15 @@ test('a list that does not fit folds each team to its lead, its size and its mos
   );
 
   expect(
-    drawn(listRows(long, [], undefined, 4), { limit: 4, width: 76 }).slice(
-      0,
-      2,
-    ),
+    drawn(listRows(long, 4), { limit: 4, width: 76 }).slice(0, 2),
   ).toStrictEqual([
     '  main         claude',
     '  bugfix       team · claude · 4 agents  ● tester: permission 12s',
   ]);
-  // A monitor counts towards the limit, so the list folds for one too.
-  expect(
-    listRows(team(), [{ key: 1, monitor: ERRORS }], undefined, 6).length,
-  ).toStrictEqual(4);
 });
 
 test('the team the pick is in unfolds, and the list scrolls to it while it has the keys', () => {
-  const rows = (picked: string) => listRows(team(picked), [], undefined, 4);
+  const rows = (picked: string) => listRows(team(picked), 4);
 
   expect(
     drawn(rows('bugfix'), { limit: 4, width: 76, focused: true }),
@@ -585,19 +397,24 @@ test('the team the pick is in unfolds, and the list scrolls to it while it has t
     '  … +3 more',
   ]);
   // ctrl+x a picks tester without the list having the keys: still unfolded.
-  expect(
-    rows('tester').map((each) => ('name' in each ? each.name : each.id)),
-  ).toStrictEqual(['main', 'bugfix', 'tester', 'coder', 'reviewer', 'parser']);
+  expect(rows('tester').map((each) => each.name)).toStrictEqual([
+    'main',
+    'bugfix',
+    'tester',
+    'coder',
+    'reviewer',
+    'parser',
+  ]);
   // ↑ ↓ walk the rows as drawn: onto a folded lead, then into its members.
-  expect(moveListFocus(rows('parser'), -1)).toStrictEqual({
+  expect(moveListFocus(rows('parser'), -1, NO_SUMMARY)).toStrictEqual({
     kind: 'agent',
     key: 2,
   });
-  expect(moveListFocus(rows('bugfix'), 1)).toStrictEqual({
+  expect(moveListFocus(rows('bugfix'), 1, NO_SUMMARY)).toStrictEqual({
     kind: 'agent',
     key: 3,
   });
-  expect(moveListFocus(rows('reviewer'), 1)).toStrictEqual({
+  expect(moveListFocus(rows('reviewer'), 1, NO_SUMMARY)).toStrictEqual({
     kind: 'agent',
     key: 6,
   });
@@ -635,8 +452,6 @@ test('two runs fold one by one, each with its own state', () => {
         ...each,
         picked: each.key === (picked ?? 1),
       })),
-      [],
-      undefined,
       6,
     );
 
@@ -679,7 +494,7 @@ test("a folded member's time keeps the list ticking while its lead is idle and s
   const idle = team().map((each) =>
     each.name === 'tester' ? each : { ...each, wait: { watch: emptyWatch } },
   );
-  const rows = listRows(idle, [], undefined, 4);
+  const rows = listRows(idle, 4);
 
   expect(rows.length).toStrictEqual(3);
   expect(listTimed(rows)).toStrictEqual(true);
@@ -687,8 +502,6 @@ test("a folded member's time keeps the list ticking while its lead is idle and s
     listTimed(
       listRows(
         idle.map((each) => ({ ...each, wait: { watch: emptyWatch } })),
-        [],
-        undefined,
         4,
       ),
     ),

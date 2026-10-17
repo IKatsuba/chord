@@ -5,11 +5,10 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { agentColour, type Palette } from '../theme/theme.ts';
 import {
+  type AgentRow,
   agentsLayout,
   type AgentTone,
   childLine,
-  isMonitorRow,
-  type ListRow,
   listTimed,
 } from './agents.ts';
 
@@ -21,7 +20,7 @@ let clockTimer: ReturnType<typeof setInterval> | undefined;
  * a time while either is drawn, and one timer for both, so the ages on
  * screen move together.
  */
-function useAgentsClock(on: boolean): number {
+export function useAgentsClock(on: boolean): number {
   const [now, setNow] = useState(Date.now);
 
   useEffect(() => {
@@ -56,15 +55,18 @@ function useAgentsClock(on: boolean): number {
   return now;
 }
 
-function toneColour(tone: AgentTone, colours: Palette): string | undefined {
+export function toneColour(
+  tone: AgentTone,
+  colours: Palette,
+): string | undefined {
   return tone === 'dim' ? undefined : colours[tone];
 }
 
 /**
  * The session's agents under the status line, the last rows of the window:
  * `main`, then each long-lived child, drawn only while there is a child,
- * a team's members under its lead, then the monitors they run. The list takes no keys itself; the window
- * routes them.
+ * a team's members under its lead. The list takes no keys itself; the
+ * window routes them.
  */
 export function AgentsList({
   rows,
@@ -72,7 +74,7 @@ export function AgentsList({
   width,
   focused,
 }: {
-  rows: readonly ListRow[];
+  rows: readonly AgentRow[];
   limit: number;
   /** Cells inside the list's padding. */
   width: number;
@@ -92,22 +94,15 @@ export function AgentsList({
     <box paddingX={2} flexShrink={0}>
       {layout.rows.map((laid) => {
         const { row } = laid;
-        const monitor = isMonitorRow(row);
-        const colour = agentColour(
-          colours,
-          monitor ? row.owner?.colour : row.colour,
-        );
-        const owner = laid.state?.owner;
+        const colour = agentColour(colours, row.colour);
 
         return (
-          <text key={monitor ? `${row.key}:${row.id}` : row.key} {...CUT}>
+          <text key={row.key} {...CUT}>
             <span {...fg(colours.permission)}>{laid.mark}</span>
             {laid.branch && <span attributes={DIM}>{laid.branch}</span>}
             <span
               {...fg(colour)}
-              attributes={
-                (monitor ? row.focused : row.picked) ? TextAttributes.BOLD : 0
-              }
+              attributes={row.picked ? TextAttributes.BOLD : 0}
             >
               <Ansi text={laid.name} />
             </span>
@@ -120,11 +115,6 @@ export function AgentsList({
                 attributes={laid.state.tone === 'dim' ? DIM : 0}
               >
                 {`  ${laid.state.text}`}
-              </span>
-            )}
-            {owner && (
-              <span {...fg(agentColour(colours, owner.colour))}>
-                {owner.text}
               </span>
             )}
           </text>

@@ -121,12 +121,18 @@ import {
 import {
   type AgentRow,
   agentState,
-  type ListRow,
   listRows,
   type ListTarget,
   moveListFocus,
-  stopFocused,
 } from '../agents/agents.ts';
+import {
+  type BackgroundAgent,
+  type BackgroundItem,
+  backgroundItems,
+  callPlace,
+  type ItemOwner,
+} from '../background/background.ts';
+import { focusedItem, moveViewFocus } from '../background/view.ts';
 import { stripLayout, tabGlyph } from './strip.ts';
 import {
   headlineText,
@@ -1551,12 +1557,17 @@ export function useSessions(
    * and the box following; above `main` the focus goes back to the box.
    */
   const moveAgent = (by: number, limit: number) => {
-    focusOn(moveListFocus(listed(limit), by));
+    focusOn(
+      moveListFocus(listed(limit), by, {
+        summary: background().length > 0,
+        onSummary: state.summaryFocus === true,
+      }),
+    );
   };
 
   /**
    * The `❯` onto `target`: an agent's row picks it, the transcript and the
-   * box following; a monitor's row picks nothing; none hands the keys back
+   * box following; the summary line picks nothing; none hands the keys back
    * to the box.
    */
   const focusOn = (target: ListTarget | undefined) => {
@@ -1566,34 +1577,78 @@ export function useSessions(
 
     dispatch({ type: 'agent_close_disarmed' });
 
-    if (target.kind === 'monitor') {
-      return dispatch({
-        type: 'monitor_focused',
-        monitor: { key: target.key, id: target.id },
-      });
+    if (target.kind === 'summary') {
+      return dispatch({ type: 'summary_focused', focused: true });
     }
 
-    dispatch({ type: 'monitor_focused' });
+    dispatch({ type: 'summary_focused', focused: false });
     sessions.pick(target.key);
     showFront();
   };
 
-  /**
-   * `x` on a monitor's row: stopped at once, as it holds nothing of the
-   * person's; its agent gets the `· stopped` message, and the `❯` goes to
-   * the row above.
-   */
-  const stopMonitor = (limit: number): boolean => {
-    const stopped = stopFocused(listed(limit));
+  /** ↑ ↓ in the background view: the `❯` `by` rows on, stopping at the ends. */
+  const moveBackground = (by: number) => {
+    const focus = moveViewFocus(background(), state.backgroundView?.focus, by);
 
-    if (stopped === undefined) {
-      return false;
+    if (focus !== undefined) {
+      dispatch({ type: 'background_focused', focus });
+    }
+  };
+
+  /**
+   * `x` in the background view: the focused item stops at once, with no
+   * confirmation, its row turning to stopped in place. A monitor stops as
+   * its row's `x` stopped it before, its agent told; a task's turn is
+   * cancelled, which ends it and closes its session. An ended one is left.
+   */
+  const stopBackground = () => {
+    const item = focusedItem(background(), state.backgroundView?.focus);
+
+    if (
+      item === undefined ||
+      (item.status.group !== 'running' && item.status.group !== 'asking')
+    ) {
+      return;
     }
 
-    conversationAt(stopped.stop.key)?.stopMonitor(stopped.stop.id, 'person');
-    focusOn(stopped.then);
+    // Kept on it by its ref, so the ❯ stays on the row as it changes.
+    dispatch({
+      type: 'background_focused',
+      focus: { key: item.key, id: item.id },
+    });
 
-    return true;
+    if (item.kind === 'monitor') {
+      conversationAt(item.key)?.stopMonitor(item.id, 'person');
+    } else {
+      conversationAt(item.key)?.task(item.id)?.cancel();
+    }
+  };
+
+  /**
+   * Enter in the background view: the view closes, the item's owner is
+   * picked, as moving onto its row picks it, and its transcript scrolls back
+   * so that the call that started the item is its top line, the keys going
+   * to the box. A call no longer in the transcript leaves the view as it is.
+   */
+  const goToCall = () => {
+    const item = focusedItem(background(), state.backgroundView?.focus);
+    const entries = item && all.sessions[item.key]?.transcript.entries;
+    const place = entries && callPlace(entries, item);
+
+    if (item === undefined || place === undefined) {
+      return;
+    }
+
+    dispatch({ type: 'background_closed' });
+    dispatch({ type: 'agents_focused', focused: false });
+    dispatch({ type: 'agent_close_disarmed' });
+    sessions.pick(item.key);
+    showFront();
+    dispatch({
+      type: 'in_session',
+      key: item.key,
+      action: { type: 'jumped_to', ...place },
+    });
   };
 
   /**
@@ -1601,11 +1656,7 @@ export function useSessions(
    * cutting a busy one short. chord tells the parent, so it is not left
    * waiting on a child that will never answer. On `main` it closes nothing.
    */
-  const closePicked = (limit: number) => {
-    if (stopMonitor(limit)) {
-      return;
-    }
-
+  const closePicked = () => {
     const tab = front();
     const child = tab && pickedChild(tab);
 
@@ -1895,6 +1946,18 @@ export function useSessions(
   };
 
   /**
+   * The person's prompt to session `key`: its tab's ended background items
+   * go, as a message between agents never clears them.
+   */
+  const backgroundCleared = (key: number) => {
+    const tab = agentOf(sessions.tabs, key)?.tab;
+
+    if (tab !== undefined) {
+      dispatch({ type: 'background_cleared', tab: tab.key, at: Date.now() });
+    }
+  };
+
+  /**
    * `/team new`: `typed` drawn as the person's
    * prompt in the front tab's `main`, `prompt` what its agent gets, with
    * the shell output held there ahead of it.
@@ -1909,6 +1972,7 @@ export function useSessions(
       canSend(now, typed) &&
       conversationAt(key)?.send(typed, withContext(heldContext(now), prompt))
     ) {
+      backgroundCleared(key);
       dispatch({
         type: 'in_session',
         key,
@@ -1996,36 +2060,46 @@ export function useSessions(
 
   /**
    * The list under the prompt as it is drawn in `limit` rows: the front
-   * tab's agents while it has a child, a team folded where they do not fit,
-   * then the monitors it and its children run, a child's in its colour.
+   * tab's agents while it has a child, a team folded where they do not fit.
    */
-  const listed = (limit: number): ListRow[] => {
+  const listed = (limit: number): AgentRow[] => listRows(agentRows(), limit);
+
+  /**
+   * The front tab's background: every monitor and task of its `main` and
+   * its children, those ended since the person's last prompt there kept.
+   */
+  const background = (): BackgroundItem[] => {
     const tab = front();
 
     if (tab === undefined) {
       return [];
     }
 
-    const monitorsOf = (
-      key: number,
-      owner?: { readonly name: string; readonly colour: number },
-    ) =>
-      (all.sessions[key]?.monitors ?? []).map((monitor) => ({
-        key,
-        monitor,
-        ...(owner === undefined ? {} : { owner }),
-      }));
+    const agentIn = (key: number, owner?: ItemOwner): BackgroundAgent[] => {
+      const session = all.sessions[key];
 
-    return listRows(
-      agentRows(),
+      return session === undefined
+        ? []
+        : [
+            {
+              key,
+              ...(owner === undefined ? {} : { owner }),
+              since: session.since,
+              monitors: session.monitors,
+              endedMonitors: session.endedMonitors,
+              transcript: session.transcript,
+            },
+          ];
+    };
+
+    return backgroundItems(
       [
-        ...monitorsOf(tab.key),
+        ...agentIn(tab.key),
         ...tab.children.flatMap((child) =>
-          monitorsOf(child.key, { name: child.name, colour: child.colour }),
+          agentIn(child.key, { name: child.name, colour: child.colour }),
         ),
       ],
-      state.monitorFocus,
-      limit,
+      all.window.backgroundCleared[tab.key],
     );
   };
 
@@ -2173,6 +2247,7 @@ export function useSessions(
         mentionsIn(text),
       )
     ) {
+      backgroundCleared(key);
       inSession({ type: 'context_sent', held: now.held });
       inSession({ type: 'images_sent', keeping: left });
       host.remember(text, imagesIn(text, sending));
@@ -2763,6 +2838,9 @@ export function useSessions(
     pickOption,
     moveAgent,
     closePicked,
+    moveBackground,
+    stopBackground,
+    goToCall,
     frontKey: () => front()?.key,
     listTeams,
     runTyped,
@@ -2772,6 +2850,7 @@ export function useSessions(
     clearFront,
     agentRows,
     listed,
+    background,
     picked,
   };
 }

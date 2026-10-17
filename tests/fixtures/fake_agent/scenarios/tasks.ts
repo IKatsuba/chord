@@ -59,7 +59,68 @@ async function work(
   });
 }
 
+/** What `tasklong` asks for: a task that works on, asking nothing. */
+export const LONG_TASK_ARGS = {
+  agent: 'fake',
+  prompt: 'taskwait',
+  name: 'Watch the build',
+};
+
 export const TASKS = {
+  // Starts `taskwait` as a task agent and ends its turn at once, so the
+  // task works on behind an idle parent, asking the person nothing.
+  async tasklong(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'spawn_task', LONG_TASK_ARGS);
+      await turn.say('The build is being watched.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // Two `taskwait` tasks spawned one after the other, which the transcript
+  // draws as one group, `Running 2 agents…`.
+  async tasktwo(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'spawn_task', LONG_TASK_ARGS);
+      await callChord(turn, client, 'spawn_task', {
+        ...LONG_TASK_ARGS,
+        name: 'Watch the deploy',
+      });
+      await turn.say('The build and the deploy are being watched.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // A task's job that takes a minute and asks nothing, until it is stopped.
+  async taskwait(turn) {
+    await turn.say('Watching the build.');
+    await pause(turn.signal, 60_000);
+
+    return turn.signal.aborted ? 'cancelled' : 'end_turn';
+  },
+
   // Starts `taskchild` as a task agent, says so, and works on a while, so
   // the task's message comes during the turn and waits behind it.
   async task(turn) {

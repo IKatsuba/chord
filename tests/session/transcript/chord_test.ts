@@ -272,7 +272,8 @@ test("a task's permission outlives the turn, waits between turns and leaves the 
     status: 'awaiting_permission',
     turnId: 't1',
     since: 0,
-    permissions: [asked.permission],
+    // A subagent's request keeps when it came, for its task's row.
+    permissions: [{ ...asked.permission, at: 2000 }],
     between: true,
   });
 

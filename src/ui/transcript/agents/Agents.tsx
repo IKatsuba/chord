@@ -26,6 +26,7 @@ import {
   ToolMarker,
   Under,
 } from '../tools/Tool.tsx';
+import { agentTarget } from '../targets.ts';
 import {
   agentHeadline,
   agentTone,
@@ -192,7 +193,7 @@ function AgentBlock({
   const ended = endedLine(subagent);
 
   return (
-    <box marginTop={1} flexShrink={0}>
+    <box id={agentTarget(subagent.id)} marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
         <ToolMarker tone={agentTone(subagent.state)} />
         <HeadlineText line={agentHeadline(subagent)} width={width} />
@@ -296,7 +297,7 @@ function AgentGroup({
         const ending = endingOf(subagent.state);
 
         return (
-          <box key={subagent.id}>
+          <box key={subagent.id} id={agentTarget(subagent.id)}>
             <box flexDirection='row' paddingLeft={2}>
               <Gutter width={3} dimColor>
                 {last ? '└─' : '├─'}

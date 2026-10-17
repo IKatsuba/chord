@@ -1,0 +1,24 @@
+ Background · 4 in this tab
+
+  ❯ dev server errors  monitor      running 13s · 1 event               main
+    parser tests       monitor      running 13s · 1 event               parser
+    Watch the build    task · fake  working 9s                          main
+    CI run 4812        monitor      ✗ exit code 1 after 1s · no events  main
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑ ↓ to move · enter to go to its call · x to stop · esc to close

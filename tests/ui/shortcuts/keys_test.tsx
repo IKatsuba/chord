@@ -271,6 +271,19 @@ const STATES: Record<string, AppState> = {
     { type: 'agents_focused', focused: true },
     { type: 'agent_close_armed', key: 2 },
   ),
+  // On to the background's summary line, the list's last stop.
+  summary: after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'agents_focused', focused: true },
+    { type: 'summary_focused', focused: true },
+  ),
+  // Enter there opened the background view, which takes every key.
+  'background view': after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'agents_focused', focused: true },
+    { type: 'summary_focused', focused: true },
+    { type: 'background_opened' },
+  ),
   // The leader's next key is its own over a permission and a form, so a
   // digit never picks one of their choices.
   'leader, asked': after(
@@ -1856,6 +1869,24 @@ test('a copy key that types, or begins a chord that does, beats a form and the s
   }
 });
 
+test("enter opens the background view from the summary line and goes to a row's call in it, as the panel's enter line says", () => {
+  const enter: KeyPress = { ctrl: false, escape: false, return: true };
+
+  expect(keyCommand('\r', enter, STATES.summary!, '')).toStrictEqual(
+    'open_background',
+  );
+  expect(keyCommand('\r', enter, STATES['background view']!, '')).toStrictEqual(
+    'go_to_call',
+  );
+  // On an agent row, enter goes back to the box as before.
+  expect(keyCommand('\r', enter, STATES.agents!, '')).toStrictEqual(
+    'agents_leave',
+  );
+  expect(shortcuts().map(shortcutLine)).toContain(
+    'enter to open background or a call',
+  );
+});
+
 describe('CHD-386 tester: movement panel entries', () => {
   test('word and line moves follow paste, before history, in both layouts', () => {
     const lines = shortcuts().map(shortcutLine);
@@ -1864,7 +1895,7 @@ describe('CHD-386 tester: movement panel entries', () => {
     expect(lines.slice(paste + 1, paste + 4)).toStrictEqual([
       'alt + ← → to move by word',
       'cmd + ← → to line start or end',
-      '↑ ↓ for prompts, agents and monitors',
+      '↑ ↓ for prompts, agents, background',
     ]);
     expect(lines).toHaveLength(40);
     expect(
@@ -1877,7 +1908,8 @@ describe('CHD-386 tester: movement panel entries', () => {
     expect(lines).toContain('↑ ↓ to pick a command or file');
     expect(lines).toContain('tab to complete a command');
     expect(lines).toContain('tab enter to add a file');
-    expect(lines.at(-1)).toStrictEqual('esc to close shortcuts');
+    expect(lines).toContain('esc to close a picker or shortcuts');
+    expect(lines.at(-1)).toStrictEqual('? for shortcuts');
   });
 
   test('the shared navigation line follows rebound keys once and disappears when unbound', () => {
@@ -1931,6 +1963,60 @@ describe('CHD-386 tester: movement panel entries', () => {
     ).toBeFalse();
     expect(shortcuts(unbound.keymap).map(shortcutLine)).toContain(
       '/ @ for commands or files',
+    );
+  });
+});
+
+describe('CHD-424 tester: shared background keys', () => {
+  test('navigation, stop and enter stay adjacent in the default panel', () => {
+    const lines = shortcuts().map(shortcutLine);
+    const at = lines.indexOf('↑ ↓ for prompts, agents, background');
+
+    expect(lines.slice(at, at + 3)).toStrictEqual([
+      '↑ ↓ for prompts, agents, background',
+      'x to close an agent, stop background',
+      'enter to open background or a call',
+    ]);
+    expect(
+      lines.filter((line) => line === 'esc to close a picker or shortcuts'),
+    ).toHaveLength(1);
+  });
+
+  test('shift arrows do nothing in the modal view, and rebinding stop moves both contexts', () => {
+    const plain: KeyPress = { ctrl: false, escape: false };
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          { context: 'Agents', bindings: { x: null, z: 'agents:close' } },
+        ],
+      }),
+    );
+
+    expect(problems).toStrictEqual([]);
+
+    for (const [name, expected] of [
+      ['agents', 'close_agent'],
+      ['background view', 'stop_background'],
+    ] as const) {
+      const state = { ...STATES[name]!, keys: keymap };
+
+      expect(keyCommand('z', plain, state, '')).toBe(expected);
+      expect(keyCommand('x', plain, state, '')).toBeUndefined();
+    }
+
+    for (const key of [{ upArrow: true }, { downArrow: true }]) {
+      expect(
+        keyCommand(
+          '',
+          { ...plain, shift: true, ...key },
+          STATES['background view']!,
+          '',
+        ),
+      ).toBeUndefined();
+    }
+
+    expect(shortcuts(keymap).map(shortcutLine)).toContain(
+      'z to close an agent, stop background',
     );
   });
 });

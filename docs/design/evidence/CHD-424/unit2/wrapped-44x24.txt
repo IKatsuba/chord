@@ -1,0 +1,24 @@
+
+ ⏺ Monitor(parser tests)
+   ⎿  $ sleep 1; echo "ok 1 - parse a
+      string at the end of a line"; sleep
+      600
+      m1 · times out after 10m
+
+ ⏺ Watching the parser tests.
+
+ ← from parser tests · monitor
+   ⎿  ok 1 - parse a string at the end of
+      a line
+
+ ⏺ Received the message from parser tests ·
+   monitor.
+
+╭─ parser ─────────────────────────────────╮
+│ ›                                        │
+╰──────────────────────────────────────────╯
+  ? for shortcuts    Fake Large… · 1% used
+    main    fake
+    parser  fake
+    background  ✗ 1 task failed ·
+                4 monitors running

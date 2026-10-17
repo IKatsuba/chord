@@ -1133,3 +1133,58 @@ test("a shell's code stays its end while what it left shrugs off SIGTERM past th
     ),
   ).toStrictEqual({ end: { kind: 'exit', code: 7 }, aliveAfter: false });
 });
+
+test("the window hears each monitor's end once, in the order they ended, a stop's at once; a /clear forgets them", () =>
+  withAgent(async (conversation, events, dir) => {
+    const commands = [fakeCommand(), fakeCommand(), fakeCommand()];
+
+    for (const [index, description] of ['exits', 'agent', 'person'].entries()) {
+      idOf(
+        conversation.startMonitor(
+          { command: 'cmd', description },
+          dir,
+          commands[index]!.run,
+        ),
+      );
+    }
+
+    const ended = () => {
+      const last = events.findLast((event) => event.type === 'monitors');
+
+      assert(last?.type === 'monitors');
+
+      return last.ended.map(({ id, description, end }) => ({
+        id,
+        description,
+        end,
+      }));
+    };
+
+    commands[0]!.exit(3);
+    await until(() => ended().length === 1);
+    conversation.stopMonitor('m2');
+    conversation.stopMonitor('m3', 'person');
+
+    // The person's stop is ended before its run is gone, and only once.
+    expect(ended()).toStrictEqual([
+      { id: 'm1', description: 'exits', end: { kind: 'exit', code: 3 } },
+      { id: 'm2', description: 'agent', end: { kind: 'stopped' } },
+      { id: 'm3', description: 'person', end: { kind: 'stopped' } },
+    ]);
+    await until(() =>
+      delivered(events).some(({ from }) => from.monitor?.id === 'm3'),
+    );
+    expect(ended().map(({ id }) => id)).toStrictEqual(['m1', 'm2', 'm3']);
+
+    conversation.clear();
+    await until(
+      () => events.filter((event) => event.type === 'connected').length === 2,
+    );
+    idOf(
+      conversation.startMonitor(
+        { command: 'sleep 30', description: 'new' },
+        dir,
+      ),
+    );
+    expect(ended()).toStrictEqual([]);
+  }));

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.nUjljCRfYn
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                          shift + ↑ ↓ to scroll a line          ctrl + d or ctrl + c twice to quit
+  \ + enter for a newline                home end for the top and the bottom   ctrl + x then a key for sessions
+  shift + enter for a newline            ctrl + c to copy                      1–9 to pick a choice
+  ctrl + g to edit in $EDITOR            / @ for commands or files             ↑ ↓ or j k to move between choices
+  ctrl + v to paste an image             ↑ ↓ to pick a command or file         enter to pick the highlighted choice
+  alt + ← → to move by word              tab to complete a command             esc to reject a permission
+  cmd + ← → to line start or end         tab enter to add a file               esc to close a picker or shortcuts
+  ↑ ↓ for prompts, agents, background    esc to close commands or files        ctrl + a to show all directories
+  x to close an agent, stop background   ! for bash mode                       tab ← → ↑ ↓ space to answer forms
+  enter to open background or a call     backspace to leave bash mode          ctrl + c to stop the turn and its form
+  ctrl + r to search prompts             esc to interrupt or stop a command    /vim for vim mode
+  tab enter to take a match              shift + tab to cycle modes            ? for shortcuts
+  esc to cancel a search                 ctrl + o for verbose output
+  pgup pgdn or wheel to scroll           ctrl + c to clear input

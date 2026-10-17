@@ -1,0 +1,40 @@
+[38;2;255;255;255m [1m[38;2;86;212;221mcoder[0;2m · fake · Fake Large with a 1M context window · bugfix's member · opened by @bugfix 2m ago[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39mbugfix's instructions for coder · 29 lines (ctrl+o to expand)[0m[38;2;255;255;255m
+
+ [38;2;108;182;255m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;108;182;255m@bugfix[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mYou will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.[0m[38;2;255;255;255m
+
+ [38;2;196;156;255m→[38;2;255;255;255m [2m[39mto [0;1m[38;2;196;156;255m@tester[0;2m · queued[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mReading src/parse/tokenize.ts now. Tell me when your test fails.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mWaiting for tester's test.[38;2;255;255;255m
+
+ [38;2;196;156;255m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;196;156;255m@tester[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThe failing test is in tests/parse/tokenize_test.ts and stays mine. Fix readString so it passes; I will run[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mthe suite after.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from tester · fake.[38;2;255;255;255m
+
+
+
+
+
+
+
+
+
+
+
+
+
+[38;2;86;212;221m╭─[1m coder[0;2m · bugfix[0m[38;2;86;212;221m ─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;2;86;212;221m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;72;150;140m⏸ plan mode on[39m [2m(shift+tab to cycle)[0m[38;2;255;255;255m            [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39mmain             [2m  fake · Fake Large with a 1M context window · medium                     ✻ working 31s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mbugfix           [2m[39m  team · fake · Fake Large with a 1M context window · medium            [0m[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39m├─ [0m[38;2;196;156;255mtester        [2m[39m  fake · Fake Small · medium                                            [0m[38;2;255;193;7m  ● permission 2m 12s[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39m└─ [0;1m[38;2;86;212;221mcoder         [0;2m  fake · Fake Large with a 1M context window · medium                   [0m[38;2;255;255;255m
+  [38;2;177;185;249m❯ [1m[39mdev server errors[0;2m  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properti…  running 39s · 1 event[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39mCI run 4812      [2m  $ sleep 600                                                             running 38s · no events[0m[38;2;255;255;255m

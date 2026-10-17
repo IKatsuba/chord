@@ -11,7 +11,7 @@ import {
   sameModels,
 } from '../../session/models.ts';
 import { type AgentMode, nextMode } from '../../session/modes.ts';
-import type { RunningMonitor } from '../../session/monitors.ts';
+import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { EarlierWindow } from '../../session/windows.ts';
 import { addTurn, type Spent } from '../../session/usage.ts';
@@ -43,6 +43,12 @@ import {
   type ShortcutsAction,
   type ShortcutsState,
 } from '../shortcuts/state.ts';
+import {
+  type BackgroundAction,
+  type BackgroundState,
+  initialBackground,
+  reduceBackground,
+} from '../background/state.ts';
 import {
   askedInput,
   asksPerson,
@@ -79,7 +85,7 @@ import { type Cursor, endOf, textareaDoes } from '../prompt/prompt.ts';
 import { mine, started } from '../prompt/queue.ts';
 import type { Search } from '../prompt/search.ts';
 import { vimKeyNames, vimTakes, vimTakesCharacter } from '../prompt/vim.ts';
-import { backfilled, heldMount } from '../transcript/mount.ts';
+import { backfilled, firstMounted, heldMount } from '../transcript/mount.ts';
 import {
   copyable,
   type CopyResult,
@@ -159,6 +165,11 @@ export interface SessionState extends PromptSession, ViewSession, DialogsState {
    * order; the agent list draws them.
    */
   readonly monitors: readonly RunningMonitor[];
+  /**
+   * Those that ended since the session came up, in the order they ended;
+   * the background view draws them until the person's next prompt.
+   */
+  readonly endedMonitors: readonly EndedMonitor[];
 }
 
 /**
@@ -166,7 +177,12 @@ export interface SessionState extends PromptSession, ViewSession, DialogsState {
  * how it is drawn, how keys work, and what is open over the prompt box.
  */
 export interface WindowState
-  extends PromptWindow, ViewWindow, PickersState, ShortcutsState {
+  extends
+    PromptWindow,
+    ViewWindow,
+    PickersState,
+    ShortcutsState,
+    BackgroundState {
   /**
    * ctrl+c, or ctrl+d or `/exit` with sessions busy, was pressed once, and
    * which, for the line to name it; a second press of either quits.
@@ -183,10 +199,10 @@ export interface WindowState
    */
   readonly agentsFocus?: true;
   /**
-   * The monitor in that list with the `❯`, which picks no agent; none while
-   * the `❯` is on the agent picked.
+   * The background's summary line, the list's last stop, has the `❯`,
+   * which picks no agent; none while the `❯` is on the agent picked.
    */
-  readonly monitorFocus?: { readonly key: number; readonly id: string };
+  readonly summaryFocus?: true;
   /**
    * `x` was pressed once on the busy child with this key; a second press
    * while it holds stops and closes it.
@@ -227,6 +243,7 @@ export type AppAction =
   | PromptAction
   | PickersAction
   | ShortcutsAction
+  | BackgroundAction
   | DialogsAction
   /** ctrl+c, or with `by` ctrl+d or `/exit`, asks for a second press. */
   | { readonly type: 'quit_armed'; readonly by?: 'ctrl+d' }
@@ -236,10 +253,8 @@ export type AppAction =
   | { readonly type: 'close_disarmed' }
   /** ↓ on an empty prompt moved the keys into the list, or they went back. */
   | { readonly type: 'agents_focused'; readonly focused: boolean }
-  | {
-      readonly type: 'monitor_focused';
-      readonly monitor?: { readonly key: number; readonly id: string };
-    }
+  /** The `❯` went on to the summary line, or off it. */
+  | { readonly type: 'summary_focused'; readonly focused: boolean }
   /** `x` on the busy child `key` asks for a second press. */
   | { readonly type: 'agent_close_armed'; readonly key: number }
   | { readonly type: 'agent_close_disarmed' }
@@ -293,10 +308,12 @@ export const initialAppState: AppState = {
   modes: [],
   options: [],
   monitors: [],
+  endedMonitors: [],
   ...initialPrompt,
   ...initialView,
   ...initialPickers,
   ...initialShortcuts,
+  ...initialBackground,
 };
 
 /**
@@ -448,6 +465,11 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'help_opened':
     case 'keys_pending':
       return reduceShortcuts(state, action) as AppState;
+    case 'background_cleared':
+    case 'background_opened':
+    case 'background_closed':
+    case 'background_focused':
+      return reduceBackground(state, action) as AppState;
     case 'expanded_toggled':
       // Rewrapped, its cells would hold other characters.
       return reduceView(withoutSelection(state), action) as AppState;
@@ -455,7 +477,14 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'scrolled':
     case 'scroll_held':
     case 'scroll_released':
+    case 'jump_done':
       return reduceView(state, action) as AppState;
+    case 'jumped_to':
+      // Its entry mounted, with every one after it.
+      return {
+        ...(reduceView(state, action) as AppState),
+        mounted: Math.min(firstMounted(state), action.entry),
+      };
     case 'form_filled':
     case 'questions_answered':
     case 'request_overflowed':
@@ -492,8 +521,9 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         sessionsPicker: _______,
         agentsFocus: ________,
         agentCloseArmed: _________,
-        monitorFocus: __________,
+        summaryFocus: __________,
         teamsPicker: ___________,
+        backgroundView: ____________,
         ...rest
       } = state;
 
@@ -582,12 +612,18 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // For the record; the command drew it.
       return state;
     case 'monitors':
-      return { ...state, monitors: action.monitors };
+      return {
+        ...state,
+        monitors: action.monitors,
+        endedMonitors: action.ended,
+      };
     case 'cleared':
       // A new session: only what is the window's own stays, and the draft
       // with its images.
       return {
         ...initialAppState,
+        // Every tab's, which another tab's clear leaves be.
+        backgroundCleared: state.backgroundCleared,
         expanded: state.expanded,
         theme: state.theme,
         draft: state.draft,
@@ -669,7 +705,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       const {
         agentsFocus: _,
         agentCloseArmed: __,
-        monitorFocus: ___,
+        summaryFocus: ___,
         ...rest
       } = state;
 
@@ -678,12 +714,10 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         ? { ...rest, agentsFocus: true, help: false }
         : rest;
     }
-    case 'monitor_focused': {
-      const { monitorFocus: _, ...rest } = state;
+    case 'summary_focused': {
+      const { summaryFocus: _, ...rest } = state;
 
-      return action.monitor === undefined
-        ? rest
-        : { ...rest, monitorFocus: action.monitor };
+      return action.focused ? { ...rest, summaryFocus: true } : rest;
     }
     case 'agent_close_armed': {
       const { sessionsNote: _, ...rest } = state;
@@ -846,6 +880,7 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   transcript: true,
   scroll: true,
   mounted: true,
+  jump: true,
   models: true,
   startedModel: true,
   resumed: true,
@@ -853,6 +888,7 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   modes: true,
   modeAsked: true,
   monitors: true,
+  endedMonitors: true,
   queue: true,
   bash: true,
   held: true,
@@ -1230,6 +1266,11 @@ function pressCommand(
     return command;
   }
 
+  // The background view begins no chord: its keys are its own.
+  if (state.backgroundView) {
+    return state.pendingKeys === undefined ? undefined : 'key_dropped';
+  }
+
   if (
     pressed !== undefined &&
     startsChord(liveChords(state, draft, cursor), pressed)
@@ -1312,6 +1353,13 @@ function boundCommand(
   // textarea's own.
   const textareaDid = (action: Action) =>
     !translated && textareaDoes(pressed, action);
+
+  // The background view is modal: it takes every key, the window's
+  // sessions' and the pickers' too, which wait until Esc closes it.
+  if (state.backgroundView) {
+    return backgroundCommand(input, key, state, on);
+  }
+
   const session = sessionCommand(on);
 
   // A selection shown takes its copy key first, and ctrl+c with no chord
@@ -1593,6 +1641,47 @@ function boundCommand(
   return undefined;
 }
 
+/** What a key means while the background view is open. */
+function backgroundCommand(
+  input: string,
+  key: KeyPress,
+  state: AppState,
+  on: (action: Action) => boolean,
+): KeyCommand | undefined {
+  if (key.ctrl && input === 'c') {
+    return state.quitArmed ? 'quit' : 'arm_quit';
+  }
+
+  if (key.ctrl && input === 'd') {
+    return 'quit';
+  }
+
+  if (on('agents:close')) {
+    return 'stop_background';
+  }
+
+  // shift+↑ ↓ scroll the transcript elsewhere; the view has none.
+  if (
+    (key.upArrow && !key.shift) ||
+    (input === 'k' && !key.ctrl && !key.meta)
+  ) {
+    return 'background_up';
+  }
+
+  if (
+    (key.downArrow && !key.shift) ||
+    (input === 'j' && !key.ctrl && !key.meta)
+  ) {
+    return 'background_down';
+  }
+
+  if (key.return) {
+    return 'go_to_call';
+  }
+
+  return on('select:cancel') ? 'close_background' : undefined;
+}
+
 /** What a key means while the list of the session's agents has the keys. */
 function agentsCommand(
   input: string,
@@ -1618,8 +1707,9 @@ function agentsCommand(
     return `scroll_${step}`;
   }
 
+  // The summary line is no item: `x` there stops nothing.
   if (on('agents:close')) {
-    return 'close_agent';
+    return state.summaryFocus ? undefined : 'close_agent';
   }
 
   if (key.upArrow || (input === 'k' && !key.ctrl && !key.meta)) {
@@ -1628,6 +1718,10 @@ function agentsCommand(
 
   if (key.downArrow || (input === 'j' && !key.ctrl && !key.meta)) {
     return 'agents_down';
+  }
+
+  if (key.return && state.summaryFocus) {
+    return 'open_background';
   }
 
   return key.return || key.escape ? 'agents_leave' : undefined;

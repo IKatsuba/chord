@@ -2,7 +2,7 @@
  * What the transcript and its area measure once a frame has laid the window
  * out, for the scroll to work from.
  */
-import type { BoxRenderable } from '@opentui/core';
+import type { BoxRenderable, Renderable } from '@opentui/core';
 import { useRenderer } from '@opentui/react';
 import {
   type Dispatch,
@@ -20,6 +20,33 @@ import {
   topOf,
 } from '../transcript/scroll.ts';
 import type { AppState, WindowedAction } from './state.ts';
+
+/**
+ * How far into an entry's box the row a jump goes to is: the first drawn
+ * row of the box with id `target` in it, where one is drawn, else of the
+ * entry's own; past the blank line each keeps above it, so its own first
+ * line goes on top.
+ */
+function rowOf(entry: Renderable, target: string | undefined): number {
+  const found =
+    target === undefined ? undefined : entry.findDescendantById(target);
+  let row = 0;
+
+  // Up from the box found to the entry's, each box placed in its parent.
+  for (let at = found; at && at !== entry; at = at.parent ?? undefined) {
+    row += at.getLayout().top;
+  }
+
+  for (
+    let at = (found ?? entry).getChildren()[0];
+    at;
+    at = at.getChildren()[0]
+  ) {
+    row += at.getLayout().top;
+  }
+
+  return row;
+}
 
 export interface Measured {
   /** The transcript's area, which shows part of it. */
@@ -100,7 +127,7 @@ export function useMeasured(
       }
 
       const {
-        state: { scroll, transcript },
+        state: { scroll, transcript, jump },
         front,
         first,
       } = latest.current;
@@ -154,7 +181,28 @@ export function useMeasured(
           return { top: node ? top : 0, height };
         });
 
-      const kept = anchors.current.get(front);
+      // An entry asked for goes on top once React has mounted it, as far
+      // down as the view goes; one gone from the transcript is let go.
+      const box =
+        jump === undefined || jump.entry < first
+          ? undefined
+          : placedRefs.current[jump.entry];
+      const jumped =
+        jump === undefined || jump.entry >= transcript.entries.length
+          ? undefined
+          : box
+            ? Math.min(
+                box.getLayout().top + rowOf(box, jump.target),
+                Math.max(0, whole.height - view),
+              )
+            : null;
+
+      if (jump !== undefined && jumped !== null) {
+        dispatch({ type: 'jump_done' });
+      }
+
+      const kept =
+        typeof jumped === 'number' ? undefined : anchors.current.get(front);
       const held =
         kept !== undefined &&
         (kept.top === scroll.top || kept.from === scroll.top)
@@ -162,7 +210,10 @@ export function useMeasured(
           : undefined;
       const still =
         held && topOf({ ...held.at, entry: held.at.entry - first }, placed);
-      const top = still ?? scroll.top;
+      const top =
+        (typeof jumped === 'number' ? jumped : undefined) ??
+        still ??
+        scroll.top;
       const read = anchorAt(top, placed);
       const at =
         held !== undefined && still !== undefined

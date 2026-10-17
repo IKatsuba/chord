@@ -1,6 +1,5 @@
 /** The list under the prompt drawn on its own, its times counting. */
 import { expect, test } from 'bun:test';
-import chalk from 'chalk';
 import { until } from '../app/render.tsx';
 import { draw } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
@@ -39,7 +38,7 @@ test("a folded member's permission time goes on counting with its lead idle and 
   ];
   const drawn = await draw(
     <AgentsList
-      rows={listRows(agents, [], undefined, 4)}
+      rows={listRows(agents, 4)}
       limit={4}
       width={76}
       focused={false}
@@ -58,45 +57,5 @@ test("a folded member's permission time goes on counting with its lead idle and 
     );
   } finally {
     await drawn.unmount();
-  }
-});
-
-test("a monitor's escapes in its description and command colour its row, the rest go", async () => {
-  const level = chalk.level;
-
-  chalk.level = 3;
-
-  try {
-    const drawn = await draw(
-      <AgentsList
-        rows={[
-          {
-            kind: 'monitor',
-            key: 1,
-            id: 'm',
-            description: '\x1b[31mred\x1b[0m',
-            command: 'echo \x1b[32mok\x1b[39m\x1b[2K',
-            startedAt: Date.now(),
-            events: 0,
-            focused: false,
-          },
-        ]}
-        limit={4}
-        width={76}
-        focused={false}
-      />,
-      { columns: 80, rows: 8 },
-    );
-    const shown = drawn.frame();
-
-    await drawn.unmount();
-    expect(shown).toContain('\x1b[31m');
-    expect(shown).toContain('\x1b[32m');
-    expect(stripAnsi(shown)).toContain(
-      'red  $ echo ok  running 0s · no events',
-    );
-    expect(stripAnsi(shown)).not.toMatch(/\[\d*[mK]/);
-  } finally {
-    chalk.level = level;
   }
 });

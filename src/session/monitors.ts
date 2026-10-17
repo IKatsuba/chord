@@ -57,6 +57,17 @@ export interface RunningMonitor extends MonitorInfo {
 }
 
 /**
+ * A monitor that has ended in the session, as the background view reads it:
+ * how, when, and the batches it handed on by then. The agent's own
+ * `stop_monitor` and the person's `x` both end it `stopped`.
+ */
+export interface EndedMonitor extends RunningMonitor {
+  readonly end: MonitorEnd;
+  /** When it ended, epoch milliseconds; a stop's is when it was asked. */
+  readonly endedAt: number;
+}
+
+/**
  * Why `monitor` refuses what it was asked, with `running` monitors already
  * in the session; none when it may start. Refused, never clamped, so the
  * agent never thinks it has what it does not.

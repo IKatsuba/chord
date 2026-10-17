@@ -1,0 +1,24 @@
+   ⎿  Allowed Write notes.txt · Allow
+
+ ››› Waiting for your input… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                    │
+│                                                                              │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                         │
+│                                                                              │
+│ Which language should helper scripts use?                                    │
+│                                                                              │
+│ ❯ 1. Deno (TypeScript) (Recommended)                                         │
+│      Runs from source with inline npm: and jsr: imports, no package manager  │
+│   2. Python                                                                  │
+│      Only where a library has no JS or TS equivalent                         │
+│                                                                              │
+│   Note  Type your own answer, or add a note to the option you chose above …  │
+│                                                                              │
+│ Enter to pick · 1–2 · ↑↓ · ←→ questions · Esc to cancel                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main    fake · Fake Large with a 1M context window  ✓ replied 9s ago
+    parser  fake · Fake Small                           ✓ replied 13s ago
+    docs    fake · Fake Large with a 1M context window  ● input 1s

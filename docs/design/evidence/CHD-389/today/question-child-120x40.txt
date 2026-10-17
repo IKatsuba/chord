@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 13s ago
+
+ ← from @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow
+
+ ⏺ Permission: allow.
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+
+
+
+
+
+ ››› Waiting for your input… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                                                            │
+│                                                                                                                      │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                                                                 │
+│                                                                                                                      │
+│ Which language should helper scripts use?                                                                            │
+│                                                                                                                      │
+│ ❯ 1. Deno (TypeScript) (Recommended)                                                                                 │
+│      Runs from source with inline npm: and jsr: imports, no package manager                                          │
+│   2. Python                                                                                                          │
+│      Only where a library has no JS or TS equivalent                                                                 │
+│                                                                                                                      │
+│   Note  Type your own answer, or add a note to the option you chose above (optional).                                │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main    fake · Fake Large with a 1M context window · medium  ✓ replied 8s ago
+    parser  fake · Fake Small · medium                           ✓ replied 12s ago
+    docs    fake · Fake Large with a 1M context window · medium  ● input 0s

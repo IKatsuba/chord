@@ -1,4 +1,4 @@
- chord   1 fake ✗    2 fake   …/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.f9ifbQIdy2
+ chord   1 fake ✗    2 fake   /tmp/chord-qa.XXXX
  ▀▀▀▄   fake · Fake Large with a 1M context window
  ▄▀▀▀   /tmp/chord-qa.XXXX
  ▀▀     ? for shortcuts · /help

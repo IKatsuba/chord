@@ -12,6 +12,7 @@ import {
   type CodeMirrorConstructor,
   initVim,
   type MotionFn,
+  type OperatorFn,
   type Pos,
 } from '@replit/codemirror-vim-core';
 import type { Cursor } from './prompt.ts';
@@ -427,9 +428,37 @@ let engine: Engine | undefined;
 
 /** The engine, made once: its registers and last `f` search are its own. */
 function engineOf(): Engine {
-  engine ??= initVim(Editor as unknown as CodeMirrorConstructor);
+  if (engine === undefined) {
+    engine = initVim(Editor as unknown as CodeMirrorConstructor);
+
+    engine.defineOperator('yank', yank(engine));
+  }
 
   return engine;
+}
+
+/**
+ * The library's yank, through its public `defineOperator`, less the
+ * "lines yanked" message: that builds a DOM node before it asks the editor
+ * to show it, which a terminal has none of, and the error it throws inside
+ * `handleKey` lost the yank with it (owner, 2026-10-17, CHD-215 Q1). What it
+ * yanked goes to the register, and the cursor stays where the yank began,
+ * as the library leaves it outside visual mode, which chord never opens.
+ */
+function yank(vim: Engine): OperatorFn {
+  return (cm, args, _ranges, oldAnchor) => {
+    vim
+      .getRegisterController()
+      .pushText(
+        args.registerName ?? undefined,
+        'yank',
+        cm.getSelection(),
+        args.linewise,
+        false,
+      );
+
+    return oldAnchor;
+  };
 }
 
 type Handler = (...args: unknown[]) => void;

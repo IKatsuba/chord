@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   cutPlaceholder,
   type PastedImage,
@@ -219,6 +219,30 @@ test('p puts back what was deleted, after the cursor or below the line', () => {
   });
 });
 
+test('y yanks into the register and p puts it back: a word, a line, a text object (CHD-215)', () => {
+  expect(play(FOX, [0, 4], [...'yw']).vim.register).toStrictEqual({
+    text: 'quick ',
+    linewise: false,
+  });
+  expect(after(FOX, [0, 4], 'ywp')).toStrictEqual([
+    'the qquick uick brown fox',
+    [0, 10],
+  ]);
+  expect(after('one\ntwo', [0, 0], 'yyp')).toStrictEqual([
+    'one\none\ntwo',
+    [1, 0],
+  ]);
+  expect(play('one\ntwo', [0, 0], [...'yy']).vim.register).toStrictEqual({
+    text: 'one\n',
+    linewise: true,
+  });
+  // A text object: the word under the cursor, put at the line's end.
+  expect(after(FOX, [0, 6], 'yiw$p')).toStrictEqual([
+    'the quick brown foxquick',
+    [0, 23],
+  ]);
+});
+
 test('dd keeps a blank line in the register, at the start of a count too', () => {
   expect(after('one\n\ntwo', [1, 0], 'ddp')).toStrictEqual([
     'one\ntwo\n',
@@ -369,5 +393,81 @@ test('typing goes in at the cursor, lines and all', () => {
   expect(typedAt('one\ntwo', [1, 0], 'x')).toStrictEqual({
     text: 'one\nxtwo',
     cursor: [1, 1],
+  });
+});
+
+describe('CHD-215 tester: yank count cursor and register boundaries', () => {
+  for (const keys of ['2yw', 'y2w']) {
+    test(`${keys} counts words without moving the cursor or changing the draft`, () => {
+      const result = play('one two three', [0, 0], [...keys]);
+
+      expect(result.text).toBe('one two three');
+      expect(result.cursor).toEqual([0, 0]);
+      expect(result.vim.register).toEqual({
+        text: 'one two ',
+        linewise: false,
+      });
+    });
+  }
+
+  for (const keys of ['2yy', 'y2y']) {
+    test(`${keys} keeps the linewise register for repeated puts`, () => {
+      const result = play('one\ntwo\nthree', [0, 0], [...keys]);
+
+      expect(result.text).toBe('one\ntwo\nthree');
+      expect(result.cursor).toEqual([0, 0]);
+      expect(result.vim.register).toEqual({
+        text: 'one\ntwo\n',
+        linewise: true,
+      });
+      expect(
+        play(result.text, result.cursor, ['p', 'p'], result.vim).text,
+      ).toBe('one\none\none\ntwo\ntwo\ntwo\nthree');
+    });
+  }
+
+  test('a last-line yank has no preceding newline and puts below the last line', () => {
+    const result = play('one\ntwo', [1, 1], ['y', 'y']);
+
+    expect(result.text).toBe('one\ntwo');
+    expect(result.cursor).toEqual([1, 1]);
+    expect(result.vim.register).toEqual({ text: 'two\n', linewise: true });
+    expect(play(result.text, result.cursor, ['p'], result.vim).text).toBe(
+      'one\ntwo\ntwo',
+    );
+  });
+
+  test('an empty-line yank remains linewise and does not move the cursor', () => {
+    const result = play('one\n\ntwo', [1, 0], ['y', 'y']);
+
+    expect(result.text).toBe('one\n\ntwo');
+    expect(result.cursor).toEqual([1, 0]);
+    expect(result.vim.register).toEqual({ text: '\n', linewise: true });
+    expect(play(result.text, result.cursor, ['p'], result.vim).text).toBe(
+      'one\n\n\ntwo',
+    );
+  });
+
+  test('a word text object leaves an interior cursor where it began', () => {
+    const result = play('one two three', [0, 5], [...'yiw']);
+
+    expect(result.text).toBe('one two three');
+    expect(result.cursor).toEqual([0, 5]);
+    expect(result.vim.register).toEqual({ text: 'two', linewise: false });
+  });
+
+  test('interleaved Vim states keep their own yank, including a pending operator', () => {
+    const pending = play('alpha beta', [0, 1], ['y']);
+    const other = play('gamma delta', [0, 1], [...'yiw']);
+    const first = play(pending.text, pending.cursor, ['i', 'w'], pending.vim);
+
+    expect(first.vim.register).toEqual({ text: 'alpha', linewise: false });
+    expect(other.vim.register).toEqual({ text: 'gamma', linewise: false });
+    expect(play(first.text, [0, 9], ['p'], first.vim).text).toBe(
+      'alpha betaalpha',
+    );
+    expect(play(other.text, [0, 10], ['p'], other.vim).text).toBe(
+      'gamma deltagamma',
+    );
   });
 });

@@ -1168,6 +1168,13 @@ export function App({
                   focus={boxKeys && state.vim?.mode !== 'normal'}
                   {...(childShown === undefined ? {} : { agent: childShown })}
                   width={columns}
+                  // A press on the box gives the list's keys back to it, the
+                  // row's ❯ going and the child picked staying the box's
+                  // (CHD-384): OpenTUI has already put its focus there.
+                  onPressed={() =>
+                    state.agentsFocus &&
+                    dispatch({ type: 'agents_focused', focused: false })
+                  }
                   // Normal mode's cursor stands only where the box would
                   // otherwise have the keys, so no dialog's own input loses them.
                   normal={boxKeys && state.vim?.mode === 'normal'}

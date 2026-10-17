@@ -25,6 +25,7 @@ import {
   DOWN,
   ESC,
   leader,
+  left,
   ready,
   send,
   until,
@@ -318,6 +319,57 @@ test("a child's reply to a message reads its age from the reply, not from the me
     '--step-ms',
     '30',
   ));
+
+/** A left click on the prompt box's text row, as a terminal reports one. */
+async function clickBox(window: Window): Promise<void> {
+  const y = window
+    .frame()
+    .split('\n')
+    .findLastIndex((line) => line.startsWith('│ ›'));
+
+  expect(y).toBeGreaterThan(0);
+  await window.press(left(10, y, 'down'));
+  await window.press(left(10, y, 'up'));
+}
+
+test("a click on the box takes the keys back from the list: the ❯ goes, the child picked stays the box's, and typing goes in in order (CHD-384)", () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'agents');
+    await window.shows('Waiting on parser.');
+    await window.press(DOWN);
+    await window.press(DOWN);
+    await window.shows('❯ parser ');
+    await clickBox(window);
+    await until('the ❯ gone', () => !window.frame().includes('❯ parser '));
+    await window.type('abc');
+    await window.type('def');
+    await window.shows('│ › abcdef');
+    // Still parser's box, and the list's hint gone from the status line.
+    expect(window.frame()).toContain('╭─ parser ');
+    expect(!window.frame().includes('↑ ↓ to pick')).toBeTruthy();
+    // ↓ is the box's again: it stays in the draft, not in the list.
+    await window.press(DOWN);
+    expect(!window.frame().includes('❯ ')).toBeTruthy();
+  }));
+
+test('a click on the box takes the keys back from the summary line too (CHD-384)', () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'monitors');
+    await window.shows('    background  2 monitors running');
+    await window.press(DOWN);
+    await window.shows('❯ background');
+    await clickBox(window);
+    await until('the ❯ gone', () => !window.frame().includes('❯ background'));
+    await window.type('abc');
+    await window.type('def');
+    await window.shows('│ › abcdef');
+    // Enter is the box's: it sends the draft, not opening the view.
+    await window.press('\r');
+    await window.shows('› abcdef');
+    expect(!window.frame().includes(' Background · ')).toBeTruthy();
+  }));
 
 /** How many `closed` lines the records in `dir`'s state hold. */
 async function closedInRecords(dir: string): Promise<number> {

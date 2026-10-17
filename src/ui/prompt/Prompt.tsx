@@ -57,6 +57,7 @@ export function PromptInput({
   wordCut,
   agent,
   width,
+  onPressed,
 }: {
   value: string;
   cursor: Cursor;
@@ -104,6 +105,11 @@ export function PromptInput({
   };
   /** The box's width, which a named top border is laid out to. */
   width?: number;
+  /**
+   * A mouse press on the box, which OpenTUI follows by giving the textarea
+   * the keys: the window takes them back from wherever else they were.
+   */
+  onPressed?: () => void;
 }) {
   const colours = useColours();
   const area = useRef<TextareaRenderable | null>(null);
@@ -342,6 +348,7 @@ export function PromptInput({
   const box = (
     <box
       flexDirection='row'
+      {...(onPressed && { onMouseDown: onPressed })}
       // With a name on top, the top is `NamedTop`'s row.
       border={agent === undefined ? true : ['bottom', 'left', 'right']}
       borderStyle='rounded'

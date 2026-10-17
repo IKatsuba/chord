@@ -446,3 +446,124 @@ describe('the summary line', () => {
     ]);
   });
 });
+
+describe('CHD-424 tester: background item edges', () => {
+  test('same-millisecond monitor ids stay in numeric order across stopping and ending', () => {
+    const items = backgroundItems([
+      agent(1, {
+        monitors: [running('m10', 'ten', 10)],
+        endedMonitors: [
+          ended(running('m9', 'nine', 10), { kind: 'stopped' }, 20),
+          ended(running('m2', 'two', 10), { kind: 'exit', code: 1 }, 30),
+        ],
+      }),
+    ]);
+
+    expect(items.map(({ id }) => id)).toStrictEqual(['m2', 'm9', 'm10']);
+  });
+
+  test('a prompt clears every ended task state at its cutoff, but keeps later ends and running tasks', () => {
+    const items = backgroundItems(
+      [
+        agent(1, {
+          transcript: withEntries([
+            ...(
+              ['completed', 'failed', 'cancelled', 'disconnected'] as const
+            ).map((state) => task(state, state, 10, { state, endedAt: 50 })),
+            task('later', 'later', 20, { state: 'completed', endedAt: 51 }),
+            task('running', 'running', 30),
+          ]),
+        }),
+      ],
+      50,
+    );
+
+    expect(items.map(({ id }) => id)).toStrictEqual(['later', 'running']);
+  });
+
+  test('resumed historical tasks are excluded even while running; a task started when the session came up remains', () => {
+    const items = backgroundItems([
+      agent(1, {
+        since: 100,
+        transcript: withEntries([
+          task('past-running', 'past', 99),
+          task('past-ended', 'past', 90, { state: 'completed', endedAt: 110 }),
+          task('current', 'current', 100),
+        ]),
+      }),
+    ]);
+
+    expect(items.map(({ id }) => id)).toStrictEqual(['current']);
+  });
+
+  test('the oldest matching input or permission sets asking time, and an ended task ignores stale requests', () => {
+    const transcript = withEntries([task('t', 'task', 10)], {
+      turn: {
+        status: 'awaiting_permission',
+        turnId: 't1',
+        since: 5,
+        permissions: [
+          { id: 'p-other', subagentId: 'other', at: 1, options: [] },
+          { id: 'p-new', subagentId: 't', at: 40, options: [] },
+          { id: 'p-old', subagentId: 't', at: 30, options: [] },
+        ],
+      },
+      asking: [
+        {
+          id: 'e',
+          subagentId: 't',
+          mode: 'url',
+          url: 'u',
+          message: 'm',
+          at: 20,
+        },
+      ],
+    });
+    const status = (value: Transcript) =>
+      backgroundItems([agent(1, { transcript: value })])[0]?.status;
+
+    expect(status(transcript)).toStrictEqual({
+      group: 'asking',
+      on: 'input',
+      since: 20,
+    });
+    expect(status({ ...transcript, asking: [] })).toStrictEqual({
+      group: 'asking',
+      on: 'permission',
+      since: 30,
+    });
+    expect(
+      status({
+        ...transcript,
+        entries: [task('t', 'task', 10, { state: 'cancelled', endedAt: 50 })],
+      }),
+    ).toStrictEqual({ group: 'stopped', endedAt: 50 });
+  });
+
+  test('all summary words and separators survive wrapping at every width from 26 through 120', () => {
+    const groups = summaryGroups([
+      item('task', ASKING),
+      item('monitor', FAILED),
+      item('monitor', RUNNING),
+      item('task', RUNNING),
+      item('task', DONE),
+      item('monitor', STOPPED),
+    ]);
+    const words =
+      `background ${groups.map(({ text }) => text).join(' · ')}`.split(/\s+/);
+
+    for (let width = 26; width <= 120; width++) {
+      const lines = summaryLines(groups, width).map((line) =>
+        line.map(({ text }) => text).join(''),
+      );
+
+      expect(lines.join(' ').trim().split(/\s+/)).toStrictEqual(words);
+      expect(lines.every((line) => Array.from(line).length <= width)).toBe(
+        true,
+      );
+      expect(
+        lines.slice(1).every((line) => line.startsWith(' '.repeat(12))),
+      ).toBe(true);
+    }
+  });
+});

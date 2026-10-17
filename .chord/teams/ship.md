@@ -250,6 +250,8 @@ The whole suite takes about ten minutes; nobody waits that long for a change of 
 
 Everything written is in English and names no private path, per AGENTS.md. Follow the one rule: a maintained package before our own code, and when a library does not do what the task asks, stop and hand the question up with options, never a workaround around it. Tests never reach a real model or a real agent. Commits are local, conventional and carry no trailers; nobody pushes or publishes.
 
+Every commit is signed: main's branch rules refuse a pull request with one unsigned commit in it, and only the owner can rewrite one that got in. Commit with plain `git commit`, never with `-c commit.gpgsign=false`, `--no-gpg-sign` or any other override of signing, and after each commit check that it carries a signature (`git cat-file commit HEAD` shows a `gpgsig` header). If signing fails, do not commit without it: stop and tell the lead, who takes it to main.
+
 ## Handing on
 
 Nobody guesses. A member acts on a unit only after the member before it in the line has handed it over by message: designer after developer says "this screen unit is done, commit X", reviewer after developer (or designer, for a screen unit) hands it on, tester after reviewer says "this unit passed review, commit X". Code seen in the tree that has not been handed over is work in progress: do not look at it, review it, test it, or write tests ahead for it. If a member needs something from another and has had no answer, it asks again or asks the lead; it does not act on what it supposes the answer is.

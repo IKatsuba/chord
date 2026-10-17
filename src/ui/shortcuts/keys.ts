@@ -242,7 +242,13 @@ export const SHORTCUTS: readonly Shortcut[] = [
     key: 'pgup pgdn or wheel',
     does: 'to scroll',
     also: 'wheel',
-    commands: ['scroll_page_up', 'scroll_page_down'],
+    // A permission request taller than its box scrolls by them (CHD-246).
+    commands: [
+      'scroll_page_up',
+      'scroll_page_down',
+      'request_page_up',
+      'request_page_down',
+    ],
     // Terminal.app passes these on only with shift held.
     presses: ['pgup', 'pgdn', 'shift + pgup', 'shift + pgdn'],
     actions: ['scroll:pageUp', 'scroll:pageDown'],
@@ -250,14 +256,19 @@ export const SHORTCUTS: readonly Shortcut[] = [
   {
     key: 'shift + ↑ ↓',
     does: 'to scroll a line',
-    commands: ['scroll_line_up', 'scroll_line_down'],
+    commands: [
+      'scroll_line_up',
+      'scroll_line_down',
+      'request_line_up',
+      'request_line_down',
+    ],
     presses: ['shift + ↑', 'shift + ↓'],
     actions: ['scroll:lineUp', 'scroll:lineDown'],
   },
   {
     key: 'home end',
     does: 'for the top and the bottom',
-    commands: ['scroll_top', 'scroll_bottom'],
+    commands: ['scroll_top', 'scroll_bottom', 'request_top', 'request_bottom'],
     presses: ['home', 'end', 'shift + home', 'shift + end'],
     actions: ['scroll:top', 'scroll:bottom'],
   },

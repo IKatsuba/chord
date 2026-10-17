@@ -1,9 +1,64 @@
 /**
  * Permissions: a write asked for, with three options or with two of one kind,
- * and an MCP call asked for by its name and arguments alone.
+ * and MCP calls asked for by their name and arguments alone, one of them a
+ * file too long for the box.
  */
 import * as acp from '@agentclientprotocol/sdk';
+import { RELEASE_NOTES } from '../../release_notes.ts';
 import { type Play, type Turn } from '../turn.ts';
+
+/**
+ * Asks for permission to call `server`'s `tool` with `rawInput`, as
+ * claude-agent-acp asks for an MCP tool, and says which option came back.
+ */
+async function askMcp(
+  turn: Turn,
+  server: string,
+  tool: string,
+  rawInput: Record<string, unknown>,
+): Promise<acp.StopReason> {
+  const id = turn.callId(tool);
+  const toolCall: acp.ToolCall = {
+    toolCallId: id,
+    title: `mcp__${server}__${tool}`,
+    kind: 'other',
+    status: 'pending',
+    rawInput,
+  };
+
+  await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
+
+  const answer = await turn.client.request('session/request_permission', {
+    sessionId: turn.sessionId,
+    toolCall,
+    options: [
+      { optionId: 'allow', name: 'Yes', kind: 'allow_once' },
+      {
+        optionId: 'always',
+        name: `Yes, and don't ask again for ${server} - ${tool} commands`,
+        kind: 'allow_always',
+      },
+      {
+        optionId: 'deny',
+        name: 'No, and tell Claude what to do differently',
+        kind: 'reject_once',
+      },
+    ],
+  });
+
+  if (answer.outcome.outcome === 'cancelled') {
+    return 'cancelled';
+  }
+
+  await turn.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: id,
+    status: answer.outcome.optionId === 'deny' ? 'failed' : 'completed',
+  });
+  await turn.say(`Permission: ${answer.outcome.optionId}.`);
+
+  return 'end_turn';
+}
 
 /**
  * Asks for permission to write a file with `options`, and says which option
@@ -77,51 +132,37 @@ export const PERMISSIONS = {
 
   // As claude-agent-acp asks for an MCP tool: the title is the tool's name,
   // the arguments are only in rawInput, and there is no content.
-  async mcpask(turn) {
-    const id = turn.callId('monitor');
-    const toolCall: acp.ToolCall = {
-      toolCallId: id,
-      title: 'mcp__chord__monitor',
-      kind: 'other',
-      status: 'pending',
-      rawInput: {
-        command: 'tail -f dev.log | grep --line-buffered -E "ERROR|WARN"',
-        description: 'dev server errors',
-        timeout_ms: 600000,
-      },
-    };
+  mcpask: (turn) =>
+    askMcp(turn, 'chord', 'monitor', {
+      command: 'tail -f dev.log | grep --line-buffered -E "ERROR|WARN"',
+      description: 'dev server errors',
+      timeout_ms: 600000,
+    }),
 
-    await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
+  // An MCP write whose file runs past any window (CHD-246).
+  bigask: (turn) =>
+    askMcp(turn, 'files', 'write_file', {
+      path: 'docs/release.md',
+      content: RELEASE_NOTES,
+      mode: 'overwrite',
+    }),
 
-    const answer = await turn.client.request('session/request_permission', {
-      sessionId: turn.sessionId,
-      toolCall,
-      options: [
-        { optionId: 'allow', name: 'Yes', kind: 'allow_once' },
-        {
-          optionId: 'always',
-          name: "Yes, and don't ask again for chord - monitor commands",
-          kind: 'allow_always',
-        },
-        {
-          optionId: 'deny',
-          name: 'No, and tell Claude what to do differently',
-          kind: 'reject_once',
-        },
-      ],
-    });
+  // Two such writes asked at once, the second waiting behind the first, told
+  // apart by their paths; each says what came back.
+  async bigasktwice(turn) {
+    const answers = await Promise.all([
+      askMcp(turn, 'files', 'write_file', {
+        path: 'docs/release.md',
+        content: RELEASE_NOTES,
+        mode: 'overwrite',
+      }),
+      askMcp(turn, 'files', 'write_file', {
+        path: 'docs/changes.md',
+        content: RELEASE_NOTES,
+        mode: 'append',
+      }),
+    ]);
 
-    if (answer.outcome.outcome === 'cancelled') {
-      return 'cancelled';
-    }
-
-    await turn.send({
-      sessionUpdate: 'tool_call_update',
-      toolCallId: id,
-      status: answer.outcome.optionId === 'deny' ? 'failed' : 'completed',
-    });
-    await turn.say(`Permission: ${answer.outcome.optionId}.`);
-
-    return 'end_turn';
+    return answers.includes('cancelled') ? 'cancelled' : 'end_turn';
   },
 } satisfies Record<string, Play>;

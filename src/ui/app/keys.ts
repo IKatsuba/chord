@@ -44,6 +44,7 @@ import {
 } from '../prompt/vim.ts';
 import { keystrokeOf } from '../shortcuts/bindings.ts';
 import type { KeyCommand, KeyPress } from '../shortcuts/state.ts';
+import type { ScrollStep } from '../transcript/scroll.ts';
 import {
   type AppAction,
   type AppState,
@@ -88,6 +89,8 @@ export type Step =
   | { readonly type: 'close_agent' }
   | { readonly type: 'interrupt' }
   | { readonly type: 'reject_permission'; readonly id: string }
+  /** A scroll key moves the permission request in its box (CHD-246). */
+  | { readonly type: 'scroll_request'; readonly step: ScrollStep }
   | { readonly type: 'set_mode'; readonly mode: string }
   | { readonly type: 'read_commands' }
   | { readonly type: 'send'; readonly text: string }
@@ -672,6 +675,18 @@ function commandSteps(
       return [dispatch({ type: 'scrolled', step: 'top' })];
     case 'scroll_bottom':
       return [dispatch({ type: 'scrolled', step: 'bottom' })];
+    case 'request_page_up':
+      return [{ type: 'scroll_request', step: 'page_up' }];
+    case 'request_page_down':
+      return [{ type: 'scroll_request', step: 'page_down' }];
+    case 'request_line_up':
+      return [{ type: 'scroll_request', step: 'line_up' }];
+    case 'request_line_down':
+      return [{ type: 'scroll_request', step: 'line_down' }];
+    case 'request_top':
+      return [{ type: 'scroll_request', step: 'top' }];
+    case 'request_bottom':
+      return [{ type: 'scroll_request', step: 'bottom' }];
     case undefined: {
       const query = state.search && editedQuery(state.search.query, input, key);
 

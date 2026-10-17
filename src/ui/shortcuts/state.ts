@@ -207,7 +207,9 @@ export type KeyCommand =
   /** A key after a chord's first that finishes no chord: both go. */
   | 'key_dropped'
   /** pgup, pgdn, shift+↑/↓, home and end move the transcript's view. */
-  | `scroll_${ScrollStep}`;
+  | `scroll_${ScrollStep}`
+  /** The same keys while a permission request overflows its box: they move it. */
+  | `request_${ScrollStep}`;
 
 /** A key named at the start of a sentence: `Esc`, `Ctrl+x`. */
 export function capital(key: string): string {

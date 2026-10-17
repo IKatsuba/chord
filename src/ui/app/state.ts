@@ -50,6 +50,7 @@ import {
   type DialogsState,
   reduceDialogs,
 } from '../dialogs/state.ts';
+import { askedPermission } from '../dialogs/permission.ts';
 import {
   configPickerShown,
   initialPickers,
@@ -452,6 +453,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       return reduceView(state, action) as AppState;
     case 'form_filled':
     case 'questions_answered':
+    case 'request_overflowed':
       return reduceDialogs(state, action) as AppState;
     case 'connected':
       return state.connection.status === 'starting'
@@ -831,6 +833,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
  * added to a session cannot be left with the window by mistake.
  */
 const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
+  overflowing: true,
   connection: true,
   sessionId: true,
   since: true,
@@ -1422,8 +1425,13 @@ function boundCommand(
 
   const step = scrollStep(on);
 
+  // A permission request taller than its box takes the view's keys, as the
+  // person reads it before answering (CHD-246).
   if (step) {
-    return `scroll_${step}`;
+    return state.overflowing !== undefined &&
+      state.overflowing === askedPermission(state.transcript.turn)?.id
+      ? `request_${step}`
+      : `scroll_${step}`;
   }
 
   const finder = fileFinder(state, draft, cursor);

@@ -18,6 +18,11 @@ export interface DialogsState {
   readonly filling?: { readonly id: string; readonly form: FormState };
   /** The question box as the person has answered it so far, the same way. */
   readonly answering?: { readonly id: string; readonly state: AskState };
+  /**
+   * The permission request, by id, whose request runs past the box's room,
+   * so the scroll keys move it rather than the transcript (CHD-246).
+   */
+  readonly overflowing?: string;
 }
 
 export type DialogsAction =
@@ -32,15 +37,39 @@ export type DialogsAction =
       readonly type: 'questions_answered';
       readonly id: string;
       readonly state: AskState;
+    }
+  /** The permission box laid out request `id`, which `overflows` or fits. */
+  | {
+      readonly type: 'request_overflowed';
+      readonly id: string;
+      readonly overflows: boolean;
     };
 
 export function reduceDialogs(
   state: DialogsState,
   action: DialogsAction,
 ): DialogsState {
-  return action.type === 'form_filled'
-    ? { ...state, filling: { id: action.id, form: action.form } }
-    : { ...state, answering: { id: action.id, state: action.state } };
+  switch (action.type) {
+    case 'form_filled':
+      return { ...state, filling: { id: action.id, form: action.form } };
+    case 'questions_answered':
+      return { ...state, answering: { id: action.id, state: action.state } };
+    case 'request_overflowed': {
+      if (action.overflows) {
+        return state.overflowing === action.id
+          ? state
+          : { ...state, overflowing: action.id };
+      }
+
+      if (state.overflowing !== action.id) {
+        return state;
+      }
+
+      const { overflowing: _, ...left } = state;
+
+      return left;
+    }
+  }
 }
 
 /**

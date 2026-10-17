@@ -8,8 +8,9 @@
   `scenarios/`: `text.ts`
   (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `unordered`, `edit`, `rewrite`),
-  `permissions.ts` (`permission`, `twins`, `mcpask`), `plans.ts` (`plan`, `planshrink`,
-  `proposal`), `forms.ts` (`form`, `link`), `shell.ts` (`shell`,
+  `permissions.ts` (`permission`, `twins`, `mcpask`, `bigask`, `bigasktwice`),
+  `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
+  `shell.ts` (`shell`,
   `shellcut`, `bash`), `compaction.ts` (`compact`, `codexcompact`,
   `compactfail`), `modes.ts` (`status`, `exitplan`, `mode`, `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -24,8 +25,8 @@
   `unordered`, `edit`, `rewrite`, `markdown`, `permission`, `plan`, `proposal`,
   `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
   `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
-  `mode`, `late`, `twins`, `mcpask`, `unknown`, `subagent`, `subagentupdate`,
-  `subagentstates`, `chordtools`)
+  `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
+  `subagent`, `subagentupdate`, `subagentstates`, `chordtools`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second; `form` asks for a form with a field of each kind and
   `link` for a link to open (`tests/fixtures/forms.ts`), `askclaude`,
@@ -37,7 +38,10 @@
   an accepted link is followed by `elicitation/complete`; `twins` asks a
   permission with two `allow_once` options and says the id picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the
-  arguments only in `rawInput`; `late`
+  arguments only in `rawInput`; `bigask` asks for an MCP file write with
+  multiline content and a long line, to scroll and wrap in the permission
+  box; `bigasktwice` asks for two such writes at once, the second waiting
+  behind the first; `late`
   sends a chunk after answering the prompt; `unknown` sends an update of a
   kind ACP does not have and a notification of its own;
   `mcp` answers with the MCP servers its session was opened with, as JSON;

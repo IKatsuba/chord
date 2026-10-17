@@ -71,11 +71,17 @@ test('the mark drifts a step at a time on its own timer', async () => {
     // Past the frames the size settling draws.
     await new Promise((resolve) => setTimeout(resolve, 20));
 
+    // The timer starts at the mount, which the window's settling leaves an
+    // unknown while behind, so the step is timed from the one before it.
+    const start = frame();
+
+    await until('the first step', () => frame() !== start, 2_000);
+
     const first = frame();
     const from = Date.now();
 
     await until('the next step', () => frame() !== first, 2_000);
-    // A step is 300 ms, give or take the timer's start.
+    // A step is 300 ms, give or take how late each is seen.
     expect(
       Date.now() - from >= 150,
       `stepped after ${Date.now() - from} ms`,

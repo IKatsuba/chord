@@ -1,0 +1,24 @@
+ ⏺ I will open parser on the tests and docs on the README.
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ → to @parser · queued
+   ⎿  I changed how a string at the end of a line is read. Run the parser
+      tests now and tell me only what fails.
+
+ → to @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ››› Working… (26s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M context window
+    main    fake · Fake Large with a 1M context window  ✻ working 26s
+    parser  fake · Fake Small                           ✓ replied 1s ago
+    docs    fake · Fake Large with a 1M context window  ● permission 25s

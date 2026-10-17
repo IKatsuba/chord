@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › agents
+
+ ⏺ I will open parser on the tests and docs on the README.
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ → to @parser
+   ⎿  I changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.
+
+ → to @parser
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (24s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts  Fake Large with a 1M context window · medium effort
+    main    fake · Fake Large with a 1M context window · medium  ✻ working 24s
+    parser  fake · Fake Small · medium                           ✓ replied 0s ago
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 23s

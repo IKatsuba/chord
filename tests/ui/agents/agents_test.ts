@@ -620,3 +620,36 @@ describe('CHD-264 tester: failure age and row fallback', () => {
     ).toBe('exited');
   });
 });
+
+test('a reply reads its age from the reply, not from the message that asked for it, in a row and a folded lead (CHD-364)', () => {
+  const reply = {
+    kind: 'replied' as const,
+    since: NOW - 23_000,
+    repliedAt: NOW - 1_000,
+  };
+  const parser = row('parser', { wait: { watch: emptyWatch, unseen: reply } });
+
+  expect(agentState(parser, NOW)?.words).toStrictEqual('replied 1s ago');
+
+  const [main, lead, ...members] = team('main');
+  const quiet = (each: AgentRow): AgentRow => ({
+    ...each,
+    wait: { watch: emptyWatch },
+  });
+  const folded = teamRows(
+    [
+      main!,
+      quiet(lead!),
+      ...members.map((member) =>
+        member.name === 'coder'
+          ? { ...member, wait: { watch: emptyWatch, unseen: reply } }
+          : quiet(member),
+      ),
+    ],
+    { fold: true },
+  );
+
+  expect(agentState(folded[1]!, NOW)?.words).toStrictEqual(
+    'coder: replied 1s ago',
+  );
+});

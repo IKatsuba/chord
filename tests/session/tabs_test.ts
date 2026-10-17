@@ -29,6 +29,7 @@ import {
   pick,
   position,
   previousTab,
+  repliedSince,
   runName,
   show,
   shownKey,
@@ -260,6 +261,7 @@ test('a turn ending behind is unseen until the person goes to it', () => {
   expect(tabOf(tabs, 1)?.wait.unseen).toStrictEqual({
     kind: 'replied',
     since: 2000,
+    repliedAt: 2000,
   });
   expect(tabOf(tabs, 1)?.wait.working).toStrictEqual(undefined);
   expect(tabOf(goTo(tabs, 1), 1)?.wait.unseen).toStrictEqual(undefined);
@@ -1018,5 +1020,114 @@ describe('CHD-264 tester: child failure lifecycle', () => {
     expect(agentOf(returned, 3)?.child?.conversation).toBe(
       'conversation of parser',
     );
+  });
+});
+
+test('a reply to a message counts its age from the reply, while the message keeps its place in the order (CHD-364)', () => {
+  const message: ConversationEvent = {
+    type: 'prompt',
+    turnId: 'm',
+    text: 'hi',
+    at: 0,
+    from: { name: 'main', reachable: true },
+  };
+  // The message at 1 s starts a turn that answers 23 s later.
+  const asked = heard(opened('a', 'b'), 1, [up, message]);
+  const replied = heard(asked, 1, [ended('m')], 24_000);
+  const wait = tabOf(replied, 1)!.wait;
+
+  expect(tabOf(asked, 1)!.wait.unseen?.kind).toStrictEqual('message');
+  expect(wait.unseen).toStrictEqual({
+    kind: 'replied',
+    since: 1000,
+    repliedAt: 24_000,
+  });
+  expect(repliedSince(wait)).toStrictEqual(24_000);
+
+  // A second reply before a look is the newest, and names the age; the
+  // news still began with the message.
+  const again = heard(replied, 1, [prompt('t2'), ended('t2')], 40_000);
+
+  expect(repliedSince(tabOf(again, 1)!.wait)).toStrictEqual(41_000);
+  expect(tabOf(again, 1)!.wait.unseen?.since).toStrictEqual(1000);
+});
+
+describe('CHD-364 tester: separate reply and attention clocks', () => {
+  const message = (turnId: string): ConversationEvent => ({
+    type: 'prompt',
+    turnId,
+    text: 'hi',
+    at: 0,
+    from: { name: 'main', reachable: true },
+  });
+
+  test('each later reply moves its age but leaves the oldest child first for attention', () => {
+    const base = withChildren(opened('fake'), 1, 'parser', 'docs');
+    const first = heard(
+      heard(base, 2, [up, message('p')], 1000),
+      2,
+      [ended('p')],
+      10_000,
+    );
+    const other = heard(first, 3, [up, prompt('d'), ended('d')], 20_000);
+    const latest = heard(other, 2, [prompt('next'), ended('next')], 50_000);
+    const wait = agentOf(latest, 2)!.child!.wait;
+
+    expect(repliedSince(wait)).toBe(51_000);
+    expect(wait.unseen?.since).toBe(2000);
+    expect(attentionOrder(latest)).toStrictEqual([2, 3]);
+
+    const there = attend(latest)!;
+
+    expect(shownKey(there)).toBe(2);
+    expect(repliedSince(agentOf(there, 2)!.child!.wait)).toBeUndefined();
+    expect(shownKey(attend(there)!)).toBe(3);
+  });
+
+  test('a cancelled turn does not move a previous unseen reply clock', () => {
+    const first = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('first'),
+      ended('first'),
+    ]);
+    const cancelled = heard(
+      first,
+      1,
+      [
+        prompt('next'),
+        { type: 'cancel', turnId: 'next', at: 50_000 },
+        ended('next'),
+      ],
+      50_000,
+    );
+
+    expect(repliedSince(tabOf(cancelled, 1)!.wait)).toBe(2000);
+    expect(tabOf(cancelled, 1)!.wait.unseen?.since).toBe(2000);
+  });
+
+  test('replies after a failure cannot replace its first failure time, or expose a reply age', () => {
+    const first = heard(opened('a', 'b'), 1, [
+      up,
+      message('first'),
+      ended('first'),
+    ]);
+    const failure = heard(first, 1, [prompt('bad'), failed('bad')], 10_000);
+    const after = heard(
+      failure,
+      1,
+      [
+        prompt('later'),
+        ended('later'),
+        prompt('bad-again'),
+        failed('bad-again'),
+      ],
+      20_000,
+    );
+    const wait = tabOf(after, 1)!.wait;
+
+    expect(failureOf(wait)).toBe('turn');
+    expect(failedSince(wait)).toBe(11_000);
+    expect(repliedSince(wait)).toBeUndefined();
+    expect(wait.unseen?.since).toBe(1000);
   });
 });

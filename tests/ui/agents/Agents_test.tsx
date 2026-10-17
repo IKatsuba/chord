@@ -294,6 +294,31 @@ test("a child's exit in a tab behind is named for the child, in that tab", () =>
     expect(!window.frame().includes('2 fake exited')).toBeTruthy();
   }));
 
+test("a child's reply to a message reads its age from the reply, not from the message (CHD-364)", () =>
+  withAgents(
+    async (window) => {
+      await ready(window);
+      await send(window, 'agents');
+      await window.shows('← message from @main');
+      await until(
+        'parser replied',
+        () => /parser .*✓ replied/.test(window.frame()),
+        30_000,
+      );
+
+      const age = /parser .*✓ replied (\d+)s ago/.exec(window.frame());
+
+      // The message came seconds before; the reply has only just come.
+      expect(Number(age?.[1])).toBeLessThanOrEqual(2);
+    },
+    '--steering',
+    'codex',
+    '--steer-late',
+    // Slow enough that the reply comes seconds after the message.
+    '--step-ms',
+    '30',
+  ));
+
 /** How many `closed` lines the records in `dir`'s state hold. */
 async function closedInRecords(dir: string): Promise<number> {
   const records = `${dir}/state/records`;
@@ -380,6 +405,9 @@ test("a message held behind the child's running call waits in its queue until it
         expect(window.frame()).toContain('Running…');
         await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
         await window.shows('The tests pass.');
+        // The answer can draw before the held steers have been accepted.
+        await window.shows(`← from @main\n   ⎿  ${HELD_MESSAGE}`);
+        await window.shows(`← from @main\n   ⎿  ${HELD_AGAIN}`);
 
         const frame = window.frame();
 
@@ -759,4 +787,36 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
         expect(window.frame()).not.toContain('✗ parser exited in 2 fake');
       }));
   }
+});
+
+describe('CHD-364 tester: narrow reply age', () => {
+  test('the first reply at 80x24 starts fresh and then ages from the reply', () =>
+    withAgents(
+      async (window) => {
+        await window.resize({ columns: 80, rows: 24 });
+        await ready(window);
+        await send(window, 'agents');
+        await window.shows('← message from @main');
+
+        const age = () =>
+          Number(/parser .*✓ replied (\d+)s ago/.exec(window.frame())?.[1]);
+
+        await until(
+          'the narrow parser reply',
+          () => Number.isFinite(age()),
+          30_000,
+        );
+
+        const first = age();
+
+        expect(first).toBeLessThanOrEqual(2);
+        await until('reply age advances', () => age() > first);
+        expect(age()).toBeLessThan(10);
+      },
+      '--steering',
+      'codex',
+      '--steer-late',
+      '--step-ms',
+      '30',
+    ));
 });

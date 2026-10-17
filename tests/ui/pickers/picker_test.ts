@@ -376,6 +376,13 @@ test('a session in the sessions picker says where it stands, and since when', ()
   expect(
     tabState(wait({ unseen: { kind: 'replied', since: at(125) } }), now),
   ).toStrictEqual('✓ replied 2m ago');
+  // From the reply, not from the message it answered (CHD-364).
+  expect(
+    tabState(
+      wait({ unseen: { kind: 'replied', since: at(125), repliedAt: at(4) } }),
+      now,
+    ),
+  ).toStrictEqual('✓ replied 4s ago');
   expect(
     tabState(wait({ unseen: { kind: 'failed', since: at(65) } }), now),
   ).toStrictEqual('✗ turn failed 1m');
@@ -585,5 +592,29 @@ describe('CHD-264 tester: picker failure identity', () => {
     expect(tabState({ ...idleTab, wait: child.wait }, now)).toBe(
       '✗ turn failed 12s',
     );
+  });
+});
+
+describe('CHD-364 tester: legacy and newest reply age', () => {
+  test('old waits fall back to news time; a later reply uses its own time, including epoch zero', () => {
+    const state = (since: number, repliedAt?: number) =>
+      tabState(
+        {
+          ...idleTab,
+          wait: {
+            ...idle,
+            unseen: {
+              kind: 'replied',
+              since,
+              ...(repliedAt === undefined ? {} : { repliedAt }),
+            },
+          },
+        },
+        65_000,
+      );
+
+    expect(state(1000)).toBe('✓ replied 1m ago');
+    expect(state(1000, 64_000)).toBe('✓ replied 1s ago');
+    expect(state(-100_000, 0)).toBe('✓ replied 1m ago');
   });
 });

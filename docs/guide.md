@@ -202,7 +202,7 @@ start under the name, at column 3, and `⎿` results follow the last row.
 ctrl+o expands output and diffs; the headline is the same in both views.
 An Agent call shows its description, with its prompt in ctrl+o.
 
-An MCP call titled `mcp__server__tool` reads
+In Claude and Codex sessions, an MCP call reads
 `server - tool (MCP)(key: JSON, …)`, with its arguments whole and wrapped.
 Strings are quoted, with newlines written as `\n`; arrays and objects are
 compact JSON. Until arguments arrive, or with none, it shows the name

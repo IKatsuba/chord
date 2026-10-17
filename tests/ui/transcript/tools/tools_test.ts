@@ -312,6 +312,56 @@ test("an MCP headline wraps as one long line, (MCP) dim, the design's rows at 80
   ]);
 });
 
+test("Codex's MCP call is drawn as Claude's, named by its wrapper's server and tool, never its title", () => {
+  const wrapped = (server: string, tool: string, input: unknown): ToolCall => ({
+    id: 'a',
+    title: `mcp.${server}.${tool}`,
+    kind: 'execute',
+    rawInput: { server, tool, arguments: input },
+    mcp: { server, tool, input },
+  });
+
+  expect(
+    headline(wrapped('notes', 'list_notes', { tag: 'ui', limit: 2 })),
+  ).toStrictEqual({
+    name: 'notes - list_notes',
+    tag: ' (MCP)',
+    arg: 'tag: "ui", limit: 2',
+  });
+  // A dotted server name needs no splitting of the title.
+  expect(headline(wrapped('notes.v2', 'list', {})).name).toStrictEqual(
+    'notes.v2 - list',
+  );
+
+  // No arguments, {} or null: the name alone.
+  for (const input of [undefined, {}, null]) {
+    expect(headline(wrapped('notes', 'list_notes', input))).toStrictEqual({
+      name: 'notes - list_notes',
+      tag: ' (MCP)',
+    });
+  }
+
+  // chord's own server's: chord's own row, as before.
+  expect(
+    headline(
+      wrapped('chord', 'send_message', { to: 'ship', text: 'hi' }),
+      'chord',
+    ),
+  ).toStrictEqual({ name: 'ship', sent: true });
+  // With nothing filed from a wrapper, or no server in it, the title as today.
+  expect(
+    headline({ id: 'a', title: 'mcp.notes.list_notes', kind: 'execute' }),
+  ).toStrictEqual({ name: 'Bash', arg: 'mcp.notes.list_notes' });
+  expect(
+    headline({
+      id: 'a',
+      title: 'mcp.notes.list_notes',
+      kind: 'execute',
+      mcp: { tool: 'list_notes', input: {} },
+    }),
+  ).toStrictEqual({ name: 'Bash', arg: 'mcp.notes.list_notes' });
+});
+
 test('the status picks the tone; no status is pending', () => {
   expect(toneOf({ id: 'a' })).toStrictEqual('pending');
   expect(toneOf({ id: 'a', status: 'pending' })).toStrictEqual('pending');
@@ -628,5 +678,57 @@ describe('CHD-415 tester: MCP identity and control boundaries', () => {
     expect(mcpArguments({ 'line\n\u007f': 'left\u009bright\u009f' })).toBe(
       'line\\n\\u007f: "left\\u009bright\\u009f"',
     );
+  });
+});
+
+describe('CHD-419 tester: wrapper authority and legacy title fallback', () => {
+  test('dotted wrapper names override a contradictory title and raw input', () => {
+    const call: ToolCall = {
+      id: 'dotted',
+      title: 'mcp__wrong__wrong',
+      kind: 'execute',
+      rawInput: {
+        server: 'wrong',
+        tool: 'wrong',
+        arguments: { ignored: true },
+      },
+      mcp: { server: 'my.notes', tool: 'notes.v2', input: { title: 'kept' } },
+    };
+
+    expect(headline(call)).toEqual({
+      name: 'my.notes - notes.v2',
+      tag: ' (MCP)',
+      arg: 'title: "kept"',
+    });
+    expect(
+      headline({
+        ...call,
+        chord: { tool: 'list_agents', input: {}, answer: {} },
+      }),
+    ).toEqual({ name: 'List agents' });
+  });
+
+  test('a server-less filed record follows its old title and raw arguments', () => {
+    const call: ToolCall = {
+      id: 'old',
+      title: 'mcp__notes__save_note',
+      rawInput: { title: 'legacy' },
+      mcp: { tool: 'ignored', input: { title: 'wrong' } },
+    };
+
+    expect(headline(call)).toEqual({
+      name: 'notes - save_note',
+      tag: ' (MCP)',
+      arg: 'title: "legacy"',
+    });
+    expect(
+      headline(
+        {
+          ...call,
+          mcp: { server: 'chord-2', tool: 'list_agents', input: undefined },
+        },
+        'chord-2',
+      ),
+    ).toEqual({ name: 'List agents' });
   });
 });

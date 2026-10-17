@@ -31,9 +31,10 @@ import { isModelState } from './models.ts';
 export const FILLED = 'chord/filled';
 
 /**
- * The `_meta` key on a tool call where chord files an MCP call's tool and
- * arguments, `{tool, arguments}`, when the agent wrapped them in its
- * `rawInput` rather than sending the arguments as `rawInput` itself.
+ * The `_meta` key on a tool call where chord files an MCP call's server,
+ * tool and arguments, `{server, tool, arguments}`, when the agent wrapped
+ * them in its `rawInput` rather than sending the arguments as `rawInput`
+ * itself.
  */
 export const MCP_CALL = 'chord/mcp';
 

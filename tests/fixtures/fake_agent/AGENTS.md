@@ -8,7 +8,7 @@
   `scenarios/`: `text.ts`
   (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `unordered`, `edit`,
-  `rewrite`, `headlines`, `heredoc`, `longcommand`, `mcpnote`),
+  `rewrite`, `headlines`, `heredoc`, `longcommand`, `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `twins`, `mcpask`, `bigask`, `bigasktwice`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
   `shell.ts` (`shell`,
@@ -26,7 +26,7 @@
   effort with the config options that offer them.
   A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `stepslater`, `calls`,
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
-  `mcpnote`, `markdown`, `permission`, `plan`, `proposal`,
+  `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `plan`, `proposal`,
   `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
   `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
@@ -36,7 +36,9 @@
   `headlines` plays a heredoc, a long one-line command, an MCP call and a
   300-line heredoc; `heredoc` and `longcommand` play the Bash calls from
   the Claude Code capture in `docs/design/CHD-393.md`, and `mcpnote` its
-  MCP note, with arguments first empty, then whole;
+  MCP note, with arguments first empty, then whole; `codexmcpnote` plays
+  the same note as Codex sends it, with server, tool and arguments wrapped
+  in `rawInput`;
   `form` asks for a form with a field of each kind and
   `link` for a link to open (`tests/fixtures/forms.ts`), `askclaude`,
   `askclaudeone`, `askcodex`, `askdroid`, `askopencode` and `askdimcode`

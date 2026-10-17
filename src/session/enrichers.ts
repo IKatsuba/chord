@@ -730,12 +730,13 @@ export const dimcodeQuestions = questionShape((params, fields) => {
 });
 
 /**
- * The enricher that files an MCP call's tool and arguments under
+ * The enricher that files an MCP call's server, tool and arguments under
  * `_meta["chord/mcp"]` where codex-acp wraps them in the call's `rawInput`,
  * `{server, tool, arguments}`, and says `_meta.is_mcp_tool_call`: Claude's
- * adapter sends the arguments as `rawInput` itself, which is what chord
- * ties a request its own server served to the call by (CHD-377). The
- * `rawInput` stays as the agent sent it.
+ * adapter sends the arguments as `rawInput` itself and names the call by
+ * its title. chord ties a request its own server served to the call by
+ * them (CHD-377) and draws the call by them (CHD-419), never from the
+ * title. The `rawInput` stays as the agent sent it.
  */
 export const codexMcpCall: Enricher = (message) => {
   const update = notificationOf(message)?.update;
@@ -753,8 +754,8 @@ export const codexMcpCall: Enricher = (message) => {
   if (
     meta.is_mcp_tool_call !== true ||
     meta[MCP_CALL] !== undefined ||
-    typeof wrapped.tool !== 'string' ||
-    !('arguments' in wrapped)
+    typeof wrapped.server !== 'string' ||
+    typeof wrapped.tool !== 'string'
   ) {
     return [message];
   }
@@ -764,7 +765,11 @@ export const codexMcpCall: Enricher = (message) => {
       ...update,
       _meta: {
         ...markFilled(update._meta, [MCP_CALL]),
-        [MCP_CALL]: { tool: wrapped.tool, arguments: wrapped.arguments },
+        [MCP_CALL]: {
+          server: wrapped.server,
+          tool: wrapped.tool,
+          arguments: wrapped.arguments,
+        },
       },
     }),
   ];

@@ -133,4 +133,6 @@ One writer per file. A member who needs a change in another's file asks that own
 
 ## Reporting
 
+For the lead and every member, send_message always goes alone, never in a parallel batch with other tool calls. If it fails with an empty error or one that gives no reason, retry it once at once, alone. If it fails again, write the same text as a board comment on the task (`board comment <KEY> '<text>'`) and carry on; never stop and wait. A message steered into a running turn can cut off a batch; Claude Code then shows the other calls a "doesn't want to take this action… STOP" text that is not the person.
+
 The lead writes to main twice: once with the brief if the request is ambiguous or a question belongs to the owner, and once at the end with what was decided, the files changed, the critic findings that were rejected and why, and the open questions left for the owner.

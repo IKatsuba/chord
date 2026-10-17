@@ -270,6 +270,7 @@ const SCENARIOS = [
   'twins',
   'mcpask',
   'bigask',
+  'bigasktwice',
   'unknown',
   'subagent',
   'subagentupdate',

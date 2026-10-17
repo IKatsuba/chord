@@ -146,4 +146,23 @@ export const PERMISSIONS = {
       content: RELEASE_NOTES,
       mode: 'overwrite',
     }),
+
+  // Two such writes asked at once, the second waiting behind the first, told
+  // apart by their paths; each says what came back.
+  async bigasktwice(turn) {
+    const answers = await Promise.all([
+      askMcp(turn, 'files', 'write_file', {
+        path: 'docs/release.md',
+        content: RELEASE_NOTES,
+        mode: 'overwrite',
+      }),
+      askMcp(turn, 'files', 'write_file', {
+        path: 'docs/changes.md',
+        content: RELEASE_NOTES,
+        mode: 'append',
+      }),
+    ]);
+
+    return answers.includes('cancelled') ? 'cancelled' : 'end_turn';
+  },
 } satisfies Record<string, Play>;

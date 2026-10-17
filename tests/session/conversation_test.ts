@@ -1212,6 +1212,40 @@ test("on Claude's adapter, a message told while the turn's call is open is held 
     expect(queued).toStrictEqual(0);
   }));
 
+test("on Claude's adapter, a message waits only for the calls open when it was told, not for one opened after", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('overlap');
+    await until(() =>
+      events.some(
+        (event) =>
+          event.type === 'update' &&
+          event.update.sessionUpdate === 'tool_call' &&
+          event.update.toolCallId === 'overlap-a',
+      ),
+    );
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    const order = events.flatMap((event) =>
+      event.type === 'update' &&
+      (event.update.sessionUpdate === 'tool_call' ||
+        event.update.sessionUpdate === 'tool_call_update')
+        ? [`${event.update.toolCallId.slice(-1)} ${event.update.status}`]
+        : event.type === 'prompt' && event.into !== undefined
+          ? [`into: ${event.text}`]
+          : [],
+    );
+
+    // `b` is still running when it goes in, as the owner's answer has it.
+    expect(order).toStrictEqual([
+      'a in_progress',
+      'b in_progress',
+      'a completed',
+      'into: Then the docs.',
+      'b completed',
+    ]);
+  }));
+
 test("on Claude's adapter, two messages held behind an open call go into the turn in the order they were told", () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
     conversation.send('bash');

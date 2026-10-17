@@ -239,6 +239,7 @@ const SCENARIOS = [
   'stepslater',
   'calls',
   'longresults',
+  'overlap',
   'unordered',
   'edit',
   'rewrite',

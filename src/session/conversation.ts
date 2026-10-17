@@ -732,12 +732,15 @@ export class Conversation {
   }
 
   /**
-   * Whether a steer now would cut off a tool call the turn has open: held
-   * until they have all ended, it goes into the same turn between its calls
-   * (the owner's answer on CHD-417).
+   * The tool calls a steer told now waits out: those the turn has open at
+   * this moment, on an agent whose steer cuts them off, and none on any
+   * other. Calls opened later never extend the wait: held only until these
+   * have ended, it goes into the same turn (the owner's answer on CHD-417).
    */
-  #cuts(session: Session): boolean {
-    return this.#openCalls.size > 0 && session.cutsCallsOnSteer();
+  #cutNow(session: Session): ReadonlySet<string> {
+    return this.#openCalls.size > 0 && session.cutsCallsOnSteer()
+      ? new Set(this.#openCalls)
+      : new Set();
   }
 
   /**
@@ -753,6 +756,9 @@ export class Conversation {
   ): Promise<void> {
     const steer = {};
     const ahead = this.#steering;
+    // Taken before any wait, as the message arrives.
+    const awaited = this.#cutNow(session);
+    const open = () => [...awaited].some((id) => this.#openCalls.has(id));
     const { promise: answered, resolve: answer } =
       Promise.withResolvers<void>();
     let outcome: SteerOutcome;
@@ -778,7 +784,7 @@ export class Conversation {
 
       while (
         this.#steerable(session) === into &&
-        (this.#waitsOnPerson() || this.#cuts(session))
+        (this.#waitsOnPerson() || open())
       ) {
         await this.#wake.promise;
       }
@@ -1989,8 +1995,8 @@ export class Conversation {
   }
 
   /**
-   * Keeps the turn's open calls as its updates say; the last one ending
-   * wakes a steer held behind them.
+   * Keeps the turn's open calls as its updates say; each one ending wakes
+   * the steers held behind it.
    */
   #track(update: SessionUpdate): void {
     if (
@@ -2001,10 +2007,7 @@ export class Conversation {
     }
 
     if (update.status === 'completed' || update.status === 'failed') {
-      if (
-        this.#openCalls.delete(update.toolCallId) &&
-        this.#openCalls.size === 0
-      ) {
+      if (this.#openCalls.delete(update.toolCallId)) {
         this.#rouse();
       }
     } else if (

@@ -696,3 +696,67 @@ describe('CHD-423 tester: two held messages on screen', () => {
     });
   }
 });
+
+describe('CHD-264 tester: failure surfaces in the window', () => {
+  async function anotherTab(window: Window) {
+    const opened = window.pids.length;
+
+    await leader(window, 'c');
+    // A failure notice can replace the ready hint at a narrow width.
+    await until(
+      'the new fake session connected',
+      () => window.pids.length > opened,
+    );
+  }
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`failure ages, mixed notices and picker owners stay correct at ${columns}x${rows}; seeing each child clears only its news`, () =>
+      withAgents(async (window) => {
+        await window.resize({ columns, rows });
+        await ready(window);
+        await send(window, 'agentfail');
+        await window.shows("✗ parser's turn failed · ctrl+x a");
+
+        const failedRow = () =>
+          window
+            .frame()
+            .split('\n')
+            .find((line) => /^ {4}parser {2}fake/.test(line));
+        const age = () =>
+          Number(/turn failed (\d+)s ago/.exec(failedRow() ?? '')?.[1]);
+        const first = age();
+
+        expect(Number.isFinite(first)).toBe(true);
+        await until('failed-turn age advances', () => age() > first);
+        expect(failedRow()).toMatch(/✗ turn failed \d+s ago/);
+        await anotherTab(window);
+        await send(window, 'agentexit');
+        await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a');
+        await anotherTab(window);
+        await leader(window, 'w');
+        await window.shows('✗ parser: turn failed');
+        await window.shows('✗ parser: exited');
+        expect(window.frame()).not.toContain('sessions ended');
+        await window.press(ESC);
+        await leader(window, 'a');
+        await window.shows('╭─ parser ');
+        await until('only exited child remains unseen', () =>
+          window.frame().includes('✗ parser exited in 2 fake · ctrl+x a'),
+        );
+        expect(window.frame()).not.toMatch(/^ {4}parser .*turn failed/m);
+        await send(window, 'text');
+        await window.shows('came in chunks');
+        await leader(window, '2');
+        await leader(window, 'a');
+        await window.shows('╭─ parser ');
+        expect(window.frame()).toMatch(/^ {4}parser .*✗ exited$/m);
+        await leader(window, '1');
+        await leader(window, '2');
+        expect(window.frame()).toMatch(/^ {4}parser .*✗ exited$/m);
+        expect(window.frame()).not.toContain('✗ parser exited in 2 fake');
+      }));
+  }
+});

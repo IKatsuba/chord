@@ -105,6 +105,8 @@ export async function draw(
         height: rows,
         exitOnCtrlC: false,
         exitSignals: [],
+        // As chord's own renderer: a click gives no widget the keys.
+        autoFocus: false,
         ...(logged === undefined
           ? {}
           : {

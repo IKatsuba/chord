@@ -10,6 +10,7 @@ import {
 } from '../../../src/session/sessions.ts';
 import { App } from '../../../src/ui/app/App.tsx';
 import * as ansi from '../../../src/ui/theme/Ansi.tsx';
+import { terminalOptions } from '../../../src/ui/app/renderer.tsx';
 import { editInEditor } from '../../../src/editor.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
@@ -17,11 +18,13 @@ import {
   CTRL_C,
   CTRL_D,
   CTRL_G,
+  CTRL_R,
   CTRL_X,
   ESC,
   inputAsked,
   isAlive,
   leader,
+  left,
   promptRow,
   quitAll,
   ready,
@@ -1558,4 +1561,64 @@ test('/clear after a resume starts a new session', async () => {
 
     await rm(dir, { recursive: true });
   }
+});
+
+/** A left click on the prompt box's text row, as a terminal reports one. */
+async function clickBox(window: Window): Promise<void> {
+  const y = window
+    .frame()
+    .split('\n')
+    .findLastIndex((line) => line.startsWith('│ ›'));
+
+  expect(y).toBeGreaterThan(0);
+  await window.press(left(10, y, 'down'));
+  await window.press(left(10, y, 'up'));
+}
+
+test('a click on the box while a permission is asked gives the box no keys: the answering key answers it and goes nowhere else (CHD-429)', () =>
+  withWindow(async (window) => {
+    await ready(window);
+    await send(window, 'permission');
+    await asked(window);
+    await clickBox(window);
+    await window.press('1');
+    await window.shows('Permission: allow');
+    // Nothing typed reached the draft.
+    expect(promptRow(window)?.replace(/[│›\s]/g, '')).toStrictEqual('');
+  }));
+
+test('a click on the box while ctrl+r searches gives the box no keys: what is typed is the query, and Esc gives the draft back untouched (CHD-429)', () =>
+  withWindow(async (window) => {
+    await ready(window);
+    await send(window, 'fix auth');
+    await until('the turn to end', () => !window.frame().includes('Working'));
+    await window.press(CTRL_R);
+    await window.shows('search prompts:');
+    await clickBox(window);
+    await window.type('auth');
+    await window.shows('search prompts: auth');
+    await window.press(ESC);
+    await until(
+      'the search closed',
+      () => !window.frame().includes('search prompts'),
+    );
+    expect(promptRow(window)?.replace(/[│›\s]/g, '')).toStrictEqual('');
+  }));
+
+test('a click on the box while the sessions picker is open gives the box no keys: its digit picks and types nothing (CHD-429)', () =>
+  withWindow(async (window) => {
+    await ready(window);
+    await leader(window, 'w');
+    await window.shows('Esc to close');
+    await clickBox(window);
+    await window.press('1');
+    await until(
+      'the picker closed',
+      () => !window.frame().includes('Esc to close'),
+    );
+    expect(promptRow(window)?.replace(/[│›\s]/g, '')).toStrictEqual('');
+  }));
+
+test('the renderer gives no widget the keys on a click (CHD-429)', () => {
+  expect(terminalOptions({ mouse: true }).autoFocus).toStrictEqual(false);
 });

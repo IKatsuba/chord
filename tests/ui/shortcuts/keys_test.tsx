@@ -1433,7 +1433,10 @@ function objectEdit(pending: string[], input: string) {
   const [name] = vimKeyNames(answer.input, plain);
   const step = vimKey(vim, 'one two', [0, 0], name!);
 
-  return 'text' in step ? { text: step.text, mode: step.vim.mode } : step;
+  // The register too: a yank leaves the text as it was either way.
+  return 'text' in step
+    ? { text: step.text, mode: step.vim.mode, register: step.vim.register }
+    : step;
 }
 
 test("a text object's Russian key after an operator is the US one", () => {
@@ -1455,10 +1458,17 @@ test("a text object's Russian key after an operator is the US one", () => {
   expect(objectEdit(['d', 'i'], 'ц')).toStrictEqual({
     text: ' two',
     mode: 'normal',
+    register: { text: 'one', linewise: false },
   });
   expect(objectEdit(['c', 'a'], 'ц')).toStrictEqual({
     text: 'two',
     mode: 'insert',
+    register: { text: 'one ', linewise: false },
+  });
+  expect(objectEdit(['y', 'i'], 'ц')).toStrictEqual({
+    text: 'one two',
+    mode: 'normal',
+    register: { text: 'one', linewise: false },
   });
 
   // After f, t and r the key is the character, Cyrillic or not.

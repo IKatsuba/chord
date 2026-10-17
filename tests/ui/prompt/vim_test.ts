@@ -219,6 +219,30 @@ test('p puts back what was deleted, after the cursor or below the line', () => {
   });
 });
 
+test('y yanks into the register and p puts it back: a word, a line, a text object (CHD-215)', () => {
+  expect(play(FOX, [0, 4], [...'yw']).vim.register).toStrictEqual({
+    text: 'quick ',
+    linewise: false,
+  });
+  expect(after(FOX, [0, 4], 'ywp')).toStrictEqual([
+    'the qquick uick brown fox',
+    [0, 10],
+  ]);
+  expect(after('one\ntwo', [0, 0], 'yyp')).toStrictEqual([
+    'one\none\ntwo',
+    [1, 0],
+  ]);
+  expect(play('one\ntwo', [0, 0], [...'yy']).vim.register).toStrictEqual({
+    text: 'one\n',
+    linewise: true,
+  });
+  // A text object: the word under the cursor, put at the line's end.
+  expect(after(FOX, [0, 6], 'yiw$p')).toStrictEqual([
+    'the quick brown foxquick',
+    [0, 23],
+  ]);
+});
+
 test('dd keeps a blank line in the register, at the start of a count too', () => {
   expect(after('one\n\ntwo', [1, 0], 'ddp')).toStrictEqual([
     'one\ntwo\n',

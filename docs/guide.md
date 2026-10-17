@@ -199,7 +199,11 @@ brings it back.
 Tool-call headlines show every line, wrapped to the width with no cap:
 a Bash heredoc is visible in full in the transcript. Continuation rows
 start under the name, at column 3, and `⎿` results follow the last row.
-ctrl+o expands output and diffs; the headline is the same in both views.
+Results under `⎿` show every line, wrapped to the width: MCP results,
+Bash output, your `!` shell output, Codex plans and subagent work. Diffs
+show every row, with long lines wrapped under their code. Read shows its
+first three source lines, each wrapped, then `… +N lines (ctrl+o to expand)`;
+ctrl+o shows the rest. Terminal output keeps its last three lines, wrapped.
 An Agent call shows its description, with its prompt in ctrl+o.
 
 In Claude and Codex sessions, an MCP call reads
@@ -513,9 +517,9 @@ closes its members and tells main.
 A team is made by asking for one: the agent you talk to calls
 `propose_team`, and chord draws its proposal as `Team(bugfix) · proposal`,
 a row per agent with its runtime, model, effort where any agent sets one,
-mode and role, each mode whole and
-one that skips your ok in the warning colour, then how the team works,
-folded. A box shaped like the permission box asks `Save team bugfix?`: for
+mode and role, with runtime, model and role wrapped under their columns,
+a mode that skips your ok in the warning colour, then how the team works
+in full. A box shaped like the permission box asks `Save team bugfix?`: for
 this project (`.chord/teams/bugfix.md`), for every project
 (`~/.config/chord/teams/bugfix.md`), or no, tell the agent what to change,
 which Esc picks too. chord writes the file, never the agent; the call ends
@@ -523,7 +527,7 @@ which Esc picks too. chord writes the file, never the agent; the call ends
 proposal under a saved team's name is `Team(bugfix) · change`, its changed
 rows marked, a changed effort or mode with the one it had (`high was
 medium`), and its body's change
-counted and drawn as a diff (whole with ctrl+o), and saves back in place.
+counted and drawn as a whole, wrapped diff, and saves back in place.
 
 `/team` is chord's own command for teams, and talks to the session you
 opened whatever agent is picked. `/team` alone (or `/team list`) opens the

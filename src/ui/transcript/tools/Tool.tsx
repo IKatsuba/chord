@@ -44,6 +44,7 @@ import {
   type TableLine,
 } from './proposal.ts';
 import type { TerminalView } from './terminal.ts';
+import { callTarget } from '../targets.ts';
 import {
   type Headline,
   headline,
@@ -115,7 +116,7 @@ export function Tool({
   );
 
   return (
-    <box marginTop={1} flexShrink={0}>
+    <box id={callTarget(call.id)} marginTop={1} flexShrink={0}>
       <box flexDirection='row'>
         {line.sent ? (
           <Arrow glyph='→' tone={outArrow(tone)} colour={recipient} />

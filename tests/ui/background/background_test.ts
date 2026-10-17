@@ -13,7 +13,7 @@ import {
   type BackgroundAgent,
   type BackgroundItem,
   backgroundItems,
-  callEntry,
+  callPlace,
   summaryGroups,
   summaryLines,
   type SummaryPiece,
@@ -596,11 +596,14 @@ describe('the call that started an item', () => {
   test("a monitor's is its Monitor call, by the id its answer gave", () => {
     const entries = [text, monitorCall('m1', 'c1'), monitorCall('m2', 'c2')];
 
-    expect(callEntry(entries, item('monitor', 'm2'))).toStrictEqual(2);
-    expect(callEntry(entries, item('monitor', 'm9'))).toStrictEqual(undefined);
+    expect(callPlace(entries, item('monitor', 'm2'))).toStrictEqual({
+      entry: 2,
+      target: 'call:c2',
+    });
+    expect(callPlace(entries, item('monitor', 'm9'))).toStrictEqual(undefined);
   });
 
-  test("a task's is its Agent block, or the first of the group of tasks that draws it", () => {
+  test("a task's is its own Agent block, or its own row in the group of tasks that draws it", () => {
     const entries = [
       text,
       task('task-1', 'one', 0),
@@ -609,13 +612,22 @@ describe('the call that started an item', () => {
       task('task-3', 'three', 0),
     ];
 
-    expect(callEntry(entries, item('task', 'task-1'))).toStrictEqual(1);
-    expect(callEntry(entries, item('task', 'task-2'))).toStrictEqual(1);
-    expect(callEntry(entries, item('task', 'task-3'))).toStrictEqual(4);
-    expect(callEntry(entries, item('task', 'gone'))).toStrictEqual(undefined);
+    expect(callPlace(entries, item('task', 'task-1'))).toStrictEqual({
+      entry: 1,
+      target: 'agent:task-1',
+    });
+    expect(callPlace(entries, item('task', 'task-2'))).toStrictEqual({
+      entry: 1,
+      target: 'agent:task-2',
+    });
+    expect(callPlace(entries, item('task', 'task-3'))).toStrictEqual({
+      entry: 4,
+      target: 'agent:task-3',
+    });
+    expect(callPlace(entries, item('task', 'gone'))).toStrictEqual(undefined);
   });
 
-  test("a call inside a subagent's work is drawn by the subagent's entry", () => {
+  test("a call inside a subagent's work is in the subagent's entry, by its own box", () => {
     const claude: Entry = {
       kind: 'subagent',
       turnId: 't1',
@@ -627,7 +639,13 @@ describe('the call that started an item', () => {
       },
     };
 
-    expect(callEntry([text, claude], item('monitor', 'm1'))).toStrictEqual(1);
-    expect(callEntry([text, claude], item('task', 'task-1'))).toStrictEqual(1);
+    expect(callPlace([text, claude], item('monitor', 'm1'))).toStrictEqual({
+      entry: 1,
+      target: 'call:c1',
+    });
+    expect(callPlace([text, claude], item('task', 'task-1'))).toStrictEqual({
+      entry: 1,
+      target: 'agent:task-1',
+    });
   });
 });

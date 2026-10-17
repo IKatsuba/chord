@@ -22,13 +22,26 @@ import {
 import type { AppState, WindowedAction } from './state.ts';
 
 /**
- * How far into `node` its first drawn row is: past the blank line an entry
- * keeps above it, so a jump puts the entry's own first line on top.
+ * How far into an entry's box the row a jump goes to is: the first drawn
+ * row of the box with id `target` in it, where one is drawn, else of the
+ * entry's own; past the blank line each keeps above it, so its own first
+ * line goes on top.
  */
-function firstRow(node: Renderable): number {
+function rowOf(entry: Renderable, target: string | undefined): number {
+  const found =
+    target === undefined ? undefined : entry.findDescendantById(target);
   let row = 0;
 
-  for (let at = node.getChildren()[0]; at; at = at.getChildren()[0]) {
+  // Up from the box found to the entry's, each box placed in its parent.
+  for (let at = found; at && at !== entry; at = at.parent ?? undefined) {
+    row += at.getLayout().top;
+  }
+
+  for (
+    let at = (found ?? entry).getChildren()[0];
+    at;
+    at = at.getChildren()[0]
+  ) {
     row += at.getLayout().top;
   }
 
@@ -170,18 +183,19 @@ export function useMeasured(
 
       // An entry asked for goes on top once React has mounted it, as far
       // down as the view goes; one gone from the transcript is let go.
-      const jumped =
-        jump === undefined || jump >= transcript.entries.length
+      const box =
+        jump === undefined || jump.entry < first
           ? undefined
-          : jump < first
-            ? null
-            : placedRefs.current[jump]
-              ? Math.min(
-                  placedRefs.current[jump]!.getLayout().top +
-                    firstRow(placedRefs.current[jump]!),
-                  Math.max(0, whole.height - view),
-                )
-              : null;
+          : placedRefs.current[jump.entry];
+      const jumped =
+        jump === undefined || jump.entry >= transcript.entries.length
+          ? undefined
+          : box
+            ? Math.min(
+                box.getLayout().top + rowOf(box, jump.target),
+                Math.max(0, whole.height - view),
+              )
+            : null;
 
       if (jump !== undefined && jumped !== null) {
         dispatch({ type: 'jump_done' });

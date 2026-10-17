@@ -129,7 +129,7 @@ import {
   type BackgroundAgent,
   type BackgroundItem,
   backgroundItems,
-  callEntry,
+  callPlace,
   type ItemOwner,
 } from '../background/background.ts';
 import { focusedItem, moveViewFocus } from '../background/view.ts';
@@ -1633,9 +1633,9 @@ export function useSessions(
   const goToCall = () => {
     const item = focusedItem(background(), state.backgroundView?.focus);
     const entries = item && all.sessions[item.key]?.transcript.entries;
-    const entry = entries && callEntry(entries, item);
+    const place = entries && callPlace(entries, item);
 
-    if (item === undefined || entry === undefined) {
+    if (item === undefined || place === undefined) {
       return;
     }
 
@@ -1647,7 +1647,7 @@ export function useSessions(
     dispatch({
       type: 'in_session',
       key: item.key,
-      action: { type: 'jumped_to', entry },
+      action: { type: 'jumped_to', ...place },
     });
   };
 

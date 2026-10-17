@@ -174,7 +174,7 @@ test('a jump scrolls the view back and mounts its entry, until the measure has p
   const tall = after({ type: 'scroll_measured', content: 100, view: 20 });
   const jumped = reduceApp(tall, { type: 'jumped_to', entry: 0 });
 
-  expect(jumped.jump).toStrictEqual(0);
+  expect(jumped.jump).toStrictEqual({ entry: 0 });
   expect(jumped.scroll.following).toStrictEqual(false);
   expect(jumped.mounted).toStrictEqual(0);
   expect(reduceApp(jumped, { type: 'jump_done' }).jump).toStrictEqual(

@@ -19,10 +19,11 @@ export interface ViewSession {
    */
   readonly mounted?: number;
   /**
-   * The entry the next measure puts on the view's top row, scrolled back
-   * there as after pgup; none once it has, or while following.
+   * What the next measure puts on the view's top row, scrolled back there as
+   * after pgup: entry `entry`, from the row of its box with id `target`
+   * where one is drawn in it; none once it has, or while following.
    */
-  readonly jump?: number;
+  readonly jump?: { readonly entry: number; readonly target?: string };
 }
 
 /** The window's part of the view. */
@@ -36,8 +37,15 @@ export interface ViewState extends ViewSession, ViewWindow {}
 export type ViewAction =
   | ScrollAction
   | { readonly type: 'expanded_toggled' }
-  /** The view is to scroll back so that entry `entry` is its top line. */
-  | { readonly type: 'jumped_to'; readonly entry: number }
+  /**
+   * The view is to scroll back so that entry `entry`, or the box with id
+   * `target` in it, is its top line.
+   */
+  | {
+      readonly type: 'jumped_to';
+      readonly entry: number;
+      readonly target?: string;
+    }
   /** The measure put the entry asked for on top, or found it gone. */
   | { readonly type: 'jump_done' };
 
@@ -54,7 +62,10 @@ export function reduceView(state: ViewState, action: ViewAction): ViewState {
       return {
         ...state,
         scroll: { ...state.scroll, following: false, news: false },
-        jump: action.entry,
+        jump: {
+          entry: action.entry,
+          ...(action.target === undefined ? {} : { target: action.target }),
+        },
       };
     case 'jump_done': {
       const { jump: _, ...rest } = state;

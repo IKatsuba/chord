@@ -300,6 +300,7 @@ const SCENARIOS = [
   'codexchordcalls',
   'taskchild',
   'tasklong',
+  'tasktwo',
   'taskwait',
   'agents',
   'agentsheld',

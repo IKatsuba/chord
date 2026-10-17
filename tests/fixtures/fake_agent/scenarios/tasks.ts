@@ -88,6 +88,31 @@ export const TASKS = {
     return 'end_turn';
   },
 
+  // Two `taskwait` tasks spawned one after the other, which the transcript
+  // draws as one group, `Running 2 agents…`.
+  async tasktwo(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'spawn_task', LONG_TASK_ARGS);
+      await callChord(turn, client, 'spawn_task', {
+        ...LONG_TASK_ARGS,
+        name: 'Watch the deploy',
+      });
+      await turn.say('The build and the deploy are being watched.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // A task's job that takes a minute and asks nothing, until it is stopped.
   async taskwait(turn) {
     await turn.say('Watching the build.');

@@ -84,3 +84,26 @@ test("enter on a child's item picks the child and shows its call", () =>
     await window.shows('⏺ Monitor(parser tests)');
     expect(!window.frame().includes('❯ background')).toBeTruthy();
   }));
+
+test("enter on the second task of a group puts that task's own row on top, not the group's header", () =>
+  withBackground(async (window) => {
+    await ready(window);
+    await send(window, 'tasktwo');
+    await window.shows('The build and the deploy are being watched.');
+    await window.shows('Running 2 agents');
+    // Far more than a screen after them, so the view cannot stop short.
+    await send(window, 'steps');
+    await window.shows('150 steps read.');
+
+    await window.press(DOWN);
+    await window.press('\r');
+    await window.shows(' Background · 2 in this tab');
+    await window.press('j');
+    await window.shows('❯ Watch the deploy');
+    await window.press('\r');
+    await until('the second task on top', () =>
+      /^ +└─ .*Watch the deploy/.test(window.frame().split('\n')[0]!),
+    );
+    expect(!window.frame().includes('Running 2 agents')).toBeTruthy();
+    await window.shows('lines below');
+  }));

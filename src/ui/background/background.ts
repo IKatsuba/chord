@@ -14,6 +14,7 @@ import type {
 } from '../../session/transcript/types.ts';
 import { GLYPHS } from '../app/strip.ts';
 import { agentGroup } from '../transcript/agents/subagents.ts';
+import { agentTarget, callTarget } from '../transcript/targets.ts';
 
 /**
  * What an item is, in the order the summary line names them; CHD-2 adds an
@@ -387,39 +388,62 @@ export function summaryLines(
   return lines;
 }
 
+/** Where the call that started an item is drawn in its owner's transcript. */
+export interface CallPlace {
+  /**
+   * The entry that draws it: its own, the group of tasks that draws it, or
+   * the subagent whose work holds it.
+   */
+  readonly entry: number;
+  /**
+   * The id of the call's own box inside that entry (`targets.ts`), drawn
+   * there unless a folded subagent's work holds it.
+   */
+  readonly target: string;
+}
+
 /**
- * The entry of its owner's transcript that draws the call that started
- * `item`: a monitor's `Monitor(…)`, by the id its answer gave, or a task's
- * `Agent(…)`, which stands where its `spawn_task` call was, or the group
- * of tasks that draws it; none once the call is gone. A call inside a
- * subagent's work is drawn by the subagent's entry.
+ * Where the call that started `item` is drawn: a monitor's `Monitor(…)`, by
+ * the id its answer gave, or a task's `Agent(…)`, which stands where its
+ * `spawn_task` call was; none once the call is gone.
  */
-export function callEntry(
+export function callPlace(
   entries: readonly Entry[],
   item: BackgroundItem,
-): number | undefined {
-  const own = (entry: Entry): boolean =>
+): CallPlace | undefined {
+  const own = (entry: Entry): string | undefined =>
     item.kind === 'monitor'
       ? entry.kind === 'tool' &&
         entry.call.chord?.tool === 'monitor' &&
         isRecord(entry.call.chord.answer) &&
         entry.call.chord.answer.id === item.id
-      : entry.kind === 'subagent' && entry.subagent.id === item.id;
-  const holds = (entry: Entry): boolean =>
-    own(entry) ||
-    (entry.kind === 'subagent' && entry.subagent.entries.some(holds));
-  let at = entries.findIndex(holds);
+        ? callTarget(entry.call.id)
+        : undefined
+      : entry.kind === 'subagent' && entry.subagent.id === item.id
+        ? agentTarget(item.id)
+        : undefined;
+  const find = (entry: Entry): string | undefined =>
+    own(entry) ??
+    (entry.kind === 'subagent'
+      ? entry.subagent.entries.map(find).find((found) => found !== undefined)
+      : undefined);
 
-  if (at === -1) {
-    return undefined;
+  for (const [index, entry] of entries.entries()) {
+    const target = find(entry);
+
+    if (target !== undefined) {
+      let at = index;
+
+      // A group of tasks is drawn by its first.
+      while (agentGroup(entries, at)?.length === 0) {
+        at -= 1;
+      }
+
+      return { entry: at, target };
+    }
   }
 
-  // A group of tasks is drawn by its first.
-  while (agentGroup(entries, at)?.length === 0) {
-    at -= 1;
-  }
-
-  return at;
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

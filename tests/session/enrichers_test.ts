@@ -303,7 +303,7 @@ test("a tool call's title and kind are carried onto updates that leave them out"
   ).toStrictEqual([{ sessionUpdate: 'tool_call_update', toolCallId: 'other' }]);
 });
 
-test("Codex's MCP call has its tool and arguments filed beside its rawInput, which stays as sent", () => {
+test("Codex's MCP call has its server, tool and arguments filed beside its rawInput, which stays as sent", () => {
   const { update } = relayOn([codexMcpCall]);
   const rawInput = {
     server: 'chord',
@@ -335,6 +335,7 @@ test("Codex's MCP call has its tool and arguments filed beside its rawInput, whi
         is_mcp_tool_call: true,
         [FILLED]: [MCP_CALL],
         [MCP_CALL]: {
+          server: 'chord',
           tool: 'send_message',
           arguments: { to: 'ship', text: 'ready' },
         },

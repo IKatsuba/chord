@@ -67,11 +67,20 @@ const VERB_FIRST = /^([A-Z][A-Za-z]*) (.+)$/;
  * `rawInput`, is drawn as Claude Code draws it, its name alone until they
  * come; one to chord's own server,
  * by the name the session gave it, `chordServer`, as chord's own call even
- * before chord has tied it to the request it served.
+ * before chord has tied it to the request it served. Codex's, which wraps
+ * the server, the tool and the arguments in its `rawInput`, is drawn the
+ * same way by what chord's enrichers filed from the wrapper, not its title.
  */
 export function headline(call: ToolCall, chordServer?: string): Headline {
   if (call.chord !== undefined) {
     return chordHeadline(call.chord);
+  }
+
+  // A record filed before the server was is drawn by its title, as then.
+  if (call.mcp?.server !== undefined) {
+    const { server, tool, input } = call.mcp;
+
+    return mcpHeadline(server, tool, input, chordServer);
   }
 
   const mcp = MCP_TITLE.exec(call.title?.trim() ?? '');
@@ -82,11 +91,24 @@ export function headline(call: ToolCall, chordServer?: string): Headline {
 
   const [, server = '', tool = ''] = mcp;
 
+  return mcpHeadline(server, tool, call.rawInput, chordServer);
+}
+
+/**
+ * `<server> - <tool> (MCP)(key: JSON, …)`, as Claude Code writes an MCP
+ * call; one to chord's own server as chord's own call.
+ */
+function mcpHeadline(
+  server: string,
+  tool: string,
+  input: unknown,
+  chordServer: string | undefined,
+): Headline {
   if (server === chordServer && isChordTool(tool)) {
-    return chordHeadline({ tool, input: call.rawInput ?? {} });
+    return chordHeadline({ tool, input: input ?? {} });
   }
 
-  const arg = mcpArguments(call.rawInput);
+  const arg = mcpArguments(input);
 
   return {
     name: `${server} - ${tool}`,

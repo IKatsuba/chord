@@ -33,11 +33,16 @@ export interface ToolCall {
   readonly rawInput?: unknown;
   readonly rawOutput?: unknown;
   /**
-   * An MCP call's tool and arguments where the agent wrapped them in its
+   * An MCP call's server, tool and arguments where the agent wrapped them in its
    * `rawInput`, as chord's enrichers file them; a request chord served is
    * tied to the call by these rather than by the `rawInput`.
    */
-  readonly mcp?: { readonly tool: string; readonly input: unknown };
+  readonly mcp?: {
+    /** None in a record filed before chord filed the server (CHD-419). */
+    readonly server?: string;
+    readonly tool: string;
+    readonly input: unknown;
+  };
   /**
    * The terminals the call ran its commands in, in the order the agent first
    * named them, with what each wrote; none until it named one.

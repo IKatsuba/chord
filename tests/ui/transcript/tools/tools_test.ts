@@ -312,6 +312,56 @@ test("an MCP headline wraps as one long line, (MCP) dim, the design's rows at 80
   ]);
 });
 
+test("Codex's MCP call is drawn as Claude's, named by its wrapper's server and tool, never its title", () => {
+  const wrapped = (server: string, tool: string, input: unknown): ToolCall => ({
+    id: 'a',
+    title: `mcp.${server}.${tool}`,
+    kind: 'execute',
+    rawInput: { server, tool, arguments: input },
+    mcp: { server, tool, input },
+  });
+
+  expect(
+    headline(wrapped('notes', 'list_notes', { tag: 'ui', limit: 2 })),
+  ).toStrictEqual({
+    name: 'notes - list_notes',
+    tag: ' (MCP)',
+    arg: 'tag: "ui", limit: 2',
+  });
+  // A dotted server name needs no splitting of the title.
+  expect(headline(wrapped('notes.v2', 'list', {})).name).toStrictEqual(
+    'notes.v2 - list',
+  );
+
+  // No arguments, {} or null: the name alone.
+  for (const input of [undefined, {}, null]) {
+    expect(headline(wrapped('notes', 'list_notes', input))).toStrictEqual({
+      name: 'notes - list_notes',
+      tag: ' (MCP)',
+    });
+  }
+
+  // chord's own server's: chord's own row, as before.
+  expect(
+    headline(
+      wrapped('chord', 'send_message', { to: 'ship', text: 'hi' }),
+      'chord',
+    ),
+  ).toStrictEqual({ name: 'ship', sent: true });
+  // With nothing filed from a wrapper, or no server in it, the title as today.
+  expect(
+    headline({ id: 'a', title: 'mcp.notes.list_notes', kind: 'execute' }),
+  ).toStrictEqual({ name: 'Bash', arg: 'mcp.notes.list_notes' });
+  expect(
+    headline({
+      id: 'a',
+      title: 'mcp.notes.list_notes',
+      kind: 'execute',
+      mcp: { tool: 'list_notes', input: {} },
+    }),
+  ).toStrictEqual({ name: 'Bash', arg: 'mcp.notes.list_notes' });
+});
+
 test('the status picks the tone; no status is pending', () => {
   expect(toneOf({ id: 'a' })).toStrictEqual('pending');
   expect(toneOf({ id: 'a', status: 'pending' })).toStrictEqual('pending');

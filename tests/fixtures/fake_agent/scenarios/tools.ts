@@ -11,6 +11,7 @@ import {
   WEATHER_COMMAND,
 } from '../../headlines.ts';
 import { STEP_MS } from '../options.ts';
+import { codexCall } from './chord_tools.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
 
 /** Calls in a `steps` turn, each an entry of the transcript. */
@@ -392,6 +393,36 @@ export const TOOLS = {
   // The calls of the Claude Code capture in docs/design/CHD-393.md.
   heredoc: (turn) => ran(turn, NOTES_COMMAND, '      10 notes.md'),
   longcommand: (turn) => ran(turn, WEATHER_COMMAND, '309'),
+
+  // The capture's MCP call as codex-acp sends one: a command by its dotted
+  // name, the server, tool and arguments wrapped in rawInput (CHD-419).
+  async codexmcpnote(turn) {
+    const toolCallId = turn.callId('save_note');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      status: 'in_progress',
+      ...codexCall('notes', 'save_note', NOTE_ARGUMENTS),
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'completed',
+      content: [
+        {
+          type: 'content',
+          content: {
+            type: 'text',
+            text: `saved "${NOTE_ARGUMENTS.title}" (${NOTE_ARGUMENTS.body.length} chars)`,
+          },
+        },
+      ],
+    });
+    await turn.say('Done.');
+
+    return 'end_turn';
+  },
 
   // The capture's MCP call, as claude-agent-acp sends one: titled by its
   // name, its arguments in rawInput alone, first empty then whole.

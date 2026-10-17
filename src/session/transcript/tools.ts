@@ -102,9 +102,13 @@ function mcpOf(update: { _meta?: unknown }): ToolCall['mcp'] | undefined {
     return undefined;
   }
 
-  const { tool, arguments: input } = filed as Record<string, unknown>;
+  const { server, tool, arguments: input } = filed as Record<string, unknown>;
 
-  return typeof tool === 'string' ? { tool, input } : undefined;
+  if (typeof tool !== 'string') {
+    return undefined;
+  }
+
+  return typeof server === 'string' ? { server, tool, input } : { tool, input };
 }
 
 const TERMINAL_ID = z.object({ terminal_id: z.string() });

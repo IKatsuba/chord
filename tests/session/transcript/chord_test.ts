@@ -526,7 +526,7 @@ function wrapped(
       rawInput: { server, tool, arguments: args },
       _meta: {
         is_mcp_tool_call: true,
-        [MCP_CALL]: { tool, arguments: args },
+        [MCP_CALL]: { server, tool, arguments: args },
       },
     },
   };

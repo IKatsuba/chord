@@ -466,6 +466,45 @@ for (const [columns, rows] of [
     ));
 }
 
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
+] as const) {
+  test(`Codex's MCP call draws the same rows as Claude's, the design's mock (CHD-419), at ${columns}×${rows}`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'codexmcpnote');
+        await window.shows('Done.');
+
+        const mock = (
+          await readFile(
+            join(
+              import.meta.dir,
+              `../../../../docs/design/evidence/CHD-393/mock/mcp-after-${columns}x${rows}.txt`,
+            ),
+            'utf8',
+          )
+        ).split('\n');
+        const from = (lines: string[]) => {
+          const start = lines.findIndex((line) =>
+            line.includes('⏺ notes - save_note'),
+          );
+          const end = lines.findIndex(
+            (line, index) => index > start && line.includes('⎿'),
+          );
+
+          // The headline's rows; the ⎿ line under it is cut as it always was.
+          return lines.slice(start, end).map((line) => line.trimEnd());
+        };
+
+        expect(from(stripAnsi(window.frame()).split('\n'))).toStrictEqual(
+          from(mock),
+        );
+      },
+      { columns, rows },
+    ));
+}
+
 describe('CHD-1 tester: original question result visibility', () => {
   for (const columns of [80, 120]) {
     test(`expanded question result restores every original line at ${columns} columns`, async () => {

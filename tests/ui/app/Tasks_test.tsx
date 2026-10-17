@@ -434,8 +434,8 @@ test("chord's own calls as Codex sends them draw as Claude's do; another server'
         expect(frame).toContain('List sessions');
         expect(frame).toContain('1 open · 1 fake (you)');
         expect(!frame.includes('mcp.chord.')).toBeTruthy();
-        // The other server's call stays the agent's own row.
-        expect(frame).toContain('Bash(mcp.notes.list_notes)');
+        // The other server's call is drawn as an MCP call, untied (CHD-419).
+        expect(frame).toContain('notes - list_notes (MCP)\n');
         expect(frame).toContain('no notes');
       },
       { server, runtimes: ['fake'], rows: 60, columns: 120 },

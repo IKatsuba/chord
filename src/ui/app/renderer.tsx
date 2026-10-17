@@ -127,6 +127,10 @@ export function terminalOptions({
     // Nothing reads hover motion: a drag reports its motion under 1002, so
     // 1000, 1002 and 1006 are all a selection needs (CHD-172).
     enableMouseMovement: false,
+    // A click gives no widget the keys: chord's own state does, so a click on
+    // the box while a permission, a picker or the agents list has them leaks
+    // no key into the draft (CHD-429).
+    autoFocus: false,
     consoleMode: 'disabled',
     openConsoleOnError: false,
   };

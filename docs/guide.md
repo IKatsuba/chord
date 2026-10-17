@@ -209,8 +209,9 @@ whatever the theme.
 for the next start. The box starts in insert mode, where it types as ever,
 and `-- INSERT --` or `-- NORMAL --` under it says which mode it is in. Esc
 goes to normal mode, which takes `h j k l`, `w b e`, `0 $ ^`, `x`, `dd`,
-`dw`, `cw`, `D`, `C`, `i a I A o O`, `u`, `p` and counts such as `3w` or
-`d2w`; an `[Image #N]` goes whole under `x` and `dw`. Enter sends from
+`dw`, `cw`, `yw`, `yy`, `yiw`, `D`, `C`, `i a I A o O`, `u`, `p` and
+counts such as `3w`, `d2w` or `2yy`; `p` puts yanked or deleted text.
+An `[Image #N]` goes whole under `x` and `dw`. Enter sends from
 either mode. Esc in normal mode does what it does without vim mode, so
 interrupting a turn takes Esc twice from insert mode; an open list, picker
 or panel still closes on the first Esc.

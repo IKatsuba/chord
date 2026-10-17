@@ -64,7 +64,8 @@ const VERB_FIRST = /^([A-Z][A-Za-z]*) (.+)$/;
  * headline is read out of it: a leading capitalised verb becomes the name,
  * otherwise the call's kind names the tool and the title is its argument.
  * An MCP call, titled `mcp__<server>__<tool>` with its arguments only in
- * `rawInput`, is drawn as Claude Code draws it; one to chord's own server,
+ * `rawInput`, is drawn as Claude Code draws it, its name alone until they
+ * come; one to chord's own server,
  * by the name the session gave it, `chordServer`, as chord's own call even
  * before chord has tied it to the request it served.
  */
@@ -75,14 +76,14 @@ export function headline(call: ToolCall, chordServer?: string): Headline {
 
   const mcp = MCP_TITLE.exec(call.title?.trim() ?? '');
 
-  if (mcp === null || call.rawInput === undefined) {
+  if (mcp === null) {
     return titleHeadline(call);
   }
 
   const [, server = '', tool = ''] = mcp;
 
   if (server === chordServer && isChordTool(tool)) {
-    return chordHeadline({ tool, input: call.rawInput });
+    return chordHeadline({ tool, input: call.rawInput ?? {} });
   }
 
   const arg = mcpArguments(call.rawInput);
@@ -119,11 +120,15 @@ function isChordTool(tool: string): tool is ChordTool {
 /**
  * An MCP call's arguments as Claude Code writes them: `key: value` joined
  * by `, `, the key bare and the value as JSON, so a newline in a string is
- * `\n` and never breaks the row; none for no arguments, and anything but an
- * object as JSON whole. The C1 controls JSON leaves as they are are escaped
+ * `\n` and never breaks the row; none for no arguments, none yet or
+ * `null`, and anything else but an object as JSON whole. The C1 controls JSON leaves as they are are escaped
  * too, as Claude Code escapes them.
  */
 export function mcpArguments(input: unknown): string | undefined {
+  if (input === undefined || input === null) {
+    return undefined;
+  }
+
   const text =
     input === null || typeof input !== 'object' || Array.isArray(input)
       ? JSON.stringify(input)

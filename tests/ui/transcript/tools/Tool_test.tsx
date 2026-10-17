@@ -228,7 +228,8 @@ test('a call its turn left unfinished waits on nothing once the turn has ended',
     for (const status of ['pending', 'in_progress']) {
       const frame = await shown(turn, status);
 
-      expect(frame).toContain('⏺ Tool(mcp__chord__spawn_task)');
+      // No server is named chord's here, so the title reads as any MCP call's.
+      expect(frame).toContain('⏺ chord - spawn_task (MCP)');
       expect(
         !frame.includes('Waiting…'),
         `${turn.status} still waits`,

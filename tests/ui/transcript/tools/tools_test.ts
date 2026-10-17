@@ -205,11 +205,16 @@ test("an MCP call's headline is Claude Code's: the server, the tool, (MCP), its 
     name: 'notes - save_note',
     tag: ' (MCP)',
   });
-  // No rawInput at all is not read as an MCP call.
-  expect(headline(call())).toStrictEqual({
-    name: 'Tool',
-    arg: 'mcp__notes__save_note',
-  });
+
+  // The title alone makes an MCP call: no arguments at all, or null, is
+  // the name alone as {} is.
+  for (const input of [undefined, null]) {
+    expect(headline(call(input))).toStrictEqual({
+      name: 'notes - save_note',
+      tag: ' (MCP)',
+    });
+  }
+
   // The server runs to the next `__`; the tool is the rest.
   expect(
     headline({ ...call({}), title: 'mcp__my_files__write__file' }).name,
@@ -258,6 +263,10 @@ test("a call to chord's own server is chord's own from its first update, by the 
     name: 'reviewer',
     sent: true,
   });
+  // chord's own from its first update, before any arguments come.
+  expect(
+    headline({ id: 'a', title: 'mcp__chord__monitor', kind: 'other' }, 'chord'),
+  ).toStrictEqual({ name: 'Monitor' });
   expect(headline(call('chord'), 'chord-2')).toStrictEqual({
     name: 'chord - send_message',
     tag: ' (MCP)',

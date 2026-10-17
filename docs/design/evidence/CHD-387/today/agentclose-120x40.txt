@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.0qoahIis32
+ ▀▀     ? for shortcuts · /help
+
+ › agentclose
+
+ ⏺ Close(parser)
+   ⎿  No agent parser is open in this session; list_sessions names them
+
+ → to @parser
+   ⎿  No agent parser is open in this session; list_sessions names them
+
+ ⏺ parser is closed, so I will run the tests myself.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

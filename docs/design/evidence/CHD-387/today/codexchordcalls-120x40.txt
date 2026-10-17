@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.0qoahIis32
+ ▀▀     ? for shortcuts · /help
+
+ › codexchordcalls
+
+ ⏺ notes - list_notes (MCP)
+   ⎿  no notes
+
+ ⏺ List agents
+   ⎿  36 runtimes · fake, agoragentic-acp, auggie, autohand, +32 more
+
+ ⏺ List sessions
+   ⎿  1 open · 1 fake (you)
+
+ ⏺ Listed as Codex.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

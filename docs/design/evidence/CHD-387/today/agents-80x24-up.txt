@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › agents
+
+ ⏺ I will open parser on the tests and docs on the README.
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ ⏺ Open(docs) · fake
+   ⎿  permission
+
+ → to @parser · queued
+   ⎿  I changed how a string at the end o...ts now and tell me only what fails.
+
+ ── ↓ 15 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake · Fake Large with a 1M context window
+    parser  fake · Fake Small                           ✓ replied 40s ago
+    docs    fake · Fake Large with a 1M context window  ● permission 40s

@@ -9,6 +9,8 @@ import {
   locationsShown,
   permissionOutcome,
   requestRows,
+  requestStep,
+  requestView,
   requestRule,
   saveChoices,
 } from '../../../src/ui/dialogs/permission.ts';
@@ -238,4 +240,116 @@ test("a request's rule says how much, which way and the key, to the box's width"
   expect(requestRule('↓', 2, undefined, 24)).toStrictEqual(
     '── ↓ 2 lines below ─────',
   );
+});
+
+test('a room of six over 42 rows: the top view, views between the rules, the end view', () => {
+  expect(requestView(42, 6, 0)).toStrictEqual({
+    top: 0,
+    shown: 5,
+    above: false,
+    below: true,
+  });
+  expect(requestView(42, 6, 5)).toStrictEqual({
+    top: 5,
+    shown: 4,
+    above: true,
+    below: true,
+  });
+  expect(requestView(42, 6, 37)).toStrictEqual({
+    top: 37,
+    shown: 5,
+    above: true,
+    below: false,
+  });
+  // Past the end view, as the wheel can leave it, is the end view.
+  expect(requestView(42, 6, 38).top).toStrictEqual(37);
+  expect(requestView(5, 6, 3)).toStrictEqual({
+    top: 0,
+    shown: 5,
+    above: false,
+    below: false,
+  });
+});
+
+/** The rows each view shows, paging from `from` with `step` to the far end. */
+function pages(
+  total: number,
+  room: number,
+  step: 'page_down' | 'page_up',
+  from: number,
+): number[][] {
+  const seen: number[][] = [];
+
+  for (let top = from, last = -1; top !== last;) {
+    const view = requestView(total, room, top);
+
+    seen.push(Array.from({ length: view.shown }, (_, row) => view.top + row));
+
+    last = top;
+    top = requestStep(step, total, room, top);
+  }
+
+  return seen;
+}
+
+test('paging down and back up reaches every row of the request, none passed over', () => {
+  for (const [total, room] of [
+    [42, 6],
+    [42, 20],
+    [30, 3],
+    [7, 4],
+  ] as const) {
+    const down = pages(total, room, 'page_down', 0);
+    const up = pages(
+      total,
+      room,
+      'page_up',
+      requestStep('bottom', total, room, 0),
+    );
+
+    for (const way of [down, up]) {
+      expect(new Set(way.flat()).size, `${total} over ${room}`).toStrictEqual(
+        total,
+      );
+    }
+  }
+
+  // The design's table, a room of six: 0–4, 5–8, 9–12, … the last five.
+  const down = pages(42, 6, 'page_down', 0);
+
+  expect(down.slice(0, 3)).toStrictEqual([
+    [0, 1, 2, 3, 4],
+    [5, 6, 7, 8],
+    [9, 10, 11, 12],
+  ]);
+  expect(down.at(-1)).toStrictEqual([37, 38, 39, 40, 41]);
+  // Up from top 5 goes to the top, not to top 1.
+  expect(requestStep('page_up', 42, 6, 5)).toStrictEqual(0);
+  expect(requestStep('page_up', 42, 6, 37)).toStrictEqual(33);
+});
+
+test('a room of two has one rule and a row; a room of one no rule, every key a row', () => {
+  expect(requestView(42, 2, 0)).toStrictEqual({
+    top: 0,
+    shown: 1,
+    above: false,
+    below: true,
+  });
+  expect(requestView(42, 2, 41)).toStrictEqual({
+    top: 41,
+    shown: 1,
+    above: true,
+    below: false,
+  });
+  expect(requestStep('page_down', 42, 2, 0)).toStrictEqual(1);
+  expect(requestView(42, 1, 3)).toStrictEqual({
+    top: 3,
+    shown: 1,
+    above: false,
+    below: false,
+  });
+  expect(requestStep('page_down', 42, 1, 3)).toStrictEqual(4);
+  expect(requestStep('bottom', 42, 1, 3)).toStrictEqual(4);
+  expect(requestStep('top', 42, 1, 3)).toStrictEqual(2);
+  expect(requestStep('line_up', 42, 1, 0)).toStrictEqual(0);
 });

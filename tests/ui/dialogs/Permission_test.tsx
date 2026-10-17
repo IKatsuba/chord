@@ -396,21 +396,61 @@ test('a request that fits has no rule, and the scroll keys keep the transcript',
     { columns: 80, rows: 24 },
   ));
 
-test('a window of 19 rows leaves the request one row, its rule, and every answer', () =>
+test('a window of 19 rows leaves the request one row, no rule, and every answer', () =>
   withWindow(
     async (window) => {
       await send(window, 'bigask');
       await asked(window);
-      await window.shows('── ↓ 42 lines below');
 
       const box = boxRows(window.frame());
 
       expect(box[1]).toContain('mcp__files__write_file');
-      expect(box[2]).toContain('── ↓ 42 lines below');
+      expect(box[2]).toContain('path: docs/release.md');
+      expect(box.join('\n')).not.toContain('lines below');
       expect(box.join('\n')).toContain('3. No, and tell Claude');
       expect(box.join('\n')).toContain('Esc to reject');
+
+      // A room of one row: every key moves it a row.
+      await window.press(PAGE_DOWN);
+      await window.shows('content: # Release 0.56.0');
     },
     { columns: 80, rows: 19 },
+  ));
+
+test('pgdn page after page shows every row of the request, none passed over', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'bigask');
+      await asked(window);
+
+      const seen = new Set<string>();
+
+      for (let page = 0; page < 20; page++) {
+        for (const row of boxRows(window.frame())) {
+          seen.add(row);
+        }
+
+        if (window.frame().includes('mode: overwrite')) {
+          break;
+        }
+
+        const before = boxRows(window.frame()).join('\n');
+
+        await window.press(PAGE_DOWN);
+        await until(
+          'the page to move',
+          () => boxRows(window.frame()).join('\n') !== before,
+        );
+      }
+
+      for (let change = 1; change <= 30; change++) {
+        expect(
+          [...seen].some((row) => row.includes(`Change ${change}:`)),
+          `Change ${change} never shown`,
+        ).toBeTruthy();
+      }
+    },
+    { columns: 80, rows: 24 },
   ));
 
 test('a resize lays the request out again, its top row kept and its answers whole', () =>

@@ -28,6 +28,8 @@ import type { ScrollStep } from '../transcript/scroll.ts';
 import {
   choicesFor,
   hiddenRows,
+  requestStep,
+  requestView,
   INPUT_INDENT,
   requestRows,
   requestRule,
@@ -165,17 +167,8 @@ function Request({
   const [top, setTop] = useState(0);
   const total = rows.length;
   const overflows = total > room;
-  const above = overflows && top > 0;
-  // A row the room has is the rule's, so the view is the rest.
-  const unruled = room - (above ? 1 : 0);
-  const below = overflows && top + unruled < total;
-  const shown = Math.max(0, unruled - (below ? 1 : 0));
-  // One row holds a single rule; the one that says more is below wins.
-  const rules = {
-    above: above && (!below || room > 1),
-    below,
-  };
-  const hidden = hiddenRows(total, top, shown);
+  const shown = requestView(total, room, top);
+  const hidden = hiddenRows(total, shown.top, shown.shown);
   const upKey = useHintKey('scroll:pageUp');
   const downKey = useHintKey('scroll:pageDown');
   const scroll = useCallback(
@@ -186,23 +179,20 @@ function Request({
         return;
       }
 
-      switch (step) {
-        case 'page_up':
-          return box.scrollBy(-Math.max(room - 1, 1));
-        case 'page_down':
-          return box.scrollBy(Math.max(room - 1, 1));
-        case 'line_up':
-          return box.scrollBy(-1);
-        case 'line_down':
-          return box.scrollBy(1);
-        case 'top':
-          return box.scrollTo(0);
-        case 'bottom':
-          return box.scrollTo(box.scrollHeight);
-      }
+      box.scrollTo(requestStep(step, total, room, box.scrollTop));
     },
-    [room],
+    [total, room],
   );
+
+  // The wheel can leave the scrollbox past a view there is, as at the end
+  // it shows a row more than a view between the rules does.
+  useEffect(() => {
+    const box = view.current;
+
+    if (box !== null && box.scrollTop !== shown.top) {
+      box.scrollTo(shown.top);
+    }
+  }, [shown.top]);
 
   useEffect(() => {
     onOverflow?.(overflows);
@@ -243,14 +233,14 @@ function Request({
       ref={area}
       onSizeChange={() => setRoom(area.current?.getLayout().height ?? total)}
     >
-      {rules.above && (
+      {shown.above && (
         <Rule text={requestRule('↑', hidden.above, upKey, width)} />
       )}
       <scrollbox
         ref={view}
-        // A room of one row is its rule's; laid out to nothing, the view
-        // would be drawn a row tall over it.
-        visible={shown > 0}
+        // With no row to show, laid out to nothing, the view would be
+        // drawn a row tall over what follows it.
+        visible={shown.shown > 0}
         flexGrow={1}
         flexShrink={1}
         minHeight={0}
@@ -283,7 +273,7 @@ function Request({
           </box>
         ))}
       </scrollbox>
-      {rules.below && (
+      {shown.below && (
         <Rule text={requestRule('↓', hidden.below, downKey, width)} />
       )}
     </box>

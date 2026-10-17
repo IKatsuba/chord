@@ -11,6 +11,7 @@ import type {
   TurnState,
 } from '../../session/transcript/types.ts';
 import { wrapLine } from '../transcript/message.ts';
+import type { ScrollStep } from '../transcript/scroll.ts';
 
 /** One row of the list, in ink-select-input's item shape. */
 export interface Choice {
@@ -171,6 +172,92 @@ export function requestRows(
       ),
     ],
   };
+}
+
+/**
+ * What the request's room shows from row `top` of `total`: the rows it
+ * shows and whether the `↑` and `↓` rules are drawn, each taking a row of
+ * the room. The top view shows its first `room − 1` rows over the `↓`
+ * rule, the end view the `↑` rule over its last `room − 1`, and a view
+ * between them both rules round `room − 2`. A room of two rows has one
+ * rule, `↓` while rows are below, else `↑`; a room of one row, none.
+ * `top` is clamped to the views there are.
+ */
+export function requestView(
+  total: number,
+  room: number,
+  top: number,
+): {
+  readonly top: number;
+  readonly shown: number;
+  readonly above: boolean;
+  readonly below: boolean;
+} {
+  if (total <= room) {
+    return { top: 0, shown: total, above: false, below: false };
+  }
+
+  if (room <= 2) {
+    const shown = Math.max(room, 0) === 0 ? 0 : 1;
+    const at = Math.min(Math.max(top, 0), total - Math.max(shown, 1));
+    const below = room === 2 && at < total - 1;
+
+    return { top: at, shown, above: room === 2 && !below, below };
+  }
+
+  const end = total - (room - 1);
+
+  if (top <= 0) {
+    return { top: 0, shown: room - 1, above: false, below: true };
+  }
+
+  return top >= end
+    ? { top: end, shown: room - 1, above: true, below: false }
+    : { top, shown: room - 2, above: true, below: true };
+}
+
+/**
+ * The top a scroll key leaves the request at. A page down starts at the
+ * row after the last one shown; a page up ends at the row before the first
+ * one shown, on a view of `room − 2` rows, or goes to the top view when that
+ * reaches the row already, so no row is passed over. A room of one row
+ * moves a row for every key (docs/design/CHD-246.md, "A page").
+ */
+export function requestStep(
+  step: ScrollStep,
+  total: number,
+  room: number,
+  top: number,
+): number {
+  const view = requestView(total, room, top);
+  const to = (next: number) => requestView(total, room, next).top;
+
+  if (room === 1) {
+    return to(
+      view.top +
+        (step === 'page_down' || step === 'line_down' || step === 'bottom'
+          ? 1
+          : -1),
+    );
+  }
+
+  switch (step) {
+    case 'page_down':
+      return to(view.top + view.shown);
+    case 'page_up': {
+      const between = Math.max(room - 2, 1);
+
+      return room >= 3 && view.top - 1 <= room - 2 ? 0 : to(view.top - between);
+    }
+    case 'line_down':
+      return to(view.top + 1);
+    case 'line_up':
+      return to(view.top - 1);
+    case 'top':
+      return 0;
+    case 'bottom':
+      return to(total);
+  }
 }
 
 /**

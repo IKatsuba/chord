@@ -287,7 +287,10 @@ const wheel = (x: number, y: number, up: boolean) =>
 /** The permission box's rows in `frame`, its borders included. */
 function boxRows(frame: string): string[] {
   const lines = stripAnsi(frame).split('\n');
-  const title = lines.findIndex((line) => line.includes('mcp__files__write'));
+  // The box's own title row, not the transcript's call above it.
+  const title = lines.findIndex((line) =>
+    line.startsWith('│ mcp__files__write'),
+  );
   const end = lines.findIndex(
     (line, index) => index > title && /^╰/.test(line),
   );
@@ -396,7 +399,7 @@ test('a request that fits has no rule, and the scroll keys keep the transcript',
     { columns: 80, rows: 24 },
   ));
 
-test('a window of 19 rows leaves the request one row, no rule, and every answer', () =>
+test('a window of 19 rows leaves the request one row, its count beside the title, and every answer', () =>
   withWindow(
     async (window) => {
       await send(window, 'bigask');
@@ -404,17 +407,22 @@ test('a window of 19 rows leaves the request one row, no rule, and every answer'
 
       const box = boxRows(window.frame());
 
-      expect(box[1]).toContain('mcp__files__write_file');
+      // No rule fits, so the count goes at the pinned row's end.
+      expect(box[1]).toStrictEqual(
+        '│ mcp__files__write_file                                      ↓ 41 lines below │',
+      );
       expect(box[2]).toContain('path: docs/release.md');
-      expect(box.join('\n')).not.toContain('lines below');
+      expect(box.slice(1, -1).join('\n')).not.toContain('──');
       expect(box.join('\n')).toContain('3. No, and tell Claude');
       expect(box.join('\n')).toContain('Esc to reject');
 
       // A room of one row: a page is a row, and end still goes to the end.
       await window.press(PAGE_DOWN);
       await window.shows('content: # Release 0.56.0');
+      await window.shows('↑ 1 above · ↓ 40 below');
       await window.press(END);
       await window.shows('mode: overwrite');
+      await window.shows('↑ 41 lines above');
     },
     { columns: 80, rows: 19 },
   ));

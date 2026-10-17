@@ -149,10 +149,14 @@ export const INPUT_INDENT = 2;
 export function requestRows(
   wait: PermissionWait,
   width: number,
+  titleWidth = width,
 ): { readonly pinned: string; readonly rows: readonly RequestRow[] } {
   const wrapped = (text: string, room: number) =>
     text.split('\n').flatMap((line) => wrapLine(line, room));
-  const [pinned = '', ...title] = wrapped(wait.title ?? 'Tool call', width);
+  const [pinned = '', ...title] = wrapped(
+    wait.title ?? 'Tool call',
+    Math.max(titleWidth, 1),
+  );
 
   return {
     pinned,
@@ -270,6 +274,27 @@ export function hiddenRows(
     above: Math.max(0, top),
     below: Math.max(0, total - top - Math.max(view, 0)),
   };
+}
+
+/**
+ * How much of the request a room of one row leaves out of view, said on the
+ * pinned title row, as that room has none for a rule: no key, as the row
+ * has no room for one either.
+ */
+export function requestCount({
+  above,
+  below,
+}: {
+  readonly above: number;
+  readonly below: number;
+}): string {
+  const lines = (count: number) => `${count} ${count === 1 ? 'line' : 'lines'}`;
+
+  return above === 0
+    ? `↓ ${lines(below)} below`
+    : below === 0
+      ? `↑ ${lines(above)} above`
+      : `↑ ${above} above · ↓ ${below} below`;
 }
 
 const RULE = '─';

@@ -8,6 +8,7 @@ import {
   inputLines,
   locationsShown,
   permissionOutcome,
+  requestCount,
   requestRows,
   requestStep,
   requestView,
@@ -353,4 +354,25 @@ test('a room of two has one rule and a row; a room of one no rule, a page a row'
   expect(requestStep('bottom', 42, 1, 3)).toStrictEqual(41);
   expect(requestStep('top', 42, 1, 3)).toStrictEqual(0);
   expect(requestStep('line_up', 42, 1, 0)).toStrictEqual(0);
+});
+
+test('a room of one row counts what it leaves out on the pinned row, naming no key', () => {
+  expect(requestCount({ above: 0, below: 41 })).toStrictEqual(
+    '↓ 41 lines below',
+  );
+  expect(requestCount({ above: 41, below: 0 })).toStrictEqual(
+    '↑ 41 lines above',
+  );
+  expect(requestCount({ above: 1, below: 0 })).toStrictEqual('↑ 1 line above');
+  expect(requestCount({ above: 3, below: 38 })).toStrictEqual(
+    '↑ 3 above · ↓ 38 below',
+  );
+
+  // The title wraps to the cells the count leaves beside it.
+  expect(
+    requestRows({ id: 'p', options: [], title: 'Write a long title' }, 20, 10),
+  ).toStrictEqual({
+    pinned: 'Write a',
+    rows: [{ text: 'long title', kind: 'title' }],
+  });
 });

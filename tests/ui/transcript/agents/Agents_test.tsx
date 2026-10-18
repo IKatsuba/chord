@@ -562,3 +562,23 @@ describe('CHD-432 tester: whole-task expansion keys', () => {
       ));
   }
 });
+
+test('a row that was last when drawn keeps its column once a sibling comes after it (Q41)', () =>
+  withWindow(
+    async (window) => {
+      // Announced one at a time, each row is the last for a moment.
+      await send(window, 'claudesubagents');
+      await asked(window);
+      await window.press('1');
+      await window.shows('4 agents ended');
+
+      const frame = window.frame();
+
+      for (const ending of ['Done', 'Failed', 'Cancelled']) {
+        expect(frame).toContain(`│  ⎿  ${ending}`);
+      }
+
+      expect(frame).not.toContain('│   ⎿');
+    },
+    { rows: 40, columns: 120 },
+  ));

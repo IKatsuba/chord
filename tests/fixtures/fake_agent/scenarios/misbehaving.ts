@@ -8,8 +8,7 @@ import { strayCancels } from '../sessions.ts';
 import { pause, type Play } from '../turn.ts';
 
 export const MISBEHAVING = {
-  // How many cancels came with no turn playing, which a client sends only
-  // for a prompt the agent never got.
+  // How many cancels came with no turn playing.
   async cancels(turn) {
     await turn.say(
       `Cancels with no turn: ${strayCancels.get(turn.sessionId) ?? 0}.`,

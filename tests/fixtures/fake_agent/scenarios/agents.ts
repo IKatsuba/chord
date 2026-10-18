@@ -302,6 +302,42 @@ async function work(turn: Turn, title: string, output: string): Promise<void> {
   });
 }
 
+/**
+ * One call for about three seconds, then a report that the tests pass; its
+ * next step after the call waits until `untilTold` messages were steered in.
+ */
+async function callChild(turn: Turn, untilTold = 0): Promise<acp.StopReason> {
+  const toolCallId = turn.callId('execute');
+
+  await turn.send({
+    sessionUpdate: 'tool_call',
+    toolCallId,
+    title: '`deno task test`',
+    kind: 'execute',
+    status: 'in_progress',
+  });
+  await pause(turn.signal, AGENT_STEP_MS * 30);
+  await turn.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId,
+    status: 'completed',
+    content: [
+      {
+        type: 'content',
+        content: { type: 'text', text: '214 passed, 0 failed' },
+      },
+    ],
+  });
+
+  while (turn.told < untilTold) {
+    await pause(turn.signal);
+  }
+
+  await turn.say('The tests pass.');
+
+  return 'end_turn';
+}
+
 export const AGENTS = {
   // Opens `parser` and `docs`, then tells `parser` twice what changed, a
   // while apart, so the second waits behind the turn the first started.
@@ -483,32 +519,11 @@ export const AGENTS = {
 
   // One call open from the turn's start for about 3 s, long enough for a
   // message held behind it to be seen, then the answer.
-  async callchild(turn) {
-    const toolCallId = turn.callId('execute');
+  callchild: (turn) => callChild(turn),
 
-    await turn.send({
-      sessionUpdate: 'tool_call',
-      toolCallId,
-      title: '`deno task test`',
-      kind: 'execute',
-      status: 'in_progress',
-    });
-    await pause(turn.signal, AGENT_STEP_MS * 30);
-    await turn.send({
-      sessionUpdate: 'tool_call_update',
-      toolCallId,
-      status: 'completed',
-      content: [
-        {
-          type: 'content',
-          content: { type: 'text', text: '214 passed, 0 failed' },
-        },
-      ],
-    });
-    await turn.say('The tests pass.');
-
-    return 'end_turn';
-  },
+  // As callchild, its next step after the call waiting until two messages
+  // have been steered in, as a model's comes only after the tool's result.
+  callchildtwo: (turn) => callChild(turn, 2),
 
   // A short message and a long one to `parser`, which answers: Claude's
   // calls, then Codex's, wrapped as its adapter wraps another server's.

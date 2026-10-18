@@ -57,6 +57,8 @@ export class Turn {
   usage: acp.Usage | undefined;
   /** Messages steered into the turn that its next step has not read yet. */
   readonly #steered: string[] = [];
+  /** How many messages steered into the turn it has read. */
+  #read = 0;
 
   constructor(
     readonly client: Client,
@@ -101,9 +103,16 @@ export class Turn {
     return this.#steered.length > 0;
   }
 
+  /** How many messages steered in, read or waiting, the turn has had. */
+  get told(): number {
+    return this.#read + this.#steered.length;
+  }
+
   /** Answers each message steered in since the last step, saying whose. */
   async read(): Promise<void> {
     for (const text of this.#steered.splice(0)) {
+      this.#read += 1;
+
       await this.client.notify('session/update', {
         sessionId: this.sessionId,
         update: {

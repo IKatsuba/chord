@@ -1293,8 +1293,9 @@ test("a message held behind an open call that the turn's end refuses waits in th
 
 test("on Claude's adapter, every message held behind an open call waits in the queue at once, in the order told, before the call ends", () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
-    // A call open for seconds, so both are told while it is.
-    conversation.send('callchild');
+    // A call open for seconds, so both are told while it is; its next step
+    // after it waits for both, as the model's comes only after its result.
+    conversation.send('callchildtwo');
     await until(() =>
       events.some(
         (event) =>
@@ -2621,4 +2622,106 @@ describe('CHD-423 tester: mixed queue holds', () => {
         ]);
       },
     ));
+});
+
+describe('CHD-452 tester: two-steer gate boundaries', () => {
+  function callEnded(events: readonly ConversationEvent[]) {
+    return until(() =>
+      events.some(
+        (event) =>
+          event.type === 'update' &&
+          event.update.sessionUpdate === 'tool_call_update' &&
+          event.update.status === 'completed',
+      ),
+    );
+  }
+
+  test('a first steer read before the call ends still counts when the second arrives later', () =>
+    onFake(['--steering', 'codex'], async (conversation, events) => {
+      conversation.send('callchildtwo');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call',
+        ),
+      );
+      conversation.tell(MAIN, 'First, during the call.');
+      await callEnded(events);
+
+      expect(saidIn(events)).toBe('Read the message from main.\n\n');
+      expect(events.some((event) => event.type === 'result')).toBe(false);
+
+      conversation.tell(MAIN, 'Second, after the call.');
+      await ended(events, 1);
+
+      expect(saidIn(events)).toBe(
+        'Read the message from main.\n\n' +
+          'Read the message from main.\n\nThe tests pass.',
+      );
+      expect(promptsIn(events).map(([text]) => text)).toStrictEqual([
+        'callchildtwo',
+        'First, during the call.',
+        'Second, after the call.',
+      ]);
+    }));
+
+  for (const end of ['cancel', 'close'] as const) {
+    test(`${end} releases a turn waiting for its missing second steer`, async () => {
+      let owner: Session | undefined;
+
+      await onFake(
+        ['--steering', 'claude'],
+        async (conversation, events) => {
+          conversation.send('callchildtwo');
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'update' &&
+                event.update.sessionUpdate === 'tool_call',
+            ),
+          );
+          conversation.tell(MAIN, 'Only the first.');
+          await callEnded(events);
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'prompt' &&
+                event.into !== undefined &&
+                event.text === 'Only the first.',
+            ),
+          );
+
+          expect(events.some((event) => event.type === 'result')).toBe(false);
+
+          if (end === 'cancel') {
+            conversation.interrupt();
+            await ended(events, 1);
+
+            const result = events.find((event) => event.type === 'result');
+
+            assert(result?.type === 'result');
+            expect(result.result.status).toBe('cancelled');
+            conversation.send('callchild');
+            await ended(events, 2);
+            expect(saidIn(events)).toEndWith('The tests pass.');
+          } else {
+            assert(owner);
+
+            const started = Date.now();
+
+            await conversation.close();
+            expect(Date.now() - started).toBeLessThan(1500);
+            expect(owner.agentPids.size).toBe(0);
+            await owner.exited;
+          }
+        },
+        (session) => {
+          owner = session;
+
+          return session;
+        },
+      );
+    });
+  }
 });

@@ -20,10 +20,11 @@ export interface BackgroundState {
      */
     readonly hint?: string;
     /**
-     * The item `x` was last pressed on, while the `❯` has stayed on it
-     * since: a stop's answer that comes later is said only then.
+     * The stop `x` last asked for, by its item and a token of its own, while
+     * the `❯` has stayed on that item since: only that stop's answer, if it
+     * comes later, is said.
      */
-    readonly stopping?: ItemRef;
+    readonly stopping?: { readonly focus: ItemRef; readonly token: string };
   };
 }
 
@@ -39,15 +40,19 @@ export type BackgroundAction =
   | { readonly type: 'background_closed' }
   /** ↑ ↓ in the view put the `❯` on `focus`. */
   | { readonly type: 'background_focused'; readonly focus: ItemRef }
-  /** `x` was pressed on `focus`, whose stop may answer later. */
-  | { readonly type: 'background_stop_asked'; readonly focus: ItemRef }
+  /** `x` asked to stop `focus`, which may answer later, under `token`. */
+  | {
+      readonly type: 'background_stop_asked';
+      readonly focus: ItemRef;
+      readonly token: string;
+    }
   /**
-   * `x` on `focus` could not stop it, as `hint` says; said only while the
-   * `❯` has stayed on it since.
+   * The stop `token` asked for could not be made, as `hint` says; said only
+   * while the `❯` has stayed on its item since, and no later stop was asked.
    */
   | {
       readonly type: 'background_hinted';
-      readonly focus: ItemRef;
+      readonly token: string;
       readonly hint: string;
     };
 
@@ -93,7 +98,8 @@ export function reduceBackground(
         backgroundView: {
           focus: action.focus,
           ...(stays && view.hint !== undefined ? { hint: view.hint } : {}),
-          ...(stays && view.stopping !== undefined
+          ...(view.stopping !== undefined &&
+          same(view.stopping.focus, action.focus)
             ? { stopping: view.stopping }
             : {}),
         },
@@ -106,13 +112,16 @@ export function reduceBackground(
         ? state
         : {
             ...state,
-            backgroundView: { ...view, stopping: action.focus },
+            backgroundView: {
+              ...view,
+              stopping: { focus: action.focus, token: action.token },
+            },
           };
     }
     case 'background_hinted': {
       const view = state.backgroundView;
 
-      if (view === undefined || !same(view.stopping, action.focus)) {
+      if (view === undefined || view.stopping?.token !== action.token) {
         return state;
       }
 

@@ -43,35 +43,39 @@ test("another tab's /clear leaves each tab's clearing as it was, so no ended ite
   expect(frontState(both).backgroundCleared).toStrictEqual({ 1: 100, 2: 200 });
 });
 
-test("a stop's hint is said only while the ❯ has stayed on its row since x, and goes once it moves or the view closes", () => {
+test("a stop's hint is said only for the stop x last asked for, while the ❯ has stayed on its row since", () => {
   const a = { key: 1, id: 'a' };
   const b = { key: 1, id: 'b' };
   const hint = 'could not stop: Session not found';
   const run = (...actions: Parameters<typeof reduceBackground>[1][]) =>
     actions.reduce(reduceBackground, initialBackground).backgroundView;
+  const asked = (token: string) =>
+    ({ type: 'background_stop_asked', focus: a, token }) as const;
+  const refused = (token: string) =>
+    ({ type: 'background_hinted', token, hint }) as const;
   const opened = [
     { type: 'background_opened' },
     { type: 'background_focused', focus: a },
-    { type: 'background_stop_asked', focus: a },
+    asked('t1'),
   ] as const;
-  const refused = { type: 'background_hinted', focus: a, hint } as const;
 
-  expect(run(...opened, refused)?.hint).toBe(hint);
+  expect(run(...opened, refused('t1'))?.hint).toBe(hint);
   // Kept while the ❯ stays; gone once it moves.
   expect(
-    run(...opened, refused, { type: 'background_focused', focus: a })?.hint,
+    run(...opened, refused('t1'), { type: 'background_focused', focus: a })
+      ?.hint,
   ).toBe(hint);
   expect(
-    run(...opened, refused, { type: 'background_focused', focus: b }),
+    run(...opened, refused('t1'), { type: 'background_focused', focus: b }),
   ).toStrictEqual({ focus: b });
-  // An answer that comes after the ❯ left, even if it came back, or after
-  // the view closed and opened again, is not said.
+  // An answer after the ❯ left, even if it came back, or after the view
+  // closed and opened again, is not said.
   expect(
     run(
       ...opened,
       { type: 'background_focused', focus: b },
       { type: 'background_focused', focus: a },
-      refused,
+      refused('t1'),
     )?.hint,
   ).toBe(undefined);
   expect(
@@ -80,8 +84,18 @@ test("a stop's hint is said only while the ❯ has stayed on its row since x, an
       { type: 'background_closed' },
       { type: 'background_opened' },
       { type: 'background_focused', focus: a },
-      refused,
+      refused('t1'),
     )?.hint,
   ).toBe(undefined);
-  expect(run(refused)).toBe(undefined);
+  // Nor is an earlier stop's once a later one on the same row was asked.
+  expect(
+    run(
+      ...opened,
+      { type: 'background_focused', focus: b },
+      { type: 'background_focused', focus: a },
+      asked('t2'),
+      refused('t1'),
+    )?.hint,
+  ).toBe(undefined);
+  expect(run(refused('t1'))).toBe(undefined);
 });

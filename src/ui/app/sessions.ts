@@ -1628,15 +1628,25 @@ export function useSessions(
     });
 
     if (item.kind === 'agent') {
-      const focus = { key: item.key, id: item.id };
-      const hinted = (hint: string) =>
-        dispatch({ type: 'background_hinted', focus, hint });
+      // A second x while its stop is pending does nothing.
+      if (item.status.group === 'running' && item.status.stopping) {
+        return;
+      }
 
-      dispatch({ type: 'background_stop_asked', focus });
+      // Its own, so an earlier stop's late answer is never this one's.
+      const token = crypto.randomUUID();
+      const hinted = (hint: string) =>
+        dispatch({ type: 'background_hinted', token, hint });
+
+      dispatch({
+        type: 'background_stop_asked',
+        focus: { key: item.key, id: item.id },
+        token,
+      });
 
       if (!item.stoppable) {
         hinted(NO_STOP_HINT);
-      } else if (!(item.status.group === 'running' && item.status.stopping)) {
+      } else {
         conversationAt(item.key)
           ?.stopSubagent(item.id)
           .catch((error: unknown) => hinted(stopRefused(error)));

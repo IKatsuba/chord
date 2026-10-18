@@ -2158,6 +2158,8 @@ test('a stop held by --stop-gate does not keep the fake alive once the session c
     // the SIGTERM it ignores or the SIGKILL after.
     expect(Date.now() - started).toBeLessThan(1500);
   } finally {
+    // Idempotent: a run that failed before the timed close still ends it.
+    await session.close();
     await rm(dir, { recursive: true });
   }
 });

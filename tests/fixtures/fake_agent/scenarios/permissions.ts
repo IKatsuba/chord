@@ -311,10 +311,12 @@ export const PERMISSIONS = {
         await pause(lifetime.signal, STEP_MS * 100);
         await askBetween(turn, 'notes/report.md');
 
+        // Within chord's second of quiet at any pace, which is fixed, so the
+        // follow-up never meets its end.
         const chosen = await askBetween(
           turn,
           'notes/summary.md',
-          STEP_MS * 100,
+          Math.min(STEP_MS * 100, 500),
         );
 
         await sayBetween(turn, `Second: ${chosen}.`);

@@ -1214,7 +1214,7 @@ describe('CHD-266 tester: settled task attention', () => {
     ]);
 
     expect(tabOf(waiting, 1)?.wait.asking).toStrictEqual({
-      on: { kind: 'input', message: 'Which suite?' },
+      on: { kind: 'input', message: 'Which suite?', subagentId: 'task' },
       since: 2000,
     });
     expect(attend(waiting)?.front).toBe(1);

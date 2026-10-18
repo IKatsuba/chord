@@ -3170,7 +3170,6 @@ test('with two requests between turns, the queue says it waits and holds until t
   await parent.close();
 });
 
-
 describe('CHD-158 tester: queued work across between-turn requests', () => {
   for (const mode of ['form', 'url'] as const) {
     test(`${mode}: a new request during quiet restarts a full quiet before the queued prompt`, async () => {

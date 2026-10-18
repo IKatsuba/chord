@@ -1015,7 +1015,6 @@ describe('CHD-158 tester: agent and task requesters', () => {
   }
 });
 
-
 describe('CHD-158 tester: queued requests in the window', () => {
   for (const [columns, rows] of [
     [80, 24],

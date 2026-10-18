@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
+import { readPast } from '../../../src/session/record.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CHILD_MESSAGES,
@@ -978,5 +979,146 @@ describe('CHD-384 tester: click focus and neighboring dialogs', () => {
       await window.press('1');
       await window.shows('Permission: allow.');
       expect(window.frame()).toContain('╭─ docs ');
+    }));
+});
+
+test("a child's task permission keeps its mark and ctrl+x a once the child's turn has ended (CHD-266)", () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'agenttask');
+    await window.shows('● parser needs your permission');
+    // parser's own turn ends about 3 s after it starts; its task still asks.
+    await new Promise((resolve) => setTimeout(resolve, 4500));
+    expect(window.frame()).toContain('● parser needs your permission');
+    expect(window.frame()).not.toContain('parser replied');
+    await leader(window, 'a');
+    await window.shows('╭─ parser ─');
+    // Asked in a turn that has ended: it waits between turns.
+    await window.shows('Agent(Fix the tokenizer) · fake asks · between turns');
+    expect(window.frame()).toMatch(/parser .*● permission/);
+    await leader(window, 'a');
+    await window.shows('Esc to reject');
+    await window.press('1');
+    await window.shows('← from Fix the tokenizer · fake · report');
+    expect(window.frame()).not.toMatch(/parser .*● permission/);
+  }));
+
+describe('CHD-266 tester: attention after an observed parent result', () => {
+  async function parserResult(dir: string): Promise<boolean> {
+    const records = join(dir, 'state', 'records');
+
+    for (const file of await readdir(records)) {
+      const past = await readPast(join(records, file));
+      const own = past.find((entry) => entry.type === 'session');
+
+      if (own?.type !== 'session' || own.name !== 'parser') {
+        continue;
+      }
+
+      const prompt = past.find((entry) => entry.type === 'prompt');
+
+      if (
+        prompt?.type === 'prompt' &&
+        past.some(
+          (entry) => entry.type === 'result' && entry.turnId === prompt.turnId,
+        )
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const job of ['task', 'taskask'] as const) {
+      test(`${job}: attention reaches the pending task after parser's recorded result at ${columns} columns`, async () => {
+        const server = serveChord();
+        const admit = server.admit.bind(server);
+        let main: Parameters<typeof admit>[0] | undefined;
+
+        server.admit = (caller) => {
+          if (caller.role === 'person') {
+            main = caller;
+          }
+
+          return admit(caller);
+        };
+
+        try {
+          await withWindow(
+            async (window) => {
+              await ready(window);
+              assert(main);
+              await main.window.open(main.key, {
+                agent: 'fake',
+                model: 'fake-small',
+                name: 'parser',
+                prompt: job,
+              });
+              await window.shows(
+                job === 'task'
+                  ? '● parser needs your permission'
+                  : '● parser asks for input',
+              );
+              await until('parser’s spawning turn result in its record', () =>
+                parserResult(window.dir),
+              );
+              expect(window.frame()).toContain(
+                job === 'task'
+                  ? '● parser needs your permission'
+                  : '● parser asks for input',
+              );
+              expect(window.frame()).not.toContain('parser replied');
+              await leader(window, 'a');
+              await window.shows('╭─ parser ─');
+              await window.shows('between turns');
+              await leader(window, 'a');
+
+              if (job === 'task') {
+                await window.shows('Esc to reject');
+                await window.press('1');
+                await window.shows('← from Fix the tokenizer · fake · report');
+              } else {
+                await window.shows('Esc to cancel');
+                await window.press(ESC);
+                await window.shows('← from Ask the person · fake · report');
+              }
+
+              expect(window.frame()).not.toMatch(
+                /parser .*● (permission|input)/,
+              );
+            },
+            { server, runtimes: ['fake'], columns, rows },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
+  }
+
+  test('clear removes an unanswered task mark and a later child request asks again', () =>
+    withAgents(async (window) => {
+      await ready(window);
+      await send(window, 'agenttask');
+      await window.shows('● parser needs your permission');
+      await until('the first parser result', () => parserResult(window.dir));
+      await send(window, '/clear');
+      await until(
+        'the old parser and its attention to leave',
+        () =>
+          !window.frame().includes('    parser') &&
+          !window.frame().includes('needs your permission'),
+      );
+      // Clear drops the old child before the new session is ready for Enter.
+      await ready(window);
+      await send(window, 'agenttask');
+      await window.shows('● parser needs your permission');
+      await leader(window, 'a');
+      await window.shows('Agent(Fix the tokenizer) · fake asks');
     }));
 });

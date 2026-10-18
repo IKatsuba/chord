@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   emptyWatch,
   type NotifChannel,
@@ -290,4 +290,139 @@ test("a turn a monitor's event started writes nothing; its end's turn and a perm
     play([connected, event('e1'), ended('e1'), prompt('t1'), ended('t1')])
       .written.length,
   ).toStrictEqual(1);
+});
+
+describe("a task's request across the turn that started it (CHD-266)", () => {
+  const taskAsked = (id: string): ConversationEvent => ({
+    type: 'permission_requested',
+    turnId: 't1',
+    permission: { id, subagentId: 'task-1', options: [] },
+    // A task's request comes stamped with when it was asked.
+    at: 1000,
+  });
+
+  test("stays open when the turn ends; the agent's own does not", () => {
+    const { watch } = play([
+      connected,
+      prompt('t1'),
+      taskAsked('p1'),
+      asked('t1', 'p2'),
+      ended('t1'),
+    ]);
+
+    expect([...watch.asking]).toStrictEqual(['p1']);
+  });
+
+  test('goes once answered or withdrawn, and a later one asks again', () => {
+    const { watch, written } = play([
+      connected,
+      prompt('t1'),
+      taskAsked('p1'),
+      ended('t1'),
+      {
+        type: 'permission_settled',
+        turnId: 't1',
+        id: 'p1',
+        answer: { type: 'withdrawn' },
+      },
+      taskAsked('p2'),
+    ]);
+
+    expect([...watch.asking]).toStrictEqual(['p2']);
+    // The first request, the turn's end, and the second request, which is a
+    // wait of its own once the first has gone.
+    expect(written.length).toStrictEqual(3);
+  });
+});
+
+describe('CHD-266 tester: lasting request identity', () => {
+  test('task forms and explicit between links survive results until their individual settlements', () => {
+    const events: ConversationEvent[] = [
+      connected,
+      prompt('t1'),
+      {
+        type: 'elicitation_requested',
+        turnId: 't1',
+        elicitation: {
+          id: 'form',
+          subagentId: 'task',
+          mode: 'form',
+          message: 'Task form',
+          schema: {},
+        },
+      },
+      {
+        type: 'elicitation_requested',
+        turnId: 't1',
+        elicitation: {
+          id: 'link',
+          between: true,
+          mode: 'url',
+          message: 'Between link',
+          url: 'https://example.com/approve',
+        },
+      },
+      ended('t1'),
+      ended('later', 'cancelled'),
+    ];
+    const open = play(events).watch;
+
+    expect([...open.asking]).toStrictEqual(['form', 'link']);
+    expect([...open.lasting]).toStrictEqual(['form', 'link']);
+
+    const partly = play([
+      ...events,
+      {
+        type: 'elicitation_settled',
+        turnId: 't1',
+        id: 'form',
+        answer: { type: 'withdrawn' },
+      },
+    ]).watch;
+
+    expect([...partly.asking]).toStrictEqual(['link']);
+    expect([...partly.lasting]).toStrictEqual(['link']);
+  });
+
+  test('an adapter subagent permission without a task timestamp keeps the previous result behavior', () => {
+    const request: ConversationEvent = {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: { id: 'adapter', subagentId: 'adapter-child', options: [] },
+    };
+    const { watch } = play([connected, prompt('t1'), request, ended('t1')]);
+
+    expect(watch.asking.size).toBe(0);
+    expect(watch.lasting.size).toBe(0);
+  });
+
+  test('withdrawal and clear remove lasting IDs so a later request can notify again', () => {
+    const request: ConversationEvent = {
+      type: 'permission_requested',
+      turnId: 't1',
+      between: true,
+      permission: { id: 'lasting', options: [] },
+    };
+    const events: ConversationEvent[] = [
+      connected,
+      request,
+      ended('t1'),
+      {
+        type: 'permission_settled',
+        turnId: 't1',
+        id: 'lasting',
+        answer: { type: 'withdrawn' },
+      },
+    ];
+    const withdrawn = play(events).watch;
+
+    expect(withdrawn.asking.size).toBe(0);
+    expect(withdrawn.lasting.size).toBe(0);
+    expect(play([...events, request]).written.at(-1)).toContain(
+      'needs your permission',
+    );
+    expect(play([connected, request, { type: 'cleared' }]).watch).toStrictEqual(
+      emptyWatch,
+    );
+  });
 });

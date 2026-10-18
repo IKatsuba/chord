@@ -53,6 +53,12 @@ export interface Watch {
   readonly queued: ReadonlySet<string>;
   readonly events: ReadonlySet<string>;
   readonly asking: ReadonlySet<string>;
+  /**
+   * Of those, the ones a turn's end leaves open: a task agent's, which
+   * outlives the turn that started it, and one asked between turns, as the
+   * transcript keeps them (CHD-266).
+   */
+  readonly lasting: ReadonlySet<string>;
 }
 
 export const emptyWatch: Watch = {
@@ -61,7 +67,16 @@ export const emptyWatch: Watch = {
   queued: new Set(),
   events: new Set(),
   asking: new Set(),
+  lasting: new Set(),
 };
+
+/** `set` with only what `kept` has too. */
+function keeping(
+  set: ReadonlySet<string>,
+  kept: ReadonlySet<string>,
+): Set<string> {
+  return new Set([...set].filter((item) => kept.has(item)));
+}
 
 function adding(set: ReadonlySet<string>, item: string): Set<string> {
   return new Set(set).add(item);
@@ -117,9 +132,13 @@ export function watchWaits(
       return { watch: { ...watch, queued: new Set() } };
     case 'permission_requested': {
       const wasAsking = watch.asking.size > 0;
+      // A task's request comes stamped with when it was asked, as one asked
+      // between turns does.
+      const lasts = event.between === true || event.at !== undefined;
       const next = {
         ...watch,
         asking: adding(watch.asking, event.permission.id),
+        ...(lasts && { lasting: adding(watch.lasting, event.permission.id) }),
       };
 
       return !watch.live || wasAsking
@@ -131,9 +150,16 @@ export function watchWaits(
     }
     case 'elicitation_requested': {
       const wasAsking = watch.asking.size > 0;
+      // A form names its asker only when a task asks.
+      const lasts =
+        event.elicitation.between === true ||
+        event.elicitation.subagentId !== undefined;
       const next = {
         ...watch,
         asking: adding(watch.asking, event.elicitation.id),
+        ...(lasts && {
+          lasting: adding(watch.lasting, event.elicitation.id),
+        }),
       };
 
       return !watch.live || wasAsking
@@ -146,14 +172,19 @@ export function watchWaits(
     case 'permission_settled':
     case 'elicitation_settled':
       return {
-        watch: { ...watch, asking: removing(watch.asking, event.id) },
+        watch: {
+          ...watch,
+          asking: removing(watch.asking, event.id),
+          lasting: removing(watch.lasting, event.id),
+        },
       };
     case 'result': {
       const next = {
         ...watch,
         cancelled: removing(watch.cancelled, event.turnId),
         events: removing(watch.events, event.turnId),
-        asking: new Set<string>(),
+        // A task's request, or one asked between turns, outlives the turn.
+        asking: keeping(watch.asking, watch.lasting),
       };
       const waits =
         watch.live &&

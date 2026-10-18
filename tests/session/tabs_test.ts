@@ -1131,3 +1131,137 @@ describe('CHD-364 tester: separate reply and attention clocks', () => {
     expect(wait.unseen?.since).toBe(1000);
   });
 });
+
+describe("a task's permission across the turn that started it (CHD-266)", () => {
+  function taskAsked(turnId: string, id: string): ConversationEvent {
+    return {
+      type: 'permission_requested',
+      turnId,
+      permission: { id, subagentId: 'task-1', options: [] },
+      at: 0,
+    };
+  }
+
+  test('keeps the wait and attention after the turn ends, until answered', () => {
+    let tabs = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t1'),
+      taskAsked('t1', 'p1'),
+      ended('t1'),
+    ]);
+
+    expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual({
+      on: { kind: 'permission', title: undefined },
+      since: 2000,
+    });
+    expect(attend(tabs)?.front).toStrictEqual(1);
+
+    tabs = heard(tabs, 1, [settled('t1', 'p1')], 9000);
+
+    expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual(undefined);
+  });
+
+  test('a later request after the answer waits again', () => {
+    const tabs = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t1'),
+      taskAsked('t1', 'p1'),
+      ended('t1'),
+      settled('t1', 'p1'),
+      taskAsked('t1', 'p2'),
+    ]);
+
+    expect(tabOf(tabs, 1)?.wait.asking?.since).toStrictEqual(5000);
+    expect(attend(tabs)?.front).toStrictEqual(1);
+  });
+
+  test('a withdrawn one, as when its task is cancelled, leaves nothing waiting', () => {
+    const tabs = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t1'),
+      taskAsked('t1', 'p1'),
+      ended('t1'),
+      {
+        type: 'permission_settled',
+        turnId: 't1',
+        id: 'p1',
+        answer: { type: 'withdrawn' },
+      },
+    ]);
+
+    expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual(undefined);
+  });
+});
+
+describe('CHD-266 tester: settled task attention', () => {
+  test('a task form retains attention across result and exposes the original reply after withdrawal', () => {
+    const form: ConversationEvent = {
+      type: 'elicitation_requested',
+      turnId: 't1',
+      elicitation: {
+        id: 'form',
+        subagentId: 'task',
+        mode: 'form',
+        message: 'Which suite?',
+        schema: {},
+      },
+    };
+    const waiting = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t1'),
+      form,
+      ended('t1'),
+    ]);
+
+    expect(tabOf(waiting, 1)?.wait.asking).toStrictEqual({
+      on: { kind: 'input', message: 'Which suite?' },
+      since: 2000,
+    });
+    expect(attend(waiting)?.front).toBe(1);
+
+    const done = heard(
+      waiting,
+      1,
+      [
+        {
+          type: 'elicitation_settled',
+          turnId: 't1',
+          id: 'form',
+          answer: { type: 'withdrawn' },
+        },
+      ],
+      9000,
+    );
+
+    expect(tabOf(done, 1)?.wait.asking).toBeUndefined();
+    expect(repliedSince(tabOf(done, 1)!.wait)).toBe(3000);
+    expect(tabOf(done, 1)?.wait.unseen).toMatchObject({
+      kind: 'replied',
+      since: 3000,
+    });
+  });
+
+  test('clear removes attention and a later between request starts a fresh asking age', () => {
+    const request: ConversationEvent = {
+      type: 'permission_requested',
+      turnId: 't1',
+      between: true,
+      permission: { id: 'p', options: [] },
+    };
+    const waiting = heard(opened('a', 'b'), 1, [up, request, ended('t1')]);
+    const cleared = heard(waiting, 1, [{ type: 'cleared' }], 5000);
+
+    expect(tabOf(cleared, 1)?.wait.asking).toBeUndefined();
+    expect(tabOf(cleared, 1)?.wait.unseen).toBeUndefined();
+
+    const later = heard(
+      cleared,
+      1,
+      [up, { ...request, permission: { id: 'new', options: [] } }],
+      7000,
+    );
+
+    expect(tabOf(later, 1)?.wait.asking?.since).toBe(8000);
+    expect(attend(later)?.front).toBe(1);
+  });
+});

@@ -103,6 +103,13 @@ news even when the agent was idle. A failure names its agent, such as
 `✗ 1 exited · 1 turn failed · ctrl+x a to go`. Seen failures leave the
 status line. ctrl+x w lists open tabs with the same failure words, naming
 the child or member when it is theirs: `✗ parser: turn failed 1m`.
+An asking task is named as its box names it:
+`● Agent(Fix the tokenizer) · fake needs your permission · ctrl+x a to go`,
+or `● main's task needs your permission · ctrl+x a` where it will not fit.
+Forms and links read `asks for input`. The hint names the oldest open
+permission in that session, otherwise its oldest form or link. With several
+asking, `● N agents wait` counts a task as one agent. ctrl+x a reaches its
+box through its owner session; the background summary keeps `● 1 task asking`.
 ctrl+x k closes the session in front, the one to its left coming forward;
 one that is working
 or running a `!` command, waits on you, has prompts queued, or task agents

@@ -36,7 +36,7 @@
   `cutcalls`, `cutcallsback`, `tasklong`, `tasktwo`, `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `plan`, `proposal`,
-  `mainbetween`, `mainbetweentwice`, `claudebetween`, `taskbetween`,
+  `mainbetween`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `teamtask`,
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
@@ -131,8 +131,9 @@
   max, which the fake does not offer, and each says the effort chord's
   answer says it started on, and its note; `team` and `team2` call `list_teams`, then `run_team` on
   `bugfix` (`tests/fixtures/teams/fake/bugfix.md`, all on the fake runtime)
-  with an issue's job; a team agent's first prompt plays its role, read off
-  its team part, unless its message names a scenario, which it plays: `teamlead` opens `tester` and `coder`, asks the other runs'
+  with an issue's job; `teamtask` runs `bugfix` and starts `taskchild`, so a
+  member and main's task ask at once. A team agent's first prompt plays its
+  role, read off its team part, unless its message names a scenario, which it plays: `teamlead` opens `tester` and `coder`, asks the other runs'
   leads which files they hold and reports to main, `teamtester` writes a
   test, reports to its lead, messages `coder` directly and asks the person
   to run the suite, and `teamcoder` messages `tester`; `propose`, or the

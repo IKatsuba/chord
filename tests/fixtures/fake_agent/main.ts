@@ -57,8 +57,7 @@
  * survive: `late` sends a chunk after answering the prompt, `twins` asks a
  * permission with two options of one kind, and `unknown` sends an update of a
  * kind ACP does not have and a notification of the agent's own. `cancels`
- * says how many `session/cancel`s came with no turn playing, which a client
- * sends only for a prompt the agent never got. An accepted
+ * says how many `session/cancel`s came with no turn playing. An accepted
  * `link` is followed by `elicitation/complete`.
  *
  * Started with `--plan-capability-only`, or with

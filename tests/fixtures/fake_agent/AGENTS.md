@@ -11,8 +11,8 @@
   `overlap`, `overlapfail`,
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
   `mcpnote`, `codexmcpnote`),
-  `permissions.ts` (`permission`, `twins`, `mcpask`, `bigask`, `bigasktwice`,
-  `overlapask`),
+  `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
+  `bigask`, `bigasktwice`, `overlapask`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
   `shell.ts` (`shell`,
   `shellcut`, `bash`, `bashcut`), `compaction.ts` (`compact`, `codexcompact`,
@@ -25,7 +25,7 @@
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `tasklong`, `tasktwo`, `taskwait`) and
-  `misbehaving.ts` (`error`, `late`, `unknown`). Beside it, what the
+  `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
@@ -35,10 +35,11 @@
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlapfail`, `overlapask`, `subagentcall`,
   `cutcalls`, `cutcallsback`, `tasklong`, `tasktwo`, `taskwait`,
-  `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `plan`, `proposal`,
+  `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
+  `callchildtwo`, `plan`, `proposal`,
   `shell`, `shellcut`, `bash`, `bashcut`, `compact`, `codexcompact`,
   `compactfail`, `status`,
-  `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
+  `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
   `mcp`, `form`, `link`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
@@ -65,7 +66,10 @@
   after AskUserQuestion's tool call as claude-agent-acp sends it,
   `askcodexwait` codex's with a wait of 300 ms, withdrawn 50 ms after it
   runs out, as codex-acp withdraws it once it does, and each says what came back, and
-  an accepted link is followed by `elicitation/complete`; `twins` asks a
+  an accepted link is followed by `elicitation/complete`;
+  `permissionsteer` asks for a write as `permission` does, with Allow and
+  Deny, then waits for a steered message before its next step;
+  `twins` asks a
   permission with two `allow_once` options and says the id picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the
   arguments only in `rawInput`; `bigask` asks for an MCP file write with
@@ -73,7 +77,8 @@
   box; `bigasktwice` asks for two such writes at once, the second waiting
   behind the first; `late`
   sends a chunk after answering the prompt; `unknown` sends an update of a
-  kind ACP does not have and a notification of its own;
+  kind ACP does not have and a notification of its own; `cancels` says how
+  many `session/cancel` notifications its session got with no turn playing;
   `mcp` answers with the MCP servers its session was opened with, as JSON;
   `chordtools` connects to chord's own, through the MCP SDK's client, calls
   `list_agents` and `list_sessions` and answers with what came back, as
@@ -100,7 +105,8 @@
   `agentcall` opens `parser` on `callchild` and messages it during its
   running call; `agentcalltwice` sends two messages during that call, to
   check their queue order. `callchild` runs one call for about three
-  seconds, then reports that the tests pass;
+  seconds, then reports that the tests pass; `callchildtwo` does the same,
+  but its next step after the call waits until two messages were steered in;
   `agentcallgated` sends two messages to `parser` on `callchildgated` only
   after its call opens (`<cwd>/.fake-gate/open`); the call stays open until
   the test writes `<cwd>/.fake-gate/release`;

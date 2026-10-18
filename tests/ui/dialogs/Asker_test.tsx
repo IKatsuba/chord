@@ -210,6 +210,7 @@ describe('CHD-389 tester: headings wrap without losing the countdown or keys', (
             expect(window.frame()).toContain(heading);
             await window.press(ESC);
             expect(await answer).toStrictEqual({ action: 'cancel' });
+            await window.shows('› draft kept');
             expect(promptRow(window)).toContain('draft kept');
           },
           { columns, rows },

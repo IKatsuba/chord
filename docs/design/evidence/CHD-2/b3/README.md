@@ -29,3 +29,15 @@ tests.
 - **`could not stop:` cannot be reached on the fake.** `session/cancel` is
   a notification: no agent answers it, so the fake cannot refuse one; only
   a send that fails, such as a connection already gone, can.
+
+## `■ stopping`, on e6bc8de9's `claudeslowstop`
+
+A stop the fake holds about 2 s, as Claude does.
+
+| File | What it shows |
+| --- | --- |
+| `stopping-120x40.txt`, `.ansi`, `stopping-80x24.txt` | `x`: `■ stopping 0s`, dim, the `❯` kept on it; a second `x` changes nothing (`■ stopping 1s`) |
+| `stopping-standing-120x40.txt` | the view closed while it stops: `background  1 agent running · ✓ 1 agent done`, stopping counted as running |
+| `stopping-ended-120x40.txt`, `stopping-ended-80x24.txt` | its `idle` come: `■ stopped after 2s`, the other `✓ done in 2s` |
+
+Reads as designed. `could not stop:` stays tests-only.

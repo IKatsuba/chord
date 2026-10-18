@@ -351,6 +351,7 @@ const SCENARIOS = [
   'agentcallgated',
   'callchildgated',
   'callchild',
+  'callchildtwo',
   'agentsend',
   'codexagentsend',
   'agentsendrefused',

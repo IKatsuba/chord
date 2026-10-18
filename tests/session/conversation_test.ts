@@ -1293,8 +1293,9 @@ test("a message held behind an open call that the turn's end refuses waits in th
 
 test("on Claude's adapter, every message held behind an open call waits in the queue at once, in the order told, before the call ends", () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
-    // A call open for seconds, so both are told while it is.
-    conversation.send('callchild');
+    // A call open for seconds, so both are told while it is; its next step
+    // after it waits for both, as the model's comes only after its result.
+    conversation.send('callchildtwo');
     await until(() =>
       events.some(
         (event) =>

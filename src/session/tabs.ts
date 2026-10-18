@@ -1,4 +1,11 @@
-import { emptyWatch, type Wait, type Watch, watchWaits } from '../notify.ts';
+import {
+  askingNow,
+  type AskingWait,
+  emptyWatch,
+  type Wait,
+  type Watch,
+  watchWaits,
+} from '../notify.ts';
 import type { ConversationEvent } from './conversation.ts';
 import { senderName } from './tasks.ts';
 
@@ -13,7 +20,7 @@ export const MAX_TABS = 9;
 export const MAX_CHILDREN = 8;
 
 /** What a session waits on the person for: a permission, or a form or link. */
-export type Asking = Exclude<Wait, { readonly kind: 'turn_ended' }>;
+export type Asking = AskingWait;
 
 /**
  * Where one session stands with the person, as its tab and the attention
@@ -864,9 +871,11 @@ function waitAfter(
   const asking =
     started !== undefined && started.kind !== 'turn_ended'
       ? { on: started, since: now }
-      : watch.asking.size === 0
+      : watch.asking.size === 0 || before.asking === undefined
         ? undefined
-        : before.asking;
+        : // Still waiting since it began, on whichever request is the oldest
+          // still open: the one answered may have been another's (CHD-431).
+          { ...before.asking, on: askingNow(watch) ?? before.asking.on };
   // An exit is news even with no turn running: the agent is gone.
   const failed =
     event.type === 'connect_failed' ||

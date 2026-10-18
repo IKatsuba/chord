@@ -160,6 +160,11 @@ export interface TabBehind {
   readonly agent: string;
   readonly wait: TabWait;
   /**
+   * The task of its own whose request it waits on, as the task's box names
+   * it: `Agent(Fix the tokenizer) · fake` (CHD-431).
+   */
+  readonly task?: string;
+  /**
    * An agent of the front tab's, by its own name: `docs`, or `main` while a
    * child is picked. A reply of one says nothing here, as the list under
    * the prompt already shows it.
@@ -229,14 +234,23 @@ export function waitsNotice(
       ? 'agents'
       : 'sessions';
 
-    return asking.length > 1
-      ? notice(`${GLYPHS.asking} ${asking.length} ${what} wait`, 'waits')
-      : first.wait.asking?.on.kind === 'input'
-        ? notice(`${GLYPHS.asking} ${named(first)} asks for input`, 'waits')
-        : notice(
-            `${GLYPHS.asking} ${named(first)} needs your permission`,
-            'waits',
-          );
+    const does =
+      first.wait.asking?.on.kind === 'input'
+        ? 'asks for input'
+        : 'needs your permission';
+
+    if (asking.length > 1) {
+      return notice(`${GLYPHS.asking} ${asking.length} ${what} wait`, 'waits');
+    }
+
+    // A task by the name its box gives it, which may be long: where that
+    // does not fit, by whose task it is (CHD-431).
+    return first.task === undefined
+      ? notice(`${GLYPHS.asking} ${named(first)} ${does}`, 'waits')
+      : {
+          ...notice(`${GLYPHS.asking} ${first.task} ${does}`, 'waits'),
+          short: `${GLYPHS.asking} ${named(first)}'s task ${does}`,
+        };
   }
 
   if (failed.length > 1) {

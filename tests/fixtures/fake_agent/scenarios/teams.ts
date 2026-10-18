@@ -11,6 +11,7 @@ import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
+import { TASK_ARGS } from './tasks.ts';
 
 /** A team agent's pace: 20 steps, a tenth of a second by default. */
 const TEAM_STEP_MS = STEP_MS * 20;
@@ -403,6 +404,32 @@ export const TEAMS = {
 
   // Hands the first job to `bugfix`.
   team: (turn) => handOver(turn, TEAM_JOB),
+
+  // A member and a task of main's asking the person at once: bugfix runs as
+  // `team` hands it over, its tester asking, and `taskchild` starts as `task`
+  // starts it, asking too (CHD-431).
+  async teamtask(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'run_team', {
+        team: 'bugfix',
+        job: TEAM_JOB,
+      });
+      await callChord(turn, client, 'spawn_task', TASK_ARGS);
+      await turn.say('The team and the task are both at work.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
 
   // Hands the second job to `bugfix`, a second run while the first is open.
   team2: (turn) => handOver(turn, SECOND_JOB),

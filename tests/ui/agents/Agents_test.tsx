@@ -65,6 +65,17 @@ async function withAgents(
   }
 }
 
+/**
+ * The hint for parser's task asking, as CHD-431 names it: by the task's own
+ * name, or by whose task it is where that does not fit.
+ */
+const PARSER_TASK =
+  /● (Agent\(Fix the tokenizer\) · fake|parser's task) needs your permission/;
+
+async function parserTaskAsks(window: Window): Promise<void> {
+  await until("parser's task asks", () => PARSER_TASK.test(window.frame()));
+}
+
 /** `agents`, until both of parser's messages have come back. */
 async function opened(window: Window): Promise<void> {
   await ready(window);
@@ -203,7 +214,7 @@ test("a child starts a task agent of its own, drawn in the child's turn, which r
     await ready(window);
     await send(window, 'agenttask');
     await window.shows('Waiting on parser.');
-    await window.shows('● parser needs your permission');
+    await parserTaskAsks(window);
     // The task is the child's, so main's transcript never draws it.
     expect(!window.frame().includes('Agent(Fix the tokenizer)')).toBeTruthy();
     await leader(window, 'a');
@@ -223,7 +234,7 @@ test('closing a child cancels the task agents it started', () =>
   withAgents(async (window) => {
     await ready(window);
     await send(window, 'agenttask');
-    await window.shows('● parser needs your permission');
+    await parserTaskAsks(window);
     await window.press(DOWN);
     await window.press(DOWN);
     await window.shows('Agent(Fix the tokenizer) · fake asks');
@@ -986,10 +997,10 @@ test("a child's task permission keeps its mark and ctrl+x a once the child's tur
   withAgents(async (window) => {
     await ready(window);
     await send(window, 'agenttask');
-    await window.shows('● parser needs your permission');
+    await parserTaskAsks(window);
     // parser's own turn ends about 3 s after it starts; its task still asks.
     await new Promise((resolve) => setTimeout(resolve, 4500));
-    expect(window.frame()).toContain('● parser needs your permission');
+    expect(window.frame()).toMatch(PARSER_TASK);
     expect(window.frame()).not.toContain('parser replied');
     await leader(window, 'a');
     await window.shows('╭─ parser ─');
@@ -1004,6 +1015,17 @@ test("a child's task permission keeps its mark and ctrl+x a once the child's tur
   }));
 
 describe('CHD-266 tester: attention after an observed parent result', () => {
+  async function taskAsks(window: Window, job: 'task' | 'taskask' = 'task') {
+    const hint =
+      job === 'task'
+        ? /● (Agent\(Fix the tokenizer\) · fake|parser's task) needs your permission/
+        : /● (Agent\(Ask the person\) · fake|parser's task) asks for input/;
+
+    await until("parser's task hint", () => hint.test(window.frame()));
+
+    return hint;
+  }
+
   async function parserResult(dir: string): Promise<boolean> {
     const records = join(dir, 'state', 'records');
 
@@ -1059,19 +1081,13 @@ describe('CHD-266 tester: attention after an observed parent result', () => {
                 name: 'parser',
                 prompt: job,
               });
-              await window.shows(
-                job === 'task'
-                  ? '● parser needs your permission'
-                  : '● parser asks for input',
-              );
+
+              const hint = await taskAsks(window, job);
+
               await until('parser’s spawning turn result in its record', () =>
                 parserResult(window.dir),
               );
-              expect(window.frame()).toContain(
-                job === 'task'
-                  ? '● parser needs your permission'
-                  : '● parser asks for input',
-              );
+              expect(window.frame()).toMatch(hint);
               expect(window.frame()).not.toContain('parser replied');
               await leader(window, 'a');
               await window.shows('╭─ parser ─');
@@ -1105,7 +1121,7 @@ describe('CHD-266 tester: attention after an observed parent result', () => {
     withAgents(async (window) => {
       await ready(window);
       await send(window, 'agenttask');
-      await window.shows('● parser needs your permission');
+      await taskAsks(window);
       await until('the first parser result', () => parserResult(window.dir));
       await send(window, '/clear');
       await until(
@@ -1117,7 +1133,7 @@ describe('CHD-266 tester: attention after an observed parent result', () => {
       // Clear drops the old child before the new session is ready for Enter.
       await ready(window);
       await send(window, 'agenttask');
-      await window.shows('● parser needs your permission');
+      await taskAsks(window);
       await leader(window, 'a');
       await window.shows('Agent(Fix the tokenizer) · fake asks');
     }));
@@ -1145,4 +1161,68 @@ describe('who a box that asks names (CHD-389)', () => {
         await window.shows('Elicitation answer: cancel');
       }
     }));
+});
+
+describe('CHD-431 tester: task input and permission in different children', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`settling the older task input changes the count to the remaining task's name at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+            await main.window.open(main.key, {
+              agent: 'fake',
+              name: 'questions',
+              prompt: 'taskask',
+            });
+            await until('the first task input hint', () =>
+              /● (Agent\(Ask the person\) · fake|questions's task) asks for input/.test(
+                window.frame(),
+              ),
+            );
+            await main.window.open(main.key, {
+              agent: 'fake',
+              name: 'parser',
+              prompt: 'task',
+            });
+            await window.shows('● 2 agents wait');
+            await leader(window, 'a');
+            await window.shows('╭─ questions ─');
+            await window.shows('between turns');
+            await leader(window, 'a');
+            await window.shows('Esc to cancel');
+            await window.press(ESC);
+            await until('the remaining task permission hint', () =>
+              /● (Agent\(Fix the tokenizer\) · fake|parser's task) needs your permission/.test(
+                window.frame(),
+              ),
+            );
+            expect(window.frame()).not.toContain('● 2 agents wait');
+            expect(window.frame()).not.toMatch(
+              /● (Agent\(Ask the person\) · fake|questions's task) asks for input/,
+            );
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
 });

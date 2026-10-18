@@ -96,7 +96,10 @@ import {
   shownKey,
   type Tab,
   tabOf,
+  type TabWait,
 } from '../../session/tabs.ts';
+import { subagentPath } from '../../session/subagents.ts';
+import { askerParts } from '../dialogs/asker.ts';
 import { homePath } from '../../settings.ts';
 import type { AgentOption } from '../../session/config.ts';
 import { modelName } from '../../session/models.ts';
@@ -2765,6 +2768,28 @@ export function useSessions(
    */
   const lines = (columns: number) => {
     const { tabs } = sessions;
+    // The task of session `key`'s whose request `wait` is, by the name its
+    // box gives it; none when the session's agent or a subagent of its own,
+    // not a task, asks (CHD-431).
+    const taskOf = (key: number, wait: TabWait) => {
+      const id = wait.asking?.on.subagentId;
+      const entries = id === undefined ? [] : stateOf(key)?.transcript.entries;
+
+      if (id === undefined || entries === undefined) {
+        return {};
+      }
+
+      const task = subagentPath(entries, id).at(-1)?.task;
+
+      return task === undefined
+        ? {}
+        : {
+            task: askerParts({ entries, subagentId: id })
+              .map((part) => part.text)
+              .join(''),
+          };
+    };
+
     const frontTab = tabs.tabs.find((tab) => tab.key === tabs.front);
     // The front tab's agents but the one picked, by their names: `main`
     // too, while a child is picked.
@@ -2780,7 +2805,13 @@ export function useSessions(
               const name =
                 'id' in other ? namedChild(frontTab, other) : other.name;
 
-              return { number: 0, agent: name, name, wait: other.wait };
+              return {
+                number: 0,
+                agent: name,
+                name,
+                wait: other.wait,
+                ...taskOf(other.key, other.wait),
+              };
             });
 
     const waits = waitsNotice(
@@ -2792,12 +2823,14 @@ export function useSessions(
           }
 
           const waiter = waitingChild(tab);
+          const wait = mergedWait(tab);
 
           return [
             {
               number: index + 1,
               agent: tab.agent,
-              wait: mergedWait(tab),
+              wait,
+              ...taskOf(waiter?.key ?? tab.key, wait),
               ...(waiter === undefined
                 ? {}
                 : { waiter: namedChild(tab, waiter) }),

@@ -1,0 +1,24 @@
+      readString in src/parse/tokenize.ts stops at the newline before it
+
+ ››› Waiting for permission… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Fix the tokenizer) · fake asks · between turns                         │
+│ Edit src/parse/tokenize.ts                                                   │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer    Fake Large with a 1M context… · 1% used
+    main       fake         ● permission 2s
+    bugfix     team · fake  ✓ replied 2s ago
+    ├─ tester  fake         ● permission 1s
+    └─ coder   fake         ✓ replied 1s ago
+    background  ● 1 task asking

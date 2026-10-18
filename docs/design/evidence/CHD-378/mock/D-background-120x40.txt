@@ -1,0 +1,40 @@
+ Background · 3 in this tab
+
+  ❯ dev server errors  monitor                   running 31s · 1 event         main
+    CI run 4812        monitor                   running 31s · no events       main
+    Fix the tokenizer  task · fake · fake-small  ✗ failed after 15s · $0.0125  main
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑ ↓ to move · enter to go to its call · x to stop · esc to close

@@ -556,3 +556,114 @@ test("the front session's own request between turns names the key that answers i
     text({ ...permission, waits: betweenNotice('input', 'ctrl+x a') }, 80),
   ).toStartWith('● input · ctrl+x a to answer  ');
 });
+
+test('an asking task is named as its box names it, or by whose task it is where that does not fit (CHD-431)', () => {
+  const asking = (on: 'permission' | 'input'): TabWait => ({
+    ...idle,
+    asking: {
+      on:
+        on === 'permission'
+          ? { kind: 'permission', subagentId: 'task-1' }
+          : { kind: 'input', message: 'Which?', subagentId: 'task-1' },
+      since: 0,
+    },
+  });
+  const main = (on: 'permission' | 'input'): TabBehind => ({
+    number: 0,
+    agent: 'main',
+    name: 'main',
+    wait: asking(on),
+    task: 'Agent(Fix the tokenizer) · fake',
+  });
+  const line = {
+    ...facts,
+    mode: 'default',
+    hint: undefined,
+    waits: waitsNotice([main('permission')], 'ctrl+x a'),
+  };
+
+  expect(text(line, 120)).toStartWith(
+    '● Agent(Fix the tokenizer) · fake needs your permission · ctrl+x a to go  ',
+  );
+  expect(text(line, 80)).toStartWith(
+    "● main's task needs your permission · ctrl+x a  ",
+  );
+  expect(waitsNotice([main('input')], 'ctrl+x a')?.text).toStrictEqual(
+    '● Agent(Fix the tokenizer) · fake asks for input',
+  );
+
+  // Two asking are counted as ever, a task as one agent.
+  const tester: TabBehind = {
+    number: 0,
+    agent: 'tester',
+    name: 'tester',
+    wait: asking('input'),
+  };
+
+  expect(
+    waitsNotice([main('permission'), tester], 'ctrl+x a')?.text,
+  ).toStrictEqual('● 2 agents wait');
+});
+
+describe('CHD-431 tester: task hints preserve identity and fit', () => {
+  const owner = (
+    name: string,
+    task: string,
+    kind: 'permission' | 'input' = 'permission',
+  ): TabBehind => ({
+    number: 0,
+    agent: name,
+    name,
+    task,
+    wait: {
+      ...idle,
+      asking: {
+        since: 0,
+        on:
+          kind === 'permission'
+            ? { kind, subagentId: task }
+            : { kind, message: 'Question', subagentId: task },
+      },
+    },
+  });
+
+  for (const kind of ['permission', 'input'] as const) {
+    test(`a very long child's task ${kind} uses its owner without truncating the task or dropping the model`, () => {
+      const waits = waitsNotice(
+        [owner('parser', `Agent(${'tokenizer '.repeat(40)}) · fake`, kind)],
+        'ctrl+y',
+      );
+      const line = text(
+        { ...facts, mode: 'default', hint: undefined, waits },
+        80,
+      );
+
+      expect(line).toContain(
+        `● parser's task ${kind === 'permission' ? 'needs your permission' : 'asks for input'} · ctrl+y`,
+      );
+      expect(line).toContain('Fake Large');
+      expect(line).not.toContain('tokenizer');
+      expect(stringWidth(line)).toBeLessThanOrEqual(80);
+    });
+  }
+
+  test('a task and a different tab count as sessions, then show the remaining task after the other settles', () => {
+    const task = owner('parser', 'Agent(Fix the tokenizer) · fake');
+    const other: TabBehind = {
+      number: 2,
+      agent: 'fake',
+      wait: {
+        ...idle,
+        asking: { on: { kind: 'input', message: 'Form' }, since: 5 },
+      },
+    };
+
+    expect(waitsNotice([task, other], 'ctrl+x a')?.text).toBe(
+      '● 2 sessions wait',
+    );
+    expect(waitsNotice([task], 'ctrl+x a')?.text).toBe(
+      '● Agent(Fix the tokenizer) · fake needs your permission',
+    );
+    expect(waitsNotice([], 'ctrl+x a')).toBeUndefined();
+  });
+});

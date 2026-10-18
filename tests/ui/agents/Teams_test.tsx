@@ -3,7 +3,7 @@
  * handed a job through `run_team`, its lead opening the file's members, the
  * members messaging each other and the person, a second run, and closing.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { type ChordServer, serveChord } from '../../../src/server/server.ts';
@@ -274,3 +274,105 @@ test("a member's question box names it with its team (CHD-389)", () =>
     await window.shows('tester · bugfix asks you 2 questions');
     expect(window.frame()).not.toContain('fake asks you 2 questions');
   }));
+
+describe('a task of main asking beside a member (CHD-431)', () => {
+  /** `teamtask`, until main's task and tester both ask. */
+  async function bothAsk(window: Window): Promise<void> {
+    await ready(window);
+    await send(window, 'teamtask');
+    await window.shows('The team and the task are both at work.');
+    await window.shows('Agent(Fix the tokenizer) · fake asks');
+    await window.shows('├─ tester');
+    await until('tester asks', () =>
+      /├─ tester .*● permission/.test(window.frame()),
+    );
+  }
+
+  /** tester picked from the list, its prompt given the keys. */
+  async function toTester(window: Window): Promise<void> {
+    for (let presses = 0; presses < 8; presses++) {
+      if (/❯ ├─ tester/.test(window.frame())) {
+        break;
+      }
+
+      await window.press(DOWN);
+    }
+
+    await window.press('\r');
+    await window.shows('╭─ tester · bugfix ─');
+  }
+
+  test("main's held box comes first, then ctrl+x a goes on to the member", () =>
+    withTeams(async (window) => {
+      await bothAsk(window);
+      // main's own request between turns is the line's, naming nobody behind.
+      // Wide or short, as the line has room.
+      expect(window.frame()).toMatch(
+        /● permission( asked between turns)? · ctrl\+x a to answer/,
+      );
+      expect(window.frame()).not.toContain('tester needs your permission');
+      await leader(window, 'a');
+      await window.shows('Esc to reject');
+      await window.press('1');
+      await window.shows('● tester needs your permission · ctrl+x a to go');
+      await leader(window, 'a');
+      await window.shows('╭─ tester · bugfix ─');
+      await window.shows('tester asks');
+    }));
+
+  test("from the member, the hint names main's task as its box does, and ctrl+x a reaches it", () =>
+    withTeams(async (window) => {
+      await bothAsk(window);
+      await toTester(window);
+      // Wide, or short where tester's mode leaves no room for the task's name.
+      await until('the task named', () =>
+        /● (Agent\(Fix the tokenizer\) · fake|main's task) needs your permission · ctrl\+x a/.test(
+          window.frame(),
+        ),
+      );
+      await leader(window, 'a');
+      await window.shows('Agent(Fix the tokenizer) · fake asks');
+      expect(window.frame()).not.toContain('╭─ tester · bugfix ─');
+    }));
+});
+
+describe('a task of main asking beside a member, at 80 columns (CHD-431)', () => {
+  test("the hint names whose task it is where the task's name does not fit", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'teamtask');
+          await window.shows('The team and the task are both at work.');
+          await window.shows('├─ tester');
+          await until('tester asks', () =>
+            /├─ tester .*● permission/.test(window.frame()),
+          );
+
+          for (let presses = 0; presses < 8; presses++) {
+            if (/❯ ├─ tester/.test(window.frame())) {
+              break;
+            }
+
+            await window.press(DOWN);
+          }
+
+          await window.press('\r');
+          await window.shows('╭─ tester · bugfix ─');
+          await window.shows("● main's task needs your permission · ctrl+x a");
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 40,
+          columns: 80,
+          teams: { bugfix: BUGFIX },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});

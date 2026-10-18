@@ -146,24 +146,29 @@ function patched(
   at: number | undefined,
 ): Subagent {
   const { title, description } = update;
-  const next = subagentStateOf(update.state) ?? subagent.state;
+  const told = subagentStateOf(update.state);
+  const next = told ?? subagent.state;
   const {
     title: _title,
     description: _description,
     endedAt,
+    error: before,
     ...kept
   } = subagent;
+  // An untracked subagent may have worked on: its time stands at the
+  // `unknown`, and runs again to whatever state comes next.
   const ended =
     next === 'running'
       ? undefined
-      : subagent.state === 'running'
+      : subagent.state === 'running' || subagent.state === 'untracked'
         ? at
         : endedAt;
+  const error = told === undefined ? before : errorOf(update.state);
 
   // chord says a task's effort once it is up, after the block is drawn.
-  const told = taskOf(update);
+  const taskTold = taskOf(update);
   const task =
-    told === undefined ? subagent.task : { ...subagent.task, ...told };
+    taskTold === undefined ? subagent.task : { ...subagent.task, ...taskTold };
 
   return {
     ...kept,
@@ -184,6 +189,7 @@ function patched(
         ? {}
         : { description }),
     ...(ended === undefined ? {} : { endedAt: ended }),
+    ...(error === undefined ? {} : { error }),
   };
 }
 
@@ -226,8 +232,9 @@ const ENDINGS: readonly string[] = [
 
 /**
  * A subagent's state from ACP's state object: at work while `running` or
- * waiting on the person (`requires_action`), done once `idle`, or ended as
- * the adapters' words say. `unknown`, `null` and any other word say nothing.
+ * waiting on the person (`requires_action`), ended by its stop reason once
+ * `idle`, untracked once `unknown`, or ended as the adapters' words say.
+ * `null` and any other word say nothing.
  */
 function subagentStateOf(
   state: StateUpdate | null | undefined,
@@ -238,12 +245,37 @@ function subagentStateOf(
     return 'running';
   }
 
+  if (word === 'unknown') {
+    return 'untracked';
+  }
+
   if (word === 'idle') {
-    return 'completed';
+    const reason = state?.stopReason;
+
+    return reason === 'end_turn'
+      ? 'completed'
+      : reason === 'error'
+        ? 'failed'
+        : reason === 'cancelled'
+          ? 'cancelled'
+          : 'ended';
   }
 
   return word !== undefined && ENDINGS.includes(word)
     ? (word as SubagentState)
+    : undefined;
+}
+
+/** The message of the error an `idle` with stop reason `error` carries. */
+function errorOf(state: StateUpdate | null | undefined): string | undefined {
+  if (state?.state !== 'idle' || state.stopReason !== 'error') {
+    return undefined;
+  }
+
+  const { error } = state as { error?: { message?: unknown } | null };
+
+  return typeof error?.message === 'string' && error.message !== ''
+    ? error.message
     : undefined;
 }
 

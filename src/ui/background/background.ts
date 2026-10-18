@@ -229,6 +229,10 @@ function taskStatus(
     case 'failed':
     case 'disconnected':
       return { group: 'failed', endedAt };
+    // chord's own tasks never end so: only an adapter's subagents do.
+    case 'ended':
+    case 'untracked':
+      return { group: 'stopped', endedAt };
   }
 }
 

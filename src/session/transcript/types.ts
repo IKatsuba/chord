@@ -266,11 +266,21 @@ export interface ReportRow {
 
 /**
  * How a subagent stands: at work, or ended, and how. `completed`, `failed`,
- * `cancelled` and `disconnected` are the adapters' words for an ending; ACP's
- * `idle` reads as `completed`, the work asked of it done.
+ * `cancelled` and `disconnected` are the adapters' words for an ending, and
+ * ACP's `idle` reads as one by its stop reason: `end_turn` the work done,
+ * `error` failed, `cancelled` cancelled, and any other or none `ended`,
+ * which claims no cause the agent did not. `untracked` is ACP's `unknown`:
+ * the agent lost sight of it, which may still be at work, so a later state
+ * takes it back.
  */
 export type SubagentState =
-  'running' | 'completed' | 'failed' | 'cancelled' | 'disconnected';
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'disconnected'
+  | 'ended'
+  | 'untracked';
 
 /**
  * A subagent: a session of its own the agent started for part of a turn, as
@@ -287,6 +297,8 @@ export interface Subagent {
   /** What it was asked to do, in full, as the parent described it. */
   readonly description?: string;
   readonly state: SubagentState;
+  /** What the agent said went wrong, while it stands failed. */
+  readonly error?: string;
   /** When its first update came. */
   readonly startedAt?: number;
   /** When it ended, once it has. */

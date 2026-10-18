@@ -73,6 +73,34 @@ test("subagents draw under the turn: one group, a child's permission named, thei
     { rows: 80, columns: 120 },
   ));
 
+test("Claude's subagents read as each ended, a failure's message and an untracked one's line in ctrl+o's view", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudesubagents');
+      await asked(window);
+      await window.press('1');
+      await window.shows(
+        '⏺ 4 agents ended · 1 failed, 1 untracked, 1 cancelled (ctrl+o to expand)',
+      );
+
+      let frame = window.frame();
+
+      expect(frame).toContain('⎿  Untracked');
+      expect(frame).toContain('⎿  Cancelled');
+      expect(frame).toContain('⎿  Failed');
+      expect(frame).not.toContain('API Error');
+      await window.press(CTRL_O);
+      await window.shows('API Error: 529 Overloaded');
+
+      frame = window.frame();
+
+      expect(frame).toContain(
+        'The agent no longer reports this subagent; it may still be at work.',
+      );
+    },
+    { rows: 80, columns: 120 },
+  ));
+
 test("Esc cancels a turn's subagents with it", () =>
   withWindow(
     async (window) => {

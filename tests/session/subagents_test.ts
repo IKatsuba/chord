@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import type {
   SessionNotification,
   SessionUpdate,
+  StateUpdate,
   ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
 import {
@@ -326,7 +327,7 @@ test("ACP's own states read as chord's, and a patch keeps or clears what it name
 
   expect(
     states('running', 'requires_action', 'idle', 'unknown', 'mystery'),
-  ).toStrictEqual(['running', 'running', 'completed', 'running', 'running']);
+  ).toStrictEqual(['running', 'running', 'ended', 'untracked', 'running']);
 
   const patched = only(
     fold([
@@ -350,6 +351,121 @@ test("ACP's own states read as chord's, and a patch keeps or clears what it name
     undefined,
   ]);
 });
+
+/** A `subagent_update` of `id`'s that brings `state` whole, at `at`. */
+function stood(id: string, state: StateUpdate, at?: number): TranscriptAction {
+  return {
+    type: 'update',
+    turnId: TURN,
+    update: { sessionUpdate: 'subagent_update', sessionId: id, state },
+    ...(at === undefined ? {} : { at }),
+  };
+}
+
+test('an idle reads by its stop reason, and unknown as untracked until a later state takes it back', () => {
+  const states = (...each: StateUpdate[]) =>
+    each.map((state) => {
+      const { state: word, error } = only(
+        fold([PROMPT, spawned('a', 'Find'), stood('a', state)]),
+        'a',
+      );
+
+      return error === undefined ? word : [word, error];
+    });
+
+  expect(
+    states(
+      { state: 'idle', stopReason: 'end_turn' },
+      { state: 'idle', stopReason: 'cancelled' },
+      {
+        state: 'idle',
+        stopReason: 'error',
+        error: { code: -32603, message: 'API Error: 529 Overloaded' },
+      },
+      { state: 'idle', stopReason: 'error' },
+      { state: 'idle', stopReason: 'max_tokens' },
+      { state: 'idle' },
+      { state: 'unknown' },
+    ),
+  ).toStrictEqual([
+    'completed',
+    'cancelled',
+    ['failed', 'API Error: 529 Overloaded'],
+    'failed',
+    'ended',
+    'ended',
+    'untracked',
+  ]);
+
+  const lost = fold([
+    { ...PROMPT, at: 1 },
+    { ...spawned('a', 'Find'), at: 1 } as TranscriptAction,
+    stood('a', { state: 'unknown' }, 5),
+  ]);
+
+  // Its time stands at the unknown, and it is not counted as running.
+  expect(only(lost, 'a').endedAt).toStrictEqual(5);
+  expect(runningSubagents(lost)).toStrictEqual(0);
+
+  const back = fold(
+    [
+      stood('a', { state: 'running' }, 7),
+      stood('a', { state: 'idle', stopReason: 'end_turn' }, 9),
+    ],
+    lost,
+  );
+
+  expect([only(back, 'a').state, only(back, 'a').endedAt]).toStrictEqual([
+    'completed',
+    9,
+  ]);
+  // Straight from untracked to idle, its time runs to the idle.
+  expect(
+    only(
+      fold([stood('a', { state: 'idle', stopReason: 'end_turn' }, 8)], lost),
+      'a',
+    ).endedAt,
+  ).toStrictEqual(8);
+  // A later state clears a failure's message.
+  expect(
+    only(
+      fold(
+        [
+          stood('a', {
+            state: 'idle',
+            stopReason: 'error',
+            error: { code: 1, message: 'x' },
+          }),
+          stood('a', { state: 'running' }),
+        ],
+        lost,
+      ),
+      'a',
+    ).error,
+  ).toStrictEqual(undefined);
+});
+
+test("Claude's subagents fold to each end they report", () =>
+  withSession(async (session) => {
+    const transcript = fold(await play(session, 'claudesubagents'));
+
+    expect(
+      subagentsIn(transcript.entries).map(({ title, state, error }) => ({
+        title,
+        state,
+        ...(error === undefined ? {} : { error }),
+      })),
+    ).toStrictEqual([
+      { title: 'explorer (Explore)', state: 'completed' },
+      {
+        title: 'reviewer (general-purpose)',
+        state: 'failed',
+        error: 'API Error: 529 Overloaded',
+      },
+      { title: 'tester (general-purpose)', state: 'cancelled' },
+      { title: 'watcher', state: 'untracked' },
+    ]);
+  }));
 
 test('a cancelled turn cancels the subagents still running, when Esc was pressed; one that ended stays as it ended', () => {
   const transcript = fold([
@@ -776,7 +892,7 @@ test("an agent that sends ACP's own subagent_update folds the same way", () =>
     expect(shape(transcript.entries)).toStrictEqual([
       'user: subagentupdate',
       {
-        'Summarise the README completed': [
+        'Summarise the README ended': [
           'tool: Read README.md completed',
           'assistant: chord is a terminal client for ACP agents.',
         ],

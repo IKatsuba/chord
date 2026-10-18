@@ -1,0 +1,24 @@
+         ⏺ Read(package.json)
+      ⎿  Untracked
+         The agent no longer reports this subagent; it may still be at work.
+
+ ⏺ Each agent has ended.
+
+ › subagentupdate
+
+ ⏺ Agent(Summarise the README)
+   ⎿  Read README.md and say in one line what chord is.
+
+      ⏺ Read(README.md)
+        ⎿  # chord
+
+      ⏺ chord is a terminal client for ACP agents.
+   ⎿  Ended (1 tool use · 0s)
+      The agent did not say how it ended.
+
+ ⏺ It says chord is a terminal client for ACP agents.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

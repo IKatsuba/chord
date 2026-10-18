@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/scratch
+ ▀▀     ? for shortcuts · /help
+
+ › claudesubagents
+
+ ⏺ I will send four agents.
+
+ ⏺ Running 4 agents… (ctrl+o to expand)
+   ├─ Agent(explorer (Explore)) · 3 tool uses
+   │  ⎿  Write(notes/routing.md) · waiting for permission
+   ├─ Agent(reviewer (general-purpose)) · 1 tool use · 0s
+   │   ⎿  Failed
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │   ⎿  Cancelled
+   └─ Agent(watcher) · 1 tool use · 0s
+      ⎿  Untracked
+
+
+
+
+
+ ››› Waiting for permission… (10s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(explorer (Explore)) asks                                                                                       │
+│ Write notes/routing.md                                                                                               │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

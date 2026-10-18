@@ -258,6 +258,13 @@ screen. The request takes the room left, at most half the window's rows;
 the transcript gives way first. With three answers and no asker row, it
 gets 6 rows at 80×24 and 20 at 120×40.
 
+Question, form and link headings name who asks, wrapped without cutting.
+In a turn, main uses its runtime: `claude asks you 2 questions`. A task
+or subagent uses its call heading, such as `Agent(Fix the tokenizer) · fake`,
+in the accent colour. A long-lived child uses its name, bold in its colour;
+a team member adds its team, dim: `tester · bugfix asks…`. Between turns,
+main uses `main` and the heading ends ` · between turns`.
+
 A permission, form or link arriving with no turn running leaves the keys
 and draft in the prompt. Its asker row ends ` · between turns`, and
 `ctrl+x a to answer` moves the keys into the box. The front status line

@@ -1114,6 +1114,8 @@ describe('CHD-266 tester: attention after an observed parent result', () => {
           !window.frame().includes('    parser') &&
           !window.frame().includes('needs your permission'),
       );
+      // Clear drops the old child before the new session is ready for Enter.
+      await ready(window);
       await send(window, 'agenttask');
       await window.shows('● parser needs your permission');
       await leader(window, 'a');

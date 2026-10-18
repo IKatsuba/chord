@@ -1,0 +1,40 @@
+   │  ⎿  Find where chord hands each session/update to its listeners and say which file owns the routing.
+   │
+   │     Report paths and line numbers, and write what you find to notes/routing.md.
+   │
+   │     ⏺ Search(sessionUpdate in src)
+   │       ⎿  Found 14 files
+   │
+   │     ⏺ Read(src/acp/connection.ts)
+   │
+   │     ⏺ Write(notes/routing.md)
+   │       ⎿  Allowed Write notes/routing.md · Allow
+   │
+   │     ⏺ Routing lives in src/acp/connection.ts.
+   │  ⎿  Done
+   ├─ Agent(reviewer (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Review src/session/transcript/reducer.ts for updates it drops.
+   │
+   │     ⏺ Read(src/session/transcript/reducer.ts)
+   │  ⎿  Failed
+   │     API Error: 529 Overloaded
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Run bun test and report what fails.
+   │
+   │     ⏺ Bash(bun test)
+   │       ⎿  Error: The turn was cancelled before this tool call returned a result.
+   │  ⎿  Cancelled
+   └─ Agent(watcher) · 1 tool use · 0s
+      ⎿  Watch the build and say when it breaks.
+
+         ⏺ Read(package.json)
+      ⎿  Untracked
+         The agent no longer reports this subagent; it may still be at work.
+
+ ⏺ Each agent has ended.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    background  ✗ 1 agent failed · ? 1 agent untracked · ✓ 1 agent done · ■ 1 agent stopped

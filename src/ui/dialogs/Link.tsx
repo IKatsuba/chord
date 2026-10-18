@@ -3,10 +3,12 @@ import { useColours } from '../app/context.ts';
 import { usePress } from '../app/input.ts';
 import { borderOf, ChoiceList } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
-import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
+import { BOLD, DIM, fg, TEXT } from '../theme/text.ts';
 import { linkHost } from './form.ts';
 import type { Choice } from './permission.ts';
-import { AttendHint, BETWEEN } from './Permission.tsx';
+import { AttendHint } from './Permission.tsx';
+import type { AskerPart } from './asker.ts';
+import { AskerHeading } from './Asker.tsx';
 
 /**
  * A link the agent asks the person to open, in the permission prompt's
@@ -16,6 +18,7 @@ import { AttendHint, BETWEEN } from './Permission.tsx';
 export function LinkPrompt({
   wait,
   agent,
+  asker,
   active,
   held = false,
   between = false,
@@ -28,6 +31,11 @@ export function LinkPrompt({
    */
   between?: boolean;
   agent: string;
+  /**
+   * Who asks, as the heading names it; `agent` alone, plain, when not given
+   * (CHD-389).
+   */
+  asker?: readonly AskerPart[];
   active: boolean;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
   held?: boolean;
@@ -60,14 +68,11 @@ export function LinkPrompt({
       marginTop={1}
       flexShrink={0}
     >
-      <text
-        {...(between ? TEXT : CUT)}
-        {...fg(colours.permission)}
-        attributes={BOLD}
-      >
-        {`${agent} asks you to open a link`}
-        {between && <span attributes={DIM}>{BETWEEN}</span>}
-      </text>
+      <AskerHeading
+        asker={asker ?? [{ text: agent, tone: 'plain' }]}
+        says='asks you to open a link'
+        between={between}
+      />
       <text {...TEXT}>
         <Ansi text={wait.message} />
       </text>

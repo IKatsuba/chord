@@ -470,9 +470,14 @@ export function headerOf(questions: Questions, index: number): string {
 
 /** `claude asks you 2 questions`, or `a question` for one. */
 export function askHeading(agent: string, questions: Questions): string {
+  return `${agent} ${asksYou(questions)}`;
+}
+
+/** What the heading says the asker does: `asks you 2 questions`. */
+export function asksYou(questions: Questions): string {
   const count = questions.questions.length;
 
-  return `${agent} asks you ${count === 1 ? 'a question' : `${count} questions`}`;
+  return `asks you ${count === 1 ? 'a question' : `${count} questions`}`;
 }
 
 /** `answers itself in 4:32`: what is left of the agent's wait, if it has one. */

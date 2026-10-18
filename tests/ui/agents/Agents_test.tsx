@@ -1122,3 +1122,27 @@ describe('CHD-266 tester: attention after an observed parent result', () => {
       await window.shows('Agent(Fix the tokenizer) · fake asks');
     }));
 });
+
+describe('who a box that asks names (CHD-389)', () => {
+  test('a picked child is named in its question, form and link boxes, not its runtime', () =>
+    withAgents(async (window) => {
+      await opened(window);
+      await window.press(DOWN);
+      await window.press(DOWN);
+      // Enter takes the keys from the list back to parser's prompt.
+      await window.press('\r');
+      await window.shows('╭─ parser ─');
+
+      for (const [prompt, heading] of [
+        ['askclaude', 'parser asks you 2 questions'],
+        ['form', 'parser asks for input'],
+        ['link', 'parser asks you to open a link'],
+      ] as const) {
+        await send(window, prompt);
+        await window.shows(heading);
+        expect(window.frame()).not.toContain(`fake ${heading.slice(7)}`);
+        await window.press(ESC);
+        await window.shows('Elicitation answer: cancel');
+      }
+    }));
+});

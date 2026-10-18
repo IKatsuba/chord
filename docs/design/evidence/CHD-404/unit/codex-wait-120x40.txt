@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › bashask
+
+ ⏺ Run(./deploy.sh)
+   ⎿  Waiting…
+      building…
+      built in 1.2s
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (9s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Run ./deploy.sh                                                                                                      │
+│   command: ["./deploy.sh"]                                                                                           │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Yes                                                                                                             │
+│   2. Yes, and don't ask again for this command                                                                       │
+│   3. No, and tell Codex what to do differently                                                                       │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

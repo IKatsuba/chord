@@ -60,7 +60,8 @@ under their code.
 ### You stay in charge
 
 Each permission the agent asks for is a choice under the transcript, answered
-with a number or the arrows. `shift+tab` cycles the agent's permission modes.
+with a number or the arrows. Between turns, it leaves your typing alone:
+ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
 
 <img src="docs/images/permission.png" alt="The permission prompt: Allow, Always allow, Deny" width="900">
 

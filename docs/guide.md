@@ -251,12 +251,23 @@ either mode. Esc in normal mode does what it does without vim mode, so
 interrupting a turn takes Esc twice from insert mode; an open list, picker
 or panel still closes on the first Esc.
 
-Permission requests appear under the transcript: 1–9 picks an answer,
+Permission requests appear over the prompt box: 1–9 picks an answer,
 ↑/↓ moves the highlight, Enter picks it, and Esc rejects. A long request
 scrolls under its pinned title; long lines wrap, and the answers stay on
 screen. The request takes the room left, at most half the window's rows;
 the transcript gives way first. With three answers and no asker row, it
 gets 6 rows at 80×24 and 20 at 120×40.
+
+A permission, form or link arriving with no turn running leaves the keys
+and draft in the prompt. Its asker row ends ` · between turns`, and
+`ctrl+x a to answer` moves the keys into the box. The front status line
+reads `● permission asked between turns · ctrl+x a to answer`, or
+`● input asked between turns · ctrl+x a to answer` for a form or link.
+If `session:attention` is unbound, the box takes the keys at once. The
+request waits until answered; closing the session or quitting rejects it.
+A prompt sent while it waits queues as `› after your answer: …`; messages
+from other agents wait too. After the answer, they wait for one second
+without an agent update, up to five seconds, before going to the agent.
 
 While the request overflows, pgup/pgdn scroll it by a page, shift+↑/↓ by
 a row, home/end to either end, and the wheel over the box scrolls it too.

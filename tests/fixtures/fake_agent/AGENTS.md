@@ -12,18 +12,18 @@
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
-  `bigask`, `bigasktwice`, `overlapask`),
+  `bigask`, `bigasktwice`, `overlapask`, `mainbetween`, `mainbetweentwice`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashcut`, `bashask`),
-  `compaction.ts` (`compact`, `codexcompact`, `compactfail`), `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`,
-  `lock`),
+  `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
+  `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
   `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`, `subagentcall`,
   `claudesubagents`, `claudebackground`, `claudemessage`, `claudewaiting`,
-  `claudenostop`, `claudeslowstop`),
+  `claudenostop`, `claudeslowstop`, `claudebetween`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
-  (`codexchordcalls`, `tasklong`, `tasktwo`, `taskwait`) and
+  (`codexchordcalls`, `tasklong`, `tasktwo`, `taskwait`, `taskbetween`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
@@ -36,6 +36,7 @@
   `cutcalls`, `cutcallsback`, `tasklong`, `tasktwo`, `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `plan`, `proposal`,
+  `mainbetween`, `mainbetweentwice`, `claudebetween`, `taskbetween`,
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
@@ -68,6 +69,9 @@
   an accepted link is followed by `elicitation/complete`;
   `permissionsteer` asks for a write as `permission` does, with Allow and
   Deny; its next step after the write waits for a steered message;
+  `mainbetween` asks for a write after its answer, and `mainbetweentwice`
+  asks for a second write at once, then pauses at most half a second before
+  reporting the answer;
   `twins` asks a permission with two `allow_once` options and says the id
   picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the
@@ -98,7 +102,8 @@
   messages its parent through `send_message`, runs the tests and reports;
   `tasklong` starts one `taskwait` task, and `tasktwo` two drawn as a group,
   then leaves the parent idle; `taskwait` works for a minute without asking
-  permission, unless stopped;
+  permission, unless stopped; `taskbetween` starts `taskchild` and ends
+  its turn at once, so the task asks between its parent's turns;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
   long-lived on the fake runtime, and messages `parser` twice;
   `agentcall` opens `parser` on `callchild` and messages it during its
@@ -201,7 +206,9 @@
   ends it done; `claudenostop` withdraws one's cancel capability.
   `session/cancel` on a Claude subagent's id stops only that one, idle
   `cancelled`, while its parent's turn continues. `claudeslowstop` plays
-  `claudebackground` with a stop taking about 2 s. `--stop-gate` or
+  `claudebackground` with a stop taking about 2 s. `claudebetween` starts
+  a background subagent that asks permission to write a report, then a form,
+  about 2 s after the parent's answer. `--stop-gate` or
   `CHORD_FAKE_STOP_GATE=1` writes each individual stop id, one per line, to
   `<cwd>/.fake-gate/stops` and holds it until the test writes
   `<cwd>/.fake-gate/stop-release`. `--step-ms <ms>` or

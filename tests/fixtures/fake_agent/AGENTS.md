@@ -20,7 +20,8 @@
   `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
   `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`, `subagentcall`,
-  `claudesubagents`, `claudebackground`),
+  `claudesubagents`, `claudebackground`, `claudemessage`, `claudewaiting`,
+  `claudenostop`, `claudeslowstop`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `tasklong`, `tasktwo`, `taskwait`) and
@@ -41,7 +42,8 @@
   `mcp`, `form`, `link`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
-  `claudebackground`, `chordtools`, `codexchordcalls`)
+  `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
+  `claudeslowstop`, `chordtools`, `codexchordcalls`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second;
   `longresults` plays an MCP result, command output, an edit and terminal
@@ -186,7 +188,16 @@
   one `cancelled`, one `unknown`. Esc ends those still working idle
   `cancelled`; `claudebackground` starts a foreground and a background
   subagent together; the background one runs about 4 s past the turn and
-  past Esc, which stops only the foreground one. `--step-ms <ms>` or
+  past Esc, which stops only the foreground one. `claudemessage` messages
+  an ended subagent again, and it works once more; `claudewaiting` holds
+  one in `requires_action` for about 2 s without sending a request, then
+  ends it done; `claudenostop` withdraws one's cancel capability.
+  `session/cancel` on a Claude subagent's id stops only that one, idle
+  `cancelled`, while its parent's turn continues. `claudeslowstop` plays
+  `claudebackground` with a stop taking about 2 s. `--stop-gate` or
+  `CHORD_FAKE_STOP_GATE=1` writes each individual stop id, one per line, to
+  `<cwd>/.fake-gate/stops` and holds it until the test writes
+  `<cwd>/.fake-gate/stop-release`. `--step-ms <ms>` or
   `CHORD_FAKE_STEP_MS` sets the pace of every scenario (5 ms a step by
   default). Every
   session offers two models, `Fake Large with a 1M context window` (in use

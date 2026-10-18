@@ -589,21 +589,30 @@ ends. `stop_monitor` and `list_monitors` are the agent's own. A resumed
 session draws its events again and names monitors left running, without
 restarting them.
 
-Monitors and `spawn_task` tasks share one `background` summary under the
-agents list, or alone when no child is open. It counts the front tab's
-items, including its children's and team members', by state: asking,
-failed, running, done and stopped, in that order. The line wraps without
-cutting text. From an empty prompt, ↓ past the agents reaches it as the
-last stop; Enter opens a full-screen background view. Each item has a row
-with its name, kind, state with time and owner, oldest first. ↑ ↓ or j k
-move between rows; `x` stops the focused item at once, with no confirmation,
-and does nothing on an ended item. Enter closes the view, picks the owner
-and scrolls its transcript to the call that started the item, as high as
-scrolling allows. A folded subagent stays folded, with its headline in
-view instead; a missing call leaves the view open. Esc returns to the
-summary line, and another Esc to the prompt. Ended items stay until your
-next prompt to any agent in that tab; running items stay, and messages
-between agents clear nothing. Closing an owner removes its items.
+Monitors, `spawn_task` tasks and subagents that offer an individual stop
+share the `background` summary under the agents list. These subagents,
+including Claude's, have kind `agent`; background Bash is not listed.
+The summary counts the front tab's items, including its children's and
+team members', by state: asking, failed, untracked, running, done and
+stopped. It wraps without cutting text. From an empty prompt, ↓ past the
+agents reaches it; Enter opens the background view. Rows show name, kind,
+state with time and owner, oldest first. ↑ ↓ or j k move between rows.
+
+An agent row reads `running`, `● permission` or `● input`; `● waiting`
+means it needs action but no request reaches you. Its end reads `✓ done`, `✗ failed`,
+`■ stopped`, `■ ended` or `✗ disconnected`. `? untracked` has its own
+summary group: the agent lost sight of the subagent, which may still work.
+`x` stops the focused item alone, without confirmation; an agent reads
+`■ stopping` until its agent reports the end. A stop that cannot be sent
+says `could not stop: …` on the hint line; one no longer offered says
+`this agent offers no stop`. An ended or stopping item ignores `x`.
+Esc in the transcript leaves individually stoppable subagents running.
+
+Enter picks the owner and scrolls to the item's call or subagent block;
+a folded block stays folded, and a missing call leaves the view open.
+Esc returns to the summary, then to the prompt. Ended and untracked items
+stay until your next prompt to any agent in that tab; running items stay.
+Messages clear nothing. Closing an owner removes its items.
 
 A session resumed after its agents ran draws them as they were: each task
 agent's block, its work behind ctrl+o (read from the task's own record,

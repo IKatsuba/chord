@@ -195,7 +195,7 @@ test('a task block says its runtime and model after the title; a row of a group 
     counts: ' · 0 tool uses',
   });
   expect(
-    askerRow([subagent], 80)
+    askerRow([subagent])
       .map((piece) => piece.text)
       .join(''),
   ).toStrictEqual('Agent(Fix the tokenizer) · codex asks');

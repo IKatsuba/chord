@@ -1,4 +1,5 @@
 import { askedPermission } from '../dialogs/permission.ts';
+import { betweenAsked, heldBack } from '../dialogs/state.ts';
 import { bashCommand, entersBash, typedText } from '../prompt/bash.ts';
 import {
   type ChordCommand,
@@ -572,8 +573,15 @@ function commandSteps(
       ];
     case 'close_session':
       return [{ type: 'close_session' }];
-    case 'attend_session':
-      return [{ type: 'attend_session' }];
+    case 'attend_session': {
+      // The front session's own request between turns is what needs the
+      // person first: the keys go into its box (CHD-158).
+      const id = heldBack(state) ? betweenAsked(state.transcript) : undefined;
+
+      return id === undefined
+        ? [{ type: 'attend_session' }]
+        : [dispatch({ type: 'request_attended', id })];
+    }
     case 'agents_up':
       return [{ type: 'move_agent', by: -1 }];
     case 'agents_down':

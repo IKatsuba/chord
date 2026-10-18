@@ -698,15 +698,18 @@ function PickerList({
  * A numbered list, the highlight in the permission colour, keyed as
  * ink-select-input was, which it was first drawn with: ↑ and ↓ (or k and j)
  * move the highlight round, Enter picks it, and a choice's number picks that
- * one. Shift+arrows are the window's.
+ * one. Shift+arrows are the window's. Not `marked`, it shows no highlight,
+ * as a list the keys have not gone into yet.
  */
 export function ChoiceList({
   choices,
   active,
+  marked = true,
   onSelect,
 }: {
   choices: readonly Choice[];
   active: boolean;
+  marked?: boolean;
   onSelect: (value: string) => void;
 }) {
   const [highlighted, setHighlighted] = useState(0);
@@ -728,9 +731,9 @@ export function ChoiceList({
     <box flexDirection='column'>
       {choices.map((choice, index) => (
         <box key={choice.value} flexDirection='row'>
-          <ChoiceIndicator isSelected={index === highlighted} />
+          <ChoiceIndicator isSelected={marked && index === highlighted} />
           <ChoiceLabel
-            isSelected={index === highlighted}
+            isSelected={marked && index === highlighted}
             label={choice.label}
           />
         </box>

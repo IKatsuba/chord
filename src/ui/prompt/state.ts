@@ -6,7 +6,7 @@
 import { shellContext } from '../../session/context.ts';
 import type { ConversationEvent } from '../../session/conversation.ts';
 import type { ShellRun, Transcript } from '../../session/transcript/types.ts';
-import { asksPerson } from '../dialogs/state.ts';
+import { asksWithKeys } from '../dialogs/state.ts';
 import {
   agentQuery,
   type CommandItem,
@@ -479,7 +479,7 @@ export function commandMenu(
     state.bash ||
     state.search !== undefined ||
     state.connection.status === 'closing' ||
-    asksPerson(state.transcript)
+    asksWithKeys(state)
   ) {
     return undefined;
   }
@@ -549,7 +549,7 @@ export function pendingMention(
     state.search !== undefined ||
     state.finder.dismissed ||
     state.connection.status === 'closing' ||
-    asksPerson(state.transcript)
+    asksWithKeys(state)
   ) {
     return undefined;
   }
@@ -580,7 +580,7 @@ export function fileFinder(
     state.search !== undefined ||
     state.finder.dismissed ||
     state.connection.status === 'closing' ||
-    asksPerson(state.transcript)
+    asksWithKeys(state)
   ) {
     return undefined;
   }

@@ -108,7 +108,9 @@ import { mine, restoredDraft } from '../prompt/queue.ts';
 import { heldContext } from '../prompt/state.ts';
 import { vimReset } from '../prompt/vim.ts';
 import { hintKey } from '../shortcuts/bindings.ts';
-import { waitsNotice } from '../status/status.ts';
+import { betweenNotice, waitsNotice } from '../status/status.ts';
+import { askedPermission } from '../dialogs/permission.ts';
+import { heldBack } from '../dialogs/state.ts';
 import {
   agentCloseArmedLine,
   busyOf,
@@ -2856,7 +2858,18 @@ export function useSessions(
       columns - 2,
     );
 
-    return { waits, armed, strip };
+    // The front session's own request between turns comes first: it is
+    // on screen, waiting for the keys.
+    const front = heldBack(state)
+      ? betweenNotice(
+          askedPermission(state.transcript.turn) === undefined
+            ? 'input'
+            : 'permission',
+          hintKey(state.keys, 'session:attention'),
+        )
+      : undefined;
+
+    return { waits: front ?? waits, armed, strip };
   };
 
   return {

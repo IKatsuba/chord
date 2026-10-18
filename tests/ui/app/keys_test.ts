@@ -19,7 +19,7 @@ import { fileFinder } from '../../../src/ui/prompt/state.ts';
 import { emptyHistory, recorded } from '../../../src/ui/prompt/history.ts';
 import { endOf, START } from '../../../src/ui/prompt/prompt.ts';
 import { readKeybindings } from '../../../src/ui/shortcuts/bindings.ts';
-import { busy, ctrl, escape, ready } from './states.ts';
+import { busy, ctrl, escape, plain, ready } from './states.ts';
 
 function context(state = ready, more: Partial<KeyContext> = {}): KeyContext {
   return {
@@ -447,5 +447,67 @@ describe("Enter or Tab while the mention's match runs", () => {
     expect(awaitedSteps(context(matched(tabbed, [])))).toStrictEqual([
       dispatched({ type: 'pick_settled' }),
     ]);
+  });
+});
+
+describe('a request between turns (CHD-158)', () => {
+  const asked = reduceApp(ready, {
+    type: 'permission_requested',
+    turnId: 't0',
+    permission: {
+      id: 'p1',
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    },
+    at: 1000,
+    between: true,
+  });
+  /** ctrl+x, then `a`, each from the state the one before left. */
+  const leaderA = (state: typeof asked) => {
+    let next = state;
+
+    for (const step of keySteps('x', ctrl, context(next))) {
+      if (step.type === 'dispatch') {
+        next = reduceApp(next, step.action);
+      }
+    }
+
+    return keySteps('a', plain, context(next));
+  };
+
+  test('waits without the keys: esc rejects nothing, and a digit is the draft’s', () => {
+    expect(keyCommand('', escape, asked, '')).not.toStrictEqual(
+      'reject_permission',
+    );
+    expect(keyCommand('1', plain, asked, '')).toStrictEqual(undefined);
+  });
+
+  test('ctrl+x a takes the keys into it, and esc then rejects it', () => {
+    expect(leaderA(asked)).toContainEqual(
+      dispatched({ type: 'request_attended', id: 'p1' }),
+    );
+
+    const attended = reduceApp(asked, { type: 'request_attended', id: 'p1' });
+
+    expect(keyCommand('', escape, attended, '')).toStrictEqual(
+      'reject_permission',
+    );
+    // With the keys in it, ctrl+x a goes to another session as before.
+    expect(leaderA(attended)).toContainEqual({ type: 'attend_session' });
+  });
+
+  test('one asked in a turn takes the keys at once, as before', () => {
+    const inTurn = reduceApp(busy, {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: { id: 'p1', options: [] },
+    });
+
+    expect(keyCommand('', escape, inTurn, '')).toStrictEqual(
+      'reject_permission',
+    );
+    expect(leaderA(inTurn)).toContainEqual({ type: 'attend_session' });
   });
 });

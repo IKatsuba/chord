@@ -55,12 +55,17 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
 /**
  * The agent's question, drawn inline above the prompt as Claude Code does:
  * what the tool wants to do, then the agent's own options, numbered.
- * ink-select-input reads 1–9, ↑/↓, j/k and Enter; Esc is the window's.
+ * ink-select-input reads 1–9, ↑/↓, j/k and Enter; Esc is the window's. One
+ * asked between turns says who asks and that it came between turns, and
+ * until the person takes the keys into it, it is `held`: drawn without
+ * them, its hint the key that takes them (CHD-158).
  */
 function AgentPermission({
   wait,
   asker = [],
   child,
+  between = false,
+  held = false,
   width = 0,
   active,
   onChoose,
@@ -72,6 +77,10 @@ function AgentPermission({
   asker?: readonly Subagent[];
   /** The long-lived child that asks, picked, with its colour. */
   child?: { readonly name: string; readonly colour: string | undefined };
+  /** Asked with no turn running. */
+  between?: boolean;
+  /** Asked between turns, the keys not taken into it yet. */
+  held?: boolean;
   /** Cells inside the box's border and padding, for the asker's row. */
   width?: number;
   active: boolean;
@@ -82,7 +91,12 @@ function AgentPermission({
   onOverflow?: (overflows: boolean) => void;
 }) {
   const colours = useColours();
-  const asks = askerRow(asker, width);
+  const asks = askerRow(asker);
+  // The session's own agent asking between turns is named too: the person
+  // prompted nothing, so the box says who asks.
+  const owner =
+    child ?? (between ? { name: 'main', colour: undefined } : undefined);
+  const when = between && <span attributes={DIM}>{BETWEEN}</span>;
 
   return (
     // It gives way only in its request's rows, every other row pinned.
@@ -92,21 +106,34 @@ function AgentPermission({
       marginTop={1}
       flexShrink={1}
     >
-      {child !== undefined && asks.length === 0 && (
-        <text {...CUT} flexShrink={0}>
-          <span {...fg(child.colour)} attributes={BOLD}>
-            {child.name}
-          </span>
-          {` asks`}
-        </text>
-      )}
+      {asks.length === 0 &&
+        wait.subagentId !== undefined &&
+        between &&
+        owner !== undefined && (
+          <text {...TEXT} {...fg(colours.accent)} flexShrink={0}>
+            {`a subagent of ${owner.name} asks`}
+            {when}
+          </text>
+        )}
+      {asks.length === 0 &&
+        !(between && wait.subagentId !== undefined) &&
+        owner !== undefined && (
+          <text {...TEXT} flexShrink={0}>
+            <span {...fg(owner.colour)} attributes={BOLD}>
+              {owner.name}
+            </span>
+            {` asks`}
+            {when}
+          </text>
+        )}
       {asks.length > 0 && (
-        <text {...CUT} {...fg(colours.accent)} flexShrink={0}>
+        <text {...TEXT} {...fg(colours.accent)} flexShrink={0}>
           {asks.map((piece, index) => (
             <span key={index} attributes={piece.bold ? BOLD : 0}>
               <Ansi text={piece.text} />
             </span>
           ))}
+          {when}
         </text>
       )}
       <Request
@@ -121,11 +148,12 @@ function AgentPermission({
       <box flexShrink={0}>
         <ChoiceList
           choices={choicesFor(wait)}
-          active={active}
+          active={active && !held}
+          marked={!held}
           onSelect={onChoose}
         />
       </box>
-      <PermissionHint />
+      {held ? <AttendHint /> : <PermissionHint />}
     </box>
   );
 }
@@ -350,6 +378,23 @@ function SaveBox({
           </text>
         </box>
       )}
+    </box>
+  );
+}
+
+/** Said dim after who asks a request that came with no turn running. */
+const BETWEEN = ' · between turns';
+
+/**
+ * A request between turns' last line until the person takes the keys into
+ * it: the key that does.
+ */
+export function AttendHint() {
+  const key = useHintKey('session:attention');
+
+  return key === undefined ? null : (
+    <box marginTop={1} flexShrink={0}>
+      <text {...TEXT} attributes={DIM}>{`${key} to answer`}</text>
     </box>
   );
 }

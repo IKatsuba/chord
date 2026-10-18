@@ -18,6 +18,7 @@ import {
   ESC,
   left,
   leader,
+  promptRow,
   send,
   until,
   UP,
@@ -704,4 +705,76 @@ describe('CHD-246 tester: queued large permission requests', () => {
         { columns, rows },
       ));
   }
+});
+
+describe('a request between turns (CHD-158)', () => {
+  test("a subagent's waits without the keys until ctrl+x a, a typed digit going to the draft, then its form the same", () =>
+    withWindow(async (window) => {
+      await send(window, 'claudebetween');
+      await window.shows(
+        'Agent(tester (general-purpose)) asks · between turns',
+      );
+      await window.shows('ctrl+x a to answer');
+
+      let frame = window.frame();
+
+      expect(frame).toMatch(
+        /● permission( asked between turns)? · ctrl\+x a to answer/,
+      );
+      expect(frame).not.toContain('❯ 1. Allow');
+      expect(frame).not.toContain('Esc to reject');
+
+      // A digit typed for the prompt is the draft's, not an answer.
+      await window.type('2');
+      expect(promptRow(window)).toContain('› 2');
+      expect(window.frame()).toContain('1. Allow');
+
+      await leader(window, 'a');
+      await window.shows('❯ 1. Allow');
+      await window.shows('Esc to reject');
+      expect(promptRow(window)).toContain('› 2');
+      await window.press('1');
+
+      // The form after it waits the same way, above the prompt.
+      await window.shows('fake asks for input');
+
+      frame = window.frame();
+
+      expect(frame).toContain('ctrl+x a to answer');
+      expect(frame).toMatch(
+        /● input( asked between turns)? · ctrl\+x a to answer/,
+      );
+      expect(promptRow(window)).toContain('› 2');
+      await leader(window, 'a');
+      await window.press(ESC);
+      await window.shows('⏺ fake asked: Which suite should run next?');
+      expect(promptRow(window)).toContain('› 2');
+    }));
+
+  test("the session's own agent is named, and answered once the keys are in", () =>
+    withWindow(async (window) => {
+      await send(window, 'mainbetween');
+      await window.shows('main asks · between turns');
+      await leader(window, 'a');
+      await window.shows('❯ 1. Allow');
+      await window.press('2');
+      await window.shows('Permission: deny.');
+      expect(window.frame()).not.toContain('between turns');
+    }));
+
+  test('the asker row wraps rather than cut at a narrow width', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudebetween');
+        await window.shows('ctrl+x a to answer');
+
+        const frame = window.frame();
+
+        expect(frame).toContain('Agent(tester (general-purpose)) asks');
+        expect(frame).toContain('between turns');
+        // Never cut from the left, as the row in a turn was.
+        expect(frame).not.toMatch(/│ …/);
+      },
+      { columns: 44 },
+    ));
 });

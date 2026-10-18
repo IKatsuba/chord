@@ -26,6 +26,7 @@ import {
   type ValueView,
 } from './form.ts';
 import { answeredQuestions, askedHeaders } from './questions.ts';
+import { AttendHint } from './Permission.tsx';
 
 /** Between the label column and the values. */
 export const FORM_GAP = 2;
@@ -215,10 +216,13 @@ export function ElicitationForm({
   windowRows,
   width,
   active,
+  held = false,
   onFill,
   onAnswer,
 }: {
   wait: Extract<ElicitationWait, { mode: 'form' }>;
+  /** Asked between turns, the keys not taken into it yet (CHD-158). */
+  held?: boolean;
   /**
    * The form as it was left, when it was on screen before: switching to
    * another session draws this one anew.
@@ -325,11 +329,15 @@ export function ElicitationForm({
           </text>
         )}
       </box>
-      <box marginTop={1}>
-        <text {...CUT} attributes={DIM}>
-          {formHint(form, inner)}
-        </text>
-      </box>
+      {held ? (
+        <AttendHint />
+      ) : (
+        <box marginTop={1}>
+          <text {...CUT} attributes={DIM}>
+            {formHint(form, inner)}
+          </text>
+        </box>
+      )}
     </box>
   );
 }

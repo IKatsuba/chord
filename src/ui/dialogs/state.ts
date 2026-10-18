@@ -6,6 +6,7 @@ import type {
   ElicitationWait,
   Transcript,
 } from '../../session/transcript/types.ts';
+import { askedPermission } from './permission.ts';
 import type { FormState } from './form.ts';
 import type { AskState } from './questions.ts';
 
@@ -23,6 +24,11 @@ export interface DialogsState {
    * so the scroll keys move it rather than the transcript (CHD-246).
    */
   readonly overflowing?: string;
+  /**
+   * The request, by id, asked between turns that the person has taken the
+   * keys into with `ctrl+x a` (CHD-158).
+   */
+  readonly attended?: string;
 }
 
 export type DialogsAction =
@@ -38,6 +44,8 @@ export type DialogsAction =
       readonly id: string;
       readonly state: AskState;
     }
+  /** The person took the keys into the request `id` asked between turns. */
+  | { readonly type: 'request_attended'; readonly id: string }
   /** The permission box laid out request `id`, which `overflows` or fits. */
   | {
       readonly type: 'request_overflowed';
@@ -54,6 +62,8 @@ export function reduceDialogs(
       return { ...state, filling: { id: action.id, form: action.form } };
     case 'questions_answered':
       return { ...state, answering: { id: action.id, state: action.state } };
+    case 'request_attended':
+      return { ...state, attended: action.id };
     case 'request_overflowed': {
       if (action.overflows) {
         return state.overflowing === action.id
@@ -93,4 +103,53 @@ export function askedInput(
   return transcript.turn.status === 'awaiting_permission'
     ? undefined
     : transcript.asking[0];
+}
+
+/**
+ * The id of the request on screen when it came with no turn of chord's
+ * running: a permission while the session waits between turns, or a form or
+ * link asked so, or a task's with no turn in flight (CHD-158).
+ */
+export function betweenAsked(transcript: Transcript): string | undefined {
+  const { turn } = transcript;
+  const permission = askedPermission(turn);
+
+  if (permission !== undefined) {
+    return turn.status === 'awaiting_permission' && turn.between === true
+      ? permission.id
+      : undefined;
+  }
+
+  const input = askedInput(transcript);
+  const outside =
+    turn.status === 'idle' ||
+    (turn.status === 'awaiting_permission' && turn.between === true);
+
+  return input !== undefined &&
+    (input.between === true || (input.subagentId !== undefined && outside))
+    ? input.id
+    : undefined;
+}
+
+/**
+ * Whether the request on screen came between turns and the person has not
+ * taken the keys into it: drawn without them, the prompt keeping its draft
+ * and its keys, so a key typed for the prompt never answers it.
+ */
+export function heldBack(
+  state: DialogsState & { readonly transcript: Transcript },
+): boolean {
+  const id = betweenAsked(state.transcript);
+
+  return id !== undefined && id !== state.attended;
+}
+
+/**
+ * Whether a permission, form or link on screen has the keys: asked in a
+ * turn, or between turns once the person took the keys into it.
+ */
+export function asksWithKeys(
+  state: DialogsState & { readonly transcript: Transcript },
+): boolean {
+  return asksPerson(state.transcript) && !heldBack(state);
 }

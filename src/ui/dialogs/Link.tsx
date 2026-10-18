@@ -6,6 +6,7 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { linkHost } from './form.ts';
 import type { Choice } from './permission.ts';
+import { AttendHint } from './Permission.tsx';
 
 /**
  * A link the agent asks the person to open, in the permission prompt's
@@ -16,11 +17,14 @@ export function LinkPrompt({
   wait,
   agent,
   active,
+  held = false,
   onAnswer,
 }: {
   wait: Extract<ElicitationWait, { mode: 'url' }>;
   agent: string;
   active: boolean;
+  /** Asked between turns, the keys not taken into it yet (CHD-158). */
+  held?: boolean;
   /** `open` when the person chose to open it. */
   onAnswer: (answer: 'open' | 'decline' | 'cancel') => void;
 }) {
@@ -74,14 +78,19 @@ export function LinkPrompt({
         <ChoiceList
           choices={choices}
           active={active}
+          marked={!held}
           onSelect={(value) => onAnswer(value === 'open' ? 'open' : 'decline')}
         />
       </box>
-      <box marginTop={1}>
-        <text {...TEXT} attributes={DIM}>
-          Enter to choose · Esc to cancel
-        </text>
-      </box>
+      {held ? (
+        <AttendHint />
+      ) : (
+        <box marginTop={1}>
+          <text {...TEXT} attributes={DIM}>
+            Enter to choose · Esc to cancel
+          </text>
+        </box>
+      )}
     </box>
   );
 }

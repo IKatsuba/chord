@@ -127,6 +127,27 @@ export interface WaitsNotice {
   readonly text: string;
   readonly tone: StatusTone;
   readonly key?: string | undefined;
+  /** What it says where the line is short; `text` when not given. */
+  readonly short?: string;
+  /** The key answers what is asked here, rather than going to it. */
+  readonly answer?: true;
+}
+
+/**
+ * The front session's own request between turns, still without the keys:
+ * what it asks for, and the key that takes the keys into it (CHD-158).
+ */
+export function betweenNotice(
+  on: 'permission' | 'input',
+  key: string | undefined,
+): WaitsNotice {
+  return {
+    text: `${GLYPHS.asking} ${on} asked between turns`,
+    short: `${GLYPHS.asking} ${on}`,
+    tone: 'waits',
+    key,
+    answer: true,
+  };
 }
 
 /**
@@ -255,12 +276,12 @@ export function waitsNotice(
 
 /** The notice's parts, with the key in full words or bare. */
 function waitsParts(waits: WaitsNotice, wide: boolean): StatusPart[] {
+  const verb = waits.answer ? ' to answer' : wide ? ' to go' : '';
   const key =
-    waits.key === undefined
-      ? ''
-      : `${STATUS_SEPARATOR}${waits.key}${wide ? ' to go' : ''}`;
+    waits.key === undefined ? '' : `${STATUS_SEPARATOR}${waits.key}${verb}`;
+  const text = wide ? waits.text : (waits.short ?? waits.text);
 
-  return [{ text: `${waits.text}${key}`, tone: waits.tone }];
+  return [{ text: `${text}${key}`, tone: waits.tone }];
 }
 
 /**

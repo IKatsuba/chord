@@ -14,6 +14,7 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { Gutter } from '../transcript/tools/Tool.tsx';
 import { formRowLimit } from './Form.tsx';
+import { AttendHint } from './Permission.tsx';
 import {
   answered,
   answerText,
@@ -56,11 +57,14 @@ export function QuestionBox({
   windowRows,
   width,
   active,
+  held = false,
   now = Date.now,
   onFill,
   onAnswer,
 }: {
   wait: Extract<ElicitationWait, { mode: 'form' }>;
+  /** Asked between turns, the keys not taken into it yet (CHD-158). */
+  held?: boolean;
   questions: Questions;
   /** The box as it was left, when it was on screen before. */
   filled?: AskState | undefined;
@@ -176,11 +180,15 @@ export function QuestionBox({
         <Steps questions={questions} state={state} problems={problems} />
       </box>
       <box marginTop={1}>{body}</box>
-      <box marginTop={1}>
-        <text {...CUT} attributes={DIM}>
-          {askHint(questions, state, inner)}
-        </text>
-      </box>
+      {held ? (
+        <AttendHint />
+      ) : (
+        <box marginTop={1}>
+          <text {...CUT} attributes={DIM}>
+            {askHint(questions, state, inner)}
+          </text>
+        </box>
+      )}
     </box>
   );
 }

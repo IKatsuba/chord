@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { useState } from 'react';
 import { draw } from '../../harness.tsx';
 import stripAnsi from 'strip-ansi';
 import type { Subagent } from '../../../../src/session/transcript/types.ts';
@@ -560,5 +561,106 @@ describe('CHD-432 tester: whole-task expansion keys', () => {
         },
         { columns, rows },
       ));
+  }
+});
+
+test('a row that was last when drawn keeps its column once a sibling comes after it (Q41)', () =>
+  withWindow(
+    async (window) => {
+      // Announced one at a time, each row is the last for a moment.
+      await send(window, 'claudesubagents');
+      await asked(window);
+      await window.press('1');
+      await window.shows('4 agents ended');
+
+      const frame = window.frame();
+
+      for (const ending of ['Done', 'Failed', 'Cancelled']) {
+        expect(frame).toContain(`│  ⎿  ${ending}`);
+      }
+
+      expect(frame).not.toContain('│   ⎿');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+describe('Q41 tester: a mounted last row gains a sibling', () => {
+  for (const columns of [80, 120]) {
+    for (const open of [false, true]) {
+      test(`${open ? 'expanded' : 'folded'} bodies retain their column after a committed last-to-non-last transition at ${columns} columns`, async () => {
+        const agents: Subagent[] = [
+          {
+            id: 'a',
+            title: 'First',
+            description: 'First task',
+            state: 'completed',
+            entries: [],
+            plan: [],
+          },
+          {
+            id: 'b',
+            title: 'Second',
+            description:
+              'Second task has enough words to wrap and keep its body under the same branch.',
+            error: 'Second failure detail',
+            state: 'failed',
+            entries: [],
+            plan: [],
+          },
+          {
+            id: 'c',
+            title: 'Third',
+            description: 'Third task',
+            state: 'cancelled',
+            entries: [],
+            plan: [],
+          },
+        ];
+        let append = () => {};
+
+        function ChangingGroup() {
+          const [count, setCount] = useState(2);
+
+          append = () => setCount(3);
+
+          return (
+            <Agents
+              agents={agents.slice(0, count)}
+              turn={{ status: 'idle' }}
+              agent='fake'
+              open={open}
+              width={columns - 4}
+            />
+          );
+        }
+
+        const drawn = await draw(<ChangingGroup />, { columns, rows: 24 });
+
+        try {
+          const before = stripAnsi(drawn.frame());
+
+          expect(before).toContain('└─ Agent(Second)');
+          expect(before).not.toContain('Agent(Third)');
+          append();
+
+          await until('the newly appended third sibling to render', () =>
+            drawn.frame().includes('Agent(Third)'),
+          );
+
+          const frame = stripAnsi(drawn.frame());
+
+          expect(frame).toContain('├─ Agent(Second)');
+          expect(frame).toContain('│  ⎿  Failed');
+          expect(frame).not.toContain('│   ⎿');
+
+          if (open) {
+            expect(frame).toContain('│  ⎿  Second task');
+            expect(frame).toContain('│     Second failure detail');
+          }
+        } finally {
+          await drawn.unmount();
+        }
+      });
+    }
   }
 });

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.EcGKSOwNrB
+ ▀▀     ? for shortcuts · /help
+
+ › claudesubagents
+
+ ⏺ I will send four agents.
+
+ ⏺ Running 3 agents… (ctrl+o to expand)
+   ├─ Agent(explorer (Explore)) · 0 tool uses
+   │  ⎿  Initializing…
+   ├─ Agent(reviewer (general-purpose)) · 0 tool uses
+   │  ⎿  Initializing…
+   └─ Agent(tester (general-purpose)) · 0 tool uses
+      ⎿  Initializing…
+
+ ››› Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    background  3 agents running

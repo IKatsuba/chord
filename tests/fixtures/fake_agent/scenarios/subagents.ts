@@ -1,7 +1,12 @@
 /** Subagents in Codex's draft form, and in ACP's own `subagent_update` as Claude's adapter sends it. */
 import * as acp from '@agentclientprotocol/sdk';
 import { clientTakesSubagents } from '../client.ts';
-import { STEP_MS } from '../options.ts';
+import { existsSync } from 'node:fs';
+import { appendFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { STEP_MS, STOP_GATE } from '../options.ts';
+import { cwds } from '../sessions.ts';
+import { GATE } from './agents.ts';
 import { pause, type Play, Turn, type Update } from '../turn.ts';
 
 /**
@@ -359,6 +364,29 @@ type Working = Set<string>;
  */
 export const claudeChildren = new Map<string, () => Promise<void>>();
 
+/** What `--stop-gate` writes each stop to, and waits on to let it go. */
+export const STOP_GATE_STOPS = 'stops';
+export const STOP_GATE_RELEASE = 'stop-release';
+
+/**
+ * With `--stop-gate`, writes the stop of subagent `id` under `parent` to its
+ * session's gate, then waits until the test releases it.
+ */
+async function stopGate(parent: Turn, id: string): Promise<void> {
+  if (!STOP_GATE) {
+    return;
+  }
+
+  const gate = join(cwds.get(parent.sessionId) ?? '.', GATE);
+
+  await mkdir(gate, { recursive: true });
+  await appendFile(join(gate, STOP_GATE_STOPS), `${id}\n`);
+
+  while (!existsSync(join(gate, STOP_GATE_RELEASE))) {
+    await new Promise((resolve) => setTimeout(resolve, STEP_MS * 2));
+  }
+}
+
 /** The subagents a stop of their own ended, whose work's abort is no error. */
 const stoppedAlone = new Set<string>();
 
@@ -396,6 +424,7 @@ async function announce(
   description: string,
   task: string,
   signal = parent.signal,
+  stopAfterMs = 0,
 ): Promise<Turn> {
   const own = new AbortController();
   const child = new Turn(
@@ -405,6 +434,9 @@ async function announce(
   );
 
   claudeChildren.set(child.sessionId, async () => {
+    await stopGate(parent, child.sessionId);
+    await new Promise((resolve) => setTimeout(resolve, stopAfterMs));
+
     if (!atWork.has(child.sessionId)) {
       return;
     }
@@ -643,6 +675,85 @@ async function testInBackground(parent: Turn, child: Turn): Promise<void> {
     });
   } catch {
     // The client went before the subagent ended.
+  }
+}
+
+/**
+ * A Claude subagent in the background beside one the turn waits on: the
+ * first goes on past the turn's end, and past a cancel, which stops only the
+ * second, then reports done; each stopped alone after `stopAfterMs`.
+ */
+async function background(
+  turn: Turn,
+  stopAfterMs = 0,
+): Promise<acp.StopReason> {
+  if (!clientTakesSubagents) {
+    await turn.say('Subagents go only to a client that takes them.');
+
+    return 'end_turn';
+  }
+
+  const working: Working = new Set();
+
+  try {
+    await turn.say('The tests run in the background while I look.');
+
+    const tests = await announce(
+      turn,
+      undefined,
+      'tester (general-purpose)',
+      'Run the test suite',
+      'Run bun test in the background and report what fails.',
+      new AbortController().signal,
+      stopAfterMs,
+    );
+
+    // At once, so a cancel that comes before the next announcement leaves
+    // it at work all the same.
+    void testInBackground(turn, tests);
+
+    const looker = await announce(
+      turn,
+      working,
+      'explorer (Explore)',
+      'Find the cancel path',
+      'Find where chord ends a turn on Esc.',
+      turn.signal,
+      stopAfterMs,
+    );
+
+    await alone(
+      looker,
+      (async () => {
+        await call(
+          looker,
+          'search',
+          { title: 'Search cancelled in src/session', kind: 'search' },
+          'completed',
+          'Found 3 files',
+        );
+        await pause(looker.signal, SUBAGENT_AFTER_MS);
+        await looker.say(
+          'Esc ends the turn in src/session/transcript/turn.ts.',
+        );
+        await report(turn, working, looker.sessionId, {
+          state: 'idle',
+          stopReason: 'end_turn',
+        });
+      })(),
+    );
+    await turn.say('The tests run on; I will say when they end.');
+
+    return 'end_turn';
+  } catch (error) {
+    for (const id of [...working].toReversed()) {
+      await report(turn, working, id, {
+        state: 'idle',
+        stopReason: 'cancelled',
+      });
+    }
+
+    throw error;
   }
 }
 
@@ -963,76 +1074,11 @@ export const SUBAGENTS = {
     }
   },
 
-  // A Claude subagent in the background beside one the turn waits on: the
-  // first goes on past the turn's end, and past a cancel, which stops only
-  // the second, then reports done.
-  async claudebackground(turn) {
-    if (!clientTakesSubagents) {
-      await turn.say('Subagents go only to a client that takes them.');
+  claudebackground: (turn) => background(turn),
 
-      return 'end_turn';
-    }
-
-    const working: Working = new Set();
-
-    try {
-      await turn.say('The tests run in the background while I look.');
-
-      const tests = await announce(
-        turn,
-        undefined,
-        'tester (general-purpose)',
-        'Run the test suite',
-        'Run bun test in the background and report what fails.',
-        new AbortController().signal,
-      );
-
-      // At once, so a cancel that comes before the next announcement leaves
-      // it at work all the same.
-      void testInBackground(turn, tests);
-
-      const looker = await announce(
-        turn,
-        working,
-        'explorer (Explore)',
-        'Find the cancel path',
-        'Find where chord ends a turn on Esc.',
-      );
-
-      await alone(
-        looker,
-        (async () => {
-          await call(
-            looker,
-            'search',
-            { title: 'Search cancelled in src/session', kind: 'search' },
-            'completed',
-            'Found 3 files',
-          );
-          await pause(looker.signal, SUBAGENT_AFTER_MS);
-          await looker.say(
-            'Esc ends the turn in src/session/transcript/turn.ts.',
-          );
-          await report(turn, working, looker.sessionId, {
-            state: 'idle',
-            stopReason: 'end_turn',
-          });
-        })(),
-      );
-      await turn.say('The tests run on; I will say when they end.');
-
-      return 'end_turn';
-    } catch (error) {
-      for (const id of [...working].toReversed()) {
-        await report(turn, working, id, {
-          state: 'idle',
-          stopReason: 'cancelled',
-        });
-      }
-
-      throw error;
-    }
-  },
+  // As claudebackground, its subagents taking about 2 s to stop alone, as
+  // Claude does, so a stop pending can be seen.
+  claudeslowstop: (turn) => background(turn, SUBAGENT_AFTER_MS),
 
   // A Claude subagent its parent messages again once it is done, as
   // SendMessage does: the message on its session, from the parent, then it

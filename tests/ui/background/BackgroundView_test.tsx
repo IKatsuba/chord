@@ -255,3 +255,21 @@ describe('CHD-424 tester: rebound background stop', () => {
     }
   });
 });
+
+test('a Claude agent that takes a while to stop reads stopping until it says it stopped, and a second x changes nothing', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudeslowstop');
+      await window.shows('background  2 agents running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Run the test suite');
+      await window.press('x');
+      await window.shows('■ stopping');
+      await window.press('x');
+      expect(window.frame()).toContain('■ stopping');
+      expect(window.frame()).not.toContain('could not stop');
+      await window.shows('■ stopped after');
+    },
+    { rows: 24, columns: 80 },
+  ));

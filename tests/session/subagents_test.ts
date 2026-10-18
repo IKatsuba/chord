@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
@@ -2056,4 +2056,69 @@ describe('CHD-2 tester: deferred stop failure and asking isolation', () => {
         unsubscribe();
       }
     }));
+});
+
+test("--stop-gate holds a Claude subagent's stop alone until the test lets it go, writing each stop it got", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-subagents-'));
+  const session = await openSession({
+    agent: 'fake',
+    cwd: dir,
+    // At its own pace, so the stopped one is still at work when let go.
+    agentCommand: fakeAgentCommand(undefined, '--stop-gate'),
+  });
+  const gate = join(dir, '.fake-gate');
+  const idles: [string, unknown][] = [];
+
+  try {
+    session.subscribe((update) => {
+      if (
+        update.sessionUpdate === 'subagent_update' &&
+        update.state?.state === 'idle'
+      ) {
+        idles.push([update.sessionId, update.state]);
+      }
+    });
+
+    let tester: string | undefined;
+    const { result } = await run(session, 'claudebackground', {
+      onUpdate: (updates) => {
+        const first = updates.find(
+          (update) => update.sessionUpdate === 'subagent_update',
+        );
+
+        if (
+          tester === undefined &&
+          first?.sessionUpdate === 'subagent_update'
+        ) {
+          tester = first.sessionId;
+
+          void session.stopSubagent(tester);
+        }
+      },
+    });
+
+    expect(result.status).toStrictEqual('completed');
+    // Held: only the one the turn waited on has ended.
+    expect(idles.map(([, state]) => state)).toStrictEqual([
+      { state: 'idle', stopReason: 'end_turn' },
+    ]);
+    expect(await readFile(join(gate, 'stops'), 'utf8')).toBe(`${tester}\n`);
+
+    await writeFile(join(gate, 'stop-release'), '');
+
+    const deadline = Date.now() + 10_000;
+
+    while (idles.length < 2 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    assert(tester !== undefined);
+    expect(idles.at(-1)).toStrictEqual([
+      tester,
+      { state: 'idle', stopReason: 'cancelled' },
+    ]);
+  } finally {
+    await session.close();
+    await rm(dir, { recursive: true });
+  }
 });

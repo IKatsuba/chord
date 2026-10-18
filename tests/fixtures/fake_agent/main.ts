@@ -120,12 +120,15 @@
  * cancel ends each still at work idle `cancelled`. `claudebackground` runs
  * one the turn waits on beside one in the background, which goes on about
  * 4 s, past the turn and past a cancel that stops only the first.
+ * `claudeslowstop` is the same, its subagents taking about 2 s to stop alone.
  * `claudemessage` messages a Claude subagent again once it is done, as
  * SendMessage does, and it runs once more. `claudewaiting` holds one in
  * `requires_action` about 2 s with no request of its sent, then done, and
  * `claudenostop` one that takes its own cancel back. A `session/cancel` on a
  * Claude subagent's own id stops that one alone, idle and `cancelled`, its
- * parent's turn going on. To any
+ * parent's turn going on. With `--stop-gate` or `CHORD_FAKE_STOP_GATE=1`
+ * each such stop is written, one id a line, to `<cwd>/.fake-gate/stops`, and
+ * held until the test writes `<cwd>/.fake-gate/stop-release`. To any
  * other client each
  * says so in a line of text.
  *
@@ -314,6 +317,7 @@ const SCENARIOS = [
   'subagentupdate',
   'claudesubagents',
   'claudebackground',
+  'claudeslowstop',
   'claudemessage',
   'claudewaiting',
   'claudenostop',

@@ -1628,14 +1628,18 @@ export function useSessions(
     });
 
     if (item.kind === 'agent') {
+      const focus = { key: item.key, id: item.id };
+      const hinted = (hint: string) =>
+        dispatch({ type: 'background_hinted', focus, hint });
+
+      dispatch({ type: 'background_stop_asked', focus });
+
       if (!item.stoppable) {
-        dispatch({ type: 'background_hinted', hint: NO_STOP_HINT });
+        hinted(NO_STOP_HINT);
       } else if (!(item.status.group === 'running' && item.status.stopping)) {
         conversationAt(item.key)
           ?.stopSubagent(item.id)
-          .catch((error: unknown) =>
-            dispatch({ type: 'background_hinted', hint: stopRefused(error) }),
-          );
+          .catch((error: unknown) => hinted(stopRefused(error)));
       }
     } else if (item.kind === 'monitor') {
       conversationAt(item.key)?.stopMonitor(item.id, 'person');

@@ -1899,3 +1899,38 @@ test("a session/cancel on a Claude subagent's own id stops it alone: it reports 
         ),
     ).toStrictEqual(['cancelled', 'end_turn']);
   }));
+
+test("a Claude subagent messaged again can be stopped alone in its second run, and its parent's turn still ends on its own", () =>
+  withSession(async (session) => {
+    const ends: unknown[] = [];
+    let idles = 0;
+    let stopped = false;
+    const { result, updates } = await run(session, 'claudemessage', {
+      onUpdate: (all) => {
+        const last = all.at(-1);
+
+        if (last?.sessionUpdate !== 'subagent_update') {
+          return;
+        }
+
+        const word = last.state?.state;
+
+        if (word === 'idle') {
+          idles += 1;
+
+          ends.push(last.state);
+        } else if (word === 'running' && idles === 1 && !stopped) {
+          stopped = true;
+
+          void session.stopSubagent(last.sessionId);
+        }
+      },
+    });
+
+    expect(result.status).toStrictEqual('completed');
+    expect(ends).toStrictEqual([
+      { state: 'idle', stopReason: 'end_turn' },
+      { state: 'idle', stopReason: 'cancelled' },
+    ]);
+    expect(said(updates).join('')).toContain('Both found.');
+  }));

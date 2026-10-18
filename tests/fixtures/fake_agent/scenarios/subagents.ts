@@ -363,6 +363,12 @@ export const claudeChildren = new Map<string, () => Promise<void>>();
 const stoppedAlone = new Set<string>();
 
 /**
+ * Claude's subagents at work now: a stop of an idle one leaves its end as
+ * it was, as Claude's adapter does, and one messaged again is at work again.
+ */
+const atWork = new Set<string>();
+
+/**
  * `work` of `child`'s, which its parent waits on: a stop of the child alone
  * ends it quietly, any other failure is the parent's.
  */
@@ -399,7 +405,10 @@ async function announce(
   );
 
   claudeChildren.set(child.sessionId, async () => {
-    claudeChildren.delete(child.sessionId);
+    if (!atWork.has(child.sessionId)) {
+      return;
+    }
+
     stoppedAlone.add(child.sessionId);
     own.abort();
     await report(parent, working, child.sessionId, {
@@ -417,6 +426,7 @@ async function announce(
     state: { state: 'running' },
   });
   working?.add(child.sessionId);
+  atWork.add(child.sessionId);
   await alone(
     child,
     child.send({
@@ -441,9 +451,11 @@ async function report(
   childId: string,
   state: acp.StateUpdate,
 ): Promise<void> {
-  if (state.state !== 'running' && state.state !== 'requires_action') {
+  if (state.state === 'running' || state.state === 'requires_action') {
+    atWork.add(childId);
+  } else {
     working?.delete(childId);
-    claudeChildren.delete(childId);
+    atWork.delete(childId);
   }
 
   await parent.client.notify('session/update', {
@@ -1044,42 +1056,62 @@ export const SUBAGENTS = {
           'Report the file that owns the routing, with line numbers.',
       );
 
-      await call(
+      await alone(
         explorer,
-        'read',
-        {
-          title: 'Read src/acp/connection.ts',
-          kind: 'read',
-          locations: [{ path: 'src/acp/connection.ts' }],
-        },
-        'completed',
+        (async () => {
+          await call(
+            explorer,
+            'read',
+            {
+              title: 'Read src/acp/connection.ts',
+              kind: 'read',
+              locations: [{ path: 'src/acp/connection.ts' }],
+            },
+            'completed',
+          );
+          await explorer.say('Routing lives in src/acp/connection.ts.');
+          await report(turn, working, explorer.sessionId, {
+            state: 'idle',
+            stopReason: 'end_turn',
+          });
+        })(),
       );
-      await explorer.say('Routing lives in src/acp/connection.ts.');
-      await report(turn, working, explorer.sessionId, {
-        state: 'idle',
-        stopReason: 'end_turn',
-      });
-      await turn.say('I will ask it for the tests too. ');
-      await explorer.send({
-        sessionUpdate: 'session_message',
-        messageId: turn.callId('send'),
-        senderSessionId: turn.sessionId,
-        recipientSessionId: explorer.sessionId,
-        content: [{ type: 'text', text: 'Now find the tests that cover it.' }],
-      });
-      await report(turn, working, explorer.sessionId, { state: 'running' });
-      await call(
-        explorer,
-        'search',
-        { title: 'Search connection in tests/acp', kind: 'search' },
-        'completed',
-        'Found 2 files',
-      );
-      await explorer.say('tests/acp/connection_test.ts covers it.');
-      await report(turn, working, explorer.sessionId, {
-        state: 'idle',
-        stopReason: 'end_turn',
-      });
+
+      // One stopped alone is not messaged again.
+      if (!stoppedAlone.has(explorer.sessionId)) {
+        await turn.say('I will ask it for the tests too. ');
+        await turn.client.notify('session/update', {
+          sessionId: explorer.sessionId,
+          update: {
+            sessionUpdate: 'session_message',
+            messageId: turn.callId('send'),
+            senderSessionId: turn.sessionId,
+            recipientSessionId: explorer.sessionId,
+            content: [
+              { type: 'text', text: 'Now find the tests that cover it.' },
+            ],
+          },
+        });
+        await report(turn, working, explorer.sessionId, { state: 'running' });
+        await alone(
+          explorer,
+          (async () => {
+            await call(
+              explorer,
+              'search',
+              { title: 'Search connection in tests/acp', kind: 'search' },
+              'completed',
+              'Found 2 files',
+            );
+            await explorer.say('tests/acp/connection_test.ts covers it.');
+            await report(turn, working, explorer.sessionId, {
+              state: 'idle',
+              stopReason: 'end_turn',
+            });
+          })(),
+        );
+      }
+
       await turn.say('Both found.');
 
       return 'end_turn';

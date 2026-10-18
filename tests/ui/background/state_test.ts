@@ -43,36 +43,45 @@ test("another tab's /clear leaves each tab's clearing as it was, so no ended ite
   expect(frontState(both).backgroundCleared).toStrictEqual({ 1: 100, 2: 200 });
 });
 
-test("a stop's hint stays while the ❯ stays on its item, and goes once it moves or the view closes", () => {
+test("a stop's hint is said only while the ❯ has stayed on its row since x, and goes once it moves or the view closes", () => {
   const a = { key: 1, id: 'a' };
-  const open = reduceBackground(
-    reduceBackground(initialBackground, { type: 'background_opened' }),
+  const b = { key: 1, id: 'b' };
+  const hint = 'could not stop: Session not found';
+  const run = (...actions: Parameters<typeof reduceBackground>[1][]) =>
+    actions.reduce(reduceBackground, initialBackground).backgroundView;
+  const opened = [
+    { type: 'background_opened' },
     { type: 'background_focused', focus: a },
-  );
-  const hinted = reduceBackground(open, {
-    type: 'background_hinted',
-    hint: 'could not stop: Session not found',
-  });
+    { type: 'background_stop_asked', focus: a },
+  ] as const;
+  const refused = { type: 'background_hinted', focus: a, hint } as const;
 
-  expect(hinted.backgroundView?.hint).toBe('could not stop: Session not found');
+  expect(run(...opened, refused)?.hint).toBe(hint);
+  // Kept while the ❯ stays; gone once it moves.
   expect(
-    reduceBackground(hinted, { type: 'background_focused', focus: a })
-      .backgroundView?.hint,
-  ).toBe('could not stop: Session not found');
+    run(...opened, refused, { type: 'background_focused', focus: a })?.hint,
+  ).toBe(hint);
   expect(
-    reduceBackground(hinted, {
-      type: 'background_focused',
-      focus: { key: 1, id: 'b' },
-    }).backgroundView,
-  ).toStrictEqual({ focus: { key: 1, id: 'b' } });
+    run(...opened, refused, { type: 'background_focused', focus: b }),
+  ).toStrictEqual({ focus: b });
+  // An answer that comes after the ❯ left, even if it came back, or after
+  // the view closed and opened again, is not said.
   expect(
-    reduceBackground(hinted, { type: 'background_closed' }).backgroundView,
+    run(
+      ...opened,
+      { type: 'background_focused', focus: b },
+      { type: 'background_focused', focus: a },
+      refused,
+    )?.hint,
   ).toBe(undefined);
-  // With the view closed there is nothing to say it on.
   expect(
-    reduceBackground(initialBackground, {
-      type: 'background_hinted',
-      hint: 'x',
-    }),
-  ).toStrictEqual(initialBackground);
+    run(
+      ...opened,
+      { type: 'background_closed' },
+      { type: 'background_opened' },
+      { type: 'background_focused', focus: a },
+      refused,
+    )?.hint,
+  ).toBe(undefined);
+  expect(run(refused)).toBe(undefined);
 });

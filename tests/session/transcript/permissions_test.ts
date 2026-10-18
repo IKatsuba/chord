@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import type { TranscriptAction } from '../../../src/session/transcript/types.ts';
 import { fold } from './fold.ts';
@@ -373,5 +373,114 @@ test('a form asked with no turn running is shown, and its answer recorded', () =
   expect(answered.entries.at(-1)).toMatchObject({
     kind: 'elicitation',
     outcome: 'declined',
+  });
+});
+
+describe('CHD-158 tester: multiple waits between turns', () => {
+  test('duplicate requests are ignored and settling out of order keeps the first wait time', () => {
+    const first: TranscriptAction = {
+      type: 'permission_requested',
+      turnId: 'old',
+      at: 100,
+      between: true,
+      permission: { id: 'one', options: [] },
+    };
+    const second: TranscriptAction = {
+      type: 'permission_requested',
+      turnId: 'later',
+      at: 200,
+      between: true,
+      permission: { id: 'two', options: [] },
+    };
+    const waiting = fold([...ENDED, first, second, first]);
+
+    expect(waiting.turn).toMatchObject({
+      between: true,
+      since: 100,
+      permissions: [{ id: 'one' }, { id: 'two' }],
+    });
+
+    const partly = fold(
+      [
+        {
+          type: 'permission_settled',
+          turnId: 'later',
+          id: 'two',
+          answer: { type: 'rejected' },
+        },
+      ],
+      waiting,
+    );
+
+    expect(partly.turn).toMatchObject({
+      between: true,
+      since: 100,
+      permissions: [{ id: 'one' }],
+    });
+    expect(
+      fold(
+        [
+          {
+            type: 'permission_settled',
+            turnId: 'old',
+            id: 'one',
+            answer: { type: 'withdrawn' },
+          },
+        ],
+        partly,
+      ).turn,
+    ).toStrictEqual({ status: 'idle' });
+    expect(
+      partly.entries.filter((entry) => entry.kind === 'permission'),
+    ).toHaveLength(1);
+  });
+
+  test('a permission and form before the first turn settle independently', () => {
+    const waiting = fold([
+      {
+        type: 'permission_requested',
+        turnId: 'session',
+        at: 10,
+        between: true,
+        permission: { id: 'p', options: [] },
+      },
+      {
+        type: 'elicitation_requested',
+        turnId: 'session',
+        elicitation: { ...FORM_WAIT, between: true },
+      },
+    ]);
+    const answered = fold(
+      [
+        {
+          type: 'permission_settled',
+          turnId: 'session',
+          id: 'p',
+          answer: { type: 'rejected' },
+        },
+      ],
+      waiting,
+    );
+
+    expect(answered.turn).toStrictEqual({ status: 'idle' });
+    expect(answered.asking).toHaveLength(1);
+
+    const done = fold(
+      [
+        {
+          type: 'elicitation_settled',
+          turnId: 'session',
+          id: 'e1',
+          answer: { type: 'accepted', content: {} },
+        },
+      ],
+      answered,
+    );
+
+    expect(done.asking).toStrictEqual([]);
+    expect(done.entries.map((entry) => entry.kind)).toStrictEqual([
+      'permission',
+      'elicitation',
+    ]);
   });
 });

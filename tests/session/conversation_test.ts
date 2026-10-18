@@ -2782,3 +2782,187 @@ describe('a request with no turn running (CHD-158)', () => {
       );
     }));
 });
+
+describe('CHD-158 tester: requests outside a turn', () => {
+  test('before the first prompt, permissions, forms and links wait independently until answered or withdrawn', async () => {
+    let owner: Session | undefined;
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        assert(owner);
+
+        const abort = new AbortController();
+        const permission = owner.permissions.handler(
+          {
+            sessionId: owner.id,
+            toolCall: {
+              toolCallId: 'startup',
+              title: 'Write notes/startup.md',
+            },
+            options: [{ optionId: 'allow', name: 'Allow', kind: 'allow_once' }],
+          },
+          abort.signal,
+        );
+        const form = owner.elicitations.handler(
+          {
+            sessionId: owner.id,
+            mode: 'form',
+            message: 'Choose a target',
+            requestedSchema: { type: 'object', properties: {} },
+          },
+          new AbortController().signal,
+        );
+        const link = owner.elicitations.handler(
+          {
+            sessionId: owner.id,
+            mode: 'url',
+            message: 'Approve the target',
+            url: 'https://example.com/approve',
+            elicitationId: 'startup-link',
+          },
+          new AbortController().signal,
+        );
+        const asked = events.find(
+          (event) => event.type === 'permission_requested',
+        );
+        const forms = events.filter(
+          (event) => event.type === 'elicitation_requested',
+        );
+
+        assert(asked?.type === 'permission_requested');
+        expect(asked).toMatchObject({ turnId: 'session', between: true });
+        expect(forms).toHaveLength(2);
+        expect(forms.every((event) => event.elicitation.between === true)).toBe(
+          true,
+        );
+        expect(events.some((event) => event.type === 'prompt')).toBe(false);
+        abort.abort();
+        expect(await permission).toStrictEqual({
+          outcome: { outcome: 'cancelled' },
+        });
+        expect(
+          events.filter((event) => event.type === 'permission_settled'),
+        ).toMatchObject([
+          { id: asked.permission.id, answer: { type: 'withdrawn' } },
+        ]);
+        conversation.answer(forms[1]!.elicitation.id, { action: 'decline' });
+        expect(await link).toStrictEqual({ action: 'decline' });
+        conversation.answer(forms[0]!.elicitation.id, {
+          action: 'accept',
+          content: {},
+        });
+        expect(await form).toStrictEqual({ action: 'accept', content: {} });
+        expect(
+          events.filter((event) => event.type === 'elicitation_settled'),
+        ).toHaveLength(2);
+      },
+      (session) => (owner = session),
+    );
+  });
+
+  test('two real fake-agent sessions keep their between-turn answers separate', () =>
+    Promise.all(
+      ['allow', 'deny'].map((option) =>
+        onFake([], async (conversation, events) => {
+          conversation.send('mainbetween');
+          await until(() =>
+            events.some((event) => event.type === 'permission_requested'),
+          );
+
+          const asked = events.find(
+            (event) => event.type === 'permission_requested',
+          );
+
+          assert(asked?.type === 'permission_requested');
+          expect(asked.between).toBe(true);
+          conversation.choose(asked.permission.id, option);
+          await until(() => saidIn(events).includes(`Permission: ${option}.`));
+          expect(
+            events.filter((event) => event.type === 'permission_settled'),
+          ).toHaveLength(1);
+          expect(saidIn(events)).not.toContain(
+            `Permission: ${option === 'allow' ? 'deny' : 'allow'}.`,
+          );
+        }),
+      ),
+    ));
+
+  for (const stage of ['permission', 'form'] as const) {
+    test(`closing an unanswered between-turn ${stage} withdraws it and stops the fake`, async () => {
+      let owner: Session | undefined;
+
+      await onFake(
+        [],
+        async (conversation, events) => {
+          conversation.send(
+            stage === 'permission' ? 'mainbetween' : 'claudebetween',
+          );
+          await until(() =>
+            events.some((event) => event.type === 'permission_requested'),
+          );
+
+          if (stage === 'form') {
+            const permission = events.find(
+              (event) => event.type === 'permission_requested',
+            );
+
+            assert(permission?.type === 'permission_requested');
+            conversation.choose(permission.permission.id, 'allow');
+            await until(() =>
+              events.some((event) => event.type === 'elicitation_requested'),
+            );
+          }
+
+          await conversation.close();
+          assert(owner);
+          await owner.exited;
+          expect(owner.agentPids.size).toBe(0);
+          expect(
+            events.filter(
+              (event) =>
+                event.type ===
+                `${stage === 'form' ? 'elicitation' : 'permission'}_settled`,
+            ),
+          ).toMatchObject([{ answer: { type: 'withdrawn' } }]);
+        },
+        (session) => (owner = session),
+      );
+    });
+  }
+
+  test('clear removes the old wait and a fresh session can answer a prompt', async () => {
+    let original: Session | undefined;
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        conversation.send('mainbetween');
+        await until(() =>
+          events.some((event) => event.type === 'permission_requested'),
+        );
+        conversation.clear();
+        await until(
+          () =>
+            events.filter((event) => event.type === 'connected').length === 2,
+        );
+        assert(original);
+        await original.exited;
+        expect(original.agentPids.size).toBe(0);
+        expect(events.filter((event) => event.type === 'cleared')).toHaveLength(
+          1,
+        );
+        conversation.send('text');
+        await until(() =>
+          saidIn(events).includes('Hello, world. This reply came in chunks.'),
+        );
+        expect(saidIn(events)).not.toContain('Permission: allow.');
+      },
+      (session) => {
+        original ??= session;
+
+        return session;
+      },
+    );
+  });
+});

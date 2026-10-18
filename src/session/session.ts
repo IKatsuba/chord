@@ -144,7 +144,10 @@ export interface Turn {
    * went, as when a cancel came before the walk for its mentions ended.
    */
   readonly sent: Promise<readonly ResourceLink[] | undefined>;
-  /** Asks the agent to stop the turn; `result` then says `cancelled`. */
+  /**
+   * Asks the agent to stop the turn, or, before the prompt has gone, keeps it
+   * back and tells the agent nothing; `result` then says `cancelled`.
+   */
   cancel(): Promise<void>;
 }
 
@@ -549,10 +552,14 @@ export async function openSession(
         })),
       ];
       let cancelled = false;
+      /** Whether the prompt has gone to the agent, which a cancel then tells. */
+      let gone = false;
       const { promise: sent, resolve: went } = Promise.withResolvers<
         readonly ResourceLink[] | undefined
       >();
       const send = (links: readonly ResourceLink[]) => {
+        gone = true;
+
         went(links);
 
         return connection.prompt({
@@ -603,7 +610,13 @@ export async function openSession(
         cancel: () => {
           cancelled = true;
 
-          return connection.cancel(id, tree.subagents);
+          // A prompt still waiting on its mentions never reached the agent:
+          // the cancel only keeps it back. Told the agent, it could land on
+          // the next turn instead, as the agent may take the next prompt
+          // before it (Q42).
+          return gone
+            ? connection.cancel(id, tree.subagents)
+            : Promise.resolve();
         },
       };
     },

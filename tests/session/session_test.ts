@@ -896,6 +896,23 @@ test('a turn says which links went with its prompt, and none went when a cancel 
     expect(await linksSent(session, 'text')).toStrictEqual([]);
   }));
 
+// The agent may take the next prompt before a cancel sent ahead of it, so a
+// cancel for a prompt it never got could stop the next turn (Q42).
+test('a cancel before the walk ended tells the agent nothing, so it cannot land on the next turn', () =>
+  withSession(async (session) => {
+    await writeFile(join(session.cwd, 'a.ts'), '');
+
+    const held = session.prompt('see @a.ts', [], ['a.ts']);
+
+    await held.cancel();
+    expect((await held.result).status).toStrictEqual('cancelled');
+
+    const { updates, result } = await run(session, 'cancels');
+
+    expect(result.status).toStrictEqual('completed');
+    expect(said(updates).join('')).toStrictEqual('Cancels with no turn: 0.');
+  }));
+
 test('a failed turn says why, and the session takes the next prompt', () =>
   withSession(async (session) => {
     const { updates, result } = await run(session, 'error');

@@ -467,3 +467,54 @@ test("an agent item's state reads as CHD-2's table words it", () => {
     '? untracked 21s',
   );
 });
+
+describe('CHD-2 tester: agent row clocks and wrapping', () => {
+  test('untracked time freezes while stopping time advances from the original start', () => {
+    const base: BackgroundItem = {
+      kind: 'agent',
+      id: 'a',
+      key: 1,
+      name: 'A',
+      startedAt: NOW - 10_000,
+      status: { group: 'untracked', endedAt: NOW - 5000 },
+    };
+
+    expect(stateText(base, NOW + 60_000).text).toBe('? untracked 5s');
+    expect(
+      stateText(
+        { ...base, status: { group: 'running', stopping: true } },
+        NOW + 60_000,
+      ).text,
+    ).toBe('■ stopping 1m 10s');
+  });
+
+  test('long agent names preserve state and owner in narrow and wide rows', () => {
+    const name = 'Read the transport tests and describe cancellation';
+    const entry: BackgroundItem = {
+      kind: 'agent',
+      id: 'a',
+      key: 2,
+      owner: PARSER,
+      name,
+      startedAt: NOW - 20_000,
+      status: { group: 'untracked', endedAt: NOW - 10_000 },
+    };
+
+    for (const width of [76, 116]) {
+      const rows = viewRows([entry], { width, focus: entry, now: NOW });
+      const lines = text(rows);
+      const kept = rows[0]!.lines
+        .flatMap((line) =>
+          line
+            .filter(({ role }) => role === 'name')
+            .map(({ text }) => text.trim()),
+        )
+        .join(' ');
+
+      expect(kept).toBe(name);
+      expect(lines[0]).toContain('? untracked 10s');
+      expect(lines[0]).toContain('parser');
+      expect(lines.every((line) => stringWidth(line) <= width)).toBe(true);
+    }
+  });
+});

@@ -334,3 +334,62 @@ test('a subagent waits while its agent says requires_action, and keeps having of
     true,
   ]);
 });
+
+describe('CHD-2 tester: retained capability and wait clocks', () => {
+  const patch = (
+    at: number,
+    update: Extract<SessionUpdate, { sessionUpdate: 'subagent_update' }>,
+  ): TranscriptAction => ({ type: 'update', turnId: TURN, at, update });
+
+  test('a late cancel offer stays remembered after it is revoked and waiting restarts after recovery', () => {
+    const before = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      patch(10, {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        state: { state: 'requires_action' },
+      }),
+      patch(20, {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        capabilities: { cancel: {} },
+      }),
+      patch(30, {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        capabilities: {},
+      }),
+    ]);
+
+    expect(only(before, 'a')).toMatchObject({
+      offeredCancel: true,
+      waiting: { since: 10 },
+    });
+    expect(only(before, 'a').cancellable).toBeUndefined();
+
+    const after = fold(
+      [
+        patch(40, {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'a',
+          state: { state: 'unknown' },
+        }),
+        patch(50, {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'a',
+          state: { state: 'requires_action' },
+        }),
+      ],
+      before,
+    );
+
+    expect(only(after, 'a')).toMatchObject({
+      offeredCancel: true,
+      waiting: { since: 50 },
+      state: 'running',
+    });
+    expect(only(after, 'a').endedAt).toBeUndefined();
+    expect(only(after, 'a').cancellable).toBeUndefined();
+  });
+});

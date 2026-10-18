@@ -920,3 +920,105 @@ test('a stopped agent reads stopping while it still asks, until its agent says i
     endedAt: 30,
   });
 });
+
+describe('CHD-2 tester: agent item ownership and terminal precedence', () => {
+  test('nested item order and owner remain stable when an untracked item clears and recovers', () => {
+    const owner = { name: 'parser', colour: 2 };
+    const listed = (state: Subagent['state']) =>
+      backgroundItems(
+        [
+          agent(1, { transcript: withEntries([claude('same', 20)]) }),
+          agent(2, {
+            owner,
+            transcript: withEntries([
+              claude('outer', 10, {
+                entries: [claude('same', 15, { state, endedAt: 30 })],
+              }),
+            ]),
+          }),
+        ],
+        30,
+      );
+
+    expect(listed('untracked').map(({ key, id }) => [key, id])).toStrictEqual([
+      [2, 'outer'],
+      [1, 'same'],
+    ]);
+
+    const recovered = listed('running');
+
+    expect(recovered.map(({ key, id }) => [key, id])).toStrictEqual([
+      [2, 'outer'],
+      [2, 'same'],
+      [1, 'same'],
+    ]);
+    expect(recovered[1]?.owner).toStrictEqual(owner);
+    expect(recovered[1]?.startedAt).toBe(15);
+  });
+
+  test('all terminal wire states beat stopping and stale permission, input and waiting state', () => {
+    for (const [state, group] of [
+      ['completed', 'done'],
+      ['failed', 'failed'],
+      ['cancelled', 'stopped'],
+      ['ended', 'stopped'],
+      ['untracked', 'untracked'],
+      ['disconnected', 'failed'],
+    ] as const) {
+      const transcript = withEntries(
+        [claude('a', 10, { state, endedAt: 40, waiting: { since: 20 } })],
+        {
+          turn: {
+            status: 'awaiting_permission',
+            turnId: 't1',
+            since: 21,
+            permissions: [{ id: 'p', subagentId: 'a', options: [], at: 21 }],
+          },
+          asking: [
+            {
+              id: 'e',
+              subagentId: 'a',
+              mode: 'url',
+              url: 'u',
+              message: 'm',
+              at: 22,
+            },
+          ],
+        },
+      );
+      const [item] = backgroundItems([
+        agent(1, { transcript, stopping: new Set(['a']) }),
+      ]);
+
+      expect(item?.status.group).toBe(group);
+      expect(item?.status).toMatchObject({ endedAt: 40 });
+      expect(summaryGroups(item ? [item] : [])[0]?.group).toBe(group);
+    }
+  });
+
+  test('every group and kind survives narrow and wide summary wrapping with agent counts', () => {
+    const groups = summaryGroups([
+      item('agent', ASKING),
+      item('agent', FAILED),
+      item('agent', { group: 'untracked', endedAt: 0 }),
+      item('monitor', RUNNING),
+      item('task', RUNNING),
+      item('agent', RUNNING),
+      item('agent', DONE),
+      item('agent', STOPPED),
+    ]);
+    const words =
+      `background ${groups.map(({ text }) => text).join(' · ')}`.split(/\s+/);
+
+    for (const width of [74, 114]) {
+      const lines = summaryLines(groups, width).map((line) =>
+        line.map(({ text }) => text).join(''),
+      );
+
+      expect(lines.join(' ').trim().split(/\s+/)).toStrictEqual(words);
+      expect(lines.every((line) => Array.from(line).length <= width)).toBe(
+        true,
+      );
+    }
+  });
+});

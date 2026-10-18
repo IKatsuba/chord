@@ -1,0 +1,40 @@
+
+ ← from @main
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Received the message from main.
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+   ⎿  Language, Checks · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › link
+
+ ››› Waiting for your input… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ parser asks you to open a link                                                                                       │
+│ Sign in to Example to continue                                                                                       │
+│                                                                                                                      │
+│   https://example.com/oauth/authorize?client=abc&state=9f2c                                                          │
+│   Opens example.com                                                                                                  │
+│                                                                                                                      │
+│ ❯ 1. Open in the browser                                                                                             │
+│   2. Decline                                                                                                         │
+│                                                                                                                      │
+│ Enter to choose · Esc to cancel                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts         Fake Small · medium effort · 5% context used
+    main    fake · Fake Large with a 1M context window · medium  ✓ replied 5s ago
+    parser  fake · Fake Small · medium                           ● input 0s
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 10s

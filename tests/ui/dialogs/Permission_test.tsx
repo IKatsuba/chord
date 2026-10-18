@@ -821,3 +821,171 @@ describe('a request between turns (CHD-158)', () => {
       { columns: 44 },
     ));
 });
+
+
+describe('CHD-158 tester: attendance in the window', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const focus of ['search', 'sessions'] as const) {
+      test(`attention answers from ${focus} and preserves the draft at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await send(window, 'mainbetween');
+            await window.shows('ctrl+x a to answer');
+            await window.type('keep-this-draft');
+
+            if (focus === 'search') {
+              await window.press('\x12');
+              await window.shows('search prompts:');
+            } else {
+              await leader(window, 'w');
+              await window.shows('Enter to go');
+            }
+
+            await window.press('\x18');
+            await window.press('a');
+            await window.shows('❯ 1. Allow');
+            expect(window.frame()).not.toContain('search prompts:');
+            expect(window.frame()).not.toContain('Enter to go');
+            expect(promptRow(window)).toContain('keep-this-draft');
+            await window.press(ESC);
+            await window.shows('Permission: deny.');
+            expect(promptRow(window)).toContain('keep-this-draft');
+          },
+          { columns, rows },
+        ));
+    }
+  }
+
+  test('a second queued permission needs its own attendance before a digit can answer it', () =>
+    withWindow(async (window) => {
+      const session = window.session();
+
+      assert(session);
+
+      const request = (id: string) =>
+        session.permissions.handler(
+          {
+            sessionId: session.id,
+            toolCall: { toolCallId: id, title: `Write ${id}.md` },
+            options: [
+              { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+              { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+            ],
+          },
+          new AbortController().signal,
+        );
+      const first = request('first');
+      const second = request('second');
+
+      await window.shows('Write first.md');
+      await leader(window, 'a');
+      await window.shows('❯ 1. Allow');
+      await window.press('1');
+      expect(await first).toStrictEqual({
+        outcome: { outcome: 'selected', optionId: 'allow' },
+      });
+      await window.shows('Write second.md');
+      await window.shows('ctrl+x a to answer');
+      expect(window.frame()).not.toContain('❯ 1. Allow');
+      await window.type('2');
+      expect(promptRow(window)).toContain('› 2');
+      await leader(window, 'a');
+      await window.shows('❯ 1. Allow');
+      await window.press('2');
+      expect(await second).toStrictEqual({
+        outcome: { outcome: 'selected', optionId: 'deny' },
+      });
+      await until(
+        'the second permission to close',
+        () => !window.frame().includes('Do you want to proceed?'),
+      );
+      expect(promptRow(window)).toContain('› 2');
+    }));
+});
+
+describe('CHD-158 tester: agent and task requesters', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`attention takes the keys from agents focus at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'agents');
+            await window.shows('All 214 parser tests pass now.');
+            await until(
+              'the parent to finish its replies',
+              () => !window.frame().includes('Working…'),
+            );
+            await send(window, 'mainbetween');
+            await window.shows('main asks · between turns');
+            await window.press(DOWN);
+            await window.shows('❯ main');
+            await window.press('\x18');
+            await window.press('a');
+            await window.shows('❯ 1. Allow');
+            expect(window.frame()).not.toContain('❯ main');
+            await window.press(ESC);
+            await window.shows('Permission: deny.');
+            await window.type('after-focus');
+            expect(promptRow(window)).toContain('after-focus');
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+
+    test(`a spawn_task permission is held with its requester named after the parent ends at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            const parent = window.session()!;
+            const prompt = parent.prompt.bind(parent);
+            let ended = false;
+
+            parent.prompt = (...args) => {
+              const turn = prompt(...args);
+
+              void turn.result.then(() => {
+                ended = true;
+              });
+
+              return turn;
+            };
+
+            await send(window, 'taskbetween');
+            await window.shows(
+              'Agent(Fix the tokenizer) · fake asks · between turns',
+            );
+            await window.shows('ctrl+x a to answer');
+            expect(ended).toBe(true);
+            expect(window.frame()).not.toContain('❯ 1. Allow');
+            await window.type('3');
+            expect(promptRow(window)).toContain('› 3');
+            await leader(window, 'a');
+            await window.shows('❯ 1. Allow');
+            await window.press('1');
+            await window.shows(
+              'Received the message from Fix the tokenizer · fake · report.',
+            );
+            expect(promptRow(window)).toContain('› 3');
+            expect(window.frame()).not.toContain('ctrl+x a to answer');
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

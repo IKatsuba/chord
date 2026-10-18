@@ -6,6 +6,7 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { linkHost } from './form.ts';
 import type { Choice } from './permission.ts';
+import { AttendHint, BETWEEN } from './Permission.tsx';
 
 /**
  * A link the agent asks the person to open, in the permission prompt's
@@ -16,11 +17,20 @@ export function LinkPrompt({
   wait,
   agent,
   active,
+  held = false,
+  between = false,
   onAnswer,
 }: {
   wait: Extract<ElicitationWait, { mode: 'url' }>;
+  /**
+   * Asked with no turn running: its heading names `agent` as who asks and
+   * says so, dim, wrapping rather than cut (CHD-158).
+   */
+  between?: boolean;
   agent: string;
   active: boolean;
+  /** Asked between turns, the keys not taken into it yet (CHD-158). */
+  held?: boolean;
   /** `open` when the person chose to open it. */
   onAnswer: (answer: 'open' | 'decline' | 'cancel') => void;
 }) {
@@ -50,8 +60,13 @@ export function LinkPrompt({
       marginTop={1}
       flexShrink={0}
     >
-      <text {...CUT} {...fg(colours.permission)} attributes={BOLD}>
+      <text
+        {...(between ? TEXT : CUT)}
+        {...fg(colours.permission)}
+        attributes={BOLD}
+      >
         {`${agent} asks you to open a link`}
+        {between && <span attributes={DIM}>{BETWEEN}</span>}
       </text>
       <text {...TEXT}>
         <Ansi text={wait.message} />
@@ -74,14 +89,19 @@ export function LinkPrompt({
         <ChoiceList
           choices={choices}
           active={active}
+          marked={!held}
           onSelect={(value) => onAnswer(value === 'open' ? 'open' : 'decline')}
         />
       </box>
-      <box marginTop={1}>
-        <text {...TEXT} attributes={DIM}>
-          Enter to choose · Esc to cancel
-        </text>
-      </box>
+      {held ? (
+        <AttendHint />
+      ) : (
+        <box marginTop={1}>
+          <text {...TEXT} attributes={DIM}>
+            Enter to choose · Esc to cancel
+          </text>
+        </box>
+      )}
     </box>
   );
 }

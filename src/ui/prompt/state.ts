@@ -6,7 +6,8 @@
 import { shellContext } from '../../session/context.ts';
 import type { ConversationEvent } from '../../session/conversation.ts';
 import type { ShellRun, Transcript } from '../../session/transcript/types.ts';
-import { asksPerson } from '../dialogs/state.ts';
+import { asksWithKeys } from '../dialogs/state.ts';
+import type { Keymap } from '../shortcuts/bindings.ts';
 import {
   agentQuery,
   type CommandItem,
@@ -297,6 +298,22 @@ export function reducePrompt(
         };
       }
 
+      // Told again once the answer it waited for came: only that changes.
+      if (state.queue.some((item) => item.turnId === action.turnId)) {
+        return {
+          ...state,
+          queue: state.queue.map((item) => {
+            if (item.turnId !== action.turnId) {
+              return item;
+            }
+
+            const { afterAnswer: _, ...rest } = item;
+
+            return action.afterAnswer ? { ...rest, afterAnswer: true } : rest;
+          }),
+        };
+      }
+
       // Queued just before its `context_sent` and `images_sent`, so what is
       // held and the draft's images went with it.
       const images = imagesIn(action.text, state.images);
@@ -310,6 +327,7 @@ export function reducePrompt(
             text: action.text,
             ...(state.held.length > 0 ? { held: state.held } : {}),
             ...(images.length > 0 ? { images } : {}),
+            ...(action.afterAnswer ? { afterAnswer: action.afterAnswer } : {}),
           },
         ],
       };
@@ -429,6 +447,10 @@ interface Said {
  */
 interface Open extends Said {
   readonly connection: { readonly status: string };
+  /** The keys, by which a request between turns is held or not. */
+  readonly keys: Keymap;
+  /** The request between turns the keys were taken into, if one was. */
+  readonly attended?: string;
 }
 
 /** The shell run still going, if there is one; one runs at a time. */
@@ -479,7 +501,7 @@ export function commandMenu(
     state.bash ||
     state.search !== undefined ||
     state.connection.status === 'closing' ||
-    asksPerson(state.transcript)
+    asksWithKeys(state)
   ) {
     return undefined;
   }
@@ -549,7 +571,7 @@ export function pendingMention(
     state.search !== undefined ||
     state.finder.dismissed ||
     state.connection.status === 'closing' ||
-    asksPerson(state.transcript)
+    asksWithKeys(state)
   ) {
     return undefined;
   }
@@ -580,7 +602,7 @@ export function fileFinder(
     state.search !== undefined ||
     state.finder.dismissed ||
     state.connection.status === 'closing' ||
-    asksPerson(state.transcript)
+    asksWithKeys(state)
   ) {
     return undefined;
   }

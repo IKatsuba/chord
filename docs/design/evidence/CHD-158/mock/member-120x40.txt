@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main               fake · Fake Large with a 1M context window · medium
+    bugfix             team · fake · Fake Large with a 1M context window · medium
+    ├─ tester          fake · Fake Small · medium                                  ● permission 9s
+    └─ coder           fake · Fake Large with a 1M context window · medium

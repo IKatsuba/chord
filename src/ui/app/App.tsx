@@ -57,7 +57,12 @@ import {
   reduceWindowed,
   windowed,
 } from './state.ts';
-import { askedInput } from '../dialogs/state.ts';
+import {
+  askedInput,
+  betweenAsked,
+  betweenAsker,
+  heldBack,
+} from '../dialogs/state.ts';
 import {
   configOption,
   configPickerShown,
@@ -476,6 +481,9 @@ export function App({
   useTimers(state, dispatch);
 
   const asked = askedPermission(state.transcript.turn);
+  // A request between turns waits without the keys until `ctrl+x a`.
+  const held = heldBack(state);
+  const between = betweenAsked(state.transcript) !== undefined;
   // A chord's next key is the window's alone, so a digit after the leader
   // never picks a permission's or a form's choice.
   const listening =
@@ -765,7 +773,7 @@ export function App({
   // window's alone.
   const boxKeys =
     state.connection.status !== 'closing' &&
-    !asked &&
+    (!asked || held) &&
     !choosing &&
     state.pendingKeys === undefined &&
     !state.search &&
@@ -795,6 +803,81 @@ export function App({
   const firstPrompt = state.transcript.entries.find(
     (entry) => entry.kind === 'user',
   );
+
+  // A form or link in the prompt's place; one asked between turns is drawn
+  // above the prompt instead, without the keys, until the person takes them
+  // into it (CHD-158).
+  // A form or link between turns names who asks, as the box does.
+  const inputBetween =
+    inputAsked !== undefined &&
+    betweenAsked(state.transcript) === inputAsked.id;
+  const inputAgent =
+    inputAsked === undefined || !inputBetween
+      ? frontAgent
+      : betweenAsker(
+          state.transcript.entries,
+          inputAsked.subagentId ?? inputAsked.asker,
+          childShown?.name ?? 'main',
+        );
+  const inputDialog =
+    inputAsked?.mode === 'form' &&
+    inputAsked.questions !== undefined &&
+    !listingSessions ? (
+      <QuestionBox
+        key={inputAsked.id}
+        wait={inputAsked}
+        questions={inputAsked.questions}
+        filled={
+          state.answering?.id === inputAsked.id
+            ? state.answering.state
+            : undefined
+        }
+        agent={inputAgent}
+        between={inputBetween}
+        windowRows={rows}
+        width={columns}
+        active={listening && !state.agentsFocus && !held}
+        held={held}
+        onFill={(answering) =>
+          dispatch({
+            type: 'questions_answered',
+            id: inputAsked.id,
+            state: answering,
+          })
+        }
+        onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
+      />
+    ) : inputAsked?.mode === 'form' && !listingSessions ? (
+      <ElicitationForm
+        key={inputAsked.id}
+        wait={inputAsked}
+        filled={
+          state.filling?.id === inputAsked.id ? state.filling.form : undefined
+        }
+        agent={inputAgent}
+        between={inputBetween}
+        windowRows={rows}
+        width={columns}
+        active={listening && !state.agentsFocus && !held}
+        held={held}
+        onFill={(form) =>
+          dispatch({ type: 'form_filled', id: inputAsked.id, form })
+        }
+        onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
+      />
+    ) : inputAsked?.mode === 'url' && !listingSessions ? (
+      <LinkPrompt
+        key={inputAsked.id}
+        wait={inputAsked}
+        agent={inputAgent}
+        between={inputBetween}
+        active={listening && !state.agentsFocus && !held}
+        held={held}
+        onAnswer={(answer) =>
+          answerLink(openUrl, conversation(), inputAsked, answer)
+        }
+      />
+    ) : undefined;
 
   return (
     <Colours.Provider value={colours}>
@@ -969,6 +1052,8 @@ export function App({
                       : subagentPath(state.transcript.entries, asked.subagentId)
                   }
                   {...(childShown === undefined ? {} : { child: childShown })}
+                  between={between}
+                  held={held}
                   width={columns - 4}
                   active={listening && !state.agentsFocus}
                   onChoose={(optionId) =>
@@ -1076,63 +1161,9 @@ export function App({
                       })}
                 />
               )}
-              {inputAsked?.mode === 'form' &&
-              inputAsked.questions !== undefined &&
-              !listingSessions ? (
-                <QuestionBox
-                  key={inputAsked.id}
-                  wait={inputAsked}
-                  questions={inputAsked.questions}
-                  filled={
-                    state.answering?.id === inputAsked.id
-                      ? state.answering.state
-                      : undefined
-                  }
-                  agent={frontAgent}
-                  windowRows={rows}
-                  width={columns}
-                  active={listening && !state.agentsFocus}
-                  onFill={(answering) =>
-                    dispatch({
-                      type: 'questions_answered',
-                      id: inputAsked.id,
-                      state: answering,
-                    })
-                  }
-                  onAnswer={(response) =>
-                    conversation()?.answer(inputAsked.id, response)
-                  }
-                />
-              ) : inputAsked?.mode === 'form' && !listingSessions ? (
-                <ElicitationForm
-                  key={inputAsked.id}
-                  wait={inputAsked}
-                  filled={
-                    state.filling?.id === inputAsked.id
-                      ? state.filling.form
-                      : undefined
-                  }
-                  agent={frontAgent}
-                  windowRows={rows}
-                  width={columns}
-                  active={listening && !state.agentsFocus}
-                  onFill={(form) =>
-                    dispatch({ type: 'form_filled', id: inputAsked.id, form })
-                  }
-                  onAnswer={(response) =>
-                    conversation()?.answer(inputAsked.id, response)
-                  }
-                />
-              ) : inputAsked?.mode === 'url' && !listingSessions ? (
-                <LinkPrompt
-                  key={inputAsked.id}
-                  wait={inputAsked}
-                  agent={frontAgent}
-                  active={listening && !state.agentsFocus}
-                  onAnswer={(answer) =>
-                    answerLink(openUrl, conversation(), inputAsked, answer)
-                  }
-                />
+              {held && inputDialog}
+              {inputDialog !== undefined && !held ? (
+                inputDialog
               ) : (
                 <PromptInput
                   key={state.search ? `search:${state.search.match}` : inputKey}
@@ -1159,7 +1190,7 @@ export function App({
                   // prompt or the model picker is drawn; a key in between is not the
                   // draft's either.
                   onChange={(value) =>
-                    !asked &&
+                    (!asked || held) &&
                     !choosing &&
                     !chordKey.current &&
                     play(changeSteps(value, context()))
@@ -1181,7 +1212,7 @@ export function App({
                   normal={boxKeys && state.vim?.mode === 'normal'}
                   onCursorChange={(at) => {
                     if (
-                      !asked &&
+                      (!asked || held) &&
                       !choosing &&
                       !chordKey.current &&
                       !cutting.current

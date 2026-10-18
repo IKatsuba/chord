@@ -18,14 +18,18 @@ export function permissionRequested(
   turnId: string,
   asked: PermissionWait,
   at = 0,
+  between = false,
 ): Transcript {
   const { turn } = state;
   // A subagent's request keeps when it came, which a task's row counts from.
   const permission = asked.subagentId === undefined ? asked : { ...asked, at };
+  const outside = between || taskWaits(state, [permission]).length > 0;
 
-  // A task agent outlives the turn that started it, and may ask between
-  // turns; the session waits on the person until it is answered.
-  if (turn.status === 'idle' && taskWaits(state, [permission]).length > 0) {
+  // An agent may ask with no turn running: a task agent outlives the turn
+  // that started it, and an agent's own work, a subagent's or a background
+  // command's, goes on past its answer (CHD-158). The session waits on the
+  // person until it is answered.
+  if (turn.status === 'idle' && outside) {
     return {
       ...state,
       turn: {
@@ -41,7 +45,7 @@ export function permissionRequested(
   if (
     turn.status === 'awaiting_permission' &&
     turn.between &&
-    taskWaits(state, [permission]).length > 0 &&
+    outside &&
     !turn.permissions.some((wait) => wait.id === permission.id)
   ) {
     return {
@@ -50,7 +54,10 @@ export function permissionRequested(
     };
   }
 
-  if (!isCurrent(turn, turnId) || turn.status === 'cancelling') {
+  // One asked as a turn of chord's started waits in that turn.
+  const owner = between && turn.status !== 'idle' ? turn.turnId : turnId;
+
+  if (!isCurrent(turn, owner) || turn.status === 'cancelling') {
     return state;
   }
 
@@ -64,7 +71,7 @@ export function permissionRequested(
     ...state,
     turn: {
       status: 'awaiting_permission',
-      turnId,
+      turnId: owner,
       since: turn.since,
       permissions: [...waiting, permission],
     },
@@ -137,7 +144,8 @@ export function elicitationRequested(
 ): Transcript {
   const { turn } = state;
 
-  const outside = elicitation.subagentId !== undefined;
+  const outside =
+    elicitation.subagentId !== undefined || elicitation.between === true;
 
   if (
     (!outside && (!isCurrent(turn, turnId) || turn.status === 'cancelling')) ||
@@ -206,7 +214,9 @@ export function elicitationSettled(
 
   if (
     !wait ||
-    (wait.subagentId === undefined && !isCurrent(state.turn, turnId))
+    (wait.subagentId === undefined &&
+      wait.between === undefined &&
+      !isCurrent(state.turn, turnId))
   ) {
     return state;
   }

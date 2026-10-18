@@ -144,6 +144,28 @@ export const TASKS = {
     return 'end_turn';
   },
 
+  // Starts `taskchild` as `task` does, then ends its turn at once, so the
+  // task asks its write's permission with no turn of its parent's running
+  // (CHD-158).
+  async taskbetween(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'spawn_task', TASK_ARGS);
+      await turn.say('It is running; I will check its report when it lands.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // A call of its own titled as claude's question call, never asked, then
   // a task whose job is `askclaude`. Played first in a session, the
   // parent's call and the task's question call share the id `ask-1`, as

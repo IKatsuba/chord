@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › mainbetween
+
+ ⏺ I will write the report once the build is done.
+
+ ⏺ Write(notes/report.md)
+   ⎿  Allowed Write notes/report.md · Allow
+
+ ⏺ Permission: allow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ › the flaky test in tests/parse is the tokenizer one; run ...tell me how often it fails, with the seed of each failure
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

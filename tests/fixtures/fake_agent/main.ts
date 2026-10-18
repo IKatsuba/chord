@@ -125,6 +125,15 @@
  * one the turn waits on beside one in the background, which goes on about
  * 4 s, past the turn and past a cancel that stops only the first.
  * `claudeslowstop` is the same, its subagents taking about 2 s to stop alone.
+ * `claudebetween` starts one in the background that, about 2 s after the
+ * turn has answered, asks to write a report and then asks a form, and
+ * `mainbetween` has the session's own agent ask for a write about half a
+ * second after its answer, and `taskbetween` starts `taskchild` as `task`
+ * does and ends its turn at once, so the task asks with none of its
+ * parent's running: requests with no turn running (CHD-158).
+ * `mainbetweentwice` asks as `mainbetween` does, then a second write at once,
+ * silent half a second (less at a quick pace, never more) after that one's
+ * answer before it says what came back.
  * `claudemessage` messages a Claude subagent again once it is done, as
  * SendMessage does, and it runs once more. `claudewaiting` holds one in
  * `requires_action` about 2 s with no request of its sent, then done, and
@@ -294,6 +303,10 @@ const SCENARIOS = [
   'bash',
   'bashcut',
   'bashask',
+  'claudebetween',
+  'mainbetween',
+  'mainbetweentwice',
+  'taskbetween',
   'compact',
   'codexcompact',
   'compactfail',

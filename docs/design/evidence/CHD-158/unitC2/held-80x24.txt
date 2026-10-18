@@ -1,0 +1,24 @@
+ ⏺ Agent(tester (general-purpose))
+   ⎿  Write(notes/test-report.md) · waiting for permission
+
+ ⏺ It is running; I will say when it ends.
+
+ ››› Waiting for permission… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(tester (general-purpose)) asks · between turns                         │
+│ Write notes/test-report.md                                                   │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer    Fake Large with a 1M context… · 1% used
+    background  ● 1 agent asking

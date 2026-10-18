@@ -295,26 +295,21 @@ test('a row drops its counts before its title is cut, and keeps its brackets', (
   });
 });
 
-test("a child's permission names the way down to it, cut from the left", () => {
+test("a child's permission names the way down to it, whole, however long", () => {
   const child = agent({ id: 'a1', title: 'Find the session layer' });
   const grandchild = agent({ id: 'a3', title: 'Read the transport tests' });
   const text = (pieces: ReturnType<typeof askerRow>) =>
     pieces.map((piece) => piece.text).join('');
 
-  expect(askerRow([], 80)).toStrictEqual([]);
-  expect(askerRow([child], 80)).toStrictEqual([
+  expect(askerRow([])).toStrictEqual([]);
+  expect(askerRow([child])).toStrictEqual([
     { text: 'Agent', bold: true },
     { text: '(Find the session layer)', bold: false },
     { text: ' asks', bold: false },
   ]);
-  expect(text(askerRow([child, grandchild], 80))).toStrictEqual(
+  expect(text(askerRow([child, grandchild]))).toStrictEqual(
     'Agent(Find the session layer) › Agent(Read the transport tests) asks',
   );
-
-  const cut = askerRow([child, grandchild], 40);
-
-  expect(text(cut)).toStrictEqual('… › Agent(Read the transport tests) asks');
-  expect(cut.find((piece) => piece.bold)?.text).toStrictEqual('Agent');
 });
 
 test("a subagent's work keeps its plan where it first came, and groups its own subagents", () => {

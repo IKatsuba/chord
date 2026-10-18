@@ -38,7 +38,11 @@ export interface Queued {
 }
 
 export type QueueRow =
-  | { readonly kind: 'prompt'; readonly text: string }
+  /**
+   * The person's prompt; one held behind a request between turns says so
+   * first, in `header` (CHD-158).
+   */
+  | { readonly kind: 'prompt'; readonly text: string; readonly header?: string }
   /**
    * A message, drawn after `←`: its header whole, then its text, which
    * alone is cut to the width.
@@ -86,6 +90,9 @@ export function queueRowLimit(rows: number): number {
  * marked `…` where it has more; past the limit the newest fold to
  * `… +N more`, since the oldest goes next.
  */
+/** Ahead of a prompt held for the person's answer to a request. */
+const AFTER_ANSWER = 'after your answer: ';
+
 export function queueRows(queue: readonly Queued[], limit: number): QueueRow[] {
   const rows = queue.map(
     ({ text, from, afterAnswer, afterCalls }): QueueRow => {
@@ -102,7 +109,11 @@ export function queueRows(queue: readonly Queued[], limit: number): QueueRow[] {
 
       const [first = '', ...rest] = text.split('\n');
 
-      return { kind: 'prompt', text: rest.length > 0 ? `${first} …` : first };
+      return {
+        kind: 'prompt',
+        text: rest.length > 0 ? `${first} …` : first,
+        ...(afterAnswer ? { header: AFTER_ANSWER } : {}),
+      };
     },
   );
 

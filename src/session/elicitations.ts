@@ -28,6 +28,8 @@ export type ElicitationReply =
 export interface PendingElicitation {
   readonly id: string;
   readonly wait: ElicitationWait;
+  /** The session that asks: the agent's own, or one of its subagents'. */
+  readonly sessionId?: string;
   /**
    * Aborts when the request stops mattering — the turn was cancelled or ended,
    * or the session closed — so the interface takes the form off the screen.
@@ -107,6 +109,9 @@ export class ElicitationBridge {
       const pending: PendingElicitation = {
         id,
         wait: waitOf(id, request),
+        ...('sessionId' in request && typeof request.sessionId === 'string'
+          ? { sessionId: request.sessionId }
+          : {}),
         signal,
         answer,
       };

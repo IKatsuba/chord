@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import {
+  betweenNotice,
   contextUsed,
   SPINNER_STEPS,
   spinnerMarks,
@@ -536,4 +537,22 @@ test("a tab behind names a child's failure for the child, in the tab; only its o
   expect(waitsNotice([behind(2, 'fake', failed('turn'))])?.text).toStrictEqual(
     "✗ 2 fake's turn failed",
   );
+});
+
+test("the front session's own request between turns names the key that answers it, short where it must be (CHD-158)", () => {
+  const permission = { ...facts, mode: 'default', hint: undefined };
+  const waits = betweenNotice('permission', 'ctrl+x a');
+
+  expect(text({ ...permission, waits }, 120)).toStartWith(
+    '● permission asked between turns · ctrl+x a to answer  ',
+  );
+  expect(text({ ...permission, waits }, 80)).toStartWith(
+    '● permission · ctrl+x a to answer  ',
+  );
+  expect(
+    text({ ...permission, waits: betweenNotice('input', 'ctrl+x a') }, 120),
+  ).toStartWith('● input asked between turns · ctrl+x a to answer  ');
+  expect(
+    text({ ...permission, waits: betweenNotice('input', 'ctrl+x a') }, 80),
+  ).toStartWith('● input · ctrl+x a to answer  ');
 });

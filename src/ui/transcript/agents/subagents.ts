@@ -494,14 +494,19 @@ export interface AskerPiece {
 
 /**
  * `Agent(<child>) › Agent(<grandchild>) asks`: who a permission request
- * comes from, the way down to it from the session, in `width` cells, cut
- * from the left with `…` so the one asking stays. None when the session's own
- * agent asks: the missing row is how its requests differ.
+ * comes from, the way down to it from the session, whole: the box wraps it
+ * rather than cut it (CHD-158). None when the session's own agent asks: in
+ * a turn, the missing row is how its requests differ.
  */
-export function askerRow(
-  path: readonly Subagent[],
-  width: number,
-): AskerPiece[] {
+/** `askerRow`'s text without its `asks`: who asks, by the way down. */
+export function askerName(path: readonly Subagent[]): string {
+  return askerRow(path)
+    .slice(0, -1)
+    .map((piece) => piece.text)
+    .join('');
+}
+
+export function askerRow(path: readonly Subagent[]): AskerPiece[] {
   if (path.length === 0) {
     return [];
   }
@@ -517,48 +522,7 @@ export function askerRow(
     ];
   });
 
-  const whole = [...pieces, { text: ' asks', bold: false }];
-  let over =
-    whole.reduce((sum, piece) => sum + stringWidth(piece.text), 0) - width;
-
-  if (over <= 0) {
-    return whole;
-  }
-
-  // One cell more goes to the `…` that says it was cut.
-  over += 1;
-
-  const kept: AskerPiece[] = [];
-
-  for (const piece of whole) {
-    const cells = stringWidth(piece.text);
-
-    if (over >= cells) {
-      over -= cells;
-
-      continue;
-    }
-
-    kept.push(
-      over > 0 ? { ...piece, text: cutStart(piece.text, over) } : piece,
-    );
-
-    over = 0;
-  }
-
-  return [{ text: '…', bold: false }, ...kept];
-}
-
-/** `text` with at least `cells` cells cut from its start. */
-function cutStart(text: string, cells: number): string {
-  const chars = [...text];
-  let cut = 0;
-
-  while (chars.length > 0 && cut < cells) {
-    cut += stringWidth(chars.shift()!);
-  }
-
-  return chars.join('');
+  return [...pieces, { text: ' asks', bold: false }];
 }
 
 /**

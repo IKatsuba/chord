@@ -1,0 +1,24 @@
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Write(notes/test-report.md) · waiting for permission
+
+ ⏺ It is running; I will say when it ends.
+
+ ››› Waiting for permission… (4s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Run the whole test suite) asks · between turns                         │
+│ Write notes/test-report.md                                                   │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer            Fake Large with a 1M… · 1% used

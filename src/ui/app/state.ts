@@ -52,6 +52,8 @@ import {
 import {
   askedInput,
   asksPerson,
+  asksWithKeys,
+  heldBack,
   type DialogsAction,
   type DialogsState,
   reduceDialogs,
@@ -491,6 +493,21 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'questions_answered':
     case 'request_overflowed':
       return reduceDialogs(state, action) as AppState;
+    case 'request_attended': {
+      // The keys go into the request from wherever they were: the list of
+      // agents, a search and the sessions picker let go of them, the draft
+      // staying as it is (CHD-158).
+      const attended = [
+        { type: 'agents_focused', focused: false },
+        { type: 'sessions_picker_closed' },
+      ].reduce<AppState>(
+        (next, step) => reduceApp(next, step as AppAction),
+        reduceDialogs(state, action) as AppState,
+      );
+      const { search: _, ...rest } = attended;
+
+      return rest;
+    }
     case 'connected':
       return state.connection.status === 'starting'
         ? {
@@ -858,7 +875,11 @@ function reduceStep(state: AppState, action: AppAction): AppState {
 
       // A permission asked while a search is open takes the keys: the search
       // closes rather than share them, and the draft is back in the box.
-      if (next.search !== undefined && asksPerson(transcript)) {
+      if (
+        next.search !== undefined &&
+        asksPerson(transcript) &&
+        !heldBack(next)
+      ) {
         const { search: _, ...rest } = next;
 
         return rest;
@@ -875,6 +896,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
  */
 const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   overflowing: true,
+  attended: true,
   connection: true,
   sessionId: true,
   since: true,
@@ -1121,9 +1143,17 @@ export function canSend(state: AppState, draft: string): boolean {
   return state.connection.status === 'ready' && draft.trim() !== '';
 }
 
-/** The permission prompt, a form or a picker is on screen and takes the keys. */
+/**
+ * The permission prompt, a form or a picker is on screen and takes the keys;
+ * one asked between turns only once the person has taken them into it.
+ */
 function listHasKeys(state: AppState): boolean {
-  return asksPerson(state.transcript) || pickerShown(state);
+  return asksWithKeys(state) || pickerShown(state);
+}
+
+/** The form or link on screen, when it has the keys. */
+function inputWithKeys(state: AppState) {
+  return heldBack(state) ? undefined : askedInput(state.transcript);
 }
 
 /** One of chord's pickers or panels is open over the prompt. */
@@ -1248,7 +1278,7 @@ function pressCommand(
     stroke !== undefined &&
     state.pendingKeys === undefined &&
     types(stroke) &&
-    ((askedInput(state.transcript) !== undefined && !state.agentsFocus) ||
+    ((inputWithKeys(state) !== undefined && !state.agentsFocus) ||
       state.search !== undefined);
   const pressed =
     stroke === undefined || typed
@@ -1420,7 +1450,7 @@ function boundCommand(
   // A form takes every key but these: ctrl+c stops the turn, which takes the
   // form with it, ctrl+o, and the transcript's scrolling keys. Esc is the
   // form's, as it answers `cancel`.
-  if (askedInput(state.transcript) !== undefined) {
+  if (inputWithKeys(state) !== undefined) {
     if (key.ctrl && input === 'c') {
       return 'interrupt';
     }
@@ -1495,6 +1525,7 @@ function boundCommand(
   // person reads it before answering (CHD-246).
   if (step) {
     return state.overflowing !== undefined &&
+      !heldBack(state) &&
       state.overflowing === askedPermission(state.transcript.turn)?.id
       ? `request_${step}`
       : `scroll_${step}`;
@@ -1558,7 +1589,8 @@ function boundCommand(
 
   if (
     on('confirm:no') &&
-    state.transcript.turn.status === 'awaiting_permission'
+    state.transcript.turn.status === 'awaiting_permission' &&
+    !heldBack(state)
   ) {
     return 'reject_permission';
   }

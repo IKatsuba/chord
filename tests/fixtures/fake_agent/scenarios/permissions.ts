@@ -6,7 +6,7 @@
 import * as acp from '@agentclientprotocol/sdk';
 import { RELEASE_NOTES } from '../../release_notes.ts';
 import { STEP_MS } from '../options.ts';
-import { pause, type Play, type Turn } from '../turn.ts';
+import { lifetime, pause, type Play, type Turn } from '../turn.ts';
 
 /**
  * Asks for permission to call `server`'s `tool` with `rawInput`, as
@@ -116,6 +116,67 @@ async function askPermission(
   return 'end_turn';
 }
 
+/**
+ * The session's own agent asking, with no turn running, to write `file`,
+ * and, silent for `saysAfterMs` after the answer, ending the call: how its
+ * answer reads.
+ */
+async function askBetween(
+  turn: Turn,
+  file: string,
+  saysAfterMs = 0,
+): Promise<string> {
+  const { client, sessionId } = turn;
+  const update = (update: acp.SessionUpdate) =>
+    client.notify('session/update', { sessionId, update });
+  const toolCall: acp.ToolCall = {
+    toolCallId: turn.callId('write'),
+    title: `Write ${file}`,
+    kind: 'edit',
+    status: 'pending',
+    locations: [{ path: file }],
+  };
+
+  await update({ sessionUpdate: 'tool_call', ...toolCall });
+
+  const answer = await client.request(
+    'session/request_permission',
+    {
+      sessionId,
+      toolCall,
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    },
+    { cancellationSignal: lifetime.signal },
+  );
+  const chosen =
+    answer.outcome.outcome === 'selected'
+      ? answer.outcome.optionId
+      : 'cancelled';
+
+  await pause(lifetime.signal, saysAfterMs);
+  await update({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: toolCall.toolCallId,
+    status: chosen === 'allow' ? 'completed' : 'failed',
+  });
+
+  return chosen;
+}
+
+/** Text from the session's own agent with no turn running. */
+function sayBetween(turn: Turn, text: string): Promise<void> {
+  return turn.client.notify('session/update', {
+    sessionId: turn.sessionId,
+    update: {
+      sessionUpdate: 'agent_message_chunk',
+      content: { type: 'text', text },
+    },
+  });
+}
+
 export const PERMISSIONS = {
   // A write asked for while another call, `overlapask-a`, stays open: the
   // answer releases what waited on it while `a` still runs, and `a` ends
@@ -218,5 +279,54 @@ export const PERMISSIONS = {
     ]);
 
     return answers.includes('cancelled') ? 'cancelled' : 'end_turn';
+  },
+
+  // The session's own agent asks once its turn has answered, with no turn
+  // running, as an agent's background command's follow-up does (CHD-158),
+  // and says what came back.
+  async mainbetween(turn) {
+    void (async () => {
+      try {
+        await pause(lifetime.signal, STEP_MS * 100);
+
+        const chosen = await askBetween(turn, 'notes/report.md');
+
+        await sayBetween(turn, `Permission: ${chosen}.`);
+      } catch {
+        // The client went before it was answered.
+      }
+    })();
+
+    await turn.say('I will write the report once the build is done.');
+
+    return 'end_turn';
+  },
+
+  // As mainbetween, then, once answered, a second request at once, after
+  // whose answer it is silent half a second before it says what came back:
+  // a follow-up that must not be taken for a held prompt's reply.
+  async mainbetweentwice(turn) {
+    void (async () => {
+      try {
+        await pause(lifetime.signal, STEP_MS * 100);
+        await askBetween(turn, 'notes/report.md');
+
+        // Within chord's second of quiet at any pace, which is fixed, so the
+        // follow-up never meets its end.
+        const chosen = await askBetween(
+          turn,
+          'notes/summary.md',
+          Math.min(STEP_MS * 100, 500),
+        );
+
+        await sayBetween(turn, `Second: ${chosen}.`);
+      } catch {
+        // The client went before it was answered.
+      }
+    })();
+
+    await turn.say('I will write the report once the build is done.');
+
+    return 'end_turn';
   },
 } satisfies Record<string, Play>;

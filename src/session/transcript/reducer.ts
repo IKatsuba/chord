@@ -100,6 +100,7 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
         action.turnId,
         action.permission,
         action.at,
+        action.between,
       );
     case 'permission_settled':
       return permissionSettled(state, action.turnId, action.id, action.answer);

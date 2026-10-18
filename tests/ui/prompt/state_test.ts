@@ -828,3 +828,21 @@ describe('CHD-423 tester: held queue replacement', () => {
     expect(state.draft).not.toContain('Second.');
   });
 });
+
+test("the person's prompt held for an answer is marked so, and only that changes once it is told again (CHD-158)", () => {
+  const held = after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'queued', turnId: 't2', text: 'second', afterAnswer: true },
+  );
+
+  expect(held.queue).toStrictEqual([
+    { turnId: 't2', text: 'second', afterAnswer: true },
+  ]);
+  expect(
+    after(
+      { type: 'connected', sessionId: 'session-1' },
+      { type: 'queued', turnId: 't2', text: 'second', afterAnswer: true },
+      { type: 'queued', turnId: 't2', text: 'second' },
+    ).queue,
+  ).toStrictEqual([{ turnId: 't2', text: 'second' }]);
+});

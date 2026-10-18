@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › mainbetween
+
+ ⏺ I will write the report once the build is done.
+
+ ⏺ Write(notes/report.md)
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (0s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                                                            │
+│ Write notes/report.md                                                                                                │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

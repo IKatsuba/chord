@@ -178,3 +178,15 @@ describe('CHD-423 tester: held queue overflow', () => {
     ).toBe('My queued prompt.\ntyping');
   });
 });
+
+test("a prompt held for the person's answer says so ahead of its text (CHD-158)", () => {
+  expect(
+    queueRows([{ turnId: 't2', text: 'the flaky test', afterAnswer: true }], 5),
+  ).toStrictEqual([
+    {
+      kind: 'prompt',
+      text: 'the flaky test',
+      header: 'after your answer: ',
+    },
+  ]);
+});

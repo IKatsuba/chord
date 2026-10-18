@@ -1,8 +1,8 @@
 /**
  * The question forms the adapters send, each laid out as that adapter's
  * source lays it out, shared by the fake agent's scenarios that ask them and
- * the tests that read them: claude-agent-acp 0.87.0's AskUserQuestion,
- * codex-acp 2.1.1's `request_user_input`, factory-droid 0.236.0's, opencode's
+ * the tests that read them: claude-agent-acp 0.93.0's AskUserQuestion,
+ * codex-acp 2.2.2's `request_user_input`, factory-droid 0.236.0's, opencode's
  * and dimcode's.
  */
 import type { CreateElicitationRequest } from '@agentclientprotocol/sdk';

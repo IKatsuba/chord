@@ -785,6 +785,172 @@ test("an agent that sends ACP's own subagent_update folds the same way", () =>
     ]);
   }));
 
+/**
+ * Each subagent's title and the states its `subagent_update`s brought, in
+ * order, among `actions`; and the text of the `session_message`s heard
+ * under it.
+ */
+function reported(actions: readonly TranscriptAction[]) {
+  const byId = new Map<
+    string,
+    { title?: string; states: unknown[]; messages: string[] }
+  >();
+  const of = (id: string) => {
+    const found = byId.get(id) ?? { states: [], messages: [] };
+
+    byId.set(id, found);
+
+    return found;
+  };
+
+  for (const action of actions) {
+    if (action.type !== 'update') {
+      continue;
+    }
+
+    const { update, subagentId } = action;
+
+    if (update.sessionUpdate === 'subagent_update') {
+      const found = of(update.sessionId);
+
+      if (update.title !== undefined && update.title !== null) {
+        found.title = update.title;
+
+        expect(update.capabilities).toStrictEqual({ cancel: {} });
+      }
+
+      if (update.state !== undefined && update.state !== null) {
+        found.states.push(update.state);
+      }
+    } else if (
+      update.sessionUpdate === 'session_message' &&
+      subagentId !== undefined
+    ) {
+      for (const block of update.content ?? []) {
+        if (block.type === 'text') {
+          of(subagentId).messages.push(block.text);
+        }
+      }
+    }
+  }
+
+  return [...byId.values()];
+}
+
+test("Claude's subagents come in ACP's own form, with their whole task, ending each way it reports", () =>
+  withSession(async (session) => {
+    const subagents = reported(await play(session, 'claudesubagents'));
+
+    expect(subagents.map(({ title, states }) => ({ title, states }))).toEqual([
+      {
+        title: 'explorer (Explore)',
+        states: [
+          { state: 'running' },
+          { state: 'requires_action' },
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ],
+      },
+      {
+        title: 'reviewer (general-purpose)',
+        states: [
+          { state: 'running' },
+          {
+            state: 'idle',
+            stopReason: 'error',
+            error: { code: -32603, message: 'API Error: 529 Overloaded' },
+          },
+        ],
+      },
+      {
+        title: 'tester (general-purpose)',
+        states: [
+          { state: 'running' },
+          { state: 'idle', stopReason: 'cancelled' },
+        ],
+      },
+      {
+        title: 'watcher',
+        states: [{ state: 'running' }, { state: 'unknown' }],
+      },
+    ]);
+    expect(subagents[0]!.messages).toStrictEqual([
+      'Find where chord hands each session/update to its listeners and ' +
+        'say which file owns the routing.\n\nReport paths and line ' +
+        'numbers, and write what you find to notes/routing.md.',
+    ]);
+    expect(subagents.every(({ messages }) => messages.length === 1)).toBe(true);
+  }));
+
+test("a cancel ends Claude's subagents still at work idle and cancelled", () =>
+  withSession(async (session) => {
+    const actions = await play(session, 'claudesubagents', {
+      answer: 'cancel',
+    });
+
+    expect(actions.at(-1)).toMatchObject({
+      type: 'result',
+      result: { status: 'cancelled' },
+    });
+    expect(reported(actions)[0]!.states).toStrictEqual([
+      { state: 'running' },
+      { state: 'requires_action' },
+      { state: 'idle', stopReason: 'cancelled' },
+    ]);
+  }));
+
+test("Claude's background subagent goes on past a cancel that stops the one the turn waits on", () =>
+  withSession(async (session) => {
+    const after: TranscriptAction[] = [];
+    let answered = false;
+    const over = new Promise<void>((resolve) => {
+      session.subscribe((update) => {
+        if (!answered) {
+          return;
+        }
+
+        after.push({ type: 'update', turnId: TURN, update });
+
+        if (
+          update.sessionUpdate === 'subagent_update' &&
+          update.state?.state === 'idle'
+        ) {
+          resolve();
+        }
+      });
+    });
+
+    const actions = await play(session, 'claudebackground', {
+      cancelAfterEvents: 6,
+    });
+
+    answered = true;
+
+    await over;
+
+    expect(
+      reported([...actions, ...after]).map(({ title, states }) => ({
+        title,
+        states,
+      })),
+    ).toStrictEqual([
+      {
+        title: 'tester (general-purpose)',
+        states: [
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ],
+      },
+      {
+        title: 'explorer (Explore)',
+        states: [
+          { state: 'running' },
+          { state: 'idle', stopReason: 'cancelled' },
+        ],
+      },
+    ]);
+  }));
+
 test("-p prints the parent's reply alone, and refuses a subagent's request like any other", async () => {
   const dir = await mkdtemp(join(tmpdir(), 'chord-subagents-'));
   const reply: string[] = [];

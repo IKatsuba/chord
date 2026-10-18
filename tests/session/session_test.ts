@@ -445,6 +445,67 @@ test("a command's output comes whole at its end as Claude's adapter sends it to 
     ]);
   }));
 
+/** Each call's status and text as the last of its updates left them. */
+function endsOf(updates: readonly SessionUpdate[]) {
+  return calls(updates)
+    .filter((update) => update.status === 'failed')
+    .map((update) => ({
+      status: update.status,
+      text: update.content?.flatMap((block) =>
+        block.type === 'content' && block.content.type === 'text'
+          ? [block.content.text]
+          : [],
+      ),
+      exit: update._meta?.terminal_exit,
+    }));
+}
+
+// Claude's adapter ends a call the turn leaves without a result `failed`,
+// with a line saying why, and a command's terminal with no exit code.
+test("a cancel ends a running command and a call that never ran failed, as Claude's adapter sends them", () =>
+  withSession(async (session) => {
+    const { updates, result } = await run(session, 'bashcut', {
+      onUpdate: (updates, turn) => {
+        if (calls(updates).length === 3) {
+          void turn.cancel();
+        }
+      },
+    });
+    const command = calls(updates)[0]!.toolCallId;
+
+    expect(result.status).toStrictEqual('cancelled');
+    expect(endsOf(updates)).toStrictEqual([
+      {
+        status: 'failed',
+        text: [
+          'The turn was cancelled before this tool call returned a result.',
+        ],
+        exit: { terminal_id: command, exit_code: null, signal: null },
+      },
+      {
+        status: 'failed',
+        text: ['Claude stopped this tool call before it ran.'],
+        exit: undefined,
+      },
+    ]);
+  }));
+
+test("a turn that ends on its own leaves its command failed with Claude's line for no result", () =>
+  withSession(
+    async (session) => {
+      const { updates, result } = await run(session, 'bashcut');
+
+      expect(result.status).toStrictEqual('completed');
+      expect(endsOf(updates).map(({ text }) => text)).toStrictEqual([
+        ['Claude ended the turn without returning a result for this tool.'],
+        ['Claude stopped this tool call before it ran.'],
+      ]);
+    },
+    undefined,
+    '--step-ms',
+    '1',
+  ));
+
 /** The compactions in a transcript's `entries`. */
 function compactionsIn({ entries }: ReturnType<typeof reduceTranscript>) {
   return entries.flatMap((entry) =>

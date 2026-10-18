@@ -1,4 +1,4 @@
-/** Subagents as both adapters send them, and as ACP's own `subagent_update`. */
+/** Subagents in Codex's draft form, and in ACP's own `subagent_update` as Claude's adapter sends it. */
 import * as acp from '@agentclientprotocol/sdk';
 import { clientTakesSubagents } from '../client.ts';
 import { STEP_MS } from '../options.ts';
@@ -34,7 +34,7 @@ function subagentId(): string {
 }
 
 /**
- * Starts a subagent under `parent`, as both adapters announce one to a client
+ * Starts a subagent under `parent`, as Codex's adapter announces one to a client
  * that takes them: a `subagent_spawned` on the parent's session, after which
  * the subagent's work goes out under a session id of its own.
  */
@@ -349,6 +349,214 @@ async function readAll(
   await finish(child.sessionId, open, 'completed');
 }
 
+/** Claude's subagents still at work, to end with a cancelled turn. */
+type Working = Set<string>;
+
+/**
+ * Starts a subagent under `parent` as Claude's adapter announces one in ACP's
+ * own form: a `subagent_update` titled by its name and role, the short task as
+ * its description, running and open to a cancel of its own; then, on its own
+ * session, its whole task as a `session_message` from the parent's call that
+ * started it. `signal` is the parent's unless the subagent outlives its turn.
+ */
+async function announce(
+  parent: Turn,
+  working: Working | undefined,
+  title: string,
+  description: string,
+  task: string,
+  signal = parent.signal,
+): Promise<Turn> {
+  const child = new Turn(parent.client, subagentId(), signal);
+
+  await parent.send({
+    sessionUpdate: 'subagent_update',
+    sessionId: child.sessionId,
+    title,
+    description,
+    capabilities: { cancel: {} },
+    state: { state: 'running' },
+  });
+  working?.add(child.sessionId);
+  await child.send({
+    sessionUpdate: 'session_message',
+    messageId: parent.callId('agent'),
+    senderSessionId: parent.sessionId,
+    recipientSessionId: child.sessionId,
+    content: [{ type: 'text', text: task }],
+  });
+
+  return child;
+}
+
+/**
+ * Reports where a Claude subagent stands, on its parent's session. Sent at
+ * once, as a cancelled turn's are sent after its signal has aborted.
+ */
+async function report(
+  parent: Turn,
+  working: Working | undefined,
+  childId: string,
+  state: acp.StateUpdate,
+): Promise<void> {
+  if (state.state !== 'running' && state.state !== 'requires_action') {
+    working?.delete(childId);
+  }
+
+  await parent.client.notify('session/update', {
+    sessionId: parent.sessionId,
+    update: { sessionUpdate: 'subagent_update', sessionId: childId, state },
+  });
+}
+
+/**
+ * The explorer of `claudesubagents`: calls, then a write it asks permission
+ * for, waiting on the person meanwhile, and done.
+ */
+async function explore(
+  parent: Turn,
+  working: Working,
+  child: Turn,
+): Promise<void> {
+  await call(
+    child,
+    'search',
+    { title: 'Search sessionUpdate in src', kind: 'search' },
+    'completed',
+    'Found 14 files',
+  );
+  await call(
+    child,
+    'read',
+    {
+      title: 'Read src/acp/connection.ts',
+      kind: 'read',
+      locations: [{ path: 'src/acp/connection.ts' }],
+    },
+    'completed',
+  );
+
+  const write = child.callId('write');
+  const toolCall: acp.ToolCall = {
+    toolCallId: write,
+    title: 'Write notes/routing.md',
+    kind: 'edit',
+    status: 'pending',
+    locations: [{ path: 'notes/routing.md' }],
+  };
+
+  await child.send({ sessionUpdate: 'tool_call', ...toolCall });
+  await report(parent, working, child.sessionId, { state: 'requires_action' });
+
+  const answer = await child.client.request('session/request_permission', {
+    sessionId: child.sessionId,
+    toolCall,
+    options: [
+      { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+    ],
+  });
+
+  // A request withdrawn is the turn being cancelled, whose cancel follows.
+  if (answer.outcome.outcome === 'cancelled') {
+    await pause(child.signal, SUBAGENT_AFTER_MS * 10);
+  }
+
+  await report(parent, working, child.sessionId, { state: 'running' });
+
+  const allowed =
+    answer.outcome.outcome === 'selected' && answer.outcome.optionId !== 'deny';
+
+  await child.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: write,
+    status: allowed ? 'completed' : 'failed',
+  });
+  await child.say('Routing lives in src/acp/connection.ts.');
+  await report(parent, working, child.sessionId, {
+    state: 'idle',
+    stopReason: 'end_turn',
+  });
+}
+
+/** The reviewer of `claudesubagents`, whose work fails. */
+async function review(
+  parent: Turn,
+  working: Working,
+  child: Turn,
+): Promise<void> {
+  await call(
+    child,
+    'read',
+    {
+      title: 'Read src/session/transcript/reducer.ts',
+      kind: 'read',
+      locations: [{ path: 'src/session/transcript/reducer.ts' }],
+    },
+    'completed',
+  );
+  await pause(child.signal, SUBAGENT_STEP_MS);
+  await report(parent, working, child.sessionId, {
+    state: 'idle',
+    stopReason: 'error',
+    error: { code: -32603, message: 'API Error: 529 Overloaded' },
+  });
+}
+
+/** The tester of `claudesubagents`, stopped while its command runs. */
+async function stopped(
+  parent: Turn,
+  working: Working,
+  child: Turn,
+): Promise<void> {
+  const test = await call(
+    child,
+    'bash',
+    { title: '`bun test`', kind: 'execute' },
+    'in_progress',
+  );
+
+  await pause(child.signal, SUBAGENT_STEP_MS * 2);
+  await child.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: test,
+    status: 'failed',
+    content: [
+      {
+        type: 'content',
+        content: {
+          type: 'text',
+          text: 'The turn was cancelled before this tool call returned a result.',
+        },
+      },
+    ],
+  });
+  await report(parent, working, child.sessionId, {
+    state: 'idle',
+    stopReason: 'cancelled',
+  });
+}
+
+/** The watcher of `claudesubagents`, which the adapter loses sight of. */
+async function lost(
+  parent: Turn,
+  working: Working,
+  child: Turn,
+): Promise<void> {
+  await call(
+    child,
+    'read',
+    {
+      title: 'Read package.json',
+      kind: 'read',
+      locations: [{ path: 'package.json' }],
+    },
+    'completed',
+  );
+  await pause(child.signal, SUBAGENT_STEP_MS * 3);
+  await report(parent, working, child.sessionId, { state: 'unknown' });
+}
+
 export const SUBAGENTS = {
   // One subagent whose call is the only one open: the parent has none of
   // its own while the subagent's `sleep 2` runs, then it ends.
@@ -387,11 +595,11 @@ export const SUBAGENTS = {
     return 'end_turn';
   },
 
-  // Subagents as Claude's and Codex's adapters send them to a client that
-  // takes them: two spawned back to back, one with a plan, calls, a subagent
-  // of its own and a permission to ask, the other failing; then, alone, a
-  // third that outlives the turn. A cancel ends each one still open, as
-  // Claude's adapter does before it answers the prompt.
+  // Subagents in the draft form Codex's adapter sends to a client that takes
+  // them: two spawned back to back, one with a plan, calls, a subagent of its
+  // own and a permission to ask, the other failing; then, alone, a third that
+  // outlives the turn. A cancel ends each one still open before the prompt is
+  // answered, as the draft form does.
   async subagent(turn) {
     if (!clientTakesSubagents) {
       await turn.say('Subagents go only to a client that takes them.');
@@ -597,5 +805,156 @@ export const SUBAGENTS = {
     await turn.say('It says chord is a terminal client for ACP agents.');
 
     return 'end_turn';
+  },
+  // Subagents as Claude's adapter sends them, in ACP's own form: four
+  // spawned back to back, each with its whole task, ending each way it
+  // reports, the first waiting on the person for a write meanwhile. A cancel
+  // ends each still at work idle and `cancelled`, as Claude Code stops them.
+  async claudesubagents(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+
+    try {
+      await turn.say('I will send four agents.');
+
+      const explorer = await announce(
+        turn,
+        working,
+        'explorer (Explore)',
+        'Find the session layer',
+        'Find where chord hands each session/update to its listeners and ' +
+          'say which file owns the routing.\n\nReport paths and line ' +
+          'numbers, and write what you find to notes/routing.md.',
+      );
+      const reviewer = await announce(
+        turn,
+        working,
+        'reviewer (general-purpose)',
+        'Review the transcript reducer',
+        'Review src/session/transcript/reducer.ts for updates it drops.',
+      );
+      const tester = await announce(
+        turn,
+        working,
+        'tester (general-purpose)',
+        'Run the tests',
+        'Run bun test and report what fails.',
+      );
+      const watcher = await announce(
+        turn,
+        working,
+        'watcher',
+        'Watch the build',
+        'Watch the build and say when it breaks.',
+      );
+
+      await Promise.all([
+        explore(turn, working, explorer),
+        review(turn, working, reviewer),
+        stopped(turn, working, tester),
+        lost(turn, working, watcher),
+      ]);
+      await turn.say('Each agent has ended.');
+
+      return 'end_turn';
+    } catch (error) {
+      for (const id of [...working].toReversed()) {
+        await report(turn, working, id, {
+          state: 'idle',
+          stopReason: 'cancelled',
+        });
+      }
+
+      throw error;
+    }
+  },
+
+  // A Claude subagent in the background beside one the turn waits on: the
+  // first goes on past the turn's end, and past a cancel, which stops only
+  // the second, then reports done.
+  async claudebackground(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+
+    try {
+      await turn.say('The tests run in the background while I look.');
+
+      const tests = await announce(
+        turn,
+        undefined,
+        'tester (general-purpose)',
+        'Run the test suite',
+        'Run bun test in the background and report what fails.',
+        new AbortController().signal,
+      );
+      const looker = await announce(
+        turn,
+        working,
+        'explorer (Explore)',
+        'Find the cancel path',
+        'Find where chord ends a turn on Esc.',
+      );
+
+      void (async () => {
+        try {
+          const test = await call(
+            tests,
+            'bash',
+            { title: '`bun test`', kind: 'execute' },
+            'in_progress',
+          );
+
+          await pause(tests.signal, SUBAGENT_AFTER_MS * 2);
+          await tests.send({
+            sessionUpdate: 'tool_call_update',
+            toolCallId: test,
+            status: 'completed',
+          });
+          await tests.say('Every test passed.');
+          await report(turn, undefined, tests.sessionId, {
+            state: 'idle',
+            stopReason: 'end_turn',
+          });
+        } catch {
+          // The client went before the subagent ended.
+        }
+      })();
+
+      await call(
+        looker,
+        'search',
+        { title: 'Search cancelled in src/session', kind: 'search' },
+        'completed',
+        'Found 3 files',
+      );
+      await pause(looker.signal, SUBAGENT_AFTER_MS);
+      await looker.say('Esc ends the turn in src/session/transcript/turn.ts.');
+      await report(turn, working, looker.sessionId, {
+        state: 'idle',
+        stopReason: 'end_turn',
+      });
+      await turn.say('The tests run on; I will say when they end.');
+
+      return 'end_turn';
+    } catch (error) {
+      for (const id of [...working].toReversed()) {
+        await report(turn, working, id, {
+          state: 'idle',
+          stopReason: 'cancelled',
+        });
+      }
+
+      throw error;
+    }
   },
 } satisfies Record<string, Play>;

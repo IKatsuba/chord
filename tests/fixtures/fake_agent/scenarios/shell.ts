@@ -155,4 +155,95 @@ export const SHELL = {
 
     return 'end_turn';
   },
+
+  // A turn Claude's adapter ends with a command still running and a call
+  // that never ran: cancelled, each ends `failed` with the line the adapter
+  // gives, the command's terminal with no exit code; left alone, the turn
+  // ends on its own and the command with the line for no result.
+  async bashcut(turn) {
+    const command = turn.callId('bash');
+    const read = turn.callId('read');
+    const takes = clientTerminalOutput !== 'none';
+    const terminal = [{ type: 'terminal' as const, terminalId: command }];
+    const unfinished = (
+      toolCallId: string,
+      text: string,
+      exits: boolean,
+    ): acp.SessionUpdate => ({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'failed',
+      content: [{ type: 'content', content: { type: 'text', text } }],
+      ...(exits && takes
+        ? {
+            _meta: {
+              terminal_exit: {
+                terminal_id: command,
+                exit_code: null,
+                signal: null,
+              },
+            },
+          }
+        : {}),
+    });
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId: command,
+      title: '`bun test`',
+      kind: 'execute',
+      status: 'pending',
+      rawInput: { command: 'bun test' },
+      content: takes ? terminal : [],
+      ...(takes ? { _meta: { terminal_info: { terminal_id: command } } } : {}),
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: command,
+      status: 'in_progress',
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId: read,
+      title: 'Read package.json',
+      kind: 'read',
+      status: 'pending',
+      locations: [{ path: 'package.json' }],
+    });
+
+    try {
+      // Long enough to press Esc while the command runs.
+      await pause(turn.signal, SHELL_STEP_MS * 20);
+    } catch (error) {
+      for (const update of [
+        unfinished(
+          command,
+          'The turn was cancelled before this tool call returned a result.',
+          true,
+        ),
+        unfinished(read, 'Claude stopped this tool call before it ran.', false),
+      ]) {
+        await turn.client.notify('session/update', {
+          sessionId: turn.sessionId,
+          update,
+        });
+      }
+
+      throw error;
+    }
+
+    await turn.send(
+      unfinished(
+        command,
+        'Claude ended the turn without returning a result for this tool.',
+        true,
+      ),
+    );
+    await turn.send(
+      unfinished(read, 'Claude stopped this tool call before it ran.', false),
+    );
+    await turn.say('The tests did not report.');
+
+    return 'end_turn';
+  },
 } satisfies Record<string, Play>;

@@ -445,6 +445,13 @@ export class Conversation {
   readonly #tasks = new Map<string, TaskAgent>();
   /** Requests of the task agents on screen, by id, with the task that asks. */
   readonly #foreign = new Map<string, TaskAgent>();
+  /** Of those, the requests a task asked with no turn running (CHD-158). */
+  readonly #foreignBetween = new Set<string>();
+  /**
+   * The quiet wait started once a request between turns was answered, which
+   * a later answer starts again rather than ride out (CHD-158).
+   */
+  #betweenQuiet: AbortController | undefined;
   /** Ended task agents' closes, which the session's own close waits for. */
   readonly #endedTasks = new Set<Promise<void>>();
   /** The session's monitors still running, by id, in start order. */
@@ -597,6 +604,7 @@ export class Conversation {
 
     this.#tasks.clear();
     this.#foreign.clear();
+    this.#foreignBetween.clear();
 
     this.#ahead = [];
 
@@ -780,9 +788,34 @@ export class Conversation {
 
   /** Whether a request asked with no turn running waits on the person. */
   #waitsBetween(): boolean {
-    return [...this.#permissions.values(), ...this.#elicitations.values()].some(
-      (asked) => asked.between,
+    return (
+      this.#foreignBetween.size > 0 ||
+      [...this.#permissions.values(), ...this.#elicitations.values()].some(
+        (asked) => asked.between,
+      )
     );
+  }
+
+  /**
+   * A request between turns came: everything queued now waits for its
+   * answer, and says so, whatever it waited for before (CHD-158).
+   */
+  #holdForAnswer(): void {
+    this.#queued = this.#queued.map((queued) => {
+      if (queued.afterAnswer) {
+        return queued;
+      }
+
+      this.#emit({
+        type: 'queued',
+        turnId: queued.turnId,
+        text: queued.text,
+        ...(queued.from === undefined ? {} : { from: queued.from }),
+        afterAnswer: true,
+      });
+
+      return { ...queued, afterAnswer: true };
+    });
   }
 
   /**
@@ -983,12 +1016,26 @@ export class Conversation {
   async #answeredBetween(session: Session): Promise<void> {
     this.#unhold();
 
-    // A wait already under way sends the queue on when it is over.
-    if (this.#queued.length === 0 || this.#settling) {
+    if (this.#queued.length === 0) {
       return;
     }
 
-    await this.#quieten(session);
+    // The quiet an earlier answer started counts again from this one, as
+    // the work that asked this time may still be about to say so; any other
+    // wait sends the queue on itself once it is over.
+    if (this.#settling !== undefined) {
+      if (this.#settling !== this.#betweenQuiet) {
+        return;
+      }
+
+      this.#settling.abort();
+    }
+
+    const quiet = this.#quieten(session);
+
+    this.#betweenQuiet = this.#settling;
+
+    await quiet;
     await this.#advance(session);
   }
 
@@ -1544,13 +1591,21 @@ export class Conversation {
 
   /** Lets a task go, and the requests of its still on screen. */
   #forget(task: TaskAgent): void {
+    let released = false;
+
     for (const [request, asker] of this.#foreign) {
       if (asker === task) {
         this.#foreign.delete(request);
+
+        released = this.#foreignBetween.delete(request) || released;
       }
     }
 
     this.#tasks.delete(task.id);
+
+    if (released) {
+      this.#release();
+    }
   }
 
   /** A task agent's event, in the session's stream, under its turn. */
@@ -1560,20 +1615,33 @@ export class Conversation {
     }
 
     const turnId = this.#stamp();
+    let released = false;
 
     switch (event.type) {
-      // The task answers it, whichever of its own subagents asked.
+      // The task answers it, whichever of its own subagents asked; one
+      // asked with no turn of the session's running holds the queue as the
+      // session's own would (CHD-158).
       case 'permission_requested':
-        this.#foreign.set(event.permission.id, task);
+      case 'elicitation_requested': {
+        const id =
+          event.type === 'permission_requested'
+            ? event.permission.id
+            : event.elicitation.id;
+
+        this.#foreign.set(id, task);
+
+        if (!this.#turn) {
+          this.#foreignBetween.add(id);
+          this.#holdForAnswer();
+        }
 
         break;
-      case 'elicitation_requested':
-        this.#foreign.set(event.elicitation.id, task);
-
-        break;
+      }
       case 'permission_settled':
       case 'elicitation_settled':
         this.#foreign.delete(event.id);
+
+        released = this.#foreignBetween.delete(event.id);
 
         break;
     }
@@ -1590,6 +1658,11 @@ export class Conversation {
       this.#show(stamped);
     } else {
       this.#emit(stamped);
+    }
+
+    // Once its answer is on screen, what waited for it goes.
+    if (released) {
+      this.#release();
     }
   }
 
@@ -2277,6 +2350,11 @@ export class Conversation {
       turnId,
       ...(between && { between }),
     });
+
+    if (between) {
+      this.#holdForAnswer();
+    }
+
     this.#emit({
       type: 'permission_requested',
       turnId,
@@ -2323,6 +2401,11 @@ export class Conversation {
       turnId,
       ...(between && { between }),
     });
+
+    if (between) {
+      this.#holdForAnswer();
+    }
+
     this.#emit({
       type: 'elicitation_requested',
       turnId,

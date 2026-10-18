@@ -3038,3 +3038,89 @@ describe('a prompt or message while a request waits between turns (CHD-158)', ()
       expect(said).toBeLessThan(went);
     }));
 });
+
+test('a second request between turns, answered during the quiet after the first, has its own quiet before the held prompt goes', () =>
+  onFake([], async (conversation, events) => {
+    conversation.send('mainbetweentwice');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    const asked = () =>
+      events.flatMap((event) =>
+        event.type === 'permission_requested' ? [event.permission.id] : [],
+      );
+
+    await until(() => asked().length === 1);
+    conversation.send('text');
+    conversation.choose(asked()[0]!, 'allow');
+    await until(() => asked().length === 2);
+
+    // The prompt queued says again that it waits, now for the second.
+    const marks = events.flatMap((event) =>
+      event.type === 'queued' && event.text === 'text'
+        ? [event.afterAnswer === true]
+        : [],
+    );
+
+    expect(marks).toStrictEqual([true, false, true]);
+    // Answered most of a second on, within the quiet after the first.
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    conversation.choose(asked()[1]!, 'allow');
+    await until(() =>
+      events.some((event) => event.type === 'prompt' && event.text === 'text'),
+    );
+
+    const said = events.findIndex(
+      (event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'agent_message_chunk' &&
+        event.update.content.type === 'text' &&
+        event.update.content.text.includes('Second: allow.'),
+    );
+    const went = events.findIndex(
+      (event) => event.type === 'prompt' && event.text === 'text',
+    );
+
+    expect(said).toBeGreaterThan(-1);
+    expect(said).toBeLessThan(went);
+  }));
+
+test("a task's request with no turn of the parent's running holds the parent's queue until it is answered", async () => {
+  const { parent, events } = await parentUp();
+  const { task, asked } = adoptTask(parent, 'task-a');
+  const prompts = () =>
+    events.flatMap((event) => (event.type === 'prompt' ? [event.text] : []));
+
+  task.heard({ type: 'connected', sessionId: 'a' });
+  task.heard({
+    type: 'permission_requested',
+    turnId: 'child-turn',
+    permission: { id: 'request', options: [] },
+  });
+
+  expect(parent.send('text')).toStrictEqual(true);
+  expect(parent.tell(MAIN, 'Then the docs.')).toStrictEqual('queued');
+  expect(
+    events.flatMap((event) =>
+      event.type === 'queued' ? [[event.text, event.afterAnswer]] : [],
+    ),
+  ).toStrictEqual([
+    ['text', true],
+    ['Then the docs.', true],
+  ]);
+
+  // Long enough for a turn the queue let go to have started.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(prompts()).toStrictEqual([]);
+
+  parent.choose('request', 'allow');
+  expect(asked).toContain('choose request allow');
+  task.heard({
+    type: 'permission_settled',
+    turnId: 'child-turn',
+    id: 'request',
+    answer: { type: 'chosen', optionId: 'allow' },
+  });
+  await until(() => prompts().length > 0);
+  expect(prompts()[0]).toStrictEqual('text');
+  await parent.close();
+});

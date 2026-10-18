@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import type { ContentBlock, SessionUpdate } from '@agentclientprotocol/sdk';
 import { subagentsIn } from '../../../src/session/subagents.ts';
@@ -200,5 +200,84 @@ test("a later message cleared leaves the subagent's plan where it first came amo
   expect(work(fold([message('a', 'call-3', null)], told))).toStrictEqual({
     kinds: ['message', 'tool'],
     planAt: 1,
+  });
+});
+
+describe('CHD-432 tester: message identity and nested routing', () => {
+  test('the same message id in two subagents replaces and clears only its recipient', () => {
+    const before = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      spawned('b', 'B'),
+      message('a', 'task', text('Task A')),
+      message('b', 'task', text('Task B')),
+      message('a', 'followup', text('For A')),
+      message('b', 'followup', text('For B')),
+    ]);
+    const after = fold(
+      [
+        message('a', 'task', []),
+        message('a', 'followup', text('Rewritten A')),
+        message('b', 'followup', null),
+      ],
+      before,
+    );
+
+    expect(only(after, 'a').prompt).toBeUndefined();
+    expect(only(after, 'a').description).toBe('A, short');
+    expect(only(after, 'b').prompt).toBe('Task B');
+    expect(messages(only(after, 'a'))).toStrictEqual([
+      { from: 'agent', text: 'Rewritten A' },
+    ]);
+    expect(messages(only(after, 'b'))).toStrictEqual([]);
+    expect(only(before, 'a').prompt).toBe('Task A');
+    expect(messages(only(before, 'b'))).toStrictEqual([
+      { from: 'agent', text: 'For B' },
+    ]);
+  });
+
+  test('clearing a task keeps its id so a new followup never becomes the task', () => {
+    const transcript = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      message('a', 'task', text('Original task')),
+      message('a', 'task', null),
+      message('a', 'later', text('Followup')),
+      message('a', 'task', [
+        { type: 'text', text: 'Restored' },
+        { type: 'text', text: ' task' },
+      ]),
+    ]);
+
+    expect(only(transcript, 'a').prompt).toBe('Restored task');
+    expect(messages(only(transcript, 'a'))).toStrictEqual([
+      { from: 'agent', text: 'Followup' },
+    ]);
+  });
+
+  test('a nested sender is named on another branch and a later explicit sender replaces it', () => {
+    const before = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      spawned('g', 'Nested', 'a'),
+      spawned('b', 'B'),
+      message('b', 'task', text('Task B')),
+      message('b', 'later', text('From nested'), 'g'),
+    ]);
+
+    expect(messages(only(before, 'b'))).toStrictEqual([
+      { from: 'Agent(Nested)', text: 'From nested' },
+    ]);
+    expect(
+      messages(
+        only(
+          fold([message('b', 'later', text('From runtime'), 'root')], before),
+          'b',
+        ),
+      ),
+    ).toStrictEqual([{ from: 'agent', text: 'From runtime' }]);
+    expect(fold([message('missing', 'id', text('No leak'))], before)).toBe(
+      before,
+    );
   });
 });

@@ -532,3 +532,33 @@ describe('CHD-432 tester: ending notes in terminal widths', () => {
     }
   }
 });
+
+describe('CHD-432 tester: whole-task expansion keys', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`Ctrl+O opens the whole task and sender then folds them again at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudemessage');
+          await window.shows('Both found.');
+          expect(window.frame()).not.toContain('Report the file');
+          await window.press(CTRL_O);
+          await window.shows(
+            'Report the file that owns the routing, with line numbers.',
+          );
+          expect(window.frame()).toContain('← from fake');
+          expect(window.frame()).toContain('Now find the tests that cover it.');
+          await window.press(CTRL_O);
+          await until(
+            'the task and message to fold again',
+            () => !window.frame().includes('Report the file'),
+          );
+          expect(window.frame()).not.toContain('Report the file');
+          expect(window.frame()).not.toContain('← from fake');
+        },
+        { columns, rows },
+      ));
+  }
+});

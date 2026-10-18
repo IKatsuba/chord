@@ -552,3 +552,43 @@ test('an agent its agent says waits, with no request on screen, is asking: ● w
     },
     { rows: 24, columns: 80 },
   ));
+
+describe('CHD-2 tester: navigation leaves the transcript tail', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`Enter goes back to the earlier agent instead of only closing the view at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudebackground');
+          await window.shows('Running 2 agents');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await send(window, 'steps');
+          await window.shows('150 steps read.');
+          expect(window.frame()).not.toContain(
+            'Agent(tester (general-purpose))',
+          );
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('Background · 1 in this tab');
+          expect(window.frame()).toContain('Run the test suite');
+          await window.press('\r');
+          await until(
+            'the earlier agent row visible and later transcript tail out of view',
+            () => {
+              const frame = window.frame();
+
+              return (
+                frame.includes('Agent(tester (general-purpose))') &&
+                !frame.includes('150 steps read.')
+              );
+            },
+          );
+          expect(window.frame()).not.toContain('Background ·');
+        },
+        { columns, rows },
+      ));
+  }
+});

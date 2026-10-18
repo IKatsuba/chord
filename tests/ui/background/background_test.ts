@@ -1057,3 +1057,58 @@ describe('CHD-2 tester: agent item ownership and terminal precedence', () => {
     }
   });
 });
+
+describe('CHD-2 tester: waiting fixture cancellation', () => {
+  test('requires_action without a request cancels to stopped and the next prompt completes independently', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-waiting-'));
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, '--step-ms', '1'),
+    });
+    let requests = 0;
+    const unsubscribe = session.permissions.subscribe(() => {
+      requests++;
+    });
+
+    try {
+      const actions = await play(session, 'claudewaiting', {
+        cancelAfterEvents: 3,
+      });
+      const transcript = actions
+        .map((action, at) =>
+          action.type === 'update' ? { ...action, at: at + 1 } : action,
+        )
+        .reduce(reduceTranscript, emptyTranscript);
+
+      expect(actions.at(-1)).toMatchObject({
+        type: 'result',
+        result: { status: 'cancelled' },
+      });
+      expect(
+        backgroundItems([agent(1, { transcript })]).map(
+          ({ status }) => status.group,
+        ),
+      ).toStrictEqual(['stopped']);
+      expect(requests).toBe(0);
+
+      const next = await play(session, 'claudewaiting');
+      const finished = next
+        .map((action, at) =>
+          action.type === 'update' ? { ...action, at: at + 1 } : action,
+        )
+        .reduce(reduceTranscript, emptyTranscript);
+
+      expect(
+        backgroundItems([agent(1, { transcript: finished })]).map(
+          ({ status }) => status.group,
+        ),
+      ).toStrictEqual(['done']);
+      expect(requests).toBe(0);
+    } finally {
+      unsubscribe();
+      await session.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+});

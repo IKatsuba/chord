@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -1379,4 +1379,104 @@ test("a resumed child's cost never counts as the parent's", async () => {
       },
     ]),
   ).toStrictEqual(alone);
+});
+
+describe('CHD-432 tester: independent Claude fixture lifetimes', () => {
+  test('a background child finishes under its own id after the parent takes another prompt', () =>
+    withSession(async (session) => {
+      const actions: TranscriptAction[] = [];
+      const { promise: ended, resolve } = Promise.withResolvers<void>();
+      let childId: string | undefined;
+      const unsubscribe = session.subscribe((update, subagentId) => {
+        actions.push({
+          type: 'update',
+          turnId: TURN,
+          update,
+          ...(subagentId === undefined ? {} : { subagentId }),
+        });
+
+        if (
+          update.sessionUpdate === 'subagent_update' &&
+          update.title === 'tester (general-purpose)'
+        ) {
+          childId = update.sessionId;
+        }
+
+        if (
+          update.sessionUpdate === 'subagent_update' &&
+          update.sessionId === childId &&
+          update.state?.state === 'idle'
+        ) {
+          resolve();
+        }
+      });
+
+      try {
+        const first = await run(session, 'claudebackground');
+
+        expect(first.result.status).toBe('completed');
+        expect(reported(actions)[0]?.states).toStrictEqual([
+          { state: 'running' },
+        ]);
+
+        const next = await run(session, 'text');
+
+        expect(next.result.status).toBe('completed');
+        expect(said(next.updates).join('')).toContain('Hello, world.');
+        await ended;
+        expect(reported(actions)[0]?.states).toStrictEqual([
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ]);
+        expect(
+          actions.some(
+            (action) =>
+              action.type === 'update' &&
+              action.subagentId === childId &&
+              action.update.sessionUpdate === 'agent_message_chunk' &&
+              action.update.content.type === 'text' &&
+              action.update.content.text === 'Every test passed.',
+          ),
+        ).toBe(true);
+      } finally {
+        unsubscribe();
+      }
+    }));
+
+  test('cancelling one session leaves another session free to reject a child permission and finish', () =>
+    withSession((cancelled) =>
+      withSession(async (other) => {
+        const [backgroundRun, actions] = await Promise.all([
+          background(cancelled, 3),
+          play(other, 'claudesubagents', { answer: 'reject' }),
+        ]);
+
+        expect(backgroundRun.result).toMatchObject({
+          result: { status: 'cancelled' },
+        });
+        expect(backgroundRun.subagents[0]?.states).toStrictEqual([
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ]);
+        expect(actions.at(-1)).toMatchObject({
+          type: 'result',
+          result: { status: 'completed' },
+        });
+        expect(reported(actions)[0]?.states).toStrictEqual([
+          { state: 'running' },
+          { state: 'requires_action' },
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ]);
+        expect(
+          actions.some(
+            (action) =>
+              action.type === 'update' &&
+              action.subagentId !== undefined &&
+              action.update.sessionUpdate === 'tool_call_update' &&
+              action.update.status === 'failed',
+          ),
+        ).toBe(true);
+      }),
+    ));
 });

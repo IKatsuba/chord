@@ -423,3 +423,47 @@ describe('CHD-424 tester: view layout edges', () => {
     );
   });
 });
+
+test("an agent item's state reads as CHD-2's table words it", () => {
+  const say = (status: BackgroundItem['status']) =>
+    stateText(
+      {
+        kind: 'agent',
+        id: 'a',
+        key: 1,
+        name: 'Explore the parser',
+        startedAt: NOW - 41_000,
+        status,
+      },
+      NOW,
+    ).text;
+  const ended = (
+    group: 'done' | 'failed' | 'stopped',
+    word?: 'ended' | 'disconnected',
+  ) => ({
+    group,
+    endedAt: NOW - 41_000 + 124_000 - 83_000,
+    ...(word === undefined ? {} : { word }),
+  });
+
+  expect(say({ group: 'running' })).toBe('running 41s');
+  expect(say({ group: 'running', stopping: true })).toBe('■ stopping 41s');
+  expect(say({ group: 'asking', on: 'permission', since: NOW - 13_000 })).toBe(
+    '● permission 13s',
+  );
+  expect(say({ group: 'asking', on: 'input', since: NOW - 13_000 })).toBe(
+    '● input 13s',
+  );
+  expect(say({ group: 'asking', on: 'waiting', since: NOW - 13_000 })).toBe(
+    '● waiting 13s',
+  );
+  expect(say(ended('done'))).toBe('✓ done in 41s');
+  expect(say(ended('failed'))).toBe('✗ failed after 41s');
+  expect(say(ended('failed', 'disconnected'))).toBe('✗ disconnected after 41s');
+  expect(say(ended('stopped'))).toBe('■ stopped after 41s');
+  expect(say(ended('stopped', 'ended'))).toBe('■ ended after 41s');
+  // Its time stands at the unknown.
+  expect(say({ group: 'untracked', endedAt: NOW - 20_000 })).toBe(
+    '? untracked 21s',
+  );
+});

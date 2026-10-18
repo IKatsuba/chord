@@ -310,6 +310,14 @@ export interface Subagent {
    * not end it on chord's word.
    */
   readonly cancellable?: true;
+  /** It announced `capabilities.cancel` at some point, if not now. */
+  readonly offeredCancel?: true;
+  /**
+   * Its agent says it waits on the person (ACP's `requires_action`), since
+   * when that came, where it was timed; whether chord shows what it waits on
+   * or not. It still stands `running`.
+   */
+  readonly waiting?: { readonly since?: number };
   /** What the agent said went wrong, while it stands failed. */
   readonly error?: string;
   /** When its first update came. */

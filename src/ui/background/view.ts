@@ -86,13 +86,25 @@ export function stateText(
     item.events === undefined ? '' : ` · ${eventsWords(item.events)}`;
 
   switch (status.group) {
-    case 'running':
+    case 'running': {
+      const ran = formatElapsed(now - item.startedAt);
+
       return {
         text:
           item.kind === 'monitor'
-            ? `running ${formatElapsed(now - item.startedAt)}${events}`
-            : `working ${formatElapsed(now - item.startedAt)}`,
+            ? `running ${ran}${events}`
+            : item.kind === 'agent'
+              ? status.stopping
+                ? `■ stopping ${ran}`
+                : `running ${ran}`
+              : `working ${ran}`,
         group: 'running',
+      };
+    }
+    case 'untracked':
+      return {
+        text: `? untracked ${formatElapsed(status.endedAt - item.startedAt)}`,
+        group: 'untracked',
       };
     case 'asking':
       return {
@@ -104,7 +116,19 @@ export function stateText(
       const tail = endedEvents ? events : '';
 
       if (status.group === 'stopped') {
-        return { text: `■ stopped after ${ran}${tail}`, group: 'stopped' };
+        return {
+          text: `■ ${status.word ?? 'stopped'} after ${ran}${tail}`,
+          group: 'stopped',
+        };
+      }
+
+      if (item.kind === 'agent') {
+        return status.group === 'done'
+          ? { text: `✓ done in ${ran}`, group: 'done' }
+          : {
+              text: `✗ ${status.word ?? 'failed'} after ${ran}`,
+              group: 'failed',
+            };
       }
 
       if (item.kind === 'task') {

@@ -238,12 +238,21 @@ function patched(
     endedAt,
     error: before,
     cancellable: wasCancellable,
+    waiting: wasWaiting,
+    offeredCancel: wasOffered,
     ...kept
   } = subagent;
+  const waiting =
+    told === undefined
+      ? wasWaiting
+      : update.state?.state === 'requires_action'
+        ? (wasWaiting ?? (at === undefined ? {} : { since: at }))
+        : undefined;
   const cancellable =
     capabilities === undefined
       ? wasCancellable
       : capabilities?.cancel !== undefined && capabilities.cancel !== null;
+  const offeredCancel = wasOffered ?? (cancellable === true || undefined);
   // An untracked subagent may have worked on: its time stands at the
   // `unknown`, and runs again to the next state it is told, but not to an
   // update that tells none.
@@ -281,6 +290,8 @@ function patched(
     ...(ended === undefined ? {} : { endedAt: ended }),
     ...(error === undefined ? {} : { error }),
     ...(cancellable === true ? { cancellable } : {}),
+    ...(offeredCancel === true ? { offeredCancel } : {}),
+    ...(waiting === undefined ? {} : { waiting }),
   };
 }
 

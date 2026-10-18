@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type {
   EndedMonitor,
   RunningMonitor,
@@ -18,6 +21,10 @@ import {
   summaryLines,
   type SummaryPiece,
 } from '../../../src/ui/background/background.ts';
+import { openSession } from '../../../src/session/session.ts';
+import { reduceTranscript } from '../../../src/session/transcript/reducer.ts';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { play, type PlayOptions } from '../../fixtures/recorder.ts';
 
 function running(id: string, description: string, startedAt: number) {
   return {
@@ -647,5 +654,233 @@ describe('the call that started an item', () => {
       entry: 1,
       target: 'agent:task-1',
     });
+  });
+});
+
+/** A subagent entry as Claude's adapter announces one, open to a cancel. */
+function claude(
+  id: string,
+  startedAt: number,
+  more: Partial<Subagent> = {},
+  without: readonly (keyof Subagent)[] = [],
+): Entry {
+  const subagent: Record<string, unknown> = {
+    id,
+    title: `${id} (Explore)`,
+    description: `Find ${id}`,
+    state: 'running',
+    startedAt,
+    entries: [],
+    plan: [],
+    cancellable: true,
+    offeredCancel: true,
+    ...more,
+  };
+
+  for (const key of without) {
+    delete subagent[key];
+  }
+
+  return {
+    kind: 'subagent',
+    turnId: 't1',
+    subagent: subagent as unknown as Subagent,
+  };
+}
+
+describe('agent items', () => {
+  test('a subagent that offered its own cancel is an agent item, named by its short task; one that never did is not', () => {
+    const items = backgroundItems([
+      agent(1, {
+        transcript: withEntries([
+          claude('a', 10, {
+            entries: [claude('g', 12, {}, ['description'])],
+          }),
+          // Codex's draft form, and a replayed one, offer none.
+          claude('b', 11, {}, ['cancellable', 'offeredCancel']),
+          task('t', 'Fix the tokenizer', 13),
+          // Lost its cancel since: still an item, with no stop.
+          claude('l', 14, {}, ['cancellable']),
+        ]),
+      }),
+    ]);
+
+    expect(
+      items.map(({ kind, name, stoppable }) => ({ kind, name, stoppable })),
+    ).toStrictEqual([
+      { kind: 'agent', name: 'Find a', stoppable: true },
+      { kind: 'agent', name: 'g (Explore)', stoppable: true },
+      { kind: 'task', name: 'Fix the tokenizer', stoppable: undefined },
+      { kind: 'agent', name: 'Find l', stoppable: false },
+    ]);
+    // One from before its session came up is its past.
+    expect(
+      backgroundItems([
+        agent(1, { since: 11, transcript: withEntries([claude('a', 10)]) }),
+      ]),
+    ).toStrictEqual([]);
+  });
+
+  test("an agent item stands as its subagent does, by CHD-2's table", () => {
+    const status = (
+      more: Partial<Subagent>,
+      extra: Partial<BackgroundAgent> = {},
+    ) =>
+      backgroundItems([
+        agent(1, {
+          transcript: withEntries([claude('a', 10, more)]),
+          ...extra,
+        }),
+      ])[0]?.status;
+
+    expect(status({})).toStrictEqual({ group: 'running' });
+    expect(status({}, { stopping: new Set(['a']) })).toStrictEqual({
+      group: 'running',
+      stopping: true,
+    });
+    expect(status({ waiting: { since: 20 } })).toStrictEqual({
+      group: 'asking',
+      on: 'waiting',
+      since: 20,
+    });
+    expect(
+      backgroundItems([
+        agent(1, {
+          transcript: withEntries(
+            [claude('a', 10, { waiting: { since: 20 } })],
+            {
+              asking: [
+                {
+                  id: 'e',
+                  subagentId: 'a',
+                  at: 22,
+                  request: {
+                    message: 'Pick',
+                    mode: 'form',
+                    requestedSchema: { type: 'object', properties: {} },
+                  },
+                } as unknown as Transcript['asking'][number],
+              ],
+            },
+          ),
+        }),
+      ])[0]?.status,
+    ).toStrictEqual({ group: 'asking', on: 'input', since: 22 });
+    expect(status({ state: 'completed', endedAt: 30 })).toStrictEqual({
+      group: 'done',
+      endedAt: 30,
+    });
+    expect(status({ state: 'failed', endedAt: 30 })).toStrictEqual({
+      group: 'failed',
+      endedAt: 30,
+    });
+    expect(status({ state: 'disconnected', endedAt: 30 })).toStrictEqual({
+      group: 'failed',
+      endedAt: 30,
+      word: 'disconnected',
+    });
+    expect(status({ state: 'cancelled', endedAt: 30 })).toStrictEqual({
+      group: 'stopped',
+      endedAt: 30,
+    });
+    expect(status({ state: 'ended', endedAt: 30 })).toStrictEqual({
+      group: 'stopped',
+      endedAt: 30,
+      word: 'ended',
+    });
+    expect(status({ state: 'untracked', endedAt: 30 })).toStrictEqual({
+      group: 'untracked',
+      endedAt: 30,
+    });
+  });
+
+  test('the summary line counts agents after monitors and tasks, untracked after failed', () => {
+    expect(
+      summaryGroups([
+        item('agent', { group: 'asking', on: 'waiting', since: 0 }),
+        item('monitor', FAILED),
+        item('agent', { group: 'untracked', endedAt: 0 }),
+        item('monitor', RUNNING),
+        item('agent', RUNNING),
+        item('agent', { group: 'running', stopping: true }),
+      ]).map(({ text }) => text),
+    ).toStrictEqual([
+      '● 1 agent asking',
+      '✗ 1 monitor failed',
+      '? 1 agent untracked',
+      '1 monitor and 2 agents running',
+    ]);
+  });
+
+  test('the next prompt clears an ended or untracked agent, and one that comes back is listed again', () => {
+    const at = (more: Partial<Subagent>) =>
+      brief(
+        backgroundItems(
+          [agent(1, { transcript: withEntries([claude('a', 10, more)]) })],
+          40,
+        ),
+      );
+
+    expect(at({ state: 'untracked', endedAt: 30 })).toStrictEqual([]);
+    expect(at({ state: 'completed', endedAt: 30 })).toStrictEqual([]);
+    expect(at({ state: 'running' })).toStrictEqual(['agent Find a 1 running']);
+    expect(at({ state: 'untracked', endedAt: 50 })).toStrictEqual([
+      'agent Find a 1 untracked',
+    ]);
+  });
+});
+
+describe('agent items from the fake', () => {
+  /** The tab's items once `scenario` has played on the fake, at `answer`. */
+  async function itemsAfter(
+    scenario: string,
+    options: PlayOptions = {},
+  ): Promise<BackgroundItem[]> {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-background-'));
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, '--step-ms', '1'),
+    });
+
+    try {
+      // Timed in the order they came, as the window times what it hears.
+      const transcript = (await play(session, scenario, options))
+        .map((action, at) =>
+          action.type === 'update' ? { ...action, at: at + 1 } : action,
+        )
+        .reduce(reduceTranscript, emptyTranscript);
+
+      return backgroundItems([agent(1, { transcript })]);
+    } finally {
+      await session.close();
+      await rm(dir, { recursive: true });
+    }
+  }
+
+  test("Claude's four subagents are agent items, each as it ended", async () => {
+    const items = await itemsAfter('claudesubagents');
+
+    expect(
+      items.map(({ kind, name, status }) => [kind, name, status.group]),
+    ).toStrictEqual([
+      ['agent', 'Find the session layer', 'done'],
+      ['agent', 'Review the transcript reducer', 'failed'],
+      ['agent', 'Run the tests', 'stopped'],
+      ['agent', 'Watch the build', 'untracked'],
+    ]);
+  });
+
+  test("Claude's background agent stays running past the parent's cancel", async () => {
+    const items = await itemsAfter('claudebackground', {
+      cancelAfterEvents: 6,
+    });
+
+    expect(items.map(({ name, status }) => [name, status.group])).toStrictEqual(
+      [
+        ['Run the test suite', 'running'],
+        ['Find the cancel path', 'stopped'],
+      ],
+    );
   });
 });

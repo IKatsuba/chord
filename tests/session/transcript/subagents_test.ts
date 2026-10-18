@@ -281,3 +281,56 @@ describe('CHD-432 tester: message identity and nested routing', () => {
     );
   });
 });
+
+test('a subagent waits while its agent says requires_action, and keeps having offered a cancel it lost', () => {
+  const stood = (
+    state: { state: string } | undefined,
+    at: number,
+    capabilities?: { cancel?: object } | null,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'a',
+      ...(state === undefined ? {} : { state: state as never }),
+      ...(capabilities === undefined ? {} : { capabilities }),
+    },
+  });
+  const after = (...actions: TranscriptAction[]) =>
+    only(
+      fold([
+        PROMPT,
+        { ...spawned('a', 'explorer'), at: 5 } as TranscriptAction,
+        stood(undefined, 5, { cancel: {} }),
+        ...actions,
+      ]),
+      'a',
+    );
+
+  expect(after(stood({ state: 'requires_action' }, 9)).waiting).toStrictEqual({
+    since: 9,
+  });
+  // A second one keeps the first time; a patch with no state keeps it.
+  expect(
+    after(
+      stood({ state: 'requires_action' }, 9),
+      stood({ state: 'requires_action' }, 12),
+      stood(undefined, 14),
+    ).waiting,
+  ).toStrictEqual({ since: 9 });
+  expect(
+    after(
+      stood({ state: 'requires_action' }, 9),
+      stood({ state: 'running' }, 12),
+    ).waiting,
+  ).toStrictEqual(undefined);
+
+  const lost = after(stood(undefined, 9, null));
+
+  expect([lost.cancellable, lost.offeredCancel]).toStrictEqual([
+    undefined,
+    true,
+  ]);
+});

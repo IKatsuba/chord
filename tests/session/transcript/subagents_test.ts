@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import type { ContentBlock } from '@agentclientprotocol/sdk';
+import type { ContentBlock, SessionUpdate } from '@agentclientprotocol/sdk';
 import { subagentsIn } from '../../../src/session/subagents.ts';
 import type {
   Entry,
@@ -154,4 +154,51 @@ test("a later message is a row among the subagent's work where it came, upserted
   expect(
     messages(only(fold([message('g', 'call-4', [])], replaced), 'g')),
   ).toStrictEqual([]);
+});
+
+test("a later message cleared leaves the subagent's plan where it first came among its work", () => {
+  const child = (update: SessionUpdate): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    subagentId: 'a',
+    update,
+  });
+  const told = fold([
+    PROMPT,
+    spawned('a', 'explorer'),
+    message('a', 'call-1', text('Find it.'), 's'),
+    message('a', 'call-2', text('Then the tests.'), 's'),
+    child({
+      sessionUpdate: 'plan',
+      entries: [
+        { content: 'Find it', priority: 'medium', status: 'in_progress' },
+      ],
+    }),
+    child({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'c1',
+      title: 'Read c1',
+      status: 'in_progress',
+    }),
+    message('a', 'call-3', text('And the docs.'), 's'),
+  ]);
+  const work = (transcript: Transcript) => {
+    const { entries, planAt } = only(transcript, 'a');
+
+    return { kinds: entries.map((entry) => entry.kind), planAt };
+  };
+
+  expect(work(told)).toStrictEqual({
+    kinds: ['message', 'tool', 'message'],
+    planAt: 1,
+  });
+  // Before the plan, its place moves with the work; after it, it stays.
+  expect(work(fold([message('a', 'call-2', null)], told))).toStrictEqual({
+    kinds: ['tool', 'message'],
+    planAt: 0,
+  });
+  expect(work(fold([message('a', 'call-3', null)], told))).toStrictEqual({
+    kinds: ['message', 'tool'],
+    planAt: 1,
+  });
 });

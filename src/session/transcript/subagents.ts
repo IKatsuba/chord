@@ -98,9 +98,18 @@ function messaged(
   }
 
   if (text === '') {
-    return at < 0
-      ? subagent
-      : { ...subagent, entries: subagent.entries.toSpliced(at, 1) };
+    if (at < 0) {
+      return subagent;
+    }
+
+    // Its plan stays where it first came among the work that is left.
+    const { planAt } = subagent;
+
+    return {
+      ...subagent,
+      entries: subagent.entries.toSpliced(at, 1),
+      ...(planAt !== undefined && at < planAt ? { planAt: planAt - 1 } : {}),
+    };
   }
 
   // A sender left out keeps the one known; one that is a subagent here is

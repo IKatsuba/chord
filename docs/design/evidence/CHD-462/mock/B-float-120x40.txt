@@ -1,0 +1,40 @@
+
+ › monitors
+
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')"; echo "
+      at validate (src/routes/login.tsx:41:22)"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 600
+      m2 · times out after 10m
+
+ ⏺ Two monitors are running.
+
+ ← from dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ › task                       ╭──────────────────────────────────────────────────────────╮
+                              │ Background · 3 in this tab                               │
+ ⏺ I will send a task agent on│                                                          │
+                              │ ❯ dev server errors  monitor  main                       │
+ ⏺ Agent(Fix the tokenizer) · │     running 39s · 1 event                                │
+   ⎿  Failed (3 tool uses · 15│   CI run 4812        monitor  main                       │
+                              │     running 39s · no events                              │
+ ⏺ It is running; I will check│   Fix the tokenizer  task     main                       │
+   ⎿  Interrupted by user     │     ✗ failed after 15s                                   │
+                              │                                                          │
+ ← from Fix the tokenizer · fa│ Enter to go to its call · x to stop ·                    │
+   ⎿  The edit to src/parse/to│ Esc to close                                             │
+                              ╰──────────────────────────────────────────────────────────╯
+ ⏺ Received the message from Fix the tokenizer · fake · failed.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    background  ✗ 1 task failed · 2 monitors running

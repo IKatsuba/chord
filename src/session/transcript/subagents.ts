@@ -279,14 +279,21 @@ function errorOf(state: StateUpdate | null | undefined): string | undefined {
     : undefined;
 }
 
+/** Whether a subagent is at work, as far as chord knows. */
+export function isRunning(subagent: Subagent): boolean {
+  return subagent.state === 'running';
+}
+
 /**
- * `entries` with every subagent still running among them or under them
- * ended as `state`, at `at` when it is known; the same array when none was.
+ * `entries` with every subagent among them or under them that `ends` picks,
+ * those still running unless told otherwise, ended as `state`, at `at` when
+ * it is known; the same array when none was.
  */
 export function endRunning(
   entries: readonly Entry[],
   state: SubagentState,
   at: number | undefined,
+  ends: (subagent: Subagent) => boolean = isRunning,
 ): readonly Entry[] {
   let changed = false;
   const next = entries.map((entry): Entry => {
@@ -295,8 +302,8 @@ export function endRunning(
     }
 
     const { subagent } = entry;
-    const inner = endRunning(subagent.entries, state, at);
-    const running = subagent.state === 'running';
+    const inner = endRunning(subagent.entries, state, at, ends);
+    const running = ends(subagent);
 
     if (!running && inner === subagent.entries) {
       return entry;

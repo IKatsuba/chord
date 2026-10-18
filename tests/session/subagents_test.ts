@@ -525,13 +525,16 @@ test('a turn that ends on its own leaves its subagents running, and they go on a
   ]);
 });
 
-test("the agent's going disconnects the subagents still running, at any depth", () => {
+test("the agent's going disconnects the subagents still running or untracked, at any depth", () => {
   const transcript = fold([
     PROMPT,
     spawned('a', 'Find'),
     spawned('g', 'Read', { from: 'a' }),
     spawned('b', 'Draw'),
     ended('b', 'completed'),
+    // One its agent lost sight of is gone with it too.
+    spawned('u', 'Watch'),
+    stood('u', { state: 'unknown' }, 20),
     { type: 'disconnected', turnId: TURN, at: 30 },
   ]);
 
@@ -544,6 +547,7 @@ test("the agent's going disconnects the subagents still running, at any depth", 
     ['disconnected', 30],
     ['disconnected', 30],
     ['completed', undefined],
+    ['disconnected', 30],
   ]);
 });
 

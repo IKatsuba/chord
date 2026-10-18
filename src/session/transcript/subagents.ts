@@ -161,13 +161,14 @@ function patched(
       ? wasCancellable
       : capabilities?.cancel !== undefined && capabilities.cancel !== null;
   // An untracked subagent may have worked on: its time stands at the
-  // `unknown`, and runs again to whatever state comes next.
-  const ended =
-    next === 'running'
-      ? undefined
-      : subagent.state === 'running' || subagent.state === 'untracked'
-        ? at
-        : endedAt;
+  // `unknown`, and runs again to the next state it is told, but not to an
+  // update that tells none.
+  const moved =
+    subagent.state === 'running' ||
+    (subagent.state === 'untracked' &&
+      told !== undefined &&
+      told !== 'untracked');
+  const ended = next === 'running' ? undefined : moved ? at : endedAt;
   const error = told === undefined ? before : errorOf(update.state);
 
   // chord says a task's effort once it is up, after the block is drawn.

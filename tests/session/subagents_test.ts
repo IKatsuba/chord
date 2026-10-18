@@ -419,6 +419,19 @@ test('an idle reads by its stop reason, and unknown as untracked until a later s
     'completed',
     9,
   ]);
+
+  // A patch that tells no state, timed or not, and another unknown leave its
+  // time at the first unknown.
+  for (const later of [
+    { ...spawned('a', 'Find again'), at: 9 } as TranscriptAction,
+    spawned('a', 'Find again'),
+    stood('a', { state: 'unknown' }, 9),
+  ]) {
+    const patched = only(fold([later], lost), 'a');
+
+    expect([patched.state, patched.endedAt]).toStrictEqual(['untracked', 5]);
+  }
+
   // Straight from untracked to idle, its time runs to the idle.
   expect(
     only(

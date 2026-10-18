@@ -334,3 +334,95 @@ describe("a task's request across the turn that started it (CHD-266)", () => {
     expect(written.length).toStrictEqual(3);
   });
 });
+
+describe('CHD-266 tester: lasting request identity', () => {
+  test('task forms and explicit between links survive results until their individual settlements', () => {
+    const events: ConversationEvent[] = [
+      connected,
+      prompt('t1'),
+      {
+        type: 'elicitation_requested',
+        turnId: 't1',
+        elicitation: {
+          id: 'form',
+          subagentId: 'task',
+          mode: 'form',
+          message: 'Task form',
+          schema: {},
+        },
+      },
+      {
+        type: 'elicitation_requested',
+        turnId: 't1',
+        elicitation: {
+          id: 'link',
+          between: true,
+          mode: 'url',
+          message: 'Between link',
+          url: 'https://example.com/approve',
+        },
+      },
+      ended('t1'),
+      ended('later', 'cancelled'),
+    ];
+    const open = play(events).watch;
+
+    expect([...open.asking]).toStrictEqual(['form', 'link']);
+    expect([...open.lasting]).toStrictEqual(['form', 'link']);
+
+    const partly = play([
+      ...events,
+      {
+        type: 'elicitation_settled',
+        turnId: 't1',
+        id: 'form',
+        answer: { type: 'withdrawn' },
+      },
+    ]).watch;
+
+    expect([...partly.asking]).toStrictEqual(['link']);
+    expect([...partly.lasting]).toStrictEqual(['link']);
+  });
+
+  test('an adapter subagent permission without a task timestamp keeps the previous result behavior', () => {
+    const request: ConversationEvent = {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: { id: 'adapter', subagentId: 'adapter-child', options: [] },
+    };
+    const { watch } = play([connected, prompt('t1'), request, ended('t1')]);
+
+    expect(watch.asking.size).toBe(0);
+    expect(watch.lasting.size).toBe(0);
+  });
+
+  test('withdrawal and clear remove lasting IDs so a later request can notify again', () => {
+    const request: ConversationEvent = {
+      type: 'permission_requested',
+      turnId: 't1',
+      between: true,
+      permission: { id: 'lasting', options: [] },
+    };
+    const events: ConversationEvent[] = [
+      connected,
+      request,
+      ended('t1'),
+      {
+        type: 'permission_settled',
+        turnId: 't1',
+        id: 'lasting',
+        answer: { type: 'withdrawn' },
+      },
+    ];
+    const withdrawn = play(events).watch;
+
+    expect(withdrawn.asking.size).toBe(0);
+    expect(withdrawn.lasting.size).toBe(0);
+    expect(play([...events, request]).written.at(-1)).toContain(
+      'needs your permission',
+    );
+    expect(play([connected, request, { type: 'cleared' }]).watch).toStrictEqual(
+      emptyWatch,
+    );
+  });
+});

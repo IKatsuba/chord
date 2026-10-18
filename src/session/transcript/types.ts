@@ -310,6 +310,19 @@ export interface Subagent {
    * not end it on chord's word.
    */
   readonly cancellable?: true;
+  /** It announced `capabilities.cancel` at some point, if not now. */
+  readonly offeredCancel?: true;
+  /**
+   * The person stopped it alone, and its agent has not yet said it ended;
+   * it still stands `running`.
+   */
+  readonly stopping?: true;
+  /**
+   * Its agent says it waits on the person (ACP's `requires_action`), since
+   * when that came, where it was timed; whether chord shows what it waits on
+   * or not. It still stands `running`.
+   */
+  readonly waiting?: { readonly since?: number };
   /** What the agent said went wrong, while it stands failed. */
   readonly error?: string;
   /** When its first update came. */
@@ -833,6 +846,16 @@ export type TranscriptAction =
       readonly answer: ElicitationAnswer;
     }
   | { readonly type: 'cancel'; readonly turnId: string; readonly at: number }
+  /**
+   * The person stopped subagent `subagentId` alone, or, `stopping` false,
+   * the stop could not be sent. Not recorded: a stop pending is live only.
+   */
+  | {
+      readonly type: 'subagent_stopping';
+      readonly turnId: string;
+      readonly subagentId: string;
+      readonly stopping: boolean;
+    }
   /**
    * The agent that ran the subagents is gone: its process exited, or the
    * session is a past reopened in another. `at` is when, if known.

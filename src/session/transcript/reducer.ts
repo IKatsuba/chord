@@ -25,7 +25,7 @@ import {
   shellReplayed,
   shellStarted,
 } from './shell.ts';
-import { childUpdate, mergeSubagent } from './subagents.ts';
+import { childUpdate, mergeSubagent, subagentStopping } from './subagents.ts';
 import { mergeToolCall } from './tools.ts';
 import { cancelled, disconnected, prompted, settle } from './turn.ts';
 import type {
@@ -109,6 +109,8 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
       return elicitationSettled(state, action.turnId, action.id, action.answer);
     case 'cancel':
       return cancelled(state, action.turnId, action.at);
+    case 'subagent_stopping':
+      return subagentStopping(state, action.subagentId, action.stopping);
     case 'disconnected':
       return disconnected(state, action.at);
     case 'result':

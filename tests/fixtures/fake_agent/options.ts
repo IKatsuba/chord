@@ -28,6 +28,14 @@ export const NO_CONFIG =
 export const NO_MODES =
   ARGS.includes('--no-modes') || process.env.CHORD_FAKE_NO_MODES === '1';
 
+/**
+ * A stop of a Claude subagent alone is held until a test lets it go: each
+ * stop is written to `STOP_GATE_STOPS` in the session's gate, one id a line,
+ * and the subagent ends only once `STOP_GATE_RELEASE` is there.
+ */
+export const STOP_GATE =
+  ARGS.includes('--stop-gate') || process.env.CHORD_FAKE_STOP_GATE === '1';
+
 const HANGS = ['start', 'config', 'turn'] as const;
 
 function hangStep(): (typeof HANGS)[number] | undefined {

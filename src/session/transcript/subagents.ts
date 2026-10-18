@@ -238,12 +238,25 @@ function patched(
     endedAt,
     error: before,
     cancellable: wasCancellable,
+    waiting: wasWaiting,
+    offeredCancel: wasOffered,
+    stopping: wasStopping,
     ...kept
   } = subagent;
+  // A stop pending holds until its agent tells a state it is not at work in.
+  const stopping =
+    told === undefined || told === 'running' ? wasStopping : undefined;
+  const waiting =
+    told === undefined
+      ? wasWaiting
+      : update.state?.state === 'requires_action'
+        ? (wasWaiting ?? (at === undefined ? {} : { since: at }))
+        : undefined;
   const cancellable =
     capabilities === undefined
       ? wasCancellable
       : capabilities?.cancel !== undefined && capabilities.cancel !== null;
+  const offeredCancel = wasOffered ?? (cancellable === true || undefined);
   // An untracked subagent may have worked on: its time stands at the
   // `unknown`, and runs again to the next state it is told, but not to an
   // update that tells none.
@@ -281,6 +294,9 @@ function patched(
     ...(ended === undefined ? {} : { endedAt: ended }),
     ...(error === undefined ? {} : { error }),
     ...(cancellable === true ? { cancellable } : {}),
+    ...(offeredCancel === true ? { offeredCancel } : {}),
+    ...(stopping === undefined ? {} : { stopping }),
+    ...(waiting === undefined ? {} : { waiting }),
   };
 }
 
@@ -415,6 +431,30 @@ export function endRunning(
   });
 
   return changed ? next : entries;
+}
+
+/**
+ * Subagent `id` marked stopping while it runs, or, `stopping` false, its
+ * stop that could not be sent taken back.
+ */
+export function subagentStopping(
+  state: Transcript,
+  id: string,
+  stopping: boolean,
+): Transcript {
+  const entries = changeSubagent(state.entries, id, (subagent) => {
+    if (stopping) {
+      return subagent.state === 'running' && subagent.stopping !== true
+        ? { ...subagent, stopping: true }
+        : subagent;
+    }
+
+    const { stopping: _, ...rest } = subagent;
+
+    return subagent.stopping === true ? rest : subagent;
+  });
+
+  return entries === state.entries ? state : { ...state, entries };
 }
 
 /** The subagent `id`, among `entries` or under them, at any depth. */

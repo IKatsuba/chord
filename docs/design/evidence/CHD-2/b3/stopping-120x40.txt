@@ -1,0 +1,40 @@
+ Background · 2 in this tab
+
+  ❯ Run the test suite    agent  ■ stopping 0s  main
+    Find the cancel path  agent  running 0s     main
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑ ↓ to move · enter to go to its call · x to stop · esc to close

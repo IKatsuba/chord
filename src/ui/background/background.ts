@@ -1,6 +1,7 @@
 /**
  * The background of a tab, kept out of the components: every monitor and
- * `spawn_task` task its agents run, as items in start order, and the
+ * `spawn_task` task its agents run, and every subagent of theirs that can be
+ * stopped alone (CHD-2), as items in start order, and the
  * summary line under the agents list that counts them by state, wrapped
  * between its groups and never cut (CHD-424).
  */
@@ -17,22 +18,24 @@ import { agentGroup } from '../transcript/agents/subagents.ts';
 import { agentTarget, callTarget } from '../transcript/targets.ts';
 
 /**
- * What an item is, in the order the summary line names them; CHD-2 adds an
- * agent's own background `bash` and `agent` after them.
+ * What an item is, in the order the summary line names them; an agent's own
+ * background `bash` waits on the adapters offering it without AIR (CHD-2).
  */
-export const KINDS = ['monitor', 'task'] as const;
+export const KINDS = ['monitor', 'task', 'agent'] as const;
 
 export type BackgroundKind = (typeof KINDS)[number];
 
 const KIND_WORDS: Record<BackgroundKind, readonly [string, string]> = {
   monitor: ['monitor', 'monitors'],
   task: ['task', 'tasks'],
+  agent: ['agent', 'agents'],
 };
 
 /** Where an item stands, as the summary line groups them, most urgent first. */
 export const GROUPS = [
   'asking',
   'failed',
+  'untracked',
   'running',
   'done',
   'stopped',
@@ -42,19 +45,36 @@ export type BackgroundGroup = (typeof GROUPS)[number];
 
 /** An item's state: at work, asking the person, or ended and how. */
 export type ItemStatus =
-  | { readonly group: 'running' }
+  | {
+      readonly group: 'running';
+      /** An agent the person stopped, until its agent says it ended. */
+      readonly stopping?: true;
+    }
   | {
       readonly group: 'asking';
-      readonly on: 'permission' | 'input';
+      /**
+       * What it asks for: a permission or a form chord holds, or, for an
+       * agent, nothing of its that reaches the person.
+       */
+      readonly on: 'permission' | 'input' | 'waiting';
       /** When it asked, epoch milliseconds. */
       readonly since: number;
     }
   | {
-      readonly group: 'failed' | 'done' | 'stopped';
+      /**
+       * Ended, or, `untracked`, an agent its agent lost sight of, which a
+       * later state takes back.
+       */
+      readonly group: 'failed' | 'done' | 'stopped' | 'untracked';
       /** When it ended, epoch milliseconds, which its time stands still at. */
       readonly endedAt: number;
       /** A monitor's end, which its row words. */
       readonly end?: MonitorEnd;
+      /**
+       * An agent's end that its group does not word: no cause seen, or its
+       * agent gone.
+       */
+      readonly word?: 'ended' | 'disconnected';
     };
 
 /** Whose an item is: a child's or member's name and colour; none for `main`. */
@@ -83,6 +103,8 @@ export interface BackgroundItem {
   readonly model?: string;
   /** A task's `spawn_task` call, which `enter` scrolls to. */
   readonly callId?: string;
+  /** An agent's own stop: its agent still offers one. */
+  readonly stoppable?: boolean;
 }
 
 /** One agent of the tab, as its items are read from its session. */
@@ -94,6 +116,8 @@ export interface BackgroundAgent {
   readonly monitors: readonly RunningMonitor[];
   readonly endedMonitors: readonly EndedMonitor[];
   readonly transcript: Transcript;
+  /** Its agent items the person stopped, by id, that have not ended yet. */
+  readonly stopping?: ReadonlySet<string>;
 }
 
 /**
@@ -108,7 +132,11 @@ export function backgroundItems(
   clearedAt = -Infinity,
 ): BackgroundItem[] {
   return agents
-    .flatMap((agent) => [...monitorItems(agent), ...taskItems(agent)])
+    .flatMap((agent) => [
+      ...monitorItems(agent),
+      ...taskItems(agent),
+      ...agentItems(agent),
+    ])
     .filter(
       ({ status }) =>
         status.group === 'running' ||
@@ -257,6 +285,124 @@ function taskAsking(
   return asked && { group: 'asking', ...asked };
 }
 
+/**
+ * Whether a subagent is an `agent` item: one announced with
+ * `capabilities.cancel`, which can be stopped alone. The rule is open with
+ * the owner (Q40), so it is here alone.
+ */
+export function isAgentItem(subagent: Subagent): boolean {
+  return subagent.task === undefined && subagent.offeredCancel === true;
+}
+
+/**
+ * The subagents of an agent's that are items, a subagent's own included,
+ * started since its session came up. One that lost its cancel since stays an
+ * item, with no stop.
+ */
+function agentItems(agent: BackgroundAgent): BackgroundItem[] {
+  const { since, transcript } = agent;
+
+  if (since === undefined) {
+    return [];
+  }
+
+  return agentsIn(transcript.entries).flatMap((subagent): BackgroundItem[] => {
+    const { startedAt } = subagent;
+
+    if (startedAt === undefined || startedAt < since) {
+      return [];
+    }
+
+    return [
+      {
+        kind: 'agent',
+        id: subagent.id,
+        key: agent.key,
+        ...(agent.owner === undefined ? {} : { owner: agent.owner }),
+        name: subagent.description ?? subagent.title ?? 'agent',
+        startedAt,
+        status: agentStatus(
+          subagent,
+          startedAt,
+          transcript,
+          agent.stopping?.has(subagent.id) === true,
+        ),
+        stoppable: subagent.cancellable === true,
+      },
+    ];
+  });
+}
+
+/** The ids of the agent items among `entries` the person stopped. */
+export function stoppingIn(entries: readonly Entry[]): ReadonlySet<string> {
+  return new Set(
+    agentsIn(entries)
+      .filter((subagent) => subagent.stopping === true)
+      .map((subagent) => subagent.id),
+  );
+}
+
+/** Every agent item among `entries`, a subagent's own included. */
+function agentsIn(entries: readonly Entry[]): Subagent[] {
+  return entries.flatMap((entry) => {
+    if (entry.kind !== 'subagent') {
+      return [];
+    }
+
+    const { subagent } = entry;
+    const inner = agentsIn(subagent.entries);
+
+    return isAgentItem(subagent) ? [subagent, ...inner] : inner;
+  });
+}
+
+/** An agent item's state, as CHD-2's table says it. */
+function agentStatus(
+  subagent: Subagent,
+  startedAt: number,
+  transcript: Transcript,
+  stopping: boolean,
+): ItemStatus {
+  const endedAt = subagent.endedAt ?? startedAt;
+
+  switch (subagent.state) {
+    case 'running': {
+      // Stopped by the person, it reads so while its request stays up.
+      if (stopping) {
+        return { group: 'running', stopping: true };
+      }
+
+      const asked = taskAsking(subagent.id, transcript);
+
+      if (asked !== undefined) {
+        return asked;
+      }
+
+      if (subagent.waiting !== undefined) {
+        return {
+          group: 'asking',
+          on: 'waiting',
+          since: subagent.waiting.since ?? startedAt,
+        };
+      }
+
+      return { group: 'running' };
+    }
+    case 'completed':
+      return { group: 'done', endedAt };
+    case 'failed':
+      return { group: 'failed', endedAt };
+    case 'disconnected':
+      return { group: 'failed', endedAt, word: 'disconnected' };
+    case 'cancelled':
+      return { group: 'stopped', endedAt };
+    case 'ended':
+      return { group: 'stopped', endedAt, word: 'ended' };
+    case 'untracked':
+      return { group: 'untracked', endedAt };
+  }
+}
+
 /** One state's group on the summary line: its words, with its glyph. */
 export interface SummaryGroup {
   readonly group: BackgroundGroup;
@@ -267,6 +413,7 @@ export interface SummaryGroup {
 const GROUP_GLYPHS: Record<BackgroundGroup, string | undefined> = {
   asking: GLYPHS.asking,
   failed: GLYPHS.failed,
+  untracked: '?',
   running: undefined,
   done: GLYPHS.replied,
   stopped: '■',

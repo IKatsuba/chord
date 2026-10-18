@@ -30,6 +30,13 @@ export function pause(signal: AbortSignal, ms = STEP_MS): Promise<void> {
   });
 }
 
+/**
+ * Aborted once the client has closed the connection: work that outlives
+ * every turn, a background subagent or a stop held for a test, ends on it,
+ * so no timer keeps the process alive after its client left.
+ */
+export const lifetime = new AbortController();
+
 /** How many tool calls each session has started, to number the next one. */
 const callCounts = new Map<string, number>();
 

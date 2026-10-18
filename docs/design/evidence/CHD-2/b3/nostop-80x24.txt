@@ -1,0 +1,24 @@
+ Background · 1 in this tab
+
+  ❯ Run the test suite  agent  running 0s  main
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ this agent offers no stop

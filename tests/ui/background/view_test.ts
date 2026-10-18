@@ -4,6 +4,7 @@ import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
   moveViewFocus,
   stateText,
+  stopRefused,
   type ViewRow,
   viewRows,
   viewWindow,
@@ -422,4 +423,106 @@ describe('CHD-424 tester: view layout edges', () => {
       'parser tests',
     );
   });
+});
+
+test("an agent item's state reads as CHD-2's table words it", () => {
+  const say = (status: BackgroundItem['status']) =>
+    stateText(
+      {
+        kind: 'agent',
+        id: 'a',
+        key: 1,
+        name: 'Explore the parser',
+        startedAt: NOW - 41_000,
+        status,
+      },
+      NOW,
+    ).text;
+  const ended = (
+    group: 'done' | 'failed' | 'stopped',
+    word?: 'ended' | 'disconnected',
+  ) => ({
+    group,
+    endedAt: NOW - 41_000 + 124_000 - 83_000,
+    ...(word === undefined ? {} : { word }),
+  });
+
+  expect(say({ group: 'running' })).toBe('running 41s');
+  expect(say({ group: 'running', stopping: true })).toBe('■ stopping 41s');
+  expect(say({ group: 'asking', on: 'permission', since: NOW - 13_000 })).toBe(
+    '● permission 13s',
+  );
+  expect(say({ group: 'asking', on: 'input', since: NOW - 13_000 })).toBe(
+    '● input 13s',
+  );
+  expect(say({ group: 'asking', on: 'waiting', since: NOW - 13_000 })).toBe(
+    '● waiting 13s',
+  );
+  expect(say(ended('done'))).toBe('✓ done in 41s');
+  expect(say(ended('failed'))).toBe('✗ failed after 41s');
+  expect(say(ended('failed', 'disconnected'))).toBe('✗ disconnected after 41s');
+  expect(say(ended('stopped'))).toBe('■ stopped after 41s');
+  expect(say(ended('stopped', 'ended'))).toBe('■ ended after 41s');
+  // Its time stands at the unknown.
+  expect(say({ group: 'untracked', endedAt: NOW - 20_000 })).toBe(
+    '? untracked 21s',
+  );
+});
+
+describe('CHD-2 tester: agent row clocks and wrapping', () => {
+  test('untracked time freezes while stopping time advances from the original start', () => {
+    const base: BackgroundItem = {
+      kind: 'agent',
+      id: 'a',
+      key: 1,
+      name: 'A',
+      startedAt: NOW - 10_000,
+      status: { group: 'untracked', endedAt: NOW - 5000 },
+    };
+
+    expect(stateText(base, NOW + 60_000).text).toBe('? untracked 5s');
+    expect(
+      stateText(
+        { ...base, status: { group: 'running', stopping: true } },
+        NOW + 60_000,
+      ).text,
+    ).toBe('■ stopping 1m 10s');
+  });
+
+  test('long agent names preserve state and owner in narrow and wide rows', () => {
+    const name = 'Read the transport tests and describe cancellation';
+    const entry: BackgroundItem = {
+      kind: 'agent',
+      id: 'a',
+      key: 2,
+      owner: PARSER,
+      name,
+      startedAt: NOW - 20_000,
+      status: { group: 'untracked', endedAt: NOW - 10_000 },
+    };
+
+    for (const width of [76, 116]) {
+      const rows = viewRows([entry], { width, focus: entry, now: NOW });
+      const lines = text(rows);
+      const kept = rows[0]!.lines
+        .flatMap((line) =>
+          line
+            .filter(({ role }) => role === 'name')
+            .map(({ text }) => text.trim()),
+        )
+        .join(' ');
+
+      expect(kept).toBe(name);
+      expect(lines[0]).toContain('? untracked 10s');
+      expect(lines[0]).toContain('parser');
+      expect(lines.every((line) => stringWidth(line) <= width)).toBe(true);
+    }
+  });
+});
+
+test("a stop that could not be sent says its error's first line", () => {
+  expect(stopRefused(new Error('Session not found\nat line 2'))).toBe(
+    'could not stop: Session not found',
+  );
+  expect(stopRefused('closed')).toBe('could not stop: closed');
 });

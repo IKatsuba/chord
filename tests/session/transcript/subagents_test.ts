@@ -281,3 +281,184 @@ describe('CHD-432 tester: message identity and nested routing', () => {
     );
   });
 });
+
+test('a subagent waits while its agent says requires_action, and keeps having offered a cancel it lost', () => {
+  const stood = (
+    state: { state: string } | undefined,
+    at: number,
+    capabilities?: { cancel?: object } | null,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'a',
+      ...(state === undefined ? {} : { state: state as never }),
+      ...(capabilities === undefined ? {} : { capabilities }),
+    },
+  });
+  const after = (...actions: TranscriptAction[]) =>
+    only(
+      fold([
+        PROMPT,
+        { ...spawned('a', 'explorer'), at: 5 } as TranscriptAction,
+        stood(undefined, 5, { cancel: {} }),
+        ...actions,
+      ]),
+      'a',
+    );
+
+  expect(after(stood({ state: 'requires_action' }, 9)).waiting).toStrictEqual({
+    since: 9,
+  });
+  // A second one keeps the first time; a patch with no state keeps it.
+  expect(
+    after(
+      stood({ state: 'requires_action' }, 9),
+      stood({ state: 'requires_action' }, 12),
+      stood(undefined, 14),
+    ).waiting,
+  ).toStrictEqual({ since: 9 });
+  expect(
+    after(
+      stood({ state: 'requires_action' }, 9),
+      stood({ state: 'running' }, 12),
+    ).waiting,
+  ).toStrictEqual(undefined);
+
+  const lost = after(stood(undefined, 9, null));
+
+  expect([lost.cancellable, lost.offeredCancel]).toStrictEqual([
+    undefined,
+    true,
+  ]);
+});
+
+describe('CHD-2 tester: retained capability and wait clocks', () => {
+  const patch = (
+    at: number,
+    update: Extract<SessionUpdate, { sessionUpdate: 'subagent_update' }>,
+  ): TranscriptAction => ({ type: 'update', turnId: TURN, at, update });
+
+  test('a late cancel offer stays remembered after it is revoked and waiting restarts after recovery', () => {
+    const before = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      patch(10, {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        state: { state: 'requires_action' },
+      }),
+      patch(20, {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        capabilities: { cancel: {} },
+      }),
+      patch(30, {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        capabilities: {},
+      }),
+    ]);
+
+    expect(only(before, 'a')).toMatchObject({
+      offeredCancel: true,
+      waiting: { since: 10 },
+    });
+    expect(only(before, 'a').cancellable).toBeUndefined();
+
+    const after = fold(
+      [
+        patch(40, {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'a',
+          state: { state: 'unknown' },
+        }),
+        patch(50, {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'a',
+          state: { state: 'requires_action' },
+        }),
+      ],
+      before,
+    );
+
+    expect(only(after, 'a')).toMatchObject({
+      offeredCancel: true,
+      waiting: { since: 50 },
+      state: 'running',
+    });
+    expect(only(after, 'a').endedAt).toBeUndefined();
+    expect(only(after, 'a').cancellable).toBeUndefined();
+  });
+});
+
+test('a subagent stopped alone reads stopping until its agent tells a state it is not at work in, or the stop could not go', () => {
+  const stop = (stopping: boolean): TranscriptAction => ({
+    type: 'subagent_stopping',
+    turnId: 'stop',
+    subagentId: 'a',
+    stopping,
+  });
+  const told = (state: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'a',
+      state: { state } as never,
+    },
+  });
+  const stopped = fold([PROMPT, spawned('a', 'explorer'), stop(true)]);
+
+  expect(only(stopped, 'a').stopping).toBe(true);
+  expect(only(fold([told('running')], stopped), 'a').stopping).toBe(true);
+  expect(only(fold([told('idle')], stopped), 'a').stopping).toBe(undefined);
+  expect(only(fold([told('unknown')], stopped), 'a').stopping).toBe(undefined);
+  expect(only(fold([stop(false)], stopped), 'a').stopping).toBe(undefined);
+  // An ended one is not marked.
+  expect(only(fold([told('idle'), stop(true)], stopped), 'a').stopping).toBe(
+    undefined,
+  );
+});
+
+describe('CHD-2 tester: completion crossing a stop', () => {
+  test('completion stays done after late rollback and a second run can be stopped independently', () => {
+    const stop = (stopping: boolean): TranscriptAction => ({
+      type: 'subagent_stopping',
+      turnId: 'stop',
+      subagentId: 'a',
+      stopping,
+    });
+    const state = (word: 'running' | 'idle', at: number): TranscriptAction => ({
+      type: 'update',
+      turnId: TURN,
+      at,
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        state:
+          word === 'running'
+            ? { state: 'running' }
+            : { state: 'idle', stopReason: 'end_turn' },
+      },
+    });
+    const done = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      stop(true),
+      state('idle', 20),
+      stop(false),
+    ]);
+
+    expect(only(done, 'a')).toMatchObject({ state: 'completed', endedAt: 20 });
+    expect(only(done, 'a').stopping).toBeUndefined();
+
+    const again = fold([state('running', 30), stop(true)], done);
+
+    expect(only(again, 'a').state).toBe('running');
+    expect(only(again, 'a').stopping).toBe(true);
+    expect(only(again, 'a').endedAt).toBeUndefined();
+  });
+});

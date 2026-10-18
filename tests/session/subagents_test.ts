@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
@@ -1858,4 +1858,308 @@ describe('CHD-432 tester: cancel capability boundaries', () => {
     });
     expect(runningSubagents(later)).toBe(0);
   });
+});
+
+test("a session/cancel on a Claude subagent's own id stops it alone: it reports idle cancelled, and its parent's turn ends on its own", () =>
+  withSession(async (session) => {
+    const states: unknown[] = [];
+    let stopped = false;
+    const { result } = await run(session, 'claudebackground', {
+      onUpdate: (updates) => {
+        const first = updates.find(
+          (update) => update.sessionUpdate === 'subagent_update',
+        );
+
+        if (!stopped && first?.sessionUpdate === 'subagent_update') {
+          stopped = true;
+
+          void session.stopSubagent(first.sessionId);
+        }
+
+        for (const update of updates.splice(0)) {
+          if (
+            update.sessionUpdate === 'subagent_update' &&
+            update.state !== undefined &&
+            update.state !== null
+          ) {
+            states.push([update.title ?? update.sessionId, update.state]);
+          }
+        }
+      },
+    });
+
+    expect(result.status).toStrictEqual('completed');
+    expect(
+      states
+        .filter(
+          (each) => (each as [string, { state: string }])[1].state === 'idle',
+        )
+        .map(
+          (each) => (each as [string, { stopReason: string }])[1].stopReason,
+        ),
+    ).toStrictEqual(['cancelled', 'end_turn']);
+  }));
+
+test("a Claude subagent messaged again can be stopped alone in its second run, and its parent's turn still ends on its own", () =>
+  withSession(async (session) => {
+    const ends: unknown[] = [];
+    let idles = 0;
+    let stopped = false;
+    const { result, updates } = await run(session, 'claudemessage', {
+      onUpdate: (all) => {
+        const last = all.at(-1);
+
+        if (last?.sessionUpdate !== 'subagent_update') {
+          return;
+        }
+
+        const word = last.state?.state;
+
+        if (word === 'idle') {
+          idles += 1;
+
+          ends.push(last.state);
+        } else if (word === 'running' && idles === 1 && !stopped) {
+          stopped = true;
+
+          void session.stopSubagent(last.sessionId);
+        }
+      },
+    });
+
+    expect(result.status).toStrictEqual('completed');
+    expect(ends).toStrictEqual([
+      { state: 'idle', stopReason: 'end_turn' },
+      { state: 'idle', stopReason: 'cancelled' },
+    ]);
+    expect(said(updates).join('')).toContain('Both found.');
+  }));
+
+describe('CHD-2 tester: deferred stop failure and asking isolation', () => {
+  test('a deferred notify failure rolls stopping back without cancelling the parent turn', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-stop-failure-'));
+    const notice = Promise.withResolvers<void>();
+    const connected = Promise.withResolvers<void>();
+    const waiting = Promise.withResolvers<string>();
+    const events: ConversationEvent[] = [];
+    const ids: string[] = [];
+    let session: Session | undefined;
+    const conversation = new Conversation(
+      async (signal) => {
+        session = await openSession({
+          agent: 'fake',
+          cwd: dir,
+          signal,
+          agentCommand: fakeAgentCommand(undefined, '--step-ms', '50'),
+        });
+
+        return {
+          ...session,
+          stopSubagent: (id: string) => {
+            ids.push(id);
+
+            return notice.promise;
+          },
+        };
+      },
+      (event) => {
+        events.push(event);
+
+        if (event.type === 'connected') {
+          connected.resolve();
+        }
+
+        if (
+          event.type === 'update' &&
+          event.update.sessionUpdate === 'subagent_update' &&
+          event.update.state?.state === 'requires_action'
+        ) {
+          waiting.resolve(event.update.sessionId);
+        }
+      },
+    );
+    const shown = () =>
+      fold(
+        events.filter((event): event is TranscriptAction =>
+          [
+            'prompt',
+            'update',
+            'result',
+            'cancel',
+            'disconnected',
+            'permission_requested',
+            'permission_settled',
+            'subagent_stopping',
+          ].includes(event.type),
+        ),
+      );
+
+    try {
+      conversation.start();
+      await connected.promise;
+      conversation.send('claudewaiting');
+
+      const id = await waiting.promise;
+      const stop = conversation.stopSubagent(id);
+
+      expect(ids).toStrictEqual([id]);
+      expect(id).not.toBe(session?.id);
+      expect(only(shown(), id).stopping).toBe(true);
+      expect(only(shown(), id).waiting).toBeDefined();
+      notice.reject(new Error('Broken pipe\ntransport detail'));
+      await expect(stop).rejects.toThrow('Broken pipe');
+      expect(only(shown(), id).stopping).toBeUndefined();
+      expect(only(shown(), id).state).toBe('running');
+      expect(only(shown(), id).waiting).toBeDefined();
+      expect(events.some((event) => event.type === 'cancel')).toBe(false);
+    } finally {
+      notice.resolve();
+      await conversation.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('stopping an asking child withdraws only its permission and the parent completes', () =>
+    withSession(async (session) => {
+      const waiting = Promise.withResolvers<PendingPermission>();
+      const unsubscribe = session.permissions.subscribe((request) =>
+        waiting.resolve(request),
+      );
+
+      try {
+        const turn = run(session, 'claudesubagents');
+        const request = await waiting.promise;
+        const withdrawn = new Promise<void>((resolve) =>
+          request.signal.addEventListener('abort', () => resolve(), {
+            once: true,
+          }),
+        );
+
+        await session.stopSubagent(request.sessionId);
+        await withdrawn;
+
+        const ran = await turn;
+
+        expect(request.signal.aborted).toBe(true);
+        expect(ran.result.status).toBe('completed');
+        expect(
+          ran.updates.some(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              update.sessionId === request.sessionId &&
+              update.state?.state === 'idle' &&
+              update.state.stopReason === 'cancelled',
+          ),
+        ).toBe(true);
+        expect(said(ran.updates).join('')).toContain('Each agent has ended.');
+      } finally {
+        unsubscribe();
+      }
+    }));
+});
+
+test("--stop-gate holds a Claude subagent's stop alone until the test lets it go, writing each stop it got", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-subagents-'));
+  const session = await openSession({
+    agent: 'fake',
+    cwd: dir,
+    // At its own pace, so the stopped one is still at work when let go.
+    agentCommand: fakeAgentCommand(undefined, '--stop-gate'),
+  });
+  const gate = join(dir, '.fake-gate');
+  const idles: [string, unknown][] = [];
+
+  try {
+    session.subscribe((update) => {
+      if (
+        update.sessionUpdate === 'subagent_update' &&
+        update.state?.state === 'idle'
+      ) {
+        idles.push([update.sessionId, update.state]);
+      }
+    });
+
+    let tester: string | undefined;
+    const { result } = await run(session, 'claudebackground', {
+      onUpdate: (updates) => {
+        const first = updates.find(
+          (update) => update.sessionUpdate === 'subagent_update',
+        );
+
+        if (
+          tester === undefined &&
+          first?.sessionUpdate === 'subagent_update'
+        ) {
+          tester = first.sessionId;
+
+          void session.stopSubagent(tester);
+        }
+      },
+    });
+
+    expect(result.status).toStrictEqual('completed');
+    // Held: only the one the turn waited on has ended.
+    expect(idles.map(([, state]) => state)).toStrictEqual([
+      { state: 'idle', stopReason: 'end_turn' },
+    ]);
+    expect(await readFile(join(gate, 'stops'), 'utf8')).toBe(`${tester}\n`);
+
+    await writeFile(join(gate, 'stop-release'), '');
+
+    const deadline = Date.now() + 10_000;
+
+    while (idles.length < 2 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    assert(tester !== undefined);
+    expect(idles.at(-1)).toStrictEqual([
+      tester,
+      { state: 'idle', stopReason: 'cancelled' },
+    ]);
+  } finally {
+    await session.close();
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('a stop held by --stop-gate does not keep the fake alive once the session closes', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-subagents-'));
+  const session = await openSession({
+    agent: 'fake',
+    cwd: dir,
+    agentCommand: fakeAgentCommand(undefined, '--stop-gate'),
+  });
+
+  try {
+    let tester: string | undefined;
+
+    await run(session, 'claudebackground', {
+      onUpdate: (updates) => {
+        const first = updates.find(
+          (update) => update.sessionUpdate === 'subagent_update',
+        );
+
+        if (
+          tester === undefined &&
+          first?.sessionUpdate === 'subagent_update'
+        ) {
+          tester = first.sessionId;
+
+          void session.stopSubagent(tester);
+        }
+      },
+    });
+
+    const started = Date.now();
+
+    await session.close();
+    // Within the first grace after stdin ends: it went on its own, not on
+    // the SIGTERM it ignores or the SIGKILL after.
+    expect(Date.now() - started).toBeLessThan(1500);
+  } finally {
+    // Idempotent: a run that failed before the timed close still ends it.
+    await session.close();
+    await rm(dir, { recursive: true });
+  }
 });

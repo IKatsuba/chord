@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   initialBackground,
   reduceBackground,
@@ -41,4 +41,106 @@ test("another tab's /clear leaves each tab's clearing as it was, so no ended ite
   ).reduce(reduceWindowed, windowed(initialAppState, 1));
 
   expect(frontState(both).backgroundCleared).toStrictEqual({ 1: 100, 2: 200 });
+});
+
+test("a stop's hint is said only for the stop x last asked for, while the ❯ has stayed on its row since", () => {
+  const a = { key: 1, id: 'a' };
+  const b = { key: 1, id: 'b' };
+  const hint = 'could not stop: Session not found';
+  const run = (...actions: Parameters<typeof reduceBackground>[1][]) =>
+    actions.reduce(reduceBackground, initialBackground).backgroundView;
+  const asked = (token: string) =>
+    ({ type: 'background_stop_asked', focus: a, token }) as const;
+  const refused = (token: string) =>
+    ({ type: 'background_hinted', token, hint }) as const;
+  const opened = [
+    { type: 'background_opened' },
+    { type: 'background_focused', focus: a },
+    asked('t1'),
+  ] as const;
+
+  expect(run(...opened, refused('t1'))?.hint).toBe(hint);
+  // Kept while the ❯ stays; gone once it moves.
+  expect(
+    run(...opened, refused('t1'), { type: 'background_focused', focus: a })
+      ?.hint,
+  ).toBe(hint);
+  expect(
+    run(...opened, refused('t1'), { type: 'background_focused', focus: b }),
+  ).toStrictEqual({ focus: b });
+  // An answer after the ❯ left, even if it came back, or after the view
+  // closed and opened again, is not said.
+  expect(
+    run(
+      ...opened,
+      { type: 'background_focused', focus: b },
+      { type: 'background_focused', focus: a },
+      refused('t1'),
+    )?.hint,
+  ).toBe(undefined);
+  expect(
+    run(
+      ...opened,
+      { type: 'background_closed' },
+      { type: 'background_opened' },
+      { type: 'background_focused', focus: a },
+      refused('t1'),
+    )?.hint,
+  ).toBe(undefined);
+  // Nor is an earlier stop's once a later one on the same row was asked.
+  expect(
+    run(
+      ...opened,
+      { type: 'background_focused', focus: b },
+      { type: 'background_focused', focus: a },
+      asked('t2'),
+      refused('t1'),
+    )?.hint,
+  ).toBe(undefined);
+  expect(run(refused('t1'))).toBe(undefined);
+});
+
+describe('CHD-2 tester: stop attempt token ordering', () => {
+  test('an old refusal cannot disarm a newer attempt and the new hint clears on owner change', () => {
+    const focus = { key: 1, id: 'same' };
+    let state = reduceBackground(initialBackground, {
+      type: 'background_opened',
+    });
+
+    state = reduceBackground(state, { type: 'background_focused', focus });
+    state = reduceBackground(state, {
+      type: 'background_stop_asked',
+      focus,
+      token: 'old',
+    });
+    state = reduceBackground(state, {
+      type: 'background_stop_asked',
+      focus,
+      token: 'new',
+    });
+
+    const late = reduceBackground(state, {
+      type: 'background_hinted',
+      token: 'old',
+      hint: 'old refusal',
+    });
+
+    expect(late).toBe(state);
+    expect(late.backgroundView?.stopping?.token).toBe('new');
+
+    const refused = reduceBackground(late, {
+      type: 'background_hinted',
+      token: 'new',
+      hint: 'new refusal',
+    });
+
+    expect(refused.backgroundView?.hint).toBe('new refusal');
+    expect(refused.backgroundView?.stopping).toBeUndefined();
+    expect(
+      reduceBackground(refused, {
+        type: 'background_focused',
+        focus: { key: 2, id: 'same' },
+      }).backgroundView?.hint,
+    ).toBeUndefined();
+  });
 });

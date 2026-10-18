@@ -1,7 +1,8 @@
 import { TextAttributes } from '@opentui/core';
 import { hintOf, useColours, useHintKey } from '../app/context.ts';
 import { useAgentsClock } from '../agents/Agents.tsx';
-import { DIM, fg, TEXT } from '../theme/text.ts';
+import { Ansi } from '../theme/Ansi.tsx';
+import { CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { agentColour, type Palette } from '../theme/theme.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
 import { type ItemRef, type ViewCell, viewRows, viewWindow } from './view.ts';
@@ -34,11 +35,14 @@ const CHROME = 4;
 export function BackgroundView({
   items,
   focus,
+  hint,
   columns,
   rows,
 }: {
   items: readonly BackgroundItem[];
   focus: ItemRef | undefined;
+  /** Said in place of the keys, of the focused item's stop. */
+  hint?: string | undefined;
   columns: number;
   rows: number;
 }) {
@@ -99,14 +103,21 @@ export function BackgroundView({
         )}
       </box>
       <box paddingX={1} flexShrink={0}>
-        <text {...TEXT} attributes={DIM}>
-          {hintOf(
-            '↑ ↓ to move',
-            'enter to go to its call',
-            stop && `${stop} to stop`,
-            close && `${close} to close`,
-          )}
-        </text>
+        {hint !== undefined ? (
+          // An agent's error, cut to one line.
+          <text {...CUT} attributes={DIM}>
+            <Ansi text={hint} />
+          </text>
+        ) : (
+          <text {...TEXT} attributes={DIM}>
+            {hintOf(
+              '↑ ↓ to move',
+              'enter to go to its call',
+              stop && `${stop} to stop`,
+              close && `${close} to close`,
+            )}
+          </text>
+        )}
       </box>
     </box>
   );

@@ -8,6 +8,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
+import { stopRefused } from '../../../src/ui/background/view.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { draw } from '../harness.tsx';
 import {
@@ -492,4 +493,198 @@ describe('CHD-424 tester: full-screen background edges', () => {
       await drawn.unmount();
     }
   });
+});
+
+for (const size of [
+  { rows: 40, columns: 120 },
+  { rows: 24, columns: 80 },
+]) {
+  test(`Claude's agents are counted on the summary line and listed in the view, and enter goes to an agent's own row in its group, at ${size.columns}x${size.rows}`, () =>
+    withWindow(async (window) => {
+      // A transcript longer than a screen ahead of them, to scroll back to.
+      await send(window, 'steps');
+      await window.shows('150 steps read.');
+      await send(window, 'claudesubagents');
+      await window.shows('Do you want to proceed?');
+      await window.press('1');
+      await window.shows('Each agent has ended.');
+      await window.shows('background  ✗ 1 agent failed · ? 1 agent untracked');
+      expect(window.frame()).toContain('✓ 1 agent done');
+      expect(window.frame()).toContain('■ 1 agent stopped');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows(' Background · 4 in this tab');
+
+      const frame = window.frame();
+
+      for (const words of [
+        'Find the session layer',
+        'agent',
+        '✓ done in',
+        '✗ failed after',
+        '■ stopped after',
+        '? untracked',
+      ]) {
+        expect(frame).toContain(words);
+      }
+
+      await window.press('j');
+      await window.shows('❯ Review the transcript');
+      await window.press('\r');
+      // At the transcript's end, it goes as high as scrolling allows.
+      await until("the view to close on the reviewer's own row", () =>
+        window.frame().includes('├─ Agent(reviewer (general-purpose))'),
+      );
+      expect(window.frame()).not.toContain('Background ·');
+    }, size));
+}
+
+test('an agent its agent says waits, with no request on screen, is asking: ● waiting on its row', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudewaiting');
+      await window.shows('background  ● 1 agent asking');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('● waiting');
+      await window.shows('✓ done in');
+      await window.press(ESC);
+      await window.shows('background  ✓ 1 agent done');
+    },
+    { rows: 24, columns: 80 },
+  ));
+
+describe('CHD-2 tester: navigation leaves the transcript tail', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`Enter goes back to the earlier agent instead of only closing the view at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudebackground');
+          await window.shows('Running 2 agents');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await send(window, 'steps');
+          await window.shows('150 steps read.');
+          expect(window.frame()).not.toContain(
+            'Agent(tester (general-purpose))',
+          );
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('Background · 1 in this tab');
+          expect(window.frame()).toContain('Run the test suite');
+          await window.press('\r');
+          await until(
+            'the earlier agent row visible and later transcript tail out of view',
+            () => {
+              const frame = window.frame();
+
+              return (
+                frame.includes('Agent(tester (general-purpose))') &&
+                !frame.includes('150 steps read.')
+              );
+            },
+          );
+          expect(window.frame()).not.toContain('Background ·');
+        },
+        { columns, rows },
+      ));
+  }
+});
+
+test("x on a Claude agent stops it alone: its row ends stopped, its block Cancelled, and its parent's turn goes on", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudebackground');
+      await window.shows('background  2 agents running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Run the test suite');
+      await window.press('x');
+      await window.shows('■ stopped after');
+      // The one the turn waits on runs on, and the turn ends on its own.
+      await window.shows('✓ done in');
+      await window.press(ESC);
+      await window.press(ESC);
+      await window.shows('The tests run on; I will say when they end.');
+      expect(window.frame()).toContain('⎿  Cancelled');
+      expect(window.frame()).not.toContain('Interrupted by user');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+test('x on an agent that took its own stop back says so on the hint line, and stays running', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudenostop');
+      await window.shows('background  1 agent running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Run the test suite');
+      await window.press('x');
+      await window.shows('this agent offers no stop');
+      expect(window.frame()).not.toContain('to stop · esc to close');
+      expect(window.frame()).toContain('running');
+    },
+    { rows: 24, columns: 80 },
+  ));
+
+describe('CHD-2 tester: stopping and refusal rendering', () => {
+  for (const columns of [80, 120]) {
+    test(`stopping and rolled-back waiting rows retain focus with a first-line refusal at ${columns} columns`, async () => {
+      const item: BackgroundItem = {
+        kind: 'agent',
+        id: 'a',
+        key: 1,
+        name: 'Run the tests',
+        startedAt: Date.now(),
+        status: { group: 'running', stopping: true },
+      };
+      const first = await draw(
+        <BackgroundView
+          items={[item]}
+          focus={item}
+          columns={columns}
+          rows={24}
+        />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        expect(first.frame()).toContain('■ stopping');
+        expect(first.frame()).toContain('❯ Run the tests');
+      } finally {
+        await first.unmount();
+      }
+
+      const rollback: BackgroundItem = {
+        ...item,
+        status: { group: 'asking', on: 'waiting', since: Date.now() },
+      };
+      const hint = stopRefused(new Error('Broken pipe\ntransport detail'));
+      const refused = await draw(
+        <BackgroundView
+          items={[rollback]}
+          focus={rollback}
+          hint={hint}
+          columns={columns}
+          rows={24}
+        />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        expect(refused.frame()).toContain('● waiting');
+        expect(refused.frame()).toContain('❯ Run the tests');
+        expect(refused.frame()).toContain('could not stop: Broken pipe');
+        expect(refused.frame()).not.toContain('transport detail');
+        expect(refused.frame()).not.toContain('■ stopping');
+        expect(refused.frame()).not.toContain('x to stop');
+      } finally {
+        await refused.unmount();
+      }
+    });
+  }
 });

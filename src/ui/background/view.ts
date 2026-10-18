@@ -41,6 +41,16 @@ export function moveViewFocus(
   return next && { key: next.key, id: next.id };
 }
 
+/** The hint line on an agent item whose agent offers no stop of its own. */
+export const NO_STOP_HINT = 'this agent offers no stop';
+
+/** The hint line on a stop that could not be sent: its error's first line. */
+export function stopRefused(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return `could not stop: ${message.split('\n')[0]}`;
+}
+
 /** A name's column at most; a longer name wraps inside it. */
 export const NAME_CELLS = 24;
 
@@ -86,13 +96,25 @@ export function stateText(
     item.events === undefined ? '' : ` · ${eventsWords(item.events)}`;
 
   switch (status.group) {
-    case 'running':
+    case 'running': {
+      const ran = formatElapsed(now - item.startedAt);
+
       return {
         text:
           item.kind === 'monitor'
-            ? `running ${formatElapsed(now - item.startedAt)}${events}`
-            : `working ${formatElapsed(now - item.startedAt)}`,
+            ? `running ${ran}${events}`
+            : item.kind === 'agent'
+              ? status.stopping
+                ? `■ stopping ${ran}`
+                : `running ${ran}`
+              : `working ${ran}`,
         group: 'running',
+      };
+    }
+    case 'untracked':
+      return {
+        text: `? untracked ${formatElapsed(status.endedAt - item.startedAt)}`,
+        group: 'untracked',
       };
     case 'asking':
       return {
@@ -104,7 +126,19 @@ export function stateText(
       const tail = endedEvents ? events : '';
 
       if (status.group === 'stopped') {
-        return { text: `■ stopped after ${ran}${tail}`, group: 'stopped' };
+        return {
+          text: `■ ${status.word ?? 'stopped'} after ${ran}${tail}`,
+          group: 'stopped',
+        };
+      }
+
+      if (item.kind === 'agent') {
+        return status.group === 'done'
+          ? { text: `✓ done in ${ran}`, group: 'done' }
+          : {
+              text: `✗ ${status.word ?? 'failed'} after ${ran}`,
+              group: 'failed',
+            };
       }
 
       if (item.kind === 'task') {

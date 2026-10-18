@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   emptyWatch,
   type NotifChannel,
@@ -290,4 +290,47 @@ test("a turn a monitor's event started writes nothing; its end's turn and a perm
     play([connected, event('e1'), ended('e1'), prompt('t1'), ended('t1')])
       .written.length,
   ).toStrictEqual(1);
+});
+
+describe("a task's request across the turn that started it (CHD-266)", () => {
+  const taskAsked = (id: string): ConversationEvent => ({
+    type: 'permission_requested',
+    turnId: 't1',
+    permission: { id, subagentId: 'task-1', options: [] },
+    // A task's request comes stamped with when it was asked.
+    at: 1000,
+  });
+
+  test("stays open when the turn ends; the agent's own does not", () => {
+    const { watch } = play([
+      connected,
+      prompt('t1'),
+      taskAsked('p1'),
+      asked('t1', 'p2'),
+      ended('t1'),
+    ]);
+
+    expect([...watch.asking]).toStrictEqual(['p1']);
+  });
+
+  test('goes once answered or withdrawn, and a later one asks again', () => {
+    const { watch, written } = play([
+      connected,
+      prompt('t1'),
+      taskAsked('p1'),
+      ended('t1'),
+      {
+        type: 'permission_settled',
+        turnId: 't1',
+        id: 'p1',
+        answer: { type: 'withdrawn' },
+      },
+      taskAsked('p2'),
+    ]);
+
+    expect([...watch.asking]).toStrictEqual(['p2']);
+    // The first request, the turn's end, and the second request, which is a
+    // wait of its own once the first has gone.
+    expect(written.length).toStrictEqual(3);
+  });
 });

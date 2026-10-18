@@ -980,3 +980,24 @@ describe('CHD-384 tester: click focus and neighboring dialogs', () => {
       expect(window.frame()).toContain('╭─ docs ');
     }));
 });
+
+test("a child's task permission keeps its mark and ctrl+x a once the child's turn has ended (CHD-266)", () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'agenttask');
+    await window.shows('● parser needs your permission');
+    // parser's own turn ends about 3 s after it starts; its task still asks.
+    await new Promise((resolve) => setTimeout(resolve, 4500));
+    expect(window.frame()).toContain('● parser needs your permission');
+    expect(window.frame()).not.toContain('parser replied');
+    await leader(window, 'a');
+    await window.shows('╭─ parser ─');
+    // Asked in a turn that has ended: it waits between turns.
+    await window.shows('Agent(Fix the tokenizer) · fake asks · between turns');
+    expect(window.frame()).toMatch(/parser .*● permission/);
+    await leader(window, 'a');
+    await window.shows('Esc to reject');
+    await window.press('1');
+    await window.shows('← from Fix the tokenizer · fake · report');
+    expect(window.frame()).not.toMatch(/parser .*● permission/);
+  }));

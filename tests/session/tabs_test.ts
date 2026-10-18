@@ -1131,3 +1131,64 @@ describe('CHD-364 tester: separate reply and attention clocks', () => {
     expect(wait.unseen?.since).toBe(1000);
   });
 });
+
+describe("a task's permission across the turn that started it (CHD-266)", () => {
+  function taskAsked(turnId: string, id: string): ConversationEvent {
+    return {
+      type: 'permission_requested',
+      turnId,
+      permission: { id, subagentId: 'task-1', options: [] },
+      at: 0,
+    };
+  }
+
+  test('keeps the wait and attention after the turn ends, until answered', () => {
+    let tabs = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t1'),
+      taskAsked('t1', 'p1'),
+      ended('t1'),
+    ]);
+
+    expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual({
+      on: { kind: 'permission', title: undefined },
+      since: 2000,
+    });
+    expect(attend(tabs)?.front).toStrictEqual(1);
+
+    tabs = heard(tabs, 1, [settled('t1', 'p1')], 9000);
+
+    expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual(undefined);
+  });
+
+  test('a later request after the answer waits again', () => {
+    const tabs = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t1'),
+      taskAsked('t1', 'p1'),
+      ended('t1'),
+      settled('t1', 'p1'),
+      taskAsked('t1', 'p2'),
+    ]);
+
+    expect(tabOf(tabs, 1)?.wait.asking?.since).toStrictEqual(5000);
+    expect(attend(tabs)?.front).toStrictEqual(1);
+  });
+
+  test('a withdrawn one, as when its task is cancelled, leaves nothing waiting', () => {
+    const tabs = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t1'),
+      taskAsked('t1', 'p1'),
+      ended('t1'),
+      {
+        type: 'permission_settled',
+        turnId: 't1',
+        id: 'p1',
+        answer: { type: 'withdrawn' },
+      },
+    ]);
+
+    expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual(undefined);
+  });
+});

@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mAll 214 parser tests pass now.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mI will run the parser tests on each change.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [2m[39mfrom [0;1m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mI changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from main.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [2m[39mfrom [0;1m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThe printer is fixed too; run the whole parser suite once more.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from main.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39maskclaude[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mAsking[0m(for your input)[38;2;255;255;255m
+
+ [38;2;21;199;162m›››[38;2;255;255;255m [38;2;71;231;165mWaiting for your input…[38;2;255;255;255m [2m[39m(1s)[0m[38;2;255;255;255m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [1m[38;2;108;182;255mparser[38;2;177;185;249m asks you 2 questions[0m[38;2;255;255;255m                                                                                          [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                                                                      [38;2;177;185;249m│
+│[38;2;255;255;255m [39m← [38;2;177;185;249m◉[1m[39m Language[0m   ○ Checks   ○ Submit →[38;2;255;255;255m                                                                                 [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                                                                      [38;2;177;185;249m│
+│[38;2;255;255;255m [1m[39mWhich language should helper scripts use?[0m[38;2;255;255;255m                                                                            [38;2;177;185;249m│
+│[38;2;255;255;255m [39m [38;2;255;255;255m                                                                                                                    [38;2;177;185;249m│
+│[38;2;255;255;255m [38;2;177;185;249m❯[38;2;255;255;255m [38;2;177;185;249m1. Deno (TypeScript) (Recommended)[38;2;255;255;255m                                                                                 [38;2;177;185;249m│
+│[38;2;255;255;255m      [2m[39mRuns from source with inline npm: and jsr: imports, no package manager[0m[38;2;255;255;255m                                          [38;2;177;185;249m│
+│[38;2;255;255;255m [38;2;177;185;249m [38;2;255;255;255m [39m2. Python[38;2;255;255;255m                                                                                                          [38;2;177;185;249m│
+│[38;2;255;255;255m      [2m[39mOnly where a library has no JS or TS equivalent[0m[38;2;255;255;255m                                                                 [38;2;177;185;249m│
+│[38;2;255;255;255m [39m [38;2;255;255;255m                                                                                                                    [38;2;177;185;249m│
+│[38;2;255;255;255m [38;2;177;185;249m [38;2;255;255;255m [39mNote  [2mType your own answer, or add a note to the option you chose above (optional).[0m[38;2;255;255;255m                                [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                                                                      [38;2;177;185;249m│
+│[38;2;255;255;255m [2m[39mEnter to pick · 1–2 · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel[0m[38;2;255;255;255m                                       [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;255;193;7m● docs needs your permission · ctrl+x a to go[39m [2m·[0m [2m? for shortcuts[0m[38;2;255;255;255m         [2m[39mFake Small · medium effort · 3% context used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39mmain  [2m  fake · Fake Large with a 1M context window · medium[0m[38;2;78;186;101m  ✓ replied 0s ago[38;2;255;255;255m
+  [38;2;177;185;249m  [1m[38;2;108;182;255mparser[0;2m  fake · Fake Small · medium                         [0m[38;2;255;193;7m  ● input 0s[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;196;156;255mdocs  [2m[39m  fake · Fake Large with a 1M context window · medium[0m[38;2;255;193;7m  ● permission 5s[38;2;255;255;255m

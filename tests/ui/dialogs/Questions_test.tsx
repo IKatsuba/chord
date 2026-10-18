@@ -879,3 +879,28 @@ describe('CHD-1 tester: task question collision in the window', () => {
     });
   }
 });
+
+describe('who a question box names (CHD-389)', () => {
+  test("main's names its runtime; a task's names it as its call is headed", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'askclaude');
+          await inputAsked(window, 'fake asks you 2 questions');
+          expect(window.frame()).toMatch(/│ fake asks you 2 questions/);
+          await window.press(ESC);
+          await window.shows('Elicitation answer: cancel');
+          await send(window, 'taskask');
+          await window.shows(
+            'Agent(Ask the person) · fake asks you 2 questions',
+          );
+        },
+        { server, runtimes: ['fake'], rows: 40, columns: 120 },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});

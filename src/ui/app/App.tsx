@@ -57,12 +57,8 @@ import {
   reduceWindowed,
   windowed,
 } from './state.ts';
-import {
-  askedInput,
-  betweenAsked,
-  betweenAsker,
-  heldBack,
-} from '../dialogs/state.ts';
+import { askedInput, betweenAsked, heldBack } from '../dialogs/state.ts';
+import { askerParts } from '../dialogs/asker.ts';
 import {
   configOption,
   configPickerShown,
@@ -807,18 +803,23 @@ export function App({
   // A form or link in the prompt's place; one asked between turns is drawn
   // above the prompt instead, without the keys, until the person takes them
   // into it (CHD-158).
-  // A form or link between turns names who asks, as the box does.
+  // A form, a question box or a link names who asks (CHD-389), and says so
+  // when it came between turns (CHD-158).
   const inputBetween =
     inputAsked !== undefined &&
     betweenAsked(state.transcript) === inputAsked.id;
-  const inputAgent =
-    inputAsked === undefined || !inputBetween
-      ? frontAgent
-      : betweenAsker(
-          state.transcript.entries,
-          inputAsked.subagentId ?? inputAsked.asker,
-          childShown?.name ?? 'main',
-        );
+  const inputAsker =
+    inputAsked === undefined
+      ? []
+      : askerParts({
+          entries: state.transcript.entries,
+          subagentId: inputAsked.subagentId ?? inputAsked.asker,
+          between: inputBetween,
+          picked: childShown,
+          runtime: frontAgent,
+        });
+  // The asker's words where a sentence names it: `… needs one`.
+  const inputAgent = inputAsker.map((part) => part.text).join('') || frontAgent;
   const inputDialog =
     inputAsked?.mode === 'form' &&
     inputAsked.questions !== undefined &&
@@ -833,6 +834,7 @@ export function App({
             : undefined
         }
         agent={inputAgent}
+        asker={inputAsker}
         between={inputBetween}
         windowRows={rows}
         width={columns}
@@ -855,6 +857,7 @@ export function App({
           state.filling?.id === inputAsked.id ? state.filling.form : undefined
         }
         agent={inputAgent}
+        asker={inputAsker}
         between={inputBetween}
         windowRows={rows}
         width={columns}
@@ -870,6 +873,7 @@ export function App({
         key={inputAsked.id}
         wait={inputAsked}
         agent={inputAgent}
+        asker={inputAsker}
         between={inputBetween}
         active={listening && !state.agentsFocus && !held}
         held={held}

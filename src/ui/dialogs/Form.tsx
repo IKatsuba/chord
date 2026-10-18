@@ -26,7 +26,9 @@ import {
   type ValueView,
 } from './form.ts';
 import { answeredQuestions, askedHeaders } from './questions.ts';
-import { AttendHint, BETWEEN } from './Permission.tsx';
+import { AttendHint } from './Permission.tsx';
+import type { AskerPart } from './asker.ts';
+import { AskerHeading } from './Asker.tsx';
 
 /** Between the label column and the values. */
 export const FORM_GAP = 2;
@@ -213,6 +215,7 @@ export function ElicitationForm({
   wait,
   filled,
   agent,
+  asker,
   windowRows,
   width,
   active,
@@ -235,6 +238,11 @@ export function ElicitationForm({
    */
   filled?: FormState | undefined;
   agent: string;
+  /**
+   * Who asks, as the heading names it; `agent` alone, plain, when not given
+   * (CHD-389).
+   */
+  asker?: readonly AskerPart[];
   windowRows: number;
   /** The window's width; the box takes all of it. */
   width: number;
@@ -265,7 +273,7 @@ export function ElicitationForm({
   );
 
   const { title, description } = wait.schema;
-  const heading = `${agent} asks for input${title ? ` · ${title}` : ''}`;
+  const says = `asks for input${title ? ` · ${title}` : ''}`;
   const limit = formRowLimit(windowRows);
   const fixed = FORM_CHROME + (description ? 1 : 0);
   const message = messageLines(wait.message, inner, limit - fixed);
@@ -288,14 +296,11 @@ export function ElicitationForm({
       marginTop={1}
       flexShrink={0}
     >
-      <text
-        {...(between ? TEXT : CUT)}
-        {...fg(colours.permission)}
-        attributes={BOLD}
-      >
-        <Ansi text={heading} />
-        {between && <span attributes={DIM}>{BETWEEN}</span>}
-      </text>
+      <AskerHeading
+        asker={asker ?? [{ text: agent, tone: 'plain' }]}
+        says={says}
+        between={between}
+      />
       {message.map((line, index) => (
         <text key={index} {...TEXT}>
           <Ansi text={line} />

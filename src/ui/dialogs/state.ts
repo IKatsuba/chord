@@ -2,13 +2,10 @@
  * What the agent asks the person, as the window holds it: the form being
  * filled in, and whether a permission, a form or a link waits on them.
  */
-import { subagentPath } from '../../session/subagents.ts';
 import type {
   ElicitationWait,
-  Entry,
   Transcript,
 } from '../../session/transcript/types.ts';
-import { askerName } from '../transcript/agents/subagents.ts';
 import { askedPermission } from './permission.ts';
 import { hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import type { FormState } from './form.ts';
@@ -164,23 +161,4 @@ export function heldBack(state: Holding): boolean {
  */
 export function asksWithKeys(state: Holding): boolean {
   return asksPerson(state.transcript) && !heldBack(state);
-}
-
-/**
- * Who a form or link between turns names as asking: the subagent `id`'s
- * way down from the session, or a subagent of `owner` when chord drew none
- * of it; `owner`, the session's agent, when no subagent asks (CHD-158).
- */
-export function betweenAsker(
-  entries: readonly Entry[],
-  id: string | undefined,
-  owner: string,
-): string {
-  if (id === undefined) {
-    return owner;
-  }
-
-  const path = subagentPath(entries, id);
-
-  return path.length > 0 ? askerName(path) : `a subagent of ${owner}`;
 }

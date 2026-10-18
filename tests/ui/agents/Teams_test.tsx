@@ -262,3 +262,15 @@ test("a team's lead and members start on the file's efforts, and one the runtime
       ),
     },
   ));
+
+test("a member's question box names it with its team (CHD-389)", () =>
+  withTeams(async (window) => {
+    await started(window);
+    await leader(window, 'a');
+    await window.shows('╭─ tester · bugfix ─');
+    await window.press('3');
+    await window.shows('Not run; I will ask bugfix how to go on.');
+    await send(window, 'askclaude');
+    await window.shows('tester · bugfix asks you 2 questions');
+    expect(window.frame()).not.toContain('fake asks you 2 questions');
+  }));

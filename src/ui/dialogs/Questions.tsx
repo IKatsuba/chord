@@ -14,12 +14,14 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { Gutter } from '../transcript/tools/Tool.tsx';
 import { formRowLimit } from './Form.tsx';
-import { AttendHint, BETWEEN } from './Permission.tsx';
+import { AttendHint } from './Permission.tsx';
+import type { AskerPart } from './asker.ts';
+import { AskerHeading } from './Asker.tsx';
 import {
   answered,
   answerText,
   answerTo,
-  askHeading,
+  asksYou,
   askHint,
   askKey,
   askPaste,
@@ -54,6 +56,7 @@ export function QuestionBox({
   questions,
   filled,
   agent,
+  asker,
   windowRows,
   width,
   active,
@@ -75,6 +78,11 @@ export function QuestionBox({
   /** The box as it was left, when it was on screen before. */
   filled?: AskState | undefined;
   agent: string;
+  /**
+   * Who asks, as the heading names it; `agent` alone, plain, when not given
+   * (CHD-389).
+   */
+  asker?: readonly AskerPart[];
   windowRows: number;
   width: number;
   active: boolean;
@@ -134,7 +142,6 @@ export function QuestionBox({
 
   const left = expiresIn(questions, wait.at ?? shownAt, time);
   const problems = blockers(questions, wait.schema, state);
-  const heading = askHeading(agent, questions);
   // Held, no row reads as where the keys are, as they are not here.
   const shown = held ? { ...state, row: -1 } : state;
   const countdown =
@@ -164,15 +171,12 @@ export function QuestionBox({
       flexShrink={0}
     >
       <box flexDirection='row'>
-        <text
-          {...(between ? TEXT : CUT)}
-          flexGrow={1}
-          {...fg(colours.permission)}
-          attributes={BOLD}
-        >
-          <Ansi text={heading} />
-          {between && <span attributes={DIM}>{BETWEEN}</span>}
-        </text>
+        <AskerHeading
+          asker={asker ?? [{ text: agent, tone: 'plain' }]}
+          says={asksYou(questions)}
+          between={between}
+          grow
+        />
         {countdown !== undefined && (
           <text
             {...TEXT}

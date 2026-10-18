@@ -17,7 +17,7 @@ import { PlanRecord } from '../../plan/Plan.tsx';
 import { Ansi } from '../../theme/Ansi.tsx';
 import { CUT, DIM, DIM_BORDER, fg, FILL, TEXT } from '../../theme/text.ts';
 import { TranscriptEntry } from '../Transcript.tsx';
-import type { Headline } from '../tools/tools.ts';
+import { asksFor, type Headline } from '../tools/tools.ts';
 import {
   Gutter,
   HeadlineText,
@@ -439,6 +439,7 @@ function Work({
         call={item.entry.call}
         expanded
         ended={endingOf(subagent.state) !== undefined}
+        asked={asksFor(turn, item.entry.call.id, subagent.id)}
         width={width}
       />
     ) : (

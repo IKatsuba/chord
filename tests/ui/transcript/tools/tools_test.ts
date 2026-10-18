@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import type { ToolCall } from '../../../../src/session/transcript/types.ts';
+import type {
+  ToolCall,
+  TurnState,
+} from '../../../../src/session/transcript/types.ts';
 import { TextAttributes } from '@opentui/core';
 import stringWidth from 'string-width';
 import { runs, type Run } from '../../../../src/ui/theme/text.ts';
 import {
+  asksFor,
   firstLine,
   type Headline,
   headline,
@@ -862,4 +866,72 @@ describe('CHD-422 tester: wrapped result styling', () => {
       { text: 'plain-end', attributes: 0 },
     ]);
   });
+});
+
+test('a call the person is asked about waits, whatever its status', () => {
+  for (const status of [undefined, 'pending', 'in_progress', 'completed']) {
+    expect(toneOf({ id: 'a', ...(status && { status }) }, true)).toStrictEqual(
+      'pending',
+    );
+  }
+
+  // chord's refusal still fails it.
+  expect(
+    toneOf(
+      {
+        id: 'a',
+        status: 'in_progress',
+        chord: { tool: 'send_message', input: {}, error: 'Refused' },
+      },
+      true,
+    ),
+  ).toStrictEqual('failed');
+});
+
+test('a running call the person is asked about says it waits above its output', () => {
+  const call: ToolCall = {
+    id: 'a',
+    status: 'in_progress',
+    content: [{ type: 'terminal', terminalId: 't' }],
+    terminals: [{ id: 't', output: 'building\nbuilt\n', exited: false }],
+  };
+  const asked = summary(call, false, undefined, false, 80, undefined, true);
+
+  expect(asked.lines).toStrictEqual(['Waiting…']);
+  expect(asked.terminals).toStrictEqual([
+    { lines: ['building', 'built'], hidden: 0 },
+  ]);
+  // Once answered, the status as sent decides again.
+  expect(summary(call, false).lines).toStrictEqual([]);
+  expect(
+    summary(
+      { id: 'a', status: 'in_progress' },
+      false,
+      undefined,
+      false,
+      80,
+      undefined,
+      true,
+    ).lines,
+  ).toStrictEqual(['Waiting…']);
+});
+
+test("a call is asked about while the turn holds a request for it, its own agent's or its subagent's", () => {
+  const turn: TurnState = {
+    status: 'awaiting_permission',
+    turnId: 't',
+    since: 0,
+    permissions: [
+      { id: 'p1', toolCallId: 'a', options: [] },
+      { id: 'p2', subagentId: 's', toolCallId: 'b', options: [] },
+    ],
+  };
+
+  expect(asksFor(turn, 'a')).toBeTrue();
+  expect(asksFor(turn, 'b')).toBeFalse();
+  expect(asksFor(turn, 'b', 's')).toBeTrue();
+  expect(asksFor(turn, 'a', 's')).toBeFalse();
+  expect(
+    asksFor({ status: 'working', turnId: 't', since: 0 }, 'a'),
+  ).toBeFalse();
 });

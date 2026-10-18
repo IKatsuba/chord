@@ -257,12 +257,39 @@ export function turnEnded(turn: TurnState, turnId: string): boolean {
   );
 }
 
+/**
+ * Whether the turn waits on the person for the call `callId` of the
+ * session's own agent, or of the subagent `subagentId`: a permission box
+ * is open for it, or queued behind another.
+ */
+export function asksFor(
+  turn: TurnState,
+  callId: string,
+  subagentId?: string,
+): boolean {
+  return (
+    turn.status === 'awaiting_permission' &&
+    turn.permissions.some(
+      (wait) => wait.toolCallId === callId && wait.subagentId === subagentId,
+    )
+  );
+}
+
 /** How the marker before a call is drawn. */
 export type Tone = 'pending' | 'running' | 'done' | 'failed';
 
-export function toneOf(call: ToolCall): Tone {
+/**
+ * The marker's tone for the call's ACP status; one the person is being
+ * `asked` about waits on them whatever its status, as Codex's adapter keeps
+ * a command `in_progress` while it asks (the owner's answer on CHD-404).
+ */
+export function toneOf(call: ToolCall, asked = false): Tone {
   if (call.chord?.error !== undefined) {
     return 'failed';
+  }
+
+  if (asked) {
+    return 'pending';
   }
 
   switch (call.status) {
@@ -353,7 +380,8 @@ const FOLDED_KINDS: ReadonlySet<string> = new Set(['read']);
  * `ended`, when nothing is waiting any more; a failed call with nothing to
  * say still says it failed, so failure never rests on colour alone. With a
  * theme's `tones`, the diffs' code is coloured. With the room its lines
- * have, `width`, each line is wrapped to it, never cut.
+ * have, `width`, each line is wrapped to it, never cut. One the person is
+ * `asked` about says it waits above whatever it has to show.
  */
 export function summary(
   call: ToolCall,
@@ -362,6 +390,7 @@ export function summary(
   ended = false,
   width?: number,
   chordServer?: string,
+  asked = false,
 ): Summary {
   // A box of questions' record under the call says what was asked and
   // answered; ctrl+o shows the call's own lines too.
@@ -387,7 +416,7 @@ export function summary(
   const terminals = (call.terminals ?? [])
     .map((terminal) => terminalView(terminal, expanded))
     .filter((view) => !isEmpty(view));
-  const tone = toneOf(call);
+  const tone = toneOf(call, asked);
   // A failing exit under a terminal already says the call failed, in words.
   const told = terminals.some((view) => view.note?.failed);
 
@@ -424,7 +453,10 @@ export function summary(
     !expanded &&
     FOLDED_KINDS.has(call.kind ?? '') &&
     shown.length > SUMMARY_LINES;
-  const kept = folds ? shown.slice(0, SUMMARY_LINES) : shown;
+  const kept = [
+    ...(asked && tone === 'pending' ? ['Waiting…'] : []),
+    ...(folds ? shown.slice(0, SUMMARY_LINES) : shown),
+  ];
 
   return {
     lines:

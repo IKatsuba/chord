@@ -72,6 +72,177 @@ async function codexShell(
   return 'end_turn';
 }
 
+/**
+ * A command's permission asked as `toolCall`, with the options `agent`'s
+ * adapter gives: whether it was allowed, or `undefined` when the turn was
+ * cancelled while it asked.
+ */
+async function askToRun(
+  turn: Turn,
+  toolCall: acp.ToolCall,
+  agent: 'Codex' | 'Claude',
+): Promise<boolean | undefined> {
+  const answer = await turn.client.request('session/request_permission', {
+    sessionId: turn.sessionId,
+    toolCall,
+    options: [
+      { optionId: 'allow', name: 'Yes', kind: 'allow_once' },
+      {
+        optionId: 'always',
+        name: "Yes, and don't ask again for this command",
+        kind: 'allow_always',
+      },
+      {
+        optionId: 'deny',
+        name: `No, and tell ${agent} what to do differently`,
+        kind: 'reject_once',
+      },
+    ],
+  });
+
+  return answer.outcome.outcome === 'cancelled'
+    ? undefined
+    : answer.outcome.optionId !== 'deny';
+}
+
+/**
+ * A command Codex's adapter has started, `in_progress` with its output
+ * coming, that asks for approval part way through and stays `in_progress`
+ * while it asks, as codex-acp does (CHD-404).
+ */
+async function codexAsksMidRun(turn: Turn): Promise<boolean | undefined> {
+  const toolCallId = turn.callId('shell');
+  const terminalId = `terminal-${toolCallId}`;
+  const toolCall: acp.ToolCall = {
+    toolCallId,
+    title: 'Run ./deploy.sh',
+    kind: 'execute',
+    status: 'in_progress',
+    rawInput: { command: ['./deploy.sh'] },
+  };
+  const output = (data: string, exit?: number) =>
+    turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      ...(exit === undefined
+        ? {}
+        : { status: exit === 0 ? 'completed' : 'failed' }),
+      _meta: {
+        terminal_output_delta: { terminal_id: terminalId, data },
+        ...(exit === undefined
+          ? {}
+          : {
+              terminal_exit: {
+                terminal_id: terminalId,
+                exit_code: exit,
+                signal: null,
+              },
+            }),
+      },
+    });
+
+  await turn.send({
+    sessionUpdate: 'tool_call',
+    ...toolCall,
+    content: [{ type: 'terminal', terminalId }],
+    _meta: {
+      terminal_info: {
+        terminal_id: terminalId,
+        cwd: cwds.get(turn.sessionId) ?? '',
+      },
+    },
+  });
+  await pause(turn.signal, SHELL_STEP_MS);
+  await output('building…\n');
+  await pause(turn.signal, SHELL_STEP_MS);
+  await output('built in 1.2s\n');
+
+  const allowed = await askToRun(turn, toolCall, 'Codex');
+
+  if (allowed === undefined) {
+    return undefined;
+  }
+
+  await pause(turn.signal, SHELL_STEP_MS);
+  await output(allowed ? 'deployed\n' : 'not deployed\n', allowed ? 0 : 1);
+
+  return allowed;
+}
+
+/**
+ * A command Claude's adapter asks for first, `pending`, and leaves
+ * `pending` once allowed until it completes, as claude-agent-acp does.
+ */
+async function claudeAsksFirst(turn: Turn): Promise<boolean | undefined> {
+  const toolCallId = turn.callId('bash');
+  const takes = clientTerminalOutput !== 'none';
+  const terminal = [{ type: 'terminal' as const, terminalId: toolCallId }];
+  const toolCall: acp.ToolCall = {
+    toolCallId,
+    title: '`git push`',
+    kind: 'execute',
+    status: 'pending',
+    rawInput: { command: 'git push' },
+  };
+
+  await turn.send({
+    sessionUpdate: 'tool_call',
+    ...toolCall,
+    content: takes ? terminal : [],
+    ...(takes ? { _meta: { terminal_info: { terminal_id: toolCallId } } } : {}),
+  });
+
+  const allowed = await askToRun(turn, toolCall, 'Claude');
+
+  if (allowed === undefined) {
+    return undefined;
+  }
+
+  if (!allowed) {
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'failed',
+    });
+
+    return false;
+  }
+
+  await pause(turn.signal, SHELL_STEP_MS);
+  await turn.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId,
+    status: 'completed',
+    ...(takes
+      ? {
+          content: terminal,
+          _meta: {
+            [clientTerminalOutput === 'delta'
+              ? 'terminal_output_delta'
+              : 'terminal_output']: {
+              terminal_id: toolCallId,
+              data: 'pushed\n',
+            },
+            terminal_exit: {
+              terminal_id: toolCallId,
+              exit_code: 0,
+              signal: null,
+            },
+          },
+        }
+      : {
+          content: [
+            {
+              type: 'content',
+              content: { type: 'text', text: 'pushed' },
+            },
+          ],
+        }),
+  });
+
+  return true;
+}
+
 export const SHELL = {
   // A command as Codex's adapter runs one, to any client: the terminal named
   // up front, its output in pieces as it comes, and the exit, which fails,
@@ -79,6 +250,29 @@ export const SHELL = {
   shell: (turn) => codexShell(turn, SHELL_OUTPUT),
 
   shellcut: (turn) => codexShell(turn, CUT_OUTPUT),
+
+  // A permission asked for a command as each adapter asks: Codex's mid-run,
+  // the call `in_progress` with output already under it, then Claude's
+  // before it runs, the call `pending` throughout.
+  async bashask(turn) {
+    const codex = await codexAsksMidRun(turn);
+
+    if (codex === undefined) {
+      return 'cancelled';
+    }
+
+    const claude = await claudeAsksFirst(turn);
+
+    if (claude === undefined) {
+      return 'cancelled';
+    }
+
+    await turn.say(
+      `Codex: ${codex ? 'ran' : 'denied'}; Claude: ${claude ? 'ran' : 'denied'}.`,
+    );
+
+    return 'end_turn';
+  },
 
   // A command as Claude's adapter runs one: to a client that takes terminal
   // output, the terminal named up front and nothing of it until it is done,

@@ -1,0 +1,24 @@
+
+ › /cost
+   ⎿  codex has not reported what this session has used.
+      Session time: 15s
+
+ › /context
+   ⎿  codex has not reported how full its context window is.
+
+ › /status
+   ⎿  Agent:     codex
+      Model:     Fake Small
+      Mode:      Accept edits
+      Session:   1df8aa99-e464-4303-9a1b-b26ccf0c4491
+      Directory: /tmp/chord-qa.XXXX
+                 FTrQbRLJzS
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)           Fake Small · medium effort
+    main       fake
+    bugfix     team · fake  ✓ replied 19s ago
+    ├─ tester  codex
+    └─ coder   fake         ✓ replied 18s ago

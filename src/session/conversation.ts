@@ -2192,16 +2192,15 @@ export class Conversation {
   }
 
   #asked(session: Session, request: PendingPermission): void {
-    const turn = this.#session === session ? this.#turn : undefined;
-
-    // A request outside any turn has nothing on screen to hang off, and an
-    // unanswered one would hold the agent for good; nor has one from a
-    // session `clear` let go.
-    if (!turn) {
+    // One from a session `clear` let go has nothing on screen to hang off.
+    if (!this.#current(session)) {
       return request.reject();
     }
 
-    const turnId = turn.id;
+    // One with no turn running, from work that outlived its turn, waits on
+    // the person as one in a turn does, under the last turn (CHD-158).
+    const between = this.#turn === undefined;
+    const turnId = this.#stamp();
     const withdrawn = () => {
       if (this.#permissions.delete(request.id)) {
         this.#emit({
@@ -2219,6 +2218,7 @@ export class Conversation {
       type: 'permission_requested',
       turnId,
       permission: waitFor(request, session.id),
+      ...(between && { at: this.#now(), between }),
     });
     request.signal.addEventListener('abort', withdrawn, { once: true });
 
@@ -2228,16 +2228,14 @@ export class Conversation {
   }
 
   #elicited(session: Session, request: PendingElicitation): void {
-    const turn = this.#session === session ? this.#turn : undefined;
-
-    // As with a permission: nothing on screen to hang it off, and the agent
-    // must not wait on it for good.
-    if (!turn) {
+    // As with a permission: nothing on screen to hang it off.
+    if (!this.#current(session)) {
       return request.answer({ action: 'cancel' });
     }
 
     const { id } = request;
-    const turnId = turn.id;
+    const between = this.#turn === undefined;
+    const turnId = this.#stamp();
     const askedAt = this.#now();
     const withdrawn = () => {
       if (this.#elicitations.delete(id)) {
@@ -2257,7 +2255,11 @@ export class Conversation {
     this.#emit({
       type: 'elicitation_requested',
       turnId,
-      elicitation: { ...request.wait, at: askedAt },
+      elicitation: {
+        ...request.wait,
+        at: askedAt,
+        ...(between && { between }),
+      },
     });
     request.signal.addEventListener('abort', withdrawn, { once: true });
 

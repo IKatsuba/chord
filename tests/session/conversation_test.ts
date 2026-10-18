@@ -2725,3 +2725,60 @@ describe('CHD-452 tester: two-steer gate boundaries', () => {
     });
   }
 });
+
+describe('a request with no turn running (CHD-158)', () => {
+  test("the session's own agent asking after its answer waits on the person, and hears the answer", () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('mainbetween');
+      await until(() => events.some((event) => event.type === 'result'));
+      await until(() =>
+        events.some((event) => event.type === 'permission_requested'),
+      );
+
+      const asked = events.find(
+        (event) => event.type === 'permission_requested',
+      );
+
+      assert(asked?.type === 'permission_requested');
+      expect(asked.between).toBeTrue();
+      expect(asked.at).toBeNumber();
+      expect(asked.permission.title).toStrictEqual('Write notes/report.md');
+      conversation.choose(asked.permission.id, 'allow');
+      await until(() => saidIn(events).includes('Permission: allow.'));
+      expect(
+        events.some((event) => event.type === 'permission_settled'),
+      ).toBeTrue();
+    }));
+
+  test('a subagent that outlived its turn asks a permission and a form, and hears both answers', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('claudebetween');
+      await until(() => events.some((event) => event.type === 'result'));
+      await until(() =>
+        events.some((event) => event.type === 'permission_requested'),
+      );
+
+      const asked = events.find(
+        (event) => event.type === 'permission_requested',
+      );
+
+      assert(asked?.type === 'permission_requested');
+      expect(asked.between).toBeTrue();
+      expect(asked.permission.subagentId).toBeString();
+      conversation.choose(asked.permission.id, 'allow');
+      await until(() =>
+        events.some((event) => event.type === 'elicitation_requested'),
+      );
+
+      const form = events.find(
+        (event) => event.type === 'elicitation_requested',
+      );
+
+      assert(form?.type === 'elicitation_requested');
+      expect(form.elicitation.between).toBeTrue();
+      conversation.answer(form.elicitation.id, { action: 'decline' });
+      await until(() =>
+        saidIn(events).includes('Write allowed; form decline.'),
+      );
+    }));
+});

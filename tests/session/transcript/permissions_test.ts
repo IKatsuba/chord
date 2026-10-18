@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import type { TranscriptAction } from '../../../src/session/transcript/types.ts';
 import { fold } from './fold.ts';
 
@@ -234,4 +235,143 @@ test("a task's box of questions is recorded under its call among the task's work
     task?.kind === 'subagent' &&
       task.subagent.entries.map((entry) => entry.kind),
   ).toStrictEqual(['tool', 'elicitation']);
+});
+
+const ENDED: TranscriptAction[] = [
+  { type: 'prompt', turnId: 't1', text: 'hi', at: 0 },
+  {
+    type: 'result',
+    turnId: 't1',
+    result: { status: 'completed', stopReason: 'end_turn' },
+  },
+];
+
+test("the session's own agent asking with no turn running waits between turns, and its answer goes at the transcript's end", () => {
+  const permission = { id: 'p1', toolCallId: 'w1', options: [] };
+  const asked = fold([
+    ...ENDED,
+    {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission,
+      at: 5000,
+      between: true,
+    },
+  ]);
+
+  expect(asked.turn).toStrictEqual({
+    status: 'awaiting_permission',
+    turnId: 't1',
+    since: 5000,
+    permissions: [permission],
+    between: true,
+  });
+
+  const answered = fold(
+    [
+      {
+        type: 'permission_settled',
+        turnId: 't1',
+        id: 'p1',
+        answer: { type: 'rejected' },
+      },
+    ],
+    asked,
+  );
+
+  expect(answered.turn).toStrictEqual({ status: 'idle' });
+  expect(answered.entries.at(-1)).toStrictEqual({
+    kind: 'permission',
+    turnId: 't1',
+  });
+});
+
+test("a subagent's request between turns is answered in its block", () => {
+  const answered = fold([
+    { type: 'prompt', turnId: 't1', text: 'hi', at: 0 },
+    {
+      type: 'update',
+      turnId: 't1',
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 's1',
+        title: 'tester',
+        description: 'Run the whole test suite',
+        state: { state: 'running' },
+      },
+    },
+    ...ENDED.slice(1),
+    {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: { id: 'p1', subagentId: 's1', title: 'Write', options: [] },
+      at: 5000,
+      between: true,
+    },
+    {
+      type: 'permission_settled',
+      turnId: 't1',
+      id: 'p1',
+      answer: { type: 'rejected' },
+    },
+  ]);
+  const block = answered.entries.find((entry) => entry.kind === 'subagent');
+
+  expect(answered.turn).toStrictEqual({ status: 'idle' });
+  assert(block?.kind === 'subagent');
+  expect(block.subagent.entries.at(-1)).toStrictEqual({
+    kind: 'permission',
+    turnId: 't1',
+    title: 'Write',
+  });
+});
+
+test('a request between turns that meets a turn starting waits in that turn', () => {
+  const asked = fold([
+    ...ENDED,
+    { type: 'prompt', turnId: 't2', text: 'next', at: 6000 },
+    {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: { id: 'p1', options: [] },
+      at: 6500,
+      between: true,
+    },
+  ]);
+
+  expect(asked.turn).toStrictEqual({
+    status: 'awaiting_permission',
+    turnId: 't2',
+    since: 6000,
+    permissions: [{ id: 'p1', options: [] }],
+  });
+});
+
+test('a form asked with no turn running is shown, and its answer recorded', () => {
+  const wait = { ...FORM_WAIT, between: true } as const;
+  const asked = fold([
+    ...ENDED,
+    { type: 'elicitation_requested', turnId: 't1', elicitation: wait },
+  ]);
+
+  expect(asked.asking).toStrictEqual([wait]);
+  expect(asked.turn).toStrictEqual({ status: 'idle' });
+
+  const answered = fold(
+    [
+      {
+        type: 'elicitation_settled',
+        turnId: 't1',
+        id: 'e1',
+        answer: { type: 'declined' },
+      },
+    ],
+    asked,
+  );
+
+  expect(answered.asking).toStrictEqual([]);
+  expect(answered.entries.at(-1)).toMatchObject({
+    kind: 'elicitation',
+    outcome: 'declined',
+  });
 });

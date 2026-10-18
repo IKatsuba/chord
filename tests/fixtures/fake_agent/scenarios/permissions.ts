@@ -6,7 +6,7 @@
 import * as acp from '@agentclientprotocol/sdk';
 import { RELEASE_NOTES } from '../../release_notes.ts';
 import { STEP_MS } from '../options.ts';
-import { pause, type Play, type Turn } from '../turn.ts';
+import { lifetime, pause, type Play, type Turn } from '../turn.ts';
 
 /**
  * Asks for permission to call `server`'s `tool` with `rawInput`, as
@@ -218,5 +218,63 @@ export const PERMISSIONS = {
     ]);
 
     return answers.includes('cancelled') ? 'cancelled' : 'end_turn';
+  },
+
+  // The session's own agent asks once its turn has answered, with no turn
+  // running, as an agent's background command's follow-up does (CHD-158),
+  // and says what came back.
+  async mainbetween(turn) {
+    const { client, sessionId } = turn;
+    const update = (update: acp.SessionUpdate) =>
+      client.notify('session/update', { sessionId, update });
+
+    void (async () => {
+      try {
+        await pause(lifetime.signal, STEP_MS * 100);
+
+        const toolCall: acp.ToolCall = {
+          toolCallId: turn.callId('write'),
+          title: 'Write notes/report.md',
+          kind: 'edit',
+          status: 'pending',
+          locations: [{ path: 'notes/report.md' }],
+        };
+
+        await update({ sessionUpdate: 'tool_call', ...toolCall });
+
+        const answer = await client.request(
+          'session/request_permission',
+          {
+            sessionId,
+            toolCall,
+            options: [
+              { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+              { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+            ],
+          },
+          { cancellationSignal: lifetime.signal },
+        );
+        const chosen =
+          answer.outcome.outcome === 'selected'
+            ? answer.outcome.optionId
+            : 'cancelled';
+
+        await update({
+          sessionUpdate: 'tool_call_update',
+          toolCallId: toolCall.toolCallId,
+          status: chosen === 'allow' ? 'completed' : 'failed',
+        });
+        await update({
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: `Permission: ${chosen}.` },
+        });
+      } catch {
+        // The client went before it was answered.
+      }
+    })();
+
+    await turn.say('I will write the report once the build is done.');
+
+    return 'end_turn';
   },
 } satisfies Record<string, Play>;

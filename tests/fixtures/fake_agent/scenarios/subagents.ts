@@ -679,6 +679,80 @@ async function testInBackground(parent: Turn, child: Turn): Promise<void> {
 }
 
 /**
+ * The background tester of `claudebetween`: once its parent's turn has
+ * answered, it asks to write its report, then asks a form, with no turn of
+ * the client's running, as a Claude subagent that outlived its turn asks
+ * (CHD-158); then it says what came back and is done.
+ */
+async function askAfterTurn(parent: Turn, child: Turn): Promise<void> {
+  try {
+    await pause(child.signal, SUBAGENT_AFTER_MS);
+
+    const write = child.callId('write');
+    const toolCall: acp.ToolCall = {
+      toolCallId: write,
+      title: 'Write notes/test-report.md',
+      kind: 'edit',
+      status: 'pending',
+      locations: [{ path: 'notes/test-report.md' }],
+    };
+
+    await child.send({ sessionUpdate: 'tool_call', ...toolCall });
+    await report(parent, undefined, child.sessionId, {
+      state: 'requires_action',
+    });
+
+    const answer = await child.client.request(
+      'session/request_permission',
+      {
+        sessionId: child.sessionId,
+        toolCall,
+        options: [
+          { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+          { optionId: 'always', name: 'Always allow', kind: 'allow_always' },
+          { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+        ],
+      },
+      { cancellationSignal: child.signal },
+    );
+    const allowed =
+      answer.outcome.outcome === 'selected' &&
+      answer.outcome.optionId !== 'deny';
+
+    await child.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: write,
+      status: allowed ? 'completed' : 'failed',
+    });
+
+    const form = await child.client.request(
+      'elicitation/create',
+      {
+        sessionId: child.sessionId,
+        mode: 'form',
+        message: 'Which suite should run next?',
+        requestedSchema: {
+          type: 'object',
+          properties: { suite: { type: 'string', title: 'Suite' } },
+        },
+      },
+      { cancellationSignal: child.signal },
+    );
+
+    await report(parent, undefined, child.sessionId, { state: 'running' });
+    await child.say(
+      `Write ${allowed ? 'allowed' : 'denied'}; form ${form.action}.`,
+    );
+    await report(parent, undefined, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+  } catch {
+    // The client went before the subagent ended.
+  }
+}
+
+/**
  * A Claude subagent in the background beside one the turn waits on: the
  * first goes on past the turn's end, and past a cancel, which stops only the
  * second, then reports done; each stopped alone after `stopAfterMs`.
@@ -1075,6 +1149,30 @@ export const SUBAGENTS = {
   },
 
   claudebackground: (turn) => background(turn),
+
+  // A Claude subagent in the background that asks a permission and then a
+  // form once the turn has answered, with no turn running (CHD-158).
+  async claudebetween(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const tests = await announce(
+      turn,
+      undefined,
+      'tester (general-purpose)',
+      'Run the whole test suite',
+      'Run bun test in the background and write a report of what fails.',
+      lifetime.signal,
+    );
+
+    void askAfterTurn(turn, tests);
+    await turn.say('It is running; I will say when it ends.');
+
+    return 'end_turn';
+  },
 
   // As claudebackground, its subagents taking about 2 s to stop alone, as
   // Claude does, so a stop pending can be seen.

@@ -664,6 +664,8 @@ export type ElicitationWait = {
    * wait for an answer counts from.
    */
   readonly at?: number;
+  /** Asked with no turn of chord's running (CHD-158). */
+  readonly between?: true;
 } & (
   | {
       readonly mode: 'form';
@@ -827,6 +829,8 @@ export type TranscriptAction =
       readonly permission: PermissionWait;
       /** When it was asked, for a task agent's asked between turns. */
       readonly at?: number;
+      /** Asked with no turn of chord's running (CHD-158). */
+      readonly between?: true;
     }
   | {
       readonly type: 'permission_settled';

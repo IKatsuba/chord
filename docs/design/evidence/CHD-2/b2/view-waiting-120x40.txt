@@ -1,0 +1,40 @@
+ Background · 1 in this tab
+
+  ❯ Run the test suite  agent  ● waiting 1s  main
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ↑ ↓ to move · enter to go to its call · x to stop · esc to close

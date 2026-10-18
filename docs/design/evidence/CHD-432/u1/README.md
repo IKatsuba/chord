@@ -14,3 +14,9 @@ Known, under Q41 and not U1's: a group row that is not the last and ended
 before the first one draws `│   ⎿` one column right of `│  ⎿`, with its
 body shifted too, folded and in ctrl+o. It is an OpenTUI 0.6.0 gap (a
 removed `paddingLeft` does not reset), on main before U1.
+
+On dc5bc5d3, from a clean checkout of that commit: `claudesubagents`,
+answer `1`, quit, reopen from `/resume`. The watcher, Untracked before,
+reads Disconnected, and the header counts `1 disconnected`
+(`resumed-disconnected-120x40.txt`; `resumed-disconnected-80x24.txt` with
+ctrl+o, where no "may still be at work" note is left).

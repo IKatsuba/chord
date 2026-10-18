@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/scratch
+ ▀▀     ? for shortcuts · /help
+        resumed · just now · claudesubagents
+
+ › claudesubagents
+
+ ⏺ I will send four agents.
+
+ ⏺ 4 agents ended · 1 failed, 1 disconnected, 1 cancelled (ctrl+o to expand)
+   ├─ Agent(explorer (Explore)) · 3 tool uses · 6s
+   │  ⎿  Done
+   ├─ Agent(reviewer (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Failed
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(watcher) · 1 tool use · 0s
+      ⎿  Disconnected
+
+ ⏺ Each agent has ended.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

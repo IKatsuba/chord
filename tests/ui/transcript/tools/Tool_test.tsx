@@ -1039,7 +1039,6 @@ describe('CHD-404 tester: denied commands at terminal sizes', () => {
           expect(window.frame()).toContain('Waiting…');
           expect(window.frame()).toContain('built in 1.2s');
           await window.press('3');
-          await window.shows('not deployed');
           await window.shows('Bash(git push)');
           await asked(window);
           await window.press('3');
@@ -1047,6 +1046,7 @@ describe('CHD-404 tester: denied commands at terminal sizes', () => {
 
           const frame = window.frame();
 
+          expect(frame).toContain('not deployed');
           expect(frame).toContain('built in 1.2s');
           expect(frame).toContain('Exit code 1');
           expect(frame).toContain('Failed');

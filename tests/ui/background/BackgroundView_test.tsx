@@ -3,7 +3,11 @@
  * view closes, the item's owner is picked and its transcript scrolls back to
  * the call that started the item.
  */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
+import assert from 'node:assert/strict';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import {
   DOWN,
@@ -273,3 +277,160 @@ test('a Claude agent that takes a while to stop reads stopping until it says it 
     },
     { rows: 24, columns: 80 },
   ));
+
+describe('CHD-2 tester: pending stops and deferred refusals in the window', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`repeated x sends one actual child notice while the gate holds stopping at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudebackground');
+          await window.shows('background  2 agents running');
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('❯ Run the test suite');
+          await window.press('x');
+          await window.shows('■ stopping');
+
+          const log = join(window.dir, '.fake-gate', 'stops');
+
+          await until(
+            'the child stop notice recorded',
+            async () =>
+              (await readFile(log, 'utf8').catch(() => '')).trim() !== '',
+          );
+          await window.press('x');
+          await window.press('x');
+
+          const ids = (await readFile(log, 'utf8')).trim().split('\n');
+
+          expect(ids).toHaveLength(1);
+          expect(ids[0]).not.toBe(window.session()?.id);
+          expect(window.frame()).toContain('■ stopping');
+          await window.press(ESC);
+          await window.shows('background  2 agents running');
+          await window.press('\r');
+          await window.shows('■ stopping');
+          await writeFile(join(window.dir, '.fake-gate', 'stop-release'), '');
+          await window.shows('■ stopped after');
+          await window.shows('✓ done in');
+          expect(
+            (await readFile(log, 'utf8')).trim().split('\n'),
+          ).toStrictEqual(ids);
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--stop-gate'),
+        },
+      ));
+
+    test(`a deferred refusal rolls back and stale replies after cursor/view changes stay silent at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudebackground');
+          await window.shows('background  2 agents running');
+
+          const session = window.session();
+
+          assert(session !== undefined);
+
+          const notices = Array.from({ length: 3 }, () =>
+            Promise.withResolvers<void>(),
+          );
+          let calls = 0;
+          const stop = spyOn(session, 'stopSubagent').mockImplementation(() => {
+            const pending = notices[calls++];
+
+            assert(pending !== undefined);
+
+            return pending.promise;
+          });
+
+          try {
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('❯ Run the test suite');
+            await window.press('x');
+            await window.shows('■ stopping');
+            await window.press('x');
+            expect(calls).toBe(1);
+            notices[0]!.reject(
+              new Error('Broken pipe\nprivate transport detail'),
+            );
+            await window.shows('could not stop: Broken pipe');
+            expect(window.frame()).not.toContain('private transport detail');
+            expect(window.frame()).not.toContain('■ stopping');
+            await window.press('x');
+            await window.shows('■ stopping');
+            expect(calls).toBe(2);
+            await window.press('j');
+            await window.press('k');
+            notices[1]!.reject(new Error('old cursor refusal'));
+            await until(
+              'the second stop rolled back',
+              () => !window.frame().includes('■ stopping'),
+            );
+            expect(window.frame()).not.toContain('could not stop');
+            await window.press('x');
+            await window.shows('■ stopping');
+            expect(calls).toBe(3);
+            await window.press(ESC);
+            await window.shows('❯ background');
+            await window.press('\r');
+            await window.shows('■ stopping');
+            notices[2]!.reject(new Error('old view refusal'));
+            await until(
+              'the third stop rolled back',
+              () => !window.frame().includes('■ stopping'),
+            );
+            expect(window.frame()).not.toContain('could not stop');
+          } finally {
+            for (const notice of notices) {
+              notice.resolve();
+            }
+
+            stop.mockRestore();
+          }
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--step-ms', '50'),
+        },
+      ));
+  }
+
+  test('natural wire completion wins while the stop is held and shutdown needs no release', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudebackground');
+        await window.shows('background  2 agents running');
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('❯ Run the test suite');
+        await window.press('x');
+        await window.shows('■ stopping');
+        await window.shows('✓ done in');
+        await until(
+          'both children done despite the held stop',
+          () => (window.frame().match(/✓ done in/g) ?? []).length === 2,
+        );
+        expect(window.frame()).not.toContain('■ stopping');
+        await window.press('x');
+        expect(
+          (await readFile(join(window.dir, '.fake-gate', 'stops'), 'utf8'))
+            .trim()
+            .split('\n'),
+        ).toHaveLength(1);
+        // withWindow closes with no stop-release and proves every process gone.
+      },
+      {
+        rows: 24,
+        columns: 80,
+        agentCommand: fakeAgentCommand(undefined, '--stop-gate'),
+      },
+    ));
+});

@@ -49,6 +49,12 @@ export const FIRST_MODEL = AVAILABLE_MODELS[0]?.value ?? 'fake-large';
 export const locked = new Set<string>();
 
 /**
+ * How many `session/cancel`s each session got with no turn of its playing:
+ * a cancel for a prompt that never reached the agent, which `cancels` tells.
+ */
+export const strayCancels = new Map<string, number>();
+
+/**
  * A model, the modes and an effort chosen through config options, as current
  * ACP agents send them; the modes also go the older way, in `session/new`'s
  * `modes`.

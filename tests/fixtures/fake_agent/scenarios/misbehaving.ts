@@ -4,9 +4,20 @@
  */
 import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
+import { strayCancels } from '../sessions.ts';
 import { pause, type Play } from '../turn.ts';
 
 export const MISBEHAVING = {
+  // How many cancels came with no turn playing, which a client sends only
+  // for a prompt the agent never got.
+  async cancels(turn) {
+    await turn.say(
+      `Cancels with no turn: ${strayCancels.get(turn.sessionId) ?? 0}.`,
+    );
+
+    return 'end_turn';
+  },
+
   async error(turn) {
     await turn.say('About to fail.');
     await pause(turn.signal);

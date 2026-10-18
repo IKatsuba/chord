@@ -896,6 +896,23 @@ test('a turn says which links went with its prompt, and none went when a cancel 
     expect(await linksSent(session, 'text')).toStrictEqual([]);
   }));
 
+// The agent may take the next prompt before a cancel sent ahead of it, so a
+// cancel for a prompt it never got could stop the next turn (Q42).
+test('a cancel before the walk ended tells the agent nothing, so it cannot land on the next turn', () =>
+  withSession(async (session) => {
+    await writeFile(join(session.cwd, 'a.ts'), '');
+
+    const held = session.prompt('see @a.ts', [], ['a.ts']);
+
+    await held.cancel();
+    expect((await held.result).status).toStrictEqual('cancelled');
+
+    const { updates, result } = await run(session, 'cancels');
+
+    expect(result.status).toStrictEqual('completed');
+    expect(said(updates).join('')).toStrictEqual('Cancels with no turn: 0.');
+  }));
+
 test('a failed turn says why, and the session takes the next prompt', () =>
   withSession(async (session) => {
     const { updates, result } = await run(session, 'error');
@@ -1322,4 +1339,98 @@ describe('CHD-393 tester: headline scenario payloads', () => {
       '--step-ms',
       '20',
     ));
+});
+
+describe('Q42 tester: prompt-send cancellation boundaries', () => {
+  test('repeated cancellation of several unsent prompts leaves the next turn and stray counter untouched', () =>
+    withSession(async (session) => {
+      await writeFile(join(session.cwd, 'a.ts'), '');
+
+      for (let index = 0; index < 6; index++) {
+        const held = session.prompt('held mention', [], ['a.ts']);
+
+        await Promise.all([held.cancel(), held.cancel()]);
+        expect(await held.sent).toBeUndefined();
+        expect((await held.result).status).toBe('cancelled');
+      }
+
+      const next = await run(session, 'cancels');
+
+      expect(next.result.status).toBe('completed');
+      expect(
+        said(next.updates)
+          .filter((line) => line.startsWith('Cancels with no turn:'))
+          .join(''),
+      ).toBe('Cancels with no turn: 0.');
+    }));
+
+  test('cancelling an unsent turn again cannot withdraw a later turn permission', () =>
+    withSession(async (session) => {
+      await writeFile(join(session.cwd, 'a.ts'), '');
+
+      const waiting = Promise.withResolvers<PendingPermission>();
+      const unsubscribe = session.permissions.subscribe((request) =>
+        waiting.resolve(request),
+      );
+
+      try {
+        const held = session.prompt('held mention', [], ['a.ts']);
+
+        await held.cancel();
+        expect(await held.sent).toBeUndefined();
+        expect((await held.result).status).toBe('cancelled');
+
+        const active = session.prompt('permission');
+        const request = await waiting.promise;
+
+        await held.cancel();
+        expect(request.signal.aborted).toBe(false);
+        request.resolve('allow');
+        expect((await active.result).status).toBe('completed');
+
+        const next = await run(session, 'cancels');
+
+        expect(next.result.status).toBe('completed');
+        expect(
+          said(next.updates)
+            .filter((line) => line.startsWith('Cancels with no turn:'))
+            .join(''),
+        ).toBe('Cancels with no turn: 0.');
+      } finally {
+        unsubscribe();
+      }
+    }));
+
+  for (const mentions of [[], ['a.ts']]) {
+    test(`an already-sent prompt ${mentions.length === 0 ? 'without' : 'with'} mentions still cancels its active permission`, () =>
+      withSession(async (session) => {
+        await writeFile(join(session.cwd, 'a.ts'), '');
+
+        const waiting = Promise.withResolvers<PendingPermission>();
+        const unsubscribe = session.permissions.subscribe((request) =>
+          waiting.resolve(request),
+        );
+
+        try {
+          const active = session.prompt('permission', [], mentions);
+          const request = await waiting.promise;
+
+          expect(await active.sent).toHaveLength(mentions.length);
+          await active.cancel();
+          expect(request.signal.aborted).toBe(true);
+          expect((await active.result).status).toBe('cancelled');
+
+          const next = await run(session, 'cancels');
+
+          expect(next.result.status).toBe('completed');
+          expect(
+            said(next.updates)
+              .filter((line) => line.startsWith('Cancels with no turn:'))
+              .join(''),
+          ).toMatch(/^Cancels with no turn: [01]\.$/);
+        } finally {
+          unsubscribe();
+        }
+      }));
+  }
 });

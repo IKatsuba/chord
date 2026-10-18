@@ -1375,3 +1375,109 @@ describe('a wait names the oldest request still open (CHD-431)', () => {
     });
   });
 });
+
+describe('CHD-431 tester: requester changes keep one wait', () => {
+  const input = (id: string, mode: 'form' | 'url'): ConversationEvent => ({
+    type: 'elicitation_requested',
+    turnId: 't',
+    elicitation:
+      mode === 'form'
+        ? { id, mode, message: id, schema: {}, subagentId: id }
+        : { id, mode, message: id, url: 'https://example.com', subagentId: id },
+  });
+  const permission = (id: string, lasting = true): ConversationEvent => ({
+    type: 'permission_requested',
+    turnId: 't',
+    permission: { id, options: [], subagentId: id },
+    ...(lasting ? { at: 0 } : {}),
+  });
+
+  test('two permissions precede older form/link requests, and each withdrawal reveals the next without ringing or changing age', () => {
+    let tabs = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t'),
+      input('form', 'form'),
+      input('link', 'url'),
+      permission('p1'),
+      permission('p2'),
+    ]);
+
+    for (const [type, id, next] of [
+      ['permission_settled', 'p1', 'p2'],
+      ['permission_settled', 'p2', 'form'],
+      ['elicitation_settled', 'form', 'link'],
+      ['elicitation_settled', 'link', undefined],
+    ] as const) {
+      const result = hear(
+        tabs,
+        1,
+        { type, turnId: 't', id, answer: { type: 'withdrawn' } },
+        9000,
+      );
+
+      tabs = result.tabs;
+
+      expect(result.wait).toBeUndefined();
+      expect(tabOf(tabs, 1)?.wait.asking?.on.subagentId).toBe(next);
+      expect(tabOf(tabs, 1)?.wait.asking?.since).toBe(
+        next === undefined ? undefined : 2000,
+      );
+    }
+  });
+
+  test('a result prunes a transient permission and reveals a lasting input, including after cancel', () => {
+    for (const cancelled of [false, true]) {
+      const events: ConversationEvent[] = [
+        up,
+        prompt('t'),
+        input('form', 'form'),
+        permission('adapter', false),
+      ];
+
+      if (cancelled) {
+        events.push({ type: 'cancel', turnId: 't', at: 8000 });
+      }
+
+      const tabs = heard(opened('a', 'b'), 1, events);
+      const next = hear(
+        tabs,
+        1,
+        cancelled
+          ? {
+              type: 'result',
+              turnId: 't',
+              result: { status: 'cancelled', stopReason: 'cancelled' },
+            }
+          : ended('t'),
+        9000,
+      ).tabs;
+
+      expect(tabOf(next, 1)?.wait.asking).toStrictEqual({
+        on: { kind: 'input', message: 'form', subagentId: 'form' },
+        since: 2000,
+      });
+      expect([...tabOf(next, 1)!.wait.watch.asked.keys()]).toStrictEqual([
+        'form',
+      ]);
+    }
+  });
+
+  test('clear erases requester metadata only in its own tab and a fresh request starts a new age', () => {
+    const both = heard(
+      heard(opened('a', 'b', 'c'), 1, [up, input('first', 'url')]),
+      2,
+      [up, permission('second')],
+      4000,
+    );
+    const cleared = hear(both, 1, { type: 'cleared' }, 9000).tabs;
+
+    expect(tabOf(cleared, 1)?.wait.watch.asked.size).toBe(0);
+    expect(tabOf(cleared, 1)?.wait.asking).toBeUndefined();
+    expect(tabOf(cleared, 2)?.wait.asking?.on.subagentId).toBe('second');
+
+    const again = heard(cleared, 1, [up, input('fresh', 'form')], 10000);
+
+    expect(tabOf(again, 1)?.wait.asking?.since).toBe(11000);
+    expect(tabOf(again, 1)?.wait.asking?.on.subagentId).toBe('fresh');
+  });
+});

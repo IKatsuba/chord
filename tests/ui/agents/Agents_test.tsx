@@ -1162,3 +1162,67 @@ describe('who a box that asks names (CHD-389)', () => {
       }
     }));
 });
+
+describe('CHD-431 tester: task input and permission in different children', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`settling the older task input changes the count to the remaining task's name at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+            await main.window.open(main.key, {
+              agent: 'fake',
+              name: 'questions',
+              prompt: 'taskask',
+            });
+            await until('the first task input hint', () =>
+              /● (Agent\(Ask the person\) · fake|questions's task) asks for input/.test(
+                window.frame(),
+              ),
+            );
+            await main.window.open(main.key, {
+              agent: 'fake',
+              name: 'parser',
+              prompt: 'task',
+            });
+            await window.shows('● 2 agents wait');
+            await leader(window, 'a');
+            await window.shows('╭─ questions ─');
+            await window.shows('between turns');
+            await leader(window, 'a');
+            await window.shows('Esc to cancel');
+            await window.press(ESC);
+            await until('the remaining task permission hint', () =>
+              /● (Agent\(Fix the tokenizer\) · fake|parser's task) needs your permission/.test(
+                window.frame(),
+              ),
+            );
+            expect(window.frame()).not.toContain('● 2 agents wait');
+            expect(window.frame()).not.toMatch(
+              /● (Agent\(Ask the person\) · fake|questions's task) asks for input/,
+            );
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

@@ -604,3 +604,66 @@ test('an asking task is named as its box names it, or by whose task it is where 
     waitsNotice([main('permission'), tester], 'ctrl+x a')?.text,
   ).toStrictEqual('● 2 agents wait');
 });
+
+describe('CHD-431 tester: task hints preserve identity and fit', () => {
+  const owner = (
+    name: string,
+    task: string,
+    kind: 'permission' | 'input' = 'permission',
+  ): TabBehind => ({
+    number: 0,
+    agent: name,
+    name,
+    task,
+    wait: {
+      ...idle,
+      asking: {
+        since: 0,
+        on:
+          kind === 'permission'
+            ? { kind, subagentId: task }
+            : { kind, message: 'Question', subagentId: task },
+      },
+    },
+  });
+
+  for (const kind of ['permission', 'input'] as const) {
+    test(`a very long child's task ${kind} uses its owner without truncating the task or dropping the model`, () => {
+      const waits = waitsNotice(
+        [owner('parser', `Agent(${'tokenizer '.repeat(40)}) · fake`, kind)],
+        'ctrl+y',
+      );
+      const line = text(
+        { ...facts, mode: 'default', hint: undefined, waits },
+        80,
+      );
+
+      expect(line).toContain(
+        `● parser's task ${kind === 'permission' ? 'needs your permission' : 'asks for input'} · ctrl+y`,
+      );
+      expect(line).toContain('Fake Large');
+      expect(line).not.toContain('tokenizer');
+      expect(stringWidth(line)).toBeLessThanOrEqual(80);
+    });
+  }
+
+  test('a task and a different tab count as sessions, then show the remaining task after the other settles', () => {
+    const task = owner('parser', 'Agent(Fix the tokenizer) · fake');
+    const other: TabBehind = {
+      number: 2,
+      agent: 'fake',
+      wait: {
+        ...idle,
+        asking: { on: { kind: 'input', message: 'Form' }, since: 5 },
+      },
+    };
+
+    expect(waitsNotice([task, other], 'ctrl+x a')?.text).toBe(
+      '● 2 sessions wait',
+    );
+    expect(waitsNotice([task], 'ctrl+x a')?.text).toBe(
+      '● Agent(Fix the tokenizer) · fake needs your permission',
+    );
+    expect(waitsNotice([], 'ctrl+x a')).toBeUndefined();
+  });
+});

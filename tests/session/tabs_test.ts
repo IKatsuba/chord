@@ -1265,3 +1265,85 @@ describe('CHD-266 tester: settled task attention', () => {
     expect(attend(later)?.front).toBe(1);
   });
 });
+
+describe('a wait names the oldest request still open (CHD-431)', () => {
+  function taskAsked(id: string, subagentId: string): ConversationEvent {
+    return {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: { id, subagentId, options: [] },
+      at: 0,
+    };
+  }
+
+  function taskForm(id: string, subagentId: string): ConversationEvent {
+    return {
+      type: 'elicitation_requested',
+      turnId: 't1',
+      elicitation: {
+        id,
+        mode: 'url',
+        message: 'Sign in',
+        url: 'https://example.com',
+        subagentId,
+      },
+    };
+  }
+
+  /** The tab's wait after `events`, and whether the last one rang. */
+  function after(events: readonly ConversationEvent[]) {
+    const tabs = heard(opened('a', 'b'), 1, [
+      up,
+      prompt('t1'),
+      ...events.slice(0, -1),
+    ]);
+    const last = hear(tabs, 1, events.at(-1)!, 9000);
+
+    return { asking: tabOf(last.tabs, 1)?.wait.asking, rang: last.wait };
+  }
+
+  test("once one task's request is answered, the other's, from when the wait began, ringing nothing", () => {
+    for (const [first, second] of [
+      ['a', 'b'],
+      ['b', 'a'],
+    ] as const) {
+      const { asking, rang } = after([
+        taskAsked('pa', 'task-a'),
+        taskAsked('pb', 'task-b'),
+        settled('t1', first === 'a' ? 'pa' : 'pb'),
+      ]);
+
+      expect(asking?.on).toMatchObject({ subagentId: `task-${second}` });
+      expect(asking?.since).toStrictEqual(2000);
+      expect(rang).toStrictEqual(undefined);
+    }
+  });
+
+  test("once the agent's own is answered, its task's", () => {
+    const { asking } = after([
+      asked('t1', 'own'),
+      taskAsked('pt', 'task-a'),
+      settled('t1', 'own'),
+    ]);
+
+    expect(asking?.on).toStrictEqual({
+      kind: 'permission',
+      title: undefined,
+      subagentId: 'task-a',
+    });
+  });
+
+  test("once a task's permission is answered, its form after it, as input", () => {
+    const { asking } = after([
+      taskAsked('pt', 'task-a'),
+      taskForm('ft', 'task-a'),
+      settled('t1', 'pt'),
+    ]);
+
+    expect(asking?.on).toStrictEqual({
+      kind: 'input',
+      message: 'Sign in',
+      subagentId: 'task-a',
+    });
+  });
+});

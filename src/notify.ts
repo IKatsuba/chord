@@ -50,6 +50,9 @@ export type Wait =
       readonly subagentId?: string;
     };
 
+/** A wait on the person's answer: a permission, or a form or link. */
+export type AskingWait = Exclude<Wait, { readonly kind: 'turn_ended' }>;
+
 /**
  * What the events so far say about waiting: whether the session is live
  * rather than replaying its past, the turns Esc cancelled, the prompts queued
@@ -68,6 +71,11 @@ export interface Watch {
    * transcript keeps them (CHD-266).
    */
   readonly lasting: ReadonlySet<string>;
+  /**
+   * What each request still open asks, by its id, oldest first: the one a
+   * wait names once the request that started it is answered (CHD-431).
+   */
+  readonly asked: ReadonlyMap<string, AskingWait>;
 }
 
 export const emptyWatch: Watch = {
@@ -77,7 +85,21 @@ export const emptyWatch: Watch = {
   events: new Set(),
   asking: new Set(),
   lasting: new Set(),
+  asked: new Map(),
 };
+
+/** What the oldest request still open asks, if one is. */
+export function askingNow(watch: Watch): AskingWait | undefined {
+  return watch.asked.values().next().value;
+}
+
+/** `asked` with only the requests `asking` still holds. */
+function stillAsked(
+  asked: ReadonlyMap<string, AskingWait>,
+  asking: ReadonlySet<string>,
+): Map<string, AskingWait> {
+  return new Map([...asked].filter(([id]) => asking.has(id)));
+}
 
 /** `set` with only what `kept` has too. */
 function keeping(
@@ -144,24 +166,21 @@ export function watchWaits(
       // A task's request comes stamped with when it was asked, as one asked
       // between turns does.
       const lasts = event.between === true || event.at !== undefined;
+      const wait: AskingWait = {
+        kind: 'permission',
+        title: event.permission.title,
+        ...(event.permission.subagentId === undefined
+          ? {}
+          : { subagentId: event.permission.subagentId }),
+      };
       const next = {
         ...watch,
         asking: adding(watch.asking, event.permission.id),
         ...(lasts && { lasting: adding(watch.lasting, event.permission.id) }),
+        asked: new Map(watch.asked).set(event.permission.id, wait),
       };
 
-      return !watch.live || wasAsking
-        ? { watch: next }
-        : {
-            watch: next,
-            wait: {
-              kind: 'permission',
-              title: event.permission.title,
-              ...(event.permission.subagentId === undefined
-                ? {}
-                : { subagentId: event.permission.subagentId }),
-            },
-          };
+      return !watch.live || wasAsking ? { watch: next } : { watch: next, wait };
     }
     case 'elicitation_requested': {
       const wasAsking = watch.asking.size > 0;
@@ -169,26 +188,23 @@ export function watchWaits(
       const lasts =
         event.elicitation.between === true ||
         event.elicitation.subagentId !== undefined;
+      const wait: AskingWait = {
+        kind: 'input',
+        message: event.elicitation.message,
+        ...(event.elicitation.subagentId === undefined
+          ? {}
+          : { subagentId: event.elicitation.subagentId }),
+      };
       const next = {
         ...watch,
         asking: adding(watch.asking, event.elicitation.id),
         ...(lasts && {
           lasting: adding(watch.lasting, event.elicitation.id),
         }),
+        asked: new Map(watch.asked).set(event.elicitation.id, wait),
       };
 
-      return !watch.live || wasAsking
-        ? { watch: next }
-        : {
-            watch: next,
-            wait: {
-              kind: 'input',
-              message: event.elicitation.message,
-              ...(event.elicitation.subagentId === undefined
-                ? {}
-                : { subagentId: event.elicitation.subagentId }),
-            },
-          };
+      return !watch.live || wasAsking ? { watch: next } : { watch: next, wait };
     }
     case 'permission_settled':
     case 'elicitation_settled':
@@ -197,6 +213,7 @@ export function watchWaits(
           ...watch,
           asking: removing(watch.asking, event.id),
           lasting: removing(watch.lasting, event.id),
+          asked: stillAsked(watch.asked, removing(watch.asking, event.id)),
         },
       };
     case 'result': {
@@ -206,6 +223,7 @@ export function watchWaits(
         events: removing(watch.events, event.turnId),
         // A task's request, or one asked between turns, outlives the turn.
         asking: keeping(watch.asking, watch.lasting),
+        asked: stillAsked(watch.asked, watch.lasting),
       };
       const waits =
         watch.live &&

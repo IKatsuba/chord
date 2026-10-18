@@ -1763,3 +1763,99 @@ describe('CHD-432 tester: untracked recovery and replay timing', () => {
     expect(runningSubagents(after)).toBe(0);
   });
 });
+
+describe('CHD-432 tester: cancel capability boundaries', () => {
+  const announced = (id: string, from?: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at: 100,
+    ...(from === undefined ? {} : { subagentId: from }),
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      capabilities: { cancel: {} },
+      state: { state: 'running' },
+    },
+  });
+  const cancel: TranscriptAction[] = [
+    { type: 'cancel', turnId: TURN, at: 200 },
+    {
+      type: 'result',
+      turnId: TURN,
+      result: { status: 'cancelled', stopReason: 'cancelled' },
+    },
+  ];
+
+  for (const [name, patch, survives] of [
+    ['omitted', {}, true],
+    ['null capabilities', { capabilities: null }, false],
+    ['empty capabilities', { capabilities: {} }, false],
+    ['null cancel', { capabilities: { cancel: null } }, false],
+    ['cancel retained', { capabilities: { cancel: {} } }, true],
+  ] as const) {
+    test(`${name} determines whether the next Esc leaves the subagent running`, () => {
+      const cut = fold([
+        PROMPT,
+        announced('a'),
+        update({ sessionUpdate: 'subagent_update', sessionId: 'a', ...patch }),
+        ...cancel,
+      ]);
+
+      expect(only(cut, 'a').state).toBe(survives ? 'running' : 'cancelled');
+      expect(only(cut, 'a').endedAt).toBe(survives ? undefined : 200);
+      expect(runningSubagents(cut)).toBe(survives ? 1 : 0);
+    });
+  }
+
+  test('a parent and child decide survival separately without inheriting the capability', () => {
+    const cut = fold([
+      PROMPT,
+      announced('parent'),
+      spawned('child', 'Child', { from: 'parent' }),
+      spawned('other', 'Other'),
+      announced('grandchild', 'other'),
+      ...cancel,
+    ]);
+
+    expect(
+      ['parent', 'child', 'other', 'grandchild'].map(
+        (id) => only(cut, id).state,
+      ),
+    ).toStrictEqual(['running', 'cancelled', 'cancelled', 'running']);
+    expect(runningSubagents(cut)).toBe(2);
+  });
+
+  test('a survivor accepts late content and its own failure, while disconnect ends another survivor', () => {
+    const cut = fold([PROMPT, announced('a'), announced('b'), ...cancel]);
+    const later = fold(
+      [
+        say('Still working after Esc.', 'a'),
+        stood(
+          'a',
+          {
+            state: 'idle',
+            stopReason: 'error',
+            error: { code: 1, message: 'Worker failed' },
+          },
+          300,
+        ),
+        { type: 'disconnected', turnId: TURN, at: 400 },
+      ],
+      cut,
+    );
+
+    expect(only(later, 'a')).toMatchObject({
+      state: 'failed',
+      error: 'Worker failed',
+      endedAt: 300,
+    });
+    expect(shape(only(later, 'a').entries)).toStrictEqual([
+      'assistant: Still working after Esc.',
+    ]);
+    expect(only(later, 'b')).toMatchObject({
+      state: 'disconnected',
+      endedAt: 400,
+    });
+    expect(runningSubagents(later)).toBe(0);
+  });
+});

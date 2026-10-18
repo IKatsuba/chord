@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/scratch
+ ▀▀     ? for shortcuts · /help
+
+ › bashcut
+
+ ⏺ Bash(bun test)
+   ⎿  Running…
+
+ ⏺ Read(package.json)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

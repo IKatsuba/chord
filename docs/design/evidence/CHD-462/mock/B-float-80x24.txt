@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+  ╭──────────────────────────────────────────────────────────────────────────╮
+  │ Background · 3 in this tab                                               │
+ ⏺│                                                                          │
+  │ ❯ dev server errors  monitor                   running 39s · 1 event    main │
+  │   CI run 4812        monitor                   running 39s · no events  main │
+ ←│   Fix the tokenizer  task · fake               ✗ failed after 15s       main │
+  │                                                                          │
+  │ Enter to go to its call · x to stop · Esc to close                       │
+  ╰──────────────────────────────────────────────────────────────────────────╯
+ ⏺ Received the message from Fix the tokenizer · fake · failed.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  ✗ 1 task failed · 2 monitors running

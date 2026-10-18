@@ -1,0 +1,40 @@
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 600
+      m2 · times out after 10m
+
+ ⏺ Two monitors are running.
+
+ ← from dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Failed (3 tool uses · 15s)
+
+ ⏺ It is running; I will check its report when it lands.
+   ⎿  Interrupted by user
+
+ ← from Fix the tokenizer · fake · failed
+   ⎿  The edit to src/parse/tokenize.ts was denied, so the tokenizer is not fixed.
+
+ ⏺ Received the message from Fix the tokenizer · fake · failed.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Sessions in /tmp/chord-qa.XXXX                                          │
+│                                                                                                                      │
+│ ❯ 1. fake  here  monitors                                                                                            │
+│                                                                                                                      │
+│ Enter to go · 1 to pick · Esc to close                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    background  ✗ 1 task failed · 2 monitors running

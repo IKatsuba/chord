@@ -330,9 +330,27 @@ describe('a task of main asking beside a member (CHD-431)', () => {
           window.frame(),
         ),
       );
-      await leader(window, 'a');
-      await window.shows('Agent(Fix the tokenizer) · fake asks');
-      expect(window.frame()).not.toContain('╭─ tester · bugfix ─');
+
+      // From a session picked by hand, ctrl+x a walks on from it, and a
+      // reply of coder's not yet seen may come first (Q46 is the owner's):
+      // it reaches main's task within the agents that want the person.
+      const shown = () =>
+        /╭─ (\w+) · bugfix ─/.exec(window.frame())?.[1] ?? 'main';
+      const task = 'Agent(Fix the tokenizer) · fake asks';
+
+      for (
+        let presses = 0;
+        presses < 4 && !(shown() === 'main' && window.frame().includes(task));
+        presses++
+      ) {
+        const from = shown();
+
+        await leader(window, 'a');
+        await until('ctrl+x a moves on', () => shown() !== from);
+      }
+
+      await window.shows(task);
+      expect(shown()).toStrictEqual('main');
     }));
 });
 

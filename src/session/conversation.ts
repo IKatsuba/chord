@@ -399,7 +399,12 @@ export class Conversation {
    */
   readonly #permissions = new Map<
     string,
-    { readonly request: PendingPermission; readonly turnId: string }
+    {
+      readonly request: PendingPermission;
+      readonly turnId: string;
+      /** Asked with no turn running (CHD-158). */
+      readonly between?: true;
+    }
   >();
   /**
    * chord's own questions on screen, each withdrawn by calling it: they go
@@ -409,7 +414,12 @@ export class Conversation {
   /** Forms and links on screen, by id, the same way. */
   readonly #elicitations = new Map<
     string,
-    { readonly request: PendingElicitation; readonly turnId: string }
+    {
+      readonly request: PendingElicitation;
+      readonly turnId: string;
+      /** Asked with no turn running (CHD-158). */
+      readonly between?: true;
+    }
   >();
   #closing: Promise<void> | undefined;
   /**
@@ -768,6 +778,13 @@ export class Conversation {
     return this.#permissions.size > 0 || this.#elicitations.size > 0;
   }
 
+  /** Whether a request asked with no turn running waits on the person. */
+  #waitsBetween(): boolean {
+    return [...this.#permissions.values(), ...this.#elicitations.values()].some(
+      (asked) => asked.between,
+    );
+  }
+
   /**
    * The tool calls a steer told now waits out: those the turn has open at
    * this moment, on an agent whose steer cuts them off, and none on any
@@ -933,6 +950,14 @@ export class Conversation {
     this.#rouse();
 
     if (!session || this.#closing || this.#waitsOnPerson()) {
+      return;
+    }
+
+    // A request between turns answered: what waited for it goes in turn.
+    if (!this.#turn) {
+      this.#unhold();
+      void this.#advance(session);
+
       return;
     }
 
@@ -1322,7 +1347,7 @@ export class Conversation {
   }
 
   #enqueue(session: Session, next: Prompt): Delivery {
-    if (this.#idle() && this.#queued.length === 0) {
+    if (this.#idle() && this.#queued.length === 0 && !this.#waitsBetween()) {
       void this.#play(session, next);
 
       return 'sent';
@@ -1333,14 +1358,24 @@ export class Conversation {
     return 'queued';
   }
 
-  /** Puts a prompt at the end of the queue, which shows it. */
+  /**
+   * Puts a prompt at the end of the queue, which shows it: with no turn
+   * running, behind a request between turns, it says it waits for the
+   * answer, as no turn starts while one waits (CHD-158).
+   */
   #hold(next: Prompt): void {
-    this.#queued.push(next);
+    const held =
+      !this.#turn && this.#waitsBetween()
+        ? { ...next, afterAnswer: true as const }
+        : next;
+
+    this.#queued.push(held);
     this.#emit({
       type: 'queued',
       turnId: next.turnId,
       text: next.text,
       ...(next.from === undefined ? {} : { from: next.from }),
+      ...(held.afterAnswer ? { afterAnswer: true } : {}),
     });
   }
 
@@ -1352,10 +1387,17 @@ export class Conversation {
     return !this.#turn && !this.#settling && this.#steers.size === 0;
   }
 
-  /** Sends the next queued prompt, if nothing holds the queue back. */
+  /**
+   * Sends the next queued prompt, if nothing holds the queue back: no turn
+   * starts while a request asked between turns waits on the person, which
+   * the turn would take off the screen while the agent still waits on it
+   * (CHD-158).
+   */
   async #advance(session: Session): Promise<void> {
     const queued =
-      this.#current(session) && this.#idle() ? this.#queued.shift() : undefined;
+      this.#current(session) && this.#idle() && !this.#waitsBetween()
+        ? this.#queued.shift()
+        : undefined;
 
     if (queued) {
       await this.#play(session, queued);
@@ -2213,7 +2255,11 @@ export class Conversation {
       }
     };
 
-    this.#permissions.set(request.id, { request, turnId });
+    this.#permissions.set(request.id, {
+      request,
+      turnId,
+      ...(between && { between }),
+    });
     this.#emit({
       type: 'permission_requested',
       turnId,
@@ -2255,7 +2301,11 @@ export class Conversation {
       }
     };
 
-    this.#elicitations.set(id, { request, turnId });
+    this.#elicitations.set(id, {
+      request,
+      turnId,
+      ...(between && { between }),
+    });
     this.#emit({
       type: 'elicitation_requested',
       turnId,

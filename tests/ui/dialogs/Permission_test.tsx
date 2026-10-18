@@ -822,6 +822,24 @@ describe('a request between turns (CHD-158)', () => {
     ));
 });
 
+describe('a prompt sent while a request waits between turns (CHD-158)', () => {
+  test('waits in the queue after your answer, and goes once answered', () =>
+    withWindow(async (window) => {
+      await send(window, 'mainbetween');
+      await window.shows('main asks · between turns');
+      await window.type('text');
+      await window.press('\r');
+      await window.shows('› after your answer: text');
+      // The request still waits, on the person.
+      expect(window.frame()).toContain('main asks · between turns');
+      await leader(window, 'a');
+      await window.press('1');
+      await window.shows('Permission: allow.');
+      await window.shows('› text');
+      expect(window.frame()).not.toContain('after your answer');
+    }));
+});
+
 
 describe('CHD-158 tester: attendance in the window', () => {
   for (const [columns, rows] of [

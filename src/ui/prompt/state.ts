@@ -298,6 +298,22 @@ export function reducePrompt(
         };
       }
 
+      // Told again once the answer it waited for came: only that changes.
+      if (state.queue.some((item) => item.turnId === action.turnId)) {
+        return {
+          ...state,
+          queue: state.queue.map((item) => {
+            if (item.turnId !== action.turnId) {
+              return item;
+            }
+
+            const { afterAnswer: _, ...rest } = item;
+
+            return action.afterAnswer ? { ...rest, afterAnswer: true } : rest;
+          }),
+        };
+      }
+
       // Queued just before its `context_sent` and `images_sent`, so what is
       // held and the draft's images went with it.
       const images = imagesIn(action.text, state.images);
@@ -311,6 +327,7 @@ export function reducePrompt(
             text: action.text,
             ...(state.held.length > 0 ? { held: state.held } : {}),
             ...(images.length > 0 ? { images } : {}),
+            ...(action.afterAnswer ? { afterAnswer: action.afterAnswer } : {}),
           },
         ],
       };

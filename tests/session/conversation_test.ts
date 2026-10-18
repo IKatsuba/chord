@@ -25,6 +25,7 @@ import {
   type TranscriptAction,
   type TurnResult,
 } from '../../src/session/transcript/types.ts';
+import { initialAppState, reduceApp } from '../../src/ui/app/state.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { cutNote } from '../../src/session/cut_off.ts';
@@ -2967,4 +2968,57 @@ describe('CHD-158 tester: requests outside a turn', () => {
       },
     );
   });
+});
+
+describe('a prompt or message while a request waits between turns (CHD-158)', () => {
+  test('both wait in the queue for the answer, and the request stays on screen while the agent waits', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('mainbetween');
+      await until(() => events.some((event) => event.type === 'result'));
+      await until(() =>
+        events.some((event) => event.type === 'permission_requested'),
+      );
+
+      expect(conversation.send('text')).toBeTrue();
+      expect(conversation.tell(MAIN, 'Then the docs.')).toStrictEqual('queued');
+
+      const queued = events.filter((event) => event.type === 'queued');
+
+      expect(queued).toMatchObject([
+        { text: 'text', afterAnswer: true },
+        { text: 'Then the docs.', afterAnswer: true },
+      ]);
+
+      // Long enough for a turn the queue let go to have started.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const prompts = () =>
+        events.filter((event) => event.type === 'prompt').length;
+
+      expect(prompts()).toStrictEqual(1);
+
+      // What the window draws from the events: the request still waits,
+      // between turns, on the person.
+      const shown = events.reduce(reduceApp, initialAppState);
+
+      expect(shown.transcript.turn).toMatchObject({
+        status: 'awaiting_permission',
+        between: true,
+      });
+
+      const asked = events.find(
+        (event) => event.type === 'permission_requested',
+      );
+
+      assert(asked?.type === 'permission_requested');
+      conversation.choose(asked.permission.id, 'allow');
+      await until(() => saidIn(events).includes('Permission: allow.'));
+      // Then, in the order they came, each as a turn of its own.
+      await until(() => prompts() === 3);
+      expect(
+        events.flatMap((event) =>
+          event.type === 'prompt' ? [event.text] : [],
+        ),
+      ).toStrictEqual(['mainbetween', 'text', 'Then the docs.']);
+    }));
 });

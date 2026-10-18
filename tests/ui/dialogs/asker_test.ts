@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { Entry, Subagent } from '../../../src/session/transcript/types.ts';
 import { type AskerPart, askerParts } from '../../../src/ui/dialogs/asker.ts';
 
@@ -83,4 +83,50 @@ test('a child is named bold in its colour; a member with its team after, dim', (
     { text: 'tester', tone: 'agent', bold: true, colour: '#c49cff' },
     { text: ' · bugfix', tone: 'dim' },
   ]);
+});
+
+describe('CHD-389 tester: nested requester precedence', () => {
+  const nested: Subagent = {
+    id: 'nested',
+    title: 'Inspect imports',
+    state: 'running',
+    entries: [],
+    plan: [],
+  };
+  const entries = [block({ ...TASK, entries: [block(nested)] })];
+
+  for (const between of [false, true]) {
+    test(`the full subagent path takes precedence over a picked member, between=${between}`, () => {
+      const parts = askerParts({
+        entries,
+        subagentId: 'nested',
+        between,
+        runtime: 'fake',
+        picked: { name: 'tester', team: 'bugfix', colour: '#c49cff' },
+      });
+
+      expect(said(parts)).toBe(
+        'Agent(Fix the tokenizer) · fake › Agent(Inspect imports)',
+      );
+      expect(parts.every((part) => part.tone === 'accent')).toBe(true);
+      expect(
+        parts.filter((part) => part.bold).map((part) => part.text),
+      ).toStrictEqual(['Agent', 'Agent']);
+      expect(parts.some((part) => part.colour !== undefined)).toBe(false);
+      expect(said(parts)).not.toContain('tester');
+      expect(said(parts)).not.toContain('bugfix');
+      expect(said(parts)).not.toContain(' asks');
+    });
+  }
+
+  test('an unknown subagent between turns names the picked member without inheriting its team or colour', () => {
+    expect(
+      askerParts({
+        entries,
+        subagentId: 'gone',
+        between: true,
+        picked: { name: 'tester', team: 'bugfix', colour: '#c49cff' },
+      }),
+    ).toStrictEqual([{ text: 'a subagent of tester', tone: 'accent' }]);
+  });
 });

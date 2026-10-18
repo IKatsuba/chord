@@ -8,6 +8,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
+import { stopRefused } from '../../../src/ui/background/view.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { draw } from '../harness.tsx';
 import {
@@ -629,3 +630,61 @@ test('x on an agent that took its own stop back says so on the hint line, and st
     },
     { rows: 24, columns: 80 },
   ));
+
+describe('CHD-2 tester: stopping and refusal rendering', () => {
+  for (const columns of [80, 120]) {
+    test(`stopping and rolled-back waiting rows retain focus with a first-line refusal at ${columns} columns`, async () => {
+      const item: BackgroundItem = {
+        kind: 'agent',
+        id: 'a',
+        key: 1,
+        name: 'Run the tests',
+        startedAt: Date.now(),
+        status: { group: 'running', stopping: true },
+      };
+      const first = await draw(
+        <BackgroundView
+          items={[item]}
+          focus={item}
+          columns={columns}
+          rows={24}
+        />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        expect(first.frame()).toContain('■ stopping');
+        expect(first.frame()).toContain('❯ Run the tests');
+      } finally {
+        await first.unmount();
+      }
+
+      const rollback: BackgroundItem = {
+        ...item,
+        status: { group: 'asking', on: 'waiting', since: Date.now() },
+      };
+      const hint = stopRefused(new Error('Broken pipe\ntransport detail'));
+      const refused = await draw(
+        <BackgroundView
+          items={[rollback]}
+          focus={rollback}
+          hint={hint}
+          columns={columns}
+          rows={24}
+        />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        expect(refused.frame()).toContain('● waiting');
+        expect(refused.frame()).toContain('❯ Run the tests');
+        expect(refused.frame()).toContain('could not stop: Broken pipe');
+        expect(refused.frame()).not.toContain('transport detail');
+        expect(refused.frame()).not.toContain('■ stopping');
+        expect(refused.frame()).not.toContain('x to stop');
+      } finally {
+        await refused.unmount();
+      }
+    });
+  }
+});

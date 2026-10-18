@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   initialBackground,
   reduceBackground,
@@ -98,4 +98,49 @@ test("a stop's hint is said only for the stop x last asked for, while the ❯ ha
     )?.hint,
   ).toBe(undefined);
   expect(run(refused('t1'))).toBe(undefined);
+});
+
+describe('CHD-2 tester: stop attempt token ordering', () => {
+  test('an old refusal cannot disarm a newer attempt and the new hint clears on owner change', () => {
+    const focus = { key: 1, id: 'same' };
+    let state = reduceBackground(initialBackground, {
+      type: 'background_opened',
+    });
+
+    state = reduceBackground(state, { type: 'background_focused', focus });
+    state = reduceBackground(state, {
+      type: 'background_stop_asked',
+      focus,
+      token: 'old',
+    });
+    state = reduceBackground(state, {
+      type: 'background_stop_asked',
+      focus,
+      token: 'new',
+    });
+
+    const late = reduceBackground(state, {
+      type: 'background_hinted',
+      token: 'old',
+      hint: 'old refusal',
+    });
+
+    expect(late).toBe(state);
+    expect(late.backgroundView?.stopping?.token).toBe('new');
+
+    const refused = reduceBackground(late, {
+      type: 'background_hinted',
+      token: 'new',
+      hint: 'new refusal',
+    });
+
+    expect(refused.backgroundView?.hint).toBe('new refusal');
+    expect(refused.backgroundView?.stopping).toBeUndefined();
+    expect(
+      reduceBackground(refused, {
+        type: 'background_focused',
+        focus: { key: 2, id: 'same' },
+      }).backgroundView?.hint,
+    ).toBeUndefined();
+  });
 });

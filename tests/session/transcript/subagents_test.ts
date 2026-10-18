@@ -422,3 +422,43 @@ test('a subagent stopped alone reads stopping until its agent tells a state it i
     undefined,
   );
 });
+
+describe('CHD-2 tester: completion crossing a stop', () => {
+  test('completion stays done after late rollback and a second run can be stopped independently', () => {
+    const stop = (stopping: boolean): TranscriptAction => ({
+      type: 'subagent_stopping',
+      turnId: 'stop',
+      subagentId: 'a',
+      stopping,
+    });
+    const state = (word: 'running' | 'idle', at: number): TranscriptAction => ({
+      type: 'update',
+      turnId: TURN,
+      at,
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        state:
+          word === 'running'
+            ? { state: 'running' }
+            : { state: 'idle', stopReason: 'end_turn' },
+      },
+    });
+    const done = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      stop(true),
+      state('idle', 20),
+      stop(false),
+    ]);
+
+    expect(only(done, 'a')).toMatchObject({ state: 'completed', endedAt: 20 });
+    expect(only(done, 'a').stopping).toBeUndefined();
+
+    const again = fold([state('running', 30), stop(true)], done);
+
+    expect(only(again, 'a').state).toBe('running');
+    expect(only(again, 'a').stopping).toBe(true);
+    expect(only(again, 'a').endedAt).toBeUndefined();
+  });
+});

@@ -1934,3 +1934,126 @@ test("a Claude subagent messaged again can be stopped alone in its second run, a
     ]);
     expect(said(updates).join('')).toContain('Both found.');
   }));
+
+describe('CHD-2 tester: deferred stop failure and asking isolation', () => {
+  test('a deferred notify failure rolls stopping back without cancelling the parent turn', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-stop-failure-'));
+    const notice = Promise.withResolvers<void>();
+    const connected = Promise.withResolvers<void>();
+    const waiting = Promise.withResolvers<string>();
+    const events: ConversationEvent[] = [];
+    const ids: string[] = [];
+    let session: Session | undefined;
+    const conversation = new Conversation(
+      async (signal) => {
+        session = await openSession({
+          agent: 'fake',
+          cwd: dir,
+          signal,
+          agentCommand: fakeAgentCommand(undefined, '--step-ms', '50'),
+        });
+
+        return {
+          ...session,
+          stopSubagent: (id: string) => {
+            ids.push(id);
+
+            return notice.promise;
+          },
+        };
+      },
+      (event) => {
+        events.push(event);
+
+        if (event.type === 'connected') {
+          connected.resolve();
+        }
+
+        if (
+          event.type === 'update' &&
+          event.update.sessionUpdate === 'subagent_update' &&
+          event.update.state?.state === 'requires_action'
+        ) {
+          waiting.resolve(event.update.sessionId);
+        }
+      },
+    );
+    const shown = () =>
+      fold(
+        events.filter((event): event is TranscriptAction =>
+          [
+            'prompt',
+            'update',
+            'result',
+            'cancel',
+            'disconnected',
+            'permission_requested',
+            'permission_settled',
+            'subagent_stopping',
+          ].includes(event.type),
+        ),
+      );
+
+    try {
+      conversation.start();
+      await connected.promise;
+      conversation.send('claudewaiting');
+
+      const id = await waiting.promise;
+      const stop = conversation.stopSubagent(id);
+
+      expect(ids).toStrictEqual([id]);
+      expect(id).not.toBe(session?.id);
+      expect(only(shown(), id).stopping).toBe(true);
+      expect(only(shown(), id).waiting).toBeDefined();
+      notice.reject(new Error('Broken pipe\ntransport detail'));
+      await expect(stop).rejects.toThrow('Broken pipe');
+      expect(only(shown(), id).stopping).toBeUndefined();
+      expect(only(shown(), id).state).toBe('running');
+      expect(only(shown(), id).waiting).toBeDefined();
+      expect(events.some((event) => event.type === 'cancel')).toBe(false);
+    } finally {
+      notice.resolve();
+      await conversation.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('stopping an asking child withdraws only its permission and the parent completes', () =>
+    withSession(async (session) => {
+      const waiting = Promise.withResolvers<PendingPermission>();
+      const unsubscribe = session.permissions.subscribe((request) =>
+        waiting.resolve(request),
+      );
+
+      try {
+        const turn = run(session, 'claudesubagents');
+        const request = await waiting.promise;
+        const withdrawn = new Promise<void>((resolve) =>
+          request.signal.addEventListener('abort', () => resolve(), {
+            once: true,
+          }),
+        );
+
+        await session.stopSubagent(request.sessionId);
+        await withdrawn;
+
+        const ran = await turn;
+
+        expect(request.signal.aborted).toBe(true);
+        expect(ran.result.status).toBe('completed');
+        expect(
+          ran.updates.some(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              update.sessionId === request.sessionId &&
+              update.state?.state === 'idle' &&
+              update.state.stopReason === 'cancelled',
+          ),
+        ).toBe(true);
+        expect(said(ran.updates).join('')).toContain('Each agent has ended.');
+      } finally {
+        unsubscribe();
+      }
+    }));
+});

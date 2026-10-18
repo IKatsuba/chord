@@ -491,9 +491,23 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       };
     case 'form_filled':
     case 'questions_answered':
-    case 'request_attended':
     case 'request_overflowed':
       return reduceDialogs(state, action) as AppState;
+    case 'request_attended': {
+      // The keys go into the request from wherever they were: the list of
+      // agents, a search and the sessions picker let go of them, the draft
+      // staying as it is (CHD-158).
+      const attended = [
+        { type: 'agents_focused', focused: false },
+        { type: 'sessions_picker_closed' },
+      ].reduce<AppState>(
+        (next, step) => reduceApp(next, step as AppAction),
+        reduceDialogs(state, action) as AppState,
+      );
+      const { search: _, ...rest } = attended;
+
+      return rest;
+    }
     case 'connected':
       return state.connection.status === 'starting'
         ? {

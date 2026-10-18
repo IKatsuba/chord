@@ -16,6 +16,7 @@ import {
   reduceApp,
 } from '../../../src/ui/app/state.ts';
 import { fileFinder } from '../../../src/ui/prompt/state.ts';
+import { emptySearch } from '../../../src/ui/prompt/search.ts';
 import { emptyHistory, recorded } from '../../../src/ui/prompt/history.ts';
 import { endOf, START } from '../../../src/ui/prompt/prompt.ts';
 import { readKeybindings } from '../../../src/ui/shortcuts/bindings.ts';
@@ -496,6 +497,29 @@ describe('a request between turns (CHD-158)', () => {
     );
     // With the keys in it, ctrl+x a goes to another session as before.
     expect(leaderA(attended)).toContainEqual({ type: 'attend_session' });
+  });
+
+  test('ctrl+x a takes the keys from the list of agents, a search or the sessions picker', () => {
+    for (const from of [
+      { type: 'agents_focused', focused: true },
+      { type: 'searched', search: emptySearch },
+      { type: 'sessions_picker_opened' },
+    ] as AppAction[]) {
+      const elsewhere = reduceApp(typing('draft', asked), from);
+      const attended = reduceApp(elsewhere, {
+        type: 'request_attended',
+        id: 'p1',
+      });
+
+      expect(attended.agentsFocus).toStrictEqual(undefined);
+      expect(attended.search).toStrictEqual(undefined);
+      expect(attended.sessionsPicker).toBeFalsy();
+      expect(attended.draft).toStrictEqual('draft');
+      // Esc is the box's now: it rejects.
+      expect(keyCommand('', escape, attended, 'draft')).toStrictEqual(
+        'reject_permission',
+      );
+    }
   });
 
   test('one asked in a turn takes the keys at once, as before', () => {

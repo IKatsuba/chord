@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › claudebetween
+
+ ⏺ Agent(tester (general-purpose))
+   ⎿  Write(notes/test-report.md)
+
+ ⏺ It is running; I will say when it ends.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(tester (general-purpose)) asks for input · between turns               │
+│ Which suite should run next?                                                 │
+│                                                                              │
+│ ❯   Suite                                                                    │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ Type to fill in · ↑↓ to move · Esc to cancel                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running          Fake Large with a 1M context window · 1% used
+    background  ● 1 agent asking

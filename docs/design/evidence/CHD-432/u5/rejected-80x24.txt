@@ -1,0 +1,24 @@
+ ⏺ Route updates by session
+
+   1. Read src/acp/connection.ts.
+   2. Move the routing into src/session/session.ts.
+   3. Run the tests.
+
+ ⏺ Starting with the routing.
+
+ › claudeexitplan
+
+ ⏺ Approve(Plan)
+   ⎿  Error: # Route updates by session
+
+      1. Read src/acp/connection.ts.
+      2. Move the routing into src/session/session.ts.
+      3. Run the tests.
+   ⎿  Rejected Approve Plan
+
+ ⏺ I will keep planning.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · medium · 1% used

@@ -675,7 +675,9 @@ test('a message steered into a turn is recorded where it went, and a reopened se
     try {
       conversation.start();
       await until(() => events.some((event) => event.type === 'connected'));
-      conversation.send('permission');
+      // Its next step after the write waits for the message, which chord
+      // holds until the write ends: the order is the agent's, not the clock's.
+      conversation.send('permissionsteer');
       await until(() =>
         events.some((event) => event.type === 'permission_requested'),
       );
@@ -726,7 +728,7 @@ test('a message steered into a turn is recorded where it went, and a reopened se
     }
 
     expect(live).toStrictEqual([
-      'user: permission',
+      'user: permissionsteer',
       'tool: Write notes.txt completed',
       'message',
       'assistant: Read the message from main.\n\nPermission: allow.',

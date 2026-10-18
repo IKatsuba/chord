@@ -458,3 +458,57 @@ describe('tester: subagentstates keys and terminal sizes', () => {
     }
   }
 });
+
+describe('CHD-432 tester: ending notes in terminal widths', () => {
+  for (const columns of [80, 120]) {
+    for (const [state, word, note] of [
+      [
+        'untracked',
+        'Untracked',
+        'The agent no longer reports this subagent; it may still be at work.',
+      ],
+      ['ended', 'Ended', 'The agent did not say how it ended.'],
+      ['failed', 'Failed', 'API Error: 529 Overloaded'],
+    ] as const) {
+      test(`${word} keeps its frozen duration and opens its whole note at ${columns} columns`, async () => {
+        for (const open of [false, true]) {
+          const drawn = await draw(
+            <Agents
+              agents={[
+                {
+                  id: 'ending',
+                  title: 'Check the transport',
+                  state,
+                  ...(state === 'failed' ? { error: note } : {}),
+                  entries: [],
+                  plan: [],
+                  startedAt: 1000,
+                  endedAt: 9000,
+                },
+              ]}
+              turn={{ status: 'idle' }}
+              agent='fake'
+              open={open}
+              width={columns - 4}
+            />,
+            { columns, rows: 24 },
+          );
+
+          try {
+            const frame = stripAnsi(drawn.frame()).replace(/\s+/g, ' ');
+
+            expect(frame).toContain(`${word} (0 tool uses · 8s)`);
+
+            if (open) {
+              expect(frame).toContain(note);
+            } else {
+              expect(frame).not.toContain(note);
+            }
+          } finally {
+            await drawn.unmount();
+          }
+        }
+      });
+    }
+  }
+});

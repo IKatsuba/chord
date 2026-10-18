@@ -1684,3 +1684,82 @@ describe('CHD-432 tester: independent Claude fixture lifetimes', () => {
       }),
     ));
 });
+
+describe('CHD-432 tester: untracked recovery and replay timing', () => {
+  test('an untimed unknown stays untimed through a timed null-state patch, then requires_action resumes its original clock', () => {
+    const lost = fold([
+      PROMPT,
+      spawned('a', 'Find', { at: 100 }),
+      stood('a', { state: 'unknown' }),
+    ]);
+    const patched = fold(
+      [
+        {
+          type: 'update',
+          turnId: TURN,
+          at: 200,
+          update: {
+            sessionUpdate: 'subagent_update',
+            sessionId: 'a',
+            state: null,
+            description: null,
+          },
+        },
+      ],
+      lost,
+    );
+
+    expect(only(patched, 'a').state).toBe('untracked');
+    expect(only(patched, 'a').endedAt).toBeUndefined();
+    expect(only(patched, 'a').description).toBeUndefined();
+    expect(runningSubagents(patched)).toBe(0);
+
+    const resumed = fold(
+      [stood('a', { state: 'requires_action' }, 300)],
+      patched,
+    );
+
+    expect(only(resumed, 'a').startedAt).toBe(100);
+    expect(only(resumed, 'a').endedAt).toBeUndefined();
+    expect(runningSubagents(resumed)).toBe(1);
+
+    const done = fold(
+      [stood('a', { state: 'idle', stopReason: 'max_tokens' }, 400)],
+      resumed,
+    );
+
+    expect(only(done, 'a')).toMatchObject({
+      state: 'ended',
+      startedAt: 100,
+      endedAt: 400,
+    });
+  });
+
+  test('a completed parent keeps its ending when a nested untracked child disconnects', () => {
+    const before = fold([
+      PROMPT,
+      spawned('a', 'Parent', { at: 100 }),
+      spawned('b', 'Child', { from: 'a', at: 110 }),
+      ended('b', 'unknown', { from: 'a', at: 120 }),
+      ended('a', 'completed', { at: 130 }),
+    ]);
+    const after = fold(
+      [{ type: 'disconnected', turnId: TURN, at: 200 }],
+      before,
+    );
+
+    expect(only(after, 'a')).toMatchObject({
+      state: 'completed',
+      endedAt: 130,
+    });
+    expect(only(after, 'b')).toMatchObject({
+      state: 'disconnected',
+      endedAt: 200,
+    });
+    expect(only(before, 'b')).toMatchObject({
+      state: 'untracked',
+      endedAt: 120,
+    });
+    expect(runningSubagents(after)).toBe(0);
+  });
+});

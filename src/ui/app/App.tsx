@@ -621,7 +621,9 @@ export function App({
 
   const commands = useCommands(
     {
-      agent: frontAgent,
+      // The reports speak of the session shown: a picked child's runtime,
+      // not the tab's (CHD-405).
+      agent: child?.runtime ?? frontAgent,
       cwd: here.cwd,
       saveTheme,
       saveEditorMode,

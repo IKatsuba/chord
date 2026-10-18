@@ -141,8 +141,8 @@ saw, its past as the agent replays it.
 holds, and opens each
 in a tab of its own, in the order given, the first in front. Each tab runs
 its session's own agent in its session's own directory, with that
-directory's settings and MCP servers; `@`, `!` commands, `/status` and the
-header follow the tab in front, and ctrl+x c and `/new` open beside it in
+directory's settings and MCP servers; `@`, `!` commands and the header
+follow the tab in front, and ctrl+x c and `/new` open beside it in
 its directory. Several ids open only sessions chord has a record of: an
 unknown id, the same id twice or a tenth refuses the whole command before
 the window opens. Each `--resume` takes one id or none, so the agent goes
@@ -518,7 +518,9 @@ outranks a failed turn. ↓ on an empty prompt that is not walking
 history moves into the list, where ↑ ↓ or j k pick; Enter or Esc goes back
 to the box with the pick kept. The picked agent's chat fills the window,
 the box takes its colour and its name on the top border, and the status line
-its model, effort and context: what you type goes to it as your own prompt. `send_message` from the parent reaches a
+its model, effort and context: what you type goes to it as your own prompt.
+`/cost`, `/context` and `/status` name the picked agent's runtime.
+`send_message` from the parent reaches a
 child, and from a child its parent alone, each a turn of the recipient's,
 as many as they trade; `list_sessions` gives each session's children. A
 message to a working Claude or Codex session goes into its running turn

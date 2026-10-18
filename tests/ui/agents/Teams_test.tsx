@@ -7,6 +7,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { type ChordServer, serveChord } from '../../../src/server/server.ts';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import type { Caller } from '../../../src/server/tools.ts';
 import {
   CODER_TO_TESTER,
@@ -375,4 +376,56 @@ describe('a task of main asking beside a member, at 80 columns (CHD-431)', () =>
       await server.close();
     }
   });
+});
+
+test("/cost, /context and /status on a picked member name its runtime, not the tab's (CHD-405)", async () => {
+  const server = serveChord();
+  // tester on another runtime than main's, its agent still the fake.
+  const team = BUGFIX.replace(
+    /(- name: tester\n(?:.*\n)*?\s+agent: )fake/,
+    '$1codex',
+  );
+
+  expect(team).not.toStrictEqual(BUGFIX);
+
+  try {
+    await withWindow(
+      async (window) => {
+        await started(window);
+        await leader(window, 'a');
+        await window.shows('╭─ tester · bugfix ─');
+        await window.press('3');
+        await window.shows('Not run; I will ask bugfix how to go on.');
+
+        for (const [command, line] of [
+          ['/cost', 'codex has not reported what this session has used.'],
+          [
+            '/context',
+            'codex has not reported how full its context window is.',
+          ],
+          ['/status', 'Agent'],
+        ] as const) {
+          await send(window, command);
+          await window.shows(line);
+        }
+
+        expect(window.frame()).toMatch(/Agent: +codex/);
+        expect(window.frame()).not.toContain('fake has not reported');
+      },
+      {
+        server,
+        runtimes: ['fake', 'codex'],
+        rows: 80,
+        columns: 120,
+        teams: { bugfix: team },
+        agentCommand: fakeAgentCommand(undefined, '--no-usage'),
+        // Every runtime on the fake: a test never starts a real Codex.
+        startupOf: () => ({
+          agentCommand: fakeAgentCommand(undefined, '--no-usage'),
+        }),
+      },
+    );
+  } finally {
+    await server.close();
+  }
 });

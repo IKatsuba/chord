@@ -1226,3 +1226,167 @@ describe('CHD-431 tester: task input and permission in different children', () =
     });
   }
 });
+
+describe('CHD-405 tester: reports follow the picked runtime', () => {
+  async function report(window: Window, command: string, expected: RegExp) {
+    const latest = () => {
+      const lines = window.frame().split('\n');
+      const at = lines.findLastIndex((line) => line.includes(`› ${command}`));
+
+      return at < 0 ? '' : lines.slice(at + 1).join('\n');
+    };
+
+    await send(window, command);
+    await until(`the latest ${command} report`, () => expected.test(latest()));
+
+    return latest();
+  }
+
+  async function childFinished(dir: string) {
+    const records = join(dir, 'state', 'records');
+    let files: string[];
+
+    try {
+      files = await readdir(records);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        error.code === 'ENOENT'
+      ) {
+        return false;
+      }
+
+      throw error;
+    }
+
+    for (const file of files) {
+      const past = await readPast(join(dir, 'state', 'records', file));
+      const session = past.find((entry) => entry.type === 'session');
+
+      if (
+        session?.type === 'session' &&
+        session.name === 'foreign' &&
+        past.some((entry) => entry.type === 'result')
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const usage of ['missing', 'tokens', 'values'] as const) {
+      test(`a standalone child, main and another tab keep their own report runtime with ${usage} usage at ${columns} columns`, async () => {
+        const server = serveChord();
+        const admit = server.admit.bind(server);
+        let main: Parameters<typeof admit>[0] | undefined;
+        const command = fakeAgentCommand(
+          undefined,
+          ...(usage === 'missing'
+            ? ['--no-usage']
+            : usage === 'tokens'
+              ? ['--tokens-only']
+              : []),
+        );
+
+        server.admit = (caller) => {
+          if (caller.role === 'person') {
+            main = caller;
+          }
+
+          return admit(caller);
+        };
+
+        try {
+          await withWindow(
+            async (window) => {
+              await ready(window);
+              assert(main);
+              await main.window.open(main.key, {
+                agent: 'codex',
+                name: 'foreign',
+                prompt: 'text',
+              });
+              await until("the child's actual recorded result", () =>
+                childFinished(window.dir),
+              );
+              await window.press(DOWN);
+              await window.press(DOWN);
+              await window.press('\r');
+              await window.shows('╭─ foreign ─');
+              await report(window, '/status', /Agent: +codex/);
+
+              const cost = await report(
+                window,
+                '/cost',
+                usage === 'missing'
+                  ? /codex has not reported what this session has used\./
+                  : /Total cost:/,
+              );
+
+              if (usage === 'tokens') {
+                expect(cost).toContain("(chord's estimate)");
+                expect(cost).toMatch(/Tokens in: +1,000/);
+              } else if (usage === 'values') {
+                expect(cost).toContain('$0.0125');
+                expect(cost).toMatch(/Tokens in: +1,000/);
+              }
+
+              await report(
+                window,
+                '/context',
+                usage === 'missing'
+                  ? /codex has not reported how full its context window is\./
+                  : /Used: +/,
+              );
+              await window.press(DOWN);
+              await window.press(UP);
+              await window.press('\r');
+              await report(window, '/status', /Agent: +fake/);
+              await report(
+                window,
+                '/cost',
+                /fake has not reported what this session has used\./,
+              );
+              await report(
+                window,
+                '/context',
+                /fake has not reported how full its context window is\./,
+              );
+              await send(window, '/new other');
+              await ready(window);
+              await report(window, '/status', /Agent: +other/);
+              await report(
+                window,
+                '/cost',
+                /other has not reported what this session has used\./,
+              );
+              await leader(window, '1');
+              await report(window, '/status', /Agent: +fake/);
+              await window.press(DOWN);
+              await window.press(DOWN);
+              await window.press('\r');
+              await window.shows('╭─ foreign ─');
+              await report(window, '/status', /Agent: +codex/);
+            },
+            {
+              server,
+              columns,
+              rows,
+              runtimes: ['fake', 'codex', 'other'],
+              agentCommand: command,
+              startupOf: () => ({ agentCommand: command }),
+            },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
+  }
+});

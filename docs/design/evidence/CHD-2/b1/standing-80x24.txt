@@ -1,0 +1,4 @@
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  ✗ 1 agent failed · ? 1 agent untracked · ✓ 1 agent done ·
+                ■ 1 agent stopped

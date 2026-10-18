@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from coder · fake.
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Failed (3 tool uses · 2s)
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ››› Working… (3s · esc to interrupt)
+ ⏺ Received the message from coder.
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● 2 agents wait · ctrl+x a                       Fake Small · medium · 3% used
+    main       fake         ● permission 16s
+    bugfix     team · fake  ✓ replied 9s ago
+    ├─ tester  fake         ● permission 4s
+    └─ coder   fake         ✓ replied 9s ago
+    background  ● 1 task asking

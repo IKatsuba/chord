@@ -297,6 +297,12 @@ export interface Subagent {
   /** What it was asked to do, in full, as the parent described it. */
   readonly description?: string;
   readonly state: SubagentState;
+  /**
+   * It announced it can be cancelled alone (ACP's `capabilities.cancel`):
+   * its agent reports its end itself, so a cancel of its parent's turn does
+   * not end it on chord's word.
+   */
+  readonly cancellable?: true;
   /** What the agent said went wrong, while it stands failed. */
   readonly error?: string;
   /** When its first update came. */

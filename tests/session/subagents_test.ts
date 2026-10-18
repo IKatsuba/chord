@@ -467,6 +467,77 @@ test("Claude's subagents fold to each end they report", () =>
     ]);
   }));
 
+test('a cancelled turn leaves a subagent that can be cancelled alone to its agent, and ends the rest', () => {
+  const own = (id: string, from?: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      title: id,
+      capabilities: { cancel: {} },
+      state: { state: 'running' },
+    },
+    ...(from === undefined ? {} : { subagentId: from }),
+  });
+  const cut = fold([
+    PROMPT,
+    own('a'),
+    own('g', 'a'),
+    spawned('b', 'Draw'),
+    { type: 'cancel', turnId: TURN, at: 12 },
+    {
+      type: 'result',
+      turnId: TURN,
+      result: { status: 'cancelled', stopReason: 'cancelled' },
+    },
+  ]);
+
+  expect(
+    subagentsIn(cut.entries).map(({ id, state, endedAt }) => ({
+      id,
+      state,
+      endedAt,
+    })),
+  ).toStrictEqual([
+    { id: 'a', state: 'running', endedAt: undefined },
+    { id: 'g', state: 'running', endedAt: undefined },
+    { id: 'b', state: 'cancelled', endedAt: 12 },
+  ]);
+  expect(runningSubagents(cut)).toStrictEqual(2);
+
+  // Its agent says how it ended, as it does; a capability taken away leaves
+  // the next one to chord.
+  const later = fold(
+    [
+      stood('a', { state: 'idle', stopReason: 'end_turn' }, 20),
+      update(
+        {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'g',
+          capabilities: null,
+        },
+        'a',
+      ),
+    ],
+    cut,
+  );
+
+  expect(only(later, 'a').state).toStrictEqual('completed');
+  expect(only(later, 'g').cancellable).toStrictEqual(undefined);
+});
+
+test("Esc leaves Claude's background subagent at work on screen, and it ends as its agent says", () =>
+  withSession(async (session) => {
+    const { result, subagents } = await background(session, 6);
+
+    expect(result).toMatchObject({ result: { status: 'cancelled' } });
+    expect(subagents.map(({ title }) => title)).toStrictEqual([
+      'tester (general-purpose)',
+      'explorer (Explore)',
+    ]);
+  }));
+
 test('a cancelled turn cancels the subagents still running, when Esc was pressed; one that ended stays as it ended', () => {
   const transcript = fold([
     PROMPT,

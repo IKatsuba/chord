@@ -143,9 +143,11 @@ export function settle(
 
   const { since } = state.turn;
 
-  // A cancel stops the turn's subagents with it, as the adapters do, which
-  // say so too, perhaps only after the turn's answer. Those still running
-  // after a turn that ended on its own are left: they may outlive it.
+  // A cancel stops the turn's subagents with it, as the adapters' draft
+  // form does, which says so too, perhaps only after the turn's answer. One
+  // that can be cancelled alone is left for its agent to report: it may live
+  // on, as a background one does. Those still running after a turn that
+  // ended on its own are left: they may outlive it.
   if (result.status === 'cancelled') {
     state = {
       ...state,
@@ -153,6 +155,7 @@ export function settle(
         state.entries,
         'cancelled',
         state.turn.status === 'cancelling' ? state.turn.cancelledAt : undefined,
+        (subagent) => isRunning(subagent) && subagent.cancellable !== true,
       ),
     };
   }

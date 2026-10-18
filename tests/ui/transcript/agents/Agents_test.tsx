@@ -101,6 +101,25 @@ test("Claude's subagents read as each ended, a failure's message and an untracke
     { rows: 80, columns: 120 },
   ));
 
+test('Esc leaves a subagent that can be cancelled alone at work until its agent says it ended', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudebackground');
+      await window.shows('⏺ Running 2 agents…');
+      await window.press(ESC);
+      await window.shows('Interrupted by user');
+      await window.shows('Cancelled');
+
+      const frame = window.frame();
+
+      expect(frame).toContain('⏺ Running 2 agents…');
+      expect(frame).toContain('1 agent still running');
+      await window.shows('⏺ 2 agents ended · 1 cancelled');
+      expect(window.frame()).toContain('│  ⎿  Done');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
 test("Esc cancels a turn's subagents with it", () =>
   withWindow(
     async (window) => {

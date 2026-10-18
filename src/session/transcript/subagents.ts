@@ -145,7 +145,7 @@ function patched(
   update: SubagentUpdate,
   at: number | undefined,
 ): Subagent {
-  const { title, description } = update;
+  const { title, description, capabilities } = update;
   const told = subagentStateOf(update.state);
   const next = told ?? subagent.state;
   const {
@@ -153,8 +153,13 @@ function patched(
     description: _description,
     endedAt,
     error: before,
+    cancellable: wasCancellable,
     ...kept
   } = subagent;
+  const cancellable =
+    capabilities === undefined
+      ? wasCancellable
+      : capabilities?.cancel !== undefined && capabilities.cancel !== null;
   // An untracked subagent may have worked on: its time stands at the
   // `unknown`, and runs again to whatever state comes next.
   const ended =
@@ -190,6 +195,7 @@ function patched(
         : { description }),
     ...(ended === undefined ? {} : { endedAt: ended }),
     ...(error === undefined ? {} : { error }),
+    ...(cancellable === true ? { cancellable } : {}),
   };
 }
 

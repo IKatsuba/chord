@@ -211,7 +211,14 @@ Bash output, your `!` shell output, Codex plans and subagent work. Diffs
 show every row, with long lines wrapped under their code. Read shows its
 first three source lines, each wrapped, then `… +N lines (ctrl+o to expand)`;
 ctrl+o shows the rest. Terminal output keeps its last three lines, wrapped.
-An Agent call shows its description, with its prompt in ctrl+o.
+An Agent call shows its description; ctrl+o shows the subagent's whole task
+and work, with later messages as `← from <sender>` rows. A Claude subagent
+ends `Done`, `Failed` or `Cancelled` by the reason its agent reports;
+`Ended` means no known reason, and `Untracked` means the agent lost sight of
+it and it may still be working. ctrl+o shows any error or explanation.
+After Esc, a subagent that announced it can be cancelled stays running on
+screen until its agent reports its end.
+An approved Claude plan appears once, as the plan.
 
 In Claude and Codex sessions, an MCP call reads
 `server - tool (MCP)(key: JSON, …)`, with its arguments whole and wrapped.
@@ -650,10 +657,11 @@ speak for the agent the command line names: a session `/new` opens of another ag
 agent's settings alone.
 
 chord knows the agents the [ACP Registry](https://agentclientprotocol.com/registry)
-offers through npx or uvx, each at the version chord's source pins: `claude`
-and `codex` for Claude's and Codex's adapters, every other one by its
-registry id. It starts one as `npx -y <package>@<version>` or
-`uvx <package>@<version>`, so `npx` or `uvx` must be on your `PATH`.
+offers through npx or uvx, with all pins refreshed together: `claude` and
+`codex` for Claude's and Codex's adapters, every other one by its registry
+id, including `bob` and `github-copilot-cli` (Copilot). It starts one as
+`npx -y <package>@<version>` or `uvx <package>@<version>`, so `npx` or `uvx`
+must be on your `PATH`.
 
 Some agents ship their own CLI, which speaks ACP itself: `cursor`, `devin`,
 `fx`, `goose`, `junie`, `kimi`, `kiro`, `openclaw`, `opencode`, `poolside`

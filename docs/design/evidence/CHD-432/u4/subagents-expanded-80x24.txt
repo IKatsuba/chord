@@ -1,0 +1,24 @@
+   │
+   │      ⏺ Read(src/session/transcript/reducer.ts)
+   │   ⎿  Failed
+   │      API Error: 529 Overloaded
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │   ⎿  Run bun test and report what fails.
+   │
+   │      ⏺ Bash(bun test)
+   │        ⎿  Error: The turn was cancelled before this tool call returned a
+   │           result.
+   │   ⎿  Cancelled
+   └─ Agent(watcher) · 1 tool use · 0s
+      ⎿  Watch the build and say when it breaks.
+
+         ⏺ Read(package.json)
+      ⎿  Untracked
+         The agent no longer reports this subagent; it may still be at work.
+
+ ⏺ Each agent has ended.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

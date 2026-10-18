@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { PlanEntry, SessionUpdate } from '@agentclientprotocol/sdk';
 import type { TranscriptAction } from '../../../src/session/transcript/types.ts';
 import { fold } from './fold.ts';
@@ -90,4 +90,172 @@ test('a plan by id: entries are the live list, markdown the reply', () => {
   expect(
     fold([start, other, removed('f')]).entries.map((e) => e.kind),
   ).toStrictEqual(['user']);
+});
+
+test("an approved plan shows once: a markdown plan_update takes it from the turn's mode switch that carries it", () => {
+  const PLAN = '# Route\n\n1. Read.\n2. Move.\n';
+  const update = (update: SessionUpdate, turnId = 't1'): TranscriptAction => ({
+    type: 'update',
+    turnId,
+    update,
+  });
+  const exit = (id: string, text: string, turnId?: string) =>
+    update(
+      {
+        sessionUpdate: 'tool_call',
+        toolCallId: id,
+        title: 'Approve Plan',
+        kind: 'switch_mode',
+        status: 'pending',
+        content: [{ type: 'content', content: { type: 'text', text } }],
+      },
+      turnId,
+    );
+  const approved = update({
+    sessionUpdate: 'plan_update',
+    plan: { type: 'markdown', planId: 'plan-mode', content: PLAN.trim() },
+  });
+  const start = (turnId: string): TranscriptAction => ({
+    type: 'prompt',
+    turnId,
+    text: 'plan',
+    at: 0,
+  });
+  const contents = (actions: TranscriptAction[]) =>
+    fold(actions).entries.flatMap((entry): unknown[] =>
+      entry.kind === 'tool'
+        ? [{ id: entry.call.id, content: entry.call.content }]
+        : entry.kind === 'assistant'
+          ? [{ plan: entry.text }]
+          : [],
+    );
+  const text = (value: string) => [
+    { type: 'content', content: { type: 'text', text: value } },
+  ];
+
+  expect(contents([start('t1'), exit('e1', PLAN), approved])).toStrictEqual([
+    { id: 'e1', content: [] },
+    { plan: PLAN.trim() },
+  ]);
+  // Only the latest switch of the turn, and only when its text is the plan.
+  expect(
+    contents([start('t1'), exit('e1', PLAN), exit('e2', 'Another.'), approved]),
+  ).toStrictEqual([
+    { id: 'e1', content: text(PLAN) },
+    { id: 'e2', content: text('Another.') },
+    { plan: PLAN.trim() },
+  ]);
+  expect(
+    contents([start('t0'), exit('e0', PLAN, 't0'), start('t1'), approved]),
+  ).toStrictEqual([{ id: 'e0', content: text(PLAN) }, { plan: PLAN.trim() }]);
+});
+
+describe('CHD-432 tester: plan deduplication boundaries', () => {
+  const start: TranscriptAction = {
+    type: 'prompt',
+    turnId: 't',
+    text: 'plan',
+    at: 0,
+  };
+  const update = (update: SessionUpdate): TranscriptAction => ({
+    type: 'update',
+    turnId: 't',
+    update,
+  });
+  const text = (value: string) => ({
+    type: 'content' as const,
+    content: { type: 'text' as const, text: value },
+  });
+  const call = (
+    id: string,
+    content: Extract<SessionUpdate, { sessionUpdate: 'tool_call' }>['content'],
+    kind: 'switch_mode' | 'read' = 'switch_mode',
+  ) =>
+    update({
+      sessionUpdate: 'tool_call',
+      toolCallId: id,
+      title: id,
+      kind,
+      status: 'completed',
+      ...(content === undefined ? {} : { content }),
+    });
+  const plan = (content: string) =>
+    update({
+      sessionUpdate: 'plan_update',
+      plan: { type: 'markdown', planId: 'p', content },
+    });
+  const contents = (actions: TranscriptAction[]) =>
+    fold(actions).entries.flatMap((entry) =>
+      entry.kind === 'tool' ? [entry.call.content] : [],
+    );
+
+  test('matching split text is removed while diff and image blocks keep their order and data', () => {
+    const diff = {
+      type: 'diff' as const,
+      path: 'notes/plan.md',
+      oldText: 'old',
+      newText: 'new',
+    };
+    const image = {
+      type: 'content' as const,
+      content: { type: 'image' as const, data: 'AA==', mimeType: 'image/png' },
+    };
+
+    expect(
+      contents([
+        start,
+        call('exit', [
+          text('  # Plan'),
+          diff,
+          text('\nRead and write.  '),
+          image,
+        ]),
+        plan('# Plan\nRead and write.'),
+      ]),
+    ).toStrictEqual([[diff, image]]);
+  });
+
+  test('only the latest matching mode switch loses its text and a later ordinary call is untouched', () => {
+    expect(
+      contents([
+        start,
+        call('first', [text('Plan')]),
+        call('latest', [text('Plan')]),
+        call('read', [text('Plan')], 'read'),
+        plan('Plan'),
+      ]),
+    ).toStrictEqual([[text('Plan')], [], [text('Plan')]]);
+  });
+
+  test('file and item plans leave matching call text alone', () => {
+    for (const alternative of [
+      update({
+        sessionUpdate: 'plan_update',
+        plan: { type: 'file', planId: 'p', uri: 'file:///plan.md' },
+      }),
+      update({
+        sessionUpdate: 'plan_update',
+        plan: {
+          type: 'items',
+          planId: 'p',
+          entries: [{ content: 'Plan', priority: 'medium', status: 'pending' }],
+        },
+      }),
+    ]) {
+      expect(
+        contents([start, call('exit', [text('file:///plan.md')]), alternative]),
+      ).toStrictEqual([[text('file:///plan.md')]]);
+    }
+  });
+
+  test('blank plans and plans differing in internal whitespace keep the call content', () => {
+    for (const [said, proposed] of [
+      ['   ', ' '],
+      ['Read  and write', 'Read and write'],
+    ]) {
+      expect(
+        contents([start, call('exit', [text(said!)]), plan(proposed!)]),
+      ).toStrictEqual([[text(said!)]]);
+    }
+  });
 });

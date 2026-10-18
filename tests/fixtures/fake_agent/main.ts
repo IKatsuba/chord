@@ -78,6 +78,10 @@
  * `clientCapabilities._meta`, the terminal named up front and nothing of the
  * output until the command is done, about half a second later, then all of
  * it and the exit; to any other, the output as a `console` code block.
+ * `bashcut` leaves a command running and a call that never ran for about
+ * 10 s: a cancel ends both `failed` with the lines Claude's adapter gives,
+ * the command's terminal with no exit code; left alone, the turn ends and
+ * the command fails with the adapter's line for no result.
  *
  * Started with `--hang <step>`, or with `CHORD_FAKE_HANG=<step>`, it stops
  * answering, as an agent that has wedged: `start` never answers `initialize`,
@@ -94,7 +98,8 @@
  * `compactfail` fails, with the error Claude's adapter sends. To any other
  * client, each runs as a `Compact conversation` tool call of kind `think`.
  *
- * `subagent` runs subagents as both adapters do to a client that declares
+ * `subagent` runs subagents in the draft form Codex's adapter sends to a
+ * client that declares
  * `clientCapabilities.subagents`: each announced to its parent by
  * `subagent_spawned`, its work sent under a session id of its own, opaque
  * and never one an earlier fake process gave, as after a resume, and its
@@ -102,12 +107,22 @@
  * calls tools, starts a subagent of its own and asks permission to write;
  * the other fails. After a line of the parent's, a third starts alone and
  * outlives the turn by about 2 s. A cancel ends
- * every one still open as `cancelled` before the turn is answered, as
- * Claude's adapter does. `subagentupdate` sends one in ACP's own
+ * every one still open as `cancelled` before the turn is answered, as the
+ * draft form does. `subagentupdate` sends one in ACP's own
  * `subagent_update` shape, running and then idle. `subagentstates` plays
  * what `subagent` never reaches: the parent's plan beside a lone subagent of
  * five calls with a plan of its own, then a pair the parent waits on with a
- * call of its own, both finishing. To any other client each
+ * call of its own, both finishing. `claudesubagents` sends four in ACP's
+ * form as Claude's adapter does, each `subagent_update` titled by name and
+ * role, open to a cancel of its own, its whole task a `session_message` on
+ * its session: one waits on the person for a write (`requires_action`) and
+ * ends idle `end_turn`, one `error`, one `cancelled`, one `unknown`; a
+ * cancel ends each still at work idle `cancelled`. `claudebackground` runs
+ * one the turn waits on beside one in the background, which goes on about
+ * 4 s, past the turn and past a cancel that stops only the first.
+ * `claudemessage` messages a Claude subagent again once it is done, as
+ * SendMessage does, and it runs once more. To any
+ * other client each
  * says so in a line of text.
  *
  * Started with `--steering claude` or `--steering codex`, or with
@@ -260,6 +275,7 @@ const SCENARIOS = [
   'shell',
   'shellcut',
   'bash',
+  'bashcut',
   'compact',
   'codexcompact',
   'compactfail',
@@ -269,6 +285,7 @@ const SCENARIOS = [
   'long',
   'todos',
   'exitplan',
+  'claudeexitplan',
   'lock',
   'mcp',
   'form',
@@ -291,6 +308,9 @@ const SCENARIOS = [
   'unknown',
   'subagent',
   'subagentupdate',
+  'claudesubagents',
+  'claudebackground',
+  'claudemessage',
   'subagentstates',
   'chordtools',
   'cutcalls',

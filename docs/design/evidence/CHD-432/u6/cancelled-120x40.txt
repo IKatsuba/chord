@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/scratch
+ ▀▀     ? for shortcuts · /help
+
+ › bashcut
+
+ ⏺ Bash(bun test)
+   ⎿  Error: The turn was cancelled before this tool call returned a result.
+      (No output)
+
+ ⏺ Read(package.json)
+   ⎿  Error: Claude stopped this tool call before it ran.
+   ⎿  Interrupted by user
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

@@ -266,11 +266,21 @@ export interface ReportRow {
 
 /**
  * How a subagent stands: at work, or ended, and how. `completed`, `failed`,
- * `cancelled` and `disconnected` are the adapters' words for an ending; ACP's
- * `idle` reads as `completed`, the work asked of it done.
+ * `cancelled` and `disconnected` are the adapters' words for an ending, and
+ * ACP's `idle` reads as one by its stop reason: `end_turn` the work done,
+ * `error` failed, `cancelled` cancelled, and any other or none `ended`,
+ * which claims no cause the agent did not. `untracked` is ACP's `unknown`:
+ * the agent lost sight of it, which may still be at work, so a later state
+ * takes it back.
  */
 export type SubagentState =
-  'running' | 'completed' | 'failed' | 'cancelled' | 'disconnected';
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'disconnected'
+  | 'ended'
+  | 'untracked';
 
 /**
  * A subagent: a session of its own the agent started for part of a turn, as
@@ -286,7 +296,22 @@ export interface Subagent {
   readonly title?: string;
   /** What it was asked to do, in full, as the parent described it. */
   readonly description?: string;
+  /**
+   * Its whole task, from the first `session_message` it got, where its
+   * description is only the short one; and that message's id, which a later
+   * upsert of it names.
+   */
+  readonly prompt?: string;
+  readonly promptId?: string;
   readonly state: SubagentState;
+  /**
+   * It announced it can be cancelled alone (ACP's `capabilities.cancel`):
+   * its agent reports its end itself, so a cancel of its parent's turn does
+   * not end it on chord's word.
+   */
+  readonly cancellable?: true;
+  /** What the agent said went wrong, while it stands failed. */
+  readonly error?: string;
   /** When its first update came. */
   readonly startedAt?: number;
   /** When it ended, once it has. */
@@ -323,6 +348,13 @@ export type Entry =
       readonly turnId: string;
       readonly from: MessageFrom;
       readonly text: string;
+      /** A subagent's `session_message` id, which a later upsert names. */
+      readonly messageId?: string;
+      /**
+       * Sent by the transcript's own agent, which its runtime names on screen
+       * in place of `from`.
+       */
+      readonly byAgent?: true;
     }
   | {
       readonly kind: 'assistant' | 'thought';

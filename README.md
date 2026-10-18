@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>One terminal for every coding agent.</strong><br>
-  Claude Code, Codex, Gemini CLI, Cursor, OpenCode and 30 more, in one
+  Claude Code, Codex, Gemini CLI, Cursor, OpenCode and 31 more, in one
   keyboard-driven window, side by side, working as a team.
 </p>
 
@@ -35,7 +35,7 @@ chord codex      # or any other agent
 
 ## Why chord
 
-- **Any agent, one interface.** 35 agents out of the box, from the
+- **Any agent, one interface.** 36 agents out of the box, from the
   [ACP Registry](https://agentclientprotocol.com) and their own CLIs. Switch
   agents without relearning keys.
 - **Agents that work together.** Open a second agent beside the one you talk
@@ -75,8 +75,8 @@ there.
 ### Subagents, folded
 
 When the agent fans out, its subagents run as one tree with their latest call
-each, and their full work is a key away. Monitors and spawned tasks share a
-`background` summary under the agents list. From an empty prompt, ↓ past the
+each; ctrl+o shows their whole task, work and later messages. Monitors and
+spawned tasks share a `background` summary under the agents list. From an empty prompt, ↓ past the
 agents reaches it; Enter opens the full list, where `x` stops an item.
 
 <img src="docs/images/subagents.png" alt="Two subagents running in parallel under one block" width="900">
@@ -157,8 +157,8 @@ recorded.
 
 ## Supported agents
 
-Claude Code, Codex, Gemini CLI, GitHub Copilot, Cursor, OpenCode, Cline, Qwen
-Code, Kimi Code, Kiro, Goose, Junie, Factory Droid, Auggie, Kilo, Devin, fx
+Claude Code, Codex, Gemini CLI, Copilot, Cursor, OpenCode, Cline, Qwen Code,
+Kimi Code, Kiro, Goose, Junie, Factory Droid, Auggie, Kilo, bob, Devin, fx
 and more: `chord agents` prints the full list, and any other ACP agent runs
 with `chord --agent-command "my-agent --acp"`.
 

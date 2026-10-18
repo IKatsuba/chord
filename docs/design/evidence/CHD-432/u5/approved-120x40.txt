@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/scratch
+ ▀▀     ? for shortcuts · /help
+
+ › claudeexitplan
+
+ ⏺ Exited(Plan Mode)
+   ⎿  Allowed Approve Plan · Yes, auto-accept edits
+
+ ⏺ Route updates by session
+
+   1. Read src/acp/connection.ts.
+   2. Move the routing into src/session/session.ts.
+   3. Run the tests.
+
+ ⏺ Starting with the routing.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Large with a 1M context window · medium effort · 1% context used

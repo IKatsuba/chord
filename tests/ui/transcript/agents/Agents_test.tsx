@@ -73,6 +73,73 @@ test("subagents draw under the turn: one group, a child's permission named, thei
     { rows: 80, columns: 120 },
   ));
 
+test("Claude's subagents read as each ended, a failure's message and an untracked one's line in ctrl+o's view", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudesubagents');
+      await asked(window);
+      await window.press('1');
+      await window.shows(
+        '⏺ 4 agents ended · 1 failed, 1 untracked, 1 cancelled (ctrl+o to expand)',
+      );
+
+      let frame = window.frame();
+
+      expect(frame).toContain('⎿  Untracked');
+      expect(frame).toContain('⎿  Cancelled');
+      expect(frame).toContain('⎿  Failed');
+      expect(frame).not.toContain('API Error');
+      await window.press(CTRL_O);
+      await window.shows('API Error: 529 Overloaded');
+
+      frame = window.frame();
+
+      expect(frame).toContain(
+        'The agent no longer reports this subagent; it may still be at work.',
+      );
+    },
+    { rows: 80, columns: 120 },
+  ));
+
+test("ctrl+o shows a subagent's whole task, and a later message among its work, from its agent's runtime", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudemessage');
+      await window.shows('Both found.');
+      expect(window.frame()).not.toContain('Report the file');
+      await window.press(CTRL_O);
+      await window.shows(
+        'Report the file that owns the routing, with line numbers.',
+      );
+
+      const frame = window.frame();
+
+      expect(frame).not.toContain('Find the session layer');
+      expect(frame).toContain('← from fake');
+      expect(frame).toContain('⎿  Now find the tests that cover it.');
+    },
+    { rows: 80, columns: 120 },
+  ));
+
+test('Esc leaves a subagent that can be cancelled alone at work until its agent says it ended', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudebackground');
+      await window.shows('⏺ Running 2 agents…');
+      await window.press(ESC);
+      await window.shows('Interrupted by user');
+      await window.shows('Cancelled');
+
+      const frame = window.frame();
+
+      expect(frame).toContain('⏺ Running 2 agents…');
+      expect(frame).toContain('1 agent still running');
+      await window.shows('⏺ 2 agents ended · 1 cancelled');
+      expect(window.frame()).toContain('│  ⎿  Done');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
 test("Esc cancels a turn's subagents with it", () =>
   withWindow(
     async (window) => {
@@ -409,5 +476,89 @@ describe('tester: subagentstates keys and terminal sizes', () => {
           { columns, rows },
         ));
     }
+  }
+});
+
+describe('CHD-432 tester: ending notes in terminal widths', () => {
+  for (const columns of [80, 120]) {
+    for (const [state, word, note] of [
+      [
+        'untracked',
+        'Untracked',
+        'The agent no longer reports this subagent; it may still be at work.',
+      ],
+      ['ended', 'Ended', 'The agent did not say how it ended.'],
+      ['failed', 'Failed', 'API Error: 529 Overloaded'],
+    ] as const) {
+      test(`${word} keeps its frozen duration and opens its whole note at ${columns} columns`, async () => {
+        for (const open of [false, true]) {
+          const drawn = await draw(
+            <Agents
+              agents={[
+                {
+                  id: 'ending',
+                  title: 'Check the transport',
+                  state,
+                  ...(state === 'failed' ? { error: note } : {}),
+                  entries: [],
+                  plan: [],
+                  startedAt: 1000,
+                  endedAt: 9000,
+                },
+              ]}
+              turn={{ status: 'idle' }}
+              agent='fake'
+              open={open}
+              width={columns - 4}
+            />,
+            { columns, rows: 24 },
+          );
+
+          try {
+            const frame = stripAnsi(drawn.frame()).replace(/\s+/g, ' ');
+
+            expect(frame).toContain(`${word} (0 tool uses · 8s)`);
+
+            if (open) {
+              expect(frame).toContain(note);
+            } else {
+              expect(frame).not.toContain(note);
+            }
+          } finally {
+            await drawn.unmount();
+          }
+        }
+      });
+    }
+  }
+});
+
+describe('CHD-432 tester: whole-task expansion keys', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`Ctrl+O opens the whole task and sender then folds them again at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudemessage');
+          await window.shows('Both found.');
+          expect(window.frame()).not.toContain('Report the file');
+          await window.press(CTRL_O);
+          await window.shows(
+            'Report the file that owns the routing, with line numbers.',
+          );
+          expect(window.frame()).toContain('← from fake');
+          expect(window.frame()).toContain('Now find the tests that cover it.');
+          await window.press(CTRL_O);
+          await until(
+            'the task and message to fold again',
+            () => !window.frame().includes('Report the file'),
+          );
+          expect(window.frame()).not.toContain('Report the file');
+          expect(window.frame()).not.toContain('← from fake');
+        },
+        { columns, rows },
+      ));
   }
 });

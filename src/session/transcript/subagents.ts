@@ -49,10 +49,94 @@ export function childUpdate(
   }
 
   const entries = changeSubagent(state.entries, subagentId, (subagent) =>
-    worked(subagent, turnId, update, at, applyUpdate),
+    update.sessionUpdate === 'session_message'
+      ? messaged(subagent, turnId, update, state.entries)
+      : worked(subagent, turnId, update, at, applyUpdate),
   );
 
   return entries === state.entries ? state : { ...state, entries };
+}
+
+/**
+ * `subagent` with a `session_message` it got upserted by its id: the first
+ * is its whole task, and each later one, as a SendMessage sends it, a message
+ * among its work where it came. Content left out keeps what it had; `null`
+ * or none clears it, the task back to its description, the message gone.
+ */
+function messaged(
+  subagent: Subagent,
+  turnId: string,
+  update: Extract<SessionUpdate, { sessionUpdate: 'session_message' }>,
+  around: readonly Entry[],
+): Subagent {
+  const { messageId, content, senderSessionId } = update;
+  const text =
+    content === undefined
+      ? undefined
+      : (content ?? [])
+          .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+          .join('');
+
+  if (subagent.promptId === undefined || subagent.promptId === messageId) {
+    const { prompt: before, ...rest } = subagent;
+    const prompt = text === undefined ? before : text;
+
+    return {
+      ...rest,
+      promptId: messageId,
+      ...(prompt === undefined || prompt === '' ? {} : { prompt }),
+    };
+  }
+
+  const at = subagent.entries.findIndex(
+    (entry) => entry.kind === 'message' && entry.messageId === messageId,
+  );
+  const was = at < 0 ? undefined : subagent.entries[at];
+
+  if (text === undefined) {
+    return subagent;
+  }
+
+  if (text === '') {
+    if (at < 0) {
+      return subagent;
+    }
+
+    // Its plan stays where it first came among the work that is left.
+    const { planAt } = subagent;
+
+    return {
+      ...subagent,
+      entries: subagent.entries.toSpliced(at, 1),
+      ...(planAt !== undefined && at < planAt ? { planAt: planAt - 1 } : {}),
+    };
+  }
+
+  // A sender left out keeps the one known; one that is a subagent here is
+  // named as its block is, and any other is the transcript's own agent.
+  const sender =
+    senderSessionId === undefined || senderSessionId === null
+      ? undefined
+      : findSubagent(around, senderSessionId);
+  const from: Pick<
+    Extract<Entry, { kind: 'message' }>,
+    'from' | 'byAgent'
+  > = sender !== undefined
+    ? { from: { name: `Agent(${sender.title ?? ''})` } }
+    : was?.kind === 'message' &&
+        (senderSessionId === undefined || senderSessionId === null)
+      ? {
+          from: was.from,
+          ...(was.byAgent === undefined ? {} : { byAgent: was.byAgent }),
+        }
+      : { from: { name: '' }, byAgent: true };
+  const entry: Entry = { kind: 'message', turnId, ...from, text, messageId };
+
+  return {
+    ...subagent,
+    entries:
+      at < 0 ? [...subagent.entries, entry] : subagent.entries.with(at, entry),
+  };
 }
 
 /**
@@ -145,25 +229,36 @@ function patched(
   update: SubagentUpdate,
   at: number | undefined,
 ): Subagent {
-  const { title, description } = update;
-  const next = subagentStateOf(update.state) ?? subagent.state;
+  const { title, description, capabilities } = update;
+  const told = subagentStateOf(update.state);
+  const next = told ?? subagent.state;
   const {
     title: _title,
     description: _description,
     endedAt,
+    error: before,
+    cancellable: wasCancellable,
     ...kept
   } = subagent;
-  const ended =
-    next === 'running'
-      ? undefined
-      : subagent.state === 'running'
-        ? at
-        : endedAt;
+  const cancellable =
+    capabilities === undefined
+      ? wasCancellable
+      : capabilities?.cancel !== undefined && capabilities.cancel !== null;
+  // An untracked subagent may have worked on: its time stands at the
+  // `unknown`, and runs again to the next state it is told, but not to an
+  // update that tells none.
+  const moved =
+    subagent.state === 'running' ||
+    (subagent.state === 'untracked' &&
+      told !== undefined &&
+      told !== 'untracked');
+  const ended = next === 'running' ? undefined : moved ? at : endedAt;
+  const error = told === undefined ? before : errorOf(update.state);
 
   // chord says a task's effort once it is up, after the block is drawn.
-  const told = taskOf(update);
+  const taskTold = taskOf(update);
   const task =
-    told === undefined ? subagent.task : { ...subagent.task, ...told };
+    taskTold === undefined ? subagent.task : { ...subagent.task, ...taskTold };
 
   return {
     ...kept,
@@ -184,6 +279,8 @@ function patched(
         ? {}
         : { description }),
     ...(ended === undefined ? {} : { endedAt: ended }),
+    ...(error === undefined ? {} : { error }),
+    ...(cancellable === true ? { cancellable } : {}),
   };
 }
 
@@ -226,8 +323,9 @@ const ENDINGS: readonly string[] = [
 
 /**
  * A subagent's state from ACP's state object: at work while `running` or
- * waiting on the person (`requires_action`), done once `idle`, or ended as
- * the adapters' words say. `unknown`, `null` and any other word say nothing.
+ * waiting on the person (`requires_action`), ended by its stop reason once
+ * `idle`, untracked once `unknown`, or ended as the adapters' words say.
+ * `null` and any other word say nothing.
  */
 function subagentStateOf(
   state: StateUpdate | null | undefined,
@@ -238,8 +336,20 @@ function subagentStateOf(
     return 'running';
   }
 
+  if (word === 'unknown') {
+    return 'untracked';
+  }
+
   if (word === 'idle') {
-    return 'completed';
+    const reason = state?.stopReason;
+
+    return reason === 'end_turn'
+      ? 'completed'
+      : reason === 'error'
+        ? 'failed'
+        : reason === 'cancelled'
+          ? 'cancelled'
+          : 'ended';
   }
 
   return word !== undefined && ENDINGS.includes(word)
@@ -247,14 +357,34 @@ function subagentStateOf(
     : undefined;
 }
 
+/** The message of the error an `idle` with stop reason `error` carries. */
+function errorOf(state: StateUpdate | null | undefined): string | undefined {
+  if (state?.state !== 'idle' || state.stopReason !== 'error') {
+    return undefined;
+  }
+
+  const { error } = state as { error?: { message?: unknown } | null };
+
+  return typeof error?.message === 'string' && error.message !== ''
+    ? error.message
+    : undefined;
+}
+
+/** Whether a subagent is at work, as far as chord knows. */
+export function isRunning(subagent: Subagent): boolean {
+  return subagent.state === 'running';
+}
+
 /**
- * `entries` with every subagent still running among them or under them
- * ended as `state`, at `at` when it is known; the same array when none was.
+ * `entries` with every subagent among them or under them that `ends` picks,
+ * those still running unless told otherwise, ended as `state`, at `at` when
+ * it is known; the same array when none was.
  */
 export function endRunning(
   entries: readonly Entry[],
   state: SubagentState,
   at: number | undefined,
+  ends: (subagent: Subagent) => boolean = isRunning,
 ): readonly Entry[] {
   let changed = false;
   const next = entries.map((entry): Entry => {
@@ -263,8 +393,8 @@ export function endRunning(
     }
 
     const { subagent } = entry;
-    const inner = endRunning(subagent.entries, state, at);
-    const running = subagent.state === 'running';
+    const inner = endRunning(subagent.entries, state, at, ends);
+    const running = ends(subagent);
 
     if (!running && inner === subagent.entries) {
       return entry;

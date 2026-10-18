@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/scratch
+ ▀▀     ? for shortcuts · /help
+
+ › claudeexitplan
+
+ ⏺ Approve(Plan)
+   ⎿  # Route updates by session
+
+      1. Read src/acp/connection.ts.
+      2. Move the routing into src/session/session.ts.
+      3. Run the tests.
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (8s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Yes, auto-accept edits                                                                                          │
+│   2. Yes, manually approve edits                                                                                     │
+│   3. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                              Fake Large with a 1M context window · medium effort

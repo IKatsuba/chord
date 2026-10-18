@@ -3,7 +3,7 @@
  * which only replaces the live list, the reducer folds itself.
  */
 import type { PlanUpdateContent } from '@agentclientprotocol/sdk';
-import type { Transcript } from './types.ts';
+import type { Entry, Transcript } from './types.ts';
 
 /**
  * The plan `planId` gone, whichever way it was drawn: the live list it is, or
@@ -44,6 +44,11 @@ export function updatePlan(
   }
 
   const text = plan.type === 'markdown' ? plan.content : plan.uri;
+
+  if (plan.type === 'markdown') {
+    state = { ...state, entries: shownOnce(state.entries, turnId, text) };
+  }
+
   const index = state.entries.findIndex(
     (entry) => entry.kind === 'assistant' && entry.planId === plan.planId,
   );
@@ -71,4 +76,52 @@ export function updatePlan(
   entries[index] = { ...entry, text };
 
   return { ...state, entries };
+}
+
+/**
+ * `entries` with the plan `text` taken out of the turn's latest mode switch
+ * that carries it as its content, as Claude's adapter sends an approved plan
+ * both ways: the plan is shown once, as the plan. A switch whose text is not
+ * the plan, as a rejected or edited one is, keeps it.
+ */
+function shownOnce(
+  entries: readonly Entry[],
+  turnId: string,
+  text: string,
+): readonly Entry[] {
+  const plan = text.trim();
+  const index = entries.findLastIndex(
+    (entry) =>
+      entry.kind === 'tool' &&
+      entry.turnId === turnId &&
+      entry.call.kind === 'switch_mode',
+  );
+  const entry = entries[index];
+
+  if (entry?.kind !== 'tool' || plan === '') {
+    return entries;
+  }
+
+  const content = entry.call.content ?? [];
+  const said = content
+    .flatMap((block) =>
+      block.type === 'content' && block.content.type === 'text'
+        ? [block.content.text]
+        : [],
+    )
+    .join('')
+    .trim();
+
+  if (said !== plan) {
+    return entries;
+  }
+
+  const kept = content.filter(
+    (block) => !(block.type === 'content' && block.content.type === 'text'),
+  );
+
+  return entries.with(index, {
+    ...entry,
+    call: { ...entry.call, content: kept },
+  });
 }

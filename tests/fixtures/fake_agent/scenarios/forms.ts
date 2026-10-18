@@ -65,7 +65,7 @@ function claudeQuestions(form: QuestionForm): [string, string][] {
 }
 
 /**
- * Asks claude's questions as claude-agent-acp 0.87.0 does: AskUserQuestion's
+ * Asks claude's questions as claude-agent-acp 0.93.0 does: AskUserQuestion's
  * tool call first, titled `Asking for your input`, or by the question when
  * there is one, its questions as its content; then the form, under that call;
  * then the call's result, the tool's text for what was answered, or its

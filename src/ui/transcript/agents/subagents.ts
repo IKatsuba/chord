@@ -176,15 +176,18 @@ export function agentTone(state: SubagentState): Tone {
     case 'failed':
     case 'disconnected':
       return 'failed';
-    // Dim, as the person stopped it.
+    // Dim, as the person stopped it, or as nothing says it failed.
     case 'cancelled':
+    case 'ended':
+    case 'untracked':
       return 'pending';
   }
 }
 
 /** A word for how it ended, so its colour is never the only signal. */
 export interface Ending {
-  readonly word: 'Done' | 'Failed' | 'Cancelled' | 'Disconnected';
+  readonly word:
+    'Done' | 'Failed' | 'Cancelled' | 'Disconnected' | 'Ended' | 'Untracked';
   readonly failed: boolean;
 }
 
@@ -200,6 +203,34 @@ export function endingOf(state: SubagentState): Ending | undefined {
       return { word: 'Cancelled', failed: false };
     case 'disconnected':
       return { word: 'Disconnected', failed: true };
+    case 'ended':
+      return { word: 'Ended', failed: false };
+    case 'untracked':
+      return { word: 'Untracked', failed: false };
+  }
+}
+
+/**
+ * The line ctrl+o's view gives under an ending, saying what its word cannot:
+ * a failure's message, as the agent sent it, or why an end claims no cause.
+ */
+export function endNote(
+  subagent: Subagent,
+): { readonly text: string; readonly failed: boolean } | undefined {
+  switch (subagent.state) {
+    case 'failed':
+      return subagent.error === undefined
+        ? undefined
+        : { text: subagent.error, failed: true };
+    case 'untracked':
+      return {
+        text: 'The agent no longer reports this subagent; it may still be at work.',
+        failed: false,
+      };
+    case 'ended':
+      return { text: 'The agent did not say how it ended.', failed: false };
+    default:
+      return undefined;
   }
 }
 
@@ -342,7 +373,9 @@ export function groupHeader(agents: readonly Subagent[]): {
     return { text: `${count} agents finished`, tone: 'done' };
   }
 
-  const wrong = (['failed', 'disconnected', 'cancelled'] as const)
+  const wrong = (
+    ['failed', 'disconnected', 'untracked', 'ended', 'cancelled'] as const
+  )
     .map((state) => ({
       state,
       count: agents.filter((agent) => agent.state === state).length,
@@ -353,7 +386,9 @@ export function groupHeader(agents: readonly Subagent[]): {
     text: `${count} agents ended · ${wrong
       .map(({ state, count }) => `${count} ${state}`)
       .join(', ')}`,
-    tone: wrong.some(({ state }) => state !== 'cancelled')
+    tone: wrong.some(
+      ({ state }) => state === 'failed' || state === 'disconnected',
+    )
       ? 'failed'
       : 'pending',
   };

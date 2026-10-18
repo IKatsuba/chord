@@ -4,7 +4,15 @@
  */
 import { NO_MODES } from '../options.ts';
 import { configOptions, locked, modes } from '../sessions.ts';
+import * as acp from '@agentclientprotocol/sdk';
 import { type Play } from '../turn.ts';
+
+/** The plan `claudeexitplan` asks to have approved. */
+const EXIT_PLAN =
+  '# Route updates by session\n\n' +
+  '1. Read src/acp/connection.ts.\n' +
+  '2. Move the routing into src/session/session.ts.\n' +
+  '3. Run the tests.\n';
 
 export const MODES = {
   // The mode moves by `current_mode_update` alone, as an agent without a mode
@@ -65,6 +73,90 @@ export const MODES = {
       currentModeId: 'plan',
     });
     await turn.say('Mode locked.');
+
+    return 'end_turn';
+  },
+
+  // Claude's ExitPlanMode, as its adapter sends it to a client that takes
+  // plans: the plan as the call's content, the person asked to approve it;
+  // approved, the mode it chose and the plan again, as a markdown
+  // `plan_update`; refused, the call fails and the plan is not sent again.
+  async claudeexitplan(turn) {
+    const toolCallId = turn.callId('exitplan');
+    const toolCall: acp.ToolCall = {
+      toolCallId,
+      title: 'Approve Plan',
+      kind: 'switch_mode',
+      status: 'pending',
+      rawInput: { plan: EXIT_PLAN },
+      content: [
+        { type: 'content', content: { type: 'text', text: EXIT_PLAN } },
+      ],
+    };
+
+    modes.set(turn.sessionId, 'plan');
+    await turn.send({
+      sessionUpdate: 'current_mode_update',
+      currentModeId: 'plan',
+    });
+    await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
+
+    const answer = await turn.client.request('session/request_permission', {
+      sessionId: turn.sessionId,
+      toolCall,
+      options: [
+        {
+          optionId: 'exit-plan-accept-edits',
+          name: 'Yes, auto-accept edits',
+          kind: 'allow_always',
+        },
+        {
+          optionId: 'exit-plan-default',
+          name: 'Yes, manually approve edits',
+          kind: 'allow_once',
+        },
+        { optionId: 'reject', name: 'No, keep planning', kind: 'reject_once' },
+      ],
+    });
+    const chosen =
+      answer.outcome.outcome === 'selected'
+        ? answer.outcome.optionId
+        : 'reject';
+
+    if (chosen === 'reject') {
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId,
+        status: 'failed',
+      });
+      await turn.say('I will keep planning.');
+
+      return 'end_turn';
+    }
+
+    const mode =
+      chosen === 'exit-plan-accept-edits' ? 'acceptEdits' : 'default';
+
+    modes.set(turn.sessionId, mode);
+    await turn.send({
+      sessionUpdate: 'current_mode_update',
+      currentModeId: mode,
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      title: 'Exited Plan Mode',
+      status: 'completed',
+    });
+    await turn.send({
+      sessionUpdate: 'plan_update',
+      plan: {
+        type: 'markdown',
+        planId: 'plan-mode',
+        content: EXIT_PLAN.trim(),
+      },
+    });
+    await turn.say('Starting with the routing.');
 
     return 'end_turn';
   },

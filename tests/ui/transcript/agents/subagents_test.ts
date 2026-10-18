@@ -11,6 +11,7 @@ import {
   askerRow,
   blockFold,
   endedLine,
+  endNote,
   groupHeader,
   groupRow,
   rowLine,
@@ -149,6 +150,40 @@ test('the marker takes a call tone: dim for cancelled, error for failed and disc
   expect(agentTone('cancelled')).toStrictEqual('pending');
 });
 
+test("an end that claims no cause, or that the agent lost sight of, reads as such, dim, with a line in ctrl+o's view", () => {
+  const of = (state: Subagent['state'], error?: string) =>
+    agent({ id: 'a', state, ...(error === undefined ? {} : { error }) });
+
+  expect(blockFold(of('ended'), [])).toStrictEqual({
+    kind: 'ended',
+    text: 'Ended (0 tool uses)',
+    failed: false,
+  });
+  expect(blockFold(of('untracked'), [])).toStrictEqual({
+    kind: 'ended',
+    text: 'Untracked (0 tool uses)',
+    failed: false,
+  });
+  expect(agentTone('ended')).toStrictEqual('pending');
+  expect(agentTone('untracked')).toStrictEqual('pending');
+  expect(endNote(of('untracked'))).toStrictEqual({
+    text: 'The agent no longer reports this subagent; it may still be at work.',
+    failed: false,
+  });
+  expect(endNote(of('ended'))).toStrictEqual({
+    text: 'The agent did not say how it ended.',
+    failed: false,
+  });
+  expect(endNote(of('failed', 'API Error: 529 Overloaded'))).toStrictEqual({
+    text: 'API Error: 529 Overloaded',
+    failed: true,
+  });
+
+  for (const state of ['completed', 'cancelled', 'failed'] as const) {
+    expect(endNote(of(state))).toStrictEqual(undefined);
+  }
+});
+
 test('the call a permission waits on is marked, and is the row line ahead of any later', () => {
   const wait: PermissionWait = {
     id: 'p',
@@ -210,6 +245,28 @@ test('the group header runs, then finishes, or says what went wrong', () => {
   expect(
     groupHeader([done, agent({ id: 'y', state: 'disconnected' })]).text,
   ).toStrictEqual('2 agents ended · 1 disconnected');
+  // Worst first; red only for a failure or a lost agent.
+  expect(
+    groupHeader([
+      agent({ id: 'v', state: 'cancelled' }),
+      agent({ id: 'w', state: 'ended' }),
+      agent({ id: 'x', state: 'untracked' }),
+      agent({ id: 'y', state: 'disconnected' }),
+      agent({ id: 'z', state: 'failed' }),
+    ]).text,
+  ).toStrictEqual(
+    '5 agents ended · 1 failed, 1 disconnected, 1 untracked, 1 ended, 1 cancelled',
+  );
+  expect(
+    groupHeader([
+      done,
+      agent({ id: 'x', state: 'untracked' }),
+      agent({ id: 'y', state: 'ended' }),
+    ]),
+  ).toStrictEqual({
+    text: '3 agents ended · 1 untracked, 1 ended',
+    tone: 'pending',
+  });
 });
 
 test('a row drops its counts before its title is cut, and keeps its brackets', () => {

@@ -97,7 +97,7 @@ export const TranscriptEntry = memo(function TranscriptEntry({
   entry: Entry;
   /** The turn running, whose spinner may carry the entry instead. */
   turn: TurnState;
-  /** Who asked, for a form's record. */
+  /** Who asked, for a form's record, and who sent a message its own agent did. */
   agent: string;
   expanded: boolean;
   /** Cells beside the gutter. */
@@ -118,7 +118,7 @@ export const TranscriptEntry = memo(function TranscriptEntry({
     case 'message':
       return (
         <Message
-          from={entry.from}
+          from={entry.byAgent ? { name: agent } : entry.from}
           text={entry.text}
           expanded={expanded}
           width={width}

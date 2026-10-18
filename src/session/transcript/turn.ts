@@ -2,7 +2,7 @@
  * The turn itself: its prompt, a cancel asked for, the agent's answer that
  * settles it, and the agent going away under its subagents.
  */
-import { endRunning, findSubagent } from './subagents.ts';
+import { endRunning, findSubagent, isRunning } from './subagents.ts';
 import type {
   Entry,
   MessageFrom,
@@ -110,7 +110,13 @@ export function disconnected(
   state: Transcript,
   at: number | undefined,
 ): Transcript {
-  const entries = endRunning(state.entries, 'disconnected', at);
+  // An untracked one is gone with its agent too: it can no longer be at work.
+  const entries = endRunning(
+    state.entries,
+    'disconnected',
+    at,
+    (subagent) => isRunning(subagent) || subagent.state === 'untracked',
+  );
 
   return entries === state.entries ? state : { ...state, entries };
 }
@@ -137,9 +143,11 @@ export function settle(
 
   const { since } = state.turn;
 
-  // A cancel stops the turn's subagents with it, as the adapters do, which
-  // say so too, perhaps only after the turn's answer. Those still running
-  // after a turn that ended on its own are left: they may outlive it.
+  // A cancel stops the turn's subagents with it, as the adapters' draft
+  // form does, which says so too, perhaps only after the turn's answer. One
+  // that can be cancelled alone is left for its agent to report: it may live
+  // on, as a background one does. Those still running after a turn that
+  // ended on its own are left: they may outlive it.
   if (result.status === 'cancelled') {
     state = {
       ...state,
@@ -147,6 +155,7 @@ export function settle(
         state.entries,
         'cancelled',
         state.turn.status === 'cancelling' ? state.turn.cancelledAt : undefined,
+        (subagent) => isRunning(subagent) && subagent.cancellable !== true,
       ),
     };
   }

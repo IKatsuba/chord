@@ -32,6 +32,7 @@ import {
   agentTone,
   blockFold,
   endedLine,
+  endNote,
   endingOf,
   groupHeader,
   groupRow,
@@ -210,6 +211,7 @@ function AgentBlock({
             />
           </box>
           {ended && <Outcome text={ended.text} failed={ended.failed} />}
+          <EndNote subagent={subagent} />
         </>
       ) : fold.kind === 'ended' ? (
         <Outcome text={fold.text} failed={fold.failed} />
@@ -237,9 +239,26 @@ function AgentBlock({
   );
 }
 
-/** What a subagent was asked to do, in full, under its `⎿`. */
+/** The line under an ending in ctrl+o's view, where it has one. */
+function EndNote({ subagent }: { subagent: Subagent }) {
+  const note = endNote(subagent);
+  const { error } = useColours();
+
+  return note ? (
+    <Under first={false}>
+      <text {...FILL} {...(note.failed ? fg(error) : { attributes: DIM })}>
+        <Ansi text={note.text} />
+      </text>
+    </Under>
+  ) : null;
+}
+
+/**
+ * What a subagent was asked to do, in full, under its `⎿`: the whole task its
+ * first message brought, else its description.
+ */
 function Task({ subagent }: { subagent: Subagent }) {
-  const task = subagent.description?.trim();
+  const task = (subagent.prompt ?? subagent.description)?.trim();
   const selectable = useSelectable();
 
   return task ? (
@@ -343,6 +362,7 @@ function AgentGroup({
                       </text>
                     </Under>
                   )}
+                  <EndNote subagent={subagent} />
                 </>
               ) : (
                 <Under first>

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import type {
   SessionNotification,
   SessionUpdate,
+  StateUpdate,
   ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
 import {
@@ -326,7 +327,7 @@ test("ACP's own states read as chord's, and a patch keeps or clears what it name
 
   expect(
     states('running', 'requires_action', 'idle', 'unknown', 'mystery'),
-  ).toStrictEqual(['running', 'running', 'completed', 'running', 'running']);
+  ).toStrictEqual(['running', 'running', 'ended', 'untracked', 'running']);
 
   const patched = only(
     fold([
@@ -350,6 +351,205 @@ test("ACP's own states read as chord's, and a patch keeps or clears what it name
     undefined,
   ]);
 });
+
+/** A `subagent_update` of `id`'s that brings `state` whole, at `at`. */
+function stood(id: string, state: StateUpdate, at?: number): TranscriptAction {
+  return {
+    type: 'update',
+    turnId: TURN,
+    update: { sessionUpdate: 'subagent_update', sessionId: id, state },
+    ...(at === undefined ? {} : { at }),
+  };
+}
+
+test('an idle reads by its stop reason, and unknown as untracked until a later state takes it back', () => {
+  const states = (...each: StateUpdate[]) =>
+    each.map((state) => {
+      const { state: word, error } = only(
+        fold([PROMPT, spawned('a', 'Find'), stood('a', state)]),
+        'a',
+      );
+
+      return error === undefined ? word : [word, error];
+    });
+
+  expect(
+    states(
+      { state: 'idle', stopReason: 'end_turn' },
+      { state: 'idle', stopReason: 'cancelled' },
+      {
+        state: 'idle',
+        stopReason: 'error',
+        error: { code: -32603, message: 'API Error: 529 Overloaded' },
+      },
+      { state: 'idle', stopReason: 'error' },
+      { state: 'idle', stopReason: 'max_tokens' },
+      { state: 'idle' },
+      { state: 'unknown' },
+    ),
+  ).toStrictEqual([
+    'completed',
+    'cancelled',
+    ['failed', 'API Error: 529 Overloaded'],
+    'failed',
+    'ended',
+    'ended',
+    'untracked',
+  ]);
+
+  const lost = fold([
+    { ...PROMPT, at: 1 },
+    { ...spawned('a', 'Find'), at: 1 } as TranscriptAction,
+    stood('a', { state: 'unknown' }, 5),
+  ]);
+
+  // Its time stands at the unknown, and it is not counted as running.
+  expect(only(lost, 'a').endedAt).toStrictEqual(5);
+  expect(runningSubagents(lost)).toStrictEqual(0);
+
+  const back = fold(
+    [
+      stood('a', { state: 'running' }, 7),
+      stood('a', { state: 'idle', stopReason: 'end_turn' }, 9),
+    ],
+    lost,
+  );
+
+  expect([only(back, 'a').state, only(back, 'a').endedAt]).toStrictEqual([
+    'completed',
+    9,
+  ]);
+
+  // A patch that tells no state, timed or not, and another unknown leave its
+  // time at the first unknown.
+  for (const later of [
+    { ...spawned('a', 'Find again'), at: 9 } as TranscriptAction,
+    spawned('a', 'Find again'),
+    stood('a', { state: 'unknown' }, 9),
+  ]) {
+    const patched = only(fold([later], lost), 'a');
+
+    expect([patched.state, patched.endedAt]).toStrictEqual(['untracked', 5]);
+  }
+
+  // Straight from untracked to idle, its time runs to the idle.
+  expect(
+    only(
+      fold([stood('a', { state: 'idle', stopReason: 'end_turn' }, 8)], lost),
+      'a',
+    ).endedAt,
+  ).toStrictEqual(8);
+  // A later state clears a failure's message.
+  expect(
+    only(
+      fold(
+        [
+          stood('a', {
+            state: 'idle',
+            stopReason: 'error',
+            error: { code: 1, message: 'x' },
+          }),
+          stood('a', { state: 'running' }),
+        ],
+        lost,
+      ),
+      'a',
+    ).error,
+  ).toStrictEqual(undefined);
+});
+
+test("Claude's subagents fold to each end they report", () =>
+  withSession(async (session) => {
+    const transcript = fold(await play(session, 'claudesubagents'));
+
+    expect(
+      subagentsIn(transcript.entries).map(({ title, state, error }) => ({
+        title,
+        state,
+        ...(error === undefined ? {} : { error }),
+      })),
+    ).toStrictEqual([
+      { title: 'explorer (Explore)', state: 'completed' },
+      {
+        title: 'reviewer (general-purpose)',
+        state: 'failed',
+        error: 'API Error: 529 Overloaded',
+      },
+      { title: 'tester (general-purpose)', state: 'cancelled' },
+      { title: 'watcher', state: 'untracked' },
+    ]);
+  }));
+
+test('a cancelled turn leaves a subagent that can be cancelled alone to its agent, and ends the rest', () => {
+  const own = (id: string, from?: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      title: id,
+      capabilities: { cancel: {} },
+      state: { state: 'running' },
+    },
+    ...(from === undefined ? {} : { subagentId: from }),
+  });
+  const cut = fold([
+    PROMPT,
+    own('a'),
+    own('g', 'a'),
+    spawned('b', 'Draw'),
+    { type: 'cancel', turnId: TURN, at: 12 },
+    {
+      type: 'result',
+      turnId: TURN,
+      result: { status: 'cancelled', stopReason: 'cancelled' },
+    },
+  ]);
+
+  expect(
+    subagentsIn(cut.entries).map(({ id, state, endedAt }) => ({
+      id,
+      state,
+      endedAt,
+    })),
+  ).toStrictEqual([
+    { id: 'a', state: 'running', endedAt: undefined },
+    { id: 'g', state: 'running', endedAt: undefined },
+    { id: 'b', state: 'cancelled', endedAt: 12 },
+  ]);
+  expect(runningSubagents(cut)).toStrictEqual(2);
+
+  // Its agent says how it ended, as it does; a capability taken away leaves
+  // the next one to chord.
+  const later = fold(
+    [
+      stood('a', { state: 'idle', stopReason: 'end_turn' }, 20),
+      update(
+        {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'g',
+          capabilities: null,
+        },
+        'a',
+      ),
+    ],
+    cut,
+  );
+
+  expect(only(later, 'a').state).toStrictEqual('completed');
+  expect(only(later, 'g').cancellable).toStrictEqual(undefined);
+});
+
+test("Esc leaves Claude's background subagent at work on screen, and it ends as its agent says", () =>
+  withSession(async (session) => {
+    const { result, subagents } = await background(session, 6);
+
+    expect(result).toMatchObject({ result: { status: 'cancelled' } });
+    expect(subagents.map(({ title }) => title)).toStrictEqual([
+      'tester (general-purpose)',
+      'explorer (Explore)',
+    ]);
+  }));
 
 test('a cancelled turn cancels the subagents still running, when Esc was pressed; one that ended stays as it ended', () => {
   const transcript = fold([
@@ -409,13 +609,16 @@ test('a turn that ends on its own leaves its subagents running, and they go on a
   ]);
 });
 
-test("the agent's going disconnects the subagents still running, at any depth", () => {
+test("the agent's going disconnects the subagents still running or untracked, at any depth", () => {
   const transcript = fold([
     PROMPT,
     spawned('a', 'Find'),
     spawned('g', 'Read', { from: 'a' }),
     spawned('b', 'Draw'),
     ended('b', 'completed'),
+    // One its agent lost sight of is gone with it too.
+    spawned('u', 'Watch'),
+    stood('u', { state: 'unknown' }, 20),
     { type: 'disconnected', turnId: TURN, at: 30 },
   ]);
 
@@ -428,6 +631,7 @@ test("the agent's going disconnects the subagents still running, at any depth", 
     ['disconnected', 30],
     ['disconnected', 30],
     ['completed', undefined],
+    ['disconnected', 30],
   ]);
 });
 
@@ -776,13 +980,202 @@ test("an agent that sends ACP's own subagent_update folds the same way", () =>
     expect(shape(transcript.entries)).toStrictEqual([
       'user: subagentupdate',
       {
-        'Summarise the README completed': [
+        'Summarise the README ended': [
           'tool: Read README.md completed',
           'assistant: chord is a terminal client for ACP agents.',
         ],
       },
       'assistant: It says chord is a terminal client for ACP agents.',
     ]);
+  }));
+
+/**
+ * Each subagent's title and the states its `subagent_update`s brought, in
+ * order, among `actions`; and the text of the `session_message`s heard
+ * under it.
+ */
+function reported(actions: readonly TranscriptAction[]) {
+  const byId = new Map<
+    string,
+    { title?: string; states: unknown[]; messages: string[] }
+  >();
+  const of = (id: string) => {
+    const found = byId.get(id) ?? { states: [], messages: [] };
+
+    byId.set(id, found);
+
+    return found;
+  };
+
+  for (const action of actions) {
+    if (action.type !== 'update') {
+      continue;
+    }
+
+    const { update, subagentId } = action;
+
+    if (update.sessionUpdate === 'subagent_update') {
+      const found = of(update.sessionId);
+
+      if (update.title !== undefined && update.title !== null) {
+        found.title = update.title;
+
+        expect(update.capabilities).toStrictEqual({ cancel: {} });
+      }
+
+      if (update.state !== undefined && update.state !== null) {
+        found.states.push(update.state);
+      }
+    } else if (
+      update.sessionUpdate === 'session_message' &&
+      subagentId !== undefined
+    ) {
+      for (const block of update.content ?? []) {
+        if (block.type === 'text') {
+          of(subagentId).messages.push(block.text);
+        }
+      }
+    }
+  }
+
+  return [...byId.values()];
+}
+
+test("Claude's subagents come in ACP's own form, with their whole task, ending each way it reports", () =>
+  withSession(async (session) => {
+    const subagents = reported(await play(session, 'claudesubagents'));
+
+    expect(subagents.map(({ title, states }) => ({ title, states }))).toEqual([
+      {
+        title: 'explorer (Explore)',
+        states: [
+          { state: 'running' },
+          { state: 'requires_action' },
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ],
+      },
+      {
+        title: 'reviewer (general-purpose)',
+        states: [
+          { state: 'running' },
+          {
+            state: 'idle',
+            stopReason: 'error',
+            error: { code: -32603, message: 'API Error: 529 Overloaded' },
+          },
+        ],
+      },
+      {
+        title: 'tester (general-purpose)',
+        states: [
+          { state: 'running' },
+          { state: 'idle', stopReason: 'cancelled' },
+        ],
+      },
+      {
+        title: 'watcher',
+        states: [{ state: 'running' }, { state: 'unknown' }],
+      },
+    ]);
+    expect(subagents[0]!.messages).toStrictEqual([
+      'Find where chord hands each session/update to its listeners and ' +
+        'say which file owns the routing.\n\nReport paths and line ' +
+        'numbers, and write what you find to notes/routing.md.',
+    ]);
+    expect(subagents.every(({ messages }) => messages.length === 1)).toBe(true);
+  }));
+
+test("a cancel ends Claude's subagents still at work idle and cancelled", () =>
+  withSession(async (session) => {
+    const actions = await play(session, 'claudesubagents', {
+      answer: 'cancel',
+    });
+
+    expect(actions.at(-1)).toMatchObject({
+      type: 'result',
+      result: { status: 'cancelled' },
+    });
+    expect(reported(actions)[0]!.states).toStrictEqual([
+      { state: 'running' },
+      { state: 'requires_action' },
+      { state: 'idle', stopReason: 'cancelled' },
+    ]);
+  }));
+
+/**
+ * What `claudebackground`'s subagents reported, through the background
+ * one's end, after a cancel once `cancelAfterEvents` updates had come; and
+ * how the turn ended.
+ */
+async function background(session: Session, cancelAfterEvents: number) {
+  const after: TranscriptAction[] = [];
+  let answered = false;
+  const over = new Promise<void>((resolve) => {
+    session.subscribe((update) => {
+      if (!answered) {
+        return;
+      }
+
+      after.push({ type: 'update', turnId: TURN, update });
+
+      if (
+        update.sessionUpdate === 'subagent_update' &&
+        update.state?.state === 'idle'
+      ) {
+        resolve();
+      }
+    });
+  });
+
+  const actions = await play(session, 'claudebackground', {
+    cancelAfterEvents,
+  });
+
+  answered = true;
+
+  await over;
+
+  return {
+    result: actions.find((action) => action.type === 'result'),
+    subagents: reported([...actions, ...after]).map(({ title, states }) => ({
+      title,
+      states,
+    })),
+  };
+}
+
+test("Claude's background subagent goes on past a cancel that stops the one the turn waits on", () =>
+  withSession(async (session) => {
+    const { subagents } = await background(session, 6);
+
+    expect(subagents).toStrictEqual([
+      {
+        title: 'tester (general-purpose)',
+        states: [
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ],
+      },
+      {
+        title: 'explorer (Explore)',
+        states: [
+          { state: 'running' },
+          { state: 'idle', stopReason: 'cancelled' },
+        ],
+      },
+    ]);
+  }));
+
+test("a cancel that comes before the next announcement leaves Claude's background subagent at work, to end on its own", () =>
+  withSession(async (session) => {
+    const { result, subagents } = await background(session, 3);
+
+    expect(result).toMatchObject({ result: { status: 'cancelled' } });
+    expect(subagents[0]).toStrictEqual({
+      title: 'tester (general-purpose)',
+      states: [{ state: 'running' }, { state: 'idle', stopReason: 'end_turn' }],
+    });
   }));
 
 test("-p prints the parent's reply alone, and refuses a subagent's request like any other", async () => {
@@ -1190,4 +1583,279 @@ test("a resumed child's cost never counts as the parent's", async () => {
       },
     ]),
   ).toStrictEqual(alone);
+});
+
+describe('CHD-432 tester: independent Claude fixture lifetimes', () => {
+  test('a background child finishes under its own id after the parent takes another prompt', () =>
+    withSession(async (session) => {
+      const actions: TranscriptAction[] = [];
+      const { promise: ended, resolve } = Promise.withResolvers<void>();
+      let childId: string | undefined;
+      const unsubscribe = session.subscribe((update, subagentId) => {
+        actions.push({
+          type: 'update',
+          turnId: TURN,
+          update,
+          ...(subagentId === undefined ? {} : { subagentId }),
+        });
+
+        if (
+          update.sessionUpdate === 'subagent_update' &&
+          update.title === 'tester (general-purpose)'
+        ) {
+          childId = update.sessionId;
+        }
+
+        if (
+          update.sessionUpdate === 'subagent_update' &&
+          update.sessionId === childId &&
+          update.state?.state === 'idle'
+        ) {
+          resolve();
+        }
+      });
+
+      try {
+        const first = await run(session, 'claudebackground');
+
+        expect(first.result.status).toBe('completed');
+        expect(reported(actions)[0]?.states).toStrictEqual([
+          { state: 'running' },
+        ]);
+
+        const next = await run(session, 'text');
+
+        expect(next.result.status).toBe('completed');
+        expect(said(next.updates).join('')).toContain('Hello, world.');
+        await ended;
+        expect(reported(actions)[0]?.states).toStrictEqual([
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ]);
+        expect(
+          actions.some(
+            (action) =>
+              action.type === 'update' &&
+              action.subagentId === childId &&
+              action.update.sessionUpdate === 'agent_message_chunk' &&
+              action.update.content.type === 'text' &&
+              action.update.content.text === 'Every test passed.',
+          ),
+        ).toBe(true);
+      } finally {
+        unsubscribe();
+      }
+    }));
+
+  test('cancelling one session leaves another session free to reject a child permission and finish', () =>
+    withSession((cancelled) =>
+      withSession(async (other) => {
+        const [backgroundRun, actions] = await Promise.all([
+          background(cancelled, 3),
+          play(other, 'claudesubagents', { answer: 'reject' }),
+        ]);
+
+        expect(backgroundRun.result).toMatchObject({
+          result: { status: 'cancelled' },
+        });
+        expect(backgroundRun.subagents[0]?.states).toStrictEqual([
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ]);
+        expect(actions.at(-1)).toMatchObject({
+          type: 'result',
+          result: { status: 'completed' },
+        });
+        expect(reported(actions)[0]?.states).toStrictEqual([
+          { state: 'running' },
+          { state: 'requires_action' },
+          { state: 'running' },
+          { state: 'idle', stopReason: 'end_turn' },
+        ]);
+        expect(
+          actions.some(
+            (action) =>
+              action.type === 'update' &&
+              action.subagentId !== undefined &&
+              action.update.sessionUpdate === 'tool_call_update' &&
+              action.update.status === 'failed',
+          ),
+        ).toBe(true);
+      }),
+    ));
+});
+
+describe('CHD-432 tester: untracked recovery and replay timing', () => {
+  test('an untimed unknown stays untimed through a timed null-state patch, then requires_action resumes its original clock', () => {
+    const lost = fold([
+      PROMPT,
+      spawned('a', 'Find', { at: 100 }),
+      stood('a', { state: 'unknown' }),
+    ]);
+    const patched = fold(
+      [
+        {
+          type: 'update',
+          turnId: TURN,
+          at: 200,
+          update: {
+            sessionUpdate: 'subagent_update',
+            sessionId: 'a',
+            state: null,
+            description: null,
+          },
+        },
+      ],
+      lost,
+    );
+
+    expect(only(patched, 'a').state).toBe('untracked');
+    expect(only(patched, 'a').endedAt).toBeUndefined();
+    expect(only(patched, 'a').description).toBeUndefined();
+    expect(runningSubagents(patched)).toBe(0);
+
+    const resumed = fold(
+      [stood('a', { state: 'requires_action' }, 300)],
+      patched,
+    );
+
+    expect(only(resumed, 'a').startedAt).toBe(100);
+    expect(only(resumed, 'a').endedAt).toBeUndefined();
+    expect(runningSubagents(resumed)).toBe(1);
+
+    const done = fold(
+      [stood('a', { state: 'idle', stopReason: 'max_tokens' }, 400)],
+      resumed,
+    );
+
+    expect(only(done, 'a')).toMatchObject({
+      state: 'ended',
+      startedAt: 100,
+      endedAt: 400,
+    });
+  });
+
+  test('a completed parent keeps its ending when a nested untracked child disconnects', () => {
+    const before = fold([
+      PROMPT,
+      spawned('a', 'Parent', { at: 100 }),
+      spawned('b', 'Child', { from: 'a', at: 110 }),
+      ended('b', 'unknown', { from: 'a', at: 120 }),
+      ended('a', 'completed', { at: 130 }),
+    ]);
+    const after = fold(
+      [{ type: 'disconnected', turnId: TURN, at: 200 }],
+      before,
+    );
+
+    expect(only(after, 'a')).toMatchObject({
+      state: 'completed',
+      endedAt: 130,
+    });
+    expect(only(after, 'b')).toMatchObject({
+      state: 'disconnected',
+      endedAt: 200,
+    });
+    expect(only(before, 'b')).toMatchObject({
+      state: 'untracked',
+      endedAt: 120,
+    });
+    expect(runningSubagents(after)).toBe(0);
+  });
+});
+
+describe('CHD-432 tester: cancel capability boundaries', () => {
+  const announced = (id: string, from?: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at: 100,
+    ...(from === undefined ? {} : { subagentId: from }),
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      capabilities: { cancel: {} },
+      state: { state: 'running' },
+    },
+  });
+  const cancel: TranscriptAction[] = [
+    { type: 'cancel', turnId: TURN, at: 200 },
+    {
+      type: 'result',
+      turnId: TURN,
+      result: { status: 'cancelled', stopReason: 'cancelled' },
+    },
+  ];
+
+  for (const [name, patch, survives] of [
+    ['omitted', {}, true],
+    ['null capabilities', { capabilities: null }, false],
+    ['empty capabilities', { capabilities: {} }, false],
+    ['null cancel', { capabilities: { cancel: null } }, false],
+    ['cancel retained', { capabilities: { cancel: {} } }, true],
+  ] as const) {
+    test(`${name} determines whether the next Esc leaves the subagent running`, () => {
+      const cut = fold([
+        PROMPT,
+        announced('a'),
+        update({ sessionUpdate: 'subagent_update', sessionId: 'a', ...patch }),
+        ...cancel,
+      ]);
+
+      expect(only(cut, 'a').state).toBe(survives ? 'running' : 'cancelled');
+      expect(only(cut, 'a').endedAt).toBe(survives ? undefined : 200);
+      expect(runningSubagents(cut)).toBe(survives ? 1 : 0);
+    });
+  }
+
+  test('a parent and child decide survival separately without inheriting the capability', () => {
+    const cut = fold([
+      PROMPT,
+      announced('parent'),
+      spawned('child', 'Child', { from: 'parent' }),
+      spawned('other', 'Other'),
+      announced('grandchild', 'other'),
+      ...cancel,
+    ]);
+
+    expect(
+      ['parent', 'child', 'other', 'grandchild'].map(
+        (id) => only(cut, id).state,
+      ),
+    ).toStrictEqual(['running', 'cancelled', 'cancelled', 'running']);
+    expect(runningSubagents(cut)).toBe(2);
+  });
+
+  test('a survivor accepts late content and its own failure, while disconnect ends another survivor', () => {
+    const cut = fold([PROMPT, announced('a'), announced('b'), ...cancel]);
+    const later = fold(
+      [
+        say('Still working after Esc.', 'a'),
+        stood(
+          'a',
+          {
+            state: 'idle',
+            stopReason: 'error',
+            error: { code: 1, message: 'Worker failed' },
+          },
+          300,
+        ),
+        { type: 'disconnected', turnId: TURN, at: 400 },
+      ],
+      cut,
+    );
+
+    expect(only(later, 'a')).toMatchObject({
+      state: 'failed',
+      error: 'Worker failed',
+      endedAt: 300,
+    });
+    expect(shape(only(later, 'a').entries)).toStrictEqual([
+      'assistant: Still working after Esc.',
+    ]);
+    expect(only(later, 'b')).toMatchObject({
+      state: 'disconnected',
+      endedAt: 400,
+    });
+    expect(runningSubagents(later)).toBe(0);
+  });
 });

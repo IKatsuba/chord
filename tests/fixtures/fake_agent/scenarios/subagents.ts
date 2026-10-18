@@ -557,6 +557,35 @@ async function lost(
   await report(parent, working, child.sessionId, { state: 'unknown' });
 }
 
+/**
+ * The background tester of `claudebackground`: a command that runs past its
+ * parent's turn, then done.
+ */
+async function testInBackground(parent: Turn, child: Turn): Promise<void> {
+  try {
+    const test = await call(
+      child,
+      'bash',
+      { title: '`bun test`', kind: 'execute' },
+      'in_progress',
+    );
+
+    await pause(child.signal, SUBAGENT_AFTER_MS * 2);
+    await child.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: test,
+      status: 'completed',
+    });
+    await child.say('Every test passed.');
+    await report(parent, undefined, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+  } catch {
+    // The client went before the subagent ended.
+  }
+}
+
 export const SUBAGENTS = {
   // One subagent whose call is the only one open: the parent has none of
   // its own while the subagent's `sleep 2` runs, then it ends.
@@ -897,6 +926,11 @@ export const SUBAGENTS = {
         'Run bun test in the background and report what fails.',
         new AbortController().signal,
       );
+
+      // At once, so a cancel that comes before the next announcement leaves
+      // it at work all the same.
+      void testInBackground(turn, tests);
+
       const looker = await announce(
         turn,
         working,
@@ -904,31 +938,6 @@ export const SUBAGENTS = {
         'Find the cancel path',
         'Find where chord ends a turn on Esc.',
       );
-
-      void (async () => {
-        try {
-          const test = await call(
-            tests,
-            'bash',
-            { title: '`bun test`', kind: 'execute' },
-            'in_progress',
-          );
-
-          await pause(tests.signal, SUBAGENT_AFTER_MS * 2);
-          await tests.send({
-            sessionUpdate: 'tool_call_update',
-            toolCallId: test,
-            status: 'completed',
-          });
-          await tests.say('Every test passed.');
-          await report(turn, undefined, tests.sessionId, {
-            state: 'idle',
-            stopReason: 'end_turn',
-          });
-        } catch {
-          // The client went before the subagent ended.
-        }
-      })();
 
       await call(
         looker,

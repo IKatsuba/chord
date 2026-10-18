@@ -899,41 +899,53 @@ test("a cancel ends Claude's subagents still at work idle and cancelled", () =>
     ]);
   }));
 
+/**
+ * What `claudebackground`'s subagents reported, through the background
+ * one's end, after a cancel once `cancelAfterEvents` updates had come; and
+ * how the turn ended.
+ */
+async function background(session: Session, cancelAfterEvents: number) {
+  const after: TranscriptAction[] = [];
+  let answered = false;
+  const over = new Promise<void>((resolve) => {
+    session.subscribe((update) => {
+      if (!answered) {
+        return;
+      }
+
+      after.push({ type: 'update', turnId: TURN, update });
+
+      if (
+        update.sessionUpdate === 'subagent_update' &&
+        update.state?.state === 'idle'
+      ) {
+        resolve();
+      }
+    });
+  });
+
+  const actions = await play(session, 'claudebackground', {
+    cancelAfterEvents,
+  });
+
+  answered = true;
+
+  await over;
+
+  return {
+    result: actions.find((action) => action.type === 'result'),
+    subagents: reported([...actions, ...after]).map(({ title, states }) => ({
+      title,
+      states,
+    })),
+  };
+}
+
 test("Claude's background subagent goes on past a cancel that stops the one the turn waits on", () =>
   withSession(async (session) => {
-    const after: TranscriptAction[] = [];
-    let answered = false;
-    const over = new Promise<void>((resolve) => {
-      session.subscribe((update) => {
-        if (!answered) {
-          return;
-        }
+    const { subagents } = await background(session, 6);
 
-        after.push({ type: 'update', turnId: TURN, update });
-
-        if (
-          update.sessionUpdate === 'subagent_update' &&
-          update.state?.state === 'idle'
-        ) {
-          resolve();
-        }
-      });
-    });
-
-    const actions = await play(session, 'claudebackground', {
-      cancelAfterEvents: 6,
-    });
-
-    answered = true;
-
-    await over;
-
-    expect(
-      reported([...actions, ...after]).map(({ title, states }) => ({
-        title,
-        states,
-      })),
-    ).toStrictEqual([
+    expect(subagents).toStrictEqual([
       {
         title: 'tester (general-purpose)',
         states: [
@@ -949,6 +961,17 @@ test("Claude's background subagent goes on past a cancel that stops the one the 
         ],
       },
     ]);
+  }));
+
+test("a cancel that comes before the next announcement leaves Claude's background subagent at work, to end on its own", () =>
+  withSession(async (session) => {
+    const { result, subagents } = await background(session, 3);
+
+    expect(result).toMatchObject({ result: { status: 'cancelled' } });
+    expect(subagents[0]).toStrictEqual({
+      title: 'tester (general-purpose)',
+      states: [{ state: 'running' }, { state: 'idle', stopReason: 'end_turn' }],
+    });
   }));
 
 test("-p prints the parent's reply alone, and refuses a subagent's request like any other", async () => {

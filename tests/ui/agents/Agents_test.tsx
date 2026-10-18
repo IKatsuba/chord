@@ -65,6 +65,17 @@ async function withAgents(
   }
 }
 
+/**
+ * The hint for parser's task asking, as CHD-431 names it: by the task's own
+ * name, or by whose task it is where that does not fit.
+ */
+const PARSER_TASK =
+  /● (Agent\(Fix the tokenizer\) · fake|parser's task) needs your permission/;
+
+async function parserTaskAsks(window: Window): Promise<void> {
+  await until("parser's task asks", () => PARSER_TASK.test(window.frame()));
+}
+
 /** `agents`, until both of parser's messages have come back. */
 async function opened(window: Window): Promise<void> {
   await ready(window);
@@ -203,7 +214,7 @@ test("a child starts a task agent of its own, drawn in the child's turn, which r
     await ready(window);
     await send(window, 'agenttask');
     await window.shows('Waiting on parser.');
-    await window.shows('● parser needs your permission');
+    await parserTaskAsks(window);
     // The task is the child's, so main's transcript never draws it.
     expect(!window.frame().includes('Agent(Fix the tokenizer)')).toBeTruthy();
     await leader(window, 'a');
@@ -223,7 +234,7 @@ test('closing a child cancels the task agents it started', () =>
   withAgents(async (window) => {
     await ready(window);
     await send(window, 'agenttask');
-    await window.shows('● parser needs your permission');
+    await parserTaskAsks(window);
     await window.press(DOWN);
     await window.press(DOWN);
     await window.shows('Agent(Fix the tokenizer) · fake asks');
@@ -986,10 +997,10 @@ test("a child's task permission keeps its mark and ctrl+x a once the child's tur
   withAgents(async (window) => {
     await ready(window);
     await send(window, 'agenttask');
-    await window.shows('● parser needs your permission');
+    await parserTaskAsks(window);
     // parser's own turn ends about 3 s after it starts; its task still asks.
     await new Promise((resolve) => setTimeout(resolve, 4500));
-    expect(window.frame()).toContain('● parser needs your permission');
+    expect(window.frame()).toMatch(PARSER_TASK);
     expect(window.frame()).not.toContain('parser replied');
     await leader(window, 'a');
     await window.shows('╭─ parser ─');

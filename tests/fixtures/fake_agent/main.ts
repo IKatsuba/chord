@@ -131,6 +131,8 @@
  * second after its answer, and `taskbetween` starts `taskchild` as `task`
  * does and ends its turn at once, so the task asks with none of its
  * parent's running: requests with no turn running (CHD-158).
+ * `teamtask` runs bugfix as `team` does and starts `taskchild` as `task` does,
+ * so a member and a task of main's ask at once (CHD-431).
  * `mainbetweentwice` asks as `mainbetween` does, then a second write at once,
  * silent half a second (less at a quick pace, never more) after that one's
  * answer before it says what came back.
@@ -307,6 +309,7 @@ const SCENARIOS = [
   'mainbetween',
   'mainbetweentwice',
   'taskbetween',
+  'teamtask',
   'compact',
   'codexcompact',
   'compactfail',

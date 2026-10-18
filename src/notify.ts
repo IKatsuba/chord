@@ -37,9 +37,18 @@ export function terminalEnv(
 /** Why chord started waiting on the person. */
 export type Wait =
   | { readonly kind: 'turn_ended' }
-  | { readonly kind: 'permission'; readonly title?: string | undefined }
+  | {
+      readonly kind: 'permission';
+      readonly title?: string | undefined;
+      /** The subagent or task that asks, when the agent itself does not. */
+      readonly subagentId?: string;
+    }
   /** A form to fill in or a link to open; `message` is the agent's. */
-  | { readonly kind: 'input'; readonly message: string };
+  | {
+      readonly kind: 'input';
+      readonly message: string;
+      readonly subagentId?: string;
+    };
 
 /**
  * What the events so far say about waiting: whether the session is live
@@ -145,7 +154,13 @@ export function watchWaits(
         ? { watch: next }
         : {
             watch: next,
-            wait: { kind: 'permission', title: event.permission.title },
+            wait: {
+              kind: 'permission',
+              title: event.permission.title,
+              ...(event.permission.subagentId === undefined
+                ? {}
+                : { subagentId: event.permission.subagentId }),
+            },
           };
     }
     case 'elicitation_requested': {
@@ -166,7 +181,13 @@ export function watchWaits(
         ? { watch: next }
         : {
             watch: next,
-            wait: { kind: 'input', message: event.elicitation.message },
+            wait: {
+              kind: 'input',
+              message: event.elicitation.message,
+              ...(event.elicitation.subagentId === undefined
+                ? {}
+                : { subagentId: event.elicitation.subagentId }),
+            },
           };
     }
     case 'permission_settled':

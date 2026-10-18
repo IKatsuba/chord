@@ -1151,7 +1151,7 @@ describe("a task's permission across the turn that started it (CHD-266)", () => 
     ]);
 
     expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual({
-      on: { kind: 'permission', title: undefined },
+      on: { kind: 'permission', title: undefined, subagentId: 'task-1' },
       since: 2000,
     });
     expect(attend(tabs)?.front).toStrictEqual(1);

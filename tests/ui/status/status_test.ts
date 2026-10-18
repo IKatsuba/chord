@@ -556,3 +556,51 @@ test("the front session's own request between turns names the key that answers i
     text({ ...permission, waits: betweenNotice('input', 'ctrl+x a') }, 80),
   ).toStartWith('● input · ctrl+x a to answer  ');
 });
+
+test('an asking task is named as its box names it, or by whose task it is where that does not fit (CHD-431)', () => {
+  const asking = (on: 'permission' | 'input'): TabWait => ({
+    ...idle,
+    asking: {
+      on:
+        on === 'permission'
+          ? { kind: 'permission', subagentId: 'task-1' }
+          : { kind: 'input', message: 'Which?', subagentId: 'task-1' },
+      since: 0,
+    },
+  });
+  const main = (on: 'permission' | 'input'): TabBehind => ({
+    number: 0,
+    agent: 'main',
+    name: 'main',
+    wait: asking(on),
+    task: 'Agent(Fix the tokenizer) · fake',
+  });
+  const line = {
+    ...facts,
+    mode: 'default',
+    hint: undefined,
+    waits: waitsNotice([main('permission')], 'ctrl+x a'),
+  };
+
+  expect(text(line, 120)).toStartWith(
+    '● Agent(Fix the tokenizer) · fake needs your permission · ctrl+x a to go  ',
+  );
+  expect(text(line, 80)).toStartWith(
+    "● main's task needs your permission · ctrl+x a  ",
+  );
+  expect(waitsNotice([main('input')], 'ctrl+x a')?.text).toStrictEqual(
+    '● Agent(Fix the tokenizer) · fake asks for input',
+  );
+
+  // Two asking are counted as ever, a task as one agent.
+  const tester: TabBehind = {
+    number: 0,
+    agent: 'tester',
+    name: 'tester',
+    wait: asking('input'),
+  };
+
+  expect(
+    waitsNotice([main('permission'), tester], 'ctrl+x a')?.text,
+  ).toStrictEqual('● 2 agents wait');
+});

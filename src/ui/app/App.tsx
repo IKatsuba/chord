@@ -818,6 +818,7 @@ export function App({
               <BackgroundView
                 items={backgroundItems}
                 focus={state.backgroundView.focus}
+                hint={state.backgroundView.hint}
                 columns={columns}
                 rows={rows}
               />

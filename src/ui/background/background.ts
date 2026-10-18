@@ -333,6 +333,15 @@ function agentItems(agent: BackgroundAgent): BackgroundItem[] {
   });
 }
 
+/** The ids of the agent items among `entries` the person stopped. */
+export function stoppingIn(entries: readonly Entry[]): ReadonlySet<string> {
+  return new Set(
+    agentsIn(entries)
+      .filter((subagent) => subagent.stopping === true)
+      .map((subagent) => subagent.id),
+  );
+}
+
 /** Every agent item among `entries`, a subagent's own included. */
 function agentsIn(entries: readonly Entry[]): Subagent[] {
   return entries.flatMap((entry) => {

@@ -143,6 +143,12 @@ export interface Agent {
    * agent's own answer.
    */
   cancel(sessionId: string, subagents?: Iterable<string>): Promise<void>;
+  /**
+   * Asks the agent to stop one subagent's work alone, by its own session id,
+   * as one that announced `capabilities.cancel` takes it. Its requests stay
+   * open until the agent withdraws them; rejects when the notice cannot go.
+   */
+  stopSubagent(sessionId: string): Promise<void>;
   setConfigOption(
     request: acp.SetSessionConfigOptionRequest,
     signal?: AbortSignal,
@@ -432,6 +438,8 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
 
       await connection.agent.notify('session/cancel', { sessionId });
     },
+    stopSubagent: (sessionId) =>
+      connection.agent.notify('session/cancel', { sessionId }),
     setConfigOption: (request, signal) =>
       ask(
         () => connection.agent.request('session/set_config_option', request),

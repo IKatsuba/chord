@@ -393,3 +393,32 @@ describe('CHD-2 tester: retained capability and wait clocks', () => {
     expect(only(after, 'a').cancellable).toBeUndefined();
   });
 });
+
+test('a subagent stopped alone reads stopping until its agent tells a state it is not at work in, or the stop could not go', () => {
+  const stop = (stopping: boolean): TranscriptAction => ({
+    type: 'subagent_stopping',
+    turnId: 'stop',
+    subagentId: 'a',
+    stopping,
+  });
+  const told = (state: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'a',
+      state: { state } as never,
+    },
+  });
+  const stopped = fold([PROMPT, spawned('a', 'explorer'), stop(true)]);
+
+  expect(only(stopped, 'a').stopping).toBe(true);
+  expect(only(fold([told('running')], stopped), 'a').stopping).toBe(true);
+  expect(only(fold([told('idle')], stopped), 'a').stopping).toBe(undefined);
+  expect(only(fold([told('unknown')], stopped), 'a').stopping).toBe(undefined);
+  expect(only(fold([stop(false)], stopped), 'a').stopping).toBe(undefined);
+  // An ended one is not marked.
+  expect(only(fold([told('idle'), stop(true)], stopped), 'a').stopping).toBe(
+    undefined,
+  );
+});

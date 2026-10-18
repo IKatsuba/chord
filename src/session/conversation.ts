@@ -1094,6 +1094,39 @@ export class Conversation {
   }
 
   /**
+   * Stops subagent `id` alone, as the person asked: it reads stopping until
+   * its agent says how it ended, or goes back as it was when the stop could
+   * not be sent, which the promise rejects with.
+   */
+  async stopSubagent(id: string): Promise<void> {
+    const session = this.#session;
+
+    if (session === undefined) {
+      throw new Error('the agent is not connected');
+    }
+
+    this.#emit({
+      type: 'subagent_stopping',
+      turnId: 'stop',
+      subagentId: id,
+      stopping: true,
+    });
+
+    try {
+      await session.stopSubagent(id);
+    } catch (error) {
+      this.#emit({
+        type: 'subagent_stopping',
+        turnId: 'stop',
+        subagentId: id,
+        stopping: false,
+      });
+
+      throw error;
+    }
+  }
+
+  /**
    * Stops monitor `id`: the agent's own `stop_monitor`, which its answer
    * tells it of, or the person's, which a message does.
    */

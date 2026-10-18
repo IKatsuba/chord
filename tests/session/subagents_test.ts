@@ -1859,3 +1859,43 @@ describe('CHD-432 tester: cancel capability boundaries', () => {
     expect(runningSubagents(later)).toBe(0);
   });
 });
+
+test("a session/cancel on a Claude subagent's own id stops it alone: it reports idle cancelled, and its parent's turn ends on its own", () =>
+  withSession(async (session) => {
+    const states: unknown[] = [];
+    let stopped = false;
+    const { result } = await run(session, 'claudebackground', {
+      onUpdate: (updates) => {
+        const first = updates.find(
+          (update) => update.sessionUpdate === 'subagent_update',
+        );
+
+        if (!stopped && first?.sessionUpdate === 'subagent_update') {
+          stopped = true;
+
+          void session.stopSubagent(first.sessionId);
+        }
+
+        for (const update of updates.splice(0)) {
+          if (
+            update.sessionUpdate === 'subagent_update' &&
+            update.state !== undefined &&
+            update.state !== null
+          ) {
+            states.push([update.title ?? update.sessionId, update.state]);
+          }
+        }
+      },
+    });
+
+    expect(result.status).toStrictEqual('completed');
+    expect(
+      states
+        .filter(
+          (each) => (each as [string, { state: string }])[1].state === 'idle',
+        )
+        .map(
+          (each) => (each as [string, { stopReason: string }])[1].stopReason,
+        ),
+    ).toStrictEqual(['cancelled', 'end_turn']);
+  }));

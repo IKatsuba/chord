@@ -469,6 +469,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'background_opened':
     case 'background_closed':
     case 'background_focused':
+    case 'background_hinted':
       return reduceBackground(state, action) as AppState;
     case 'expanded_toggled':
       // Rewrapped, its cells would hold other characters.

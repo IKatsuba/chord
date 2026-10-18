@@ -12,7 +12,14 @@ export interface BackgroundState {
    * The background view is open over the window, with the `❯` on the item
    * `focus` names, or on the first while it names none still listed.
    */
-  readonly backgroundView?: { readonly focus?: ItemRef };
+  readonly backgroundView?: {
+    readonly focus?: ItemRef;
+    /**
+     * What the hint line says in place of the keys, about the focused item's
+     * stop, until the `❯` moves.
+     */
+    readonly hint?: string;
+  };
 }
 
 export type BackgroundAction =
@@ -26,7 +33,9 @@ export type BackgroundAction =
   | { readonly type: 'background_opened' }
   | { readonly type: 'background_closed' }
   /** ↑ ↓ in the view put the `❯` on `focus`. */
-  | { readonly type: 'background_focused'; readonly focus: ItemRef };
+  | { readonly type: 'background_focused'; readonly focus: ItemRef }
+  /** `x` on the focused item could not stop it, as `hint` says. */
+  | { readonly type: 'background_hinted'; readonly hint: string };
 
 export const initialBackground: BackgroundState = { backgroundCleared: {} };
 
@@ -50,9 +59,33 @@ export function reduceBackground(
 
       return rest;
     }
-    case 'background_focused':
+    case 'background_focused': {
+      const view = state.backgroundView;
+
+      if (view === undefined) {
+        return state;
+      }
+
+      // The hint stays while the `❯` stays on its item.
+      const stays =
+        view.hint !== undefined &&
+        view.focus?.key === action.focus.key &&
+        view.focus.id === action.focus.id;
+
+      return {
+        ...state,
+        backgroundView: {
+          focus: action.focus,
+          ...(stays ? { hint: view.hint } : {}),
+        },
+      };
+    }
+    case 'background_hinted':
       return state.backgroundView === undefined
         ? state
-        : { ...state, backgroundView: { focus: action.focus } };
+        : {
+            ...state,
+            backgroundView: { ...state.backgroundView, hint: action.hint },
+          };
   }
 }

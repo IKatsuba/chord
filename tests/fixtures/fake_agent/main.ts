@@ -122,7 +122,10 @@
  * 4 s, past the turn and past a cancel that stops only the first.
  * `claudemessage` messages a Claude subagent again once it is done, as
  * SendMessage does, and it runs once more. `claudewaiting` holds one in
- * `requires_action` about 2 s with no request of its sent, then done. To any
+ * `requires_action` about 2 s with no request of its sent, then done, and
+ * `claudenostop` one that takes its own cancel back. A `session/cancel` on a
+ * Claude subagent's own id stops that one alone, idle and `cancelled`, its
+ * parent's turn going on. To any
  * other client each
  * says so in a line of text.
  *
@@ -217,7 +220,7 @@ import { MODES } from './scenarios/modes.ts';
 import { PERMISSIONS } from './scenarios/permissions.ts';
 import { PLANS } from './scenarios/plans.ts';
 import { SHELL } from './scenarios/shell.ts';
-import { SUBAGENTS } from './scenarios/subagents.ts';
+import { claudeChildren, SUBAGENTS } from './scenarios/subagents.ts';
 import { TASKS } from './scenarios/tasks.ts';
 import { AGENTS } from './scenarios/agents.ts';
 import { EFFORTS } from './scenarios/efforts.ts';
@@ -313,6 +316,7 @@ const SCENARIOS = [
   'claudebackground',
   'claudemessage',
   'claudewaiting',
+  'claudenostop',
   'subagentstates',
   'chordtools',
   'cutcalls',
@@ -1030,6 +1034,11 @@ const connection = acp
     },
   )
   .onNotification('session/cancel', ({ params }) => {
+    // A Claude subagent's own id stops that one alone.
+    void claudeChildren
+      .get(params.sessionId)?.()
+      .catch(() => {});
+
     turns.get(params.sessionId)?.abort();
   })
   .connect(

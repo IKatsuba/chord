@@ -4,6 +4,7 @@ import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
   moveViewFocus,
   stateText,
+  stopRefused,
   type ViewRow,
   viewRows,
   viewWindow,
@@ -517,4 +518,11 @@ describe('CHD-2 tester: agent row clocks and wrapping', () => {
       expect(lines.every((line) => stringWidth(line) <= width)).toBe(true);
     }
   });
+});
+
+test("a stop that could not be sent says its error's first line", () => {
+  expect(stopRefused(new Error('Session not found\nat line 2'))).toBe(
+    'could not stop: Session not found',
+  );
+  expect(stopRefused('closed')).toBe('could not stop: closed');
 });

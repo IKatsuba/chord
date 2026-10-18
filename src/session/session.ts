@@ -256,6 +256,11 @@ export interface Session {
   /** Cancels the turn that is running, if any, and its subagents' work. */
   cancel(): Promise<void>;
   /**
+   * Stops subagent `id`'s work alone, its parent's turn going on; rejects
+   * when the stop cannot be sent.
+   */
+  stopSubagent(id: string): Promise<void>;
+  /**
    * The models the agent offers, by their display names where it gave them,
    * and the one it says it is using; none when it advertises none.
    */
@@ -618,6 +623,7 @@ export async function openSession(
         : 'refused';
     },
     cancel: () => connection.cancel(id, tree.subagents),
+    stopSubagent: (subagent) => connection.stopSubagent(subagent),
     models: () => modelsOf(state),
     setModel: async (model) => {
       const key = modelConfigId(state.configOptions);

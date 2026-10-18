@@ -592,3 +592,40 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
       ));
   }
 });
+
+test("x on a Claude agent stops it alone: its row ends stopped, its block Cancelled, and its parent's turn goes on", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudebackground');
+      await window.shows('background  2 agents running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Run the test suite');
+      await window.press('x');
+      await window.shows('■ stopped after');
+      // The one the turn waits on runs on, and the turn ends on its own.
+      await window.shows('✓ done in');
+      await window.press(ESC);
+      await window.press(ESC);
+      await window.shows('The tests run on; I will say when they end.');
+      expect(window.frame()).toContain('⎿  Cancelled');
+      expect(window.frame()).not.toContain('Interrupted by user');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+test('x on an agent that took its own stop back says so on the hint line, and stays running', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudenostop');
+      await window.shows('background  1 agent running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Run the test suite');
+      await window.press('x');
+      await window.shows('this agent offers no stop');
+      expect(window.frame()).not.toContain('to stop · esc to close');
+      expect(window.frame()).toContain('running');
+    },
+    { rows: 24, columns: 80 },
+  ));

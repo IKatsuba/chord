@@ -41,6 +41,16 @@ export function moveViewFocus(
   return next && { key: next.key, id: next.id };
 }
 
+/** The hint line on an agent item whose agent offers no stop of its own. */
+export const NO_STOP_HINT = 'this agent offers no stop';
+
+/** The hint line on a stop that could not be sent: its error's first line. */
+export function stopRefused(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return `could not stop: ${message.split('\n')[0]}`;
+}
+
 /** A name's column at most; a longer name wraps inside it. */
 export const NAME_CELLS = 24;
 

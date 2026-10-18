@@ -132,8 +132,14 @@ import {
   backgroundItems,
   callPlace,
   type ItemOwner,
+  stoppingIn,
 } from '../background/background.ts';
-import { focusedItem, moveViewFocus } from '../background/view.ts';
+import {
+  focusedItem,
+  moveViewFocus,
+  NO_STOP_HINT,
+  stopRefused,
+} from '../background/view.ts';
 import { stripLayout, tabGlyph } from './strip.ts';
 import {
   headlineText,
@@ -1600,7 +1606,10 @@ export function useSessions(
    * `x` in the background view: the focused item stops at once, with no
    * confirmation, its row turning to stopped in place. A monitor stops as
    * its row's `x` stopped it before, its agent told; a task's turn is
-   * cancelled, which ends it and closes its session. An ended one is left.
+   * cancelled, which ends it and closes its session; an agent is asked to
+   * stop alone, its row stopping until its agent says it ended, and a stop
+   * that cannot be sent, or an agent that offers none, says so on the hint
+   * line. An ended one, and one already stopping, is left.
    */
   const stopBackground = () => {
     const item = focusedItem(background(), state.backgroundView?.focus);
@@ -1618,7 +1627,17 @@ export function useSessions(
       focus: { key: item.key, id: item.id },
     });
 
-    if (item.kind === 'monitor') {
+    if (item.kind === 'agent') {
+      if (!item.stoppable) {
+        dispatch({ type: 'background_hinted', hint: NO_STOP_HINT });
+      } else if (!(item.status.group === 'running' && item.status.stopping)) {
+        conversationAt(item.key)
+          ?.stopSubagent(item.id)
+          .catch((error: unknown) =>
+            dispatch({ type: 'background_hinted', hint: stopRefused(error) }),
+          );
+      }
+    } else if (item.kind === 'monitor') {
       conversationAt(item.key)?.stopMonitor(item.id, 'person');
     } else {
       conversationAt(item.key)?.task(item.id)?.cancel();
@@ -2089,6 +2108,7 @@ export function useSessions(
               monitors: session.monitors,
               endedMonitors: session.endedMonitors,
               transcript: session.transcript,
+              stopping: stoppingIn(session.transcript.entries),
             },
           ];
     };

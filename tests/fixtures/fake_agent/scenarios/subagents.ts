@@ -353,6 +353,30 @@ async function readAll(
 type Working = Set<string>;
 
 /**
+ * Claude's subagents at work, by session id, each with the stop a
+ * `session/cancel` on its own id makes: its work stops, and it reports itself
+ * idle and cancelled, its parent's turn going on.
+ */
+export const claudeChildren = new Map<string, () => Promise<void>>();
+
+/** The subagents a stop of their own ended, whose work's abort is no error. */
+const stoppedAlone = new Set<string>();
+
+/**
+ * `work` of `child`'s, which its parent waits on: a stop of the child alone
+ * ends it quietly, any other failure is the parent's.
+ */
+async function alone(child: Turn, work: Promise<void>): Promise<void> {
+  try {
+    await work;
+  } catch (error) {
+    if (!stoppedAlone.has(child.sessionId)) {
+      throw error;
+    }
+  }
+}
+
+/**
  * Starts a subagent under `parent` as Claude's adapter announces one in ACP's
  * own form: a `subagent_update` titled by its name and role, the short task as
  * its description, running and open to a cancel of its own; then, on its own
@@ -367,7 +391,22 @@ async function announce(
   task: string,
   signal = parent.signal,
 ): Promise<Turn> {
-  const child = new Turn(parent.client, subagentId(), signal);
+  const own = new AbortController();
+  const child = new Turn(
+    parent.client,
+    subagentId(),
+    AbortSignal.any([signal, own.signal]),
+  );
+
+  claudeChildren.set(child.sessionId, async () => {
+    claudeChildren.delete(child.sessionId);
+    stoppedAlone.add(child.sessionId);
+    own.abort();
+    await report(parent, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'cancelled',
+    });
+  });
 
   await parent.send({
     sessionUpdate: 'subagent_update',
@@ -378,13 +417,16 @@ async function announce(
     state: { state: 'running' },
   });
   working?.add(child.sessionId);
-  await child.send({
-    sessionUpdate: 'session_message',
-    messageId: parent.callId('agent'),
-    senderSessionId: parent.sessionId,
-    recipientSessionId: child.sessionId,
-    content: [{ type: 'text', text: task }],
-  });
+  await alone(
+    child,
+    child.send({
+      sessionUpdate: 'session_message',
+      messageId: parent.callId('agent'),
+      senderSessionId: parent.sessionId,
+      recipientSessionId: child.sessionId,
+      content: [{ type: 'text', text: task }],
+    }),
+  );
 
   return child;
 }
@@ -401,6 +443,7 @@ async function report(
 ): Promise<void> {
   if (state.state !== 'running' && state.state !== 'requires_action') {
     working?.delete(childId);
+    claudeChildren.delete(childId);
   }
 
   await parent.client.notify('session/update', {
@@ -448,14 +491,19 @@ async function explore(
   await child.send({ sessionUpdate: 'tool_call', ...toolCall });
   await report(parent, working, child.sessionId, { state: 'requires_action' });
 
-  const answer = await child.client.request('session/request_permission', {
-    sessionId: child.sessionId,
-    toolCall,
-    options: [
-      { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
-      { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
-    ],
-  });
+  const answer = await child.client.request(
+    'session/request_permission',
+    {
+      sessionId: child.sessionId,
+      toolCall,
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    },
+    // Withdrawn when it is stopped alone, as Claude Code withdraws it.
+    { cancellationSignal: child.signal },
+  );
 
   // A request withdrawn is the turn being cancelled, whose cancel follows.
   if (answer.outcome.outcome === 'cancelled') {
@@ -883,10 +931,10 @@ export const SUBAGENTS = {
       );
 
       await Promise.all([
-        explore(turn, working, explorer),
-        review(turn, working, reviewer),
-        stopped(turn, working, tester),
-        lost(turn, working, watcher),
+        alone(explorer, explore(turn, working, explorer)),
+        alone(reviewer, review(turn, working, reviewer)),
+        alone(tester, stopped(turn, working, tester)),
+        alone(watcher, lost(turn, working, watcher)),
       ]);
       await turn.say('Each agent has ended.');
 
@@ -939,19 +987,26 @@ export const SUBAGENTS = {
         'Find where chord ends a turn on Esc.',
       );
 
-      await call(
+      await alone(
         looker,
-        'search',
-        { title: 'Search cancelled in src/session', kind: 'search' },
-        'completed',
-        'Found 3 files',
+        (async () => {
+          await call(
+            looker,
+            'search',
+            { title: 'Search cancelled in src/session', kind: 'search' },
+            'completed',
+            'Found 3 files',
+          );
+          await pause(looker.signal, SUBAGENT_AFTER_MS);
+          await looker.say(
+            'Esc ends the turn in src/session/transcript/turn.ts.',
+          );
+          await report(turn, working, looker.sessionId, {
+            state: 'idle',
+            stopReason: 'end_turn',
+          });
+        })(),
       );
-      await pause(looker.signal, SUBAGENT_AFTER_MS);
-      await looker.say('Esc ends the turn in src/session/transcript/turn.ts.');
-      await report(turn, working, looker.sessionId, {
-        state: 'idle',
-        stopReason: 'end_turn',
-      });
       await turn.say('The tests run on; I will say when they end.');
 
       return 'end_turn';
@@ -1061,16 +1116,21 @@ export const SUBAGENTS = {
         'Run bun test and report what fails.',
       );
 
-      await report(turn, working, child.sessionId, {
-        state: 'requires_action',
-      });
-      await pause(turn.signal, SUBAGENT_AFTER_MS);
-      await report(turn, working, child.sessionId, { state: 'running' });
-      await child.say('Every test passed.');
-      await report(turn, working, child.sessionId, {
-        state: 'idle',
-        stopReason: 'end_turn',
-      });
+      await alone(
+        child,
+        (async () => {
+          await report(turn, working, child.sessionId, {
+            state: 'requires_action',
+          });
+          await pause(child.signal, SUBAGENT_AFTER_MS);
+          await report(turn, working, child.sessionId, { state: 'running' });
+          await child.say('Every test passed.');
+          await report(turn, working, child.sessionId, {
+            state: 'idle',
+            stopReason: 'end_turn',
+          });
+        })(),
+      );
       await turn.say('The tests passed.');
 
       return 'end_turn';
@@ -1084,5 +1144,39 @@ export const SUBAGENTS = {
 
       throw error;
     }
+  },
+
+  // A Claude subagent that takes its own cancel back, as a later update
+  // without it does: held about 2 s with no stop of its own, then done.
+  async claudenostop(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'tester (general-purpose)',
+      'Run the test suite',
+      'Run bun test and report what fails.',
+    );
+
+    claudeChildren.delete(child.sessionId);
+    await turn.send({
+      sessionUpdate: 'subagent_update',
+      sessionId: child.sessionId,
+      capabilities: null,
+    });
+    await pause(turn.signal, SUBAGENT_AFTER_MS);
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('The tests passed.');
+
+    return 'end_turn';
   },
 } satisfies Record<string, Play>;

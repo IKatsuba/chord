@@ -91,3 +91,61 @@ test('a plan by id: entries are the live list, markdown the reply', () => {
     fold([start, other, removed('f')]).entries.map((e) => e.kind),
   ).toStrictEqual(['user']);
 });
+
+test("an approved plan shows once: a markdown plan_update takes it from the turn's mode switch that carries it", () => {
+  const PLAN = '# Route\n\n1. Read.\n2. Move.\n';
+  const update = (update: SessionUpdate, turnId = 't1'): TranscriptAction => ({
+    type: 'update',
+    turnId,
+    update,
+  });
+  const exit = (id: string, text: string, turnId?: string) =>
+    update(
+      {
+        sessionUpdate: 'tool_call',
+        toolCallId: id,
+        title: 'Approve Plan',
+        kind: 'switch_mode',
+        status: 'pending',
+        content: [{ type: 'content', content: { type: 'text', text } }],
+      },
+      turnId,
+    );
+  const approved = update({
+    sessionUpdate: 'plan_update',
+    plan: { type: 'markdown', planId: 'plan-mode', content: PLAN.trim() },
+  });
+  const start = (turnId: string): TranscriptAction => ({
+    type: 'prompt',
+    turnId,
+    text: 'plan',
+    at: 0,
+  });
+  const contents = (actions: TranscriptAction[]) =>
+    fold(actions).entries.flatMap((entry): unknown[] =>
+      entry.kind === 'tool'
+        ? [{ id: entry.call.id, content: entry.call.content }]
+        : entry.kind === 'assistant'
+          ? [{ plan: entry.text }]
+          : [],
+    );
+  const text = (value: string) => [
+    { type: 'content', content: { type: 'text', text: value } },
+  ];
+
+  expect(contents([start('t1'), exit('e1', PLAN), approved])).toStrictEqual([
+    { id: 'e1', content: [] },
+    { plan: PLAN.trim() },
+  ]);
+  // Only the latest switch of the turn, and only when its text is the plan.
+  expect(
+    contents([start('t1'), exit('e1', PLAN), exit('e2', 'Another.'), approved]),
+  ).toStrictEqual([
+    { id: 'e1', content: text(PLAN) },
+    { id: 'e2', content: text('Another.') },
+    { plan: PLAN.trim() },
+  ]);
+  expect(
+    contents([start('t0'), exit('e0', PLAN, 't0'), start('t1'), approved]),
+  ).toStrictEqual([{ id: 'e0', content: text(PLAN) }, { plan: PLAN.trim() }]);
+});

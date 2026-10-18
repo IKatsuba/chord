@@ -1,6 +1,14 @@
 import { describe, expect, test } from 'bun:test';
 import stripAnsi from 'strip-ansi';
-import { ESC, left, send, until, withWindow } from '../app/render.tsx';
+import {
+  asked,
+  CTRL_O,
+  ESC,
+  left,
+  send,
+  until,
+  withWindow,
+} from '../app/render.tsx';
 
 test('the plan is a list above the prompt while the turn runs', () =>
   withWindow(async (window) => {
@@ -134,3 +142,29 @@ describe('tester: selected plan entry identity', () => {
       ));
   }
 });
+
+test("Claude's approved plan shows once, folded and open, and a refused one stays on its call", () =>
+  withWindow(
+    async (window) => {
+      const times = (text: string) => window.frame().split(text).length - 1;
+
+      await send(window, 'claudeexitplan');
+      await asked(window);
+      expect(times('Move the routing into')).toStrictEqual(1);
+      await window.press('1');
+      await window.shows('Starting with the routing.');
+      expect(window.frame()).toContain('Exited(Plan Mode)');
+      expect(times('Move the routing into')).toStrictEqual(1);
+      await window.press(CTRL_O);
+      await window.shows('Allowed Approve Plan');
+      expect(times('Move the routing into')).toStrictEqual(1);
+      await window.press(CTRL_O);
+
+      await send(window, 'claudeexitplan');
+      await asked(window);
+      await window.press('3');
+      await window.shows('I will keep planning.');
+      expect(times('Move the routing into')).toStrictEqual(2);
+    },
+    { rows: 60, columns: 120 },
+  ));

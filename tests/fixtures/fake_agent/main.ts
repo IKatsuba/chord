@@ -285,6 +285,7 @@ const SCENARIOS = [
   'long',
   'todos',
   'exitplan',
+  'claudeexitplan',
   'lock',
   'mcp',
   'form',

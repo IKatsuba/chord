@@ -168,3 +168,34 @@ test("Claude's approved plan shows once, folded and open, and a refused one stay
     },
     { rows: 60, columns: 120 },
   ));
+
+describe('CHD-432 tester: approved and rejected plan widths', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    for (const [key, answer] of [
+      ['1', 'Starting with the routing.'],
+      ['3', 'I will keep planning.'],
+    ] as const) {
+      test(`${key === '1' ? 'approved' : 'rejected'} plan remains once folded and open at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await send(window, 'claudeexitplan');
+            await asked(window);
+            await window.press(key);
+            await window.shows(answer);
+            expect(
+              window.frame().split('Move the routing into').length - 1,
+            ).toBe(1);
+            await window.press(CTRL_O);
+            await window.shows(answer);
+            expect(
+              window.frame().split('Move the routing into').length - 1,
+            ).toBe(1);
+          },
+          { columns, rows },
+        ));
+    }
+  }
+});

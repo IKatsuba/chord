@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { STEP_MS, STOP_GATE } from '../options.ts';
 import { cwds } from '../sessions.ts';
 import { GATE } from './agents.ts';
-import { pause, type Play, Turn, type Update } from '../turn.ts';
+import { lifetime, pause, type Play, Turn, type Update } from '../turn.ts';
 
 /**
  * How long a subagent takes between steps of its work: 40 steps, a fifth of a
@@ -383,7 +383,7 @@ async function stopGate(parent: Turn, id: string): Promise<void> {
   await appendFile(join(gate, STOP_GATE_STOPS), `${id}\n`);
 
   while (!existsSync(join(gate, STOP_GATE_RELEASE))) {
-    await new Promise((resolve) => setTimeout(resolve, STEP_MS * 2));
+    await pause(lifetime.signal, STEP_MS * 2);
   }
 }
 
@@ -435,7 +435,7 @@ async function announce(
 
   claudeChildren.set(child.sessionId, async () => {
     await stopGate(parent, child.sessionId);
-    await new Promise((resolve) => setTimeout(resolve, stopAfterMs));
+    await pause(lifetime.signal, stopAfterMs);
 
     if (!atWork.has(child.sessionId)) {
       return;
@@ -704,7 +704,7 @@ async function background(
       'tester (general-purpose)',
       'Run the test suite',
       'Run bun test in the background and report what fails.',
-      new AbortController().signal,
+      lifetime.signal,
       stopAfterMs,
     );
 

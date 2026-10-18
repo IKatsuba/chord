@@ -2122,3 +2122,42 @@ test("--stop-gate holds a Claude subagent's stop alone until the test lets it go
     await rm(dir, { recursive: true });
   }
 });
+
+test('a stop held by --stop-gate does not keep the fake alive once the session closes', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-subagents-'));
+  const session = await openSession({
+    agent: 'fake',
+    cwd: dir,
+    agentCommand: fakeAgentCommand(undefined, '--stop-gate'),
+  });
+
+  try {
+    let tester: string | undefined;
+
+    await run(session, 'claudebackground', {
+      onUpdate: (updates) => {
+        const first = updates.find(
+          (update) => update.sessionUpdate === 'subagent_update',
+        );
+
+        if (
+          tester === undefined &&
+          first?.sessionUpdate === 'subagent_update'
+        ) {
+          tester = first.sessionId;
+
+          void session.stopSubagent(tester);
+        }
+      },
+    });
+
+    const started = Date.now();
+
+    await session.close();
+    // Within the first grace after stdin ends: it went on its own, not on
+    // the SIGTERM it ignores or the SIGKILL after.
+    expect(Date.now() - started).toBeLessThan(1500);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});

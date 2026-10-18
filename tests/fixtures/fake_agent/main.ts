@@ -247,6 +247,7 @@ import {
 } from './sessions.ts';
 import {
   type Client,
+  lifetime,
   loadMarks,
   type Play,
   Turn,
@@ -1059,3 +1060,5 @@ await connection.closed;
 for (const turn of turns.values()) {
   turn.abort();
 }
+
+lifetime.abort();

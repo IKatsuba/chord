@@ -1058,6 +1058,12 @@ export class Conversation {
   #unhold(): void {
     this.#rouse();
 
+    // A request between turns still open holds them, whatever else ended:
+    // they go once it is answered (CHD-158).
+    if (this.#waitsBetween()) {
+      return;
+    }
+
     this.#queued = this.#queued.map((queued) => {
       if (!queued.afterAnswer) {
         return queued;

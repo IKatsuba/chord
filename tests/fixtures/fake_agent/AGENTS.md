@@ -15,10 +15,12 @@
   `overlapask`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
   `shell.ts` (`shell`,
-  `shellcut`, `bash`), `compaction.ts` (`compact`, `codexcompact`,
-  `compactfail`), `modes.ts` (`status`, `exitplan`, `mode`, `lock`),
+  `shellcut`, `bash`, `bashcut`), `compaction.ts` (`compact`, `codexcompact`,
+  `compactfail`), `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`,
+  `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
-  `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`, `subagentcall`),
+  `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`, `subagentcall`,
+  `claudesubagents`, `claudebackground`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `tasklong`, `tasktwo`, `taskwait`) and
@@ -33,10 +35,13 @@
   `longcommand`, `overlap`, `overlapfail`, `overlapask`, `subagentcall`,
   `cutcalls`, `cutcallsback`, `tasklong`, `tasktwo`, `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `plan`, `proposal`,
-  `shell`, `shellcut`, `bash`, `compact`, `codexcompact`, `compactfail`, `status`,
-  `error`, `slow`, `long`, `todos`, `exitplan`, `lock`, `mcp`, `form`, `link`,
+  `shell`, `shellcut`, `bash`, `bashcut`, `compact`, `codexcompact`,
+  `compactfail`, `status`,
+  `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
+  `mcp`, `form`, `link`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
-  `subagent`, `subagentupdate`, `subagentstates`, `chordtools`, `codexchordcalls`)
+  `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
+  `claudebackground`, `chordtools`, `codexchordcalls`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second;
   `longresults` plays an MCP result, command output, an edit and terminal
@@ -144,6 +149,9 @@
   Claude's does: to a client that asks for terminal output in `_meta`, the
   terminal up front and the whole output, then the exit, once it is done
   about half a second later, and to any other a `console` code block;
+  `bashcut` leaves a command running and a call unstarted for about 10 s;
+  Esc ends both failed with Claude's messages and no terminal exit code.
+  Left alone, the turn ends and the command fails for a missing result;
   `compact` compacts as Claude's adapter does, to a client that declares
   `session.compaction`: a `compaction_update` in progress, its summary in
   chunks over about 2 s, then completed (cancelled when its turn is);
@@ -154,9 +162,11 @@
   `status` moves to plan mode by `current_mode_update` alone, reports a cost
   and answers with token usage of its own, and `exitplan`
   leaves a mode for the default as Claude does once a plan is approved;
+  `claudeexitplan` asks permission for a plan as Claude 0.93 does, then
+  sends it as a markdown plan on approval, or keeps planning on rejection;
   `lock` moves to plan the same way and refuses every mode asked for after;
   `mode` says the mode the turn runs in;
-  `subagent` runs subagents as Claude's and Codex's adapters send them to a
+  `subagent` runs subagents in Codex's draft form, sent to a
   client that declares `clientCapabilities.subagents` (`subagent_spawned`,
   `subagent_state_update`, each subagent's work under its own session id,
   opaque and never one an earlier fake process gave, as after a resume):
@@ -169,7 +179,14 @@
   `subagent` does not: the parent's own plan beside a lone subagent with a
   plan of its own and five calls, held about 2 s, then a pair spawned back
   to back that the parent waits on with a call of its own, as Codex's
-  adapter does, both finishing. `--step-ms <ms>` or
+  adapter does, both finishing;
+  `claudesubagents` sends four in Claude 0.93's ACP form, `subagent_update`,
+  with cancel capabilities and whole tasks as `session_message`: one asks
+  permission (`requires_action`) and ends idle `end_turn`, one `error`,
+  one `cancelled`, one `unknown`. Esc ends those still working idle
+  `cancelled`; `claudebackground` starts a foreground and a background
+  subagent together; the background one runs about 4 s past the turn and
+  past Esc, which stops only the foreground one. `--step-ms <ms>` or
   `CHORD_FAKE_STEP_MS` sets the pace of every scenario (5 ms a step by
   default). Every
   session offers two models, `Fake Large with a 1M context window` (in use

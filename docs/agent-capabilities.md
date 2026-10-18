@@ -2609,7 +2609,7 @@ ids are not in genai-prices, so no cost is estimated (CHD-381), and Copilot
 bills premium requests, which no token price models. Ignored: titles,
 `github.com/copilot/sessionEvent`, subagent ids, `terminal-auth`. Whether
 Copilot's questions reach chord as forms, now that chord declares
-`elicitation.form`, is open. README.md still says `GitHub Copilot`.
+`elicitation.form`, is open.
 
 **Sources.**
 

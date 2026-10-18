@@ -966,4 +966,77 @@ export const SUBAGENTS = {
       throw error;
     }
   },
+
+  // A Claude subagent its parent messages again once it is done, as
+  // SendMessage does: the message on its session, from the parent, then it
+  // runs once more and is done again.
+  async claudemessage(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+
+    try {
+      const explorer = await announce(
+        turn,
+        working,
+        'explorer (Explore)',
+        'Find the session layer',
+        'Find where chord hands each session/update to its listeners.\n\n' +
+          'Report the file that owns the routing, with line numbers.',
+      );
+
+      await call(
+        explorer,
+        'read',
+        {
+          title: 'Read src/acp/connection.ts',
+          kind: 'read',
+          locations: [{ path: 'src/acp/connection.ts' }],
+        },
+        'completed',
+      );
+      await explorer.say('Routing lives in src/acp/connection.ts.');
+      await report(turn, working, explorer.sessionId, {
+        state: 'idle',
+        stopReason: 'end_turn',
+      });
+      await turn.say('I will ask it for the tests too. ');
+      await explorer.send({
+        sessionUpdate: 'session_message',
+        messageId: turn.callId('send'),
+        senderSessionId: turn.sessionId,
+        recipientSessionId: explorer.sessionId,
+        content: [{ type: 'text', text: 'Now find the tests that cover it.' }],
+      });
+      await report(turn, working, explorer.sessionId, { state: 'running' });
+      await call(
+        explorer,
+        'search',
+        { title: 'Search connection in tests/acp', kind: 'search' },
+        'completed',
+        'Found 2 files',
+      );
+      await explorer.say('tests/acp/connection_test.ts covers it.');
+      await report(turn, working, explorer.sessionId, {
+        state: 'idle',
+        stopReason: 'end_turn',
+      });
+      await turn.say('Both found.');
+
+      return 'end_turn';
+    } catch (error) {
+      for (const id of [...working].toReversed()) {
+        await report(turn, working, id, {
+          state: 'idle',
+          stopReason: 'cancelled',
+        });
+      }
+
+      throw error;
+    }
+  },
 } satisfies Record<string, Play>;

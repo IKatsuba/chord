@@ -253,9 +253,12 @@ function EndNote({ subagent }: { subagent: Subagent }) {
   ) : null;
 }
 
-/** What a subagent was asked to do, in full, under its `⎿`. */
+/**
+ * What a subagent was asked to do, in full, under its `⎿`: the whole task its
+ * first message brought, else its description.
+ */
 function Task({ subagent }: { subagent: Subagent }) {
-  const task = subagent.description?.trim();
+  const task = (subagent.prompt ?? subagent.description)?.trim();
   const selectable = useSelectable();
 
   return task ? (

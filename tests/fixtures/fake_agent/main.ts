@@ -119,7 +119,9 @@
  * ends idle `end_turn`, one `error`, one `cancelled`, one `unknown`; a
  * cancel ends each still at work idle `cancelled`. `claudebackground` runs
  * one the turn waits on beside one in the background, which goes on about
- * 4 s, past the turn and past a cancel that stops only the first. To any
+ * 4 s, past the turn and past a cancel that stops only the first.
+ * `claudemessage` messages a Claude subagent again once it is done, as
+ * SendMessage does, and it runs once more. To any
  * other client each
  * says so in a line of text.
  *
@@ -307,6 +309,7 @@ const SCENARIOS = [
   'subagentupdate',
   'claudesubagents',
   'claudebackground',
+  'claudemessage',
   'subagentstates',
   'chordtools',
   'cutcalls',

@@ -101,6 +101,26 @@ test("Claude's subagents read as each ended, a failure's message and an untracke
     { rows: 80, columns: 120 },
   ));
 
+test("ctrl+o shows a subagent's whole task, and a later message among its work, from its agent's runtime", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudemessage');
+      await window.shows('Both found.');
+      expect(window.frame()).not.toContain('Report the file');
+      await window.press(CTRL_O);
+      await window.shows(
+        'Report the file that owns the routing, with line numbers.',
+      );
+
+      const frame = window.frame();
+
+      expect(frame).not.toContain('Find the session layer');
+      expect(frame).toContain('← from fake');
+      expect(frame).toContain('⎿  Now find the tests that cover it.');
+    },
+    { rows: 80, columns: 120 },
+  ));
+
 test('Esc leaves a subagent that can be cancelled alone at work until its agent says it ended', () =>
   withWindow(
     async (window) => {

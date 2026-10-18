@@ -296,6 +296,13 @@ export interface Subagent {
   readonly title?: string;
   /** What it was asked to do, in full, as the parent described it. */
   readonly description?: string;
+  /**
+   * Its whole task, from the first `session_message` it got, where its
+   * description is only the short one; and that message's id, which a later
+   * upsert of it names.
+   */
+  readonly prompt?: string;
+  readonly promptId?: string;
   readonly state: SubagentState;
   /**
    * It announced it can be cancelled alone (ACP's `capabilities.cancel`):
@@ -341,6 +348,13 @@ export type Entry =
       readonly turnId: string;
       readonly from: MessageFrom;
       readonly text: string;
+      /** A subagent's `session_message` id, which a later upsert names. */
+      readonly messageId?: string;
+      /**
+       * Sent by the transcript's own agent, which its runtime names on screen
+       * in place of `from`.
+       */
+      readonly byAgent?: true;
     }
   | {
       readonly kind: 'assistant' | 'thought';

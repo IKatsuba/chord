@@ -49,10 +49,85 @@ export function childUpdate(
   }
 
   const entries = changeSubagent(state.entries, subagentId, (subagent) =>
-    worked(subagent, turnId, update, at, applyUpdate),
+    update.sessionUpdate === 'session_message'
+      ? messaged(subagent, turnId, update, state.entries)
+      : worked(subagent, turnId, update, at, applyUpdate),
   );
 
   return entries === state.entries ? state : { ...state, entries };
+}
+
+/**
+ * `subagent` with a `session_message` it got upserted by its id: the first
+ * is its whole task, and each later one, as a SendMessage sends it, a message
+ * among its work where it came. Content left out keeps what it had; `null`
+ * or none clears it, the task back to its description, the message gone.
+ */
+function messaged(
+  subagent: Subagent,
+  turnId: string,
+  update: Extract<SessionUpdate, { sessionUpdate: 'session_message' }>,
+  around: readonly Entry[],
+): Subagent {
+  const { messageId, content, senderSessionId } = update;
+  const text =
+    content === undefined
+      ? undefined
+      : (content ?? [])
+          .flatMap((block) => (block.type === 'text' ? [block.text] : []))
+          .join('');
+
+  if (subagent.promptId === undefined || subagent.promptId === messageId) {
+    const { prompt: before, ...rest } = subagent;
+    const prompt = text === undefined ? before : text;
+
+    return {
+      ...rest,
+      promptId: messageId,
+      ...(prompt === undefined || prompt === '' ? {} : { prompt }),
+    };
+  }
+
+  const at = subagent.entries.findIndex(
+    (entry) => entry.kind === 'message' && entry.messageId === messageId,
+  );
+  const was = at < 0 ? undefined : subagent.entries[at];
+
+  if (text === undefined) {
+    return subagent;
+  }
+
+  if (text === '') {
+    return at < 0
+      ? subagent
+      : { ...subagent, entries: subagent.entries.toSpliced(at, 1) };
+  }
+
+  // A sender left out keeps the one known; one that is a subagent here is
+  // named as its block is, and any other is the transcript's own agent.
+  const sender =
+    senderSessionId === undefined || senderSessionId === null
+      ? undefined
+      : findSubagent(around, senderSessionId);
+  const from: Pick<
+    Extract<Entry, { kind: 'message' }>,
+    'from' | 'byAgent'
+  > = sender !== undefined
+    ? { from: { name: `Agent(${sender.title ?? ''})` } }
+    : was?.kind === 'message' &&
+        (senderSessionId === undefined || senderSessionId === null)
+      ? {
+          from: was.from,
+          ...(was.byAgent === undefined ? {} : { byAgent: was.byAgent }),
+        }
+      : { from: { name: '' }, byAgent: true };
+  const entry: Entry = { kind: 'message', turnId, ...from, text, messageId };
+
+  return {
+    ...subagent,
+    entries:
+      at < 0 ? [...subagent.entries, entry] : subagent.entries.with(at, entry),
+  };
 }
 
 /**

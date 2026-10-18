@@ -358,6 +358,11 @@ function agentStatus(
 
   switch (subagent.state) {
     case 'running': {
+      // Stopped by the person, it reads so while its request stays up.
+      if (stopping) {
+        return { group: 'running', stopping: true };
+      }
+
       const asked = taskAsking(subagent.id, transcript);
 
       if (asked !== undefined) {
@@ -372,9 +377,7 @@ function agentStatus(
         };
       }
 
-      return stopping
-        ? { group: 'running', stopping: true }
-        : { group: 'running' };
+      return { group: 'running' };
     }
     case 'completed':
       return { group: 'done', endedAt };

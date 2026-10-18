@@ -884,3 +884,39 @@ describe('agent items from the fake', () => {
     );
   });
 });
+
+test('a stopped agent reads stopping while it still asks, until its agent says it ended', () => {
+  const stopping = new Set(['a']);
+  const asked = (waits: Partial<Transcript>, more: Partial<Subagent> = {}) =>
+    backgroundItems([
+      agent(1, {
+        stopping,
+        transcript: withEntries([claude('a', 10, more)], waits),
+      }),
+    ])[0]?.status;
+  const form = {
+    id: 'e',
+    subagentId: 'a',
+    at: 22,
+  } as unknown as Transcript['asking'][number];
+  const permission = {
+    turn: {
+      status: 'awaiting_permission',
+      turnId: 't1',
+      since: 5,
+      permissions: [
+        { id: 'p', subagentId: 'a', toolCallId: 'c', options: [], at: 21 },
+      ],
+    },
+  } as unknown as Partial<Transcript>;
+  const STOPPING = { group: 'running', stopping: true } as const;
+
+  expect(asked({}, { waiting: { since: 20 } })).toStrictEqual(STOPPING);
+  expect(asked(permission)).toStrictEqual(STOPPING);
+  expect(asked({ asking: [form] })).toStrictEqual(STOPPING);
+  // Its agent's end wins over the key.
+  expect(asked({}, { state: 'completed', endedAt: 30 })).toStrictEqual({
+    group: 'done',
+    endedAt: 30,
+  });
+});

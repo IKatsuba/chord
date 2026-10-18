@@ -1014,6 +1014,11 @@ export class Conversation {
    * must not take that for its own (CHD-158).
    */
   async #answeredBetween(session: Session): Promise<void> {
+    // Another between turns, a task's too, still waits: so does the queue.
+    if (this.#waitsBetween()) {
+      return;
+    }
+
     this.#unhold();
 
     if (this.#queued.length === 0) {

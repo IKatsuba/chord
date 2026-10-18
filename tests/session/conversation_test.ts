@@ -3124,3 +3124,48 @@ test("a task's request with no turn of the parent's running holds the parent's q
   expect(prompts()[0]).toStrictEqual('text');
   await parent.close();
 });
+
+test('with two requests between turns, the queue says it waits and holds until the last is answered', async () => {
+  const { parent, events } = await parentUp();
+  const a = adoptTask(parent, 'task-a');
+  const b = adoptTask(parent, 'task-b');
+  const prompts = () =>
+    events.flatMap((event) => (event.type === 'prompt' ? [event.text] : []));
+  const marks = () =>
+    events.flatMap((event) =>
+      event.type === 'queued' ? [event.afterAnswer === true] : [],
+    );
+  const settled = (task: TaskAgent, id: string) =>
+    task.heard({
+      type: 'permission_settled',
+      turnId: 'child-turn',
+      id,
+      answer: { type: 'chosen', optionId: 'allow' },
+    });
+
+  for (const [{ task }, id] of [
+    [a, 'request-a'],
+    [b, 'request-b'],
+  ] as const) {
+    task.heard({ type: 'connected', sessionId: id });
+    task.heard({
+      type: 'permission_requested',
+      turnId: 'child-turn',
+      permission: { id, options: [] },
+    });
+  }
+
+  parent.send('text');
+  settled(a.task, 'request-a');
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  // One still waits: the prompt still says so, and has not gone.
+  expect(marks()).toStrictEqual([true]);
+  expect(prompts()).toStrictEqual([]);
+
+  settled(b.task, 'request-b');
+  await until(() => prompts().length > 0);
+  expect(marks()).toStrictEqual([true, false]);
+  expect(prompts()).toStrictEqual(['text']);
+  await parent.close();
+});

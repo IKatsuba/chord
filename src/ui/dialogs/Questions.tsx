@@ -14,7 +14,7 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { Gutter } from '../transcript/tools/Tool.tsx';
 import { formRowLimit } from './Form.tsx';
-import { AttendHint } from './Permission.tsx';
+import { AttendHint, BETWEEN } from './Permission.tsx';
 import {
   answered,
   answerText,
@@ -58,6 +58,7 @@ export function QuestionBox({
   width,
   active,
   held = false,
+  between = false,
   now = Date.now,
   onFill,
   onAnswer,
@@ -65,6 +66,11 @@ export function QuestionBox({
   wait: Extract<ElicitationWait, { mode: 'form' }>;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
   held?: boolean;
+  /**
+   * Asked with no turn running: its heading names `agent` as who asks and
+   * says so, dim, wrapping rather than cut (CHD-158).
+   */
+  between?: boolean;
   questions: Questions;
   /** The box as it was left, when it was on screen before. */
   filled?: AskState | undefined;
@@ -129,20 +135,22 @@ export function QuestionBox({
   const left = expiresIn(questions, wait.at ?? shownAt, time);
   const problems = blockers(questions, wait.schema, state);
   const heading = askHeading(agent, questions);
+  // Held, no row reads as where the keys are, as they are not here.
+  const shown = held ? { ...state, row: -1 } : state;
   const countdown =
     left === undefined ? undefined : `answers itself in ${clock(left)}`;
   const body =
     state.step < questions.questions.length ? (
       <QuestionStep
         question={questions.questions[state.step]!}
-        state={state}
+        state={shown}
         width={inner}
         limit={formRowLimit(windowRows) - BOX_CHROME}
       />
     ) : (
       <SubmitStep
         questions={questions}
-        state={state}
+        state={shown}
         problems={problems}
         agent={agent}
       />
@@ -157,12 +165,13 @@ export function QuestionBox({
     >
       <box flexDirection='row'>
         <text
-          {...CUT}
+          {...(between ? TEXT : CUT)}
           flexGrow={1}
           {...fg(colours.permission)}
           attributes={BOLD}
         >
           <Ansi text={heading} />
+          {between && <span attributes={DIM}>{BETWEEN}</span>}
         </text>
         {countdown !== undefined && (
           <text
@@ -543,11 +552,13 @@ function SubmitStep({
       </box>
       <box flexDirection='row'>
         <Gutter {...paint(colours.permission)}>
-          {!sendable || state.row === 1 ? '❯' : ' '}
+          {(!sendable && state.row >= 0) || state.row === 1 ? '❯' : ' '}
         </Gutter>
         <text
           {...TEXT}
-          {...(!sendable || state.row === 1 ? fg(colours.permission) : {})}
+          {...((!sendable && state.row >= 0) || state.row === 1
+            ? fg(colours.permission)
+            : {})}
         >
           2. Skip these questions
         </text>

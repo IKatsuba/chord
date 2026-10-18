@@ -383,7 +383,7 @@ function SaveBox({
 }
 
 /** Said dim after who asks a request that came with no turn running. */
-const BETWEEN = ' · between turns';
+export const BETWEEN = ' · between turns';
 
 /**
  * A request between turns' last line until the person takes the keys into

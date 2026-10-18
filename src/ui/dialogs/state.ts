@@ -2,11 +2,15 @@
  * What the agent asks the person, as the window holds it: the form being
  * filled in, and whether a permission, a form or a link waits on them.
  */
+import { subagentPath } from '../../session/subagents.ts';
 import type {
   ElicitationWait,
+  Entry,
   Transcript,
 } from '../../session/transcript/types.ts';
+import { askerName } from '../transcript/agents/subagents.ts';
 import { askedPermission } from './permission.ts';
+import { hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import type { FormState } from './form.ts';
 import type { AskState } from './questions.ts';
 
@@ -131,25 +135,52 @@ export function betweenAsked(transcript: Transcript): string | undefined {
     : undefined;
 }
 
+/** What decides whether a request is held: the session's and the keys. */
+type Holding = DialogsState & {
+  readonly transcript: Transcript;
+  readonly keys: Keymap;
+};
+
 /**
  * Whether the request on screen came between turns and the person has not
  * taken the keys into it: drawn without them, the prompt keeping its draft
- * and its keys, so a key typed for the prompt never answers it.
+ * and its keys, so a key typed for the prompt never answers it. With no key
+ * to take them in, `session:attention` unbound, it has them at once, as in
+ * a turn.
  */
-export function heldBack(
-  state: DialogsState & { readonly transcript: Transcript },
-): boolean {
+export function heldBack(state: Holding): boolean {
   const id = betweenAsked(state.transcript);
 
-  return id !== undefined && id !== state.attended;
+  return (
+    id !== undefined &&
+    id !== state.attended &&
+    hintKey(state.keys, 'session:attention') !== undefined
+  );
 }
 
 /**
  * Whether a permission, form or link on screen has the keys: asked in a
  * turn, or between turns once the person took the keys into it.
  */
-export function asksWithKeys(
-  state: DialogsState & { readonly transcript: Transcript },
-): boolean {
+export function asksWithKeys(state: Holding): boolean {
   return asksPerson(state.transcript) && !heldBack(state);
+}
+
+/**
+ * Who a form or link between turns names as asking: the subagent `id`'s
+ * way down from the session, or a subagent of `owner` when chord drew none
+ * of it; `owner`, the session's agent, when no subagent asks (CHD-158).
+ */
+export function betweenAsker(
+  entries: readonly Entry[],
+  id: string | undefined,
+  owner: string,
+): string {
+  if (id === undefined) {
+    return owner;
+  }
+
+  const path = subagentPath(entries, id);
+
+  return path.length > 0 ? askerName(path) : `a subagent of ${owner}`;
 }

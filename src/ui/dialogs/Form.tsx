@@ -26,7 +26,7 @@ import {
   type ValueView,
 } from './form.ts';
 import { answeredQuestions, askedHeaders } from './questions.ts';
-import { AttendHint } from './Permission.tsx';
+import { AttendHint, BETWEEN } from './Permission.tsx';
 
 /** Between the label column and the values. */
 export const FORM_GAP = 2;
@@ -217,10 +217,16 @@ export function ElicitationForm({
   width,
   active,
   held = false,
+  between = false,
   onFill,
   onAnswer,
 }: {
   wait: Extract<ElicitationWait, { mode: 'form' }>;
+  /**
+   * Asked with no turn running: its heading names `agent` as who asks and
+   * says so, dim, wrapping rather than cut (CHD-158).
+   */
+  between?: boolean;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
   held?: boolean;
   /**
@@ -270,6 +276,9 @@ export function ElicitationForm({
   );
   const valueAt = FORM_MARKS + labelWidth + FORM_GAP;
   const keys = rowKeys(rows);
+  // Held, nothing reads as where the keys are, as they are not here.
+  const shown = held ? rows.map(unmarked) : rows;
+  const on = held ? undefined : form.focus.on;
   const fix = toFix(form);
 
   return (
@@ -279,8 +288,13 @@ export function ElicitationForm({
       marginTop={1}
       flexShrink={0}
     >
-      <text {...CUT} {...fg(colours.permission)} attributes={BOLD}>
+      <text
+        {...(between ? TEXT : CUT)}
+        {...fg(colours.permission)}
+        attributes={BOLD}
+      >
         <Ansi text={heading} />
+        {between && <span attributes={DIM}>{BETWEEN}</span>}
       </text>
       {message.map((line, index) => (
         <text key={index} {...TEXT}>
@@ -293,7 +307,7 @@ export function ElicitationForm({
         </text>
       )}
       <box marginTop={1}>
-        {rows.map((row, index) => (
+        {shown.map((row, index) => (
           <FormLine
             key={keys[index]}
             row={row}
@@ -304,23 +318,20 @@ export function ElicitationForm({
       </box>
       <box flexDirection='row' marginTop={rows.length > 0 ? 1 : 0}>
         <Gutter {...paint(colours.permission)}>
-          {form.focus.on === 'accept' ? '❯' : ' '}
+          {on === 'accept' ? '❯' : ' '}
         </Gutter>
         <text
           {...TEXT}
-          attributes={form.focus.on === 'accept' ? BOLD : 0}
-          {...(form.focus.on === 'accept' ? fg(colours.success) : {})}
+          attributes={on === 'accept' ? BOLD : 0}
+          {...(on === 'accept' ? fg(colours.success) : {})}
         >
           Accept
         </text>
         <box width={1} flexShrink={1} />
         <Gutter {...paint(colours.permission)}>
-          {form.focus.on === 'decline' ? '❯' : ' '}
+          {on === 'decline' ? '❯' : ' '}
         </Gutter>
-        <text
-          {...TEXT}
-          {...(form.focus.on === 'decline' ? fg(colours.error) : {})}
-        >
+        <text {...TEXT} {...(on === 'decline' ? fg(colours.error) : {})}>
           Decline
         </text>
         {fix > 0 && (
@@ -340,6 +351,18 @@ export function ElicitationForm({
       )}
     </box>
   );
+}
+
+/** `row` as drawn while the keys are elsewhere: no `❯`, no highlight. */
+function unmarked(row: FormRow): FormRow {
+  switch (row.kind) {
+    case 'field':
+      return { ...row, focused: false };
+    case 'option':
+      return { ...row, highlighted: false };
+    default:
+      return row;
+  }
 }
 
 /** The `❯` and status columns before a field's label. */

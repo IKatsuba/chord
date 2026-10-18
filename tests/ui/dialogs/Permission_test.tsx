@@ -736,7 +736,9 @@ describe('a request between turns (CHD-158)', () => {
       await window.press('1');
 
       // The form after it waits the same way, above the prompt.
-      await window.shows('fake asks for input');
+      await window.shows(
+        'Agent(tester (general-purpose)) asks for input · between turns',
+      );
 
       frame = window.frame();
 
@@ -761,6 +763,47 @@ describe('a request between turns (CHD-158)', () => {
       await window.shows('Permission: deny.');
       expect(window.frame()).not.toContain('between turns');
     }));
+
+  test('a held form names who asks and shows no ❯ until ctrl+x a', () =>
+    withWindow(async (window) => {
+      await send(window, 'claudebetween');
+      await window.shows('ctrl+x a to answer');
+      await leader(window, 'a');
+      await window.press('1');
+      await window.shows(
+        'Agent(tester (general-purpose)) asks for input · between turns',
+      );
+
+      const held = window.frame();
+
+      expect(held).toContain('ctrl+x a to answer');
+      expect(held).not.toContain('❯');
+      await leader(window, 'a');
+      await window.shows('❯   Suite');
+      await window.press(ESC);
+      await window.shows('⏺ fake asked: Which suite should run next?');
+    }));
+
+  test('with session:attention unbound, the box takes the keys at once, as in a turn', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'mainbetween');
+        await window.shows('main asks · between turns');
+        await window.shows('❯ 1. Allow');
+
+        const frame = window.frame();
+
+        expect(frame).toContain('Esc to reject');
+        expect(frame).not.toContain('to answer');
+        await window.press('2');
+        await window.shows('Permission: deny.');
+      },
+      {
+        keybindings: JSON.stringify({
+          bindings: [{ context: 'Global', bindings: { 'ctrl+x a': null } }],
+        }),
+      },
+    ));
 
   test('the asker row wraps rather than cut at a narrow width', () =>
     withWindow(

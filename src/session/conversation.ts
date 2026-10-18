@@ -2235,6 +2235,10 @@ export class Conversation {
 
     const { id } = request;
     const between = this.#turn === undefined;
+    const asker =
+      request.sessionId !== undefined && request.sessionId !== session.id
+        ? request.sessionId
+        : undefined;
     const turnId = this.#stamp();
     const askedAt = this.#now();
     const withdrawn = () => {
@@ -2259,6 +2263,7 @@ export class Conversation {
         ...request.wait,
         at: askedAt,
         ...(between && { between }),
+        ...(between && asker !== undefined && { asker }),
       },
     });
     request.signal.addEventListener('abort', withdrawn, { once: true });

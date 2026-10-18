@@ -6,7 +6,7 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { linkHost } from './form.ts';
 import type { Choice } from './permission.ts';
-import { AttendHint } from './Permission.tsx';
+import { AttendHint, BETWEEN } from './Permission.tsx';
 
 /**
  * A link the agent asks the person to open, in the permission prompt's
@@ -18,9 +18,15 @@ export function LinkPrompt({
   agent,
   active,
   held = false,
+  between = false,
   onAnswer,
 }: {
   wait: Extract<ElicitationWait, { mode: 'url' }>;
+  /**
+   * Asked with no turn running: its heading names `agent` as who asks and
+   * says so, dim, wrapping rather than cut (CHD-158).
+   */
+  between?: boolean;
   agent: string;
   active: boolean;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
@@ -54,8 +60,13 @@ export function LinkPrompt({
       marginTop={1}
       flexShrink={0}
     >
-      <text {...CUT} {...fg(colours.permission)} attributes={BOLD}>
+      <text
+        {...(between ? TEXT : CUT)}
+        {...fg(colours.permission)}
+        attributes={BOLD}
+      >
         {`${agent} asks you to open a link`}
+        {between && <span attributes={DIM}>{BETWEEN}</span>}
       </text>
       <text {...TEXT}>
         <Ansi text={wait.message} />

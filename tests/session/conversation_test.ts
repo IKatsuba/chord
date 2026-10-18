@@ -2776,6 +2776,8 @@ describe('a request with no turn running (CHD-158)', () => {
 
       assert(form?.type === 'elicitation_requested');
       expect(form.elicitation.between).toBeTrue();
+      // Asked by the subagent, which the box names.
+      expect(form.elicitation.asker).toStrictEqual(asked.permission.subagentId);
       conversation.answer(form.elicitation.id, { action: 'decline' });
       await until(() =>
         saidIn(events).includes('Write allowed; form decline.'),

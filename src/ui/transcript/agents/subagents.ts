@@ -498,6 +498,14 @@ export interface AskerPiece {
  * rather than cut it (CHD-158). None when the session's own agent asks: in
  * a turn, the missing row is how its requests differ.
  */
+/** `askerRow`'s text without its `asks`: who asks, by the way down. */
+export function askerName(path: readonly Subagent[]): string {
+  return askerRow(path)
+    .slice(0, -1)
+    .map((piece) => piece.text)
+    .join('');
+}
+
 export function askerRow(path: readonly Subagent[]): AskerPiece[] {
   if (path.length === 0) {
     return [];

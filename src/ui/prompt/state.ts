@@ -7,6 +7,7 @@ import { shellContext } from '../../session/context.ts';
 import type { ConversationEvent } from '../../session/conversation.ts';
 import type { ShellRun, Transcript } from '../../session/transcript/types.ts';
 import { asksWithKeys } from '../dialogs/state.ts';
+import type { Keymap } from '../shortcuts/bindings.ts';
 import {
   agentQuery,
   type CommandItem,
@@ -429,6 +430,10 @@ interface Said {
  */
 interface Open extends Said {
   readonly connection: { readonly status: string };
+  /** The keys, by which a request between turns is held or not. */
+  readonly keys: Keymap;
+  /** The request between turns the keys were taken into, if one was. */
+  readonly attended?: string;
 }
 
 /** The shell run still going, if there is one; one runs at a time. */

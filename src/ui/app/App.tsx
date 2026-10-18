@@ -57,7 +57,12 @@ import {
   reduceWindowed,
   windowed,
 } from './state.ts';
-import { askedInput, betweenAsked, heldBack } from '../dialogs/state.ts';
+import {
+  askedInput,
+  betweenAsked,
+  betweenAsker,
+  heldBack,
+} from '../dialogs/state.ts';
 import {
   configOption,
   configPickerShown,
@@ -802,6 +807,18 @@ export function App({
   // A form or link in the prompt's place; one asked between turns is drawn
   // above the prompt instead, without the keys, until the person takes them
   // into it (CHD-158).
+  // A form or link between turns names who asks, as the box does.
+  const inputBetween =
+    inputAsked !== undefined &&
+    betweenAsked(state.transcript) === inputAsked.id;
+  const inputAgent =
+    inputAsked === undefined || !inputBetween
+      ? frontAgent
+      : betweenAsker(
+          state.transcript.entries,
+          inputAsked.subagentId ?? inputAsked.asker,
+          childShown?.name ?? 'main',
+        );
   const inputDialog =
     inputAsked?.mode === 'form' &&
     inputAsked.questions !== undefined &&
@@ -815,7 +832,8 @@ export function App({
             ? state.answering.state
             : undefined
         }
-        agent={frontAgent}
+        agent={inputAgent}
+        between={inputBetween}
         windowRows={rows}
         width={columns}
         active={listening && !state.agentsFocus && !held}
@@ -836,7 +854,8 @@ export function App({
         filled={
           state.filling?.id === inputAsked.id ? state.filling.form : undefined
         }
-        agent={frontAgent}
+        agent={inputAgent}
+        between={inputBetween}
         windowRows={rows}
         width={columns}
         active={listening && !state.agentsFocus && !held}
@@ -850,7 +869,8 @@ export function App({
       <LinkPrompt
         key={inputAsked.id}
         wait={inputAsked}
-        agent={frontAgent}
+        agent={inputAgent}
+        between={inputBetween}
         active={listening && !state.agentsFocus && !held}
         held={held}
         onAnswer={(answer) =>

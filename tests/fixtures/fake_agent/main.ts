@@ -148,6 +148,10 @@
  * turn playing has ended, as one that meets a turn's end does. As Codex's, a
  * prompt that comes while a turn plays opens with `Started alongside a turn
  * still playing.`, which chord must never cause.
+ * `permissionsteer` asks for a write as `permission` does, then takes its
+ * next step only once a message steered in has reached it, as a model's next
+ * step comes only after the tool's result, so a message chord holds behind
+ * the write lands in the turn whatever the load.
  *
  * `--step-ms <ms>`, or `CHORD_FAKE_STEP_MS`, sets how long a step takes, and
  * with it the pace of every scenario; 5 ms by default.
@@ -310,6 +314,7 @@ const SCENARIOS = [
   'effort',
   'late',
   'twins',
+  'permissionsteer',
   'mcpask',
   'bigask',
   'bigasktwice',

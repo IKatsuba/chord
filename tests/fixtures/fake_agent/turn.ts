@@ -96,6 +96,11 @@ export class Turn {
     this.#steered.push(text);
   }
 
+  /** Whether a message steered in waits for the turn's next step. */
+  get steered(): boolean {
+    return this.#steered.length > 0;
+  }
+
   /** Answers each message steered in since the last step, saying whose. */
   async read(): Promise<void> {
     for (const text of this.#steered.splice(0)) {

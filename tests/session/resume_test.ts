@@ -47,7 +47,7 @@ import { EDIT_NEW } from '../fixtures/edits.ts';
 import { BASH_OUTPUT, SHELL_OUTPUT } from '../fixtures/terminals.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
-import { play } from '../fixtures/recorder.ts';
+import { play, run, said as saidChunks } from '../fixtures/recorder.ts';
 
 interface Place {
   readonly dir: string;
@@ -675,7 +675,9 @@ test('a message steered into a turn is recorded where it went, and a reopened se
     try {
       conversation.start();
       await until(() => events.some((event) => event.type === 'connected'));
-      conversation.send('permission');
+      // Its next step after the write waits for the message, which chord
+      // holds until the write ends: the order is the agent's, not the clock's.
+      conversation.send('permissionsteer');
       await until(() =>
         events.some((event) => event.type === 'permission_requested'),
       );
@@ -726,7 +728,7 @@ test('a message steered into a turn is recorded where it went, and a reopened se
     }
 
     expect(live).toStrictEqual([
-      'user: permission',
+      'user: permissionsteer',
       'tool: Write notes.txt completed',
       'message',
       'assistant: Read the message from main.\n\nPermission: allow.',
@@ -1641,6 +1643,61 @@ describe('CHD-1 tester: task question tool association', () => {
           expect(transcript.asking).toStrictEqual([]);
         } finally {
           await resumed.close();
+        }
+      }));
+  }
+});
+
+describe('CHD-451 tester: steering gate lifetime', () => {
+  for (const end of ['cancel', 'close'] as const) {
+    test(`${end} releases permissionsteer after the write completed but before any steer arrived`, () =>
+      withPlace(async (place) => {
+        const session = await openSession({
+          agent: 'fake',
+          cwd: place.dir,
+          agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        });
+        const completed = Promise.withResolvers<void>();
+        const unsubscribe = session.subscribe((update) => {
+          if (
+            update.sessionUpdate === 'tool_call_update' &&
+            update.status === 'completed'
+          ) {
+            completed.resolve();
+          }
+        });
+
+        const unasked = session.permissions.subscribe((request) =>
+          request.resolve('allow'),
+        );
+
+        try {
+          const turn = session.prompt('permissionsteer');
+
+          await completed.promise;
+
+          const started = Date.now();
+
+          if (end === 'cancel') {
+            await turn.cancel();
+            expect((await turn.result).status).toBe('cancelled');
+
+            const next = await run(session, 'permission');
+
+            expect(next.result.status).toBe('completed');
+            expect(saidChunks(next.updates).join('')).toBe(
+              'Permission: allow.',
+            );
+          } else {
+            await session.close();
+            expect(Date.now() - started).toBeLessThan(1500);
+            expect(session.agentPids.size).toBe(0);
+            expect((await turn.result).status).not.toBe('completed');
+          }
+        } finally {
+          unsubscribe();
+          unasked();
+          await session.close();
         }
       }));
   }

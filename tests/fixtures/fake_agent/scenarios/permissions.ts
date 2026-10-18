@@ -68,6 +68,7 @@ async function askMcp(
 async function askPermission(
   turn: Turn,
   options: acp.PermissionOption[],
+  { untilSteered = false }: { readonly untilSteered?: boolean } = {},
 ): Promise<acp.StopReason> {
   const id = turn.callId('write');
   const toolCall: acp.ToolCall = {
@@ -103,6 +104,13 @@ async function askPermission(
     toolCallId: id,
     status: allowed ? 'completed' : 'failed',
   });
+
+  // A model's next step comes only after the tool's result is in: a message
+  // held behind the call until it ended is read at that step, not after it.
+  while (untilSteered && !turn.steered) {
+    await pause(turn.signal);
+  }
+
   await turn.say(`Permission: ${answer.outcome.optionId}.`);
 
   return 'end_turn';
@@ -147,6 +155,19 @@ export const PERMISSIONS = {
       { optionId: 'always', name: 'Always allow', kind: 'allow_always' },
       { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
     ]);
+  },
+
+  // As `permission`, its next step after the write waiting for a message
+  // steered in, as the model's next step waits for the tool's result.
+  async permissionsteer(turn) {
+    return await askPermission(
+      turn,
+      [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+      { untilSteered: true },
+    );
   },
 
   // Two options of one kind, as Codex's adapter offers two ways to allow

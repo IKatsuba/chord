@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/scratch
+ ▀▀     ? for shortcuts · /help
+
+ › claudebackground
+
+ ⏺ The tests run in the background while I look.
+
+ ⏺ 2 agents ended · 1 cancelled (ctrl+o to expand)
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(explorer (Explore)) · 1 tool use · 2s
+      ⎿  Done
+
+ ⏺ The tests run on; I will say when they end.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    background  ✓ 1 agent done · ■ 1 agent stopped

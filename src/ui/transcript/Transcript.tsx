@@ -48,7 +48,7 @@ import {
   Tool,
   Under,
 } from './tools/Tool.tsx';
-import { turnEnded } from './tools/tools.ts';
+import { asksFor, turnEnded } from './tools/tools.ts';
 
 /**
  * The rule in the transcript's last row while scrolled back: how much is
@@ -180,6 +180,7 @@ export const TranscriptEntry = memo(function TranscriptEntry({
           call={entry.call}
           expanded={expanded}
           ended={turnEnded(turn, entry.turnId)}
+          asked={asksFor(turn, entry.call.id)}
           width={width}
         />
       );

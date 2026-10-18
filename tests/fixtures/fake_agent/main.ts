@@ -82,7 +82,10 @@
  * `bashcut` leaves a command running and a call that never ran for about
  * 10 s: a cancel ends both `failed` with the lines Claude's adapter gives,
  * the command's terminal with no exit code; left alone, the turn ends and
- * the command fails with the adapter's line for no result.
+ * the command fails with the adapter's line for no result. `bashask` asks
+ * to run a command as Codex's adapter does, mid-run, the call
+ * `in_progress` with output under it, then one as Claude's does, before it
+ * runs, the call `pending` until it completes.
  *
  * Started with `--hang <step>`, or with `CHORD_FAKE_HANG=<step>`, it stops
  * answering, as an agent that has wedged: `start` never answers `initialize`,
@@ -290,6 +293,7 @@ const SCENARIOS = [
   'shellcut',
   'bash',
   'bashcut',
+  'bashask',
   'compact',
   'codexcompact',
   'compactfail',

@@ -73,24 +73,28 @@ function toneColour(tone: Tone, colours: Palette): string | undefined {
  * diff. The headline is drawn whole, wrapped to the row's `width`, and so
  * is every line under it, never cut in the middle (CHD-422); what a message
  * sent says is drawn whole, as a received one's is. A call left running in
- * a turn or a subagent that has `ended` no longer blinks or says it waits.
+ * a turn or a subagent that has `ended` no longer blinks or says it waits;
+ * one the person is `asked` about stands still and says it waits.
  */
 export function Tool({
   call,
   expanded,
   ended = false,
+  asked = false,
   width,
 }: {
   call: ToolCall;
   expanded: boolean;
   ended?: boolean;
+  /** A permission box is open for it. */
+  asked?: boolean;
   /** Cells beside the marker. */
   width: number;
 }) {
   const chordServer = useContext(ChordServerName);
   const line = headline(call, chordServer);
   const recipient = useAgentColour(line.name);
-  const live = toneOf(call);
+  const live = toneOf(call, asked);
   const tone = ended && live === 'running' ? 'pending' : live;
   const colours = useColours();
   const selectable = useSelectable();
@@ -104,6 +108,7 @@ export function Tool({
     // The `⎿` and its gutter take five columns.
     Math.max(width - 5, 1),
     chordServer,
+    asked,
   );
   const sent = sentBody(call, chordServer);
   // Rows drawn ahead of each terminal's, so only the first row of all has `⎿`.

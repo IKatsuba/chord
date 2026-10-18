@@ -14,9 +14,8 @@
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
   `bigask`, `bigasktwice`, `overlapask`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
-  `shell.ts` (`shell`,
-  `shellcut`, `bash`, `bashcut`), `compaction.ts` (`compact`, `codexcompact`,
-  `compactfail`), `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`,
+  `shell.ts` (`shell`, `shellcut`, `bash`, `bashcut`, `bashask`),
+  `compaction.ts` (`compact`, `codexcompact`, `compactfail`), `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`,
   `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
   `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`, `subagentcall`,
@@ -37,7 +36,7 @@
   `cutcalls`, `cutcallsback`, `tasklong`, `tasktwo`, `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `plan`, `proposal`,
-  `shell`, `shellcut`, `bash`, `bashcut`, `compact`, `codexcompact`,
+  `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
   `mcp`, `form`, `link`,
@@ -160,6 +159,8 @@
   `bashcut` leaves a command running and a call unstarted for about 10 s;
   Esc ends both failed with Claude's messages and no terminal exit code.
   Left alone, the turn ends and the command fails for a missing result;
+  `bashask` asks permission mid-run with output as Codex does, then before
+  running as Claude does, keeping Claude's call `pending` until it ends;
   `compact` compacts as Claude's adapter does, to a client that declares
   `session.compaction`: a `compaction_update` in progress, its summary in
   chunks over about 2 s, then completed (cancelled when its turn is);
@@ -205,7 +206,7 @@
   `<cwd>/.fake-gate/stops` and holds it until the test writes
   `<cwd>/.fake-gate/stop-release`. `--step-ms <ms>` or
   `CHORD_FAKE_STEP_MS` sets the pace of every scenario (5 ms a step by
-  default). Every
+  default); with chord, use `CHORD_FAKE_STEP_MS=40 bun dev chord --fake`. Every
   session offers two models, `Fake Large with a 1M context window` (in use
   until switched) and `Fake Small`, and three modes, `default`, `acceptEdits`
   and `plan`, and an effort, `low`, `medium` (until set) or `high`, through

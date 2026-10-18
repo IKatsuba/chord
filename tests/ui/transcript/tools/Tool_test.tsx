@@ -9,7 +9,14 @@ import type {
 } from '../../../../src/session/transcript/types.ts';
 import { ChordServerName } from '../../../../src/ui/app/context.ts';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
-import { CTRL_O, END, send, until, withWindow } from '../../app/render.tsx';
+import {
+  asked,
+  CTRL_O,
+  END,
+  send,
+  until,
+  withWindow,
+} from '../../app/render.tsx';
 import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
 import {
   LONG_DIFF,
@@ -959,4 +966,114 @@ describe('CHD-422 tester: wrapped source-line exceptions', () => {
       }
     });
   }
+});
+
+test('a call the person is asked about waits, whatever its status, until answered', async () => {
+  const shown = async (status: string, asked: boolean) => {
+    const drawn = await draw(
+      <TranscriptEntry
+        entry={{
+          kind: 'tool',
+          turnId: 't',
+          call: { id: 'c', title: 'Run ./deploy.sh', kind: 'execute', status },
+        }}
+        turn={{
+          status: 'awaiting_permission',
+          turnId: 't',
+          since: 0,
+          permissions: asked ? [{ id: 'p', toolCallId: 'c', options: [] }] : [],
+        }}
+        agent='fake'
+        expanded={false}
+        width={80}
+      />,
+    );
+    const frame = stripAnsi(drawn.frame());
+
+    await drawn.unmount();
+
+    return frame;
+  };
+
+  // The marker takes the same tone as the line under it.
+  expect(await shown('in_progress', true)).toStrictEqual(
+    await shown('pending', false),
+  );
+  expect(await shown('in_progress', true)).toContain('⎿  Waiting…');
+  expect(await shown('in_progress', false)).toContain('⎿  Running…');
+});
+
+test("a command waits while asked, mid-run as Codex's adapter asks and first as Claude's", () =>
+  withWindow(async (window) => {
+    await send(window, 'bashask');
+    await asked(window);
+
+    let frame = window.frame();
+
+    expect(frame).toContain('⏺ Run(./deploy.sh)');
+    expect(frame).toMatch(/⎿ {2}Waiting…\n\s+building…\n\s+built in 1\.2s/);
+    expect(!frame.includes('Running…'), "Codex's asked call runs").toBeTruthy();
+    await window.press('1');
+    await window.shows('deployed');
+    await window.shows('⏺ Bash(git push)');
+    await asked(window);
+
+    frame = window.frame();
+
+    expect(frame).toMatch(/Bash\(git push\)\n\s+⎿ {2}Waiting…/);
+    await window.press('1');
+    await window.shows('Codex: ran; Claude: ran.');
+    expect(window.frame()).toContain('pushed');
+  }));
+
+describe('CHD-404 tester: denied commands at terminal sizes', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`denial preserves earlier output and clears waiting at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'bashask');
+          await asked(window);
+          expect(window.frame()).toContain('Waiting…');
+          expect(window.frame()).toContain('built in 1.2s');
+          await window.press('3');
+          await window.shows('Bash(git push)');
+          await asked(window);
+          await window.press('3');
+          await window.shows('Codex: denied; Claude: denied.');
+
+          const frame = window.frame();
+
+          expect(frame).toContain('not deployed');
+          expect(frame).toContain('built in 1.2s');
+          expect(frame).toContain('Exit code 1');
+          expect(frame).toContain('Failed');
+          expect(frame).not.toContain('Waiting…');
+          expect(frame).not.toContain('Running…');
+          expect(
+            frame.split('\n').every((row) => stringWidth(row) <= columns),
+          ).toBe(true);
+        },
+        { columns, rows },
+      ));
+  }
+});
+
+describe('CHD-404 tester: cancelling an open command permission', () => {
+  test('cancelling clears the permission and a later turn has no stale Waiting line', () =>
+    withWindow(async (window) => {
+      await send(window, 'bashask');
+      await asked(window);
+      await window.session()!.cancel();
+      await until(
+        'the permission turn to end',
+        () => !window.frame().includes('Waiting…'),
+      );
+      expect(window.frame()).not.toContain('Waiting…');
+      await send(window, 'hello');
+      await window.shows('Hello');
+      expect(window.frame()).not.toContain('Waiting…');
+    }));
 });

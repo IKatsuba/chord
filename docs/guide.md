@@ -206,6 +206,11 @@ brings it back.
 Tool-call headlines show every line, wrapped to the width with no cap:
 a Bash heredoc is visible in full in the transcript. Continuation rows
 start under the name, at column 3, and `⎿` results follow the last row.
+A call awaiting your permission has a still, dim `⏺` and `Waiting…` above
+any output it already has. Otherwise its agent's status decides: `in_progress`
+pulses with `Running…`, and `pending` stays still with `Waiting…`.
+Claude's Bash stays `Waiting…` after approval until its adapter sends
+`in_progress` or the result.
 Results under `⎿` show every line, wrapped to the width: MCP results,
 Bash output, your `!` shell output, Codex plans and subagent work. Diffs
 show every row, with long lines wrapped under their code. Read shows its

@@ -664,3 +664,66 @@ describe('Q41 tester: a mounted last row gains a sibling', () => {
     }
   }
 });
+
+describe('CHD-404 tester: expanded subagent permission matching', () => {
+  test('only the requested child call waits, including a request queued second', async () => {
+    for (const requested of ['child-a', 'child-b', undefined]) {
+      const drawn = await draw(
+        <Agents
+          agents={[
+            {
+              id: 'child-a',
+              title: 'Inspect deploy',
+              state: 'running',
+              plan: [],
+              entries: [
+                {
+                  kind: 'tool',
+                  turnId: 't',
+                  call: {
+                    id: 'same',
+                    title: 'Run ./deploy.sh',
+                    status: 'in_progress',
+                    content: [
+                      {
+                        type: 'content',
+                        content: { type: 'text', text: 'existing output' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ]}
+          turn={{
+            status: 'awaiting_permission',
+            turnId: 't',
+            since: 0,
+            permissions: [
+              { id: 'first', toolCallId: 'other', options: [] },
+              {
+                id: 'second',
+                toolCallId: 'same',
+                ...(requested === undefined ? {} : { subagentId: requested }),
+                options: [],
+              },
+            ],
+          }}
+          agent='fake'
+          open
+          width={78}
+        />,
+        { columns: 80, rows: 24 },
+      );
+
+      try {
+        const frame = stripAnsi(drawn.frame());
+
+        expect(frame).toContain('existing output');
+        expect(frame.includes('Waiting…')).toBe(requested === 'child-a');
+      } finally {
+        await drawn.unmount();
+      }
+    }
+  });
+});

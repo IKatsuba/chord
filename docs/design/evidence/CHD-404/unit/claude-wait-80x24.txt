@@ -1,0 +1,24 @@
+      deployed
+   ⎿  Allowed Run ./deploy.sh · Yes
+
+ ⏺ Bash(git push)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (42s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ `git push`                                                                   │
+│   command: git push                                                          │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Yes                                                                     │
+│   2. Yes, and don't ask again for this command                               │
+│   3. No, and tell Claude what to do differently                              │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

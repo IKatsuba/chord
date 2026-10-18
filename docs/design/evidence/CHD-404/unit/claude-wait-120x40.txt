@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › bashask
+
+ ⏺ Run(./deploy.sh)
+   ⎿  building…
+      built in 1.2s
+      deployed
+   ⎿  Allowed Run ./deploy.sh · Yes
+
+ ⏺ Bash(git push)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+ ››› Waiting for permission… (33s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ `git push`                                                                                                           │
+│   command: git push                                                                                                  │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Yes                                                                                                             │
+│   2. Yes, and don't ask again for this command                                                                       │
+│   3. No, and tell Claude what to do differently                                                                      │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

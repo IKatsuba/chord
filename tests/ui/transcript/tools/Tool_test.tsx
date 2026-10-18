@@ -1025,3 +1025,55 @@ test("a command waits while asked, mid-run as Codex's adapter asks and first as 
     await window.shows('Codex: ran; Claude: ran.');
     expect(window.frame()).toContain('pushed');
   }));
+
+describe('CHD-404 tester: denied commands at terminal sizes', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`denial preserves earlier output and clears waiting at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'bashask');
+          await asked(window);
+          expect(window.frame()).toContain('Waiting…');
+          expect(window.frame()).toContain('built in 1.2s');
+          await window.press('3');
+          await window.shows('not deployed');
+          await window.shows('Bash(git push)');
+          await asked(window);
+          await window.press('3');
+          await window.shows('Codex: denied; Claude: denied.');
+
+          const frame = window.frame();
+
+          expect(frame).toContain('built in 1.2s');
+          expect(frame).toContain('Exit code 1');
+          expect(frame).toContain('Failed');
+          expect(frame).not.toContain('Waiting…');
+          expect(frame).not.toContain('Running…');
+          expect(
+            frame.split('\n').every((row) => stringWidth(row) <= columns),
+          ).toBe(true);
+        },
+        { columns, rows },
+      ));
+  }
+});
+
+describe('CHD-404 tester: cancelling an open command permission', () => {
+  test('cancelling clears the permission and a later turn has no stale Waiting line', () =>
+    withWindow(async (window) => {
+      await send(window, 'bashask');
+      await asked(window);
+      await window.session()!.cancel();
+      await until(
+        'the permission turn to end',
+        () => !window.frame().includes('Waiting…'),
+      );
+      expect(window.frame()).not.toContain('Waiting…');
+      await send(window, 'hello');
+      await window.shows('Hello');
+      expect(window.frame()).not.toContain('Waiting…');
+    }));
+});

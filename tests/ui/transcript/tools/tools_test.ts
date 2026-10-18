@@ -935,3 +935,59 @@ test("a call is asked about while the turn holds a request for it, its own agent
     asksFor({ status: 'working', turnId: 't', since: 0 }, 'a'),
   ).toBeFalse();
 });
+
+describe('CHD-404 tester: queued permission identity and status restoration', () => {
+  test('queued requests match both identities and stop matching after removal', () => {
+    const turn: TurnState = {
+      status: 'awaiting_permission',
+      turnId: 't',
+      since: 0,
+      permissions: [
+        { id: 'front', toolCallId: 'other', options: [] },
+        {
+          id: 'queued',
+          toolCallId: 'same',
+          subagentId: 'child-a',
+          options: [],
+        },
+        { id: 'parent', toolCallId: 'same', options: [] },
+      ],
+    };
+
+    expect(asksFor(turn, 'same', 'child-a')).toBe(true);
+    expect(asksFor(turn, 'same', 'child-b')).toBe(false);
+    expect(asksFor(turn, 'same')).toBe(true);
+    expect(
+      asksFor(
+        { ...turn, permissions: turn.permissions.slice(0, 1) },
+        'same',
+        'child-a',
+      ),
+    ).toBe(false);
+    expect(asksFor({ status: 'idle' }, 'same')).toBe(false);
+  });
+
+  test('an answered permission restores every ACP tone and preserves its output', () => {
+    for (const [status, tone] of [
+      ['pending', 'pending'],
+      ['in_progress', 'running'],
+      ['completed', 'done'],
+      ['failed', 'failed'],
+    ] as const) {
+      const call: ToolCall = {
+        id: 'c',
+        status,
+        content: [text('existing output')],
+      };
+
+      expect(toneOf(call, true)).toBe('pending');
+      expect(
+        summary(call, false, undefined, false, 80, undefined, true).lines,
+      ).toStrictEqual(['Waiting…', 'existing output']);
+      expect(toneOf(call)).toBe(tone);
+      expect(summary(call, false).lines).toStrictEqual([
+        status === 'failed' ? 'Error: existing output' : 'existing output',
+      ]);
+    }
+  });
+});

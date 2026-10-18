@@ -68,9 +68,9 @@
   runs out, as codex-acp withdraws it once it does, and each says what came back, and
   an accepted link is followed by `elicitation/complete`;
   `permissionsteer` asks for a write as `permission` does, with Allow and
-  Deny, then waits for a steered message before its next step;
-  `twins` asks a
-  permission with two `allow_once` options and says the id picked; `mcpask`
+  Deny; its next step after the write waits for a steered message;
+  `twins` asks a permission with two `allow_once` options and says the id
+  picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the
   arguments only in `rawInput`; `bigask` asks for an MCP file write with
   multiline content and a long line, to scroll and wrap in the permission

@@ -3169,3 +3169,255 @@ test('with two requests between turns, the queue says it waits and holds until t
   expect(prompts()).toStrictEqual(['text']);
   await parent.close();
 });
+
+
+describe('CHD-158 tester: queued work across between-turn requests', () => {
+  for (const mode of ['form', 'url'] as const) {
+    test(`${mode}: a new request during quiet restarts a full quiet before the queued prompt`, async () => {
+      let owner: Session | undefined;
+      let sentAt: number | undefined;
+
+      await onFake(
+        [],
+        async (conversation, events) => {
+          assert(owner);
+
+          const first = owner.permissions.handler(
+            {
+              sessionId: owner.id,
+              toolCall: { toolCallId: 'first', title: 'Write first.md' },
+              options: [
+                { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+              ],
+            },
+            new AbortController().signal,
+          );
+          const permission = events.find(
+            (event) => event.type === 'permission_requested',
+          );
+
+          assert(permission?.type === 'permission_requested');
+          conversation.send('text');
+          conversation.choose(permission.permission.id, 'allow');
+          await first;
+
+          const response = owner.elicitations.handler(
+            mode === 'form'
+              ? {
+                  sessionId: owner.id,
+                  mode: 'form',
+                  message: 'Second request',
+                  requestedSchema: { type: 'object', properties: {} },
+                }
+              : {
+                  sessionId: owner.id,
+                  mode: 'url',
+                  message: 'Second request',
+                  url: 'https://example.com/approve',
+                  elicitationId: 'second',
+                },
+            new AbortController().signal,
+          );
+          const input = events.find(
+            (event) => event.type === 'elicitation_requested',
+          );
+
+          assert(input?.type === 'elicitation_requested');
+          expect(
+            events
+              .filter((event) => event.type === 'queued')
+              .map((event) => event.afterAnswer === true),
+          ).toStrictEqual([true, false, true]);
+
+          const answeredAt = performance.now();
+
+          conversation.answer(input.elicitation.id, { action: 'decline' });
+          expect(await response).toStrictEqual({ action: 'decline' });
+          await until(() => sentAt !== undefined);
+          assert(sentAt !== undefined);
+          expect(sentAt - answeredAt).toBeGreaterThanOrEqual(1000);
+          await until(() => saidIn(events).includes('Hello, world.'));
+        },
+        (session) => {
+          owner = session;
+
+          const prompt = session.prompt.bind(session);
+
+          session.prompt = (...args) => {
+            sentAt = performance.now();
+
+            return prompt(...args);
+          };
+
+          return session;
+        },
+      );
+    });
+  }
+
+  test('a form and a link keep prompts and messages held until the last wait settles', async () => {
+    let owner: Session | undefined;
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        assert(owner);
+
+        const form = owner.elicitations.handler(
+          {
+            sessionId: owner.id,
+            mode: 'form',
+            message: 'Form',
+            requestedSchema: { type: 'object', properties: {} },
+          },
+          new AbortController().signal,
+        );
+        const abort = new AbortController();
+        const link = owner.elicitations.handler(
+          {
+            sessionId: owner.id,
+            mode: 'url',
+            message: 'Link',
+            url: 'https://example.com/approve',
+            elicitationId: 'link',
+          },
+          abort.signal,
+        );
+        const input = events.find(
+          (event) => event.type === 'elicitation_requested',
+        );
+
+        assert(input?.type === 'elicitation_requested');
+        conversation.send('text');
+        expect(conversation.tell(MAIN, 'Message after the form.')).toBe(
+          'queued',
+        );
+        conversation.answer(input.elicitation.id, { action: 'decline' });
+        await form;
+        expect(events.filter((event) => event.type === 'prompt')).toHaveLength(
+          0,
+        );
+        expect(
+          events
+            .filter((event) => event.type === 'queued')
+            .every((event) => event.afterAnswer === true),
+        ).toBe(true);
+        abort.abort();
+        expect(await link).toStrictEqual({ action: 'cancel' });
+        await until(
+          () => events.filter((event) => event.type === 'prompt').length === 2,
+        );
+        expect(
+          events
+            .filter((event) => event.type === 'prompt')
+            .map((event) => event.text),
+        ).toStrictEqual(['text', 'Message after the form.']);
+      },
+      (session) => (owner = session),
+    );
+  });
+
+  test('interrupt restores only the person’s prompt while a held message still waits for the link answer', async () => {
+    let owner: Session | undefined;
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        assert(owner);
+
+        const response = owner.elicitations.handler(
+          {
+            sessionId: owner.id,
+            mode: 'url',
+            message: 'Approve',
+            url: 'https://example.com/approve',
+            elicitationId: 'link',
+          },
+          new AbortController().signal,
+        );
+        const input = events.find(
+          (event) => event.type === 'elicitation_requested',
+        );
+
+        assert(input?.type === 'elicitation_requested');
+        conversation.send('My queued prompt.');
+        conversation.tell(MAIN, 'Message stays.');
+        conversation.interrupt();
+        expect(events.some((event) => event.type === 'queue_withdrawn')).toBe(
+          true,
+        );
+        expect(events.filter((event) => event.type === 'prompt')).toHaveLength(
+          0,
+        );
+        expect(
+          events
+            .filter(
+              (event) =>
+                event.type === 'queued' && event.text === 'Message stays.',
+            )
+            .at(-1),
+        ).toMatchObject({ afterAnswer: true });
+        conversation.answer(input.elicitation.id, { action: 'decline' });
+        await response;
+        await until(() => events.some((event) => event.type === 'prompt'));
+        expect(
+          events
+            .filter((event) => event.type === 'prompt')
+            .map((event) => event.text),
+        ).toStrictEqual(['Message stays.']);
+      },
+      (session) => (owner = session),
+    );
+  });
+
+  for (const end of ['close', 'clear'] as const) {
+    test(`${end} during the final quiet never sends the old queued prompt`, async () => {
+      let original: Session | undefined;
+
+      await onFake(
+        [],
+        async (conversation, events) => {
+          conversation.send('mainbetween');
+          await until(() =>
+            events.some((event) => event.type === 'permission_requested'),
+          );
+
+          const permission = events.find(
+            (event) => event.type === 'permission_requested',
+          );
+
+          assert(permission?.type === 'permission_requested');
+          conversation.send('Old queued prompt.');
+          conversation.choose(permission.permission.id, 'allow');
+
+          if (end === 'close') {
+            await conversation.close();
+          } else {
+            conversation.clear();
+            await until(
+              () =>
+                events.filter((event) => event.type === 'connected').length ===
+                2,
+            );
+            conversation.send('text');
+            await until(() => saidIn(events).includes('Hello, world.'));
+          }
+
+          assert(original);
+          await original.exited;
+          expect(original.agentPids.size).toBe(0);
+          expect(
+            events
+              .filter((event) => event.type === 'prompt')
+              .map((event) => event.text),
+          ).not.toContain('Old queued prompt.');
+        },
+        (session) => {
+          original ??= session;
+
+          return session;
+        },
+      );
+    });
+  }
+});

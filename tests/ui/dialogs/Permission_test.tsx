@@ -1014,3 +1014,184 @@ describe('CHD-158 tester: agent and task requesters', () => {
     });
   }
 });
+
+
+describe('CHD-158 tester: queued requests in the window', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const mode of ['form', 'url'] as const) {
+      test(`${mode}: a queued prompt stays held until the attended request is cancelled at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            const session = window.session()!;
+            const answer = session.elicitations.handler(
+              mode === 'form'
+                ? {
+                    sessionId: session.id,
+                    mode: 'form',
+                    message: 'Choose a target',
+                    requestedSchema: { type: 'object', properties: {} },
+                  }
+                : {
+                    sessionId: session.id,
+                    mode: 'url',
+                    message: 'Approve a target',
+                    url: 'https://example.com/approve',
+                    elicitationId: 'queued-link',
+                  },
+              new AbortController().signal,
+            );
+
+            await window.shows('ctrl+x a to answer');
+            await window.type('text');
+            await window.press('\r');
+            await window.shows('› after your answer: text');
+            expect(window.frame()).toContain('between turns');
+            await leader(window, 'a');
+            await window.press(ESC);
+            expect(await answer).toStrictEqual({ action: 'cancel' });
+            await window.shows('Hello, world.');
+            expect(window.frame()).not.toContain('after your answer');
+            expect(window.frame()).not.toContain('ctrl+x a to answer');
+          },
+          { columns, rows },
+        ));
+    }
+
+    test(`an incoming agent message and the person’s prompt retain their order after answering at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      let child: Parameters<typeof admit>[0] | undefined;
+
+      server.admit = (caller) => {
+        if (caller.agent === undefined) {
+          main = caller;
+        } else {
+          child = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            assert(main);
+            await main.window.open(main.key, {
+              agent: 'fake',
+              name: 'sender',
+              prompt: 'text',
+            });
+            assert(child);
+            await send(window, 'mainbetween');
+            await window.shows('main asks · between turns');
+            expect(
+              child.window.message(child, 'Check the queued report.', () => {}),
+            ).toMatchObject({ delivered: 'queued' });
+            await window.shows('← from @sender · fake · after your answer:');
+            await window.type('text');
+            await window.press('\r');
+            await window.shows('› after your answer: text');
+            expect(window.frame()).toContain('main asks · between turns');
+            await leader(window, 'a');
+            await window.press('1');
+            await window.shows('Received the message from sender · fake.');
+            await window.shows('Hello, world.');
+
+            const frame = window.frame();
+
+            expect(frame).not.toContain('after your answer');
+            expect(frame.indexOf('Permission: allow.')).toBeLessThan(
+              frame.indexOf('Received the message from sender'),
+            );
+            expect(
+              frame.indexOf('Received the message from sender'),
+            ).toBeLessThan(frame.indexOf('› text'));
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+
+    test(`a task’s between-turn permission holds the queued prompt at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'taskbetween');
+            await window.shows(
+              'Agent(Fix the tokenizer) · fake asks · between turns',
+            );
+            await window.type('text');
+            await window.press('\r');
+            await window.shows('› after your answer: text');
+            expect(window.frame()).toContain('ctrl+x a to answer');
+            await leader(window, 'a');
+            await window.press('1');
+            await window.shows('Hello, world.');
+            expect(window.frame()).not.toContain('› after your answer: text');
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});
+
+describe('CHD-158 tester: interrupting a mixed held queue', () => {
+  test('Esc restores the typed prompt but keeps the agent message marked after your answer', async () => {
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+    let child: Parameters<typeof admit>[0] | undefined;
+
+    server.admit = (caller) => {
+      if (caller.agent === undefined) {
+        main = caller;
+      } else {
+        child = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          assert(main);
+          await main.window.open(main.key, {
+            agent: 'fake',
+            name: 'sender',
+            prompt: 'text',
+          });
+          assert(child);
+          await send(window, 'mainbetween');
+          await window.shows('main asks · between turns');
+          await window.type('My queued prompt.');
+          await window.press('\r');
+          await window.shows('› after your answer: My queued prompt.');
+          child.window.message(child, 'Agent message stays.', () => {});
+
+          await window.shows('← from @sender · fake · after your answer:');
+          await window.press(ESC);
+          expect(promptRow(window)).toContain('My queued prompt.');
+          expect(window.frame()).toContain('main asks · between turns');
+          expect(window.frame()).toContain(
+            '← from @sender · fake · after your answer:',
+          );
+        },
+        { server, runtimes: ['fake'], columns: 120, rows: 40 },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});

@@ -88,9 +88,14 @@ export const emptyWatch: Watch = {
   asked: new Map(),
 };
 
-/** What the oldest request still open asks, if one is. */
+/**
+ * What the request on screen asks, as the session's box shows it: the oldest
+ * permission still open, else the oldest form or link.
+ */
 export function askingNow(watch: Watch): AskingWait | undefined {
-  return watch.asked.values().next().value;
+  const open = [...watch.asked.values()];
+
+  return open.find((wait) => wait.kind === 'permission') ?? open[0];
 }
 
 /** `asked` with only the requests `asking` still holds. */

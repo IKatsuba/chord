@@ -1333,6 +1333,34 @@ describe('a wait names the oldest request still open (CHD-431)', () => {
     });
   });
 
+  test("a task's permission comes before another's form opened earlier, as the box shows it", () => {
+    const { asking, rang } = after([
+      taskForm('fa', 'task-a'),
+      taskAsked('pb', 'task-b'),
+    ]);
+
+    expect(asking?.on).toStrictEqual({
+      kind: 'permission',
+      title: undefined,
+      subagentId: 'task-b',
+    });
+    // From when the form came, and the permission rings nothing.
+    expect(asking?.since).toStrictEqual(2000);
+    expect(rang).toStrictEqual(undefined);
+
+    // Once the permission is answered, the form is on screen again.
+    const answered = after([
+      taskForm('fa', 'task-a'),
+      taskAsked('pb', 'task-b'),
+      settled('t1', 'pb'),
+    ]);
+
+    expect(answered.asking?.on).toMatchObject({
+      kind: 'input',
+      subagentId: 'task-a',
+    });
+  });
+
   test("once a task's permission is answered, its form after it, as input", () => {
     const { asking } = after([
       taskAsked('pt', 'task-a'),

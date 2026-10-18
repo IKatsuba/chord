@@ -1039,4 +1039,50 @@ export const SUBAGENTS = {
       throw error;
     }
   },
+
+  // A Claude subagent its agent says waits on the person, with no request
+  // of its reaching chord, as one refused between turns does; it is held
+  // about 2 s, then runs on and is done.
+  async claudewaiting(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+
+    try {
+      const child = await announce(
+        turn,
+        working,
+        'tester (general-purpose)',
+        'Run the test suite',
+        'Run bun test and report what fails.',
+      );
+
+      await report(turn, working, child.sessionId, {
+        state: 'requires_action',
+      });
+      await pause(turn.signal, SUBAGENT_AFTER_MS);
+      await report(turn, working, child.sessionId, { state: 'running' });
+      await child.say('Every test passed.');
+      await report(turn, working, child.sessionId, {
+        state: 'idle',
+        stopReason: 'end_turn',
+      });
+      await turn.say('The tests passed.');
+
+      return 'end_turn';
+    } catch (error) {
+      for (const id of [...working].toReversed()) {
+        await report(turn, working, id, {
+          state: 'idle',
+          stopReason: 'cancelled',
+        });
+      }
+
+      throw error;
+    }
+  },
 } satisfies Record<string, Play>;

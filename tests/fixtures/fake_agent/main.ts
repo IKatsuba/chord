@@ -121,7 +121,8 @@
  * one the turn waits on beside one in the background, which goes on about
  * 4 s, past the turn and past a cancel that stops only the first.
  * `claudemessage` messages a Claude subagent again once it is done, as
- * SendMessage does, and it runs once more. To any
+ * SendMessage does, and it runs once more. `claudewaiting` holds one in
+ * `requires_action` about 2 s with no request of its sent, then done. To any
  * other client each
  * says so in a line of text.
  *
@@ -311,6 +312,7 @@ const SCENARIOS = [
   'claudesubagents',
   'claudebackground',
   'claudemessage',
+  'claudewaiting',
   'subagentstates',
   'chordtools',
   'cutcalls',

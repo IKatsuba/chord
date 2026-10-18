@@ -921,6 +921,41 @@ test('a stopped agent reads stopping while it still asks, until its agent says i
   });
 });
 
+describe('the block an agent item goes to', () => {
+  const item = (id: string): BackgroundItem => ({
+    kind: 'agent',
+    id,
+    key: 1,
+    name: 'x',
+    startedAt: 0,
+    status: { group: 'running' },
+  });
+  const text: Entry = { kind: 'user', turnId: 't1', text: 'hi' };
+
+  test("its own Agent block, its own row in a group, or, inside another's work, its own box there", () => {
+    const entries = [
+      text,
+      claude('a', 0),
+      claude('b', 0),
+      text,
+      claude('c', 0, { entries: [claude('g', 1)] }),
+    ];
+
+    expect(callPlace(entries, item('a'))).toStrictEqual({
+      entry: 1,
+      target: 'agent:a',
+    });
+    expect(callPlace(entries, item('b'))).toStrictEqual({
+      entry: 1,
+      target: 'agent:b',
+    });
+    expect(callPlace(entries, item('g'))).toStrictEqual({
+      entry: 4,
+      target: 'agent:g',
+    });
+  });
+});
+
 describe('CHD-2 tester: agent item ownership and terminal precedence', () => {
   test('nested item order and owner remain stable when an untracked item clears and recovers', () => {
     const owner = { name: 'parser', colour: 2 };

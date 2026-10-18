@@ -493,3 +493,62 @@ describe('CHD-424 tester: full-screen background edges', () => {
     }
   });
 });
+
+for (const size of [
+  { rows: 40, columns: 120 },
+  { rows: 24, columns: 80 },
+]) {
+  test(`Claude's agents are counted on the summary line and listed in the view, and enter goes to an agent's own row in its group, at ${size.columns}x${size.rows}`, () =>
+    withWindow(async (window) => {
+      // A transcript longer than a screen ahead of them, to scroll back to.
+      await send(window, 'steps');
+      await window.shows('150 steps read.');
+      await send(window, 'claudesubagents');
+      await window.shows('Do you want to proceed?');
+      await window.press('1');
+      await window.shows('Each agent has ended.');
+      await window.shows('background  ✗ 1 agent failed · ? 1 agent untracked');
+      expect(window.frame()).toContain('✓ 1 agent done');
+      expect(window.frame()).toContain('■ 1 agent stopped');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows(' Background · 4 in this tab');
+
+      const frame = window.frame();
+
+      for (const words of [
+        'Find the session layer',
+        'agent',
+        '✓ done in',
+        '✗ failed after',
+        '■ stopped after',
+        '? untracked',
+      ]) {
+        expect(frame).toContain(words);
+      }
+
+      await window.press('j');
+      await window.shows('❯ Review the transcript');
+      await window.press('\r');
+      // At the transcript's end, it goes as high as scrolling allows.
+      await until("the view to close on the reviewer's own row", () =>
+        window.frame().includes('├─ Agent(reviewer (general-purpose))'),
+      );
+      expect(window.frame()).not.toContain('Background ·');
+    }, size));
+}
+
+test('an agent its agent says waits, with no request on screen, is asking: ● waiting on its row', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'claudewaiting');
+      await window.shows('background  ● 1 agent asking');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('● waiting');
+      await window.shows('✓ done in');
+      await window.press(ESC);
+      await window.shows('background  ✓ 1 agent done');
+    },
+    { rows: 24, columns: 80 },
+  ));

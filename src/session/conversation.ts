@@ -955,8 +955,7 @@ export class Conversation {
 
     // A request between turns answered: what waited for it goes in turn.
     if (!this.#turn) {
-      this.#unhold();
-      void this.#advance(session);
+      void this.#answeredBetween(session);
 
       return;
     }
@@ -973,6 +972,24 @@ export class Conversation {
     for (const { afterAnswer: _, ...message } of held) {
       void this.#steer(session, into, message);
     }
+  }
+
+  /**
+   * Once a request between turns is answered, what waited for it goes, after
+   * the agent has gone quiet, as after a turn's answer: the work that asked
+   * says what it did with the answer outside any turn, and the next turn
+   * must not take that for its own (CHD-158).
+   */
+  async #answeredBetween(session: Session): Promise<void> {
+    this.#unhold();
+
+    // A wait already under way sends the queue on when it is over.
+    if (this.#queued.length === 0 || this.#settling) {
+      return;
+    }
+
+    await this.#quieten(session);
+    await this.#advance(session);
   }
 
   /** Wakes the steers waiting on the person's answer to look again. */

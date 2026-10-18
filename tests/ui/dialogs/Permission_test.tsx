@@ -835,11 +835,18 @@ describe('a prompt sent while a request waits between turns (CHD-158)', () => {
       await leader(window, 'a');
       await window.press('1');
       await window.shows('Permission: allow.');
-      await window.shows('› text');
-      expect(window.frame()).not.toContain('after your answer');
+      // The held prompt goes once the agent has gone quiet, and is answered.
+      await window.shows('Hello, world.');
+
+      const frame = window.frame();
+
+      expect(frame).not.toContain('after your answer');
+      // The answer's follow-up is a block of its own, above the prompt.
+      expect(frame).toMatch(
+        /⏺ Permission: allow\.\n\n › text\n\n ⏺ Hello, world\./,
+      );
     }));
 });
-
 
 describe('CHD-158 tester: attendance in the window', () => {
   for (const [columns, rows] of [

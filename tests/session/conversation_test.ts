@@ -3020,5 +3020,21 @@ describe('a prompt or message while a request waits between turns (CHD-158)', ()
           event.type === 'prompt' ? [event.text] : [],
         ),
       ).toStrictEqual(['mainbetween', 'text', 'Then the docs.']);
+
+      // What the work that asked said of the answer came before the held
+      // prompt went, so it is never taken for that prompt's reply.
+      const said = events.findIndex(
+        (event) =>
+          event.type === 'update' &&
+          event.update.sessionUpdate === 'agent_message_chunk' &&
+          event.update.content.type === 'text' &&
+          event.update.content.text.includes('Permission: allow.'),
+      );
+      const went = events.findIndex(
+        (event) => event.type === 'prompt' && event.text === 'text',
+      );
+
+      expect(said).toBeGreaterThan(-1);
+      expect(said).toBeLessThan(went);
     }));
 });

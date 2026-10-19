@@ -114,7 +114,7 @@ test("a member picked has its run in its box's title, its instructions folded, t
     await started(window);
     await leader(window, 'a');
     await window.shows('╭─ tester · bugfix ─');
-    await window.shows('tester asks');
+    await window.shows('tester · bugfix asks');
 
     const frame = window.frame();
 
@@ -318,7 +318,7 @@ describe('a task of main asking beside a member (CHD-431)', () => {
       await window.shows('● tester needs your permission · ctrl+x a to go');
       await leader(window, 'a');
       await window.shows('╭─ tester · bugfix ─');
-      await window.shows('tester asks');
+      await window.shows('tester · bugfix asks');
     }));
 
   test("from the member, the hint names main's task as its box does, and ctrl+x a reaches it", () =>

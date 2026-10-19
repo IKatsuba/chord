@@ -23,7 +23,8 @@ import { useColours, useHintKey } from '../app/context.ts';
 import { borderOf, ChoiceList } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
-import { askerRow } from '../transcript/agents/subagents.ts';
+import { askerParts } from './asker.ts';
+import { AskerRow } from './Asker.tsx';
 import type { ScrollStep } from '../transcript/scroll.ts';
 import {
   choicesFor,
@@ -75,8 +76,15 @@ function AgentPermission({
   wait: PermissionWait;
   /** The way down to the subagent that asks; empty when the agent does. */
   asker?: readonly Subagent[];
-  /** The long-lived child that asks, picked, with its colour. */
-  child?: { readonly name: string; readonly colour: string | undefined };
+  /**
+   * The long-lived child that asks, picked, with its colour, and a member's
+   * team, which its row names after it (the owner's Q45).
+   */
+  child?: {
+    readonly name: string;
+    readonly colour: string | undefined;
+    readonly team?: string | undefined;
+  };
   /** Asked with no turn running. */
   between?: boolean;
   /** Asked between turns, the keys not taken into it yet. */
@@ -91,12 +99,15 @@ function AgentPermission({
   onOverflow?: (overflows: boolean) => void;
 }) {
   const colours = useColours();
-  const asks = askerRow(asker);
-  // The session's own agent asking between turns is named too: the person
-  // prompted nothing, so the box says who asks.
-  const owner =
-    child ?? (between ? { name: 'main', colour: undefined } : undefined);
-  const when = between && <span attributes={DIM}>{BETWEEN}</span>;
+  // Who asks, by the rule every box that asks shares (CHD-389): main's own
+  // request in a turn names nobody, as its missing row is how it differs.
+  const parts = askerParts({
+    entries: [],
+    path: asker,
+    subagentId: wait.subagentId,
+    between,
+    picked: child,
+  });
 
   return (
     // It gives way only in its request's rows, every other row pinned.
@@ -106,36 +117,7 @@ function AgentPermission({
       marginTop={1}
       flexShrink={1}
     >
-      {asks.length === 0 &&
-        wait.subagentId !== undefined &&
-        between &&
-        owner !== undefined && (
-          <text {...TEXT} {...fg(colours.accent)} flexShrink={0}>
-            {`a subagent of ${owner.name} asks`}
-            {when}
-          </text>
-        )}
-      {asks.length === 0 &&
-        !(between && wait.subagentId !== undefined) &&
-        owner !== undefined && (
-          <text {...TEXT} flexShrink={0}>
-            <span {...fg(owner.colour)} attributes={BOLD}>
-              {owner.name}
-            </span>
-            {` asks`}
-            {when}
-          </text>
-        )}
-      {asks.length > 0 && (
-        <text {...TEXT} {...fg(colours.accent)} flexShrink={0}>
-          {asks.map((piece, index) => (
-            <span key={index} attributes={piece.bold ? BOLD : 0}>
-              <Ansi text={piece.text} />
-            </span>
-          ))}
-          {when}
-        </text>
-      )}
+      <AskerRow asker={parts} between={between} />
       <Request
         wait={wait}
         width={Math.max(width, 1)}
@@ -381,9 +363,6 @@ function SaveBox({
     </box>
   );
 }
-
-/** Said dim after who asks a request that came with no turn running. */
-export const BETWEEN = ' · between turns';
 
 /**
  * A request between turns' last line until the person takes the keys into

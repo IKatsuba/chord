@@ -1225,6 +1225,32 @@ describe("a permission left open at its turn's end (CHD-158 C4, the owner's Q44)
     }));
 });
 
+test("a member's permission row names its team, in a turn and between turns (CHD-389 U3, the owner's Q45)", async () => {
+  for (const between of [false, true]) {
+    const drawn = await draw(
+      <PermissionPrompt
+        wait={{
+          id: 'p',
+          title: 'Write tests/parse/tokenize_test.ts',
+          options: [],
+        }}
+        child={{ name: 'tester', colour: undefined, team: 'bugfix' }}
+        between={between}
+        width={76}
+        active={false}
+        onChoose={() => {}}
+      />,
+      { columns: 80, rows: 24 },
+    );
+    const shown = stripAnsi(drawn.frame());
+
+    await drawn.unmount();
+    expect(shown).toContain(
+      between ? 'tester · bugfix asks · between turns' : 'tester · bugfix asks',
+    );
+  }
+});
+
 describe('CHD-158 C4 tester: promoted permission keys and withdrawal', () => {
   for (const [columns, rows] of [
     [80, 24],

@@ -1,12 +1,15 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   contextReport,
+  reportFacts,
   costReport,
   formatCost,
   type ReportFacts,
   sessionTokens,
   statusReport,
 } from '../../../src/ui/transcript/reports.ts';
+
+import { initialAppState } from '../../../src/ui/app/state.ts';
 
 const FACTS: ReportFacts = {
   agent: 'fake',
@@ -188,4 +191,113 @@ test("a cost and a context chord worked out read as chord's estimate", () => {
   expect(
     text(contextReport({ ...FACTS, context: { used: 4000, size: 0 } })),
   ).toStrictEqual(['fake has not reported how full its context window is.']);
+});
+
+test("/cost says the turn running is counted when it ends, until any of its spend has come (the owner's Q51, CHD-405)", () => {
+  const earlier = {
+    turns: {
+      a: { inputTokens: 1000, outputTokens: 200, cachedReadTokens: 800 },
+    },
+  };
+  const estimated = {
+    used: 4000,
+    size: 1_000_000,
+    cost: { amount: 0.025, currency: 'USD' },
+    estimated: ['cost'] as const,
+  };
+
+  // Earlier turns reported: the row goes right after the total.
+  expect(
+    text(
+      costReport({
+        ...FACTS,
+        spent: earlier,
+        context: estimated,
+        running: 'b',
+      }),
+    ),
+  ).toStrictEqual([
+    "Total cost:   $0.0250 (chord's estimate)",
+    'This turn:    counted when it ends',
+    'Tokens in:    1,000',
+    'Tokens out:   200',
+    'Cache read:   800',
+    'Session time: 1m 5s',
+  ]);
+  // A first turn with nothing reported: after the sentence, before the time.
+  expect(text(costReport({ ...FACTS, running: 'a' }))).toStrictEqual([
+    'fake has not reported what this session has used.',
+    'This turn:    counted when it ends',
+    'Session time: 1m 5s',
+  ]);
+  // Its spend in, or no turn running: no row.
+  expect(
+    text(costReport({ ...FACTS, spent: earlier, running: 'a' })),
+  ).not.toContain('This turn:    counted when it ends');
+  expect(
+    text(costReport({ ...FACTS, spent: earlier, context: estimated })),
+  ).not.toContain('This turn:    counted when it ends');
+});
+
+describe('CHD-405 N2 tester: running spend boundaries', () => {
+  test('a held between-turn permission with no running turn adds no current-turn row', () => {
+    const state = {
+      ...initialAppState,
+      transcript: {
+        ...initialAppState.transcript,
+        turn: {
+          status: 'awaiting_permission' as const,
+          turnId: 'ended',
+          since: 100,
+          permissions: [{ id: 'held', options: [] }],
+          between: true as const,
+        },
+      },
+    };
+    const facts = reportFacts(state, 'codex', '/work', 500);
+
+    expect(facts.running).toBeUndefined();
+    expect(text(costReport(facts)).join('\n')).not.toContain('This turn:');
+  });
+
+  test('recorded zero spend counts as reported, and an unrelated turn does not', () => {
+    const spent = { turns: { current: { inputTokens: 0, outputTokens: 0 } } };
+
+    expect(
+      text(costReport({ ...FACTS, running: 'current', spent })).join('\n'),
+    ).not.toContain('This turn:');
+    expect(
+      text(costReport({ ...FACTS, running: 'next', spent })).join('\n'),
+    ).toContain('counted when it ends');
+  });
+});
+
+test("a permission held inside the agent's own cycle leaves the cycle running: /cost says it is counted when it ends (CHD-405, CHD-426)", () => {
+  const held = {
+    status: 'awaiting_permission' as const,
+    turnId: 'cycle',
+    since: 100,
+    permissions: [{ id: 'held', options: [] }],
+    between: true as const,
+  };
+  const facts = (cycle: boolean) =>
+    reportFacts(
+      {
+        ...initialAppState,
+        transcript: {
+          ...initialAppState.transcript,
+          turn: cycle ? { ...held, cycle: true as const } : held,
+        },
+      },
+      'claude',
+      '/work',
+      500,
+    );
+
+  expect(facts(true).running).toBe('cycle');
+  expect(text(costReport(facts(true))).join('\n')).toMatch(
+    /This turn: +counted when it ends/,
+  );
+  // Held between turns with no cycle: nothing runs.
+  expect(facts(false).running).toBeUndefined();
 });

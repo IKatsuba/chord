@@ -2020,3 +2020,102 @@ describe('CHD-426 U2 tester: held inputs and cancellation silence', () => {
       ));
   }
 });
+
+test("/cost while a turn runs says that turn is counted when it ends, beside the earlier turns' estimate, and no longer once it has ended (CHD-405)", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await until('the turn to end', () => !window.frame().includes('Working'));
+      await send(window, 'slow');
+      await window.shows('Working');
+
+      const during = await reported(window, '/cost');
+
+      expect(during).toContain('Total cost:   $');
+      expect(during).toContain("(chord's estimate)");
+      expect(during).toMatch(
+        /Total cost:.*\n\s+This turn: {4}counted when it ends/,
+      );
+
+      await window.press(ESC);
+      await until(
+        'the turn to end',
+        () => !window.frame().includes('Working…'),
+      );
+      expect(await reported(window, '/cost')).not.toContain('This turn:');
+    },
+    {
+      agentCommand: fakeAgentCommand(undefined, '--tokens-only'),
+      rows: 60,
+    },
+  ));
+
+describe('CHD-405 N2 tester: held requests do not imply running spend', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`cost has no current-turn row while a between-turn permission remains open at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'leftask');
+          await window.shows('main asks · between turns');
+
+          const cost = await reported(window, '/cost');
+
+          expect(cost).toContain('fake has not reported');
+          expect(cost).not.toContain('This turn:');
+          expect(window.frame()).toContain('ctrl+x a to answer');
+          expect(window.frame()).not.toContain('❯ 1. Allow');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--no-usage'),
+        },
+      ));
+  }
+});
+
+describe('CHD-405 N2 tester: cycle-held permission cost', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a held cycle has a current-turn row until its end, while a plain held request does not at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'claudecycleask');
+          await window.shows('main asks · between turns');
+          expect(await reported(window, '/cost')).toContain(
+            'counted when it ends',
+          );
+          await leader(window, 'a');
+          await window.shows('❯ 1. Allow');
+          await window.press('1');
+          await window.shows('Permission: allow.');
+          await until(
+            'the cycle ended',
+            () => !window.frame().includes('Working…'),
+          );
+          expect(await reported(window, '/cost')).not.toContain('This turn:');
+          await send(window, 'leftask');
+          await window.shows('main asks · between turns');
+          expect(await reported(window, '/cost')).not.toContain('This turn:');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--adapter',
+            'claude',
+            '--no-usage',
+          ),
+        },
+      ));
+  }
+});

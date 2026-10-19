@@ -1543,3 +1543,83 @@ describe('CHD-466 U2 tester: refusal before cached offers and child starts', () 
     });
   }
 });
+
+describe('CHD-405 N2 tester: standalone child spend is independent', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`the picked child gets its own running row and loses it when cancelled while main runs at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      const command = fakeAgentCommand(
+        undefined,
+        '--no-usage',
+        '--step-ms',
+        '30',
+      );
+      const cost = async (window: Window) => {
+        await send(window, '/cost');
+        await window.shows('› /cost');
+
+        const lines = window.frame().split('\n');
+        const at = lines.findLastIndex((line) => line.includes('› /cost'));
+
+        return lines.slice(at + 1).join('\n');
+      };
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+            await main.window.open(main.key, {
+              agent: 'codex',
+              name: 'foreign',
+              prompt: 'slow',
+            });
+            await window.shows('foreign');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('╭─ foreign ─');
+            await window.shows('Working.');
+            expect(await cost(window)).toContain('counted when it ends');
+            await window.press(DOWN);
+            await window.press(UP);
+            await window.press('\r');
+            expect(await cost(window)).not.toContain('This turn:');
+            await send(window, 'slow');
+            await window.shows('Working.');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('╭─ foreign ─');
+            await window.press(ESC);
+            await window.shows('Interrupted by user');
+            expect(await cost(window)).not.toContain('This turn:');
+          },
+          {
+            server,
+            runtimes: ['fake', 'codex'],
+            columns,
+            rows,
+            agentCommand: command,
+            startupOf: () => ({ agentCommand: command }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

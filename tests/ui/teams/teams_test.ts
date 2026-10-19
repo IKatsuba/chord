@@ -385,7 +385,8 @@ test("/team show's running form gives an agent's effort as the last part of its 
       name: 'lead',
       lead: true as const,
       open: true,
-      state: { glyph: '✓', words: 'replied 6s ago', tone: 'dim' as const },
+      state: { glyph: '◦', words: 'idle 6s', tone: 'dim' as const },
+      mark: { glyph: '✓', words: 'new reply', tone: 'success' as const },
       latest: '← from @tester · claude',
     },
     {
@@ -407,13 +408,13 @@ test("/team show's running form gives an agent's effort as the last part of its 
     ]);
 
   expect(drawn(114)).toStrictEqual([
-    'lead    claude · opus · high   default      ✓ replied 6s ago  ← from @tester · claude',
-    'tester  claude · sonnet · low  acceptEdits  ● permission 5s   Bash(deno task test tests/parse)',
+    'lead    claude · opus · high   default      ◦ idle 6s        ✓ new reply  ← from @tester · claude',
+    'tester  claude · sonnet · low  acceptEdits  ● permission 5s               Bash(deno task test tests/parse)',
     'coder   codex · gpt-5.3-codex  auto         not opened',
   ]);
   // Narrower, the headline goes under the row; the effort stays.
   expect(drawn(74)).toStrictEqual([
-    'lead    claude · opus · high   default      ✓ replied 6s ago',
+    'lead    claude · opus · high   default      ◦ idle 6s        ✓ new reply',
     '        ← from @tester · claude',
     'tester  claude · sonnet · low  acceptEdits  ● permission 5s',
     '        Bash(deno task test tests/parse)',

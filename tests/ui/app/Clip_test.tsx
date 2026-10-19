@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
-import { type ReactNode, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Clip } from '../../../src/ui/app/Clip.tsx';
 import { TEXT } from '../../../src/ui/theme/text.ts';
 import { draw } from '../harness.tsx';
@@ -42,40 +42,4 @@ test('a clipping box laid out to no rows draws nothing of what it holds', async 
   );
 
   expect(stripAnsi(frame).split('\n')).toStrictEqual(['panel']);
-});
-
-/** A clipping box above a panel that grows from two rows to three. */
-function Squeezed({ fewest }: { fewest: number }) {
-  const [tall, setTall] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setTall(true), 50);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  return (
-    <box width={20} height={3}>
-      <Clip flexGrow={1} flexShrink={1} flexBasis={0} fewest={fewest}>
-        <text {...TEXT}>one-a</text>
-        <text {...TEXT}>two-bb</text>
-      </Clip>
-      <box flexShrink={0} height={tall ? 3 : 2}>
-        <text {...TEXT}>panel</text>
-      </box>
-    </box>
-  );
-}
-
-test("the transcript's clip draws nothing in one row, so going from one row to none leaves nothing over what follows (CHD-158 §8)", async () => {
-  const app = await draw(<Squeezed fewest={2} />, { columns: 20, rows: 3 });
-
-  try {
-    // In its one row, nothing.
-    expect(stripAnsi(app.frame()).split('\n')[0]?.trim()).toBe('');
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(stripAnsi(app.frame()).split('\n')[0]).toBe('panel');
-  } finally {
-    await app.unmount();
-  }
 });

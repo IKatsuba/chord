@@ -9,19 +9,7 @@ import { useRef, useState } from 'react';
  * nothing would still draw a row, with everything in it laid out to nothing
  * too and drawn on that one row.
  */
-export function Clip({
-  ref,
-  children,
-  fewest = 1,
-  ...props
-}: BoxProps & {
-  /**
-   * The fewest rows it draws what it holds in: fewer, it draws nothing. The
-   * transcript's area takes two, so it never has one row that a change to
-   * none would leave drawn (CHD-158 §8).
-   */
-  fewest?: number;
-}) {
+export function Clip({ ref, children, ...props }: BoxProps) {
   const node = useRef<BoxRenderable | null>(null);
   const [empty, setEmpty] = useState(false);
 
@@ -43,9 +31,7 @@ export function Clip({
       onSizeChange={() => {
         const laid = node.current?.getLayout();
 
-        setEmpty(
-          laid !== undefined && (laid.height < fewest || laid.width === 0),
-        );
+        setEmpty(laid !== undefined && (laid.height === 0 || laid.width === 0));
       }}
     >
       {empty ? null : children}

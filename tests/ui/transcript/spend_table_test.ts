@@ -1,4 +1,6 @@
 import { expect, test } from 'bun:test';
+import stringWidth from 'string-width';
+import { costReport } from '../../../src/ui/transcript/reports.ts';
 import type { SpendPart } from '../../../src/ui/transcript/spend.ts';
 import {
   manySessions,
@@ -132,8 +134,9 @@ test('an estimate says whose prices, a figure nobody reported says so, and the t
     '3 gemini     not reported        —',
     "Total            ~$0.4370  192,400  part chord's estimate; gemini not reported",
   ]);
+  // Too narrow for even the short one whole: cut at the row's end.
   expect(lines(mixed, 50).at(-1)).toBe(
-    'Total            ~$0.4370  192,400  part estimate; 1 not reported',
+    'Total            ~$0.4370  192,400  part estimate…',
   );
 });
 
@@ -247,3 +250,163 @@ test("the Total says chord's estimate when all of it is, and part only when some
     "Total        ~$0.0094   4,000  chord's estimate",
   );
 });
+
+test("each task sits under the session that started it, a closed agent's too, every row its own spend and only a tab's row its subtotal", () => {
+  const window: SpendPart[] = [
+    {
+      name: '1 fake',
+      kind: 'tab',
+      parts: [
+        {
+          name: 'main',
+          kind: 'main',
+          agent: 'fake',
+          figure: { cost: USD(0.01) },
+          parts: [
+            {
+              name: 'Fix it',
+              kind: 'task',
+              ended: true,
+              figure: { cost: USD(0.005) },
+            },
+          ],
+        },
+        {
+          name: 'docs',
+          kind: 'agent',
+          ended: true,
+          figure: { cost: USD(0.02) },
+          parts: [
+            {
+              name: 'Index',
+              kind: 'task',
+              ended: true,
+              figure: { cost: USD(0.03) },
+            },
+          ],
+        },
+        {
+          name: 'bugfix',
+          kind: 'team',
+          parts: [
+            { name: 'lead', kind: 'member', figure: { cost: USD(0.025) } },
+            {
+              name: 'tester',
+              kind: 'member',
+              figure: { cost: USD(0.0125) },
+              parts: [
+                {
+                  name: 'Run it',
+                  kind: 'task',
+                  ended: true,
+                  figure: { cost: USD(0.001) },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  expect(lines(window, 112)).toStrictEqual([
+    'This window     Cost  Tokens',
+    '1 fake       $0.1035       —',
+    '  main       $0.0100       —',
+    '    Fix it   $0.0050       —  task agent, ended',
+    '  docs       $0.0200       —  agent, closed',
+    '    Index    $0.0300       —  task agent, ended',
+    '  bugfix     $0.0375       —  team run: lead $0.0250 · tester $0.0125',
+    '    Run it   $0.0010       —  task agent of tester, ended',
+    'Total        $0.1035       —',
+  ]);
+});
+
+test('no row is wider than the table: a long name is cut at a third of it by display width, CJK never split, and notes cut last part first', () => {
+  const window: SpendPart[] = [
+    {
+      name: '1 fake',
+      kind: 'tab',
+      parts: [
+        {
+          name: 'main',
+          kind: 'main',
+          agent: 'fake',
+          figure: { cost: USD(0.01) },
+        },
+        {
+          name: 'Rewrite the tokenizer as a single pass over the source that reads every token once',
+          kind: 'task',
+          ended: true,
+          figure: { cost: USD(0.0125), tokens: 2000 },
+        },
+        {
+          name: '日本語のエージェントの名前',
+          kind: 'agent',
+          figure: { cost: USD(0.002) },
+        },
+        { name: '🧪 tester', kind: 'agent' },
+        {
+          name: 'docs',
+          kind: 'agent',
+          ended: true,
+          figure: {
+            cost: USD(0.02),
+            estimated: 'part',
+            before: { cost: USD(0.015), until: Date.UTC(2026, 9, 12, 12) },
+            uncounted: 2,
+          },
+        },
+      ],
+    },
+    {
+      name: '2 gemini',
+      kind: 'tab',
+      parts: [{ name: 'main', kind: 'main', agent: 'gemini' }],
+    },
+  ];
+
+  for (const width of [72, 112]) {
+    const drawn = lines(window, width);
+
+    for (const line of drawn) {
+      expect(stringWidth(line), line).toBeLessThanOrEqual(width);
+    }
+
+    expect(drawn.some((line) => line.includes('…'))).toBe(true);
+  }
+
+  const at72 = lines(window, 72);
+
+  // A third of 72, the indent counted: the name column is 24 cells.
+  expect(at72[3]).toStartWith('  Rewrite the tokenizer…');
+  // Two cells a character: cut whole, never half one.
+  expect(at72[4]).toStartWith('  日本語のエージェント…');
+
+  // Its notes as far as the row goes, the last cut, the first whole.
+  const docs = at72.find((line) => line.startsWith('  docs'))!;
+
+  expect(stringWidth(docs)).toBe(72);
+  expect(docs).toMatch(/~\$0\.0200 +— {2}closed; part estimate; .*…$/);
+});
+
+test('a session that reported nothing but a turn left out still says that turn', () => {
+  expect(
+    text(
+      costReport({
+        agent: 'fake',
+        cwd: '/work',
+        now: 1,
+        modes: [],
+        spent: { turns: {}, costs: { a: { uncounted: true } } },
+      }),
+    ),
+  ).toStrictEqual([
+    'Total cost:  not reported by fake',
+    'Not counted: 1 turn',
+    'Tokens:      not reported by fake',
+  ]);
+});
+
+const text = (rows: readonly { label?: string; text: string }[]) =>
+  rows.map(({ label, text }) => `${label ?? ''}${text}`);

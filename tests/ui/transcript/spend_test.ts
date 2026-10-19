@@ -289,9 +289,15 @@ test("the window's spend: each tab's own agent and its tasks, its long-lived age
       '1 fake',
       undefined,
       [
-        ['main', 0.15],
-        ['Fix it', 0.0125],
-        ['Watch', undefined],
+        // Its task agents under it.
+        [
+          'main',
+          0.15,
+          [
+            ['Fix it', 0.0125],
+            ['Watch', undefined],
+          ],
+        ],
         ['docs', 0.02],
         [
           'bugfix',

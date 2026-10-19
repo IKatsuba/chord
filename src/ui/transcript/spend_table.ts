@@ -6,6 +6,8 @@
  * S4, CHD-378's C as settled for the build).
  */
 import type { Cost } from '@agentclientprotocol/sdk';
+import stringWidth from 'string-width';
+import wrapAnsi from 'wrap-ansi';
 import type { ReportRow } from '../../session/transcript/types.ts';
 import { formatCost } from './reports.ts';
 import { type Figure, type SpendPart, sum, type Summed } from './spend.ts';
@@ -131,8 +133,59 @@ function sumRow(
   };
 }
 
-/** A team run's row: its members added up, each named in the long note. */
-function teamRow(team: SpendPart, depth: number): Row {
+/** A part with nothing under it: its own figure, as its row shows it. */
+function alone(part: SpendPart): SpendPart {
+  const { parts: _, ...own } = part;
+
+  return own;
+}
+
+/**
+ * A task agent's row, under the session that started it; `owner` names
+ * that session where the row above is not it, as under a team run.
+ */
+function taskRows(task: SpendPart, depth: number, owner?: string): Row[] {
+  const kind = owner === undefined ? 'task agent' : `task agent of ${owner}`;
+
+  return [
+    task.running === true
+      ? {
+          name: task.name,
+          depth,
+          cost: NONE,
+          tokens: NONE,
+          notes: [
+            {
+              long: `${kind}, running: counted when it ends`,
+              short: 'running',
+            },
+          ],
+        }
+      : ownRow(task.name, depth, task.figure, [
+          { long: `${kind}, ended`, short: 'ended' },
+        ]),
+    ...(task.parts ?? []).flatMap((under) => taskRows(under, depth + 1, owner)),
+  ];
+}
+
+/** A session's row, its own spend, and its task agents' rows under it. */
+function sessionRows(
+  part: SpendPart,
+  name: string,
+  depth: number,
+  kind: readonly Note[] = [],
+): Row[] {
+  return [
+    ownRow(name, depth, part.figure, kind),
+    ...(part.parts ?? []).flatMap((task) => taskRows(task, depth + 1)),
+  ];
+}
+
+/**
+ * A team run's rows: its lead and members added up, each named in the long
+ * note, then the task agents they started, each with its owner.
+ */
+function teamRows(team: SpendPart, depth: number): Row[] {
   const members = team.parts ?? [];
   const each = members
     .map(
@@ -149,38 +202,30 @@ function teamRow(team: SpendPart, depth: number): Row {
     .join(' · ');
   const ended = team.ended === true;
 
-  return sumRow(team.name, depth, sum(members), [
-    {
-      long: `team run${ended ? ', ended' : ''}: ${each}`,
-      short: `team run of ${members.length}${ended ? ', ended' : ''}`,
-    },
-  ]);
+  return [
+    sumRow(team.name, depth, sum(members.map(alone)), [
+      {
+        long: `team run${ended ? ', ended' : ''}: ${each}`,
+        short: `team run of ${members.length}${ended ? ', ended' : ''}`,
+      },
+    ]),
+    ...members.flatMap((member) =>
+      (member.parts ?? []).flatMap((task) =>
+        taskRows(task, depth + 1, member.name),
+      ),
+    ),
+  ];
 }
 
-/** The row of a task agent, of a long-lived agent, or of a team run. */
-function childRow(part: SpendPart, depth: number): Row {
+/** The rows of a long-lived agent, open or closed, or of a team run. */
+function childRows(part: SpendPart, depth: number): Row[] {
   switch (part.kind) {
-    case 'task':
-      return part.running === true
-        ? {
-            name: part.name,
-            depth,
-            cost: NONE,
-            tokens: NONE,
-            notes: [
-              {
-                long: 'task agent, running: counted when it ends',
-                short: 'running',
-              },
-            ],
-          }
-        : ownRow(part.name, depth, part.figure, [
-            { long: 'task agent, ended', short: 'ended' },
-          ]);
     case 'team':
-      return teamRow(part, depth);
+      return teamRows(part, depth);
+    case 'task':
+      return taskRows(part, depth);
     default:
-      return ownRow(part.name, depth, part.figure, [
+      return sessionRows(part, part.name, depth, [
         part.ended === true
           ? { long: 'agent, closed', short: 'closed' }
           : { long: 'agent', short: 'agent' },
@@ -190,8 +235,10 @@ function childRow(part: SpendPart, depth: number): Row {
 
 /**
  * A tab's rows: one when its own session is all it holds, else its row
- * with its subtotal and each part under it; the sessions `/clear` let go
- * in it as one row, `before /clear`.
+ * with the subtotal of everything under it, then its own session, the
+ * sessions `/clear` let go in it as one row, `before /clear`, and each
+ * agent and team run, every row its own spend, task agents under the
+ * session that started them.
  */
 function tabRows(tab: SpendPart): Row[] {
   const parts = tab.parts ?? [];
@@ -204,22 +251,20 @@ function tabRows(tab: SpendPart): Row[] {
   const rest = parts.filter((part) => part.kind !== 'main');
   const mark: Note[] = closed ? [{ long: 'closed', short: 'closed' }] : [];
 
-  if (cleared.length === 0 && rest.length === 0) {
+  if (cleared.length === 0 && rest.length === 0 && own?.parts === undefined) {
     return [ownRow(tab.name, 0, own?.figure, mark)];
   }
 
-  const before = cleared.length === 0 ? undefined : sum(cleared);
-
   return [
     sumRow(tab.name, 0, sum(parts), mark),
-    ...(own === undefined ? [] : [ownRow('main', 1, own.figure)]),
-    ...(before === undefined
+    ...(own === undefined ? [] : sessionRows(own, 'main', 1)),
+    ...(cleared.length === 0
       ? []
       : [
           sumRow(
             'before /clear',
             1,
-            before,
+            sum(cleared.map(alone)),
             cleared.length > 1
               ? [
                   {
@@ -229,8 +274,11 @@ function tabRows(tab: SpendPart): Row[] {
                 ]
               : [],
           ),
+          ...cleared.flatMap((session) =>
+            (session.parts ?? []).flatMap((task) => taskRows(task, 2)),
+          ),
         ]),
-    ...rest.map((part) => childRow(part, 1)),
+    ...rest.flatMap((part) => childRows(part, 1)),
   ];
 }
 
@@ -292,43 +340,82 @@ function totalRow(parts: readonly SpendPart[]): Row {
   return sumRow('Total', 0, summed, notes);
 }
 
+/** `text` cut to `cells` columns, an ellipsis where it was cut. */
+function cut(text: string, cells: number): string {
+  if (stringWidth(text) <= cells) {
+    return text;
+  }
+
+  if (cells <= 1) {
+    return cells === 1 ? '…' : '';
+  }
+
+  const [head = ''] = wrapAnsi(text, cells - 1, {
+    hard: true,
+    trim: false,
+    wordWrap: false,
+  }).split('\n');
+
+  return `${head}…`;
+}
+
+/** `text` padded with spaces to `cells` columns, at its end or its start. */
+function pad(text: string, cells: number, start = false): string {
+  const fill = ' '.repeat(Math.max(0, cells - stringWidth(text)));
+
+  return start ? fill + text : text + fill;
+}
+
+/** The header's name, which the name column is never narrower than. */
+const NAME_LEAST = 'This window'.length;
+
 /**
- * The table's lines for the window's spend, laid out in `width` columns:
- * each note in its long form where the row then fits, else its short one.
+ * The table's lines for the window's spend in `width` cells, none wider:
+ * names cut where the figures would not fit beside them, and each note in
+ * its long form where the row then fits, else its short one, cut at the
+ * row's end where even that does not; a note never wraps.
  */
 export function spendTable(
   parts: readonly SpendPart[],
   width: number,
 ): ReportRow[] {
   const rows = [...parts.flatMap(tabRows), totalRow(parts)];
-  const names = rows.map((row) => `${'  '.repeat(row.depth)}${row.name}`);
-  const nameWidth = Math.max(
-    'This window'.length,
-    ...names.map((n) => n.length),
-  );
   const costWidth = Math.max(
-    'Cost'.length,
-    ...rows.map((row) => row.cost.length),
+    stringWidth('Cost'),
+    ...rows.map((row) => stringWidth(row.cost)),
   );
   const tokenWidth = Math.max(
-    'Tokens'.length,
-    ...rows.map((row) => row.tokens.length),
+    stringWidth('Tokens'),
+    ...rows.map((row) => stringWidth(row.tokens)),
+  );
+  const figures = 2 + costWidth + 2 + tokenWidth;
+  const names = rows.map((row) => `${'  '.repeat(row.depth)}${row.name}`);
+  // At most a third of the table, the figures never cut.
+  const nameWidth = Math.min(
+    Math.max(NAME_LEAST, ...names.map((name) => stringWidth(name))),
+    Math.max(NAME_LEAST, Math.floor(width / 3)),
+    Math.max(1, width - figures),
   );
   const line = (name: string, cost: string, tokens: string) =>
-    `${name.padEnd(nameWidth)}  ${cost.padStart(costWidth)}  ${tokens.padStart(
+    `${pad(cut(name, nameWidth), nameWidth)}  ${pad(cost, costWidth, true)}  ${pad(
+      tokens,
       tokenWidth,
+      true,
     )}`;
 
   return [
-    { text: line('This window', 'Cost', 'Tokens') },
+    { text: cut(line('This window', 'Cost', 'Tokens'), width) },
     ...rows.map((row, index) => {
-      const figures = line(names[index]!, row.cost, row.tokens);
+      const shown = line(names[index]!, row.cost, row.tokens);
+      const room = width - stringWidth(shown) - 2;
       const long = row.notes.map((note) => note.long).join('; ');
       const short = row.notes.map((note) => note.short).join('; ');
       const note =
-        long === '' || figures.length + 2 + long.length <= width ? long : short;
+        long === '' ? '' : stringWidth(long) <= room ? long : cut(short, room);
 
-      return { text: note === '' ? figures : `${figures}  ${note}` };
+      return {
+        text: cut(note === '' ? shown : `${shown}  ${note}`, width),
+      };
     }),
   ];
 }

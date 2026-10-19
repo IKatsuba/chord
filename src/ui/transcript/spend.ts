@@ -334,6 +334,21 @@ export function sessionParts(
 }
 
 /**
+ * A session's part, a tab's own, a long-lived agent's or a team member's,
+ * its task agents under it, as a closed one's is kept.
+ */
+function ownPart(
+  name: string,
+  kind: SpendKind,
+  session: SpendSession | undefined,
+  agent?: string,
+): SpendPart {
+  const [own, ...tasks] = sessionParts(name, kind, session, agent);
+
+  return tasks.length === 0 ? own! : { ...own!, parts: tasks };
+}
+
+/**
  * The window's spend, tab by tab: each tab's own agent and its task agents,
  * then each long-lived agent, a team run as one part with its lead and
  * members under it; then the agents and tabs closed since the window opened,
@@ -369,9 +384,9 @@ export function windowSpend<C>(
       kind: 'team',
       parts: [
         // Its row is named by the team; its lead is `lead` under it.
-        ...sessionParts('lead', 'member', sessions[lead.key]),
-        ...membersOf(tab, lead.id).flatMap((member) =>
-          sessionParts(member.name, 'member', sessions[member.key]),
+        ownPart('lead', 'member', sessions[lead.key]),
+        ...membersOf(tab, lead.id).map((member) =>
+          ownPart(member.name, 'member', sessions[member.key]),
         ),
         ...keptHere
           .filter((each) => each.lead === lead.id)
@@ -380,15 +395,13 @@ export function windowSpend<C>(
     }));
     const agents = tab.children
       .filter((child) => child.team === undefined)
-      .flatMap((child) =>
-        sessionParts(child.name, 'agent', sessions[child.key]),
-      );
+      .map((child) => ownPart(child.name, 'agent', sessions[child.key]));
 
     return {
       name: `${index + 1} ${tab.agent}`,
       kind: 'tab',
       parts: [
-        ...sessionParts('main', 'main', sessions[tab.key], tab.agent),
+        ownPart('main', 'main', sessions[tab.key], tab.agent),
         ...agents,
         ...runs,
         // What closed under a team still running is in its part above.

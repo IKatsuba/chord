@@ -257,7 +257,8 @@ function sessionReport(facts: ReportFacts): ReportRow[] {
       ? [RUNNING_TURN]
       : [];
 
-  if (spent === undefined && cost === undefined) {
+  // Nothing to say, but a turn left out or an older sum still is said.
+  if (spent === undefined && cost === undefined && marks.length === 0) {
     return aligned([
       `${facts.agent} has not reported what this session has used.`,
       ...running,

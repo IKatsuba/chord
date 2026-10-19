@@ -199,9 +199,12 @@ function RunningTeam({
         const {
           text,
           state: [start, end],
+          mark,
           agent,
         } = line;
         const tone = agent.state?.tone;
+        const markTone = agent.mark?.tone;
+        const [markStart, markEnd] = mark ?? [end, end];
 
         return (
           <Under key={index} first={false}>
@@ -214,7 +217,15 @@ function RunningTeam({
               >
                 <Ansi text={text.slice(start, end)} />
               </span>
-              <Ansi text={text.slice(end)} />
+              <Ansi text={text.slice(end, markStart)} />
+              <span
+                {...(markTone === undefined || markTone === 'dim'
+                  ? { attributes: DIM }
+                  : fg(tones[markTone]))}
+              >
+                <Ansi text={text.slice(markStart, markEnd)} />
+              </span>
+              <Ansi text={text.slice(markEnd)} />
             </text>
           </Under>
         );

@@ -126,6 +126,7 @@ import {
 } from './closing.ts';
 import {
   type AgentRow,
+  agentMark,
   agentState,
   listRows,
   type ListTarget,
@@ -145,7 +146,7 @@ import {
   NO_STOP_HINT,
   stopRefused,
 } from '../background/view.ts';
-import { stripLayout, tabGlyph } from './strip.ts';
+import { stripLayout, tabGlyphs } from './strip.ts';
 import {
   headlineText,
   type ListedTeam,
@@ -2084,17 +2085,16 @@ export function useSessions(
         return { ...who, open: false };
       }
 
-      const state = agentState(
-        {
-          key: child.key,
-          name: child.name,
-          runtime: child.runtime,
-          wait: child.wait,
-          picked: false,
-          failed: all.sessions[child.key]?.connection.status === 'failed',
-        },
-        now,
-      );
+      const row = {
+        key: child.key,
+        name: child.name,
+        runtime: child.runtime,
+        wait: child.wait,
+        picked: false,
+        failed: all.sessions[child.key]?.connection.status === 'failed',
+      };
+      const state = agentState(row, now);
+      const mark = agentMark(row);
       const latest = stateOf(child.key)?.transcript.entries.findLast(
         (entry) => entry.kind === 'tool' || entry.kind === 'message',
       );
@@ -2102,7 +2102,8 @@ export function useSessions(
       return {
         ...who,
         open: true,
-        ...(state === undefined ? {} : { state }),
+        state,
+        ...(mark === undefined ? {} : { mark }),
         ...(latest?.kind === 'tool'
           ? {
               latest: headlineText(
@@ -3112,7 +3113,7 @@ export function useSessions(
         number: index + 1,
         agent: tab.agent,
         front: tab.key === tabs.front,
-        glyph: tabGlyph(mergedWait(tab)),
+        glyphs: tabGlyphs(mergedWait(tab)),
       })),
       homePath(frontPlace().cwd, home),
       // Inside the header's padding.

@@ -311,11 +311,19 @@ export function mergedWait<C>(tab: Tab<C>): TabWait {
     wait.working === undefined ? [] : [wait.working],
   );
 
+  const stopped = waits.flatMap((wait) =>
+    wait.stopped === undefined ? [] : [wait.stopped],
+  );
+
   return {
     watch: tab.wait.watch,
     asking: earliest(waits.map((wait) => wait.asking)),
     unseen: unseen('failed') ?? unseen('replied'),
     working: working.length === 0 ? undefined : Math.min(...working),
+    // Idle since the last of its agents stopped (CHD-471).
+    ...(stopped.length === 0 ? {} : { stopped: Math.max(...stopped) }),
+    // Its own agent gone is the tab's.
+    ...(tab.wait.exited ? { exited: true as const } : {}),
   };
 }
 

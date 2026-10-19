@@ -397,3 +397,37 @@ test("/team show's running form has the file's efforts as a column, which gives 
     '● permission 5s',
   );
 });
+
+test("/team show's running form says what of an agent is not yet seen beside its state, the marks in one column (CHD-471)", () => {
+  const idle = { glyph: '◦', words: 'idle 3m', tone: 'dim' as const };
+  const lines = runningTable(
+    BUGFIX,
+    [
+      {
+        name: 'lead',
+        lead: true,
+        open: true,
+        state: { glyph: '✻', words: 'working 8s', tone: 'dim' },
+      },
+      {
+        name: 'tester',
+        open: true,
+        state: idle,
+        mark: { glyph: '✓', words: 'new reply', tone: 'success' },
+      },
+      { name: 'coder', open: true, state: idle },
+      { name: 'reviewer', open: false },
+    ],
+    200,
+  );
+
+  expect(lines.map(({ text }) => text)).toStrictEqual([
+    'lead      claude · opus          default      ✻ working 8s',
+    'tester    claude · sonnet        acceptEdits  ◦ idle 3m     ✓ new reply',
+    'coder     codex · gpt-5.3-codex  auto         ◦ idle 3m',
+    'reviewer  claude · opus          plan         not opened',
+  ]);
+  expect(lines[1]!.text.slice(...lines[1]!.state)).toStrictEqual('◦ idle 3m');
+  expect(lines[1]!.text.slice(...lines[1]!.mark!)).toStrictEqual('✓ new reply');
+  expect(lines[2]!.mark).toBe(undefined);
+});

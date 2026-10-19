@@ -395,6 +395,8 @@ export interface RunningLine {
   readonly text: string;
   /** The state's cells, `[start, end)` in `text`, to paint by its tone. */
   readonly state: readonly [number, number];
+  /** Its mark's cells after the state, to paint by the mark's tone. */
+  readonly mark?: readonly [number, number];
   readonly agent: TeamAgentShown;
 }
 
@@ -421,12 +423,29 @@ export function runningTable(
     agent.lead
       ? team.lead
       : team.members.find((member) => member.name === agent.name);
-  const stateOf = (agent: TeamAgentShown) =>
+  const ownState = (agent: TeamAgentShown) =>
     !agent.open
       ? NOT_OPENED
       : agent.state === undefined
         ? 'idle'
         : `${agent.state.glyph} ${agent.state.words}`;
+  const markOf = (agent: TeamAgentShown) =>
+    agent.open && agent.mark !== undefined
+      ? `${agent.mark.glyph} ${agent.mark.words}`
+      : undefined;
+  // Each state padded where a mark follows, so the marks start in one column.
+  const stateWidth = Math.max(
+    0,
+    ...agents.map((agent) => stringWidth(ownState(agent))),
+  );
+  const stateOf = (agent: TeamAgentShown) => {
+    const mark = markOf(agent);
+
+    return mark === undefined
+      ? ownState(agent)
+      : `${ownState(agent).padEnd(stateWidth)}${GAP}${mark}`;
+  };
+
   const cellsOf = (effort: boolean) =>
     agents.map((agent) => {
       const file = defined(agent);
@@ -483,11 +502,14 @@ export function runningTable(
     .split('\n');
 
   return agents.map((agent, index) => {
-    const state = stateOf(agent);
+    const state = ownState(agent);
+    const mark = markOf(agent);
+    const markAt = before + stateWidth + GAP.length;
 
     return {
       text: (laid[index] ?? '').trimEnd(),
       state: [before, before + state.length],
+      ...(mark === undefined ? {} : { mark: [markAt, markAt + mark.length] }),
       agent,
     };
   });

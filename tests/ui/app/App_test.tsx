@@ -917,7 +917,7 @@ test('ctrl+x w lists the sessions open, and Enter goes to the one highlighted', 
       await ready(window);
       await leader(window, 'w');
       await window.shows('Sessions in ');
-      expect(window.frame()).toMatch(/1\. fake {2}idle {2}text/);
+      expect(window.frame()).toMatch(/1\. fake {2}◦ idle \d+s {2}text/);
       expect(window.frame()).toMatch(/2\. fake {2}here/);
       expect(window.frame()).toContain(
         'Enter to go · 1–2 to pick · Esc to close',

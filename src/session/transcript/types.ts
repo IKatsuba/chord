@@ -588,8 +588,17 @@ export interface TeamAgentShown {
   readonly lead?: true;
   /** Not opened yet, or closed again: it has no state. */
   readonly open: boolean;
-  /** Its state as the agent list words it; none while idle and seen. */
+  /** Its state as the agent list words it; none in a record from before. */
   readonly state?: {
+    readonly glyph: string;
+    readonly words: string;
+    readonly tone: 'warning' | 'error' | 'success' | 'dim';
+  };
+  /**
+   * What of it is not yet seen, as the agent list marks it beside its state
+   * (CHD-471); showing it here does not clear it.
+   */
+  readonly mark?: {
     readonly glyph: string;
     readonly words: string;
     readonly tone: 'warning' | 'error' | 'success' | 'dim';

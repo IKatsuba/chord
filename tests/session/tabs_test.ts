@@ -1648,3 +1648,19 @@ describe('CHD-471 tester: stop time and seen marks', () => {
     expect(tabOf(tabs, 1)!.wait.stopped).toBe(8000);
   });
 });
+
+test("a tab's merged wait last stopped when the last of its agents did, and exited when its lead has (CHD-471)", () => {
+  let tabs = withChildren(opened('claude'), 1, 'parser', 'docs');
+
+  tabs = heard(tabs, 1, [up], 1000);
+  tabs = heard(tabs, 2, [up, prompt('p'), ended('p')], 4000);
+  tabs = heard(tabs, 3, [up], 2000);
+
+  // The child's turn ended at 6000, after the lead and the other child came up.
+  expect(mergedWait(tabOf(tabs, 1)!).stopped).toStrictEqual(6000);
+  expect(mergedWait(tabOf(tabs, 1)!).exited).toStrictEqual(undefined);
+
+  tabs = heard(tabs, 1, [{ type: 'disconnected', turnId: '' }], 9000);
+
+  expect(mergedWait(tabOf(tabs, 1)!).exited).toStrictEqual(true);
+});

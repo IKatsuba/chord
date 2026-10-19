@@ -1,7 +1,7 @@
 import { TextAttributes } from '@opentui/core';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { useColours } from './context.ts';
-import { GLYPHS, type StripView } from './strip.ts';
+import { GLYPHS, glyphsOf, type StripView } from './strip.ts';
 
 /**
  * The header with two or more sessions open: ` chord`, a tab for each, the
@@ -15,6 +15,7 @@ export function Strip({ view }: { view: StripView }) {
     failed: colours.error,
     replied: colours.success,
     working: undefined,
+    message: undefined,
   };
 
   return (
@@ -36,15 +37,16 @@ export function Strip({ view }: { view: StripView }) {
           ) : (
             <span key={index}>
               <span attributes={DIM}>{piece.text}</span>
-              {piece.glyph && (
+              {glyphsOf(piece.glyphs).map((glyph, at) => (
                 <span
-                  {...(glyphColour[piece.glyph] === undefined
+                  key={glyph}
+                  {...(glyphColour[glyph] === undefined
                     ? { attributes: DIM }
-                    : fg(glyphColour[piece.glyph]))}
+                    : fg(glyphColour[glyph]))}
                 >
-                  {` ${GLYPHS[piece.glyph]}`}
+                  {`${at === 0 ? ' ' : ''}${GLYPHS[glyph]}`}
                 </span>
-              )}
+              ))}
             </span>
           ),
         )}

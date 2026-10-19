@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/team.png" alt="chord handing an issue to a team: a lead, a tester on Claude and a coder on Codex, each with its state in the list under the prompt" width="900">
+  <img src="docs/images/team.png" alt="chord handing an issue to a team: a lead, tester and reviewer on Claude, a coder on Codex, each with its state under the prompt" width="900">
 </p>
 
 chord brings Claude Code, Codex, Gemini CLI and other coding agents into one

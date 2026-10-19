@@ -14,9 +14,13 @@
  *
  * chord runs in a home of its own under a temporary directory, so nothing
  * of the person's settings, records or teams reaches a shot. There the
- * settings name the fake agent `claude` and `codex`, on the two real models
- * its `--tokens-only` offers, and the scenario each shot plays comes from
- * `CHORD_FAKE_SCENARIO`, so the prompt typed can be a person's words.
+ * settings name the fake agent `claude` and `codex`, on Claude Opus 5.5 and
+ * GPT-6.1 Sol, which its `--tokens-only` offers, the team the shots run is
+ * `screenshots_team.md` beside this script, whose lead opens all three of
+ * its members, `/team new` proposes the same team in short from
+ * `screenshots_proposal.md`, so the whole proposal fits, and the scenario each shot
+ * plays comes from `CHORD_FAKE_SCENARIO`, so the prompt typed can be a
+ * person's words.
  *
  * Chrome is the system's: `CHROME` names its binary where it is not at
  * macOS's usual place.
@@ -182,10 +186,17 @@ async function until(text: string, shot: string): Promise<void> {
 async function world(dir: string, team: boolean): Promise<string> {
   const home = join(dir, 'home');
   const project = join(home, 'src', 'app');
+  const teamFile = join(ROOT, 'scripts', 'dev', 'screenshots_team.md');
+  // Its team's lead opens every member, reviewer too, and a proposal is
+  // the same team in short, so the whole of it fits the frame.
   const fake = quote([
     process.execPath,
     join(ROOT, 'tests', 'fixtures', 'fake_agent', 'main.ts'),
     '--tokens-only',
+    '--lead-opens',
+    'tester,coder,reviewer',
+    '--propose-team',
+    join(ROOT, 'scripts', 'dev', 'screenshots_proposal.md'),
   ]);
 
   await mkdir(join(home, '.config', 'chord'), { recursive: true });
@@ -196,28 +207,18 @@ async function world(dir: string, team: boolean): Promise<string> {
       theme: 'dark',
       agent: 'claude',
       agents: {
-        claude: { command: fake, model: 'claude-haiku-4-5' },
-        codex: { command: fake, model: 'gpt-5.3-codex' },
+        claude: { command: fake, model: 'claude-opus-5-5' },
+        codex: { command: fake, model: 'gpt-6.1-sol' },
       },
     }),
   );
 
   if (team) {
-    // The fixture's team, on the two names the settings give the fake.
-    const file = await readFile(
-      join(ROOT, 'tests', 'fixtures', 'teams', 'fake', 'bugfix.md'),
-      'utf8',
-    );
-
+    // The shots' own team, beside this script, on the two names the
+    // settings give the fake.
     await writeFile(
       join(project, '.chord', 'teams', 'bugfix.md'),
-      file
-        .replace(
-          /(name: coder\n[^\n]*\n)\s+agent: fake\n\s+model: fake-large/u,
-          '$1    agent: codex\n    model: gpt-5.3-codex',
-        )
-        .replaceAll('agent: fake', 'agent: claude')
-        .replaceAll(/model: fake-(large|small)/gu, 'model: claude-haiku-4-5'),
+      await readFile(teamFile, 'utf8'),
     );
   }
 
@@ -303,11 +304,18 @@ function page(frame: string): string {
   @font-face { font-family: Term; src: local('JetBrains Mono'), local('JetBrainsMono-Regular'); }
   @font-face { font-family: Term; font-weight: bold; src: local('JetBrains Mono Bold'), local('JetBrainsMono-Bold'); }
   html, body { margin: 0; background: transparent; }
-  .page { padding: 36px 40px 56px; display: inline-block; }
-  /* Chorded's window: a metal rim around a dark pane, its corners round. */
+  /* The window on a gradient, as Chorded's own pictures show it (CHD-407). */
+  .page {
+    padding: 64px 72px 88px; display: inline-block; position: relative;
+    overflow: hidden; isolation: isolate;
+    background: linear-gradient(135deg, #2b3a8c 0%, #6a4bc4 38%, #c46aa8 70%, #f2a17a 100%);
+  }
+  /* Chorded's window: a metal rim around a dark pane, its corners round; the
+     rim lets the backdrop through a little, the pane does not. */
   .rim {
     padding: 7px; border-radius: 38px;
-    background: linear-gradient(180deg, #8e9095 0%, #5d5f64 45%, #3a3b40 100%);
+    background: linear-gradient(180deg, rgba(142, 144, 149, 0.55) 0%, rgba(93, 95, 100, 0.55) 45%, rgba(58, 59, 64, 0.55) 100%);
+    backdrop-filter: blur(24px) saturate(1.6);
     box-shadow:
       0 0 0 1px rgba(0, 0, 0, 0.55),
       0 24px 48px rgba(0, 0, 0, 0.28),
@@ -325,8 +333,9 @@ function page(frame: string): string {
     font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
   }
   .bar svg { flex: none; }
+  .lights { display: flex; gap: 8px; flex: none; margin-right: 4px; }
+  .lights i { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.25); }
   .title { font-size: 15px; font-weight: 500; color: #ececec; }
-  .where { margin-left: auto; font-size: 12.5px; color: #8b9099; }
   .screen {
     padding: 2px 22px 22px; color: ${FOREGROUND};
     font: 13.5px/1.3 Term, Menlo, monospace; white-space: pre;
@@ -336,12 +345,12 @@ function page(frame: string): string {
 </style>
 <div class="page"><div class="rim"><div class="window">
   <div class="bar">
+    <span class="lights"><i style="background: #ff5f57"></i><i style="background: #febc2e"></i><i style="background: #28c840"></i></span>
     <svg width="22" height="18" viewBox="0 0 22 18" fill="none" stroke="#c9cacd" stroke-width="1.5">
       <rect x="1" y="1" width="20" height="16" rx="3.5"/><line x1="8" y1="1" x2="8" y2="17"/>
       <line x1="3.5" y1="5" x2="5.5" y2="5" stroke-linecap="round"/><line x1="3.5" y1="8" x2="5.5" y2="8" stroke-linecap="round"/>
     </svg>
     <div class="title">Chorded</div>
-    <div class="where">~/src/app</div>
   </div>
   <div class="screen">${rows}</div>
 </div></div></div>`;
@@ -357,7 +366,7 @@ export async function screenshots(names: readonly string[]): Promise<void> {
 
     const tab = await browser.newPage();
 
-    await tab.setViewport({ width: 1400, height: 900, deviceScaleFactor: 2 });
+    await tab.setViewport({ width: 1600, height: 1000, deviceScaleFactor: 2 });
 
     for (const shot of SHOTS) {
       if (only.size > 0 && !only.has(shot.name)) {
@@ -373,10 +382,8 @@ export async function screenshots(names: readonly string[]): Promise<void> {
         throw new Error(`${shot.name}: nothing was drawn.`);
       }
 
-      await element.screenshot({
-        path: join(IMAGES, `${shot.name}.png`),
-        omitBackground: true,
-      });
+      // Square and opaque, the backdrop to the picture's edge.
+      await element.screenshot({ path: join(IMAGES, `${shot.name}.png`) });
       console.log(`docs/images/${shot.name}.png`);
     }
   } finally {

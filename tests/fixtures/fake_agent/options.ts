@@ -44,6 +44,34 @@ export const STOP_GATE =
 export const SAY_CANCELS =
   ARGS.includes('--say-cancels') || process.env.CHORD_FAKE_SAY_CANCELS === '1';
 
+/** The value given a flag `--name value`, or its environment variable. */
+function valueOf(flag: string, variable: string): string | undefined {
+  const at = ARGS.indexOf(flag);
+
+  return at >= 0 ? ARGS[at + 1] : process.env[variable];
+}
+
+/**
+ * The members a team's lead opens on its first turn, in order: `tester` and
+ * `coder` unless `--lead-opens tester,coder,reviewer` (or
+ * `CHORD_FAKE_LEAD_OPENS`) says, as the README's screenshots ask.
+ */
+export const LEAD_OPENS: readonly string[] = (
+  valueOf('--lead-opens', 'CHORD_FAKE_LEAD_OPENS') ?? 'tester,coder'
+)
+  .split(',')
+  .filter((name) => name !== '');
+
+/**
+ * A team file whose team `propose` proposes in place of its own, with
+ * `--propose-team <file>` or `CHORD_FAKE_PROPOSE_TEAM`: the screenshots'
+ * team, on the models they show.
+ */
+export const PROPOSE_TEAM = valueOf(
+  '--propose-team',
+  'CHORD_FAKE_PROPOSE_TEAM',
+);
+
 const HANGS = ['start', 'config', 'turn'] as const;
 
 function hangStep(): (typeof HANGS)[number] | undefined {

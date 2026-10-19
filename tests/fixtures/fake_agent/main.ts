@@ -30,8 +30,9 @@
  * none, as an agent that says nothing of its usage would. Started with
  * `--tokens-only`, or with `CHORD_FAKE_TOKENS_ONLY=1`, it reports the turn's
  * tokens in its answer and nothing else, no cost and no window, as Codex's
- * adapter can; its two models are then real ones, `gpt-5.3-codex` and
- * `claude-haiku-4-5`, which chord's price data knows.
+ * adapter can; its models are then real ones chord's price data knows,
+ * `gpt-5.3-codex` (in use until switched), `claude-haiku-4-5`, and the
+ * README's screenshots' `claude-opus-5-5` and `gpt-6.1-sol`.
  *
  * It takes images in a prompt, and answers each one first with a line naming
  * its media type and its size in bytes, so a capture shows what arrived, and
@@ -411,6 +412,7 @@ const SCENARIOS = [
   'teamlead',
   'teamtester',
   'teamcoder',
+  'teamreviewer',
   'propose',
   'proposeagain',
   'proposeefforts',

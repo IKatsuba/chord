@@ -1434,3 +1434,37 @@ describe('Q42 tester: prompt-send cancellation boundaries', () => {
       }));
   }
 });
+
+describe('CHD-407 R1 tester: screenshot model selection', () => {
+  test('tokens-only keeps the original defaults and accepts both screenshot models', () =>
+    withSession(
+      async (session) => {
+        const models = await session.models();
+
+        expect(models?.current).toBe('gpt-5.3-codex');
+        expect(models?.available.map(({ id }) => id)).toEqual([
+          'gpt-5.3-codex',
+          'claude-haiku-4-5',
+          'claude-opus-5-5',
+          'gpt-6.1-sol',
+        ]);
+
+        for (const model of ['claude-opus-5-5', 'gpt-6.1-sol']) {
+          await session.setModel(model);
+
+          const { updates, result } = await run(session, 'text');
+          const usage = updates.find(
+            (update) => update.sessionUpdate === 'usage_update',
+          );
+
+          expect(result.status).toBe('completed');
+          expect((await session.models())?.current).toBe(model);
+          assert(usage?.sessionUpdate === 'usage_update');
+          expect(usage.cost?.amount).toBeGreaterThan(0);
+          expect(usage.size).toBeGreaterThan(0);
+        }
+      },
+      undefined,
+      '--tokens-only',
+    ));
+});

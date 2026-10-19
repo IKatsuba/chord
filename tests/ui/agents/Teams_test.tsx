@@ -471,3 +471,49 @@ describe('CHD-389 U3 tester: same member name across runs', () => {
       }));
   }
 });
+
+describe('CHD-407 R2 tester: opt-in lead members', () => {
+  for (const extra of [false, true]) {
+    test(`${extra ? 'flagged' : 'default'} lead opens the expected members on fake runtimes`, async () => {
+      const server = serveChord();
+      const team = await readFile(
+        new URL('../../../scripts/dev/screenshots_team.md', import.meta.url),
+        'utf8',
+      );
+      const command = fakeAgentCommand(
+        undefined,
+        '--tokens-only',
+        ...(extra ? ['--lead-opens', 'tester,coder,reviewer'] : []),
+      );
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'team');
+            await window.shows('← from @bugfix · claude');
+            await window.shows('tester');
+            await window.shows('coder');
+
+            if (extra) {
+              await window.shows('reviewer');
+            } else {
+              expect(window.frame()).not.toMatch(/└─ reviewer/);
+            }
+          },
+          {
+            server,
+            teams: { bugfix: team },
+            runtimes: ['fake', 'claude', 'codex'],
+            agentCommand: command,
+            startupOf: () => ({ agentCommand: command }),
+            rows: 40,
+            columns: 120,
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

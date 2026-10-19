@@ -34,11 +34,16 @@ export const AVAILABLE_EFFORTS = [
   { value: 'high', name: 'High' },
 ];
 
-/** The two models every session offers, the first in use until switched. */
+/**
+ * The models every session offers, the first in use until switched. With
+ * real ones, the README's screenshots' two come after (CHD-407).
+ */
 export const AVAILABLE_MODELS = TOKENS_ONLY
   ? [
       { value: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' },
       { value: 'claude-haiku-4-5', name: 'Claude Haiku 4.5' },
+      { value: 'claude-opus-5-5', name: 'Claude Opus 5.5' },
+      { value: 'gpt-6.1-sol', name: 'GPT-6.1 Sol' },
     ]
   : [
       { value: 'fake-large', name: 'Fake Large with a 1M context window' },

@@ -5876,6 +5876,17 @@ What the bridge held that was never Ink's has a home of its own:
 - `app/Clip.tsx`: a box that draws nothing while it is laid out to no rows.
   OpenTUI still draws every box at least a row high, so the transcript's
   area keeps it.
+  **Widened 2026-10-19, the owner's consent (Q57, option 1; CHD-158 C6).**
+  Clip learnt of a size laid out to nothing through `onSizeChange`. A box
+  going from one row to none is drawn one cell high both before and after,
+  so OpenTUI reports no change, and what it held stayed drawn over the row
+  below it: a held box's queued line over the splash at 80x24 (CHD-158
+  C5). Clip now also reads Yoga's layout again in `renderAfter`, after
+  each frame drawn, and asks React for nothing unless what it read
+  differs. The upstream report, that a box laid out to no rows still
+  draws one and that one row to none fires no `onSizeChange`, is drafted
+  on CHD-438 for the owner to file; once OpenTUI fixes either, this read
+  goes.
 
 Two of the bridge's answers are not carried on. It set `flexShrink` back to
 1 after each new size in cells; in these folders the only box whose size

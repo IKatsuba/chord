@@ -4,7 +4,7 @@
  * same way (CHD-389, after CHD-158's asker row).
  */
 import { subagentPath } from '../../session/subagents.ts';
-import type { Entry } from '../../session/transcript/types.ts';
+import type { Entry, Subagent } from '../../session/transcript/types.ts';
 import { askerRow } from '../transcript/agents/subagents.ts';
 
 /** How a piece is drawn: as the subagent row is, an agent's name, or plain. */
@@ -30,6 +30,8 @@ export interface Asking {
   readonly entries: readonly Entry[];
   /** The subagent or task that asks, by its id; none when the agent does. */
   readonly subagentId?: string | undefined;
+  /** The way down to it, where the caller has it already. */
+  readonly path?: readonly Subagent[] | undefined;
   /** Asked with no turn running. */
   readonly between?: boolean;
   /** The child or member on screen, when one is. */
@@ -52,14 +54,20 @@ export interface Asking {
 export function askerParts({
   entries,
   subagentId,
+  path: given,
   between = false,
   picked,
   runtime,
 }: Asking): AskerPart[] {
   const owner = picked?.name ?? 'main';
 
-  if (subagentId !== undefined) {
-    const path = subagentPath(entries, subagentId);
+  if (subagentId !== undefined || (given?.length ?? 0) > 0) {
+    const path =
+      given !== undefined && given.length > 0
+        ? given
+        : subagentId === undefined
+          ? []
+          : subagentPath(entries, subagentId);
 
     if (path.length > 0) {
       return askerRow(path)

@@ -130,3 +130,21 @@ describe('CHD-389 tester: nested requester precedence', () => {
     ).toStrictEqual([{ text: 'a subagent of tester', tone: 'accent' }]);
   });
 });
+
+test("a path the caller has is named as one found by id; a member's row carries its team (the owner's Q45)", () => {
+  expect(
+    said(askerParts({ entries: [], path: [TASK], subagentId: 'other' })),
+  ).toStrictEqual('Agent(Fix the tokenizer) · fake');
+
+  for (const between of [false, true]) {
+    expect(
+      said(
+        askerParts({
+          entries: [],
+          between,
+          picked: { name: 'tester', colour: '#c49cff', team: 'bugfix' },
+        }),
+      ),
+    ).toStrictEqual('tester · bugfix');
+  }
+});

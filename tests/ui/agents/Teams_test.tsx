@@ -114,7 +114,7 @@ test("a member picked has its run in its box's title, its instructions folded, t
     await started(window);
     await leader(window, 'a');
     await window.shows('╭─ tester · bugfix ─');
-    await window.shows('tester asks');
+    await window.shows('tester · bugfix asks');
 
     const frame = window.frame();
 
@@ -318,7 +318,7 @@ describe('a task of main asking beside a member (CHD-431)', () => {
       await window.shows('● tester needs your permission · ctrl+x a to go');
       await leader(window, 'a');
       await window.shows('╭─ tester · bugfix ─');
-      await window.shows('tester asks');
+      await window.shows('tester · bugfix asks');
     }));
 
   test("from the member, the hint names main's task as its box does, and ctrl+x a reaches it", () =>
@@ -445,5 +445,39 @@ test("/cost, /context and /status on a picked member name its runtime, not the t
     );
   } finally {
     await server.close();
+  }
+});
+
+describe('CHD-389 U3 tester: same member name across runs', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`each tester permission names its own run at ${columns} columns`, () =>
+      withTeams(async (window) => {
+        await window.resize({ columns, rows });
+        await started(window);
+        await send(window, 'team2');
+        await window.shows('Team(bugfix 2) · fake · fake-large');
+        await window.shows('● 2 agents wait');
+
+        for (const team of ['bugfix', 'bugfix 2']) {
+          const heading = `╭─ tester · ${team} ─`;
+
+          for (
+            let presses = 0;
+            presses < 10 && !window.frame().includes(heading);
+            presses++
+          ) {
+            await window.press(DOWN);
+          }
+
+          await window.shows(heading);
+          await window.shows(`tester · ${team} asks`);
+          expect(window.frame()).not.toContain(
+            `tester · ${team === 'bugfix' ? 'bugfix 2' : 'bugfix'} asks`,
+          );
+        }
+      }));
   }
 });

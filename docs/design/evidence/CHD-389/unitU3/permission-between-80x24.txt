@@ -1,0 +1,24 @@
+
+ ⏺ I asked; the turn ends with it open.
+
+ ››› Waiting for permission… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ tester · bugfix asks · between turns                                         │
+│ Write notes/left.md                                                          │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer · ⏵⏵ accept edits on  Fake Small · 3% used
+    main       fake
+    bugfix     team · fake  ✓ replied 35s ago
+    ├─ tester  fake         ● permission 2s
+    └─ coder   fake         ✓ replied 34s ago

@@ -547,7 +547,11 @@ const cli = chordCommand().action(async (options, named) => {
         agentCommand: start.agentCommand,
         refused: start.refused,
       };
-    }) ?? [{ agent, agentCommand, refused: refusedLine }],
+    }) ?? [
+      // A session resumed alone works in its record's directory, whose
+      // files may refuse what the command line's would not.
+      { agent, agentCommand, refused: first.startupOf(agent)?.refused },
+    ],
   );
 
   const shown = { cwd, home };

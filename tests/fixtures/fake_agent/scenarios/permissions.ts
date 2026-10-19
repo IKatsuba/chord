@@ -263,8 +263,8 @@ export const PERMISSIONS = {
     }),
 
   // bigask's write, its turn ending with it still open (CHD-158 §8): a tall
-  // request held between turns, which folds on a short screen; its answer is
-  // said once it comes.
+  // request held between turns, whose rows scroll on a short screen; its
+  // answer is said once it comes.
   async bigaskleft(turn) {
     const toolCall: acp.ToolCall = {
       toolCallId: turn.callId('write_file'),

@@ -4,12 +4,12 @@
  * adapters word it.
  */
 import type {
-  Cost,
   SessionUpdate,
   StateUpdate,
   SubagentUpdate,
 } from '@agentclientprotocol/sdk';
-import type { TokenUsage } from '../usage.ts';
+import { z } from '@zod/zod';
+import { TOKEN_FIELDS, type TokenUsage } from '../usage.ts';
 import {
   emptyTranscript,
   type Entry,
@@ -315,23 +315,54 @@ export const TASK_META = 'chord/task';
 /** Where a task's ending `subagent_update` carries what it spent (CHD-373). */
 export const TASK_SPENT_META = 'chord/spent';
 
+/** A count of tokens: whole, and none below nothing. */
+const COUNT = z.number().int().nonnegative();
+
+/** A token field: its count, or left out where it is not one. */
+const FIELD = COUNT.optional().catch(undefined);
+
+/**
+ * A task's spend as its ending update carries it, which a record or an
+ * agent may have bent: each part that does not read as one is left out, a
+ * token count on its own, and `estimated` stands only with a cost.
+ */
+const SPENT = z.object({
+  tokens: z
+    .object({
+      inputTokens: FIELD,
+      outputTokens: FIELD,
+      cachedReadTokens: FIELD,
+      cachedWriteTokens: FIELD,
+      thoughtTokens: FIELD,
+      totalTokens: FIELD,
+    } satisfies Record<(typeof TOKEN_FIELDS)[number], typeof FIELD>)
+    .optional()
+    .catch(undefined),
+  cost: z
+    .object({ amount: z.number().nonnegative(), currency: z.string().min(1) })
+    .optional()
+    .catch(undefined),
+  estimated: z.literal(true).optional().catch(undefined),
+});
+
 /** What a task's ending update says it spent; none when it says nothing. */
 function spentOf(update: SubagentUpdate): TaskSpent | undefined {
-  const meta = update._meta?.[TASK_SPENT_META];
+  const read = SPENT.safeParse(update._meta?.[TASK_SPENT_META]);
 
-  if (typeof meta !== 'object' || meta === null) {
+  if (!read.success) {
     return undefined;
   }
 
-  const { tokens, cost, estimated } = meta as Record<string, unknown>;
+  const counts = Object.fromEntries(
+    Object.entries(read.data.tokens ?? {}).filter(
+      ([, count]) => count !== undefined,
+    ),
+  ) as TokenUsage;
+  const { cost } = read.data;
   const spent: TaskSpent = {
-    ...(typeof tokens === 'object' && tokens !== null
-      ? { tokens: tokens as TokenUsage }
-      : {}),
-    ...(typeof cost === 'object' && cost !== null
-      ? { cost: cost as Cost }
-      : {}),
-    ...(estimated === true ? { estimated } : {}),
+    ...(Object.keys(counts).length === 0 ? {} : { tokens: counts }),
+    ...(cost === undefined ? {} : { cost }),
+    ...(cost !== undefined && read.data.estimated ? { estimated: true } : {}),
   };
 
   return Object.keys(spent).length === 0 ? undefined : spent;

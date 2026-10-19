@@ -6,6 +6,7 @@ import {
   TaskAgent,
   taskName,
   type TaskParent,
+  taskUpdate,
   type TaskSession,
   unwrapMessage,
   wrapMessage,
@@ -372,5 +373,21 @@ test('a task whose agent reported nothing ends with nothing said of its spend (C
       state: { state: 'completed' },
     },
     at: 42,
+  });
+});
+
+test("a task's update keeps both what the task is and what it spent when it carries both (CHD-373)", () => {
+  expect(
+    taskUpdate(
+      'task-1',
+      'completed',
+      { name: 'Fix it', runtime: 'fake', prompt: 'go' },
+      { cost: { amount: 0.01, currency: 'USD' } },
+    ),
+  ).toMatchObject({
+    _meta: {
+      'chord/task': { name: 'Fix it', runtime: 'fake' },
+      'chord/spent': { cost: { amount: 0.01, currency: 'USD' } },
+    },
   });
 });

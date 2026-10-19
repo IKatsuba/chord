@@ -170,20 +170,27 @@ export function taskUpdate(
     state: { state },
     ...(task === undefined
       ? {}
+      : { title: task.name, description: task.prompt }),
+    ...(task === undefined && spent === undefined
+      ? {}
       : {
-          title: task.name,
-          description: task.prompt,
           _meta: {
-            [TASK_META]: {
-              name: task.name,
-              runtime: task.runtime,
-              ...(task.model === undefined ? {} : { model: task.model }),
-              ...(task.effort === undefined ? {} : { effort: task.effort }),
-            },
+            ...(task === undefined
+              ? {}
+              : {
+                  [TASK_META]: {
+                    name: task.name,
+                    runtime: task.runtime,
+                    ...(task.model === undefined ? {} : { model: task.model }),
+                    ...(task.effort === undefined
+                      ? {}
+                      : { effort: task.effort }),
+                  },
+                }),
+            // What it spent, on its ending update (CHD-373).
+            ...(spent === undefined ? {} : { [TASK_SPENT_META]: spent }),
           },
         }),
-    // What it spent, on its ending update (CHD-373).
-    ...(spent === undefined ? {} : { _meta: { [TASK_SPENT_META]: spent } }),
   };
 }
 

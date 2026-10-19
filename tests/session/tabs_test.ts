@@ -1584,3 +1584,18 @@ test("an agent's own cycle behind works as a turn does until its end (CHD-426)",
     tabOf(heard(working, 1, [ended('c1')]), 1)?.wait.working,
   ).toStrictEqual(undefined);
 });
+
+test("an agent's wait keeps when it last stopped working: when it came up, then each turn's end, a running turn keeping the last (CHD-471)", () => {
+  const tabs = opened('fake');
+  const stopped = (events: readonly ConversationEvent[]) =>
+    heard(tabs, 1, events, 1000).tabs[0]!.wait.stopped;
+
+  expect(tabs.tabs[0]!.wait.stopped).toBe(undefined);
+  // Came up at 1000.
+  expect(stopped([up])).toBe(1000);
+  // Its turn began at 2000 and ended at 3000.
+  expect(stopped([up, prompt('t1'), ended('t1')])).toBe(3000);
+  // While the next runs, it still last stopped at 3000.
+  expect(stopped([up, prompt('t1'), ended('t1'), prompt('t2')])).toBe(3000);
+  expect(stopped([up, prompt('t1'), failed('t1')])).toBe(3000);
+});

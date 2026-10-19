@@ -7,13 +7,7 @@
  */
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
-import {
-  type Failure,
-  failedSince,
-  failureOf,
-  repliedSince,
-  type TabWait,
-} from '../../session/tabs.ts';
+import { type Failure, failureOf, type TabWait } from '../../session/tabs.ts';
 import { GLYPHS } from '../app/strip.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
@@ -73,13 +67,16 @@ function failureFor(row: AgentRow): Failure | undefined {
       : failureOf(row.wait);
 }
 
+/** An agent's state while it is open and does nothing: a hollow dot. */
+export const IDLE_GLYPH = '◦';
+
 /**
- * Where an agent stands, most urgent first, as the strip's glyphs and the
- * sessions picker's words say it, with `←` for a message not yet seen;
- * none while it is idle and seen. A failed turn is told apart from an agent
- * that is gone, as the agent is still open (CHD-264).
+ * What an agent is doing now, always one (the owner's CHD-471): asking,
+ * gone, working, or idle since it last stopped. A failed turn is no state,
+ * as the agent is still open and idle once its turn failed: what was not
+ * yet seen of it is its mark (`agentMark`).
  */
-export function agentState(row: AgentRow, now: number): AgentState | undefined {
+export function agentState(row: AgentRow, now: number): AgentState {
   if (row.folded !== undefined) {
     return teamState(row, row.folded, now);
   }
@@ -96,39 +93,22 @@ export function agentState(row: AgentRow, now: number): AgentState | undefined {
     };
   }
 
-  const failure = failureFor(row);
+  const gone = goneFor(row);
 
-  if (failure !== undefined) {
+  if (gone !== undefined) {
     return {
       glyph: GLYPHS.failed,
-      words:
-        failure === 'exited'
-          ? 'exited'
-          : failure === 'start'
-            ? 'failed to start'
-            : `turn failed ${briefly(now - (failedSince(wait) ?? now))} ago`,
+      words: gone === 'exited' ? 'exited' : 'failed to start',
       tone: 'error',
     };
   }
 
-  if (wait.unseen?.kind === 'message') {
-    return {
-      glyph: '←',
-      words: `message from ${wait.unseen.from ?? '@main'}`,
-      tone: 'dim',
-    };
-  }
-
-  if (wait.unseen?.kind === 'replied') {
-    return {
-      glyph: GLYPHS.replied,
-      words: `replied ${briefly(now - (repliedSince(wait) ?? now))} ago`,
-      tone: 'success',
-    };
-  }
-
   return wait.working === undefined
-    ? undefined
+    ? {
+        glyph: IDLE_GLYPH,
+        words: `idle ${briefly(now - (wait.stopped ?? now))}`,
+        tone: 'dim',
+      }
     : {
         glyph: GLYPHS.working,
         words: `working ${formatElapsed(now - wait.working)}`,
@@ -136,10 +116,60 @@ export function agentState(row: AgentRow, now: number): AgentState | undefined {
       };
 }
 
+/** How an agent is gone, its process exited or never come up; none while open. */
+function goneFor(row: AgentRow): Exclude<Failure, 'turn'> | undefined {
+  const failure = failureFor(row);
+
+  return failure === 'turn' ? undefined : failure;
+}
+
+/** What not yet seen an agent's mark says, gravest first. */
+type Unseen = 'failed' | 'replied' | 'message';
+
+const UNSEEN_ORDER: readonly Unseen[] = ['failed', 'replied', 'message'];
+
+/** What of an agent is not yet seen: a failed turn, a reply, a message to it. */
+function unseenOf(row: AgentRow): Unseen | undefined {
+  const { unseen } = row.wait;
+
+  if (unseen === undefined) {
+    return undefined;
+  }
+
+  // An agent gone says so in its state; only a failed turn is a mark.
+  return unseen.kind === 'failed'
+    ? failureFor(row) === 'turn'
+      ? 'failed'
+      : undefined
+    : unseen.kind;
+}
+
 /**
- * How urgent an agent's state is, as `agentState` orders them, lowest
- * first, then how long it has stood, longest first; none while it is idle
- * and seen.
+ * Beside the state, what of the agent the person has not yet seen, gone
+ * once they open it; a folded team's, the first of its lead's and its
+ * members', unnamed. None when all of it is seen.
+ */
+export function agentMark(row: AgentRow): AgentState | undefined {
+  const kinds = [row, ...(row.folded ?? [])].flatMap(
+    (each) => unseenOf(each) ?? [],
+  );
+  const first = UNSEEN_ORDER.find((kind) => kinds.includes(kind));
+
+  switch (first) {
+    case 'failed':
+      return { glyph: GLYPHS.failed, words: 'turn failed', tone: 'error' };
+    case 'replied':
+      return { glyph: GLYPHS.replied, words: 'new reply', tone: 'success' };
+    case 'message':
+      return { glyph: '←', words: 'new message', tone: 'dim' };
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * How urgent an agent's state is, lowest first, then how long it has stood,
+ * longest first; none while it is idle.
  */
 function urgency(row: AgentRow): readonly [number, number] | undefined {
   const { wait } = row;
@@ -148,34 +178,29 @@ function urgency(row: AgentRow): readonly [number, number] | undefined {
     return [0, wait.asking.since];
   }
 
-  const failure = failureFor(row);
+  const gone = goneFor(row);
 
-  if (failure !== undefined) {
-    return [
-      failure === 'exited' ? 1 : failure === 'start' ? 2 : 3,
-      wait.unseen?.since ?? 0,
-    ];
+  if (gone !== undefined) {
+    return [gone === 'exited' ? 1 : 2, wait.unseen?.since ?? 0];
   }
 
-  if (wait.unseen !== undefined) {
-    return [wait.unseen.kind === 'message' ? 4 : 5, wait.unseen.since];
-  }
-
-  return wait.working === undefined ? undefined : [6, wait.working];
+  return wait.working === undefined ? undefined : [3, wait.working];
 }
 
 /**
  * A folded team's state: the most urgent among its lead and members, as the
- * sessions picker gives a tab's children's, naming the member whose it is:
- * `● tester: permission 12s`.
+ * sessions picker gives a tab's children's, naming the member whose it is,
+ * `● tester: permission 12s`; idle from the one that stopped last when all
+ * of them are.
  */
 function teamState(
   lead: AgentRow,
   members: readonly AgentRow[],
   now: number,
-): AgentState | undefined {
+): AgentState {
   const { folded: _, ...own } = lead;
-  const first = [own, ...members]
+  const all = [own, ...members];
+  const first = all
     .flatMap((row) => {
       const rank = urgency(row);
 
@@ -184,10 +209,16 @@ function teamState(
     .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1])[0]?.row;
 
   if (first === undefined) {
-    return undefined;
+    const stopped = Math.max(...all.map((row) => row.wait.stopped ?? now));
+
+    return {
+      glyph: IDLE_GLYPH,
+      words: `idle ${briefly(now - stopped)}`,
+      tone: 'dim',
+    };
   }
 
-  const state = agentState(first, now)!;
+  const state = agentState(first, now);
 
   return first === own
     ? state
@@ -233,17 +264,12 @@ export function teamRows(
 }
 
 /**
- * Whether a time on the list goes on counting, so the list ticks: an agent
- * asking, working or with a reply or failed turn not yet seen, a folded
- * team's members among them, since their state stands on the lead's row.
+ * Whether a time on the list goes on counting, so the list ticks: every
+ * agent's state has one, idle too (CHD-471), but one that is gone.
  */
 export function listTimed(rows: readonly AgentRow[]): boolean {
   const timed = (row: AgentRow): boolean =>
-    row.wait.asking !== undefined ||
-    row.wait.working !== undefined ||
-    row.wait.unseen?.kind === 'replied' ||
-    failureFor(row) === 'turn' ||
-    (row.folded ?? []).some(timed);
+    goneFor(row) === undefined || (row.folded ?? []).some(timed);
 
   return rows.some(timed);
 }
@@ -317,7 +343,10 @@ export interface LaidRow {
   readonly name: string;
   /** Its runtime and model. */
   readonly detail: string;
+  /** Its state, padded so the marks after it start in one column. */
   readonly state?: { readonly text: string; readonly tone: AgentTone };
+  /** What of it is not yet seen, in its own column after the state. */
+  readonly unseen?: { readonly text: string; readonly tone: AgentTone };
 }
 
 export interface AgentsLayout {
@@ -339,18 +368,22 @@ const GAP = '  ';
 interface Fit {
   readonly model: boolean;
   readonly effort: boolean;
+  /** The words of what is not yet seen, beside its glyph. */
+  readonly marks: boolean;
   readonly words: boolean;
 }
 
 /**
  * Each way of fitting, the fullest first: an agent's effort goes first,
- * then its model, then its state words, leaving its glyph.
+ * then its model, then the words of its mark, then its state words, each
+ * leaving its glyph, as the state is always to be seen (CHD-471).
  */
 const FITS: readonly Fit[] = [
-  { model: true, effort: true, words: true },
-  { model: true, effort: false, words: true },
-  { model: false, effort: false, words: true },
-  { model: false, effort: false, words: false },
+  { model: true, effort: true, marks: true, words: true },
+  { model: true, effort: false, marks: true, words: true },
+  { model: false, effort: false, marks: true, words: true },
+  { model: false, effort: false, marks: false, words: true },
+  { model: false, effort: false, marks: false, words: false },
 ];
 
 /**
@@ -388,6 +421,7 @@ export function agentsLayout(
       : Math.min(Math.max(0, at - shown + 1), rows.length - shown);
   const visible = rows.slice(start, start + shown);
   const states = new Map(rows.map((row) => [row, agentState(row, now)]));
+  const marks = new Map(rows.map((row) => [row, agentMark(row)]));
   // Widths over every row, drawn or not, so scrolling never moves a column.
   const widest = (texts: readonly string[]) =>
     Math.max(0, ...texts.map((text) => stringWidth(text)));
@@ -433,13 +467,26 @@ export function agentsLayout(
       );
     };
 
+    const markOf = (row: AgentRow): LaidRow['unseen'] => {
+      const mark = marks.get(row);
+
+      return (
+        mark && {
+          text: fit.marks ? `${mark.glyph} ${mark.words}` : mark.glyph,
+          tone: mark.tone,
+        }
+      );
+    };
+
     const runtimeWidth = widest(rows.map(runtimeOf));
     const stateWidth = widest(rows.map((row) => stateOf(row)?.text ?? ''));
+    const markWidth = widest(rows.map((row) => markOf(row)?.text ?? ''));
     const fixed =
       2 +
       nameWidth +
       GAP.length +
-      (stateWidth === 0 ? 0 : GAP.length + stateWidth);
+      (stateWidth === 0 ? 0 : GAP.length + stateWidth) +
+      (markWidth === 0 ? 0 : GAP.length + markWidth);
     const last = fit === FITS[FITS.length - 1];
 
     if (fixed + runtimeWidth > width && !last) {
@@ -455,7 +502,13 @@ export function agentsLayout(
     return {
       more: rows.length - shown,
       rows: visible.map((row) => {
-        const state = stateOf(row);
+        const mark = markOf(row);
+        const shown = stateOf(row);
+        // Padded where a mark follows, so every mark starts in one column.
+        const state =
+          shown && mark !== undefined
+            ? { ...shown, text: pad(shown.text, stateWidth) }
+            : shown;
         const branch = branchOf(row);
         const room = names - stringWidth(branch);
 
@@ -466,6 +519,7 @@ export function agentsLayout(
           name: pad(cliTruncate(row.name, room), room),
           detail: pad(runtimeOf(row), runtimeWidth),
           ...(state === undefined ? {} : { state }),
+          ...(mark === undefined ? {} : { unseen: mark }),
         };
       }),
     };

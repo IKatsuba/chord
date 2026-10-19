@@ -6,6 +6,7 @@ import {
   agentsHint,
   agentsLayout,
   agentsRowLimit,
+  agentMark,
   agentState,
   childLine,
   leftOpenLine,
@@ -50,7 +51,7 @@ function drawn(
     ...layout.rows.map((laid) =>
       `${laid.mark}${laid.branch ?? ''}${laid.name}  ${laid.detail}${
         laid.state === undefined ? '' : `  ${laid.state.text}`
-      }`.trimEnd(),
+      }${laid.unseen === undefined ? '' : `  ${laid.unseen.text}`}`.trimEnd(),
     ),
     ...(layout.more > 0 ? [`  … +${layout.more} more`] : []),
   ];
@@ -66,9 +67,9 @@ const DOCS = row('docs', {
 
 test('each agent is a row of its name, runtime and model, and state, in columns', () => {
   expect(drawn([MAIN, PARSER, DOCS])).toStrictEqual([
-    '  main    claude · Opus',
+    '  main    claude · Opus          ◦ idle 0s',
     '  parser  codex · gpt-5.3-codex  ✻ working 41s',
-    '  docs    claude · Sonnet        ← message from @main',
+    '  docs    claude · Sonnet        ◦ idle 0s      ← new message',
   ]);
 });
 
@@ -81,14 +82,20 @@ test('the picked row is marked while the list has the keys', () => {
       { focused: true },
     ),
   ).toStrictEqual([
-    '  main    claude · Opus',
+    '  main    claude · Opus          ◦ idle 0s',
     '❯ parser  codex · gpt-5.3-codex  ✻ working 41s',
   ]);
 });
 
-test('the states read most urgent first, as the strip and the picker word them', () => {
+test('an agent always has one state, most urgent first, and what is not yet seen is a mark beside it (CHD-471)', () => {
   const state = (wait: Partial<TabWait>, more: Partial<AgentRow> = {}) => {
     const found = agentState(row('x', { ...more, wait }), NOW);
+
+    return `${found.glyph} ${found.words} (${found.tone})`;
+  };
+
+  const mark = (wait: Partial<TabWait>) => {
+    const found = agentMark(row('x', { wait }));
 
     return found && `${found.glyph} ${found.words} (${found.tone})`;
   };
@@ -103,19 +110,38 @@ test('the states read most urgent first, as the strip and the picker word them',
     '✗ failed to start (error)',
   );
   expect(state({ exited: true })).toStrictEqual('✗ exited (error)');
-  // A failed turn leaves the agent open: the turn failed, not the agent.
-  expect(
-    state({
-      unseen: { kind: 'failed', since: NOW - 12_000, failure: 'turn' },
-    }),
-  ).toStrictEqual('✗ turn failed 12s ago (error)');
-  expect(
-    state({ unseen: { kind: 'replied', since: NOW - 120_000 } }),
-  ).toStrictEqual('✓ replied 2m ago (success)');
   expect(state({ working: NOW - 62_000 })).toStrictEqual(
     '✻ working 1m 2s (dim)',
   );
-  expect(state({})).toStrictEqual(undefined);
+  // Idle since it last stopped, in its first unit.
+  expect(state({ stopped: NOW - 190_000 })).toStrictEqual('◦ idle 3m (dim)');
+
+  // A failed turn leaves the agent open and idle: the failure is a mark.
+  const failed = {
+    stopped: NOW - 12_000,
+    unseen: {
+      kind: 'failed' as const,
+      since: NOW - 12_000,
+      failure: 'turn' as const,
+    },
+  };
+
+  expect(state(failed)).toStrictEqual('◦ idle 12s (dim)');
+  expect(mark(failed)).toStrictEqual('✗ turn failed (error)');
+  expect(mark({ unseen: { kind: 'replied', since: NOW } })).toStrictEqual(
+    '✓ new reply (success)',
+  );
+  expect(
+    mark({ unseen: { kind: 'message', from: '@main', since: NOW } }),
+  ).toStrictEqual('← new message (dim)');
+  // Its state says it is gone; that is no mark.
+  expect(
+    mark({
+      exited: true,
+      unseen: { kind: 'failed', since: NOW, failure: 'exited' },
+    }),
+  ).toStrictEqual(undefined);
+  expect(mark({})).toStrictEqual(undefined);
 });
 
 test('past its rows the list ends in … +N more, and moves so the picked row shows while it has the keys', () => {
@@ -126,15 +152,15 @@ test('past its rows the list ends in … +N more, and moves so the picked row sh
   expect(agentsRowLimit(24)).toStrictEqual(4);
   expect(agentsRowLimit(40)).toStrictEqual(6);
   expect(drawn(rows, { limit: 4 })).toStrictEqual([
-    '  main  codex',
-    '  a     codex',
-    '  b     codex',
+    '  main  codex  ◦ idle 0s',
+    '  a     codex  ◦ idle 0s',
+    '  b     codex  ◦ idle 0s',
     '  … +3 more',
   ]);
   expect(drawn(rows, { limit: 4, focused: true })).toStrictEqual([
-    '  c     codex',
-    '  d     codex',
-    '❯ e     codex',
+    '  c     codex  ◦ idle 0s',
+    '  d     codex  ◦ idle 0s',
+    '❯ e     codex  ◦ idle 0s',
     '  … +3 more',
   ]);
 });
@@ -145,11 +171,11 @@ test('a narrow list drops the model, then the words, and cuts a name no shorter 
   });
 
   expect(drawn([MAIN, PARSER], { width: 36 })).toStrictEqual([
-    '  main    claude',
+    '  main    claude  ◦ idle 0s',
     '  parser  codex   ✻ working 41s',
   ]);
   expect(drawn([MAIN, PARSER], { width: 20 })).toStrictEqual([
-    '  main    claude',
+    '  main    claude  ◦',
     '  parser  codex   ✻',
   ]);
   expect(drawn([long], { width: 20 })).toStrictEqual([
@@ -162,15 +188,15 @@ test("a row's effort follows its model, and a narrow list drops it a step before
   const parser = { ...PARSER, effort: 'xhigh' };
 
   expect(drawn([main, parser])).toStrictEqual([
-    '  main    claude · Opus · high',
+    '  main    claude · Opus · high           ◦ idle 0s',
     '  parser  codex · gpt-5.3-codex · xhigh  ✻ working 41s',
   ]);
   expect(drawn([main, parser], { width: 50 })).toStrictEqual([
-    '  main    claude · Opus',
+    '  main    claude · Opus          ◦ idle 0s',
     '  parser  codex · gpt-5.3-codex  ✻ working 41s',
   ]);
   expect(drawn([main, parser], { width: 36 })).toStrictEqual([
-    '  main    claude',
+    '  main    claude  ◦ idle 0s',
     '  parser  codex   ✻ working 41s',
   ]);
 });
@@ -361,20 +387,20 @@ function team(picked = 'main'): AgentRow[] {
 
 test("a team's members nest under its lead with CHD-149's branches, as 120-4-team-list.txt draws them", () => {
   expect(drawn(listRows(team(), 6), { limit: 6 })).toStrictEqual([
-    '  main         claude · Opus',
-    '  bugfix       team · claude · Opus   ✓ replied 40s ago',
+    '  main         claude · Opus          ◦ idle 0s',
+    '  bugfix       team · claude · Opus   ◦ idle 0s         ✓ new reply',
     '  ├─ tester    claude · Sonnet        ● permission 12s',
-    '  ├─ coder     codex · gpt-5.3-codex',
-    '  └─ reviewer  claude · Opus          ✓ replied 1m ago',
+    '  ├─ coder     codex · gpt-5.3-codex  ◦ idle 0s',
+    '  └─ reviewer  claude · Opus          ◦ idle 0s         ✓ new reply',
     '  parser       codex · gpt-5.3-codex  ✻ working 9s',
   ]);
 });
 
 test('a list that does not fit folds each team to its lead, its size and its most urgent state naming the member', () => {
   expect(drawn(listRows(team(), 4), { limit: 4, width: 76 })).toStrictEqual([
-    '  main         claude · Opus',
-    '  bugfix       team · claude · 4 agents  ● tester: permission 12s',
-    '  parser       codex · gpt-5.3-codex     ✻ working 9s',
+    '  main         claude                    ◦ idle 0s',
+    '  bugfix       team · claude · 4 agents  ● tester: permission 12s  ✓',
+    '  parser       codex                     ✻ working 9s',
   ]);
 
   // A model too long for the row drops the models; the size stays, as it
@@ -388,8 +414,8 @@ test('a list that does not fit folds each team to its lead, its size and its mos
   expect(
     drawn(listRows(long, 4), { limit: 4, width: 76 }).slice(0, 2),
   ).toStrictEqual([
-    '  main         claude',
-    '  bugfix       team · claude · 4 agents  ● tester: permission 12s',
+    '  main         claude                    ◦ idle 0s',
+    '  bugfix       team · claude · 4 agents  ● tester: permission 12s  ✓',
   ]);
 });
 
@@ -399,8 +425,8 @@ test('the team the pick is in unfolds, and the list scrolls to it while it has t
   expect(
     drawn(rows('bugfix'), { limit: 4, width: 76, focused: true }),
   ).toStrictEqual([
-    '  main         claude · Opus',
-    '❯ bugfix       team · claude · Opus   ✓ replied 40s ago',
+    '  main         claude · Opus          ◦ idle 0s',
+    '❯ bugfix       team · claude · Opus   ◦ idle 0s         ✓ new reply',
     '  ├─ tester    claude · Sonnet        ● permission 12s',
     '  … +3 more',
   ]);
@@ -464,18 +490,18 @@ test('two runs fold one by one, each with its own state', () => {
     );
 
   expect(drawn(rows(), { limit: 6 })).toStrictEqual([
-    '  main         claude · Opus',
+    '  main         claude · Opus             ◦ idle 0s',
     '  bugfix       team · claude · 4 agents  ✻ coder: working 1m 1s',
     '  bugfix 2     team · claude · 4 agents  ● tester: permission 5s',
   ]);
   // The run picked unfolds; the other stays folded, so all six rows fit.
   expect(drawn(rows(13), { limit: 6, focused: true })).toStrictEqual([
-    '  main         claude · Opus',
+    '  main         claude · Opus             ◦ idle 0s',
     '  bugfix       team · claude · 4 agents  ✻ coder: working 1m 1s',
-    '  bugfix 2     team · claude · Opus',
+    '  bugfix 2     team · claude · Opus      ◦ idle 0s',
     '❯ ├─ tester    claude · Sonnet           ● permission 5s',
-    '  ├─ coder     codex · gpt-5.3-codex',
-    '  └─ reviewer  claude · Opus',
+    '  ├─ coder     codex · gpt-5.3-codex     ◦ idle 0s',
+    '  └─ reviewer  claude · Opus             ◦ idle 0s',
   ]);
 });
 
@@ -488,45 +514,48 @@ test("a folded lead's own state is its own, and a lead with no member open folds
       limit: 9,
     })[1],
   ).toStrictEqual(
-    '  bugfix       team · claude · 4 agents  ● tester: permission 12s',
+    '  bugfix       team · claude · 4 agents  ● tester: permission 12s  ✓ new reply',
   );
   expect(
     drawn(teamRows([main!, failed, ...members.slice(1, 3)], { fold: true }), {
       limit: 9,
     })[1],
-  ).toStrictEqual('  bugfix       team · claude · 3 agents  ✗ failed to start');
+  ).toStrictEqual(
+    '  bugfix       team · claude · 3 agents  ✗ failed to start  ✓ new reply',
+  );
   expect(teamRows([main!, lead!], { fold: true })[1]).toStrictEqual(lead);
 });
 
-test("a folded member's time keeps the list ticking while its lead is idle and seen", () => {
-  const idle = team().map((each) =>
-    each.name === 'tester' ? each : { ...each, wait: { watch: emptyWatch } },
-  );
-  const rows = listRows(idle, 4);
+test("the list ticks while any agent on it is open, an idle one's time counting too, and not once all are gone (CHD-471)", () => {
+  const idle = team().map((each) => ({ ...each, wait: { watch: emptyWatch } }));
 
-  expect(rows.length).toStrictEqual(3);
-  expect(listTimed(rows)).toStrictEqual(true);
+  expect(listTimed(listRows(idle, 4))).toStrictEqual(true);
   expect(
     listTimed(
-      listRows(
-        idle.map((each) => ({ ...each, wait: { watch: emptyWatch } })),
-        4,
-      ),
+      idle.map((each) => ({
+        ...each,
+        wait: { watch: emptyWatch, exited: true as const },
+      })),
     ),
   ).toStrictEqual(false);
 });
 
-test('the three failures read apart, an exit outranking the turn it cut short, then never starting, then a failed turn; a seen failed turn clears', () => {
+test('an exit and never starting are states, gravest first; a failed turn is a mark the agent reads idle beside, gone once seen', () => {
   const words = (wait: Partial<TabWait>, more: Partial<AgentRow> = {}) =>
     agentState(row('x', { ...more, wait: { watch: emptyWatch, ...wait } }), NOW)
-      ?.words;
+      .words;
   const turn = {
     kind: 'failed' as const,
     since: NOW - 60_000,
     failure: 'turn' as const,
   };
 
-  expect(words({ unseen: turn })).toStrictEqual('turn failed 1m ago');
+  expect(words({ unseen: turn, stopped: NOW - 60_000 })).toStrictEqual(
+    'idle 1m',
+  );
+  expect(agentMark(row('x', { wait: { unseen: turn } }))?.words).toStrictEqual(
+    'turn failed',
+  );
   expect(words({ unseen: turn, exited: true })).toStrictEqual('exited');
   expect(words({ unseen: turn }, { failed: true })).toStrictEqual(
     'failed to start',
@@ -540,22 +569,18 @@ test('the three failures read apart, an exit outranking the turn it cut short, t
       asking: { on: { kind: 'permission' }, since: NOW },
     }),
   ).toStrictEqual('permission 0s');
-  // Seen, a failed turn says nothing, and the agent reads idle and open.
-  expect(words({})).toStrictEqual(undefined);
+  // Seen, a failed turn leaves no mark.
+  expect(agentMark(row('x'))).toStrictEqual(undefined);
   // An exit and never starting stay until the agent is closed, seen or not.
   expect(words({ exited: true })).toStrictEqual('exited');
   expect(words({}, { failed: true })).toStrictEqual('failed to start');
-  // A failed turn's time goes on counting.
-  expect(
-    listTimed([row('x', { wait: { watch: emptyWatch, unseen: turn } })]),
-  ).toStrictEqual(true);
 });
 
-test('a folded lead names the member whose failure it shows, gravest first', () => {
+test("a folded lead names the member that is gone, gravest first, and its mark is the first of its agents' unnamed", () => {
   const [main, lead, ...members] = team('main');
   const quiet = (each: AgentRow): AgentRow => ({
     ...each,
-    wait: { watch: emptyWatch },
+    wait: { watch: emptyWatch, stopped: NOW - 30_000 },
   });
   const rows = [
     main!,
@@ -566,6 +591,7 @@ test('a folded lead names the member whose failure it shows, gravest first', () 
             ...member,
             wait: {
               watch: emptyWatch,
+              stopped: NOW - 12_000,
               unseen: {
                 kind: 'failed' as const,
                 since: NOW - 12_000,
@@ -581,7 +607,10 @@ test('a folded lead names the member whose failure it shows, gravest first', () 
 
   expect(
     drawn(teamRows(rows, { fold: true }), { limit: 9, width: 116 })[1],
-  ).toStrictEqual('  bugfix       team · claude · 4 agents  ✗ coder: exited');
+  ).toStrictEqual(
+    '  bugfix       team · claude · 4 agents  ✗ coder: exited  ✗ turn failed',
+  );
+  // All idle: from the one that stopped last.
   expect(
     drawn(
       teamRows(
@@ -591,7 +620,7 @@ test('a folded lead names the member whose failure it shows, gravest first', () 
       { limit: 9, width: 116 },
     )[1],
   ).toStrictEqual(
-    '  bugfix       team · claude · 4 agents  ✗ tester: turn failed 12s ago',
+    '  bugfix       team · claude · 4 agents  ◦ idle 12s  ✗ turn failed',
   );
 });
 
@@ -621,20 +650,19 @@ describe('CHD-264 tester: failure age and row fallback', () => {
   });
 });
 
-test('a reply reads its age from the reply, not from the message that asked for it, in a row and a folded lead (CHD-364)', () => {
-  const reply = {
-    kind: 'replied' as const,
-    since: NOW - 23_000,
-    repliedAt: NOW - 1_000,
-  };
-  const parser = row('parser', { wait: { watch: emptyWatch, unseen: reply } });
+test("a reply not yet seen is a mark with no time: the agent's own time says when it stopped, in a row and a folded lead (CHD-471)", () => {
+  const reply = { kind: 'replied' as const, since: NOW - 23_000 };
+  const parser = row('parser', {
+    wait: { watch: emptyWatch, stopped: NOW - 1_000, unseen: reply },
+  });
 
-  expect(agentState(parser, NOW)?.words).toStrictEqual('replied 1s ago');
+  expect(agentState(parser, NOW).words).toStrictEqual('idle 1s');
+  expect(agentMark(parser)?.words).toStrictEqual('new reply');
 
   const [main, lead, ...members] = team('main');
   const quiet = (each: AgentRow): AgentRow => ({
     ...each,
-    wait: { watch: emptyWatch },
+    wait: { watch: emptyWatch, stopped: NOW - 30_000 },
   });
   const folded = teamRows(
     [
@@ -642,14 +670,42 @@ test('a reply reads its age from the reply, not from the message that asked for 
       quiet(lead!),
       ...members.map((member) =>
         member.name === 'coder'
-          ? { ...member, wait: { watch: emptyWatch, unseen: reply } }
+          ? {
+              ...member,
+              wait: { watch: emptyWatch, stopped: NOW - 1_000, unseen: reply },
+            }
           : quiet(member),
       ),
     ],
     { fold: true },
   );
 
-  expect(agentState(folded[1]!, NOW)?.words).toStrictEqual(
-    'coder: replied 1s ago',
-  );
+  expect(agentState(folded[1]!, NOW).words).toStrictEqual('idle 1s');
+  expect(agentMark(folded[1]!)?.words).toStrictEqual('new reply');
+});
+
+test("a narrow list drops a mark's words before the state's, each leaving its glyph (CHD-471)", () => {
+  const replied = row('parser', {
+    wait: {
+      stopped: NOW - 13_000,
+      unseen: { kind: 'replied', since: NOW },
+    },
+  });
+  const rows = [
+    { ...MAIN, wait: { ...MAIN.wait, stopped: NOW - 4_000 } },
+    replied,
+  ];
+
+  expect(drawn(rows)).toStrictEqual([
+    '  main    claude · Opus          ◦ idle 4s',
+    '  parser  codex · gpt-5.3-codex  ◦ idle 13s  ✓ new reply',
+  ]);
+  expect(drawn(rows, { width: 40 })).toStrictEqual([
+    '  main    claude  ◦ idle 4s',
+    '  parser  codex   ◦ idle 13s  ✓',
+  ]);
+  expect(drawn(rows, { width: 22 })).toStrictEqual([
+    '  main    claude  ◦',
+    '  parser  codex   ◦  ✓',
+  ]);
 });

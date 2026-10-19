@@ -117,6 +117,14 @@ export function AgentsList({
                 {`  ${laid.state.text}`}
               </span>
             )}
+            {laid.unseen && (
+              <span
+                {...fg(toneColour(laid.unseen.tone, colours))}
+                attributes={laid.unseen.tone === 'dim' ? DIM : 0}
+              >
+                {`  ${laid.unseen.text}`}
+              </span>
+            )}
           </text>
         );
       })}

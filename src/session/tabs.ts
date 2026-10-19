@@ -61,6 +61,11 @@ export interface TabWait {
     | undefined;
   /** When the turn running now began, while one runs. */
   readonly working?: number | undefined;
+  /**
+   * When its agent last stopped working: its turn's or own cycle's end,
+   * else when it came up, which an idle agent's time counts from (CHD-471).
+   */
+  readonly stopped?: number | undefined;
   /** Its agent has exited. */
   readonly exited?: true;
 }
@@ -939,12 +944,19 @@ function waitAfter(
       : event.type === 'result' || event.type === 'connect_failed'
         ? undefined
         : before.working;
+  const stopped =
+    before.working !== undefined && working === undefined
+      ? now
+      : event.type === 'connected' && before.stopped === undefined
+        ? now
+        : before.stopped;
 
   return {
     watch,
     asking,
     unseen,
     working,
+    ...(stopped === undefined ? {} : { stopped }),
     ...(event.type === 'disconnected' || before.exited
       ? { exited: true as const }
       : {}),

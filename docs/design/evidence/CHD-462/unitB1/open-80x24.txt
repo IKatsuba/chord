@@ -1,0 +1,24 @@
+ ⏺ Received the message from dev server errors · monitor.
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 3 in this tab                                                   │
+│                                                                              │
+│ ❯ dev server errors  monitor      running 9s · 1 event    main               │
+│   CI run 4812        monitor      running 9s · no events  main               │
+│   Watch the build    task · fake  working 5s              main               │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running          Fake Large with a 1M context window · 1% used
+    background  2 monitors and 1 task running

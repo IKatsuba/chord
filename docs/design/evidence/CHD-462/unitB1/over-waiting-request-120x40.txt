@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 24s ago
+
+ ← from @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (24s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 in this tab                                                                                           │
+│                                                                                                                      │
+│ ❯ dev server errors  monitor      running 50s · 1 event  main                                                        │
+│   Watch the build    task · fake  working 46s            main                                                        │
+│                                                                                                                      │
+│ Enter to go to its call · x to stop · Esc to close                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    main    fake · Fake Large with a 1M context window · medium
+    parser  fake · Fake Small · medium
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 23s
+    background  1 monitor and 1 task running

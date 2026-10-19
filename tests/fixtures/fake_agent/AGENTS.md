@@ -26,8 +26,8 @@
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `codexmodels`, `tasklong`, `tasktallname`, `tasktwo`,
-  `taskwait`, `taskbetween`), `cycles.ts` (`claudecycle`, `claudecyclebare`,
-  `claudecycleask`, `codebuddycycle`) and
+  `taskwait`, `taskbetween`, `taskstays`), `cycles.ts` (`claudecycle`,
+  `claudecyclebare`, `claudecycleask`, `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
@@ -41,7 +41,7 @@
   `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `plan`, `proposal`,
-  `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`,
+  `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`,
   `teamtask`,
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
@@ -120,7 +120,9 @@
   (CHD-430), and `tasktwo` two drawn as a group, then leaves the parent
   idle; `taskwait` works for a minute without asking
   permission, unless stopped; `taskbetween` starts `taskchild` and ends
-  its turn at once, so the task asks between its parent's turns;
+  its turn at once, so the task asks between its parent's turns, and
+  `taskstays` keeps its turn running until it is cancelled, so the task
+  asks within it however slow it is;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
   long-lived on the fake runtime, and messages `parser` twice;
   `agentcall` opens `parser` on `callchild` and messages it during its

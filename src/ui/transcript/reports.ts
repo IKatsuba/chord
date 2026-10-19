@@ -77,8 +77,12 @@ export function reportFacts(
 function runningTurn(state: AppState): string | undefined {
   const { turn } = state.transcript;
 
+  // A request held inside an agent's own cycle leaves the cycle running
+  // (CHD-426): its spend, too, comes when it ends.
   return turn.status === 'idle' ||
-    (turn.status === 'awaiting_permission' && turn.between === true)
+    (turn.status === 'awaiting_permission' &&
+      turn.between === true &&
+      turn.cycle !== true)
     ? undefined
     : turn.turnId;
 }

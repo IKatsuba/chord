@@ -271,3 +271,33 @@ describe('CHD-405 N2 tester: running spend boundaries', () => {
     ).toContain('counted when it ends');
   });
 });
+
+test("a permission held inside the agent's own cycle leaves the cycle running: /cost says it is counted when it ends (CHD-405, CHD-426)", () => {
+  const held = {
+    status: 'awaiting_permission' as const,
+    turnId: 'cycle',
+    since: 100,
+    permissions: [{ id: 'held', options: [] }],
+    between: true as const,
+  };
+  const facts = (cycle: boolean) =>
+    reportFacts(
+      {
+        ...initialAppState,
+        transcript: {
+          ...initialAppState.transcript,
+          turn: cycle ? { ...held, cycle: true as const } : held,
+        },
+      },
+      'claude',
+      '/work',
+      500,
+    );
+
+  expect(facts(true).running).toBe('cycle');
+  expect(text(costReport(facts(true))).join('\n')).toMatch(
+    /This turn: +counted when it ends/,
+  );
+  // Held between turns with no cycle: nothing runs.
+  expect(facts(false).running).toBeUndefined();
+});

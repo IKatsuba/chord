@@ -289,3 +289,38 @@ test("a narrow list wraps a long name in its column and draws a state under its 
     await drawn.unmount();
   }
 });
+
+test('a detail wider than the list on its own is drawn whole, wrapped under its start, nothing clipped (CHD-471)', async () => {
+  const drawn = await draw(
+    <AgentsList
+      rows={[
+        row('main', 1, { model: undefined, picked: true }),
+        row('parser', 2, {
+          runtime: 'a-runtime-named-past-the-line and more words',
+          model: undefined,
+        }),
+      ]}
+      limit={9}
+      width={30}
+      focused={false}
+    />,
+    { columns: 34, rows: 8 },
+  );
+
+  try {
+    expect(
+      stripAnsi(drawn.frame())
+        .split('\n')
+        .map((line) => line.trimEnd())
+        .filter((line) => line !== ''),
+    ).toStrictEqual([
+      '    main    fake  ◦ idle 0s',
+      '    parser  a-runtime-named-past',
+      '            -the-line and more',
+      '            words',
+      '            ◦ idle 0s',
+    ]);
+  } finally {
+    await drawn.unmount();
+  }
+});

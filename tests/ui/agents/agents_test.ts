@@ -905,3 +905,23 @@ describe('CHD-471 a row that does not fit wraps, and counts its lines', () => {
     ]);
   });
 });
+
+test('a detail wider than its line on its own wraps under its start, inside a word only where the word alone is wider, and the state follows under it (CHD-471)', () => {
+  const rows = [
+    row('main', { key: 1, runtime: 'fake', model: undefined }),
+    row('parser', {
+      key: 2,
+      runtime: 'a-runtime-named-past-the-line and more words',
+      model: undefined,
+      wait: { stopped: NOW - 4_000 },
+    }),
+  ];
+
+  expect(drawn(rows, { width: 30, limit: 9 })).toStrictEqual([
+    '  main    fake  ◦ idle 0s',
+    '  parser  a-runtime-named-past',
+    '          -the-line and more',
+    '          words',
+    '          ◦ idle 4s',
+  ]);
+});

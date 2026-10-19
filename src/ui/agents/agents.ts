@@ -370,8 +370,9 @@ export interface LaidRow {
   /** What of it is not yet seen, in its own column after the state. */
   readonly unseen?: Toned;
   /**
-   * Its state and mark under the detail, where the row had no room for
-   * them beside it: a line each, from the row's second line.
+   * Under the detail, a line each from the row's second line: the rest of
+   * a detail too wide for its line, then the state and mark where the row
+   * had no room for them beside it.
    */
   readonly below: readonly (readonly Toned[])[];
   /** How many lines the row takes. */
@@ -539,8 +540,10 @@ function laidRows(
 
     return rows.map((row) => {
       const branch = branchOf(row);
-      const room = names - stringWidth(branch);
-      const lines = wrapped(row.name, room).map((line) => pad(line, room));
+      const nameRoom = names - stringWidth(branch);
+      const lines = wrapped(row.name, nameRoom).map((line) =>
+        pad(line, nameRoom),
+      );
       // Under the branch, the tree goes on past a member that is not the last.
       const under = pad(row.branch === '├─' ? '│' : '', stringWidth(branch));
       const mark = markOf(row);
@@ -549,10 +552,19 @@ function laidRows(
       // Under the detail: the state, wrapped at its spaces, then the mark
       // after it where it fits, else on a line of its own.
       const below: Toned[][] = [];
+      const room = width - detailAt;
+      // A detail wider than its line on its own wraps under its start, at
+      // its spaces, inside a word only where the word alone is wider.
+      const [detail = '', ...details] =
+        !isBeside && stringWidth(runtimeOf(row)) > room
+          ? wrapped(runtimeOf(row), room)
+          : [runtimeOf(row)];
+
+      for (const text of details) {
+        below.push([{ text, tone: 'dim' }]);
+      }
 
       if (!isBeside) {
-        const room = width - detailAt;
-
         for (const text of wrapped(shown.text, room)) {
           below.push([{ text, tone: shown.tone }]);
         }
@@ -581,9 +593,7 @@ function laidRows(
         name: lines[0]!,
         names: lines.slice(1).map((text) => ({ tree: under, text })),
         nameWidth: names,
-        detail: isBeside
-          ? pad(runtimeOf(row), measured.detail)
-          : runtimeOf(row),
+        detail: isBeside ? pad(detail, measured.detail) : detail,
         ...(isBeside ? { state } : {}),
         ...(isBeside && mark !== undefined ? { unseen: mark } : {}),
         below,

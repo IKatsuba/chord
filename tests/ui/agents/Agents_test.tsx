@@ -836,7 +836,9 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
         await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a');
         await anotherTab(window);
         await leader(window, 'w');
-        await window.shows('✗ parser: turn failed');
+        await until('the picker marks the failed tab', () =>
+          /1\. fake · 1 agent +◦ idle \d+s +✗ turn failed/.test(window.frame()),
+        );
         await window.shows('✗ parser: exited');
         expect(window.frame()).not.toContain('sessions ended');
         await window.press(ESC);
@@ -1622,6 +1624,109 @@ describe('CHD-405 N2 tester: standalone child spend is independent', () => {
             rows,
             agentCommand: command,
             startupOf: () => ({ agentCommand: command }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});
+
+describe('CHD-471 L2 tester: child messages in the strip and picker', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a working child's unread message is displayed and opening only that child clears it at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'agentcallgated');
+            await window.shows('← new message');
+
+            const previousSession = window.session();
+
+            await leader(window, 'c');
+            await until(
+              'the second fake session connected',
+              () => window.session() !== previousSession,
+            );
+            await window.shows('2 fake');
+
+            const header = () => window.frame().split('\n')[0] ?? '';
+
+            await until(
+              'parent result recorded before clearing its own reply',
+              async () => {
+                const records = join(window.dir, 'state', 'records');
+
+                for (const file of await readdir(records)) {
+                  const past = await readPast(join(records, file));
+                  const prompt = past.find(
+                    (entry) =>
+                      entry.type === 'prompt' &&
+                      entry.prompt === 'agentcallgated',
+                  );
+
+                  if (
+                    prompt?.type === 'prompt' &&
+                    past.some(
+                      (entry) =>
+                        entry.type === 'result' &&
+                        entry.turnId === prompt.turnId,
+                    )
+                  ) {
+                    return true;
+                  }
+                }
+
+                return false;
+              },
+            );
+
+            await leader(window, '1');
+            await window.shows('› agentcallgated');
+            await leader(window, '2');
+
+            await until(
+              'working and message glyphs in the background tab',
+              () => /1 fake ✻←/.test(header()),
+            );
+            await leader(window, 'w');
+            await until(
+              'picker keeps the child working beside its message mark',
+              () =>
+                /1\. fake · 1 agent +✻ working \d+s +← new message/.test(
+                  window.frame(),
+                ),
+            );
+            expect(window.frame()).not.toContain('← message from @main');
+            await window.press(ESC);
+            await leader(window, '1');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.shows(
+              `← from @main · after the running calls: ${HELD_AGAIN}`,
+            );
+            await leader(window, '2');
+            await until(
+              'opening the child clears its mark but leaves its working state',
+              () => /1 fake ✻/.test(header()) && !header().includes('✻←'),
+            );
+            expect(await readdir(join(window.dir, GATE))).not.toContain(
+              GATE_RELEASE,
+            );
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
           },
         );
       } finally {

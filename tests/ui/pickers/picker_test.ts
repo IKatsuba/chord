@@ -573,13 +573,14 @@ test("a numbered list's keys move round, pick, and leave shift+arrows alone", ()
 });
 
 describe('CHD-264 tester: picker failure identity', () => {
-  test('a child failure uses its own failure time and owner while the front tab still reads here', () => {
+  test('a failed turn is idle with its own stop time and an unnamed mark while the front tab reads here', () => {
     const now = 1_000_000;
     const child: TabRow = {
       ...idleTab,
       waiter: 'parser',
       wait: {
         ...idle,
+        stopped: now - 12_000,
         unseen: {
           kind: 'failed',
           failure: 'turn',
@@ -589,37 +590,38 @@ describe('CHD-264 tester: picker failure identity', () => {
       },
     };
 
-    expect(tabState(child, now)).toBe('✗ parser: turn failed 12s');
+    expect(tabState(child, now)).toBe('◦ idle 12s');
+    expect(tabMark(child)).toBe('✗ turn failed');
     expect(
       tabState({ ...child, wait: { ...child.wait, exited: true } }, now),
     ).toBe('✗ parser: exited');
     expect(tabState({ ...child, front: true }, now)).toBe('here');
-    expect(tabState({ ...idleTab, wait: child.wait }, now)).toBe(
-      '✗ turn failed 12s',
-    );
+    expect(tabState({ ...idleTab, wait: child.wait }, now)).toBe('◦ idle 12s');
   });
 });
 
-describe('CHD-364 tester: legacy and newest reply age', () => {
-  test('old waits fall back to news time; a later reply uses its own time, including epoch zero', () => {
-    const state = (since: number, repliedAt?: number) =>
-      tabState(
-        {
-          ...idleTab,
-          wait: {
-            ...idle,
-            unseen: {
-              kind: 'replied',
-              since,
-              ...(repliedAt === undefined ? {} : { repliedAt }),
-            },
+describe('CHD-364 tester: legacy and newest replies are timeless marks', () => {
+  test('old and new reply timestamps including epoch zero leave state and mark independent', () => {
+    for (const [since, repliedAt] of [
+      [1000, undefined],
+      [1000, 64000],
+      [-100000, 0],
+    ]) {
+      const tab: TabRow = {
+        ...idleTab,
+        wait: {
+          ...idle,
+          unseen: {
+            kind: 'replied',
+            since: since!,
+            ...(repliedAt === undefined ? {} : { repliedAt }),
           },
         },
-        65_000,
-      );
+      };
 
-    expect(state(1000)).toBe('✓ replied 1m ago');
-    expect(state(1000, 64_000)).toBe('✓ replied 1s ago');
-    expect(state(-100_000, 0)).toBe('✓ replied 1m ago');
+      expect(tabState(tab, 65000)).toBe('◦ idle 0s');
+      expect(tabMark(tab)).toBe('✓ new reply');
+      expect(tabMark({ ...tab, front: true })).toBeUndefined();
+    }
   });
 });

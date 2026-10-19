@@ -488,3 +488,72 @@ test("/team show paints an agent's state and mark in their colours past a model 
     chalk.level = level;
   }
 });
+
+describe('CHD-471 L2 tester: inspecting a run preserves unread marks', () => {
+  for (const columns of [80, 120]) {
+    test(`repeated /team show keeps the member's mark until that member is opened at ${columns} columns`, () =>
+      withTeams(async (window) => {
+        await ran(window);
+        await window.resize({ columns, rows: 60 });
+
+        const coder = () =>
+          window
+            .frame()
+            .slice(window.frame().lastIndexOf('› /team show bugfix'))
+            .split('\n')
+            .findLast((line) => /coder +fake · fake-large +plan/.test(line)) ??
+          '';
+
+        await until('coder has replied in a run snapshot', async () => {
+          await send(window, '/team show bugfix');
+
+          return /◦ idle \d+s +✓ new reply/.test(coder());
+        });
+
+        const firstAge = Number(/◦ idle (\d+)s/.exec(coder())?.[1]);
+        const liveWaitAge = () =>
+          Number(
+            /permission (\d+)s/.exec(
+              window
+                .frame()
+                .split('\n')
+                .findLast((line) => line.includes('permission ')) ?? '',
+            )?.[1],
+          );
+        const firstWaitAge = liveWaitAge();
+
+        expect(Number.isFinite(firstAge)).toBe(true);
+        expect(Number.isFinite(firstWaitAge)).toBe(true);
+        // The live list ticks, while an old /team show snapshot cannot age.
+        await until(
+          'live wait advances beyond the first snapshot',
+          () => liveWaitAge() >= firstWaitAge + 2,
+        );
+        await send(window, '/team show bugfix');
+        await until(
+          'a newer snapshot retains the same unread reply',
+          () =>
+            Number(/◦ idle (\d+)s/.exec(coder())?.[1]) > firstAge &&
+            /✓ new reply/.test(coder()),
+        );
+        expect(window.frame()).toContain('✓ new reply');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('╭─ coder · bugfix');
+        // /team writes its report in main's transcript, so return there to read it.
+        await window.press(UP);
+        await window.press(UP);
+        await window.press(UP);
+        await window.shows('❯ main');
+        await window.press('\x1b');
+        await send(window, '/team show bugfix');
+        await until(
+          'opening coder cleared only its mark in the next snapshot',
+          () => /◦ idle \d+s/.test(coder()) && !coder().includes('✓ new reply'),
+        );
+        expect(window.frame()).toContain('● permission');
+      }));
+  }
+});

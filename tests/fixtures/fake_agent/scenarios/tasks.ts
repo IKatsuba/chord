@@ -6,7 +6,7 @@
 import { once } from 'node:events';
 import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
-import { steers } from '../sessions.ts';
+import { steeredInto } from '../sessions.ts';
 import { lifetime, pause, type Play, type Turn } from '../turn.ts';
 import { codexCall, callChord, chordClient } from './chord_tools.ts';
 
@@ -214,14 +214,19 @@ export const TASKS = {
       return 'end_turn';
     }
 
-    try {
-      const steered = once(steers, turn.sessionId, { signal: turn.signal });
+    // Listening before the task starts, so its message is never missed.
+    const waiting = steeredInto(
+      turn.sessionId,
+      AbortSignal.any([turn.signal, lifetime.signal]),
+    );
 
+    try {
       await turn.say('I will send a task agent on fake for the fix.');
       await callChord(turn, client, 'spawn_task', TASK_ARGS);
       await turn.say('It is running; I will check its report when it lands.');
-      await steered;
+      await waiting.steered;
     } finally {
+      waiting.stop();
       await client.close();
     }
 

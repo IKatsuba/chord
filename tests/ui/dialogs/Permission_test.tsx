@@ -1310,3 +1310,143 @@ describe('CHD-158 C4 tester: promoted permission keys and withdrawal', () => {
       ));
   }
 });
+
+describe('CHD-389 U3 tester: permission row identity and wrapping', () => {
+  const name =
+    'release validation member checking tokenizer boundaries and source locations';
+  const team =
+    'the second independent release validation run across all terminal sizes';
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const between of [false, true]) {
+      test(`a long member and team stay whole with choices visible at ${columns} columns, between=${between}`, async () => {
+        const drawn = await draw(
+          <PermissionPrompt
+            wait={{
+              id: 'p',
+              title: 'Write report.md',
+              options: [
+                { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+              ],
+            }}
+            child={{ name, team, colour: '#c49cff' }}
+            between={between}
+            held={between}
+            width={columns - 4}
+            active={false}
+            onChoose={() => {}}
+          />,
+          { columns, rows },
+        );
+
+        try {
+          const frame = stripAnsi(drawn.frame());
+          const plain = frame.replace(/[│╭╮╰╯─]/g, ' ').replace(/\s+/g, ' ');
+
+          expect(plain).toContain(
+            `${name} · ${team} asks${between ? ' · between turns' : ''}`,
+          );
+          expect(frame).toContain('1. Allow');
+          expect(frame).toContain(
+            between ? 'ctrl+x a to answer' : 'Esc to reject',
+          );
+          expect(
+            frame.split('\n').every((row) => row.length <= columns),
+          ).toBeTrue();
+        } finally {
+          await drawn.unmount();
+        }
+      });
+    }
+  }
+
+  test('member name is bold in its colour, team and between suffix dim, asks plain', async () => {
+    const level = chalk.level;
+
+    chalk.level = 3;
+
+    try {
+      const drawn = await draw(
+        <PermissionPrompt
+          wait={{ id: 'p', title: 'Write report.md', options: [] }}
+          child={{ name: 'tester', team: 'bugfix', colour: '#c49cff' }}
+          between
+          width={116}
+          active={false}
+          onChoose={() => {}}
+        />,
+        { columns: 120, rows: 40 },
+      );
+
+      try {
+        const frame = drawn.frame();
+
+        expect(frame).toContain('\x1b[1m\x1b[38;2;196;156;255mtester\x1b[0m');
+        expect(frame).toContain('\x1b[2m · bugfix\x1b[0m asks');
+        expect(frame).toContain('\x1b[2m · between turns\x1b[0m');
+      } finally {
+        await drawn.unmount();
+      }
+    } finally {
+      chalk.level = level;
+    }
+  });
+
+  for (const kind of ['main', 'child', 'task', 'unknown'] as const) {
+    test(`${kind} retains its permission naming rule`, async () => {
+      const drawn = await draw(
+        <PermissionPrompt
+          wait={{
+            id: 'p',
+            title: 'Write report.md',
+            options: [],
+            ...(kind === 'unknown' ? { subagentId: 'unknown' } : {}),
+          }}
+          {...(kind === 'child' || kind === 'task' || kind === 'unknown'
+            ? { child: { name: 'docs', colour: undefined } }
+            : {})}
+          {...(kind === 'task'
+            ? {
+                asker: [
+                  {
+                    id: 'task',
+                    title: 'Fix the tokenizer',
+                    state: 'running',
+                    entries: [],
+                    plan: [],
+                    task: { name: 'Fix the tokenizer', runtime: 'fake' },
+                  },
+                ],
+              }
+            : {})}
+          between={kind === 'unknown'}
+          width={76}
+          active={false}
+          onChoose={() => {}}
+        />,
+        { columns: 80, rows: 24 },
+      );
+
+      try {
+        const frame = stripAnsi(drawn.frame());
+
+        if (kind === 'main') {
+          expect(frame).not.toContain(' asks');
+        } else {
+          expect(frame).toContain(
+            kind === 'child'
+              ? 'docs asks'
+              : kind === 'task'
+                ? 'Agent(Fix the tokenizer) · fake asks'
+                : 'a subagent of docs asks · between turns',
+          );
+        }
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});

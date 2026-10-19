@@ -447,3 +447,37 @@ test("/cost, /context and /status on a picked member name its runtime, not the t
     await server.close();
   }
 });
+
+describe('CHD-389 U3 tester: same member name across runs', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`each tester permission names its own run at ${columns} columns`, () =>
+      withTeams(async (window) => {
+        await window.resize({ columns, rows });
+        await started(window);
+        await send(window, 'team2');
+        await window.shows('Team(bugfix 2) · fake · fake-large');
+        await window.shows('● 2 agents wait');
+
+        for (const team of ['bugfix', 'bugfix 2']) {
+          const heading = `╭─ tester · ${team} ─`;
+
+          for (
+            let presses = 0;
+            presses < 10 && !window.frame().includes(heading);
+            presses++
+          ) {
+            await window.press(DOWN);
+          }
+
+          await window.shows(heading);
+          await window.shows(`tester · ${team} asks`);
+          expect(window.frame()).not.toContain(
+            `tester · ${team === 'bugfix' ? 'bugfix 2' : 'bugfix'} asks`,
+          );
+        }
+      }));
+  }
+});

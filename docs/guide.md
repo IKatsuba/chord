@@ -646,7 +646,10 @@ agents reaches it; Enter opens the background view above the prompt, full
 width in the pickers' rounded frame in the permission colour. It is as tall
 as its rows, at most half the screen; the prompt, status line and summary
 stay visible. Rows show name, kind, state with time and owner, oldest first.
-↑ ↓ or j k move between rows and scroll the view.
+↑ ↓ or j k move between rows. A row taller than the frame scrolls one line
+at a time before moving to the next row. Its `❯` stays on its first line;
+a dim `↑` in the gutter stands in when that line is out of sight. Resizing
+or reopening starts it from its first line again.
 
 An agent row reads `running`, `● permission` or `● input`; `● waiting`
 means it needs action but no request reaches you. Its end reads `✓ done`, `✗ failed`,

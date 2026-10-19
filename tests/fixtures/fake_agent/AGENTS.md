@@ -25,8 +25,8 @@
   `claudenostop`, `claudeslowstop`, `claudebetween`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
-  (`codexchordcalls`, `tasklong`, `tasktallname`, `tasktwo`, `taskwait`,
-  `taskbetween`), `cycles.ts` (`claudecycle`, `claudecyclebare`,
+  (`codexchordcalls`, `codexmodels`, `tasklong`, `tasktallname`, `tasktwo`,
+  `taskwait`, `taskbetween`), `cycles.ts` (`claudecycle`, `claudecyclebare`,
   `claudecycleask`, `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
@@ -50,8 +50,8 @@
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
-  `claudeslowstop`, `chordtools`, `codexchordcalls`, `claudecycle`,
-  `claudecyclebare`, `claudecycleask`, `codebuddycycle`)
+  `claudeslowstop`, `chordtools`, `codexchordcalls`, `codexmodels`,
+  `claudecycle`, `claudecyclebare`, `claudecycleask`, `codebuddycycle`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second;
   `longresults` plays an MCP result, command output, an edit and terminal
@@ -103,6 +103,7 @@
   adapter titles them, then a `spawn_task` on a runtime chord does not
   know; `codexchordcalls` lists agents and sessions as Codex does, after
   another server's call with the same arguments as the first;
+  `codexmodels` asks `list_agents` for codex's models and says the answer;
   `cutcalls` cuts off `send_message` and `open_agent` before they reach
   chord, with empty errors, and cancels a command beside them;
   `cutcallsback` adds `list_sessions`, ends the calls in reverse order and

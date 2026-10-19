@@ -786,6 +786,27 @@ export class Conversation {
     return this.#permissions.size > 0 || this.#elicitations.size > 0;
   }
 
+  /**
+   * The permissions turn `turnId` ended with still open wait on the person
+   * between turns, as one asked then does: the queue holds behind them, and
+   * what is queued says so (the owner's Q44, CHD-158).
+   */
+  #leftOpen(turnId: string): void {
+    let left = false;
+
+    for (const [id, asked] of this.#permissions) {
+      if (asked.turnId === turnId && !asked.between) {
+        this.#permissions.set(id, { ...asked, between: true });
+
+        left = true;
+      }
+    }
+
+    if (left) {
+      this.#holdForAnswer();
+    }
+  }
+
   /** Whether a request asked with no turn running waits on the person. */
   #waitsBetween(): boolean {
     return (
@@ -2592,6 +2613,8 @@ export class Conversation {
     if (this.#turn?.id === turnId) {
       this.#turn = undefined;
     }
+
+    this.#leftOpen(turnId);
 
     // A question of chord's the turn ended under has nobody to answer.
     this.#withdrawAsks();

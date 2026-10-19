@@ -1854,7 +1854,7 @@ for (const wait of ['permission', 'form'] as const) {
   });
 }
 
-test('a message waiting on a question asked while the steer ahead was out goes as the next turn when the turn ends first', async () => {
+test("a message waiting on a question asked while the steer ahead was out waits on for the answer when the turn ends first, then goes as the next turn (the owner's Q44)", async () => {
   const stub = await steeringStub();
   const { conversation, events, steers, prompts } = stub;
 
@@ -1868,6 +1868,12 @@ test('a message waiting on a question asked while the steer ahead was out goes a
   steers[0]!.answer('injected');
   await stub.settled();
   stub.end();
+  // The question outlives the turn, between turns, and the message waits
+  // for its answer rather than start a turn that would hide it.
+  await until(() => events.some((event) => event.type === 'result'));
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(prompts).toHaveLength(1);
+  conversation.choose('first', 'allow');
   await until(() => prompts.length === 2);
 
   expect(steers).toHaveLength(1);

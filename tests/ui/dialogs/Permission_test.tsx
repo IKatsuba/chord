@@ -1194,3 +1194,29 @@ describe('CHD-158 tester: interrupting a mixed held queue', () => {
     }
   });
 });
+
+describe("a permission left open at its turn's end (CHD-158 C4, the owner's Q44)", () => {
+  test('stays answerable between turns, the queue behind it, through what follows', () =>
+    withWindow(async (window) => {
+      await send(window, 'leftask');
+      // In its turn it has the keys.
+      await window.shows('❯ 1. Allow');
+      await window.shows('I asked; the turn ends with it open.');
+      // Its turn over, it waits between turns, without the keys.
+      await window.shows('main asks · between turns');
+      await window.shows('ctrl+x a to answer');
+      expect(window.frame()).not.toContain('❯ 1. Allow');
+
+      await window.type('text');
+      await window.press('\r');
+      await window.shows('› after your answer: text');
+      expect(window.frame()).toContain('main asks · between turns');
+
+      await leader(window, 'a');
+      await window.shows('❯ 1. Allow');
+      await window.press('1');
+      await window.shows('Permission: allow.');
+      await window.shows('Hello, world.');
+      expect(window.frame()).not.toContain('between turns');
+    }));
+});

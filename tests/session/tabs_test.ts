@@ -412,7 +412,7 @@ test('a cancelled turn, or one a queued prompt follows, is not unseen', () => {
   expect(tabOf(queued, 1)?.wait.unseen).toStrictEqual(undefined);
 });
 
-test('a turn ending closes the wait on its permissions', () => {
+test("a turn ending leaves its permissions waiting, between turns (the owner's Q44)", () => {
   const tabs = heard(opened('a', 'b'), 1, [
     up,
     prompt('t1'),
@@ -420,7 +420,8 @@ test('a turn ending closes the wait on its permissions', () => {
     ended('t1'),
   ]);
 
-  expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual(undefined);
+  expect(tabOf(tabs, 1)?.wait.asking?.since).toStrictEqual(2000);
+  // The turn's end is news too, behind the wait.
   expect(tabOf(tabs, 1)?.wait.unseen?.kind).toStrictEqual('replied');
 });
 

@@ -133,6 +133,8 @@
  * parent's running: requests with no turn running (CHD-158).
  * `teamtask` runs bugfix as `team` does and starts `taskchild` as `task` does,
  * so a member and a task of main's ask at once (CHD-431).
+ * `leftask` asks for a write in its turn and ends the turn with it still
+ * open, then says the answer once it comes (CHD-158, the owner's Q44).
  * `mainbetweentwice` asks as `mainbetween` does, then a second write at once,
  * silent half a second (less at a quick pace, never more) after that one's
  * answer before it says what came back.
@@ -307,6 +309,7 @@ const SCENARIOS = [
   'bashask',
   'claudebetween',
   'mainbetween',
+  'leftask',
   'mainbetweentwice',
   'taskbetween',
   'teamtask',

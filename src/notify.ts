@@ -98,6 +98,16 @@ export function askingNow(watch: Watch): AskingWait | undefined {
   return open.find((wait) => wait.kind === 'permission') ?? open[0];
 }
 
+/** The requests a turn's end leaves open (the owner's Q44, CHD-158). */
+function outliving(watch: Watch): Set<string> {
+  return new Set(
+    [...watch.asking].filter(
+      (id) =>
+        watch.lasting.has(id) || watch.asked.get(id)?.kind === 'permission',
+    ),
+  );
+}
+
 /** `asked` with only the requests `asking` still holds. */
 function stillAsked(
   asked: ReadonlyMap<string, AskingWait>,
@@ -226,9 +236,10 @@ export function watchWaits(
         ...watch,
         cancelled: removing(watch.cancelled, event.turnId),
         events: removing(watch.events, event.turnId),
-        // A task's request, or one asked between turns, outlives the turn.
-        asking: keeping(watch.asking, watch.lasting),
-        asked: stillAsked(watch.asked, watch.lasting),
+        // A permission outlives the turn, as do a task's form and one asked
+        // between turns; a form of the turn's own goes with it.
+        asking: keeping(watch.asking, outliving(watch)),
+        asked: stillAsked(watch.asked, outliving(watch)),
       };
       const waits =
         watch.live &&

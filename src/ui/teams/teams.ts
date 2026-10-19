@@ -389,11 +389,19 @@ export function runningHeader(
 /** One running agent's row laid out, and where its state is in it. */
 export interface RunningLine {
   readonly text: string;
-  /** The state's cells, `[start, end)` in `text`, to paint by its tone. */
+  /**
+   * The state's cells, `[start, end)` in its line, to paint by its tone:
+   * `text`, or the line of `under` that `stateLine` names.
+   */
   readonly state: readonly [number, number];
-  /** Its mark's cells after the state, to paint by the mark's tone. */
+  /** Its mark's cells after the state, in the same line. */
   readonly mark?: readonly [number, number];
-  /** The rest of its latest headline, wrapped, a line each under the row. */
+  /** Which line the state is on: 0 for `text`, else `under`'s, from 1. */
+  readonly stateLine: number;
+  /**
+   * The row's further lines: its wrapped cells, its state where the row
+   * had no room for it, and its latest headline, wrapped.
+   */
   readonly under: readonly string[];
   readonly agent: TeamAgentShown;
 }
@@ -412,10 +420,13 @@ const BESIDE = 20;
  * effort and mode from the file, then its state, its mark and its latest
  * headline. Nothing is cut (CHD-471): the headline wraps in its column
  * while that keeps `BESIDE` cells, and under the row from the runtime's
- * column where it would not. The effort is a column where an agent sets
- * one, as the proposal's table has it, and gives way where that alone
- * keeps the headline beside the row, as what each agent is on now is what
- * this form is for.
+ * column where it would not. Where the row's own columns are wider than
+ * `width`, the runtime's and then the name's wrap in a third of it, and if
+ * that is not enough the state and mark go whole under the row; the mode
+ * never wraps. The effort is a column where an agent sets one, as the
+ * proposal's table has it, and gives way where that alone keeps the
+ * headline beside the row, as what each agent is on now is what this form
+ * is for.
  */
 export function runningTable(
   team: Team,
@@ -464,18 +475,30 @@ export function runningTable(
       ];
     });
 
+  const across = (widths: readonly number[]) =>
+    widths.reduce((sum, each) => sum + each + GAP.length, 0) - GAP.length;
   const laidOut = (cells: string[][]) => {
     const widths = cells[0]!.map((_, column) =>
       Math.max(0, ...cells.map((row) => stringWidth(row[column]!))),
     );
-    const before = widths
-      .slice(0, -1)
-      .reduce((sum, each) => sum + each + GAP.length, 0);
+    const third = Math.max(1, Math.floor(width / 3));
+
+    // The runtime's column, then the name's, wrap in a third of the width
+    // while the row's own columns are wider than it.
+    for (const column of [1, 0]) {
+      if (across(widths) > width && widths[column]! > third) {
+        widths[column] = third;
+      }
+    }
+
+    const under = across(widths) > width;
+    const before = across(widths.slice(0, -1)) + GAP.length;
 
     return {
       widths,
       before,
-      room: width - before - widths.at(-1)! - GAP.length,
+      under,
+      room: under ? 0 : width - across(widths) - GAP.length,
     };
   };
 
@@ -489,36 +512,57 @@ export function runningTable(
     (laidOut(withEffort).room >= BESIDE ||
       laidOut(cellsOf(false)).room < BESIDE);
   const cells = effort ? withEffort : cellsOf(false);
-  const { widths, before, room } = laidOut(cells);
+  const { widths, before, under, room } = laidOut(cells);
   const beside = room >= BESIDE;
+  const runtimeAt = widths[0]! + GAP.length;
   // Beside, after the state's column; under, from the runtime's.
-  const latestAt = beside ? width - room : widths[0]! + GAP.length;
-  const laid = new Table()
-    .body(cells)
-    .padding(GAP.length)
-    .toString()
-    .split('\n');
+  const latestAt = beside ? width - room : runtimeAt;
+  // Each row its own table, its columns as wide as all the rows' are: a
+  // cell wider than its column wraps in it, after a ` · ` where it can.
+  const columns = (under ? widths.slice(0, -1) : widths).map((each) => ({
+    minWidth: each,
+    maxWidth: each,
+  }));
 
   return agents.map((agent, index) => {
+    const row = cells[index]!;
+    const own = new Table()
+      .body([under ? row.slice(0, -1) : row])
+      .columns(columns)
+      .padding(GAP.length)
+      .toString()
+      .split('\n')
+      .map((line) => line.trimEnd());
     const state = ownState(agent);
     const mark = markOf(agent);
-    const markAt = before + stateWidth + GAP.length;
-    const row = (laid[index] ?? '').trimEnd();
+    const stateAt = under ? runtimeAt : before;
+    const markAt = stateAt + stateWidth + GAP.length;
     const latest = (agent.latest ?? '').replaceAll(/\s+/g, ' ').trim();
-    const lines =
+    const wrapped =
       latest === ''
         ? []
         : wrapAnsi(latest, Math.max(1, width - latestAt), {
             hard: true,
             trim: true,
           }).split('\n');
-    const indent = ' '.repeat(latestAt);
+    const lines = beside
+      ? Array.from({ length: Math.max(own.length, wrapped.length) }, (_, at) =>
+          at < wrapped.length
+            ? padded(own[at] ?? '', latestAt) + wrapped[at]!
+            : own[at]!,
+        )
+      : [
+          ...own,
+          ...(under ? [' '.repeat(runtimeAt) + row.at(-1)!] : []),
+          ...wrapped.map((line) => ' '.repeat(latestAt) + line),
+        ];
 
     return {
-      text: beside && lines.length > 0 ? padded(row, latestAt) + lines[0] : row,
-      state: [before, before + state.length],
+      text: lines[0]!,
+      state: [stateAt, stateAt + state.length],
       ...(mark === undefined ? {} : { mark: [markAt, markAt + mark.length] }),
-      under: (beside ? lines.slice(1) : lines).map((line) => indent + line),
+      stateLine: under ? own.length : 0,
+      under: lines.slice(1),
       agent,
     };
   });

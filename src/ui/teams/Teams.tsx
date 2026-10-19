@@ -7,7 +7,7 @@ import type {
 import type { Team } from '../../teams.ts';
 import { useColours } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
-import { CUT, DIM, fg, FILL } from '../theme/text.ts';
+import { CUT, DIM, fg, FILL, ROWS } from '../theme/text.ts';
 import { markdown } from '../transcript/markdown.ts';
 import { wrapLine } from '../transcript/message.ts';
 import {
@@ -192,7 +192,7 @@ function RunningTeam({
       {runningHeader(run.name === name ? name : run.name, file, run, width).map(
         (line, index) => (
           <Under key={index} first={index === 0}>
-            <text {...CUT}>{line}</text>
+            <text {...ROWS}>{line}</text>
           </Under>
         ),
       )}
@@ -203,6 +203,7 @@ function RunningTeam({
           text,
           state: [start, end],
           mark,
+          stateLine,
           under,
           agent,
         } = line;
@@ -212,32 +213,33 @@ function RunningTeam({
 
         return (
           <Fragment key={index}>
-            <Under first={false}>
-              <text {...CUT}>
-                <Ansi text={text.slice(0, start)} />
-                <span
-                  {...(tone === undefined || tone === 'dim'
-                    ? { attributes: DIM }
-                    : fg(tones[tone]))}
-                >
-                  <Ansi text={text.slice(start, end)} />
-                </span>
-                <Ansi text={text.slice(end, markStart)} />
-                <span
-                  {...(markTone === undefined || markTone === 'dim'
-                    ? { attributes: DIM }
-                    : fg(tones[markTone]))}
-                >
-                  <Ansi text={text.slice(markStart, markEnd)} />
-                </span>
-                <Ansi text={text.slice(markEnd)} />
-              </text>
-            </Under>
-            {under.map((rest, at) => (
+            {[text, ...under].map((each, at) => (
               <Under key={at} first={false}>
-                <text {...CUT}>
-                  <Ansi text={rest} />
-                </text>
+                {at === stateLine ? (
+                  <text {...ROWS}>
+                    <Ansi text={each.slice(0, start)} />
+                    <span
+                      {...(tone === undefined || tone === 'dim'
+                        ? { attributes: DIM }
+                        : fg(tones[tone]))}
+                    >
+                      <Ansi text={each.slice(start, end)} />
+                    </span>
+                    <Ansi text={each.slice(end, markStart)} />
+                    <span
+                      {...(markTone === undefined || markTone === 'dim'
+                        ? { attributes: DIM }
+                        : fg(tones[markTone]))}
+                    >
+                      <Ansi text={each.slice(markStart, markEnd)} />
+                    </span>
+                    <Ansi text={each.slice(markEnd)} />
+                  </text>
+                ) : (
+                  <text {...ROWS}>
+                    <Ansi text={each} />
+                  </text>
+                )}
               </Under>
             ))}
           </Fragment>

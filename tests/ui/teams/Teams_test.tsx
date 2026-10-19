@@ -411,3 +411,13 @@ test('/team show of a running team at 80 columns cuts nothing: the job wraps, an
     expect(lines[end + 1]!.trim()).toBe('');
     expect(lines[end + 2]).toMatch(/^ +lead {4}fake/);
   }));
+
+test("/team show of a running team narrower than its own columns puts each agent's state and mark whole under its row (CHD-471)", () =>
+  withTeams(async (window) => {
+    await ran(window);
+    await window.resize({ columns: 60, rows: 60 });
+    await send(window, '/team show bugfix');
+    await window.shows('      tester  fake · fake-small  acceptEdits\n');
+    await window.shows('              ● permission');
+    await window.shows('              Bash(deno task test tests/parse)');
+  }));

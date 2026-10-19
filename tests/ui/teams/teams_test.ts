@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import type { TeamAgentShown } from '../../../src/session/transcript/types.ts';
 import type { Team } from '../../../src/teams.ts';
 import {
   headlineText,
@@ -8,6 +9,7 @@ import {
   pickedDraft,
   ranNote,
   runningHeader,
+  type RunningLine,
   runningTable,
   runningWords,
   stoppedLine,
@@ -467,4 +469,109 @@ test("/team show's running form says what of an agent is not yet seen beside its
   expect(lines[1]!.text.slice(...lines[1]!.state)).toStrictEqual('◦ idle 3m');
   expect(lines[1]!.text.slice(...lines[1]!.mark!)).toStrictEqual('✓ new reply');
   expect(lines[2]!.mark).toBe(undefined);
+});
+
+describe("/team show's running form wraps its own columns where they are wider than the width, and hides nothing (CHD-471)", () => {
+  const team: Team = {
+    ...BUGFIX,
+    lead: { agent: 'fake', model: 'fake-large', mode: 'default' },
+    members: [
+      {
+        ...BUGFIX.members[0]!,
+        agent: 'fake',
+        model: 'claude-opus-5-5-20261001-preview-long',
+      },
+      {
+        ...BUGFIX.members[1]!,
+        name: 'a-member-with-a-name-far-longer-than-a-third',
+        agent: 'fake',
+        model: 'fake-large',
+        mode: 'plan',
+      },
+    ],
+  };
+  const agents: TeamAgentShown[] = [
+    {
+      name: 'lead',
+      lead: true,
+      open: true,
+      state: { glyph: '◦', words: 'idle 9s', tone: 'dim' },
+      mark: { glyph: '✓', words: 'new reply', tone: 'success' },
+      latest: '← from @tester · fake',
+    },
+    {
+      name: 'tester',
+      open: true,
+      state: { glyph: '●', words: 'permission 8s', tone: 'warning' },
+      mark: { glyph: '←', words: 'new message', tone: 'dim' },
+      latest: 'Bash(deno task test tests/parse)',
+    },
+  ];
+  const drawn = (lines: readonly RunningLine[]) =>
+    lines.flatMap(({ text, under }) => [text, ...under]);
+  const states = (lines: readonly RunningLine[]) =>
+    lines.map((line) => {
+      const on = [line.text, ...line.under][line.stateLine]!;
+
+      return [
+        on.slice(...line.state),
+        line.mark === undefined ? undefined : on.slice(...line.mark),
+      ];
+    });
+
+  test('at 72 the model id wraps after its runtime in a third of the width, and the state and mark go whole under the row', () => {
+    const lines = runningTable(team, agents, 72);
+
+    expect(drawn(lines)).toStrictEqual([
+      'lead    fake · fake-large         default',
+      '        ◦ idle 9s        ✓ new reply',
+      '        ← from @tester · fake',
+      'tester  fake ·                    acceptEdits',
+      '        claude-opus-5-5-20261001',
+      '        -preview-long',
+      '        ● permission 8s  ← new message',
+      '        Bash(deno task test tests/parse)',
+    ]);
+    expect(states(lines)).toStrictEqual([
+      ['◦ idle 9s', '✓ new reply'],
+      ['● permission 8s', '← new message'],
+    ]);
+  });
+
+  test('at 112 the row has room for its own columns', () => {
+    const lines = runningTable(team, agents, 112);
+
+    expect(drawn(lines)).toStrictEqual([
+      'lead    fake · fake-large                             default      ◦ idle 9s        ✓ new reply',
+      '        ← from @tester · fake',
+      'tester  fake · claude-opus-5-5-20261001-preview-long  acceptEdits  ● permission 8s  ← new message',
+      '        Bash(deno task test tests/parse)',
+    ]);
+    expect(states(lines)).toStrictEqual([
+      ['◦ idle 9s', '✓ new reply'],
+      ['● permission 8s', '← new message'],
+    ]);
+  });
+
+  test('a long name wraps in its column once the runtime has, and the model id stays whole where it fits the column', () => {
+    const all = [
+      ...agents,
+      { name: 'a-member-with-a-name-far-longer-than-a-third', open: false },
+    ];
+
+    expect(drawn(runningTable(team, all, 72)).slice(-3)).toStrictEqual([
+      'a-member-with-a-name-far  fake · fake-large         plan',
+      '-longer-than-a-third',
+      '                          not opened',
+    ]);
+
+    const wide = runningTable(team, all, 112);
+
+    expect(drawn(wide).slice(3, 6)).toStrictEqual([
+      'tester                                 fake ·                                 acceptEdits',
+      '                                       claude-opus-5-5-20261001-preview-long',
+      '                                       ● permission 8s  ← new message',
+    ]);
+    expect(states(wide).at(-1)).toStrictEqual(['not opened', undefined]);
+  });
 });

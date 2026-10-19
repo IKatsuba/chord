@@ -213,6 +213,7 @@ function QuestionsRecord({
  * Decline. What each key does is `formKey`'s; this only draws.
  */
 export function ElicitationForm({
+  hidden = false,
   wait,
   filled,
   agent,
@@ -225,6 +226,11 @@ export function ElicitationForm({
   onFill,
   onAnswer,
 }: {
+  /**
+   * Not drawn, its state kept, while the background view stands in its
+   * place (CHD-462).
+   */
+  hidden?: boolean;
   wait: Extract<ElicitationWait, { mode: 'form' }>;
   /**
    * Asked with no turn running: its heading names `agent` as who asks and
@@ -293,6 +299,7 @@ export function ElicitationForm({
   return (
     <box
       {...borderOf(colours.permission)}
+      visible={!hidden}
       paddingX={1}
       marginTop={1}
       flexShrink={held ? 1 : 0}

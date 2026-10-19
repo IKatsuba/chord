@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
+import { useState } from 'react';
 import { draw } from '../harness.tsx';
 import {
   type RequestScroller,
@@ -1467,3 +1468,51 @@ test('a tall permission held between turns names no scroll key until it has the 
     },
     { columns: 80, rows: 24 },
   ));
+
+test('hidden under the background view, a permission keeps its highlighted choice, and is drawn as it was when shown again (CHD-462)', async () => {
+  const show: { set?: (hidden: boolean) => void } = {};
+
+  function Hidden() {
+    const [hidden, setHidden] = useState(false);
+
+    show.set = setHidden;
+
+    return (
+      <PermissionPrompt
+        wait={{
+          id: 'p',
+          title: 'Write notes.txt',
+          options: [
+            { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+            { optionId: 'always', name: 'Always allow', kind: 'allow_always' },
+            { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+          ],
+        }}
+        width={76}
+        active={!hidden}
+        hidden={hidden}
+        onChoose={() => {}}
+      />
+    );
+  }
+
+  const drawn = await draw(<Hidden />, { columns: 80, rows: 24 });
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+
+  try {
+    await drawn.write('\x1b[B');
+    await drawn.write('\x1b[B');
+    await settle();
+    expect(stripAnsi(drawn.frame())).toContain('❯ 3. Deny');
+
+    show.set?.(true);
+    await settle();
+    expect(stripAnsi(drawn.frame())).not.toContain('Deny');
+
+    show.set?.(false);
+    await settle();
+    expect(stripAnsi(drawn.frame())).toContain('❯ 3. Deny');
+  } finally {
+    await drawn.unmount();
+  }
+});

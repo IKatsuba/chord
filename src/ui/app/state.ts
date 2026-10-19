@@ -1275,12 +1275,15 @@ function pressCommand(
 
   // A form and the search line take what types, whatever is bound to it, as
   // Claude Code's text fields do; a chord already begun still finishes. A
-  // form waits while the list of agents has the keys.
+  // form waits while the list of agents has the keys, and while the
+  // background view stands over it (CHD-462).
   const typed =
     stroke !== undefined &&
     state.pendingKeys === undefined &&
     types(stroke) &&
-    ((inputWithKeys(state) !== undefined && !agentsHaveKeys(state)) ||
+    ((inputWithKeys(state) !== undefined &&
+      !agentsHaveKeys(state) &&
+      !backgroundShown(state)) ||
       state.search !== undefined);
   const pressed =
     stroke === undefined || typed

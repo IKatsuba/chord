@@ -847,6 +847,7 @@ export function App({
         width={columns}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        hidden={viewing}
         onFill={(answering) =>
           dispatch({
             type: 'questions_answered',
@@ -870,6 +871,7 @@ export function App({
         width={columns}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        hidden={viewing}
         onFill={(form) =>
           dispatch({ type: 'form_filled', id: inputAsked.id, form })
         }
@@ -884,6 +886,7 @@ export function App({
         between={inputBetween}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        hidden={viewing}
         onAnswer={(answer) =>
           answerLink(openUrl, conversation(), inputAsked, answer)
         }
@@ -1045,10 +1048,11 @@ export function App({
               {/* One box above the prompt at a time: the background view
         opened over a request waiting takes its place until it closes
         (CHD-462). */}
-              {asked && !listingSessions && !viewing && (
+              {asked && !listingSessions && (
                 <PermissionPrompt
                   key={asked.id}
                   wait={asked}
+                  hidden={viewing}
                   asker={
                     asked.subagentId === undefined
                       ? []
@@ -1173,10 +1177,9 @@ export function App({
                       })}
                 />
               )}
-              {held && !viewing && inputDialog}
-              {inputDialog !== undefined && !held && !viewing ? (
-                inputDialog
-              ) : (
+              {held && inputDialog}
+              {inputDialog !== undefined && !held && inputDialog}
+              {inputDialog !== undefined && !held && !viewing ? null : (
                 <PromptInput
                   key={state.search ? `search:${state.search.match}` : inputKey}
                   value={boxText}

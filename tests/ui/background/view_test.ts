@@ -400,14 +400,16 @@ describe('CHD-424 tester: view layout edges', () => {
           }),
           20,
         );
-        const occupied = shown.rows.reduce((n, row) => n + row.lines.length, 0);
+        const visible = edgeMarked(shown);
 
         expect(
           shown.rows
             .filter(({ focused }) => focused)
             .map(({ item }) => item.id),
         ).toStrictEqual([item.id]);
-        expect(occupied).toBeLessThanOrEqual(20);
+        expect(visible).toHaveLength(shown.height);
+        expect(visible.length).toBeLessThanOrEqual(20);
+        expect(visible.some(({ row }) => row.item.id === item.id)).toBe(true);
         expect(shown.above + shown.rows.length + shown.below).toBe(many.length);
       }
     }

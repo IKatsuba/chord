@@ -870,3 +870,71 @@ test('a task name taller than the frame scrolls by line at 80x24: ↓ through it
     },
     { rows: 24, columns: 80 },
   ));
+
+describe('CHD-430 tester: a scrolled task keeps its identity', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a live addition keeps the line in sight and Enter goes to the tall task at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+
+      server.admit = (caller) => {
+        if (caller.agent === undefined && caller.task === undefined) {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'tasktallname');
+            await window.shows('background  1 task running');
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('│ ❯ Rewrite the tokenizer');
+            await window.press('j');
+            await window.shows('│ ↑ ');
+
+            const itemLines = () =>
+              window
+                .frame()
+                .split('\n')
+                .filter((line) => line.startsWith('│'))
+                .slice(2, -2)
+                .map((line) => line.trimEnd());
+            const before = itemLines();
+
+            assert(main);
+
+            const added = await main.window.spawn(main, {
+              agent: 'fake',
+              name: 'New live task',
+              prompt: 'taskwait',
+            });
+
+            expect(added).not.toHaveProperty('error');
+            await window.shows('Background · 2 in this tab');
+            expect(itemLines()).toEqual(before);
+            expect(window.frame()).not.toContain('❯ Rewrite');
+            await window.press('\r');
+            await until(
+              'the frame closes at the tall task call',
+              () => !window.frame().includes('│ Background'),
+            );
+            await window.shows('Rewrite the tokenizer');
+            expect(window.frame()).not.toContain('› New live task');
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

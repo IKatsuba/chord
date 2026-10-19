@@ -24,7 +24,8 @@ import {
   unseenProblems,
 } from '../src/settings.ts';
 import { parse } from 'shell-quote';
-import { commandLine } from '../src/agents.ts';
+import { commandLine, listedAgents } from '../src/agents.ts';
+import { commandArgv } from '../src/acp/process.ts';
 import { resumeCommand } from '../src/session/sessions.ts';
 
 describe('tester: copyOnSelect settings edges', () => {
@@ -807,6 +808,108 @@ describe("an agent's command chord refuses (CHD-466, the owner's Q52)", () => {
       ),
     ).toStrictEqual(
       'codex not started: agents.codex.command in ~/.config/chord/settings.json: expected a string, got a number',
+    );
+  });
+});
+
+describe('CHD-466 U1 tester: command settings boundaries', () => {
+  test('null and malformed lists refuse the named runtime with their source', () => {
+    for (const command of [
+      null,
+      [null],
+      ['tool', null],
+      ['tool', {}],
+      [['tool']],
+    ]) {
+      const file = '/project/.chord/settings.json';
+      const parsed = parseSettings(
+        file,
+        JSON.stringify({ agents: { custom: { command } } }),
+      );
+      const found = startupOf('custom', { agent: 'fake' }, [
+        { file, ...parsed },
+      ]);
+
+      expect(found.agentCommand).toBeUndefined();
+      expect(found.refused?.file).toBe(file);
+      expect(found.refused?.cause).toContain('expected a string, got');
+      expect(
+        startupOf('fake', { agent: 'fake' }, [{ file, ...parsed }]).refused,
+      ).toBeUndefined();
+    }
+  });
+
+  test('literal special and empty arguments survive display and a resume flag', () => {
+    const command: [string, ...string[]] = [
+      'a program',
+      '',
+      'two words',
+      "single'quote",
+      '"quoted"',
+      '$HOME',
+      '$(touch ignored)',
+      '; exit',
+      '*',
+      '\\path',
+    ];
+    const line = commandLine(command);
+    const resume = parse(resumeCommand('custom', 'session-id', command));
+    const flag = resume[resume.indexOf('--agent-command') + 1];
+
+    expect(commandArgv(line)).toEqual(command);
+    expect(commandArgv(String(flag))).toEqual(command);
+    expect(resume.slice(-2)).toEqual(['--resume', 'session-id']);
+  });
+
+  test('array commands are listed with quoting that preserves every argument', async () => {
+    const command = ['a program', '', 'two words', '$literal'];
+    const rows = await listedAgents({ 'tester-custom': command }, () =>
+      Promise.resolve(undefined),
+    );
+    const row = rows.find(({ name }) => name === 'tester-custom');
+
+    expect(row?.from).toBe('settings');
+    expect(parse(row!.start)).toEqual(command);
+  });
+
+  test('an explicit flag overrides loaded malformed settings without affecting another runtime', async () => {
+    await place(
+      {
+        user: JSON.stringify({
+          agents: {
+            custom: { command: null },
+            other: { command: ['other-tool', ''] },
+          },
+        }),
+        project: JSON.stringify({
+          agents: { custom: { model: 'chosen-model' } },
+        }),
+      },
+      async (where) => {
+        const loaded = await loadSettings(where);
+        const refused = resolveStartup(
+          { agent: 'custom' },
+          loaded.layers,
+          'fake',
+        );
+        const selected = resolveStartup(
+          { agent: 'custom', agentCommand: "tool --value ''" },
+          loaded.layers,
+          'fake',
+        );
+
+        expect(refused.refused?.cause).toBe('expected a string, got null');
+        expect(refused.agentCommand).toBeUndefined();
+        expect(selected.refused).toBeUndefined();
+        expect(selected.agentCommand).toBe("tool --value ''");
+        expect(selected.model?.id).toBe('chosen-model');
+        expect(
+          startupOf('other', selected, loaded.layers).agentCommand,
+        ).toEqual(['other-tool', '']);
+        expect(resumedStartup(selected, {}, loaded.layers).agentCommand).toBe(
+          selected.agentCommand,
+        );
+      },
     );
   });
 });

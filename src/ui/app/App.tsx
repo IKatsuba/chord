@@ -1033,7 +1033,7 @@ export function App({
               </Clip>
               <Working
                 turn={state.transcript.turn}
-                asking={inputAsked !== undefined}
+                asking={inputAsked}
                 compacting={state.transcript.entries.some((entry) =>
                   inSpinner(entry, state.transcript.turn),
                 )}

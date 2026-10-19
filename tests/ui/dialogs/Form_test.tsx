@@ -453,3 +453,59 @@ describe('CHD-1 tester: Droid multi-select schema', () => {
     }
   });
 });
+
+describe("a form left open at its turn's end (CHD-158 C5, the owner's Q53)", () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`stays answerable between turns, the queue behind it, at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'leftform');
+          // In its turn it has the keys.
+          await inputAsked(window);
+          await window.shows('❯ * Project name');
+          // Its turn over, it waits between turns, without the keys; at 80
+          // by 24 the form hides the turn's last words.
+          await window.shows('main asks for input · between turns');
+          await window.shows('ctrl+x a to answer');
+          // It still waits on the person, and the line says so.
+          await window.shows('Waiting for your input…');
+          expect(window.frame()).not.toContain('❯ * Project name');
+          expect(window.frame()).toContain('Set up the deploy target');
+          expect(window.frame()).not.toContain('Elicitation answer');
+
+          await window.type('text');
+          await window.press('\r');
+          await window.shows('› after your answer: text');
+
+          const lines = window.frame().split('\n');
+
+          // Everything below the box is whole, the box folding to make room
+          // at 80 by 24 and drawn whole at 120 by 40 (CHD-158 §8).
+          expect(lines).toHaveLength(rows);
+          expect(lines.at(-1)).toContain('ctrl+x a to answer');
+          expect(window.frame()).toContain('Waiting for your input…');
+
+          if (columns === 80) {
+            expect(window.frame()).toMatch(/… \d+ more lines/);
+            expect(window.frame()).not.toContain('Accept   Decline');
+          } else {
+            expect(window.frame()).not.toContain('more lines');
+          }
+
+          expect(window.frame()).toContain('between turns');
+
+          await leader(window, 'a');
+          await window.shows('❯ * Project name');
+          await window.shows('› after your answer: text');
+          await window.press(ESC);
+          await window.shows('Elicitation answer: cancel');
+          await window.shows('Hello, world.');
+          expect(window.frame()).not.toContain('between turns');
+        },
+        { columns, rows },
+      ));
+  }
+});

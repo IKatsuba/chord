@@ -360,6 +360,8 @@ const SCENARIOS = [
   'task',
   'chordcalls',
   'codexchordcalls',
+  'leftform',
+  'bigaskleft',
   'taskchild',
   'tasklong',
   'tasktwo',

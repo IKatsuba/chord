@@ -262,6 +262,51 @@ export const PERMISSIONS = {
       mode: 'overwrite',
     }),
 
+  // bigask's write, its turn ending with it still open (CHD-158 §8): a tall
+  // request held between turns, whose rows scroll on a short screen; its
+  // answer is said once it comes.
+  async bigaskleft(turn) {
+    const toolCall: acp.ToolCall = {
+      toolCallId: turn.callId('write_file'),
+      title: 'mcp__files__write_file',
+      kind: 'other',
+      status: 'pending',
+      rawInput: {
+        path: 'docs/release.md',
+        content: RELEASE_NOTES,
+        mode: 'overwrite',
+      },
+    };
+
+    await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
+
+    void (async () => {
+      try {
+        const answer = await turn.client.request('session/request_permission', {
+          sessionId: turn.sessionId,
+          toolCall,
+          options: [
+            { optionId: 'allow', name: 'Yes', kind: 'allow_once' },
+            { optionId: 'deny', name: 'No', kind: 'reject_once' },
+          ],
+        });
+        const chosen =
+          answer.outcome.outcome === 'selected'
+            ? answer.outcome.optionId
+            : 'cancelled';
+
+        await sayBetween(turn, `Permission: ${chosen}.`);
+      } catch {
+        // The client went before it was answered.
+      }
+    })();
+
+    await pause(turn.signal, STEP_MS * 100);
+    await turn.say('I asked; the turn ends with it open.');
+
+    return 'end_turn';
+  },
+
   // Two such writes asked at once, the second waiting behind the first, told
   // apart by their paths; each says what came back.
   async bigasktwice(turn) {

@@ -19,6 +19,7 @@ import { ElicitationRecord } from '../../../src/ui/dialogs/Form.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { recordSession } from '../../fixtures/records.ts';
 import { FORM_SCHEMA } from '../../fixtures/forms.ts';
+import { CLAUDE_QUESTIONS } from '../../fixtures/questions.ts';
 import type { PendingElicitation } from '../../../src/session/elicitations.ts';
 import { enricherRelay } from '../../../src/session/enrich.ts';
 import { ENRICHERS } from '../../../src/session/enrichers.ts';
@@ -903,4 +904,85 @@ describe('who a question box names (CHD-389)', () => {
       await server.close();
     }
   });
+});
+
+describe('CHD-158 C5 tester: questions and links carried past result', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`all three input kinds hold queued work until the last answer at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          const session = window.session();
+
+          assert(session);
+
+          let added = false;
+          let questions: Promise<unknown> | undefined;
+          let link: Promise<unknown> | undefined;
+          const stop = session.elicitations.subscribe(() => {
+            if (added) {
+              return;
+            }
+
+            added = true;
+
+            const [message] = enricherRelay(ENRICHERS).fromAgent({
+              jsonrpc: '2.0',
+              id: 'c5-questions',
+              method: 'elicitation/create',
+              params: { ...CLAUDE_QUESTIONS, sessionId: session.id },
+            });
+
+            assert(message !== undefined && 'params' in message);
+
+            questions = session.elicitations.handler(
+              message.params as typeof CLAUDE_QUESTIONS & { sessionId: string },
+              new AbortController().signal,
+            );
+            link = session.elicitations.handler(
+              {
+                sessionId: session.id,
+                mode: 'url',
+                message: 'Open the release link',
+                url: 'https://example.com/release',
+                elicitationId: 'c5-link',
+              },
+              new AbortController().signal,
+            );
+          });
+
+          try {
+            await send(window, 'leftform');
+            await window.shows('main asks for input · between turns');
+            await send(window, 'text');
+            await window.shows('› after your answer: text');
+            await leader(window, 'a');
+            await window.shows('❯ * Project name');
+            await window.press(ESC);
+            await window.shows('main asks you 2 questions · between turns');
+            await window.shows('ctrl+x a to answer');
+            expect(window.frame()).not.toContain('❯ 1. Deno');
+            expect(window.frame()).toContain('after your answer: text');
+            await leader(window, 'a');
+            await window.shows('Esc to cancel');
+            await window.press(ESC);
+            await window.shows('main asks you to open a link · between turns');
+            expect(window.frame()).not.toContain('❯ 1. Open in the browser');
+            expect(window.frame()).toContain('after your answer: text');
+            await leader(window, 'a');
+            await window.shows('Esc to cancel');
+            await window.press(ESC);
+            await window.shows('Hello, world.');
+            expect(await questions).toMatchObject({ action: 'cancel' });
+            expect(await link).toMatchObject({ action: 'cancel' });
+            expect(window.frame()).not.toContain('after your answer: text');
+          } finally {
+            stop();
+          }
+        },
+        { columns, rows },
+      ));
+  }
 });

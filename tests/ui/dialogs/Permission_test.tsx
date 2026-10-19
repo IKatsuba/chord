@@ -1450,3 +1450,20 @@ describe('CHD-389 U3 tester: permission row identity and wrapping', () => {
     });
   }
 });
+
+test('a tall permission held between turns names no scroll key until it has the keys (CHD-158 §8)', () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'bigaskleft');
+      await window.shows('main asks · between turns');
+      await window.shows('lines below ─');
+      // No key scrolls it while the keys are the prompt's.
+      expect(window.frame()).not.toContain('to scroll');
+      expect(window.frame()).toContain('ctrl+x a to answer');
+
+      await leader(window, 'a');
+      await window.shows('pagedown to scroll');
+      await window.shows('❯ 1. Yes');
+    },
+    { columns: 80, rows: 24 },
+  ));

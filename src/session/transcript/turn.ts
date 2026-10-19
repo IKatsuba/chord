@@ -166,18 +166,7 @@ export function settle(
     state.plan.length > 0 &&
     state.plan.every((entry) => entry.status === 'completed');
   const ending = endingOf(turnId, result);
-  // A form the turn ended under was answered `cancel` as the turn ended; its
-  // record says so ahead of the turn's own ending.
-  const left: Entry[] = state.asking
-    .filter((wait) => wait.subagentId === undefined)
-    .map((wait) => ({
-      kind: 'elicitation',
-      turnId,
-      wait,
-      outcome: 'cancelled',
-    }));
   const added: Entry[] = [
-    ...left,
     ...(finished
       ? [{ kind: 'plan' as const, turnId, entries: state.plan }]
       : []),
@@ -192,7 +181,13 @@ export function settle(
   // between turns (the owner's Q44, CHD-158).
   const kept =
     state.turn.status === 'awaiting_permission' ? state.turn.permissions : [];
-  const asking = state.asking.filter((wait) => wait.subagentId !== undefined);
+  // So does every form, question or link, the agent's own now asked between
+  // turns (the owner's Q53).
+  const asking = state.asking.map((wait) =>
+    wait.subagentId === undefined && wait.between !== true
+      ? { ...wait, between: true as const }
+      : wait,
+  );
 
   return {
     ...state,

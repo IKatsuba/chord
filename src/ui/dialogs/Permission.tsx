@@ -121,6 +121,7 @@ function AgentPermission({
       <Request
         wait={wait}
         width={Math.max(width, 1)}
+        held={held}
         {...(scroller === undefined ? {} : { scroller })}
         {...(onOverflow === undefined ? {} : { onOverflow })}
       />
@@ -152,11 +153,17 @@ function AgentPermission({
 function Request({
   wait,
   width,
+  held = false,
   scroller,
   onOverflow,
 }: {
   wait: PermissionWait;
   width: number;
+  /**
+   * Held between turns, the keys elsewhere: its rules name no key, as none
+   * scrolls it until the person takes the keys into it (CHD-158 §8).
+   */
+  held?: boolean;
   scroller?: RefObject<RequestScroller | undefined>;
   onOverflow?: (overflows: boolean) => void;
 }) {
@@ -180,8 +187,10 @@ function Request({
   const shown = requestView(total, room, top);
   const hidden = hiddenRows(total, shown.top, shown.shown);
   const count = room === 1 && overflows ? requestCount(hidden) : undefined;
-  const upKey = useHintKey('scroll:pageUp');
-  const downKey = useHintKey('scroll:pageDown');
+  const pageUp = useHintKey('scroll:pageUp');
+  const pageDown = useHintKey('scroll:pageDown');
+  const upKey = held ? undefined : pageUp;
+  const downKey = held ? undefined : pageDown;
   const scroll = useCallback(
     (step: ScrollStep) => {
       const box = view.current;

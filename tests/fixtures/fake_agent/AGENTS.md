@@ -13,8 +13,9 @@
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
   `bigask`, `bigasktwice`, `overlapask`, `mainbetween`, `leftask`,
-  `mainbetweentwice`),
-  `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
+  `mainbetweentwice`, `bigaskleft`),
+  `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`,
+  `leftform`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashcut`, `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`),
@@ -42,7 +43,7 @@
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
-  `mcp`, `form`, `link`,
+  `mcp`, `form`, `link`, `leftform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
@@ -76,6 +77,9 @@
   reporting the answer;
   `leftask` asks permission to write during its turn, ends with it still
   open, then reports the answer once it comes;
+  `bigaskleft` leaves `bigask`'s tall write open to check held scrolling;
+  `leftform` leaves a form with a field of each kind open to check folding;
+  both report the answer once it comes;
   `twins` asks a permission with two `allow_once` options and says the id
   picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the

@@ -66,9 +66,9 @@ export interface Watch {
   readonly events: ReadonlySet<string>;
   readonly asking: ReadonlySet<string>;
   /**
-   * Of those, the ones a turn's end leaves open: a task agent's, which
-   * outlives the turn that started it, and one asked between turns, as the
-   * transcript keeps them (CHD-266).
+   * Of those, a task agent's and those asked between turns (CHD-266). A
+   * turn's end leaves every request open since Q53, so nothing reads this
+   * to decide what goes; it is kept as the record of which lasted.
    */
   readonly lasting: ReadonlySet<string>;
   /**
@@ -98,30 +98,12 @@ export function askingNow(watch: Watch): AskingWait | undefined {
   return open.find((wait) => wait.kind === 'permission') ?? open[0];
 }
 
-/** The requests a turn's end leaves open (the owner's Q44, CHD-158). */
-function outliving(watch: Watch): Set<string> {
-  return new Set(
-    [...watch.asking].filter(
-      (id) =>
-        watch.lasting.has(id) || watch.asked.get(id)?.kind === 'permission',
-    ),
-  );
-}
-
 /** `asked` with only the requests `asking` still holds. */
 function stillAsked(
   asked: ReadonlyMap<string, AskingWait>,
   asking: ReadonlySet<string>,
 ): Map<string, AskingWait> {
   return new Map([...asked].filter(([id]) => asking.has(id)));
-}
-
-/** `set` with only what `kept` has too. */
-function keeping(
-  set: ReadonlySet<string>,
-  kept: ReadonlySet<string>,
-): Set<string> {
-  return new Set([...set].filter((item) => kept.has(item)));
 }
 
 function adding(set: ReadonlySet<string>, item: string): Set<string> {
@@ -236,10 +218,8 @@ export function watchWaits(
         ...watch,
         cancelled: removing(watch.cancelled, event.turnId),
         events: removing(watch.events, event.turnId),
-        // A permission outlives the turn, as do a task's form and one asked
-        // between turns; a form of the turn's own goes with it.
-        asking: keeping(watch.asking, outliving(watch)),
-        asked: stillAsked(watch.asked, outliving(watch)),
+        // Every request still open outlives the turn: a permission (the
+        // owner's Q44) and a form, question or link (Q53) alike (CHD-158).
       };
       const waits =
         watch.live &&

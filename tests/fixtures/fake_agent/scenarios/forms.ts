@@ -10,7 +10,8 @@ import {
   OPENCODE_QUESTIONS,
   type QuestionForm,
 } from '../../questions.ts';
-import { type Play, type Turn } from '../turn.ts';
+import { STEP_MS } from '../options.ts';
+import { pause, type Play, type Turn } from '../turn.ts';
 
 /**
  * Asks the client for input and says what came back: the action, and an
@@ -175,6 +176,42 @@ export const FORMS = {
         ? 'Elicitation answer: timed out'
         : `Elicitation answer: ${answer?.action ?? 'none'}`,
     );
+
+    return 'end_turn';
+  },
+
+  // The form asked in its turn, which then ends with it open, as an agent
+  // may: the form outlives the turn (the owner's Q53, CHD-158), and its
+  // answer is said once it comes.
+  async leftform(turn) {
+    const { client, sessionId } = turn;
+
+    void (async () => {
+      try {
+        const answer = await client.request('elicitation/create', {
+          sessionId,
+          mode: 'form',
+          message: 'Set up the deploy target',
+          requestedSchema: FORM_SCHEMA,
+        });
+
+        await client.notify('session/update', {
+          sessionId,
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            content: {
+              type: 'text',
+              text: `Elicitation answer: ${answer.action}`,
+            },
+          },
+        });
+      } catch {
+        // The client went before it was answered.
+      }
+    })();
+
+    await pause(turn.signal, STEP_MS * 100);
+    await turn.say('I asked; the turn ends with the form open.');
 
     return 'end_turn';
   },

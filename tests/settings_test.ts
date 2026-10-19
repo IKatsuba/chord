@@ -949,3 +949,50 @@ describe('CHD-466 U1 tester: command settings boundaries', () => {
     );
   });
 });
+
+describe('CHD-466 U2 tester: last command-bearing layer', () => {
+  for (const [user, project, allowed] of [
+    [null, ['project-tool', ''], true],
+    [['user-tool'], null, false],
+    [null, undefined, false],
+  ] as const) {
+    test(`project command ${String(project)} decides after user command ${String(user)}`, async () => {
+      await place(
+        {
+          user: JSON.stringify({ agents: { custom: { command: user } } }),
+          project: JSON.stringify({
+            agents: { custom: { command: project, model: 'project-model' } },
+          }),
+        },
+        async (where) => {
+          const loaded = await loadSettings(where);
+          const found = resolveStartup(
+            { agent: 'custom' },
+            loaded.layers,
+            'fake',
+          );
+
+          if (allowed) {
+            expect(found.refused).toBeUndefined();
+            expect(found.agentCommand).toEqual([...project]);
+          } else {
+            expect(found.agentCommand).toBeUndefined();
+            expect(found.refused?.file).toBe(
+              settingsFiles(where)[project === undefined ? 0 : 1],
+            );
+          }
+
+          const overridden = resolveStartup(
+            { agent: 'custom', agentCommand: 'flag-tool' },
+            loaded.layers,
+            'fake',
+          );
+
+          expect(overridden.refused).toBeUndefined();
+          expect(overridden.agentCommand).toBe('flag-tool');
+          expect(overridden.model?.id).toBe('project-model');
+        },
+      );
+    });
+  }
+});

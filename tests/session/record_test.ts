@@ -16,6 +16,14 @@ import {
 } from '../../src/session/record.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { readRecords, type Resume } from '../../src/session/sessions.ts';
+import { TaskAgent } from '../../src/session/tasks.ts';
+import {
+  initialAppState,
+  reduceWindowed,
+  windowed,
+  type WindowedAction,
+} from '../../src/ui/app/state.ts';
+import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
 
@@ -1182,5 +1190,159 @@ describe('CHD-373 S3c: a turn running as its session is let go', () => {
         { model: 'fake-large', cost: { amount: 0.02, currency: 'USD' } },
         turn(0.0125),
       ]);
+    }));
+});
+
+describe('CHD-373 S3c: a task running as its parent is let go', () => {
+  test("its ending, what it spent with it, is its parent's still: in the old record and kept once by the window, and nothing else of it reaches the new session", () =>
+    withDir(async (dir) => {
+      const events: ConversationEvent[] = [];
+      const recording = new FileRecording(join(dir, 'state'), () => {});
+
+      const conversation = new Conversation(
+        (signal) =>
+          openSession({
+            agent: 'claude',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(),
+            signal,
+          }),
+        (event) => events.push(event),
+        Date.now,
+        {},
+        recording,
+      );
+      const until = async (check: () => boolean) => {
+        while (!check()) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      };
+
+      let child: Conversation | undefined;
+
+      conversation.start();
+
+      try {
+        await until(() => events.some((event) => event.type === 'connected'));
+        conversation.send('text', 'text');
+        await until(() => events.some((event) => event.type === 'result'));
+
+        const task = new TaskAgent(
+          {
+            id: 'count',
+            name: 'Count the cost',
+            runtime: 'fake',
+            prompt: 'costwait',
+          },
+          conversation.taskParent('count'),
+          Date.now,
+        );
+
+        child = new Conversation(
+          (signal) =>
+            openSession({
+              agent: 'fake',
+              cwd: dir,
+              agentCommand: fakeAgentCommand(),
+              signal,
+            }),
+          (event) => task.heard(event),
+        );
+
+        conversation.adopt(task, child);
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'update' &&
+              event.subagentId === 'count' &&
+              event.update.sessionUpdate === 'usage_update',
+          ),
+        );
+
+        const record = recording.path!;
+        const cleared = events.length;
+
+        await conversation.clear();
+        await recording.flushed();
+
+        const spentOf = (update: SessionUpdate) =>
+          (update._meta?.['chord/spent'] as { cost?: unknown } | undefined)
+            ?.cost;
+        const endings = events
+          .slice(cleared)
+          .flatMap((event) =>
+            event.type === 'retired_update' &&
+            event.update.sessionUpdate === 'subagent_update'
+              ? [spentOf(event.update)]
+              : [],
+          );
+
+        expect(endings).toStrictEqual([{ amount: 0.01, currency: 'USD' }]);
+        // Its line that it stopped never reaches the new session.
+        expect(
+          events
+            .slice(cleared)
+            .some(
+              (event) =>
+                event.type === 'update' && event.subagentId === 'count',
+            ),
+        ).toBeFalsy();
+        expect(
+          (await readPast(record)).filter(
+            (entry) =>
+              entry.type === 'update' &&
+              entry.update.sessionUpdate === 'subagent_update' &&
+              spentOf(entry.update) !== undefined,
+          ),
+        ).toHaveLength(1);
+
+        // The window takes them in as sessions.ts does.
+        const at = events.findIndex((event) => event.type === 'cleared');
+        const actions: WindowedAction[] = [
+          ...events.slice(0, at).map((event): WindowedAction => ({
+            type: 'in_session',
+            key: 1,
+            action: event,
+          })),
+          {
+            type: 'spend_closing',
+            key: -1,
+            from: 1,
+            place: { tab: 1, name: 'main', kind: 'main', agent: 'claude' },
+          },
+          ...events.slice(at).map((event): WindowedAction =>
+            event.type === 'retired_update'
+              ? {
+                  type: 'retired_heard',
+                  from: 1,
+                  event: {
+                    type: 'update',
+                    turnId: event.turnId,
+                    update: event.update,
+                  },
+                }
+              : event.type === 'retired_usage'
+                ? {
+                    type: 'retired_heard',
+                    from: 1,
+                    event: { ...event, type: 'usage' },
+                  }
+                : { type: 'in_session', key: 1, action: event },
+          ),
+          { type: 'spend_closed', key: -1 },
+        ];
+        const window = actions.reduce(
+          reduceWindowed,
+          windowed(initialAppState, 1),
+        );
+        const tasks = window.window.keptSpend?.[0]?.part.parts ?? [];
+
+        expect(
+          tasks.map((part) => [part.name, part.figure?.cost?.amount]),
+        ).toStrictEqual([['Count the cost', 0.01]]);
+      } finally {
+        await child?.close();
+        await conversation.close();
+      }
     }));
 });

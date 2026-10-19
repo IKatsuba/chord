@@ -372,6 +372,12 @@ export class Conversation {
    * their turns' costs, and that turn's end, which their close waits for.
    */
   readonly #retired = new Map<Session, Retired>();
+  /**
+   * The task agents of the sessions `clear` let go, by id, with that
+   * session: their ending update, what they spent with it, still counts as
+   * that session's; nothing else of theirs is heard (CHD-373 S3c).
+   */
+  readonly #retiredTasks = new Map<string, Session>();
   /** When the last turn or cycle ended, on `performance.now()`'s clock. */
   #endedAt = 0;
   /**
@@ -662,6 +668,12 @@ export class Conversation {
       .finally(() => {
         if (old !== undefined) {
           this.#retired.delete(old);
+
+          for (const [id, of] of this.#retiredTasks) {
+            if (of === old) {
+              this.#retiredTasks.delete(id);
+            }
+          }
         }
       });
 
@@ -703,6 +715,12 @@ export class Conversation {
     // they close reaches the new session; so do the messages and lines they
     // left for it.
     const tasks = [...this.#tasks.values()];
+
+    if (old !== undefined && retiring !== undefined) {
+      for (const task of tasks) {
+        this.#retiredTasks.set(task.id, old);
+      }
+    }
 
     this.#tasks.clear();
     this.#foreign.clear();
@@ -1752,6 +1770,8 @@ export class Conversation {
 
         if (task) {
           this.#relay(event, task);
+        } else {
+          this.#retiredTaskEnded(id, event);
         }
       },
       deliver: (from, text) => {
@@ -1779,6 +1799,30 @@ export class Conversation {
         void closing.then(() => this.#endedTasks.delete(closing));
       },
     };
+  }
+
+  /**
+   * The block update of a task of a session `clear` let go, its ending
+   * with what it spent: that session's still, to its record and what the
+   * window keeps of it. Nothing else of the task's goes anywhere.
+   */
+  #retiredTaskEnded(id: string, event: ConversationEvent): void {
+    const session = this.#retiredTasks.get(id);
+    const turnId =
+      session === undefined
+        ? undefined
+        : this.#retired.get(session)?.costs.lastTurn;
+
+    if (
+      turnId === undefined ||
+      event.type !== 'update' ||
+      event.subagentId !== undefined ||
+      event.update.sessionUpdate !== 'subagent_update'
+    ) {
+      return;
+    }
+
+    this.#emit({ type: 'retired_update', turnId, update: event.update });
   }
 
   /** Lets a task go, and the requests of its still on screen. */
@@ -2940,6 +2984,13 @@ export class Conversation {
     // queued prompt reads as waiting behind it and Esc can still take it back.
     if (this.#queued.length > 0 && this.#current(session)) {
       await this.#quieten(session);
+    }
+
+    // `clear` may have let the session go while that wait ran.
+    if (this.#session !== session) {
+      this.#retiredEnded(session, turnId, went, result);
+
+      return;
     }
 
     if (this.#turn?.id === turnId) {

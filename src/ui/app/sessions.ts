@@ -310,6 +310,13 @@ export function useSessions(
    */
   const retiredHeard = (key: number, event: ConversationEvent): boolean => {
     if (event.type === 'retired_update') {
+      // A cost it said, or a task of its ending with what it spent.
+      dispatch({
+        type: 'retired_heard',
+        from: key,
+        event: { type: 'update', turnId: event.turnId, update: event.update },
+      });
+
       return true;
     }
 

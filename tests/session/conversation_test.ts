@@ -2280,6 +2280,102 @@ test('a turn of a session /clear let go ends without touching the new session: a
   await conversation.close();
 });
 
+test("a session /clear lets go while its turn's end waits out the quiet ends as its own: its cost said apart, nothing of the new session's touched (CHD-373 S3c)", async () => {
+  const opened: {
+    prompts: string[];
+    update: (update: SessionUpdate) => void;
+    turns: {
+      went: (links: readonly never[] | undefined) => void;
+      end: () => void;
+    }[];
+  }[] = [];
+  const open = () => {
+    const { session } = heldSession();
+    const own: (typeof opened)[number] = {
+      prompts: [],
+      update: () => {},
+      turns: [],
+    };
+
+    opened.push(own);
+
+    return Promise.resolve(
+      Object.assign(session, {
+        chordServer: {
+          type: 'http' as const,
+          name: 'chord',
+          url: 'http://127.0.0.1:1/mcp',
+          headers: [],
+        },
+        steers: () => false,
+        cutsCallsOnSteer: () => true,
+        subscribe: (listener: (update: SessionUpdate) => void) => {
+          own.update = listener;
+
+          return () => {};
+        },
+        prompt: (text: string) => {
+          const sent = Promise.withResolvers<readonly never[] | undefined>();
+          const result = Promise.withResolvers<TurnResult>();
+
+          own.prompts.push(text);
+          own.turns.push({
+            went: sent.resolve,
+            end: () =>
+              result.resolve({ status: 'completed', stopReason: 'end_turn' }),
+          });
+
+          return {
+            id: text,
+            sent: sent.promise,
+            result: result.promise,
+            cancel: () => Promise.resolve(),
+          };
+        },
+      }),
+    );
+  };
+
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(open, (event) => events.push(event));
+  const connected = (count: number) =>
+    until(
+      () =>
+        events.filter((event) => event.type === 'connected').length === count,
+    );
+
+  conversation.start();
+  await connected(1);
+  conversation.send('first');
+  await until(() => opened[0]!.turns.length === 1);
+  opened[0]!.turns[0]!.went([]);
+  await went();
+  opened[0]!.update({
+    sessionUpdate: 'usage_update',
+    used: 1,
+    size: 2,
+    cost: { amount: 0.01, currency: 'USD' },
+  });
+  // Queued behind it, so its end waits out the quiet before it finishes.
+  conversation.send('second');
+  opened[0]!.turns[0]!.end();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  const started = performance.now();
+
+  await conversation.clear();
+
+  // Let go well within the settle limit, so its end was heard.
+  expect(performance.now() - started).toBeLessThan(3000);
+  expect(
+    events.filter((event) => event.type === 'retired_usage'),
+  ).toMatchObject([{ cost: { amount: 0.01, currency: 'USD' } }]);
+  expect(events.some((event) => event.type === 'usage')).toBeFalsy();
+  // The queued prompt went with the session it was queued in.
+  expect(opened[1]?.prompts ?? []).toStrictEqual([]);
+  await conversation.close();
+});
+
 describe('CHD-417 tester: held steer lifecycle', () => {
   test('serialized messages keep separate snapshots when the second call opens between them', () =>
     onFake(['--steering', 'claude'], async (conversation, events) => {

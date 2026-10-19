@@ -702,7 +702,7 @@ test("a turn's usage keeps its own cost on the session, and the window keeps wha
 
   expect(spent).toStrictEqual({
     turns: { t: { totalTokens: 5 } },
-    costs: { t: { cost, estimated: true } },
+    costs: { t: { model: 'm', cost, estimated: true } },
   });
 
   const kept = (name: string) => ({

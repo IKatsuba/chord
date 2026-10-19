@@ -37,6 +37,9 @@ export function tokensOf(usage: Usage): TokenUsage {
   );
 }
 
+/** A turn's own cost as a session keeps it, with the model it ended on. */
+export type SpentTurn = TurnCost & { readonly model?: string };
+
 export interface Spent {
   /** Each turn's tokens by the turn's id, every one the agent reported. */
   readonly turns: Readonly<Record<string, TokenUsage>>;
@@ -44,7 +47,7 @@ export interface Spent {
    * Each turn's own cost by the turn's id, the agent's own cycles' among
    * them, where it had one or was left uncounted (CHD-373).
    */
-  readonly costs?: Readonly<Record<string, TurnCost>>;
+  readonly costs?: Readonly<Record<string, SpentTurn>>;
 }
 
 /**
@@ -55,7 +58,7 @@ export function addTurn(
   spent: Spent | undefined,
   turnId: string,
   tokens: TokenUsage,
-  cost: TurnCost = {},
+  cost: SpentTurn = {},
 ): Spent {
   const { [turnId]: _, ...costs } = spent?.costs ?? {};
   const counted = cost.cost !== undefined || cost.uncounted === true;

@@ -36,6 +36,8 @@ export interface Figure {
    * last reported, and up to when (the owner's Q62).
    */
   readonly before?: { readonly cost: Cost; readonly until?: number };
+  /** The models whose prices chord's estimate came from, where it says. */
+  readonly models?: readonly string[];
 }
 
 /** A turn's tokens, or a session's, in all: the total, else each kind. */
@@ -74,6 +76,13 @@ export function sessionFigure(spent: Spent | undefined): Figure | undefined {
   );
   const uncounted = costs.length - added.length;
   const before = costs.find((each) => each.before !== undefined);
+  const models = [
+    ...new Set(
+      added.flatMap((each) =>
+        each.estimated === true && each.model !== undefined ? [each.model] : [],
+      ),
+    ),
+  ];
   // Each turn's in all first: one that gave a total and one that gave
   // only its kinds each count whole.
   const each = Object.values(spent?.turns ?? {}).flatMap(
@@ -93,6 +102,7 @@ export function sessionFigure(spent: Spent | undefined): Figure | undefined {
     ...(estimated === 'none' ? {} : { estimated }),
     ...(tokens === undefined ? {} : { tokens }),
     ...(uncounted === 0 ? {} : { uncounted }),
+    ...(models.length === 0 ? {} : { models }),
     ...(before?.cost === undefined
       ? {}
       : {

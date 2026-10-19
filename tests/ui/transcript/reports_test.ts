@@ -60,6 +60,11 @@ test('/cost lines up tokens, cost and time', () => {
             a: { inputTokens: 1000, outputTokens: 200, cachedReadTokens: 800 },
             b: { inputTokens: 1000, outputTokens: 200, cachedReadTokens: 800 },
           },
+          // Each turn's own cost: the session's is theirs added (CHD-373).
+          costs: {
+            a: { cost: { amount: 0.0125, currency: 'USD' } },
+            b: { cost: { amount: 0.0125, currency: 'USD' } },
+          },
         },
         context: {
           used: 4000,
@@ -89,13 +94,16 @@ test('/cost says what the agent left out, and draws no zeros', () => {
     'Tokens in:    9',
     'Session time: 1m 5s',
   ]);
-  // The `usage_update`'s cost, when no turn reported tokens.
+  // A turn's cost, when no turn reported tokens.
   expect(
     text(
       costReport({
         ...FACTS,
         since: undefined,
-        context: { used: 1, size: 2, cost: { amount: 0.5, currency: 'USD' } },
+        spent: {
+          turns: {},
+          costs: { a: { cost: { amount: 0.5, currency: 'USD' } } },
+        },
       }),
     ),
   ).toStrictEqual(['Total cost: $0.5000', 'Tokens:     not reported by fake']);
@@ -164,7 +172,12 @@ test("a cost and a context chord worked out read as chord's estimate", () => {
       costReport({
         ...FACTS,
         since: undefined,
-        spent: { turns: { a: { inputTokens: 1000 } } },
+        spent: {
+          turns: { a: { inputTokens: 1000 } },
+          costs: {
+            a: { cost: { amount: 0.0042, currency: 'USD' }, estimated: true },
+          },
+        },
         context: {
           used: 1000,
           size: 400_000,
@@ -300,4 +313,74 @@ test("a permission held inside the agent's own cycle leaves the cycle running: /
   );
   // Held between turns with no cycle: nothing runs.
   expect(facts(false).running).toBeUndefined();
+});
+
+test("/cost's total is the whole session's, marked when part of it is chord's estimate, with an older record's sum and turns left out each a row of its own (CHD-373)", () => {
+  const usd = (amount: number) => ({ amount, currency: 'USD' });
+
+  expect(
+    text(
+      costReport({
+        ...FACTS,
+        since: undefined,
+        spent: {
+          turns: { a: { inputTokens: 48_200 } },
+          costs: {
+            'history-before': {
+              cost: usd(0.04),
+              before: { until: Date.UTC(2026, 9, 12, 12) },
+            },
+            a: { cost: usd(0.1), estimated: true },
+            b: { cost: usd(0.044) },
+            c: { uncounted: true },
+          },
+        },
+      }),
+    ),
+  ).toStrictEqual([
+    "Total cost:    $0.1840 (part chord's estimate)",
+    'Before Oct 12: $0.0400 as last reported',
+    'Not counted:   1 turn',
+    'Tokens in:     48,200',
+  ]);
+});
+
+test("/cost adds the window's table once it holds more than one session, and leaves it out for one", () => {
+  const main = {
+    name: 'main',
+    kind: 'main' as const,
+    agent: 'fake',
+    figure: { cost: { amount: 0.025, currency: 'USD' } },
+  };
+  const one = {
+    spend: [{ name: '1 fake', kind: 'tab' as const, parts: [main] }],
+    width: 114,
+  };
+  const two = {
+    spend: [
+      ...one.spend,
+      { name: '2 fake', kind: 'tab' as const, parts: [main] },
+    ],
+    width: 114,
+  };
+  const facts = {
+    ...FACTS,
+    since: undefined,
+    spent: {
+      turns: {},
+      costs: { a: { cost: { amount: 0.025, currency: 'USD' } } },
+    },
+  };
+
+  expect(text(costReport({ ...facts, window: one }))).toStrictEqual([
+    'Total cost: $0.0250',
+    'Tokens:     not reported by fake',
+  ]);
+  expect(text(costReport({ ...facts, window: two })).slice(2)).toStrictEqual([
+    '',
+    'This window     Cost  Tokens',
+    '1 fake       $0.0250       —',
+    '2 fake       $0.0250       —',
+    'Total        $0.0500       —',
+  ]);
 });

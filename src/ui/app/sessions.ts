@@ -157,9 +157,11 @@ import {
   type TeamRun,
 } from '../teams/teams.ts';
 import { firstLine, headline } from '../transcript/tools/tools.ts';
+import { windowSpend } from '../transcript/spend.ts';
 import {
   type AppAction,
   type KeptPlace,
+  keptSpend,
   type AppState,
   canSend,
   resumableSession,
@@ -2632,6 +2634,21 @@ export function useSessions(
     ).length,
   });
 
+  /**
+   * What the whole window has spent, for `/cost`: each tab, closed agents
+   * and tabs, and the sessions still closing as they stand (CHD-373 S4).
+   */
+  const spend = () => {
+    const now = allNow.current;
+
+    return windowSpend(sessions.tabs.tabs, now.sessions, [
+      ...(now.window.keptSpend ?? []),
+      ...Object.values(now.closing ?? {}).map((closing) =>
+        keptSpend(closing.session, closing.place),
+      ),
+    ]);
+  };
+
   /** The tab the sessions picker opens on. */
   const listFrom = () => listStart(sessions.tabs);
 
@@ -3133,6 +3150,7 @@ export function useSessions(
     takeBackQueue,
     tabRows,
     counted,
+    spend,
     listFrom,
     pickTab,
     openTabs,

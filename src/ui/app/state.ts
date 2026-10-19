@@ -589,7 +589,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'retired_update':
       return state;
     case 'usage': {
-      const { type: _, turnId, usage, model: __, ...cost } = action;
+      const { type: _, turnId, usage, ...cost } = action;
 
       return { ...state, spent: addTurn(state.spent, turnId, usage, cost) };
     }

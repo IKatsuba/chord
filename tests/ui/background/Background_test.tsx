@@ -692,3 +692,24 @@ describe('CHD-2 tester: stopping and refusal rendering', () => {
     });
   }
 });
+
+test('opened over a request held between turns, the frame gives way to ctrl+x a, which the status line names, and the box takes the keys (CHD-462)', () =>
+  withBackground(async (window) => {
+    await ready(window);
+    await send(window, 'taskbetween');
+    await window.shows('Agent(Fix the tokenizer) · fake asks · between turns');
+    await window.shows('background  ● 1 task asking');
+    // Held, the prompt has the keys: ↓ reaches the summary line.
+    await window.press(DOWN);
+    await window.press('\r');
+    await window.shows('│ Background · 1 in this tab');
+    expect(window.frame()).toContain('ctrl+x a to answer');
+
+    await leader(window, 'a');
+    await window.shows('❯ 1. Allow');
+    expect(window.frame()).not.toContain('│ Background');
+    await window.press('1');
+    await window.shows(
+      'Received the message from Fix the tokenizer · fake · report.',
+    );
+  }));

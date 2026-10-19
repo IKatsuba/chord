@@ -577,10 +577,18 @@ function commandSteps(
       // The front session's own request between turns is what needs the
       // person first: the keys go into its box (CHD-158).
       const id = heldBack(state) ? betweenAsked(state.transcript) : undefined;
+      // From the background view, which it closes first, the keys going
+      // where they would from the prompt (CHD-462).
+      const closing = state.backgroundView
+        ? [
+            dispatch({ type: 'background_closed' }),
+            dispatch({ type: 'agents_focused', focused: false }),
+          ]
+        : [];
 
       return id === undefined
-        ? [{ type: 'attend_session' }]
-        : [dispatch({ type: 'request_attended', id })];
+        ? [...closing, { type: 'attend_session' }]
+        : [...closing, dispatch({ type: 'request_attended', id })];
     }
     case 'agents_up':
       return [{ type: 'move_agent', by: -1 }];

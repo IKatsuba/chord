@@ -1303,11 +1303,6 @@ function pressCommand(
     return command;
   }
 
-  // The background view begins no chord: its keys are its own.
-  if (backgroundShown(state)) {
-    return state.pendingKeys === undefined ? undefined : 'key_dropped';
-  }
-
   if (
     pressed !== undefined &&
     startsChord(liveChords(state, draft, cursor), pressed)
@@ -1697,6 +1692,12 @@ function backgroundCommand(
 
   if (on('agents:close')) {
     return 'stop_background';
+  }
+
+  // The one chord it begins: what the status line names to answer a
+  // request held between turns, which closes it on the way (CHD-462).
+  if (on('session:attention')) {
+    return 'attend_session';
   }
 
   // shift+↑ ↓ scroll the transcript elsewhere; the view has none.

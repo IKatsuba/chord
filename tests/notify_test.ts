@@ -384,7 +384,7 @@ describe('CHD-266 tester: lasting request identity', () => {
     expect([...partly.lasting]).toStrictEqual(['link']);
   });
 
-  test('an adapter subagent permission without a task timestamp keeps the previous result behavior', () => {
+  test('an adapter subagent permission without a task timestamp survives the result as a between-turns wait', () => {
     const request: ConversationEvent = {
       type: 'permission_requested',
       turnId: 't1',
@@ -392,8 +392,11 @@ describe('CHD-266 tester: lasting request identity', () => {
     };
     const { watch } = play([connected, prompt('t1'), request, ended('t1')]);
 
-    expect(watch.asking.size).toBe(0);
-    expect(watch.lasting.size).toBe(0);
+    expect([...watch.asking]).toStrictEqual(['adapter']);
+    expect(watch.asked.get('adapter')).toMatchObject({
+      kind: 'permission',
+      subagentId: 'adapter-child',
+    });
   });
 
   test('withdrawal and clear remove lasting IDs so a later request can notify again', () => {

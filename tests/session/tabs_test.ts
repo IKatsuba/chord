@@ -1425,7 +1425,7 @@ describe('CHD-431 tester: requester changes keep one wait', () => {
     }
   });
 
-  test('a result prunes a transient permission and reveals a lasting input, including after cancel', () => {
+  test('a result keeps an untimestamped permission ahead of a lasting input, including after cancel', () => {
     for (const cancelled of [false, true]) {
       const events: ConversationEvent[] = [
         up,
@@ -1453,11 +1453,12 @@ describe('CHD-431 tester: requester changes keep one wait', () => {
       ).tabs;
 
       expect(tabOf(next, 1)?.wait.asking).toStrictEqual({
-        on: { kind: 'input', message: 'form', subagentId: 'form' },
+        on: { kind: 'permission', title: undefined, subagentId: 'adapter' },
         since: 2000,
       });
       expect([...tabOf(next, 1)!.wait.watch.asked.keys()]).toStrictEqual([
         'form',
+        'adapter',
       ]);
     }
   });

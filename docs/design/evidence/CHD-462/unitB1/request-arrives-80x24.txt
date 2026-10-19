@@ -1,0 +1,24 @@
+      Edit(src/parse/tokenize.ts) · waiting for permission
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ››› Waiting for permission… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 8 in this tab                                                   │
+│                                                                              │
+│ ❯ dev server errors  monitor                   running 59s · 1 event    main │
+│   CI run 4812        monitor                   running 59s · no events  main │
+│   Watch the build    task · fake               working 54s              main │
+│   Watch the deploy   task · fake               working 54s              main │
+│   Watch the build    task · fake               working 49s              main │
+│ ↓ dev server errors  monitor                   running 44s · 1 event    main │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer    Fake Large with a 1M context… · 2% used
+    background  ● 1 task asking · 4 monitors and 3 tasks running

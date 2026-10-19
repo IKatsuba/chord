@@ -1,0 +1,24 @@
+ ▀▀▀▀   ?vforfshortcuts/·v/help[temp path redacted]
+ ››› Waiting for permission… (9s)
+ ← from Watch the build · fake · report · after your answer: Watchin...e build.
+ ← from Watch the deploy · fake · report · after your answer: Watchin... build.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 8 in this tab                                                   │
+│                                                                              │
+│ ❯ dev server errors  monitor      running 1m 6s · 1 event    main            │
+│   CI run 4812        monitor      running 1m 6s · no events  main            │
+│   Watch the build    task · fake  ✓ reported after 1m        main            │
+│   Watch the deploy   task · fake  ✓ reported after 1m        main            │
+│   Watch the build    task · fake  working 56s                main            │
+│ ↓ dev server errors  monitor      running 51s · 1 event      main            │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer    Fake Large with a 1M context… · 2% used
+    background  ● 1 task asking · 4 monitors and 1 task running ·
+                ✓ 2 tasks done

@@ -703,3 +703,60 @@ test('a permission held before the cycle, answered during it, leaves the cycle w
     ).turn,
   ).toStrictEqual({ status: 'idle' });
 });
+
+describe('CHD-426 U3 tester: several held requests keep the cycle clock', () => {
+  for (const order of [
+    ['old', 'new'],
+    ['new', 'old'],
+  ] as const) {
+    const permission = (id: string, at: number): TranscriptAction => ({
+      type: 'permission_requested',
+      turnId: id === 'old' ? 'session' : 'cycle',
+      permission: { id, options: [] },
+      at,
+      between: true,
+    });
+    const settle = (id: string): TranscriptAction => ({
+      type: 'permission_settled',
+      turnId: 'cycle',
+      id,
+      answer: { type: 'chosen', optionId: 'allow' },
+    });
+    const opening: TranscriptAction[] = [
+      permission('old', 100),
+      { type: 'cycle_started', turnId: 'cycle', at: 5000 },
+      permission('new', 9000),
+    ];
+
+    test(`${order.join(' then ')}: the last answer resumes the original cycle clock`, () => {
+      const waiting = fold([...opening, settle(order[0])]);
+
+      expect(waiting.turn).toMatchObject({
+        status: 'awaiting_permission',
+        cycle: true,
+        cycleSince: 5000,
+      });
+      expect(fold([settle(order[1])], waiting).turn).toEqual({
+        status: 'working',
+        turnId: 'cycle',
+        since: 5000,
+        cycle: true,
+      });
+    });
+
+    test(`${order.join(' then ')}: answers after the cycle ends cannot restart its clock`, () => {
+      const ended = fold([
+        ...opening,
+        {
+          type: 'result',
+          turnId: 'cycle',
+          result: { status: 'completed', stopReason: 'end_turn' },
+        },
+      ]);
+
+      assert(ended.turn.status === 'awaiting_permission');
+      expect(ended.turn.permissions).toHaveLength(2);
+      expect(fold(order.map(settle), ended).turn).toEqual({ status: 'idle' });
+    });
+  }
+});

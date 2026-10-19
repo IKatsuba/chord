@@ -1835,3 +1835,79 @@ test("Esc in the agent's own cycle stops it: the working line goes, and a prompt
       rows: 40,
     },
   ));
+
+describe('CHD-426 U2 tester: held inputs and cancellation silence', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`Esc stays quiet while held form and link are withdrawn at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'claudecyclebare');
+          await window.shows('The build passed.');
+
+          const before = writes(
+            window,
+            '\x1b]9;fake is waiting for your input\x07',
+          );
+          const session = window.session()!;
+          const withdrawn = new AbortController();
+          const responses = [
+            session.elicitations.handler(
+              {
+                sessionId: session.id,
+                mode: 'form',
+                message: 'Cancel cycle form',
+                requestedSchema: { type: 'object', properties: {} },
+              },
+              withdrawn.signal,
+            ),
+            session.elicitations.handler(
+              {
+                sessionId: session.id,
+                mode: 'url',
+                message: 'Cancel cycle link',
+                url: 'https://example.com/cancel',
+                elicitationId: 'cancel-cycle-link',
+              },
+              withdrawn.signal,
+            ),
+          ];
+
+          await window.shows('between turns');
+          await window.press(ESC);
+          await window.shows('Cancel heard with no turn.');
+          withdrawn.abort();
+          expect(await Promise.all(responses)).toEqual([
+            { action: 'cancel' },
+            { action: 'cancel' },
+          ]);
+          await until(
+            'the cycle and held boxes are gone',
+            () =>
+              !window.frame().includes('Working…') &&
+              !window.frame().includes('between turns'),
+          );
+          expect(
+            writes(window, '\x1b]9;fake is waiting for your input\x07'),
+          ).toBe(before);
+          await window.press(ESC);
+          await send(window, 'cancels');
+          await window.shows('Cancels with no turn: 1.');
+        },
+        {
+          columns,
+          rows,
+          notifications: OSC9,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--adapter',
+            'claude',
+            '--say-cancels',
+          ),
+        },
+      ));
+  }
+});

@@ -4059,3 +4059,78 @@ describe("Esc in an agent's own cycle (CHD-426 U2)", () => {
       expect(saidIn(events)).toContain('Cancels with no turn: 0.');
     }));
 });
+
+describe('CHD-426 U2 tester: cancellation at real cycle markers', () => {
+  for (const scenario of ['claudecycle', 'codebuddycycle']) {
+    test(`${scenario}: duplicate interrupt sends one cancel and its late end cannot complete the cancelled cycle`, async () => {
+      let source: Session | undefined;
+
+      await onFake(
+        ['--adapter', 'claude', '--say-cancels'],
+        async (conversation, events) => {
+          assert(source);
+
+          let interrupted = false;
+          const stop = source.subscribe((update) => {
+            const starts =
+              cycleMark(update) === 'start' ||
+              (update.sessionUpdate === 'agent_message_chunk' &&
+                update.content.type === 'text' &&
+                update.content.text.includes('The background build ended;'));
+
+            if (!interrupted && starts) {
+              interrupted = true;
+
+              conversation.interrupt();
+              conversation.interrupt();
+            }
+          });
+
+          try {
+            conversation.send(scenario);
+            await until(() =>
+              saidIn(events).includes('Cancel heard with no turn.'),
+            );
+            await until(() =>
+              events.some(
+                (event) =>
+                  event.type === 'update' && cycleMark(event.update) === 'end',
+              ),
+            );
+
+            const cycle = events.find(
+              (event) => event.type === 'cycle_started',
+            );
+
+            assert(cycle?.type === 'cycle_started');
+            expect(
+              events.filter((event) => event.type === 'cancel'),
+            ).toHaveLength(1);
+            expect(
+              events.filter(
+                (event) =>
+                  event.type === 'result' && event.turnId === cycle.turnId,
+              ),
+            ).toEqual([
+              {
+                type: 'result',
+                turnId: cycle.turnId,
+                result: { status: 'cancelled', stopReason: 'cancelled' },
+              },
+            ]);
+            expect(
+              events.filter((event) => event.type === 'cycle_started'),
+            ).toHaveLength(1);
+            conversation.send('cancels');
+            await until(() =>
+              saidIn(events).includes('Cancels with no turn: 1.'),
+            );
+          } finally {
+            stop();
+          }
+        },
+        (session) => (source = session),
+      );
+    });
+  }
+});

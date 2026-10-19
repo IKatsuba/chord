@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { type Child, idle, type Tab } from '../../../src/session/tabs.ts';
 import {
   emptyTranscript,
@@ -356,5 +356,77 @@ test("a session's tokens are each turn's in all, added: a turn that gave only it
   ).toStrictEqual({ tokens: 3200 });
   expect(sessionFigure(spentOf([['a', { totalTokens: 0 }]]))).toStrictEqual({
     tokens: 0,
+  });
+});
+
+describe('CHD-373 S3b tester: retained session identity and partial figures', () => {
+  test('same-named closed agents with distinct sessions both count, and a resumed session supersedes all older snapshots', () => {
+    const kept: KeptSpend[] = [
+      {
+        sessionId: 'one',
+        tab: 9,
+        part: { name: 'parser', kind: 'agent', figure: { cost: USD(0.01) } },
+      },
+      {
+        sessionId: 'two',
+        tab: 9,
+        part: { name: 'parser', kind: 'agent', figure: { cost: USD(0.02) } },
+      },
+      {
+        sessionId: 'one',
+        tab: 10,
+        part: { name: 'parser', kind: 'agent', figure: { cost: USD(0.03) } },
+      },
+    ];
+
+    expect(sum(windowSpend([], {}, kept)).cost).toBeCloseTo(0.05, 9);
+
+    const live = windowSpend(
+      [tab(1, 'fake', [])],
+      { 1: session(0.04, [], 'one') },
+      kept,
+    );
+
+    expect(sum(live).cost).toBeCloseTo(0.06, 9);
+    expect(shape(live)).toEqual([
+      ['1 fake', undefined, [['main', 0.04]]],
+      ['closed tab', undefined, [['parser', 0.02]]],
+    ]);
+  });
+
+  test('a zero estimate remains reported while missing and non-USD sessions remain unreported, with mixed token formats counted per turn', () => {
+    const sessions = {
+      1: {
+        transcript: emptyTranscript,
+        spent: spentOf([
+          ['one', { totalTokens: 10 }, { cost: USD(0), estimated: true }],
+          ['two', { inputTokens: 2, outputTokens: 3 }, { uncounted: true }],
+          [
+            'one',
+            { totalTokens: 0, inputTokens: 99 },
+            { cost: USD(0), estimated: true },
+          ],
+        ]),
+      },
+      2: {
+        transcript: emptyTranscript,
+        spent: spentOf([
+          ['euro', {}, { cost: { amount: 2, currency: 'EUR' } }],
+        ]),
+      },
+    };
+    const parts = windowSpend(
+      [tab(1, 'fake', []), tab(2, 'other', []), tab(3, 'silent', [])],
+      sessions,
+      [],
+    );
+
+    expect(sum(parts)).toEqual({
+      cost: 0,
+      estimated: 'all',
+      tokens: 5,
+      uncounted: 2,
+      missing: ['other', 'silent'],
+    });
   });
 });

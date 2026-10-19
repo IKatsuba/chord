@@ -903,3 +903,60 @@ describe("CHD-373 S3b: an older record's spend before it kept each turn's (the o
     ).toStrictEqual([]);
   });
 });
+
+describe('CHD-373 S3b tester: legacy zero is a reported baseline', () => {
+  test('the last own zero supersedes earlier money and a later subagent cost cannot replace it', () => {
+    const actions = recordActions([
+      {
+        type: 'session',
+        version: 1,
+        sessionId: 'legacy',
+        agent: 'claude',
+        cwd: '/',
+        at: 1,
+      },
+      {
+        type: 'update',
+        turnId: 'old',
+        update: {
+          sessionUpdate: 'usage_update',
+          used: 1,
+          size: 2,
+          cost: { amount: 4, currency: 'USD' },
+        },
+      },
+      {
+        type: 'update',
+        turnId: 'zero',
+        update: {
+          sessionUpdate: 'usage_update',
+          used: 1,
+          size: 2,
+          cost: { amount: 0, currency: 'USD' },
+        },
+      },
+      {
+        type: 'update',
+        turnId: 'child',
+        subagentId: 'task',
+        update: {
+          sessionUpdate: 'usage_update',
+          used: 1,
+          size: 2,
+          cost: { amount: 50, currency: 'USD' },
+        },
+      },
+      { type: 'opened', at: 100 },
+    ]);
+
+    expect(actions.filter((action) => action.type === 'usage')).toEqual([
+      {
+        type: 'usage',
+        turnId: 'history-before',
+        usage: {},
+        cost: { amount: 0, currency: 'USD' },
+        before: { until: 100 },
+      },
+    ]);
+  });
+});

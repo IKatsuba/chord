@@ -210,6 +210,15 @@ and under the row of tabs with more, and the conversation grows down from it;
 once the conversation fills the window the header scrolls away, and `home`
 brings it back.
 
+Claude's work after a background task and codebuddy's unasked turns show as
+working: `››› Working… (Ns · esc to interrupt)`, timed from the cycle's
+first update, with `✻` in the tab and `✻ working` in the agents list.
+Its end notifies as a turn's end does. Esc interrupts it; a prompt sent
+meanwhile goes at once and takes it over. Requests inside it are held
+between turns, with ctrl+x a to answer. Claude's cycle ends when it reports
+autonomous model usage; without that update it stays working until Esc or
+a prompt.
+
 Tool-call headlines show every line, wrapped to the width with no cap:
 a Bash heredoc is visible in full in the transcript. Continuation rows
 start under the name, at column 3, and `⎿` results follow the last row.

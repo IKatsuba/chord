@@ -94,9 +94,8 @@
   sends a chunk after answering the prompt; `unknown` sends an update of a
   kind ACP does not have and a notification of its own; `cancels` says how
   many `session/cancel` notifications its session got with no turn playing,
-  and with `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) each such cancel is
-  answered at once with `Cancel heard with no turn.`, so a test sees it
-  arrived before sending what follows;
+  `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) acknowledges each such cancel
+  with `Cancel heard with no turn.`, so tests can wait for its arrival;
   `mcp` answers with the MCP servers its session was opened with, as JSON;
   `chordtools` connects to chord's own, through the MCP SDK's client, calls
   `list_agents` and `list_sessions` and answers with what came back, as
@@ -287,9 +286,9 @@
   agent's own for (CHD-426). `claudecycle` ends its turn, then, a second and
   a half on, says a few words as Claude Code does when a background task
   ends and ends that cycle with a `usage_update` whose `_claude/origin` is
-  `task-notification`; `claudecyclebare` sends no such update, so the cycle
-  never ends; `claudecycleask` asks to write a file in the cycle and says
-  the option that came back before ending it; `codebuddycycle` runs
+  `task-notification`; `claudecyclebare` sends no end marker, to check Esc
+  and a prompt taking over; `claudecycleask` asks permission to write in
+  the cycle, reports the answer, then ends it; `codebuddycycle` runs
   codebuddy's unasked turn, started by
   `_meta["codebuddy.ai/unsolicitedTurn"]` and ended by `session_end`.
   `tests/fixtures/recorder.ts`

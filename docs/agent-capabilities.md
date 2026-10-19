@@ -602,8 +602,9 @@ person's own prompts.
 - **Used:** `compaction_update` and summary chunks are drawn
   (`src/session/transcript/compactions.ts`); chord never starts a compaction
   itself. A user's own message chunks are read only when a history is
-  replayed.
-- **Dropped:** `session_info_update`, `notice`, `session_message`,
+  replayed. codebuddy's `session_info_update` unsolicited-turn marker starts
+  its own cycle; `session_end` ends it.
+- **Dropped:** other `session_info_update` content, `notice`, `session_message`,
   `session_message_chunk`, a live `user_message_chunk`, and any kind chord
   does not know.
 
@@ -613,7 +614,9 @@ person's own prompts.
   the `terminal_*` keys of a tool call's `_meta`; Codex's
   `_meta.is_mcp_tool_call` and `_meta.codex` (`autoResolutionMs`, a
   `user_note` role, `isSecret`); `_claude/askUserQuestionOption` previews;
-  DimCode's `_meta.lody.elicitation.customAnswerFor`.
+  DimCode's `_meta.lody.elicitation.customAnswerFor`; Claude's
+  `_claude/origin` to end an autonomous cycle, and codebuddy's
+  `codebuddy.ai/unsolicitedTurn` to start one.
 - **Sent:** `_meta.terminal_output_delta` in the client capabilities,
   `_meta.steering.idleBehavior` on a steer, and
   `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in Claude's environment
@@ -1276,6 +1279,13 @@ ignored. Warnings arrive as `**Warning:**` reply text, as chord does not
 declare `session.notices`. chord's `/mcp` hides claude's, as it hides
 codex's `/mcp` and `/status`. With `authMethods: []` and no `authenticate`
 call, login stays outside chord. Fork, delete, close and list are never called.
+After a turn goes quiet, the agent's first work starts a cycle of its own,
+shown as working, with its own turn id. It ends and notifies on a
+`usage_update` whose `_claude/origin` kind is `task-notification`, `peer`,
+`coordinator`, `observer` or `observer-activity`. Without that usage it stays
+working until Esc or a prompt. Esc sends `session/cancel` and interrupts
+the cycle; a prompt goes at once and takes it over. Requests in it are held
+between turns, with ctrl+x a to answer.
 
 **Sources.**
 
@@ -1536,12 +1546,13 @@ shows no output, live or final: chord keeps `rawOutput` but never draws it,
 and codebuddy does not read `terminal_output_delta`. A backgrounded command
 ends with an empty terminal block that chord filters out, so the call reads
 as done with nothing said, and its end never arrives. The unsolicited turn
-that follows is folded under the last turn on screen with no working line,
-as CHD-426 describes for Claude; `session_end` falls to the reducer's
-default. A permission request or form in that turn comes with no turn
-running, so chord refuses it unseen (CHD-158). chord does not declare
-`question`, so the model has no `AskUserQuestion` tool. Subagents show flat.
-Ignored: titles, the custom `_meta`, the notifications and the extra
+that follows starts a cycle on `codebuddy.ai/unsolicitedTurn`, shown as
+working under its own turn id; `session_end` ends it and notifies.
+Esc sends `session/cancel` and interrupts it; a prompt takes it over.
+Permissions and forms in it are held between turns, with ctrl+x a to answer.
+chord does not declare `question`, so the model has no `AskUserQuestion`
+tool. Subagents show flat.
+Ignored: titles, the other custom `_meta`, notifications and extra
 capability keys.
 
 **Sources.**
@@ -5360,8 +5371,8 @@ agent's Custom or In chord paragraph instead, the item says so.
 - **Spend the person does not see.** codex asks a model for a title after the
   first turn (cx22) and, in its default `agent` mode, has a model reviewer
   approve calls (cx9). codebuddy runs turns nobody asked for when a background
-  task ends, folded under the last turn, and its permission requests in them are
-  refused unseen (codebuddy, Custom and In chord). claude requests and pays for
+  task ends; chord shows them working and holds their permission requests
+  for the person (codebuddy, Custom and In chord). claude requests and pays for
   a prompt suggestion every turn, shown only to AIR clients, and a title call
   per session (cl22; claude, Custom). Options found for claude: send
   `_meta.claudeCode.options.promptSuggestions: false` on `session/new`, declare
@@ -5701,8 +5712,9 @@ agent's Custom or In chord paragraph instead, the item says so.
 - **CHD-426** (new evidence), Claude's own cycle after a background task ends,
   and a resumed session's background tasks: codebuddy has the same cycle with no
   opt-in, marked by `_meta["codebuddy.ai/unsolicitedTurn"]` and a non-standard
-  `session_end`, which chord folds under the last turn (codebuddy, Custom). kimi
-  starts a turn when a background task ends and ACP drops it (kimi, In chord);
+  `session_end`; chord shows both agents' cycles working, notifies at their
+  end and lets Esc interrupt them. Reopening background tasks remains open.
+  kimi starts a turn when a background task ends and ACP drops it (kimi, In chord);
   codex restores async tasks only for AIR; cursor replays a running subagent as
   `disconnected`; devin parks subagents on interrupt (dv17); grok reports
   background work only on its own notification.

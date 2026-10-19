@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import process from 'node:process';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
+import { useState } from 'react';
+import { FORM_SCHEMA } from '../../fixtures/forms.ts';
 import { draw } from '../harness.tsx';
 import type { ElicitationReply } from '../../../src/session/elicitations.ts';
 import { DROID_QUESTIONS } from '../../fixtures/questions.ts';
@@ -507,5 +509,58 @@ describe("a form left open at its turn's end (CHD-158 C5, the owner's Q53)", () 
         },
         { columns, rows },
       ));
+  }
+});
+
+describe('CHD-462 B1 tester: hidden form contents', () => {
+  for (const columns of [80, 120]) {
+    test(`typed contents survive the frame at ${columns} columns`, async () => {
+      const control: { set?: (hidden: boolean) => void } = {};
+
+      function Hidden() {
+        const [hidden, setHidden] = useState(false);
+
+        control.set = setHidden;
+
+        return (
+          <ElicitationForm
+            wait={{
+              id: 'kept-form',
+              mode: 'form',
+              message: 'Kept deploy values',
+              schema: FORM_SCHEMA,
+            }}
+            agent='fake'
+            width={columns}
+            windowRows={24}
+            active={!hidden}
+            hidden={hidden}
+            onAnswer={() => {}}
+          />
+        );
+      }
+
+      const drawn = await draw(<Hidden />, { columns, rows: 24 });
+
+      try {
+        await drawn.write('web-app');
+        await until('typed value', () => drawn.frame().includes('web-app'));
+        control.set?.(true);
+        await until(
+          'form hidden',
+          () => !drawn.frame().includes('Kept deploy values'),
+        );
+        control.set?.(false);
+        await until('typed value restored', () =>
+          drawn.frame().includes('web-app'),
+        );
+        await drawn.write('-v2');
+        await until('field continues editing', () =>
+          drawn.frame().includes('web-app-v2'),
+        );
+      } finally {
+        await drawn.unmount();
+      }
+    });
   }
 });

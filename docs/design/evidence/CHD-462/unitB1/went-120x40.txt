@@ -1,0 +1,40 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › monitors
+
+ ⏺ Monitor(dev server errors)
+   ⎿  $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')"; echo "
+      at validate (src/routes/login.tsx:41:22)"; sleep 600
+      m1 · times out after 10m
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 600
+      m2 · times out after 10m
+
+ ⏺ Two monitors are running.
+
+ ← from dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+ ← from CI run 4812 · monitor · stopped
+   ⎿  The person stopped it after 18s.
+
+ ── ↓ 1 line below · end to jump to the bottom ────────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running                          Fake Large with a 1M context window · medium effort · 1% context used
+    background  1 monitor and 1 task running · ■ 1 monitor stopped

@@ -642,8 +642,11 @@ including Claude's, have kind `agent`; background Bash is not listed.
 The summary counts the front tab's items, including its children's and
 team members', by state: asking, failed, untracked, running, done and
 stopped. It wraps without cutting text. From an empty prompt, ↓ past the
-agents reaches it; Enter opens the background view. Rows show name, kind,
-state with time and owner, oldest first. ↑ ↓ or j k move between rows.
+agents reaches it; Enter opens the background view above the prompt, full
+width in the pickers' rounded frame in the permission colour. It is as tall
+as its rows, at most half the screen; the prompt, status line and summary
+stay visible. Rows show name, kind, state with time and owner, oldest first.
+↑ ↓ or j k move between rows and scroll the view.
 
 An agent row reads `running`, `● permission` or `● input`; `● waiting`
 means it needs action but no request reaches you. Its end reads `✓ done`, `✗ failed`,
@@ -657,7 +660,10 @@ Esc in the transcript leaves individually stoppable subagents running.
 
 Enter picks the owner and scrolls to the item's call or subagent block;
 a folded block stays folded, and a missing call leaves the view open.
-Esc returns to the summary, then to the prompt. Ended and untracked items
+Esc returns to the summary, then to the prompt. A new request that takes
+the keys hides the frame until answered, then it returns as it was. Opened
+over a held request, the frame takes that box's place; ctrl+x a closes it
+and gives the request the keys. Ended and untracked items
 stay until your next prompt to any agent in that tab; running items stay.
 Messages clear nothing. Closing an owner removes its items.
 

@@ -9,6 +9,8 @@ import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import { stopRefused } from '../../../src/ui/background/view.ts';
+import assert from 'node:assert/strict';
+import { FORM_SCHEMA } from '../../fixtures/forms.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { draw } from '../harness.tsx';
 import {
@@ -278,12 +280,16 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     await window.press(DOWN);
     await window.shows('❯ background');
     await window.press('\r');
-    await window.shows(' Background · 2 in this tab');
-    await window.shows(
-      '↑ ↓ to move · enter to go to its call · x to stop · esc to close',
-    );
-    // The whole window: no prompt box, no status line.
-    expect(!window.frame().includes('╭')).toBeTruthy();
+    await window.shows('│ Background · 2 in this tab');
+    await window.shows('Enter to go to its call · x to stop · Esc to close');
+    // A picker's frame above the prompt: the transcript, the prompt box,
+    // the status line and the summary line stay, the summary's ❯ gone as
+    // the keys are the frame's (CHD-462).
+    expect(window.frame()).toContain('Two monitors are running.');
+    expect(window.frame()).toContain('│ ›');
+    expect(window.frame()).toContain('? for shortcuts');
+    expect(window.frame()).toContain('    background  2 monitors running');
+    expect(window.frame()).not.toContain('❯ background');
     expect(window.frame()).toMatch(
       /❯ dev server errors {2}monitor {2}running \d+s · 1 event +main/,
     );
@@ -303,7 +309,7 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     // The stop is told in the transcript as before.
     await window.shows('← from CI run 4812 · monitor · stopped');
     await window.press('\r');
-    await window.shows(' Background · 2 in this tab');
+    await window.shows('│ Background · 2 in this tab');
     await window.press(ESC);
     await window.press(ESC);
     await until('the ❯ gone', () => !window.frame().includes('❯ background'));
@@ -334,7 +340,7 @@ test('the view is modal: the window’s session keys do nothing in it, and esc g
     await window.shows('    background  2 monitors running');
     await window.press(DOWN);
     await window.press('\r');
-    await window.shows(' Background · 2 in this tab');
+    await window.shows('│ Background · 2 in this tab');
 
     // ctrl+x w would open the sessions picker; ctrl+x c a new tab.
     await window.press(CTRL_X);
@@ -342,8 +348,8 @@ test('the view is modal: the window’s session keys do nothing in it, and esc g
     await window.press(CTRL_X);
     await window.press('c');
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(window.frame()).toContain(' Background · 2 in this tab');
-    expect(!window.frame().includes('╭')).toBeTruthy();
+    expect(window.frame()).toContain('│ Background · 2 in this tab');
+    expect(window.frame()).not.toContain('Sessions in');
 
     await window.press(ESC);
     await window.shows('❯ background  2 monitors running');
@@ -351,7 +357,7 @@ test('the view is modal: the window’s session keys do nothing in it, and esc g
     expect(window.frame()).toContain('Two monitors are running.');
   }));
 
-describe('CHD-424 tester: full-screen background edges', () => {
+describe('CHD-424 tester: background frame edges', () => {
   async function withSlowTask(body: (window: Window) => Promise<void>) {
     const server = serveChord();
     const agentCommand = fakeAgentCommand(undefined, '--step-ms', '30');
@@ -370,14 +376,16 @@ describe('CHD-424 tester: full-screen background edges', () => {
     }
   }
 
-  test('x stops a permission-waiting task immediately and a second x on its ended row changes nothing', () =>
+  test('an arriving permission hides the frame, then x stops its resumed task and a second x changes nothing', () =>
     withSlowTask(async (window) => {
       await ready(window);
       await send(window, 'task');
       await window.shows('background  1 task running');
       await window.press(DOWN);
       await window.press('\r');
-      await window.shows('● permission');
+      await window.shows('Do you want to proceed?');
+      expect(window.frame()).not.toContain('Background ·');
+      await window.press('1');
       await window.shows('❯ Fix the tokenizer');
       await window.press('x');
       await window.shows('■ stopped after');
@@ -408,15 +416,15 @@ describe('CHD-424 tester: full-screen background edges', () => {
         await window.press(DOWN);
         await window.press('\r');
         await window.shows('Background · 22 in this tab');
-        await window.shows('… 3 below');
+        await window.shows('│ ↓ Watch the build');
 
         for (let index = 0; index < 25; index++) {
           await window.press('j');
         }
 
-        await window.shows('… 3 above');
+        await window.shows('│ ↑ Watch the build');
         expect(window.frame()).toContain('❯ Watch the build');
-        expect(window.frame()).not.toContain(' below');
+        expect(window.frame()).not.toContain('│ ↓ Watch the build');
         expect(window.frame().split('\n')).toHaveLength(24);
         await window.press('x');
         await window.shows('■ stopped after');
@@ -425,8 +433,8 @@ describe('CHD-424 tester: full-screen background edges', () => {
         await window.shows('❯ background  21 tasks running · ■ 1 task stopped');
         await window.press('\r');
         await window.shows('❯ Watch the build');
-        await window.shows('… 3 below');
-        expect(window.frame()).not.toContain(' above');
+        await window.shows('│ ↓ Watch the build');
+        expect(window.frame()).not.toContain('│ ↑ Watch the build');
       },
       { rows: 24, columns: 80 },
     ));
@@ -478,17 +486,23 @@ describe('CHD-424 tester: full-screen background edges', () => {
     try {
       const lines = drawn.frame().split('\n');
       const at = lines.findIndex((line) => line.includes('❯ 29-'));
+      const inside = (line: string) =>
+        line.replace(/^│ ?/, '').replace(/ *│$/, '').trim();
       const kept = [
-        lines[at]!.trim().split(/\s+/)[1],
-        lines[at + 1]!.trim(),
-        lines[at + 2]!.trim(),
+        inside(lines[at]!).split(/\s+/)[1],
+        inside(lines[at + 1]!),
+        inside(lines[at + 2]!),
       ].join('');
+      const top = lines.findIndex((line) => line.startsWith('╭'));
+      const bottom = lines.findIndex((line) => line.startsWith('╰'));
 
       expect(kept).toBe(items[29]!.name);
-      expect(drawn.frame()).toContain(' above');
-      expect(drawn.frame()).not.toContain(' below');
-      expect(lines).toHaveLength(24);
-      expect(lines[23]).toContain('esc to close');
+      expect(drawn.frame()).toMatch(/│ ↑/);
+      expect(drawn.frame()).not.toMatch(/│ ↓/);
+      expect(bottom - top + 1).toBeLessThanOrEqual(12);
+      expect(lines[bottom - 1]).toContain(
+        'Enter to go to its call · x to stop · Esc to close',
+      );
     } finally {
       await drawn.unmount();
     }
@@ -686,5 +700,107 @@ describe('CHD-2 tester: stopping and refusal rendering', () => {
         await refused.unmount();
       }
     });
+  }
+});
+
+test('opened over a request held between turns, the frame gives way to ctrl+x a, which the status line names, and the box takes the keys (CHD-462)', () =>
+  withBackground(async (window) => {
+    await ready(window);
+    await send(window, 'taskbetween');
+    await window.shows('Agent(Fix the tokenizer) · fake asks · between turns');
+    await window.shows('background  ● 1 task asking');
+    // Held, the prompt has the keys: ↓ reaches the summary line.
+    await window.press(DOWN);
+    await window.press('\r');
+    await window.shows('│ Background · 1 in this tab');
+    expect(window.frame()).toContain('ctrl+x a to answer');
+
+    await leader(window, 'a');
+    await window.shows('❯ 1. Allow');
+    expect(window.frame()).not.toContain('│ Background');
+    await window.press('1');
+    await window.shows(
+      'Received the message from Fix the tokenizer · fake · report.',
+    );
+  }));
+
+describe('CHD-462 B1 tester: an arriving input hides and resumes the frame', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const kind of ['form', 'link'] as const) {
+      test(`${kind}: the incoming box takes keys and restores the focused item at ${columns} columns`, async () => {
+        const server = serveChord();
+        const agentCommand = fakeAgentCommand(undefined, '--step-ms', '30');
+
+        try {
+          await withWindow(
+            async (window) => {
+              await ready(window);
+              await send(window, 'monitors');
+              await window.shows('background  2 monitors running');
+              await send(window, 'slow');
+              await window.shows('Working');
+              await window.press(DOWN);
+              await window.press('\r');
+              await window.shows('Background · 2 in this tab');
+              await window.press('j');
+              await window.shows('❯ CI run 4812');
+
+              const session = window.session();
+
+              assert(session);
+
+              const response = session.elicitations.handler(
+                kind === 'form'
+                  ? {
+                      sessionId: session.id,
+                      mode: 'form',
+                      message: 'Incoming deployment form',
+                      requestedSchema: FORM_SCHEMA,
+                    }
+                  : {
+                      sessionId: session.id,
+                      mode: 'url',
+                      message: 'Incoming release link',
+                      url: 'https://example.com/release',
+                      elicitationId: 'frame-link',
+                    },
+                new AbortController().signal,
+              );
+
+              await window.shows(
+                kind === 'form'
+                  ? '❯ * Project name'
+                  : '❯ 1. Open in the browser',
+              );
+              expect(window.frame()).not.toContain('Background ·');
+              await window.press(ESC);
+              expect(await response).toMatchObject({ action: 'cancel' });
+              await window.shows('Background · 2 in this tab');
+              await window.shows('❯ CI run 4812');
+              expect(window.frame()).toContain('│ ›');
+              await window.press('x');
+              await window.shows('■ stopped after');
+              await window.press(ESC);
+              await window.shows('❯ background');
+              await window.press(ESC);
+              expect(window.frame()).not.toContain('Background ·');
+            },
+            {
+              server,
+              runtimes: ['fake'],
+              columns,
+              rows,
+              agentCommand,
+              startupOf: () => ({ agentCommand }),
+            },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
   }
 });

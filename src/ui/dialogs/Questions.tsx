@@ -53,6 +53,7 @@ const WARN_MS = 30_000;
  * `askKey`'s; this only draws.
  */
 export function QuestionBox({
+  hidden = false,
   wait,
   questions,
   filled,
@@ -67,6 +68,11 @@ export function QuestionBox({
   onFill,
   onAnswer,
 }: {
+  /**
+   * Not drawn, its state kept, while the background view stands in its
+   * place (CHD-462).
+   */
+  hidden?: boolean;
   wait: Extract<ElicitationWait, { mode: 'form' }>;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
   held?: boolean;
@@ -167,6 +173,7 @@ export function QuestionBox({
   return (
     <box
       {...borderOf(colours.permission)}
+      visible={!hidden}
       paddingX={1}
       marginTop={1}
       flexShrink={held ? 1 : 0}

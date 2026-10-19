@@ -8,6 +8,7 @@ import {
   type ViewRow,
   viewRows,
   viewWindow,
+  edgeMarked,
 } from '../../../src/ui/background/view.ts';
 
 const NOW = 1_000_000;
@@ -265,7 +266,7 @@ test('↑ ↓ move the ❯ by rows, stopping at the first and last, and it follo
   expect(moveViewFocus([], undefined, 1)).toStrictEqual(undefined);
 });
 
-test('more rows than fit scroll to keep the ❯ in sight, … N above and … N below standing for the rest', () => {
+test('more rows than fit scroll to keep the ❯ in sight, the gutter marking the rest above and below (CHD-462)', () => {
   const many = Array.from({ length: 30 }, (_, index) =>
     monitor(`m${index + 1}`, `build ${index + 1}`, { group: 'running' }),
   );
@@ -286,25 +287,25 @@ test('more rows than fit scroll to keep the ❯ in sight, … N above and … N 
     };
   };
 
-  // At the top, the last line is … 11 below.
+  // At the top, every line a row: the marks take none.
   expect(window(1, 20)).toStrictEqual({
-    names: many.slice(0, 19).map((item) => item.name),
+    names: many.slice(0, 20).map((item) => item.name),
     above: 0,
-    below: 11,
+    below: 10,
   });
 
-  // Scrolled: a line each for above and below.
+  // Scrolled just far enough for the ❯.
   const scrolled = window(25, 20);
 
   expect(scrolled.names.at(-1)).toStrictEqual('build 25');
-  expect(scrolled.names.length + 2).toStrictEqual(20);
+  expect(scrolled.names.length).toStrictEqual(20);
   expect(scrolled.above + scrolled.names.length + scrolled.below).toStrictEqual(
     30,
   );
-  // At the end, no line below.
+  // At the end, nothing below.
   expect(window(30, 20)).toStrictEqual({
-    names: many.slice(11).map((item) => item.name),
-    above: 11,
+    names: many.slice(10).map((item) => item.name),
+    above: 10,
     below: 0,
   });
   // All fit: neither.
@@ -365,7 +366,7 @@ describe('CHD-424 tester: view layout edges', () => {
     expect(stateText(working, NOW + 2_000).text).toBe('working 34s');
   });
 
-  test('every focus stays visible among variable-height rows and the indicators count items', () => {
+  test('every focus stays visible among variable-height rows and gutter marks consume no extra lines', () => {
     const many = Array.from({ length: 30 }, (_, index) =>
       monitor(
         `m${index + 1}`,
@@ -386,10 +387,7 @@ describe('CHD-424 tester: view layout edges', () => {
           }),
           20,
         );
-        const occupied =
-          shown.rows.reduce((n, row) => n + row.lines.length, 0) +
-          Number(shown.above > 0) +
-          Number(shown.below > 0);
+        const occupied = shown.rows.reduce((n, row) => n + row.lines.length, 0);
 
         expect(
           shown.rows
@@ -525,4 +523,38 @@ test("a stop that could not be sent says its error's first line", () => {
     'could not stop: Session not found',
   );
   expect(stopRefused('closed')).toBe('could not stop: closed');
+});
+
+test("the gutter says what is out of sight, as the pickers' edges do: ↑ on the first line, ↓ on the last, the ❯ keeping its place (CHD-462)", () => {
+  const many = Array.from({ length: 10 }, (_, index) =>
+    monitor(`m${index + 1}`, `build ${index + 1}`, { group: 'running' }),
+  );
+  const marked = (focus: number) =>
+    edgeMarked(
+      viewWindow(
+        viewRows(many, {
+          width: 76,
+          focus: { key: 1, id: `m${focus}` },
+          now: NOW,
+        }),
+        4,
+      ),
+    ).map(({ cells }) => cells.map((cell) => cell.text).join(''));
+
+  // The top: nothing above, more below.
+  expect(marked(1).map((line) => line.slice(0, 2))).toStrictEqual([
+    '❯ ',
+    '  ',
+    '  ',
+    '↓ ',
+  ]);
+  // Scrolled to the middle: the ❯ on the last line in sight keeps it.
+  expect(marked(6).map((line) => line.slice(0, 2))).toStrictEqual([
+    '↑ ',
+    '  ',
+    '  ',
+    '❯ ',
+  ]);
+  // Every line keeps its width.
+  expect(marked(6)[0]!.slice(2)).toBe(marked(1)[1]!.slice(2).replace('2', '3'));
 });

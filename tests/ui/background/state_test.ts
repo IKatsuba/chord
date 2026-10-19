@@ -1,15 +1,21 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  backgroundShown,
   initialBackground,
   reduceBackground,
 } from '../../../src/ui/background/state.ts';
 import {
+  type AppState,
   frontState,
   initialAppState,
+  keyCommand,
+  reduceApp,
   reduceWindowed,
   windowed,
   type WindowedAction,
 } from '../../../src/ui/app/state.ts';
+import { askedIds } from '../../../src/ui/dialogs/state.ts';
+import { busy, escape, plain } from '../app/states.ts';
 
 test("the person's prompt in a tab marks when its ended items were cleared, each tab its own", () => {
   const once = reduceBackground(initialBackground, {
@@ -142,5 +148,99 @@ describe('CHD-2 tester: stop attempt token ordering', () => {
         focus: { key: 2, id: 'same' },
       }).backgroundView?.hint,
     ).toBeUndefined();
+  });
+});
+
+describe('the view over requests the front tab asks (CHD-462)', () => {
+  const FORM = {
+    id: 'e1',
+    mode: 'form',
+    message: 'Set up the deploy target',
+    schema: { type: 'object', properties: {} },
+  } as const;
+  const PERMISSION = {
+    id: 'p1',
+    options: [
+      { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+      { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+    ],
+  } as const;
+  const formAsked = reduceApp(busy, {
+    type: 'elicitation_requested',
+    turnId: 't1',
+    elicitation: FORM,
+  });
+  const permissionAsked = reduceApp(busy, {
+    type: 'permission_requested',
+    turnId: 't1',
+    permission: PERMISSION,
+    at: 0,
+  });
+  const opened = (state: AppState) =>
+    reduceApp(state, {
+      type: 'background_opened',
+      over: askedIds(state.transcript),
+    });
+  const enter = { ...plain, return: true };
+
+  test('opened over a form that has the keys, the view stands and takes them all, x and typing too', () => {
+    const over = opened(formAsked);
+
+    expect(backgroundShown(over)).toBeTruthy();
+    expect(keyCommand('x', plain, over, '')).toBe('stop_background');
+    expect(keyCommand('j', plain, over, '')).toBe('background_down');
+    expect(keyCommand('k', plain, over, '')).toBe('background_up');
+    expect(keyCommand('', enter, over, '')).toBe('go_to_call');
+    expect(keyCommand('', escape, over, '')).toBe('close_background');
+    // Nothing typed reaches the form beneath.
+    expect(keyCommand('a', plain, over, '')).toBe(undefined);
+  });
+
+  test('opened over a permission waiting, esc closes the view and rejects nothing', () => {
+    const over = opened(permissionAsked);
+
+    expect(backgroundShown(over)).toBeTruthy();
+    expect(keyCommand('', escape, over, '')).toBe('close_background');
+    expect(keyCommand('', enter, over, '')).toBe('go_to_call');
+  });
+
+  test('a request that arrives once it is open hides it and takes the keys; answered, the view is back as it was', () => {
+    const open = reduceApp(
+      { ...busy, agentsFocus: true },
+      { type: 'background_opened', over: [] },
+    );
+
+    expect(backgroundShown(open)).toBeTruthy();
+
+    const arrived = reduceApp(open, {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: PERMISSION,
+      at: 0,
+    });
+
+    expect(backgroundShown(arrived)).toBeFalsy();
+    expect(keyCommand('', escape, arrived, '')).toBe('reject_permission');
+
+    const answered = reduceApp(arrived, {
+      type: 'permission_settled',
+      turnId: 't1',
+      id: 'p1',
+      answer: { type: 'chosen', optionId: 'allow' },
+    });
+
+    expect(backgroundShown(answered)).toBeTruthy();
+    expect(answered.backgroundView).toStrictEqual(open.backgroundView);
+  });
+
+  test('a form that arrives once it is open hides it too, even over a permission it stood over', () => {
+    const over = opened(permissionAsked);
+    const arrived = reduceApp(over, {
+      type: 'elicitation_requested',
+      turnId: 't1',
+      elicitation: FORM,
+    });
+
+    expect(backgroundShown(arrived)).toBeFalsy();
   });
 });

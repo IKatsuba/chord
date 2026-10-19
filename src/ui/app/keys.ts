@@ -1,5 +1,5 @@
 import { askedPermission } from '../dialogs/permission.ts';
-import { betweenAsked, heldBack } from '../dialogs/state.ts';
+import { askedIds, betweenAsked, heldBack } from '../dialogs/state.ts';
 import { bashCommand, entersBash, typedText } from '../prompt/bash.ts';
 import {
   type ChordCommand,
@@ -577,10 +577,18 @@ function commandSteps(
       // The front session's own request between turns is what needs the
       // person first: the keys go into its box (CHD-158).
       const id = heldBack(state) ? betweenAsked(state.transcript) : undefined;
+      // From the background view, which it closes first, the keys going
+      // where they would from the prompt (CHD-462).
+      const closing = state.backgroundView
+        ? [
+            dispatch({ type: 'background_closed' }),
+            dispatch({ type: 'agents_focused', focused: false }),
+          ]
+        : [];
 
       return id === undefined
-        ? [{ type: 'attend_session' }]
-        : [dispatch({ type: 'request_attended', id })];
+        ? [...closing, { type: 'attend_session' }]
+        : [...closing, dispatch({ type: 'request_attended', id })];
     }
     case 'agents_up':
       return [{ type: 'move_agent', by: -1 }];
@@ -591,7 +599,12 @@ function commandSteps(
     case 'close_agent':
       return [{ type: 'close_agent' }];
     case 'open_background':
-      return [dispatch({ type: 'background_opened' })];
+      return [
+        dispatch({
+          type: 'background_opened',
+          over: askedIds(state.transcript),
+        }),
+      ];
     case 'background_up':
       return [{ type: 'move_background', by: -1 }];
     case 'background_down':

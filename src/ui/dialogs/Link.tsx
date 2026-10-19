@@ -17,6 +17,7 @@ import { AskerHeading } from './Asker.tsx';
  * opens until a choice is made; Esc answers `cancel`.
  */
 export function LinkPrompt({
+  hidden = false,
   wait,
   agent,
   asker,
@@ -25,6 +26,11 @@ export function LinkPrompt({
   between = false,
   onAnswer,
 }: {
+  /**
+   * Not drawn, its state kept, while the background view stands in its
+   * place (CHD-462).
+   */
+  hidden?: boolean;
   wait: Extract<ElicitationWait, { mode: 'url' }>;
   /**
    * Asked with no turn running: its heading names `agent` as who asks and
@@ -65,6 +71,7 @@ export function LinkPrompt({
   return (
     <box
       {...borderOf(colours.permission)}
+      visible={!hidden}
       paddingX={1}
       marginTop={1}
       flexShrink={held ? 1 : 0}

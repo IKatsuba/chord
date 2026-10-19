@@ -1,0 +1,40 @@
+
+ ⏺ Monitor(CI run 4812)
+   ⎿  $ sleep 600
+      m2 · times out after 10m
+
+ ⏺ Two monitors are running.
+
+ ← from dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+ ← from CI run 4812 · monitor · stopped
+   ⎿  The person stopped it after 18s.
+
+ ⏺ Received the message from CI run 4812 · monitor · stopped.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 3 in this tab                                                                                           │
+│                                                                                                                      │
+│   dev server errors  monitor      running 18s · 1 event            main                                              │
+│ ❯ CI run 4812        monitor      ■ stopped after 18s · no events  main                                              │
+│   Watch the build    task · fake  working 14s                      main                                              │
+│                                                                                                                      │
+│ Enter to go to its call · x to stop · Esc to close                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running                          Fake Large with a 1M context window · medium effort · 1% context used
+    background  1 monitor and 1 task running · ■ 1 monitor stopped

@@ -49,7 +49,13 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
   return wait.save === undefined ? (
     <AgentPermission {...props} />
   ) : (
-    <SaveBox wait={wait} save={wait.save} active={active} onChoose={onChoose} />
+    <SaveBox
+      wait={wait}
+      save={wait.save}
+      active={active}
+      onChoose={onChoose}
+      hidden={props.hidden ?? false}
+    />
   );
 }
 
@@ -62,6 +68,7 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
  * them, its hint the key that takes them (CHD-158).
  */
 function AgentPermission({
+  hidden = false,
   wait,
   asker = [],
   child,
@@ -73,6 +80,11 @@ function AgentPermission({
   scroller,
   onOverflow,
 }: {
+  /**
+   * Not drawn, its state kept, while the background view stands in its
+   * place (CHD-462).
+   */
+  hidden?: boolean;
   wait: PermissionWait;
   /** The way down to the subagent that asks; empty when the agent does. */
   asker?: readonly Subagent[];
@@ -113,6 +125,7 @@ function AgentPermission({
     // It gives way only in its request's rows, every other row pinned.
     <box
       {...borderOf(colours.permission)}
+      visible={!hidden}
       paddingX={1}
       marginTop={1}
       flexShrink={1}
@@ -337,11 +350,17 @@ function Rule({ text }: { text: string }) {
  * Esc does, which is the last choice.
  */
 function SaveBox({
+  hidden = false,
   wait,
   save,
   active,
   onChoose,
 }: {
+  /**
+   * Not drawn, its state kept, while the background view stands in its
+   * place (CHD-462).
+   */
+  hidden?: boolean;
   wait: PermissionWait;
   save: SaveBoxQuestion;
   active: boolean;
@@ -351,7 +370,13 @@ function SaveBox({
   const key = useHintKey('confirm:no');
 
   return (
-    <box {...borderOf(permission)} paddingX={1} marginTop={1} flexShrink={0}>
+    <box
+      visible={!hidden}
+      {...borderOf(permission)}
+      paddingX={1}
+      marginTop={1}
+      flexShrink={0}
+    >
       <text {...TEXT} {...fg(permission)} attributes={BOLD}>
         {save.question}
       </text>

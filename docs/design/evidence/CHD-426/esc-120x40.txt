@@ -1,0 +1,40 @@
+ chord   1 fake    2 fake ●                             /tmp/chord-qa.XXXX
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › claudecyclebare
+
+ ⏺ The build runs in the background; I will read it after.
+
+ ⏺ The background build ended; reading its log. The build passed.
+   ⎿  Interrupted by user
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 2 fake needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used

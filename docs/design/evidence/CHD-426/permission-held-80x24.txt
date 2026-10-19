@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake ●   /tmp/chord-qa.XXXX
+
+ ⏺ The background build ended; saving its log.
+
+ ⏺ Write(notes/build.md)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                    │
+│ Write notes/build.md                                                         │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer    Fake Large with a 1M context… · 1% used

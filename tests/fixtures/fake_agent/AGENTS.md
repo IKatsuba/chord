@@ -26,9 +26,10 @@
   `claudenostop`, `claudeslowstop`, `claudebetween`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
-  (`codexchordcalls`, `codexmodels`, `tasklong`, `tasktallname`, `tasktwo`,
-  `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`), `cycles.ts` (`claudecycle`,
-  `claudecyclebare`, `claudecycleask`, `codebuddycycle`) and
+  (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
+  `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`),
+  `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
+  `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
@@ -118,7 +119,8 @@
   messages its parent through `send_message`, runs the tests and reports;
   `tasklong` starts one `taskwait` task, `tasktallname` the same under a
   name of about 600 characters, taller than the background frame at 80x24
-  (CHD-430), and `tasktwo` two drawn as a group, then leaves the parent
+  (CHD-430), `taskcost` one on `costwait`, which says a cost and works on
+  until stopped, and `tasktwo` two drawn as a group, then leaves the parent
   idle; `taskwait` works for a minute without asking
   permission, unless stopped; `taskbetween` starts `taskchild` and ends
   its turn at once, so the task asks between its parent's turns, and

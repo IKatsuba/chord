@@ -120,6 +120,31 @@ export const TASKS = {
     return 'end_turn';
   },
 
+  // As `tasklong`, its task on `costwait`: it says a cost and works on until
+  // it is stopped, to let its parent go with its spend said (CHD-373).
+  async taskcost(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'spawn_task', {
+        agent: 'fake',
+        prompt: 'costwait',
+        name: 'Count the cost',
+      });
+      await turn.say('The cost is being counted.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // Two `taskwait` tasks spawned one after the other, which the transcript
   // draws as one group, `Running 2 agents…`.
   async tasktwo(turn) {

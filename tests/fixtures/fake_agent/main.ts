@@ -394,6 +394,7 @@ const SCENARIOS = [
   'codebuddycycle',
   'taskchild',
   'tasklong',
+  'taskcost',
   'tasktallname',
   'tasktwo',
   'taskwait',

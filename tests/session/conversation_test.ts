@@ -3608,3 +3608,94 @@ describe('CHD-158 C4 tester: work queued before the parent result', () => {
     });
   }
 });
+
+describe('CHD-158 C5 tester: closing carried inputs in concurrent sessions', () => {
+  test('clear and close withdraw each session own form and link without releasing queued text', async () => {
+    const bothHeld = Promise.withResolvers<void>();
+    let arrived = 0;
+
+    await Promise.all(
+      ['clear', 'close'].map((release) => {
+        let source: Session | undefined;
+
+        return onFake(
+          [],
+          async (conversation, events) => {
+            assert(source);
+
+            const owner = source;
+            let form: PendingElicitation | undefined;
+            let link: Promise<unknown> | undefined;
+            const stop = owner.elicitations.subscribe((pending) => {
+              if (form !== undefined) {
+                return;
+              }
+
+              form = pending;
+              link = owner.elicitations.handler(
+                {
+                  sessionId: owner.id,
+                  mode: 'url',
+                  message: release,
+                  url: 'https://example.com/release',
+                  elicitationId: release,
+                },
+                new AbortController().signal,
+              );
+            });
+
+            try {
+              conversation.send('leftform');
+              await until(() =>
+                events.some((event) => event.type === 'result'),
+              );
+              assert(form);
+              expect(form.signal.aborted).toBe(false);
+              conversation.send('tools');
+              expect(
+                events.filter((event) => event.type === 'prompt'),
+              ).toHaveLength(1);
+              expect(
+                events.filter((event) => event.type === 'queued').at(-1),
+              ).toMatchObject({ afterAnswer: true });
+              arrived++;
+
+              if (arrived === 2) {
+                bothHeld.resolve();
+              }
+
+              await bothHeld.promise;
+
+              if (release === 'clear') {
+                conversation.clear();
+                await until(() =>
+                  events.some((event) => event.type === 'cleared'),
+                );
+                await until(
+                  () =>
+                    events.filter((event) => event.type === 'connected')
+                      .length === 2,
+                );
+              } else {
+                await conversation.close();
+              }
+
+              expect(form.signal.aborted).toBe(true);
+              expect(await link).toMatchObject({ action: 'cancel' });
+              expect(
+                events
+                  .filter((event) => event.type === 'prompt')
+                  .map((event) => event.text),
+              ).toEqual(['leftform']);
+              await owner.exited;
+              expect(owner.agentPids.size).toBe(0);
+            } finally {
+              stop();
+            }
+          },
+          (session) => (source = session),
+        );
+      }),
+    );
+  });
+});

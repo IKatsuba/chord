@@ -1390,3 +1390,54 @@ describe('CHD-405 tester: reports follow the picked runtime', () => {
     }
   }
 });
+
+describe('CHD-158 C5 tester: a task returns with input open', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`the task form remains held and answerable after its result at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+
+      server.admit = (caller) => {
+        if (caller.agent === undefined) {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+            await main.window.spawn(main, {
+              agent: 'fake',
+              name: 'Carry the form',
+              prompt: 'leftform',
+            });
+            await window.shows(
+              'Agent(Carry the form) · fake asks for input · between turns',
+            );
+            await window.shows('ctrl+x a to answer');
+            expect(window.frame()).not.toContain('❯ * Project name');
+            await send(window, 'text');
+            await window.shows('after your answer: text');
+            await leader(window, 'a');
+            await window.shows('❯ * Project name');
+            await window.shows('Esc to cancel');
+            await window.press(ESC);
+            await window.shows('Hello, world.');
+            expect(window.frame()).not.toContain('after your answer: text');
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

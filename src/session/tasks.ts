@@ -11,15 +11,17 @@ import type { ConversationEvent } from './conversation.ts';
 import type { ElicitationReply } from './elicitations.ts';
 import { endWord } from './monitors.ts';
 import { reduceTranscript } from './transcript/reducer.ts';
-import { TASK_META } from './transcript/subagents.ts';
+import { TASK_META, TASK_SPENT_META } from './transcript/subagents.ts';
 import {
   emptyTranscript,
   type MessageFrom,
   type SubagentState,
   type TaskInfo,
+  type TaskSpent,
   type TeamPart,
   type Transcript,
 } from './transcript/types.ts';
+import type { TokenUsage } from './usage.ts';
 
 /**
  * `from` as a message's row and its wrapper name it: a monitor's as its
@@ -160,6 +162,7 @@ export function taskUpdate(
   id: string,
   state: SubagentState,
   task?: TaskInfo & { readonly prompt: string },
+  spent?: TaskSpent,
 ): SessionUpdate {
   return {
     sessionUpdate: 'subagent_update',
@@ -179,7 +182,30 @@ export function taskUpdate(
             },
           },
         }),
+    // What it spent, on its ending update (CHD-373).
+    ...(spent === undefined ? {} : { _meta: { [TASK_SPENT_META]: spent } }),
   };
+}
+
+/**
+ * What a task spent, from its own transcript and its turn's answer: the
+ * tokens the answer gave, and the cost its last `usage_update` did, marked
+ * when chord worked it out; none when its agent reported neither.
+ */
+export function taskSpent(
+  transcript: Transcript,
+  tokens: TokenUsage | undefined,
+): TaskSpent | undefined {
+  const { usage } = transcript;
+  const spent: TaskSpent = {
+    ...(tokens === undefined ? {} : { tokens }),
+    ...(usage?.cost === undefined ? {} : { cost: usage.cost }),
+    ...(usage?.cost !== undefined && usage.estimated?.includes('cost')
+      ? { estimated: true as const }
+      : {}),
+  };
+
+  return Object.keys(spent).length === 0 ? undefined : spent;
 }
 
 /** What a task does to its parent, which `Conversation` gives it. */
@@ -238,6 +264,8 @@ export class TaskAgent {
   #ended = false;
   /** The parent cancelled it: it ends `cancelled` and sends no report. */
   #stopped = false;
+  /** Its turn's tokens, as the answer to its prompt gave them. */
+  #tokens: TokenUsage | undefined;
 
   constructor(start: TaskStart, parent: TaskParent, now: () => number) {
     this.start = start;
@@ -363,6 +391,8 @@ export class TaskAgent {
 
         const { result } = event;
 
+        this.#tokens = result.status === 'failed' ? undefined : result.usage;
+
         return result.status === 'failed'
           ? this.#end('failed', result.error.message)
           : result.status === 'cancelled'
@@ -429,7 +459,12 @@ export class TaskAgent {
     this.#parent.relay({
       type: 'update',
       turnId: '',
-      update: taskUpdate(this.id, state),
+      update: taskUpdate(
+        this.id,
+        state,
+        undefined,
+        taskSpent(this.#transcript, this.#tokens),
+      ),
       at: this.#now(),
     });
 

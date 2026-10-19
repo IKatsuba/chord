@@ -4,16 +4,19 @@
  * adapters word it.
  */
 import type {
+  Cost,
   SessionUpdate,
   StateUpdate,
   SubagentUpdate,
 } from '@agentclientprotocol/sdk';
+import type { TokenUsage } from '../usage.ts';
 import {
   emptyTranscript,
   type Entry,
   type Subagent,
   type SubagentState,
   type TaskInfo,
+  type TaskSpent,
   type Transcript,
   type TranscriptAction,
 } from './types.ts';
@@ -270,8 +273,11 @@ function patched(
 
   // chord says a task's effort once it is up, after the block is drawn.
   const taskTold = taskOf(update);
-  const task =
+  const spent = spentOf(update);
+  const known =
     taskTold === undefined ? subagent.task : { ...subagent.task, ...taskTold };
+  const task =
+    known === undefined || spent === undefined ? known : { ...known, spent };
 
   return {
     ...kept,
@@ -305,6 +311,31 @@ function patched(
  * its name, runtime and model, which no adapter's subagent has.
  */
 export const TASK_META = 'chord/task';
+
+/** Where a task's ending `subagent_update` carries what it spent (CHD-373). */
+export const TASK_SPENT_META = 'chord/spent';
+
+/** What a task's ending update says it spent; none when it says nothing. */
+function spentOf(update: SubagentUpdate): TaskSpent | undefined {
+  const meta = update._meta?.[TASK_SPENT_META];
+
+  if (typeof meta !== 'object' || meta === null) {
+    return undefined;
+  }
+
+  const { tokens, cost, estimated } = meta as Record<string, unknown>;
+  const spent: TaskSpent = {
+    ...(typeof tokens === 'object' && tokens !== null
+      ? { tokens: tokens as TokenUsage }
+      : {}),
+    ...(typeof cost === 'object' && cost !== null
+      ? { cost: cost as Cost }
+      : {}),
+    ...(estimated === true ? { estimated } : {}),
+  };
+
+  return Object.keys(spent).length === 0 ? undefined : spent;
+}
 
 /** The task a `subagent_update` describes, when chord sent it for one. */
 function taskOf(update: SubagentUpdate): TaskInfo | undefined {

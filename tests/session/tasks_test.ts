@@ -298,3 +298,79 @@ test("a team agent's first prompt has its team part ahead of the message, and re
   });
   expect(unwrapMessage(lead)?.text).toStrictEqual('The job.');
 });
+
+test("a task's ending update carries what it spent: its turn's tokens and its last cost, marked when chord estimated it (CHD-373)", () => {
+  const ending = (
+    estimated: boolean,
+    tokens = { inputTokens: 1000, outputTokens: 200, totalTokens: 2000 },
+  ) => {
+    const { task, relayed } = harness();
+
+    task.heard(MODELS);
+    task.heard({ type: 'connected', sessionId: 's1' });
+    task.heard({ type: 'prompt', turnId: 'r1', text: 'taskchild', at: 1 });
+    task.heard({
+      type: 'update',
+      turnId: 'r1',
+      update: {
+        sessionUpdate: 'usage_update',
+        used: 2000,
+        size: 200_000,
+        cost: { amount: 0.0125, currency: 'USD' },
+        ...(estimated ? { _meta: { 'chord/filled': ['cost'] } } : {}),
+      },
+    });
+    task.heard({
+      type: 'result',
+      turnId: 'r1',
+      result: { status: 'completed', stopReason: 'end_turn', usage: tokens },
+    });
+
+    const last = relayed.at(-1);
+
+    return last?.type === 'update' ? last.update : undefined;
+  };
+
+  expect(ending(false)).toMatchObject({
+    sessionUpdate: 'subagent_update',
+    state: { state: 'completed' },
+    _meta: {
+      'chord/spent': {
+        tokens: { inputTokens: 1000, outputTokens: 200, totalTokens: 2000 },
+        cost: { amount: 0.0125, currency: 'USD' },
+      },
+    },
+  });
+  // The agent's own cost is not marked as chord's.
+  expect(JSON.stringify(ending(false))).not.toContain('estimated');
+  // A cost chord worked out says so.
+  expect(ending(true)).toMatchObject({
+    _meta: {
+      'chord/spent': { cost: { amount: 0.0125 }, estimated: true },
+    },
+  });
+});
+
+test('a task whose agent reported nothing ends with nothing said of its spend (CHD-373)', () => {
+  const { task, relayed } = harness();
+
+  task.heard(MODELS);
+  task.heard({ type: 'connected', sessionId: 's1' });
+  task.heard({ type: 'prompt', turnId: 'r1', text: 'taskchild', at: 1 });
+  task.heard({
+    type: 'result',
+    turnId: 'r1',
+    result: { status: 'completed', stopReason: 'end_turn' },
+  });
+
+  expect(relayed.at(-1)).toStrictEqual({
+    type: 'update',
+    turnId: '',
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'task-1',
+      state: { state: 'completed' },
+    },
+    at: 42,
+  });
+});

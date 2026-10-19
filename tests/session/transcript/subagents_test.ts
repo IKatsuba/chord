@@ -462,3 +462,43 @@ describe('CHD-2 tester: completion crossing a stop', () => {
     expect(only(again, 'a').endedAt).toBeUndefined();
   });
 });
+
+test("a task's block keeps what its ending update says it spent, beside its task (CHD-373)", () => {
+  const update = (meta: Record<string, unknown>, state: string) => ({
+    type: 'update' as const,
+    turnId: 't1',
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'task-1',
+      state: { state },
+      _meta: meta,
+    } as SessionUpdate,
+    at: 0,
+  });
+  const ended = fold([
+    { type: 'prompt', turnId: 't1', text: 'task', at: 0 },
+    update({ 'chord/task': { name: 'Fix it', runtime: 'fake' } }, 'running'),
+    update(
+      {
+        'chord/spent': {
+          tokens: { inputTokens: 1000, totalTokens: 2000 },
+          cost: { amount: 0.0125, currency: 'USD' },
+          estimated: true,
+        },
+      },
+      'completed',
+    ),
+  ]);
+  const block = ended.entries.find((entry) => entry.kind === 'subagent');
+
+  assert(block?.kind === 'subagent');
+  expect(block.subagent.task).toStrictEqual({
+    name: 'Fix it',
+    runtime: 'fake',
+    spent: {
+      tokens: { inputTokens: 1000, totalTokens: 2000 },
+      cost: { amount: 0.0125, currency: 'USD' },
+      estimated: true,
+    },
+  });
+});

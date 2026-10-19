@@ -184,6 +184,19 @@ export interface TaskInfo {
    * resumed: how much it did is not known.
    */
   readonly workLost?: boolean;
+  /** What it spent, as its agent reported it, once it has ended (CHD-373). */
+  readonly spent?: TaskSpent;
+}
+
+/**
+ * A task agent's spend: its turn's tokens as the answer to its prompt gave
+ * them, and its cost as its last `usage_update` did, `estimated` when chord
+ * worked that cost out. What its agent did not report is left out.
+ */
+export interface TaskSpent {
+  readonly tokens?: TokenUsage;
+  readonly cost?: Cost;
+  readonly estimated?: true;
 }
 
 /**

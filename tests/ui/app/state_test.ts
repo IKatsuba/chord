@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   type AppAction,
   type AppState,
@@ -806,4 +806,30 @@ test("a session /clear lets go is held under a key of its own, takes its running
   // The tab goes on with the new session, which spent nothing.
   expect(window.sessions[1]?.sessionId).toBe('new');
   expect(window.sessions[1]?.spent?.costs).toBe(undefined);
+});
+
+describe('CHD-373 S3c tester: settled window spend survives session replacement', () => {
+  test('clearing the front session keeps the cost of sessions already retired', () => {
+    const kept = {
+      sessionId: 'earlier',
+      tab: 1,
+      part: {
+        name: 'main',
+        kind: 'main' as const,
+        ended: true as const,
+        figure: { cost: { amount: 0.02, currency: 'USD' } },
+      },
+    };
+    const before = reduceWindowed(windowed(initialAppState, 1), {
+      type: 'spend_kept',
+      kept,
+    });
+    const after = reduceWindowed(before, {
+      type: 'in_session',
+      key: 1,
+      action: { type: 'cleared' },
+    });
+
+    expect(after.window.keptSpend).toEqual([kept]);
+  });
 });

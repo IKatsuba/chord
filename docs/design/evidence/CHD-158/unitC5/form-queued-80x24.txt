@@ -1,0 +1,24 @@
+
+ ››› Waiting for your input… (4s)
+ › after your answer: then deploy it to staging
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ main asks for input · between turns                                          │
+│ Set up the deploy target                                                     │
+│                                                                              │
+│   * Project name                                                             │
+│                    Lowercase, dashes allowed                                 │
+│     Contact email  not set                                                   │
+│   ✔ Replicas       2                                                         │
+│     Traffic share  not set                                                   │
+│   ✔ Public         ☐ No                                                      │
+│   * Region         not set                                                   │
+│   … 3 more lines                                                             │
+│                                                                              │
+│ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● input · ctrl+x a to answer   Fake Large with a 1M context window · 1% used

@@ -112,6 +112,12 @@ export type ConversationEvent =
    */
   | ({ readonly type: 'usage' } & TurnFigures)
   /**
+   * The figures of a turn of a session `/clear` or a resume let go, at its
+   * end as it was cancelled, or a cost it said after: the session gone, it
+   * is still what it spent (CHD-373 S3c).
+   */
+  | ({ readonly type: 'retired_usage' } & TurnFigures)
+  /**
    * The agent's config options other than its mode and model, when they
    * differ from the last reported.
    */
@@ -342,6 +348,14 @@ export class Conversation {
   #cycle: string | undefined;
   /** The session on screen's turns' costs, since it opened. */
   #costs: TurnCosts | undefined;
+  /**
+   * The sessions `clear` let go while a turn of theirs ran, until they close:
+   * their turns' costs, and that turn's end, which their close waits for.
+   */
+  readonly #retired = new Map<
+    Session,
+    { readonly costs: TurnCosts; readonly ended: PromiseWithResolvers<void> }
+  >();
   /** When the last turn or cycle ended, on `performance.now()`'s clock. */
   #endedAt = 0;
   /**
@@ -569,12 +583,64 @@ export class Conversation {
    * the agent forgets the conversation, and the transcript starts empty. The
    * old agent is closed alongside; a turn in it ends with it.
    */
-  clear(): void {
+  /**
+   * Lets the session go and opens a new one. A turn of the old one still
+   * running is cancelled, and the old one closes once that turn has ended,
+   * or after `SETTLE_LIMIT_MS`, so what it cost to the end is said
+   * (`retired_usage`) and kept in its record; settles when it has closed.
+   */
+  clear(): Promise<void> {
     const opening = this.#opening;
 
     if (!opening || this.#closing) {
-      return;
+      return Promise.resolve();
     }
+
+    const old = this.#session;
+    const turn = this.#turn;
+    const cycle = this.#cycle;
+    const ended = Promise.withResolvers<void>();
+
+    if (old !== undefined && this.#costs !== undefined && turn !== undefined) {
+      // Cancelled as an interrupt cancels it; its end says what it cost.
+      this.#retired.set(old, { costs: this.#costs, ended });
+      turn.turn.cancel().catch(() => {
+        // The turn may settle before the cancel lands; its result says so.
+      });
+    } else {
+      ended.resolve();
+    }
+
+    // The agent's own cycle has no prompt to wait on: told to stop, it is
+    // over now, what it said it cost with it.
+    if (old !== undefined && turn === undefined && cycle !== undefined) {
+      old.cancel().catch(() => {
+        // The cycle may have ended before the cancel landed.
+      });
+    }
+
+    const cycleCost =
+      old !== undefined && turn === undefined && cycle !== undefined
+        ? this.#costs?.ended(cycle, undefined, old.models()?.current)
+        : undefined;
+
+    // Once its turn has ended, or the agent has had its time to end it; the
+    // time given up on then, so no timer outlives it.
+    const limit = new AbortController();
+    const settled = Promise.race([
+      ended.promise,
+      delay(SETTLE_LIMIT_MS, undefined, { signal: limit.signal }).catch(
+        () => {},
+      ),
+    ]).finally(() => limit.abort());
+    const retired = settled
+      .then(() => opening)
+      .then((session) => session?.close())
+      .finally(() => {
+        if (old !== undefined) {
+          this.#retired.delete(old);
+        }
+      });
 
     this.#opening = undefined;
     this.#session = undefined;
@@ -633,13 +699,17 @@ export class Conversation {
     this.#monitorCount = 0;
 
     this.#emit({ type: 'cleared' });
+
+    // After `cleared`, so the record has it as the session it let go.
+    if (cycleCost !== undefined) {
+      this.#emit({ type: 'retired_usage', ...cycleCost });
+    }
+
     this.#retiring.push(
-      opening
-        .then((session) => session?.close())
-        .then(
-          () => undefined,
-          (error: unknown) => error,
-        ),
+      retired.then(
+        () => undefined,
+        (error: unknown) => error,
+      ),
       ...tasks.map((task) =>
         task.close().then(
           () => undefined,
@@ -649,6 +719,11 @@ export class Conversation {
       monitors,
     );
     this.start();
+
+    return retired.then(
+      () => {},
+      () => {},
+    );
   }
 
   /**
@@ -2308,6 +2383,15 @@ export class Conversation {
     subagentId: string | undefined,
   ): void {
     if (!this.#current(session)) {
+      // A session let go: a cost it says still counts, as its own.
+      const retired =
+        subagentId === undefined ? this.#retired.get(session) : undefined;
+      const late = retired?.costs.heardLast(update);
+
+      if (late !== undefined) {
+        this.#emit({ type: 'retired_usage', ...late });
+      }
+
       return;
     }
 
@@ -2780,8 +2864,9 @@ export class Conversation {
     this.#withdrawAsks();
     ended({ type: 'result', turnId, result });
 
+    const retired = this.#retired.get(session);
     const figures = went
-      ? this.#costs?.ended(
+      ? (retired?.costs ?? this.#costs)?.ended(
           turnId,
           result.status !== 'failed' ? result.usage : undefined,
           session.models()?.current,
@@ -2790,9 +2875,13 @@ export class Conversation {
         ? { turnId, usage: result.usage }
         : undefined;
 
-    if (figures !== undefined) {
+    if (figures !== undefined && retired !== undefined) {
+      this.#emit({ type: 'retired_usage', ...figures });
+    } else if (figures !== undefined) {
       ended({ type: 'usage', ...figures });
     }
+
+    retired?.ended.resolve();
 
     await this.#advance(session);
   }

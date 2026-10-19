@@ -295,6 +295,20 @@ export function useSessions(
   /** Where the session in front works. */
   const frontPlace = () => placeOf(sessions.tabs.front);
   const heard = (key: number, event: ConversationEvent, wait?: Wait) => {
+    // A session the tab let go said what a turn of its cost: it is kept
+    // where that session is (CHD-373 S3c).
+    if (event.type === 'retired_usage') {
+      const { type: _, ...figures } = event;
+
+      dispatch({
+        type: 'retired_heard',
+        from: key,
+        event: { type: 'usage', ...figures },
+      });
+
+      return;
+    }
+
     dispatch({ type: 'in_session', key, action: event });
     host.notify(wait, notifiedName(sessions.tabs, key) ?? agent);
   };
@@ -1276,8 +1290,13 @@ export function useSessions(
    * a cancelled turn's end among them, until `settled` is called with its
    * close, or at once with none (CHD-373).
    */
-  const keepSpend = (key: number, place: KeptPlace) => {
-    dispatch({ type: 'spend_closing', key, place });
+  const keepSpend = (key: number, place: KeptPlace, from?: number) => {
+    dispatch({
+      type: 'spend_closing',
+      key,
+      place,
+      ...(from === undefined ? {} : { from }),
+    });
 
     return (closed?: Promise<unknown>) => {
       const kept = () => dispatch({ type: 'spend_closed', key });
@@ -1289,6 +1308,11 @@ export function useSessions(
       }
     };
   };
+
+  // Keys of the sessions a tab let go, held as they close, apart from every
+  // session's own, which count up from one.
+  const retiredKeys = useRef(0);
+  const retiredKey = () => --retiredKeys.current;
 
   /** Holds what a child of tab `tab` spent, by its team, as it closes. */
   const keepChild = (
@@ -2146,17 +2170,17 @@ export function useSessions(
       dropChild(child.key);
     }
 
-    // Its session goes; what it spent still counts.
+    // Its session goes; what it spent still counts, its turn running too,
+    // to that turn's end.
     if (tab !== undefined) {
-      keepSpend(tab.key, {
-        tab: tab.key,
-        name: 'main',
-        kind: 'main',
-        agent: tab.agent,
-      })();
+      keepSpend(
+        retiredKey(),
+        { tab: tab.key, name: 'main', kind: 'main', agent: tab.agent },
+        tab.key,
+      )(conversationAt(tab.key)?.clear());
+    } else {
+      void conversation()?.clear();
     }
-
-    conversation()?.clear();
 
     return undefined;
   };
@@ -2745,16 +2769,16 @@ export function useSessions(
     }
 
     if (tab !== undefined) {
-      keepSpend(tab.key, {
-        tab: tab.key,
-        name: 'main',
-        kind: 'main',
-        agent: tab.agent,
-      })();
+      const kept = keepSpend(
+        retiredKey(),
+        { tab: tab.key, name: 'main', kind: 'main', agent: tab.agent },
+        tab.key,
+      );
+
       sessions.pick(tab.key);
       showFront();
       resuming.current.set(tab.key, chosen);
-      conversationAt(tab.key)?.clear();
+      kept(conversationAt(tab.key)?.clear());
     }
   };
 

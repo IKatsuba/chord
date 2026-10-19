@@ -584,6 +584,9 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         ? started
         : { ...started, models: action.models };
     }
+    // An earlier session's, which the window keeps where it was let go.
+    case 'retired_usage':
+      return state;
     case 'usage': {
       const { type: _, turnId, usage, model: __, ...cost } = action;
 
@@ -982,6 +985,20 @@ export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
 interface Closing {
   readonly session: SessionState;
   readonly place: KeptPlace;
+  /** The tab `/clear` or a resume let it go from, whose key goes on. */
+  readonly from?: number;
+}
+
+/** Whether `session` had turn `turnId`: drawn, or running. */
+function hadTurn(session: SessionState, turnId: string): boolean {
+  const { transcript } = session;
+
+  return (
+    (transcript.turn.status !== 'idle' && transcript.turn.turnId === turnId) ||
+    transcript.entries.some(
+      (entry) => 'turnId' in entry && entry.turnId === turnId,
+    )
+  );
 }
 
 /** What `session` spent, kept at `place` (CHD-373, Q59). */
@@ -1026,6 +1043,20 @@ export type WindowedAction =
       readonly type: 'spend_closing';
       readonly key: number;
       readonly place: KeptPlace;
+      /**
+       * The tab whose session it is, when that tab goes on with another:
+       * `key` is then the closing's own (CHD-373 S3c).
+       */
+      readonly from?: number;
+    }
+  /**
+   * What a session `/clear` or a resume let go from tab `from` said of a
+   * turn of its after: to the one of those that had the turn.
+   */
+  | {
+      readonly type: 'retired_heard';
+      readonly from: number;
+      readonly event: AppAction & { readonly turnId: string };
     }
   /** An event a closing session reported after it left the window. */
   | {
@@ -1099,7 +1130,7 @@ export function reduceWindowed(
         },
       };
     case 'spend_closing': {
-      const session = state.sessions[action.key];
+      const session = state.sessions[action.from ?? action.key];
 
       return session === undefined
         ? state
@@ -1107,9 +1138,28 @@ export function reduceWindowed(
             ...state,
             closing: {
               ...state.closing,
-              [action.key]: { session, place: action.place },
+              [action.key]: {
+                session,
+                place: action.place,
+                ...(action.from === undefined ? {} : { from: action.from }),
+              },
             },
           };
+    }
+    case 'retired_heard': {
+      const key = Object.entries(state.closing ?? {}).find(
+        ([, closing]) =>
+          closing.from === action.from &&
+          hadTurn(closing.session, action.event.turnId),
+      )?.[0];
+
+      return key === undefined
+        ? state
+        : reduceWindowed(state, {
+            type: 'closing_heard',
+            key: Number(key),
+            event: action.event,
+          });
     }
     case 'closing_heard': {
       const closing = state.closing?.[action.key];

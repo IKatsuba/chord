@@ -217,6 +217,14 @@ export class TurnCosts {
   }
 
   /**
+   * As `heard`, under the turn or cycle that began last: for a session let
+   * go, whose updates no turn of the window's takes any more (CHD-373 S3c).
+   */
+  heardLast(update: SessionUpdate): TurnFigures | undefined {
+    return this.heard(this.#turn?.id ?? '', update);
+  }
+
+  /**
    * A turn or cycle ended, with the tokens its answer gave and the model it
    * was on: its figures, always for one with tokens, else only when it has a
    * cost to say.

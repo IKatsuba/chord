@@ -747,3 +747,63 @@ test('a closing session is held as it was, takes its last events in, and is kept
     },
   ]);
 });
+
+test("a session /clear lets go is held under a key of its own, takes its running turn's end, and is kept once it has closed, as the tab goes on (CHD-373 S3c)", () => {
+  const cost = { amount: 0.01, currency: 'USD' };
+  const window = (
+    [
+      {
+        type: 'in_session',
+        key: 1,
+        action: { type: 'connected', sessionId: 'old' },
+      },
+      {
+        type: 'in_session',
+        key: 1,
+        action: { type: 'prompt', turnId: 't', text: 'go', at: 1 },
+      },
+      {
+        type: 'spend_closing',
+        key: -1,
+        from: 1,
+        place: { tab: 1, name: 'main', kind: 'main', agent: 'fake' },
+      },
+      { type: 'in_session', key: 1, action: { type: 'cleared' } },
+      {
+        type: 'in_session',
+        key: 1,
+        action: { type: 'connected', sessionId: 'new' },
+      },
+      // Not this session's turn: nowhere.
+      {
+        type: 'retired_heard',
+        from: 1,
+        event: { type: 'usage', turnId: 'other', usage: {}, cost },
+      },
+      {
+        type: 'retired_heard',
+        from: 1,
+        event: { type: 'usage', turnId: 't', usage: {}, cost },
+      },
+      { type: 'spend_closed', key: -1 },
+    ] satisfies WindowedAction[]
+  ).reduce(reduceWindowed, windowed(initialAppState, 1));
+
+  expect(window.window.keptSpend).toStrictEqual([
+    {
+      sessionId: 'old',
+      tab: 1,
+      part: {
+        name: 'main',
+        kind: 'main',
+        agent: 'fake',
+        figure: { cost },
+        ended: true,
+      },
+    },
+  ]);
+  expect(window.closing).toStrictEqual({});
+  // The tab goes on with the new session, which spent nothing.
+  expect(window.sessions[1]?.sessionId).toBe('new');
+  expect(window.sessions[1]?.spent?.costs).toBe(undefined);
+});

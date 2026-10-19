@@ -960,3 +960,104 @@ describe('CHD-373 S3b tester: legacy zero is a reported baseline', () => {
     ]);
   });
 });
+
+describe('CHD-373 S3c: a turn running as its session is let go', () => {
+  /** A conversation on the fake as Claude, recorded, and what it reports. */
+  function opened(dir: string) {
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(join(dir, 'state'), () => {});
+
+    const conversation = new Conversation(
+      (signal) =>
+        openSession({
+          agent: 'claude',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(),
+          signal,
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+    const until = async (check: () => boolean) => {
+      while (!check()) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    };
+
+    conversation.start();
+
+    return { events, recording, conversation, until };
+  }
+
+  test("/clear cancels the running turn, and its end, its cost said so far with it, goes into that session's record and is reported apart, once the old session has closed", () =>
+    withDir(async (dir) => {
+      const { events, recording, conversation, until } = opened(dir);
+
+      try {
+        await until(() => events.some((event) => event.type === 'connected'));
+        conversation.send('costwait', 'costwait');
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'update' &&
+              event.update.sessionUpdate === 'usage_update',
+          ),
+        );
+
+        const turn = events.find((event) => event.type === 'prompt');
+        const record = recording.path!;
+
+        assert(turn?.type === 'prompt');
+        await conversation.clear();
+
+        const cleared = events.findIndex((event) => event.type === 'cleared');
+        const retired = events.filter(
+          (event) => event.type === 'retired_usage',
+        );
+
+        // After the clear, as the old session's, never as the new one's.
+        expect(retired).toStrictEqual([
+          {
+            type: 'retired_usage',
+            turnId: turn.turnId,
+            usage: {},
+            model: 'fake-large',
+            cost: { amount: 0.01, currency: 'USD' },
+          },
+        ]);
+        expect(events.indexOf(retired[0]!)).toBeGreaterThan(cleared);
+        expect(events.some((event) => event.type === 'usage')).toBeFalsy();
+
+        await recording.flushed();
+        expect(costs(await readPast(record))).toStrictEqual([
+          { model: 'fake-large', cost: { amount: 0.01, currency: 'USD' } },
+        ]);
+      } finally {
+        await conversation.close();
+      }
+    }));
+
+  test('a session cleared with no turn running is let go at once, and says nothing of cost', () =>
+    withDir(async (dir) => {
+      const { events, conversation, until } = opened(dir);
+
+      try {
+        await until(() => events.some((event) => event.type === 'connected'));
+        conversation.send('text', 'text');
+        await until(() => events.some((event) => event.type === 'result'));
+
+        const started = performance.now();
+
+        await conversation.clear();
+
+        expect(performance.now() - started).toBeLessThan(2000);
+        expect(
+          events.some((event) => event.type === 'retired_usage'),
+        ).toBeFalsy();
+      } finally {
+        await conversation.close();
+      }
+    }));
+});

@@ -968,6 +968,13 @@ export class FileRecording implements Recording {
   #flushing = false;
   #reported = false;
   readonly #child: Child | undefined;
+  /** The turn or cycle the session on screen began last. */
+  #lastTurn: string | undefined;
+  /**
+   * The records of sessions `/clear` let go, by the turn each was in, which
+   * may still say what it cost (CHD-373 S3c).
+   */
+  readonly #retired = new Map<string, string>();
 
   /**
    * `failed` hears, once, why a record could not be written; the session goes
@@ -1048,6 +1055,11 @@ export class FileRecording implements Recording {
     }
 
     this.#begun();
+
+    if (into === undefined) {
+      this.#lastTurn = turnId;
+    }
+
     this.#add({
       type: 'prompt',
       turnId,
@@ -1062,9 +1074,21 @@ export class FileRecording implements Recording {
   }
 
   heard(event: ConversationEvent): void {
+    if (event.type === 'retired_usage') {
+      this.#retiredUsage(event);
+
+      return;
+    }
+
     if (event.type === 'cleared') {
+      // Its last turn may still say what it cost, into this record.
+      if (this.#path !== undefined && this.#lastTurn !== undefined) {
+        this.#retired.set(this.#lastTurn, this.#path);
+      }
+
       // The session it was let go for is opened next, and says so.
       this.#path = undefined;
+      this.#lastTurn = undefined;
       this.#held = [];
 
       this.#asking.clear();
@@ -1084,6 +1108,8 @@ export class FileRecording implements Recording {
     // turn is, though nobody sent one.
     if (event.type === 'cycle_started') {
       this.#begun();
+
+      this.#lastTurn = event.turnId;
     }
 
     const entry =
@@ -1137,6 +1163,25 @@ export class FileRecording implements Recording {
               }
           : answer,
     };
+  }
+
+  /** A let-go session's turn's figures, into that session's record. */
+  #retiredUsage(
+    event: Extract<ConversationEvent, { type: 'retired_usage' }>,
+  ): void {
+    const path = this.#retired.get(event.turnId);
+
+    if (path === undefined) {
+      return;
+    }
+
+    const { type: _, ...figures } = event;
+
+    this.#queue.push({
+      path,
+      line: `${JSON.stringify({ type: 'usage', ...figures })}\n`,
+    });
+    this.#flush();
   }
 
   /** Work began in the session: what was held for it is kept from now. */

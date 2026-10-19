@@ -196,7 +196,8 @@ function RunningTeam({
           </Under>
         ),
       )}
-      <box height={1} flexShrink={1} />
+      {/* Held: the report sits in the scrolling transcript (CHD-471). */}
+      <box height={1} flexShrink={0} />
       {runningTable(team, run.agents, width).map((line, index) => {
         const {
           text,

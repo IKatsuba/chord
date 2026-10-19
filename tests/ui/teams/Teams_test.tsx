@@ -401,4 +401,13 @@ test('/team show of a running team at 80 columns cuts nothing: the job wraps, an
     await window.shows('tester  fake · fake-small  acceptEdits  ● permission');
     await window.shows('        Bash(deno task test tests/parse)');
     expect(window.frame()).not.toMatch(/working \d+s on ".*…/);
+
+    // A blank line between the header and the table, however short the frame.
+    const lines = window.frame().split('\n');
+    const end = lines.findIndex((line) =>
+      line.includes('the end of a line lose their closing quote"'),
+    );
+
+    expect(lines[end + 1]!.trim()).toBe('');
+    expect(lines[end + 2]).toMatch(/^ +lead {4}fake/);
   }));

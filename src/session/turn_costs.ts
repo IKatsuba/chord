@@ -220,6 +220,11 @@ export class TurnCosts {
    * As `heard`, under the turn or cycle that began last: for a session let
    * go, whose updates no turn of the window's takes any more (CHD-373 S3c).
    */
+  /** The turn or cycle that began last, by its id. */
+  get lastTurn(): string | undefined {
+    return this.#turn?.id;
+  }
+
   heardLast(update: SessionUpdate): TurnFigures | undefined {
     return this.heard(this.#turn?.id ?? '', update);
   }

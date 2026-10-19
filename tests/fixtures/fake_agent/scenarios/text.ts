@@ -16,6 +16,25 @@ import { lifetime, pause, type Play } from '../turn.ts';
 /** How many items the `long` scenario's list has. */
 const LONG_LINES = 200;
 
+/**
+ * Reports the session's cost so far, then works on until it is cancelled, as
+ * a turn a person closes while it runs (CHD-373).
+ */
+const costWait: Play = async (turn) => {
+  await turn.send({
+    sessionUpdate: 'usage_update',
+    used: 1200,
+    size: 200000,
+    cost: { amount: 0.01, currency: 'USD' },
+  });
+  await turn.say('Working until stopped.');
+  turn.signal.throwIfAborted();
+  await once(turn.signal, 'abort', { signal: lifetime.signal });
+  turn.signal.throwIfAborted();
+
+  return 'end_turn';
+};
+
 export const TEXT = {
   async text(turn) {
     await turn.say('Hello', ', world', '. This reply', ' came in chunks.');
@@ -87,21 +106,32 @@ export const TEXT = {
     return 'end_turn';
   },
 
-  // Reports the session's cost so far, then works on until it is
-  // cancelled, as a turn a person closes while it runs (CHD-373).
-  async costwait(turn) {
-    await turn.send({
-      sessionUpdate: 'usage_update',
-      used: 1200,
-      size: 200000,
-      cost: { amount: 0.01, currency: 'USD' },
-    });
-    await turn.say('Working until stopped.');
-    turn.signal.throwIfAborted();
-    await once(turn.signal, 'abort', { signal: lifetime.signal });
-    turn.signal.throwIfAborted();
+  costwait: costWait,
 
-    return 'end_turn';
+  // As `costwait`, and once cancelled, a cost of 0.02 after its answer, as
+  // Claude's adapter sends a turn's cost (CHD-373 S3c).
+  async costwaitlate(turn) {
+    try {
+      return await costWait(turn);
+    } finally {
+      if (turn.signal.aborted) {
+        setTimeout(() => {
+          turn.client
+            .notify('session/update', {
+              sessionId: turn.sessionId,
+              update: {
+                sessionUpdate: 'usage_update',
+                used: 1200,
+                size: 200000,
+                cost: { amount: 0.02, currency: 'USD' },
+              },
+            })
+            .catch(() => {
+              // The client went first.
+            });
+        }, 0);
+      }
+    }
   },
 
   async slow(turn) {

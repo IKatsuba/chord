@@ -295,22 +295,37 @@ export function useSessions(
   /** Where the session in front works. */
   const frontPlace = () => placeOf(sessions.tabs.front);
   const heard = (key: number, event: ConversationEvent, wait?: Wait) => {
-    // A session the tab let go said what a turn of its cost: it is kept
-    // where that session is (CHD-373 S3c).
-    if (event.type === 'retired_usage') {
-      const { type: _, ...figures } = event;
-
-      dispatch({
-        type: 'retired_heard',
-        from: key,
-        event: { type: 'usage', ...figures },
-      });
-
+    if (retiredHeard(key, event)) {
       return;
     }
 
     dispatch({ type: 'in_session', key, action: event });
     host.notify(wait, notifiedName(sessions.tabs, key) ?? agent);
+  };
+
+  /**
+   * What a session tab `key` let go said of a turn of its, from the tab
+   * open or closed since: kept where that session is held (CHD-373 S3c).
+   * Whether `event` was one.
+   */
+  const retiredHeard = (key: number, event: ConversationEvent): boolean => {
+    if (event.type === 'retired_update') {
+      return true;
+    }
+
+    if (event.type !== 'retired_usage') {
+      return false;
+    }
+
+    const { type: _, ...figures } = event;
+
+    dispatch({
+      type: 'retired_heard',
+      from: key,
+      event: { type: 'usage', ...figures },
+    });
+
+    return true;
   };
 
   // The sessions are made once and keep the first listener; this one reads
@@ -1462,8 +1477,11 @@ export function useSessions(
       new OpenSessions({
         conversation: conversationOf,
         heard: (key, event, wait) => hear.current(key, event, wait),
-        closingHeard: (key, event) =>
-          dispatch({ type: 'closing_heard', key, event }),
+        closingHeard: (key, event) => {
+          if (!retiredHeard(key, event)) {
+            dispatch({ type: 'closing_heard', key, event });
+          }
+        },
       }),
   );
   // What each runtime offers, read in each directory's place apart: its

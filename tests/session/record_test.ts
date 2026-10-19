@@ -963,16 +963,16 @@ describe('CHD-373 S3b tester: legacy zero is a reported baseline', () => {
 
 describe('CHD-373 S3c: a turn running as its session is let go', () => {
   /** A conversation on the fake as Claude, recorded, and what it reports. */
-  function opened(dir: string) {
+  function opened(dir: string, agent = 'claude', flags: string[] = []) {
     const events: ConversationEvent[] = [];
     const recording = new FileRecording(join(dir, 'state'), () => {});
 
     const conversation = new Conversation(
       (signal) =>
         openSession({
-          agent: 'claude',
+          agent,
           cwd: dir,
-          agentCommand: fakeAgentCommand(),
+          agentCommand: fakeAgentCommand(undefined, ...flags),
           signal,
         }),
       (event) => events.push(event),
@@ -1059,5 +1059,128 @@ describe('CHD-373 S3c: a turn running as its session is let go', () => {
       } finally {
         await conversation.close();
       }
+    }));
+
+  /** A turn of `scenario` with its cost seen, then /clear, settled. */
+  async function clearedIn(
+    dir: string,
+    scenario: string,
+    { agent = 'claude', flags = [] as string[], seen = 'usage_update' } = {},
+  ) {
+    const opening = opened(dir, agent, flags);
+    const { events, recording, conversation, until } = opening;
+
+    await until(() => events.some((event) => event.type === 'connected'));
+    conversation.send(scenario, scenario);
+    await until(() =>
+      events.some(
+        (event) =>
+          (seen === 'cycle_started' && event.type === 'cycle_started') ||
+          (event.type === 'update' && event.update.sessionUpdate === seen),
+      ),
+    );
+
+    const record = recording.path!;
+
+    await conversation.clear();
+    await recording.flushed();
+
+    return { ...opening, record };
+  }
+
+  test("a cost said after the cancelled turn's answer, as Claude's adapter says it, is still that turn's, and its record keeps the cost too", () =>
+    withDir(async (dir) => {
+      const { events, conversation, record } = await clearedIn(
+        dir,
+        'costwaitlate',
+      );
+
+      try {
+        expect(
+          events.flatMap((event) =>
+            event.type === 'retired_usage' ? [event.cost?.amount] : [],
+          ),
+        ).toStrictEqual([0.01, 0.02]);
+
+        const entries = await readPast(record);
+
+        expect(costs(entries)).toStrictEqual([
+          { model: 'fake-large', cost: { amount: 0.02, currency: 'USD' } },
+        ]);
+        expect(
+          entries.some(
+            (entry) =>
+              entry.type === 'update' &&
+              entry.update.sessionUpdate === 'usage_update' &&
+              entry.update.cost?.amount === 0.02,
+          ),
+        ).toBeTruthy();
+      } finally {
+        await conversation.close();
+      }
+    }));
+
+  test("an agent's own cycle cleared before the usage that ends it still counts that usage's cost, as its session's", () =>
+    withDir(async (dir) => {
+      const { events, conversation, record } = await clearedIn(
+        dir,
+        'claudecycle',
+        {
+          flags: ['--adapter', 'claude', '--cycle-cost', '0.005'],
+          seen: 'cycle_started',
+        },
+      );
+
+      try {
+        const cycle = events.find((event) => event.type === 'cycle_started');
+
+        expect(
+          events.filter((event) => event.type === 'retired_usage'),
+        ).toMatchObject([
+          {
+            turnId: cycle?.type === 'cycle_started' ? cycle.turnId : '',
+            cost: { amount: expect.closeTo(0.005, 9), currency: 'USD' },
+          },
+        ]);
+        expect(costs(await readPast(record)).at(-1)).toMatchObject({
+          cost: { amount: expect.closeTo(0.005, 9) },
+        });
+      } finally {
+        await conversation.close();
+      }
+    }));
+
+  test('a resumed session of an agent that keeps its cost with the session counts on from the cost its let-go turn said last', () =>
+    withDir(async (dir) => {
+      const { conversation, record } = await clearedIn(dir, 'costwaitlate', {
+        agent: 'kilo',
+      });
+
+      await conversation.close();
+
+      const [past] = await readRecords(join(dir, 'state')).then((all) =>
+        all.filter((each) => each.path === record),
+      );
+
+      assert(past !== undefined);
+      // The agent goes on from 0.02, as kilo would.
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(
+          undefined,
+          '--resume-only',
+          '--cost-from',
+          '0.02',
+        ),
+        prompts: ['text'],
+        agent: 'kilo',
+        resume: { sessionId: past.sessionId, cwd: dir, record },
+      });
+
+      expect(costs(await readPast(record))).toStrictEqual([
+        { model: 'fake-large', cost: { amount: 0.02, currency: 'USD' } },
+        turn(0.0125),
+      ]);
     }));
 });

@@ -56,7 +56,7 @@ import type {
   TurnResult,
 } from './transcript/types.ts';
 import { costCountOf } from '../cost_counts.ts';
-import { type TurnFigures, TurnCosts } from './turn_costs.ts';
+import { costReading, type TurnFigures, TurnCosts } from './turn_costs.ts';
 import { type CutCall, cutNote } from './cut_off.ts';
 import { chordCallOf, servedFor } from './transcript/chord.ts';
 import { mergeToolCall } from './transcript/tools.ts';
@@ -117,6 +117,15 @@ export type ConversationEvent =
    * is still what it spent (CHD-373 S3c).
    */
   | ({ readonly type: 'retired_usage' } & TurnFigures)
+  /**
+   * A cost a session `/clear` or a resume let go said after, under its last
+   * turn: its record keeps it, so a resume counts on from it (CHD-373 S3c).
+   */
+  | {
+      readonly type: 'retired_update';
+      readonly turnId: string;
+      readonly update: SessionUpdate;
+    }
   /**
    * The agent's config options other than its mode and model, when they
    * differ from the last reported.
@@ -285,6 +294,16 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * A session `/clear` or a resume let go, until it closes: its turns' costs,
+ * its running turn's end, and when it last said anything (CHD-373 S3c).
+ */
+interface Retired {
+  readonly costs: TurnCosts;
+  readonly ended: PromiseWithResolvers<void>;
+  heardAt: number;
+}
+
 /** How long the agent must be silent after an answer to have finished. */
 const QUIET_MS = 1000;
 /** How long the next queued prompt waits for that silence at most. */
@@ -352,10 +371,7 @@ export class Conversation {
    * The sessions `clear` let go while a turn of theirs ran, until they close:
    * their turns' costs, and that turn's end, which their close waits for.
    */
-  readonly #retired = new Map<
-    Session,
-    { readonly costs: TurnCosts; readonly ended: PromiseWithResolvers<void> }
-  >();
+  readonly #retired = new Map<Session, Retired>();
   /** When the last turn or cycle ended, on `performance.now()`'s clock. */
   #endedAt = 0;
   /**
@@ -599,16 +615,30 @@ export class Conversation {
     const old = this.#session;
     const turn = this.#turn;
     const cycle = this.#cycle;
-    const ended = Promise.withResolvers<void>();
+    const retiring: Retired | undefined =
+      old === undefined || this.#costs === undefined
+        ? undefined
+        : {
+            costs: this.#costs,
+            ended: Promise.withResolvers<void>(),
+            heardAt: this.#heardAt,
+          };
 
-    if (old !== undefined && this.#costs !== undefined && turn !== undefined) {
+    if (old !== undefined && retiring !== undefined) {
+      this.#retired.set(old, retiring);
+    }
+
+    // Nobody will answer what it asks: withdrawn now, as its close would,
+    // while its agent may still say what its turn cost.
+    old?.withdraw?.();
+
+    if (turn !== undefined) {
       // Cancelled as an interrupt cancels it; its end says what it cost.
-      this.#retired.set(old, { costs: this.#costs, ended });
       turn.turn.cancel().catch(() => {
         // The turn may settle before the cancel lands; its result says so.
       });
     } else {
-      ended.resolve();
+      retiring?.ended.resolve();
     }
 
     // The agent's own cycle has no prompt to wait on: told to stop, it is
@@ -624,16 +654,9 @@ export class Conversation {
         ? this.#costs?.ended(cycle, undefined, old.models()?.current)
         : undefined;
 
-    // Once its turn has ended, or the agent has had its time to end it; the
-    // time given up on then, so no timer outlives it.
-    const limit = new AbortController();
-    const settled = Promise.race([
-      ended.promise,
-      delay(SETTLE_LIMIT_MS, undefined, { signal: limit.signal }).catch(
-        () => {},
-      ),
-    ]).finally(() => limit.abort());
-    const retired = settled
+    const retired = (
+      retiring === undefined ? Promise.resolve() : this.#retirement(retiring)
+    )
       .then(() => opening)
       .then((session) => session?.close())
       .finally(() => {
@@ -724,6 +747,35 @@ export class Conversation {
       () => {},
       () => {},
     );
+  }
+
+  /**
+   * Until a session let go may close: its turn ended, then quiet for as
+   * long as a turn's tail gets, as a cost can come after the answer, or
+   * `SETTLE_LIMIT_MS` from now, whichever comes first.
+   */
+  async #retirement(retiring: Retired): Promise<void> {
+    const giveUp = performance.now() + SETTLE_LIMIT_MS;
+    const limit = new AbortController();
+
+    await Promise.race([
+      retiring.ended.promise,
+      delay(SETTLE_LIMIT_MS, undefined, { signal: limit.signal }).catch(
+        () => {},
+      ),
+    ]);
+    limit.abort();
+
+    for (;;) {
+      const wait =
+        Math.min(retiring.heardAt + QUIET_MS, giveUp) - performance.now();
+
+      if (wait <= 0) {
+        return;
+      }
+
+      await delay(wait);
+    }
   }
 
   /**
@@ -2383,14 +2435,7 @@ export class Conversation {
     subagentId: string | undefined,
   ): void {
     if (!this.#current(session)) {
-      // A session let go: a cost it says still counts, as its own.
-      const retired =
-        subagentId === undefined ? this.#retired.get(session) : undefined;
-      const late = retired?.costs.heardLast(update);
-
-      if (late !== undefined) {
-        this.#emit({ type: 'retired_usage', ...late });
-      }
+      this.#retiredHeard(session, update, subagentId);
 
       return;
     }
@@ -2431,6 +2476,43 @@ export class Conversation {
 
     if (subagentId === undefined && STATE_UPDATES.has(update.sessionUpdate)) {
       this.#report(session);
+    }
+  }
+
+  /**
+   * An update of a session let go: it keeps the session from closing until
+   * it is quiet, and a cost it says still counts, as its own, kept in its
+   * record so a resume counts on from it.
+   */
+  #retiredHeard(
+    session: Session,
+    update: SessionUpdate,
+    subagentId: string | undefined,
+  ): void {
+    const retired = this.#retired.get(session);
+
+    if (retired === undefined) {
+      return;
+    }
+
+    retired.heardAt = performance.now();
+
+    const turnId = retired.costs.lastTurn;
+
+    if (
+      subagentId !== undefined ||
+      turnId === undefined ||
+      costReading(update) === undefined
+    ) {
+      return;
+    }
+
+    this.#emit({ type: 'retired_update', turnId, update });
+
+    const late = retired.costs.heardLast(update);
+
+    if (late !== undefined) {
+      this.#emit({ type: 'retired_usage', ...late });
     }
   }
 
@@ -2831,6 +2913,14 @@ export class Conversation {
       this.#cut = [...cut, ...this.#cut];
     }
 
+    // A turn of a session let go: its end is its own, and touches nothing of
+    // the session that came after it.
+    if (this.#session !== session) {
+      this.#retiredEnded(session, turnId, went, result);
+
+      return;
+    }
+
     // The turn has answered: nothing goes into it any more, and a steer
     // waiting on the person's answer in it goes as the next turn.
     if (this.#current(session)) {
@@ -2864,9 +2954,8 @@ export class Conversation {
     this.#withdrawAsks();
     ended({ type: 'result', turnId, result });
 
-    const retired = this.#retired.get(session);
     const figures = went
-      ? (retired?.costs ?? this.#costs)?.ended(
+      ? this.#costs?.ended(
           turnId,
           result.status !== 'failed' ? result.usage : undefined,
           session.models()?.current,
@@ -2875,15 +2964,44 @@ export class Conversation {
         ? { turnId, usage: result.usage }
         : undefined;
 
-    if (figures !== undefined && retired !== undefined) {
-      this.#emit({ type: 'retired_usage', ...figures });
-    } else if (figures !== undefined) {
+    if (figures !== undefined) {
       ended({ type: 'usage', ...figures });
     }
 
-    retired?.ended.resolve();
-
     await this.#advance(session);
+  }
+
+  /**
+   * The end of a turn of a session `/clear` or a resume let go: what it
+   * cost, as that session's, and the quiet its close waits for from now.
+   */
+  #retiredEnded(
+    session: Session,
+    turnId: string,
+    went: boolean,
+    result: TurnResult,
+  ): void {
+    const retired = this.#retired.get(session);
+
+    if (retired === undefined) {
+      return;
+    }
+
+    const figures = went
+      ? retired.costs.ended(
+          turnId,
+          result.status !== 'failed' ? result.usage : undefined,
+          session.models()?.current,
+        )
+      : undefined;
+
+    if (figures !== undefined) {
+      this.#emit({ type: 'retired_usage', ...figures });
+    }
+
+    retired.heardAt = performance.now();
+
+    retired.ended.resolve();
   }
 }
 

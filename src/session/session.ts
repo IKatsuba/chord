@@ -313,6 +313,13 @@ export interface Session {
    * with `AgentExitError` if that exit cannot be seen even after a kill.
    */
   close(): Promise<void>;
+  /**
+   * Withdraws what the session still asks of the person, its permissions,
+   * forms and links, as its close does, and leaves it open for what its
+   * agent says after: a session `/clear` lets go, whose last turn may still
+   * say what it cost (CHD-373 S3c). A session that asks nothing has none.
+   */
+  withdraw?(): void;
 }
 
 export async function openSession(
@@ -715,6 +722,10 @@ export async function openSession(
       state = withOptions(state, answered.configOptions);
     },
     close: () => (closing ??= shutdown()),
+    withdraw: () => {
+      permissions.close();
+      elicitations.close();
+    },
   };
 }
 

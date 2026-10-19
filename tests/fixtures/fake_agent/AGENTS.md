@@ -7,7 +7,7 @@
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
   (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`,
-  `costwait`),
+  `costwait`, `costwaitlate`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `longresults`,
   `overlap`, `overlapfail`,
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
@@ -46,7 +46,7 @@
   `teamtask`,
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
-  `cancels`, `error`, `slow`, `long`, `costwait`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
+  `cancels`, `error`, `slow`, `long`, `costwait`, `costwaitlate`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
   `mcp`, `form`, `link`, `leftform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
@@ -176,7 +176,8 @@
   first prompt is its parent's message; and `--no-http` or `CHORD_FAKE_NO_HTTP=1` leaves HTTP out of its
   `mcpCapabilities`, so chord gives it no server of its own; `long` streams 200
   numbered lines about 100 ms apart, to scroll back through by hand;
-  `costwait` reports a cost, then works on until it is cancelled; `plan`
+  `costwait` reports a cost, then works on until it is cancelled, and
+  `costwaitlate` also says a cost of 0.02 just after its cancelled answer; `plan`
   moves its three steps along about 2 s apart, to see the list mid-turn;
   `proposal` sends Codex's proposed plan by id about 2 s a step: markdown
   rewritten then grown, a file plan, then the markdown one removed;

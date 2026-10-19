@@ -1074,8 +1074,8 @@ export class FileRecording implements Recording {
   }
 
   heard(event: ConversationEvent): void {
-    if (event.type === 'retired_usage') {
-      this.#retiredUsage(event);
+    if (event.type === 'retired_usage' || event.type === 'retired_update') {
+      this.#retiredLine(event);
 
       return;
     }
@@ -1165,9 +1165,15 @@ export class FileRecording implements Recording {
     };
   }
 
-  /** A let-go session's turn's figures, into that session's record. */
-  #retiredUsage(
-    event: Extract<ConversationEvent, { type: 'retired_usage' }>,
+  /**
+   * What a let-go session said after: its turn's figures, and a cost it
+   * said, which a resume counts on from, into that session's record.
+   */
+  #retiredLine(
+    event: Extract<
+      ConversationEvent,
+      { type: 'retired_usage' | 'retired_update' }
+    >,
   ): void {
     const path = this.#retired.get(event.turnId);
 
@@ -1175,12 +1181,13 @@ export class FileRecording implements Recording {
       return;
     }
 
-    const { type: _, ...figures } = event;
+    const { type, ...rest } = event;
+    const entry: RecordEntry =
+      type === 'retired_update'
+        ? { type: 'update', turnId: event.turnId, update: event.update }
+        : { type: 'usage', ...(rest as TurnFigures) };
 
-    this.#queue.push({
-      path,
-      line: `${JSON.stringify({ type: 'usage', ...figures })}\n`,
-    });
+    this.#queue.push({ path, line: `${JSON.stringify(entry)}\n` });
     this.#flush();
   }
 

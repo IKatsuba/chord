@@ -343,6 +343,7 @@ const SCENARIOS = [
   'error',
   'slow',
   'costwait',
+  'costwaitlate',
   'long',
   'todos',
   'exitplan',

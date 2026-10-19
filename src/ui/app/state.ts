@@ -586,6 +586,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     }
     // An earlier session's, which the window keeps where it was let go.
     case 'retired_usage':
+    case 'retired_update':
       return state;
     case 'usage': {
       const { type: _, turnId, usage, model: __, ...cost } = action;

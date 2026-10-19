@@ -336,3 +336,133 @@ describe('CHD-373 S3b tester: session close wiring', () => {
       expect(figure()).toMatchObject({ cost: 0.01 });
     }));
 });
+
+describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', () => {
+  test("its turn's end, its last cost with it, is kept where it was let go, and nothing of it reaches the tab's next session", async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-spend-retire-'));
+    const server = serveChord();
+    const command = fakeAgentCommand();
+    const opened: Session[] = [];
+    let seen:
+      { all: WindowedState; drive: ReturnType<typeof useSessions> } | undefined;
+    const read = () => {
+      assert(seen);
+
+      return seen;
+    };
+
+    function Host() {
+      const [all, dispatch] = useReducer(
+        reduceWindowed,
+        windowed(initialAppState, 1),
+      );
+      const [, redraw] = useReducer((n: number) => n + 1, 0);
+      const drive = useSessions(
+        {
+          agent: 'fake',
+          agentCommand: command,
+          place: {
+            cwd: dir,
+            startupOf: (agent) =>
+              agent === 'fake' ? { agentCommand: command } : undefined,
+            mcpServers: [],
+            mcpIgnored: [],
+          },
+          stateDir: join(dir, 'state'),
+          readRecords,
+          open: async (options) => {
+            const session = await openSession(options);
+
+            opened.push(session);
+
+            return session;
+          },
+          resume: undefined,
+          resumes: undefined,
+          resumedFront: undefined,
+          resumedNote: undefined,
+          server,
+          runtimes: ['fake'],
+          home: undefined,
+          configHome: undefined,
+          onQuit: undefined,
+        },
+        {
+          all,
+          state: frontState(all),
+          dispatch,
+          redraw,
+          showDraft: () => {},
+          notify: () => {},
+          remember: () => {},
+          stopCommand: () => {},
+        },
+      );
+
+      seen = { all, drive };
+
+      return <text>Session retirement host</text>;
+    }
+
+    const drawn = await draw(<Host />);
+
+    try {
+      await until(
+        'main ready',
+        () => read().all.sessions[1]?.connection.status === 'ready',
+      );
+      // A second tab, so closing the first leaves the window open.
+      read().drive.openBeside();
+      await until(
+        'second ready',
+        () => read().all.sessions[2]?.connection.status === 'ready',
+      );
+      read().drive.sessions.pick(1);
+      read().drive.showFront();
+      await until('first in front', () => read().all.front === 1);
+
+      const conversation = read().drive.sessions.conversationOf(1);
+
+      assert(conversation);
+      conversation.send('costwaitlate');
+      await until(
+        'its cost so far',
+        () => read().all.sessions[1]?.transcript.usage?.cost?.amount === 0.01,
+      );
+
+      // Let go, and its tab gone at once, before the old turn has ended:
+      // what that turn says comes through the closed tab's events.
+      read().drive.clearFront(() => {});
+
+      const closed = read().drive.sessions.close(1);
+
+      await until(
+        'the let-go session kept',
+        () =>
+          read().all.window.keptSpend?.length === 1 &&
+          Object.keys(read().all.closing ?? {}).length === 0,
+      );
+      await closed;
+
+      const [kept] = read().all.window.keptSpend!;
+
+      // Its turn to its end, the late cost included, under its tab.
+      expect(kept).toMatchObject({
+        tab: 1,
+        part: { name: 'main', figure: { cost: { amount: 0.02 } } },
+      });
+      // Nothing of it reached the session the tab went on with.
+      expect(read().all.sessions[1]?.spent?.costs).toBe(undefined);
+    } finally {
+      await read().drive.sessions.closeAll();
+      await drawn.unmount();
+
+      for (const session of opened) {
+        await session.close();
+      }
+
+      await server.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+});

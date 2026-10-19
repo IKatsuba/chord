@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type {
   Entry,
   PermissionWait,
@@ -464,4 +464,82 @@ test("an ended task's group row gives its tokens way first, then its money, then
     ' · 2 tool uses · 13s',
     undefined,
   ]);
+});
+
+describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {
+  test('reported zero totals win over component counts, and zero estimated money remains visible', () => {
+    const ended = blockFold(
+      {
+        ...SPENT_TASK,
+        task: {
+          ...SPENT_TASK.task!,
+          spent: {
+            tokens: { totalTokens: 0, inputTokens: 100 },
+            cost: { amount: 0, currency: 'USD' },
+            estimated: true,
+          },
+        },
+      },
+      [],
+    );
+
+    expect(ended).toMatchObject({
+      kind: 'ended',
+      text: 'Done (2 tool uses · 0 tokens · ~$0.0000 · 13s)',
+    });
+  });
+
+  test('fallback token count includes every reported kind without inventing absent spend', () => {
+    expect(
+      blockFold(
+        {
+          ...SPENT_TASK,
+          task: {
+            ...SPENT_TASK.task!,
+            spent: {
+              tokens: {
+                inputTokens: 10,
+                outputTokens: 20,
+                cachedReadTokens: 30,
+                cachedWriteTokens: 40,
+                thoughtTokens: 50,
+              },
+            },
+          },
+        },
+        [],
+      ),
+    ).toMatchObject({ text: 'Done (2 tool uses · 150 tokens · 13s)' });
+    expect(
+      blockFold(
+        { ...SPENT_TASK, task: { name: 'No usage', runtime: 'fake' } },
+        [],
+      ),
+    ).toMatchObject({ text: 'Done (2 tool uses · 13s)' });
+  });
+
+  test('a shrinking estimated group row drops its model, tokens, money, then counts in that order', () => {
+    const task = {
+      ...SPENT_TASK,
+      task: {
+        ...SPENT_TASK.task!,
+        model: 'A deliberately long model',
+        spent: { ...SPENT_TASK.task!.spent!, estimated: true as const },
+      },
+    };
+    const rows = Array.from({ length: 199 }, (_, index) =>
+      groupRow(task, 200 - index),
+    );
+    const lostModel = rows.findIndex(
+      (row) => !row.headline.note?.includes('A deliberately long model'),
+    );
+    const lostTokens = rows.findIndex((row) => !row.counts?.includes('tokens'));
+    const lostMoney = rows.findIndex((row) => !row.counts?.includes('~$'));
+    const lostCounts = rows.findIndex((row) => row.counts === undefined);
+
+    expect(lostModel).toBeGreaterThan(0);
+    expect(lostModel).toBeLessThan(lostTokens);
+    expect(lostTokens).toBeLessThan(lostMoney);
+    expect(lostMoney).toBeLessThan(lostCounts);
+  });
 });

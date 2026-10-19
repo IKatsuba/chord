@@ -723,3 +723,31 @@ test("an ended task's row says its money after its state, which gives way after 
     expect.stringMatching(/task · fake +✗ failed after 15s · \$0\.0125/),
   );
 });
+
+describe('CHD-373 S2 tester: zero and absent money in background states', () => {
+  for (const group of ['done', 'failed', 'stopped'] as const) {
+    test(`${group} retains reported zero money while absent cost stays absent`, () => {
+      const item = task(
+        'zero',
+        'Zero cost',
+        { group, endedAt: NOW },
+        {
+          spent: {
+            cost: { amount: 0, currency: 'USD' },
+            tokens: { totalTokens: 0 },
+          },
+        },
+      );
+
+      expect(stateText(item, NOW).text).toContain('$0.0000');
+      expect(
+        stateText(task('missing', 'No cost', { group, endedAt: NOW }), NOW)
+          .text,
+      ).not.toContain('$');
+      expect(
+        stateText({ ...item, spent: { ...item.spent!, estimated: true } }, NOW)
+          .text,
+      ).toContain('~$0.0000');
+    });
+  }
+});

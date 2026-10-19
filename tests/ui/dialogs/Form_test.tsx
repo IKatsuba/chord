@@ -476,16 +476,25 @@ describe("a form left open at its turn's end (CHD-158 C5, the owner's Q53)", () 
           expect(window.frame()).toContain('Set up the deploy target');
           expect(window.frame()).not.toContain('Elicitation answer');
 
-          // At 80 by 24 the held form, its waiting line and the prompt fill
-          // the window, the status line below it; what gives way there is
-          // designer's to say, and the rest is checked once it is.
-          if (columns === 80) {
-            return;
-          }
-
           await window.type('text');
           await window.press('\r');
           await window.shows('› after your answer: text');
+
+          const lines = window.frame().split('\n');
+
+          // Everything below the box is whole, the box folding to make room
+          // at 80 by 24 and drawn whole at 120 by 40 (CHD-158 §8).
+          expect(lines).toHaveLength(rows);
+          expect(lines.at(-1)).toContain('ctrl+x a to answer');
+          expect(window.frame()).toContain('Waiting for your input…');
+
+          if (columns === 80) {
+            expect(window.frame()).toMatch(/… \d+ more lines/);
+            expect(window.frame()).not.toContain('Accept   Decline');
+          } else {
+            expect(window.frame()).not.toContain('more lines');
+          }
+
           expect(window.frame()).toContain('between turns');
 
           await leader(window, 'a');

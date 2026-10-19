@@ -6,6 +6,7 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, DIM, fg, TEXT } from '../theme/text.ts';
 import { linkHost } from './form.ts';
 import type { Choice } from './permission.ts';
+import { Fold } from './Fold.tsx';
 import { AttendHint } from './Permission.tsx';
 import type { AskerPart } from './asker.ts';
 import { AskerHeading } from './Asker.tsx';
@@ -66,38 +67,42 @@ export function LinkPrompt({
       {...borderOf(colours.permission)}
       paddingX={1}
       marginTop={1}
-      flexShrink={0}
+      flexShrink={held ? 1 : 0}
     >
-      <AskerHeading
-        asker={asker ?? [{ text: agent, tone: 'plain' }]}
-        says='asks you to open a link'
-        between={between}
-      />
-      <text {...TEXT}>
-        <Ansi text={wait.message} />
-      </text>
-      <box marginTop={1} paddingLeft={2}>
-        <text {...TEXT} {...fg(colours.link)}>
-          <Ansi text={wait.url} />
-        </text>
-        {host === undefined ? (
-          <text {...TEXT} {...fg(colours.error)}>
-            Not a web link
-          </text>
-        ) : (
-          <text {...TEXT} attributes={DIM}>
-            Opens <span attributes={BOLD}>{host}</span>
-          </text>
-        )}
-      </box>
-      <box marginTop={1}>
-        <ChoiceList
-          choices={choices}
-          active={active}
-          marked={!held}
-          onSelect={(value) => onAnswer(value === 'open' ? 'open' : 'decline')}
+      <Fold held={held}>
+        <AskerHeading
+          asker={asker ?? [{ text: agent, tone: 'plain' }]}
+          says='asks you to open a link'
+          between={between}
         />
-      </box>
+        <text {...TEXT}>
+          <Ansi text={wait.message} />
+        </text>
+        <box marginTop={1} paddingLeft={2}>
+          <text {...TEXT} {...fg(colours.link)}>
+            <Ansi text={wait.url} />
+          </text>
+          {host === undefined ? (
+            <text {...TEXT} {...fg(colours.error)}>
+              Not a web link
+            </text>
+          ) : (
+            <text {...TEXT} attributes={DIM}>
+              Opens <span attributes={BOLD}>{host}</span>
+            </text>
+          )}
+        </box>
+        <box marginTop={1}>
+          <ChoiceList
+            choices={choices}
+            active={active}
+            marked={!held}
+            onSelect={(value) =>
+              onAnswer(value === 'open' ? 'open' : 'decline')
+            }
+          />
+        </box>
+      </Fold>
       {held ? (
         <AttendHint />
       ) : (

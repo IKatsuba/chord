@@ -26,6 +26,7 @@ import {
   type ValueView,
 } from './form.ts';
 import { answeredQuestions, askedHeaders } from './questions.ts';
+import { Fold } from './Fold.tsx';
 import { AttendHint } from './Permission.tsx';
 import type { AskerPart } from './asker.ts';
 import { AskerHeading } from './Asker.tsx';
@@ -294,57 +295,59 @@ export function ElicitationForm({
       {...borderOf(colours.permission)}
       paddingX={1}
       marginTop={1}
-      flexShrink={0}
+      flexShrink={held ? 1 : 0}
     >
-      <AskerHeading
-        asker={asker ?? [{ text: agent, tone: 'plain' }]}
-        says={says}
-        between={between}
-      />
-      {message.map((line, index) => (
-        <text key={index} {...TEXT}>
-          <Ansi text={line} />
-        </text>
-      ))}
-      {description && (
-        <text {...CUT} attributes={DIM}>
-          <Ansi text={description} />
-        </text>
-      )}
-      <box marginTop={1}>
-        {shown.map((row, index) => (
-          <FormLine
-            key={keys[index]}
-            row={row}
-            labelWidth={labelWidth}
-            valueAt={valueAt}
-          />
+      <Fold held={held}>
+        <AskerHeading
+          asker={asker ?? [{ text: agent, tone: 'plain' }]}
+          says={says}
+          between={between}
+        />
+        {message.map((line, index) => (
+          <text key={index} {...TEXT}>
+            <Ansi text={line} />
+          </text>
         ))}
-      </box>
-      <box flexDirection='row' marginTop={rows.length > 0 ? 1 : 0}>
-        <Gutter {...paint(colours.permission)}>
-          {on === 'accept' ? '❯' : ' '}
-        </Gutter>
-        <text
-          {...TEXT}
-          attributes={on === 'accept' ? BOLD : 0}
-          {...(on === 'accept' ? fg(colours.success) : {})}
-        >
-          Accept
-        </text>
-        <box width={1} flexShrink={1} />
-        <Gutter {...paint(colours.permission)}>
-          {on === 'decline' ? '❯' : ' '}
-        </Gutter>
-        <text {...TEXT} {...(on === 'decline' ? fg(colours.error) : {})}>
-          Decline
-        </text>
-        {fix > 0 && (
-          <text {...TEXT} {...fg(colours.error)}>
-            {`     ${fix} field${fix === 1 ? '' : 's'} to fix`}
+        {description && (
+          <text {...CUT} attributes={DIM}>
+            <Ansi text={description} />
           </text>
         )}
-      </box>
+        <box marginTop={1}>
+          {shown.map((row, index) => (
+            <FormLine
+              key={keys[index]}
+              row={row}
+              labelWidth={labelWidth}
+              valueAt={valueAt}
+            />
+          ))}
+        </box>
+        <box flexDirection='row' marginTop={rows.length > 0 ? 1 : 0}>
+          <Gutter {...paint(colours.permission)}>
+            {on === 'accept' ? '❯' : ' '}
+          </Gutter>
+          <text
+            {...TEXT}
+            attributes={on === 'accept' ? BOLD : 0}
+            {...(on === 'accept' ? fg(colours.success) : {})}
+          >
+            Accept
+          </text>
+          <box width={1} flexShrink={1} />
+          <Gutter {...paint(colours.permission)}>
+            {on === 'decline' ? '❯' : ' '}
+          </Gutter>
+          <text {...TEXT} {...(on === 'decline' ? fg(colours.error) : {})}>
+            Decline
+          </text>
+          {fix > 0 && (
+            <text {...TEXT} {...fg(colours.error)}>
+              {`     ${fix} field${fix === 1 ? '' : 's'} to fix`}
+            </text>
+          )}
+        </box>
+      </Fold>
       {held ? (
         <AttendHint />
       ) : (

@@ -14,6 +14,7 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { Gutter } from '../transcript/tools/Tool.tsx';
 import { formRowLimit } from './Form.tsx';
+import { Fold } from './Fold.tsx';
 import { AttendHint } from './Permission.tsx';
 import type { AskerPart } from './asker.ts';
 import { AskerHeading } from './Asker.tsx';
@@ -168,31 +169,33 @@ export function QuestionBox({
       {...borderOf(colours.permission)}
       paddingX={1}
       marginTop={1}
-      flexShrink={0}
+      flexShrink={held ? 1 : 0}
     >
-      <box flexDirection='row'>
-        <AskerHeading
-          asker={asker ?? [{ text: agent, tone: 'plain' }]}
-          says={asksYou(questions)}
-          between={between}
-          grow
-        />
-        {countdown !== undefined && (
-          <text
-            {...TEXT}
-            flexShrink={0}
-            {...(left !== undefined && left < WARN_MS
-              ? fg(colours.warning)
-              : { attributes: DIM })}
-          >
-            {countdown}
-          </text>
-        )}
-      </box>
-      <box marginTop={1}>
-        <Steps questions={questions} state={state} problems={problems} />
-      </box>
-      <box marginTop={1}>{body}</box>
+      <Fold held={held}>
+        <box flexDirection='row'>
+          <AskerHeading
+            asker={asker ?? [{ text: agent, tone: 'plain' }]}
+            says={asksYou(questions)}
+            between={between}
+            grow
+          />
+          {countdown !== undefined && (
+            <text
+              {...TEXT}
+              flexShrink={0}
+              {...(left !== undefined && left < WARN_MS
+                ? fg(colours.warning)
+                : { attributes: DIM })}
+            >
+              {countdown}
+            </text>
+          )}
+        </box>
+        <box marginTop={1}>
+          <Steps questions={questions} state={state} problems={problems} />
+        </box>
+        <box marginTop={1}>{body}</box>
+      </Fold>
       {held ? (
         <AttendHint />
       ) : (

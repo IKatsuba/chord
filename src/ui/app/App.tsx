@@ -931,7 +931,15 @@ export function App({
               {/* Its basis is nothing, so when the rows under it run out it
         has none to keep, and a permission request taller than what is left
         gives way only after the transcript is gone (CHD-246). */}
-              <Clip flexGrow={1} flexShrink={1} flexBasis={0} paddingX={1}>
+              {/* Never one row of transcript: one is a blank row, as a change
+        from one row to none would leave it drawn (CHD-158 §8). */}
+              <Clip
+                flexGrow={1}
+                flexShrink={1}
+                flexBasis={0}
+                paddingX={1}
+                fewest={2}
+              >
                 {/* Following, the transcript hangs from the top while it fits,
           the header on the window's first row, or under the tab strip, and
           once it overflows it sits on the bottom and new rows push the old

@@ -13,7 +13,7 @@
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
   `bigask`, `bigasktwice`, `overlapask`, `mainbetween`, `leftask`,
-  `mainbetweentwice`),
+  `mainbetweentwice`, `bigaskleft`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`,
   `leftform`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashcut`, `bashask`),
@@ -43,7 +43,7 @@
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
-  `mcp`, `form`, `link`, `leftform`,
+  `mcp`, `form`, `link`, `leftform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
@@ -77,6 +77,7 @@
   reporting the answer;
   `leftask` asks permission to write during its turn, ends with it still
   open, then reports the answer once it comes;
+  `bigaskleft` does the same with `bigask`'s tall write;
   `leftform` does the same with a form;
   `twins` asks a permission with two `allow_once` options and says the id
   picked; `mcpask`

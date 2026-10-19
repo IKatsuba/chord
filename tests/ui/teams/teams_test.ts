@@ -262,7 +262,7 @@ test("the picker's hint offers Enter on a team it can run, and says how a broken
   expect(teamsHint(undefined, 116)).toStrictEqual([]);
 });
 
-test("/team show's running form gives each agent its file's mode, its state and latest headline, cut to the width", () => {
+test("/team show's running form gives each agent its file's mode, its state and latest headline, wrapped to the width (CHD-471)", () => {
   const run = {
     name: 'bugfix',
     since: 0,
@@ -296,9 +296,10 @@ test("/team show's running form gives each agent its file's mode, its state and 
 
   expect(
     runningHeader('bugfix', '.chord/teams/bugfix.md', run, 70),
-  ).toStrictEqual(
-    'bugfix · .chord/teams/bugfix.md · working 6m on "strings at the end…"',
-  );
+  ).toStrictEqual([
+    'bugfix · .chord/teams/bugfix.md · working 6m on "strings at the end of',
+    'a line lose their closing quote; see issue"',
+  ]);
 
   const lines = runningTable(BUGFIX, run.agents, 200);
 
@@ -313,11 +314,32 @@ test("/team show's running form gives each agent its file's mode, its state and 
     '● permission 12s',
   );
 
-  const cut = runningTable(BUGFIX, run.agents, 70);
+  expect(lines.map(({ under }) => under)).toStrictEqual([[], [], [], []]);
 
-  expect(cut[1]!.text).toStrictEqual(
-    'tester    claude · sonnet        acceptEdits  ● permission 12s  Bash(…',
+  // At 70 the headline would keep fewer than 20 cells beside the state, so
+  // it goes under the row, from the runtime's column.
+  const narrow = runningTable(BUGFIX, run.agents, 70);
+
+  expect(narrow.flatMap(({ text, under }) => [text, ...under])).toStrictEqual([
+    'lead      claude · opus          default      ✻ working 8s',
+    '          → to @coder',
+    'tester    claude · sonnet        acceptEdits  ● permission 12s',
+    '          Bash(deno task test tests/parse)',
+    'coder     codex · gpt-5.3-codex  auto         idle',
+    'reviewer  claude · opus          plan         not opened',
+  ]);
+
+  // With 20 cells or more beside the row it wraps there.
+  const latest = 'Bash(deno task test tests/parse --filter strings)';
+  const wrapped = runningTable(BUGFIX, [{ ...run.agents[1]!, latest }], 80);
+
+  expect(wrapped[0]!.text).toStrictEqual(
+    'tester  claude · sonnet  acceptEdits  ● permission 12s  Bash(deno task test',
   );
+  expect(wrapped[0]!.under).toStrictEqual([
+    '                                                        tests/parse --filter',
+    '                                                        strings)',
+  ]);
 });
 
 test("/team show's running form reads the lead's runtime from the lead, though a member is named lead", () => {
@@ -350,7 +372,7 @@ test("/team show's running form reads the lead's runtime from the lead, though a
   ]);
 });
 
-test("/team show's running form has the file's efforts as a column, which gives way to the headline", () => {
+test("/team show's running form has the file's efforts as a column, which gives way where that keeps the headline beside the row", () => {
   const team: Team = {
     ...BUGFIX,
     lead: { ...BUGFIX.lead, effort: 'high' },
@@ -387,15 +409,30 @@ test("/team show's running form has the file's efforts as a column, which gives 
     '● permission 5s',
   );
 
-  // At 80 the headline would keep fewer than 12 cells beside the effort.
-  const narrow = runningTable(team, agents, 74);
+  // At 86 the effort would leave the headline 18 cells; without it, 24.
+  const between = runningTable(team, agents, 86);
 
-  expect(narrow.map(({ text }) => text)).toStrictEqual(
-    runningTable(BUGFIX, agents, 74).map(({ text }) => text),
-  );
-  expect(narrow[1]!.text.slice(...narrow[1]!.state)).toStrictEqual(
+  expect(between.flatMap(({ text, under }) => [text, ...under])).toStrictEqual([
+    'lead    claude · opus          default      ✓ replied 6s ago  ← from @tester · claude',
+    'tester  claude · sonnet        acceptEdits  ● permission 5s   Bash(deno task test',
+    '                                                              tests/parse)',
+    'coder   codex · gpt-5.3-codex  auto         not opened',
+  ]);
+  expect(between[1]!.text.slice(...between[1]!.state)).toStrictEqual(
     '● permission 5s',
   );
+
+  // At 74 the headline goes under the row either way, so the effort stays.
+  const narrow = runningTable(team, agents, 74);
+
+  expect(narrow.map(({ text }) => text)).toStrictEqual([
+    'lead    claude · opus          high  default      ✓ replied 6s ago',
+    'tester  claude · sonnet        low   acceptEdits  ● permission 5s',
+    'coder   codex · gpt-5.3-codex  —     auto         not opened',
+  ]);
+  expect(narrow[1]!.under).toStrictEqual([
+    '        Bash(deno task test tests/parse)',
+  ]);
 });
 
 test("/team show's running form says what of an agent is not yet seen beside its state, the marks in one column (CHD-471)", () => {

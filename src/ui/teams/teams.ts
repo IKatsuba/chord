@@ -5,8 +5,8 @@
  * session; the window gathers what each needs.
  */
 import { Table } from '@cliffy/table';
-import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
+import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
 import type {
   MessageFrom,
@@ -367,27 +367,23 @@ export function pickedDraft(found: FoundTeam): string | undefined {
 }
 
 /**
- * The line `/team show` opens a running team with: its name, its file and
- * how long it has worked on what, the job cut to fit.
+ * The lines `/team show` opens a running team with: its name, its file and
+ * how long it has worked on what, the whole job wrapped to `width`
+ * (CHD-471).
  */
 export function runningHeader(
   name: string,
   file: string,
   run: TeamRunShown,
   width: number,
-): string {
-  const start = `${name} · ${file} · working ${briefly(
-    run.at - run.since,
-  )} on "`;
+): string[] {
   const job = run.job.replaceAll(/\s+/g, ' ').trim();
-  const room = Math.max(1, width - stringWidth(start) - 1);
 
-  // A cut at a space would leave it before the ellipsis.
-  return `${start}${
-    stringWidth(job) <= room
-      ? job
-      : cliTruncate(job, room).replace(/\s+…$/, '…')
-  }"`;
+  return wrapAnsi(
+    `${name} · ${file} · working ${briefly(run.at - run.since)} on "${job}"`,
+    Math.max(1, width),
+    { hard: true, trim: true },
+  ).split('\n');
 }
 
 /** One running agent's row laid out, and where its state is in it. */
@@ -397,22 +393,29 @@ export interface RunningLine {
   readonly state: readonly [number, number];
   /** Its mark's cells after the state, to paint by the mark's tone. */
   readonly mark?: readonly [number, number];
+  /** The rest of its latest headline, wrapped, a line each under the row. */
+  readonly under: readonly string[];
   readonly agent: TeamAgentShown;
 }
 
 /** What a member not open says in the state column. */
 export const NOT_OPENED = 'not opened';
 
-/** The least of the latest headline the running table keeps its effort for. */
-const MIN_LATEST = 12;
+/**
+ * The least of the latest headline's column kept beside the row; with less
+ * the headline goes under the row.
+ */
+const BESIDE = 20;
 
 /**
  * `/team show`'s running table: each agent's name, `runtime · model`,
- * effort and mode from the file, then its state and its latest headline,
- * cut to `width`, the headline first. The effort is a column where an agent
- * sets one, as the proposal's table has it, and gives way to the headline
- * where that would keep fewer than `MIN_LATEST` cells, as what each agent
- * is on now is what this form is for.
+ * effort and mode from the file, then its state, its mark and its latest
+ * headline. Nothing is cut (CHD-471): the headline wraps in its column
+ * while that keeps `BESIDE` cells, and under the row from the runtime's
+ * column where it would not. The effort is a column where an agent sets
+ * one, as the proposal's table has it, and gives way where that alone
+ * keeps the headline beside the row, as what each agent is on now is what
+ * this form is for.
  */
 export function runningTable(
   team: Team,
@@ -470,6 +473,7 @@ export function runningTable(
       .reduce((sum, each) => sum + each + GAP.length, 0);
 
     return {
+      widths,
       before,
       room: width - before - widths.at(-1)! - GAP.length,
     };
@@ -482,21 +486,15 @@ export function runningTable(
   const withEffort = cellsOf(true);
   const effort =
     agents.some((agent) => defined(agent)?.effort !== undefined) &&
-    laidOut(withEffort).room >= MIN_LATEST;
+    (laidOut(withEffort).room >= BESIDE ||
+      laidOut(cellsOf(false)).room < BESIDE);
   const cells = effort ? withEffort : cellsOf(false);
-  const { before, room: left } = laidOut(cells);
-  const room = Math.max(1, left);
+  const { widths, before, room } = laidOut(cells);
+  const beside = room >= BESIDE;
+  // Beside, after the state's column; under, from the runtime's.
+  const latestAt = beside ? width - room : widths[0]! + GAP.length;
   const laid = new Table()
-    .body(
-      cells.map((row, index) => {
-        const latest = agents[index]!.latest ?? '';
-
-        return [
-          ...row,
-          stringWidth(latest) <= room ? latest : cliTruncate(latest, room),
-        ];
-      }),
-    )
+    .body(cells)
     .padding(GAP.length)
     .toString()
     .split('\n');
@@ -505,11 +503,22 @@ export function runningTable(
     const state = ownState(agent);
     const mark = markOf(agent);
     const markAt = before + stateWidth + GAP.length;
+    const row = (laid[index] ?? '').trimEnd();
+    const latest = (agent.latest ?? '').replaceAll(/\s+/g, ' ').trim();
+    const lines =
+      latest === ''
+        ? []
+        : wrapAnsi(latest, Math.max(1, width - latestAt), {
+            hard: true,
+            trim: true,
+          }).split('\n');
+    const indent = ' '.repeat(latestAt);
 
     return {
-      text: (laid[index] ?? '').trimEnd(),
+      text: beside && lines.length > 0 ? padded(row, latestAt) + lines[0] : row,
       state: [before, before + state.length],
       ...(mark === undefined ? {} : { mark: [markAt, markAt + mark.length] }),
+      under: (beside ? lines.slice(1) : lines).map((line) => indent + line),
       agent,
     };
   });

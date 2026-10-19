@@ -391,3 +391,14 @@ describe('CHD-407 R2 tester: opt-in proposal team', () => {
     });
   }
 });
+
+test('/team show of a running team at 80 columns cuts nothing: the job wraps, and each headline goes under its row (CHD-471)', () =>
+  withTeams(async (window) => {
+    await ran(window);
+    await window.resize({ columns: 80, rows: 60 });
+    await send(window, '/team show bugfix');
+    await window.shows('the end of a line lose their closing quote"');
+    await window.shows('tester  fake · fake-small  acceptEdits  ● permission');
+    await window.shows('        Bash(deno task test tests/parse)');
+    expect(window.frame()).not.toMatch(/working \d+s on ".*…/);
+  }));

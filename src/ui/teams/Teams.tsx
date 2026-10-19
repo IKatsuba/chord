@@ -1,5 +1,5 @@
 import { useTerminalDimensions } from '@opentui/react';
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import type {
   TeamRunShown,
   TeamShown,
@@ -189,17 +189,20 @@ function RunningTeam({
 
   return (
     <>
-      <Under first>
-        <text {...CUT}>
-          {runningHeader(run.name === name ? name : run.name, file, run, width)}
-        </text>
-      </Under>
+      {runningHeader(run.name === name ? name : run.name, file, run, width).map(
+        (line, index) => (
+          <Under key={index} first={index === 0}>
+            <text {...CUT}>{line}</text>
+          </Under>
+        ),
+      )}
       <box height={1} flexShrink={1} />
       {runningTable(team, run.agents, width).map((line, index) => {
         const {
           text,
           state: [start, end],
           mark,
+          under,
           agent,
         } = line;
         const tone = agent.state?.tone;
@@ -207,27 +210,36 @@ function RunningTeam({
         const [markStart, markEnd] = mark ?? [end, end];
 
         return (
-          <Under key={index} first={false}>
-            <text {...CUT}>
-              <Ansi text={text.slice(0, start)} />
-              <span
-                {...(tone === undefined || tone === 'dim'
-                  ? { attributes: DIM }
-                  : fg(tones[tone]))}
-              >
-                <Ansi text={text.slice(start, end)} />
-              </span>
-              <Ansi text={text.slice(end, markStart)} />
-              <span
-                {...(markTone === undefined || markTone === 'dim'
-                  ? { attributes: DIM }
-                  : fg(tones[markTone]))}
-              >
-                <Ansi text={text.slice(markStart, markEnd)} />
-              </span>
-              <Ansi text={text.slice(markEnd)} />
-            </text>
-          </Under>
+          <Fragment key={index}>
+            <Under first={false}>
+              <text {...CUT}>
+                <Ansi text={text.slice(0, start)} />
+                <span
+                  {...(tone === undefined || tone === 'dim'
+                    ? { attributes: DIM }
+                    : fg(tones[tone]))}
+                >
+                  <Ansi text={text.slice(start, end)} />
+                </span>
+                <Ansi text={text.slice(end, markStart)} />
+                <span
+                  {...(markTone === undefined || markTone === 'dim'
+                    ? { attributes: DIM }
+                    : fg(tones[markTone]))}
+                >
+                  <Ansi text={text.slice(markStart, markEnd)} />
+                </span>
+                <Ansi text={text.slice(markEnd)} />
+              </text>
+            </Under>
+            {under.map((rest, at) => (
+              <Under key={at} first={false}>
+                <text {...CUT}>
+                  <Ansi text={rest} />
+                </text>
+              </Under>
+            ))}
+          </Fragment>
         );
       })}
     </>

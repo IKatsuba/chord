@@ -4,7 +4,6 @@ lead:
   agent: claude
   model: claude-opus-5-5
   mode: default
-  instructions: Name the cause and the files, then open tester, coder and reviewer in turn.
 members:
   - name: tester
     role: Writes the failing test, then proves the fix

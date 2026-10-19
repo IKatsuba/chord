@@ -1725,3 +1725,30 @@ test("an agent's own cycle after its turn shows it working until its end is mark
       rows: 40,
     },
   ));
+
+test("a permission asked in the agent's own cycle is held: a digit typed is the draft's, ctrl+x a answers it, and the cycle works on to its end (the owner's Q48, CHD-426)", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'claudecycleask');
+      await window.shows('main asks · between turns');
+      await window.shows('ctrl+x a to answer');
+      expect(window.frame()).not.toContain('❯ 1. Allow');
+
+      await window.type('1');
+      expect(promptRow(window)).toContain('› 1');
+      expect(window.frame()).not.toContain('Permission: allow.');
+
+      await leader(window, 'a');
+      await window.shows('❯ 1. Allow');
+      await window.press('1');
+      await window.shows('Permission: allow.');
+      await until('the cycle over', () => !window.frame().includes('Working…'));
+      expect(promptRow(window)).toContain('› 1');
+    },
+    {
+      agentCommand: fakeAgentCommand(undefined, '--adapter', 'claude'),
+      columns: 120,
+      rows: 40,
+    },
+  ));

@@ -366,6 +366,7 @@ const SCENARIOS = [
   'bigaskleft',
   'claudecycle',
   'claudecyclebare',
+  'claudecycleask',
   'codebuddycycle',
   'taskchild',
   'tasklong',

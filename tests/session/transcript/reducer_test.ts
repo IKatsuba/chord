@@ -588,6 +588,7 @@ test("an agent's own cycle works as a turn does, with nothing of the person's dr
     status: 'working',
     turnId: 'c1',
     since: 5000,
+    cycle: true,
   });
   expect(working.entries.map((entry) => entry.kind)).toStrictEqual(['user']);
   expect(
@@ -621,4 +622,74 @@ test("a permission held between turns stays held through the agent's own cycle (
     turnId: 'c1',
     between: true,
   });
+});
+
+test("a permission asked in the agent's own cycle is held, and once answered the cycle works on (the owner's Q48, CHD-426)", () => {
+  const asked = fold([
+    { type: 'cycle_started', turnId: 'c1', at: 5000 },
+    {
+      type: 'permission_requested',
+      turnId: 'c1',
+      permission: { id: 'p1', options: [] },
+      at: 6000,
+      between: true,
+    },
+  ]);
+
+  expect(asked.turn).toMatchObject({
+    status: 'awaiting_permission',
+    turnId: 'c1',
+    between: true,
+    cycle: true,
+  });
+  expect(
+    fold(
+      [
+        {
+          type: 'permission_settled',
+          turnId: 'c1',
+          id: 'p1',
+          answer: { type: 'chosen', optionId: 'allow' },
+        },
+      ],
+      asked,
+    ).turn,
+  ).toMatchObject({ status: 'working', turnId: 'c1', cycle: true });
+});
+
+test('a permission held before the cycle, answered during it, leaves the cycle working until its end (CHD-426)', () => {
+  const answered = fold([
+    {
+      type: 'permission_requested',
+      turnId: 'session',
+      permission: { id: 'p1', options: [] },
+      at: 100,
+      between: true,
+    },
+    { type: 'cycle_started', turnId: 'c1', at: 5000 },
+    {
+      type: 'permission_settled',
+      turnId: 'c1',
+      id: 'p1',
+      answer: { type: 'chosen', optionId: 'allow' },
+    },
+  ]);
+
+  expect(answered.turn).toMatchObject({
+    status: 'working',
+    turnId: 'c1',
+    cycle: true,
+  });
+  expect(
+    fold(
+      [
+        {
+          type: 'result',
+          turnId: 'c1',
+          result: { status: 'completed', stopReason: 'end_turn' },
+        },
+      ],
+      answered,
+    ).turn,
+  ).toStrictEqual({ status: 'idle' });
 });

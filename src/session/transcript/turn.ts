@@ -77,8 +77,8 @@ export function cycleStarted(
     ...state,
     turn:
       turn.status === 'awaiting_permission' && turn.permissions.length > 0
-        ? { ...turn, turnId }
-        : { status: 'working', turnId, since: at },
+        ? { ...turn, turnId, cycle: true }
+        : { status: 'working', turnId, since: at, cycle: true },
   };
 }
 

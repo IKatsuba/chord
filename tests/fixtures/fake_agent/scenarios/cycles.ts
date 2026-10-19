@@ -69,6 +69,58 @@ export const CYCLES = {
   claudecycle: claudeCycle(true),
   claudecyclebare: claudeCycle(false),
 
+  // As claudecycle, the cycle asking to write a file before it ends, and
+  // saying which option came back.
+  async claudecycleask(turn) {
+    void (async () => {
+      try {
+        await pause(lifetime.signal, QUIET);
+        await say(turn, 'The background build ended; saving its log.');
+
+        const toolCall = {
+          toolCallId: turn.callId('write'),
+          title: 'Write notes/build.md',
+          kind: 'edit' as const,
+          status: 'pending' as const,
+          locations: [{ path: 'notes/build.md' }],
+        };
+
+        await send(turn, { sessionUpdate: 'tool_call', ...toolCall });
+
+        const answer: acp.RequestPermissionResponse = await turn.client.request(
+          'session/request_permission',
+          {
+            sessionId: turn.sessionId,
+            toolCall,
+            options: [
+              { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+              { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+            ],
+          },
+        );
+        const chosen =
+          answer.outcome.outcome === 'selected'
+            ? answer.outcome.optionId
+            : 'cancelled';
+
+        await say(turn, `Permission: ${chosen}.`);
+        await pause(lifetime.signal, STEP);
+        await send(turn, {
+          sessionUpdate: 'usage_update',
+          used: 1200,
+          size: 200000,
+          _meta: { '_claude/origin': { kind: 'task-notification' } },
+        });
+      } catch {
+        // The client went first.
+      }
+    })();
+
+    await turn.say('The build runs in the background; I will read it after.');
+
+    return 'end_turn';
+  },
+
   // Ends the turn, then runs an unasked turn as codebuddy does once a
   // background task drains: marked at its start by
   // `_meta["codebuddy.ai/unsolicitedTurn"]` and at its end by the

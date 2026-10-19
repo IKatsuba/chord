@@ -707,6 +707,11 @@ export type TurnState =
       readonly status: 'working';
       readonly turnId: string;
       readonly since: number;
+      /**
+       * A cycle of the agent's own, which the person did not start: what it
+       * asks is held as between turns (the owner's Q48, CHD-426).
+       */
+      readonly cycle?: true;
     }
   | {
       readonly status: 'awaiting_permission';
@@ -718,6 +723,11 @@ export type TurnState =
        * started it: the session is idle again once every request is answered.
        */
       readonly between?: true;
+      /**
+       * Asked in a cycle of the agent's own, which works on once every
+       * request is answered (CHD-426).
+       */
+      readonly cycle?: true;
     }
   | {
       /** Cancel was asked for; the turn has not settled yet. */

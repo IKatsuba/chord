@@ -1569,3 +1569,18 @@ describe('CHD-431 Q46 tester: attention after a hand pick', () => {
     expect(attend(second)).toBeUndefined();
   });
 });
+
+test("an agent's own cycle behind works as a turn does until its end (CHD-426)", () => {
+  const cycle = { type: 'cycle_started', turnId: 'c1', at: 5000 } as const;
+  const working = heard(opened('a', 'b'), 1, [
+    up,
+    prompt('t1'),
+    ended('t1'),
+    cycle,
+  ]);
+
+  expect(tabOf(working, 1)?.wait.working).toStrictEqual(5000);
+  expect(
+    tabOf(heard(working, 1, [ended('c1')]), 1)?.wait.working,
+  ).toStrictEqual(undefined);
+});

@@ -17,6 +17,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CTRL_O,
+  DOWN,
   ESC,
   leader,
   quitAll,
@@ -652,5 +653,109 @@ describe('CHD-470 tester: a steering-gated task parent closes before any steer',
         await server.close();
       }
     });
+  }
+});
+
+test("an ended task's block says what it spent, its tokens and money, and its background row its money (CHD-373)", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'task');
+        await answerTask(window, '\r');
+        await window.shows('Done (5 tool uses · 2.0k tokens · $0.0125 ·');
+        await window.shows(
+          'Received the message from Fix the tokenizer · fake · report.',
+        );
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('│ Background · 1 in this tab');
+        await window.shows('✓ reported after');
+        expect(window.frame()).toMatch(/✓ reported after \d+s · \$0\.0125/);
+      },
+      { server, runtimes: ['fake'], rows: 40, columns: 120 },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+describe('CHD-373 S2 tester: fake spend reaches both task views', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const mode of ['tokens-only', 'no-usage'] as const) {
+      test(`${mode}: task block and background row agree at ${columns} columns`, async () => {
+        const server = serveChord();
+        const admit = server.admit.bind(server);
+        let main: Parameters<typeof admit>[0] | undefined;
+        const command = fakeAgentCommand(undefined, `--${mode}`);
+
+        server.admit = (caller) => {
+          if (caller.role === 'person') {
+            main = caller;
+          }
+
+          return admit(caller);
+        };
+
+        try {
+          await withWindow(
+            async (window) => {
+              await ready(window);
+              assert(main);
+              await main.window.spawn(main, {
+                agent: 'fake',
+                name: 'Priced reply',
+                prompt: 'text',
+              });
+              await window.shows('Done (');
+
+              const done = window
+                .frame()
+                .split('\n')
+                .find((line) => line.includes('Done ('))!;
+
+              if (mode === 'tokens-only') {
+                expect(done).toContain('2.0k tokens');
+                expect(done).toContain('~$');
+              } else {
+                expect(done).not.toContain('tokens');
+                expect(done).not.toContain('$');
+              }
+
+              await window.press(DOWN);
+              await window.press('\r');
+              await window.shows('Background · 1 in this tab');
+              await window.shows('Priced reply');
+
+              const row = window
+                .frame()
+                .split('\n')
+                .find((line) => line.includes('❯ Priced reply'))!;
+
+              if (mode === 'tokens-only') {
+                expect(row).toContain('~$');
+              } else {
+                expect(row).not.toContain('$');
+              }
+            },
+            {
+              server,
+              runtimes: ['fake'],
+              columns,
+              rows,
+              agentCommand: command,
+              startupOf: () => ({ agentCommand: command }),
+            },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
   }
 });

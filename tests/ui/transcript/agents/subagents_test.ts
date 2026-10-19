@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type {
   Entry,
   PermissionWait,
@@ -385,4 +385,161 @@ test('the status line counts the subagents still at work', () => {
   expect(stillRunning(0)).toStrictEqual(undefined);
   expect(stillRunning(1)).toStrictEqual('1 agent still running');
   expect(stillRunning(2)).toStrictEqual('2 agents still running');
+});
+
+const SPENT_TASK = agent({
+  id: 'task-1',
+  state: 'completed',
+  startedAt: 0,
+  endedAt: 13_000,
+  entries: [
+    tool('c1', 'Read a', 'completed'),
+    tool('c2', 'Read b', 'completed'),
+  ],
+  task: {
+    name: 'Fix the tokenizer',
+    runtime: 'fake',
+    spent: {
+      tokens: { inputTokens: 1000, outputTokens: 200, totalTokens: 2000 },
+      cost: { amount: 0.0125, currency: 'USD' },
+    },
+  },
+});
+
+test("an ended task's block says its tokens and money between its tool uses and its time, as Claude Code's does with money added (CHD-373)", () => {
+  expect(blockFold(SPENT_TASK, [])).toStrictEqual({
+    kind: 'ended',
+    text: 'Done (2 tool uses · 2.0k tokens · $0.0125 · 13s)',
+    failed: false,
+  });
+
+  const spent = SPENT_TASK.task!.spent!;
+  const said = (task: NonNullable<Subagent['task']>) =>
+    blockFold({ ...SPENT_TASK, task }, []).kind === 'ended'
+      ? (blockFold({ ...SPENT_TASK, task }, []) as { text: string }).text
+      : '';
+
+  // chord's estimate is marked.
+  expect(
+    said({ ...SPENT_TASK.task!, spent: { ...spent, estimated: true } }),
+  ).toBe('Done (2 tool uses · 2.0k tokens · ~$0.0125 · 13s)');
+  // What was not reported is left out; tokens with no total are added up.
+  expect(
+    said({
+      ...SPENT_TASK.task!,
+      spent: { tokens: { inputTokens: 600, outputTokens: 250 } },
+    }),
+  ).toBe('Done (2 tool uses · 850 tokens · 13s)');
+  expect(said({ name: 'Fix the tokenizer', runtime: 'fake' })).toBe(
+    'Done (2 tool uses · 13s)',
+  );
+  expect(
+    said({
+      ...SPENT_TASK.task!,
+      spent: { tokens: { totalTokens: 1_234_567 } },
+    }),
+  ).toBe('Done (2 tool uses · 1.2M tokens · 13s)');
+});
+
+test("an ended task's group row gives its tokens way first, then its money, then the rest of its counts (CHD-373)", () => {
+  const counts = (width: number) => groupRow(SPENT_TASK, width).counts;
+
+  expect(counts(200)).toBe(' · 2 tool uses · 2.0k tokens · $0.0125 · 13s');
+
+  // Narrower and narrower: the tokens go first, then the money, then the
+  // rest of the counts.
+  const seen: (string | undefined)[] = [];
+
+  for (let width = 200; width > 0; width--) {
+    const now = counts(width);
+
+    if (now !== seen.at(-1)) {
+      seen.push(now);
+    }
+  }
+
+  expect(seen).toStrictEqual([
+    ' · 2 tool uses · 2.0k tokens · $0.0125 · 13s',
+    ' · 2 tool uses · $0.0125 · 13s',
+    ' · 2 tool uses · 13s',
+    undefined,
+  ]);
+});
+
+describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {
+  test('reported zero totals win over component counts, and zero estimated money remains visible', () => {
+    const ended = blockFold(
+      {
+        ...SPENT_TASK,
+        task: {
+          ...SPENT_TASK.task!,
+          spent: {
+            tokens: { totalTokens: 0, inputTokens: 100 },
+            cost: { amount: 0, currency: 'USD' },
+            estimated: true,
+          },
+        },
+      },
+      [],
+    );
+
+    expect(ended).toMatchObject({
+      kind: 'ended',
+      text: 'Done (2 tool uses · 0 tokens · ~$0.0000 · 13s)',
+    });
+  });
+
+  test('fallback token count includes every reported kind without inventing absent spend', () => {
+    expect(
+      blockFold(
+        {
+          ...SPENT_TASK,
+          task: {
+            ...SPENT_TASK.task!,
+            spent: {
+              tokens: {
+                inputTokens: 10,
+                outputTokens: 20,
+                cachedReadTokens: 30,
+                cachedWriteTokens: 40,
+                thoughtTokens: 50,
+              },
+            },
+          },
+        },
+        [],
+      ),
+    ).toMatchObject({ text: 'Done (2 tool uses · 150 tokens · 13s)' });
+    expect(
+      blockFold(
+        { ...SPENT_TASK, task: { name: 'No usage', runtime: 'fake' } },
+        [],
+      ),
+    ).toMatchObject({ text: 'Done (2 tool uses · 13s)' });
+  });
+
+  test('a shrinking estimated group row drops its model, tokens, money, then counts in that order', () => {
+    const task = {
+      ...SPENT_TASK,
+      task: {
+        ...SPENT_TASK.task!,
+        model: 'A deliberately long model',
+        spent: { ...SPENT_TASK.task!.spent!, estimated: true as const },
+      },
+    };
+    const rows = Array.from({ length: 199 }, (_, index) =>
+      groupRow(task, 200 - index),
+    );
+    const lostModel = rows.findIndex(
+      (row) => !row.headline.note?.includes('A deliberately long model'),
+    );
+    const lostTokens = rows.findIndex((row) => !row.counts?.includes('tokens'));
+    const lostMoney = rows.findIndex((row) => !row.counts?.includes('~$'));
+    const lostCounts = rows.findIndex((row) => row.counts === undefined);
+
+    expect(lostModel).toBeGreaterThan(0);
+    expect(lostModel).toBeLessThan(lostTokens);
+    expect(lostTokens).toBeLessThan(lostMoney);
+    expect(lostMoney).toBeLessThan(lostCounts);
+  });
 });

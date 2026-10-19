@@ -8,12 +8,15 @@ import type {
   StateUpdate,
   SubagentUpdate,
 } from '@agentclientprotocol/sdk';
+import { z } from '@zod/zod';
+import { TOKEN_FIELDS, type TokenUsage } from '../usage.ts';
 import {
   emptyTranscript,
   type Entry,
   type Subagent,
   type SubagentState,
   type TaskInfo,
+  type TaskSpent,
   type Transcript,
   type TranscriptAction,
 } from './types.ts';
@@ -270,8 +273,11 @@ function patched(
 
   // chord says a task's effort once it is up, after the block is drawn.
   const taskTold = taskOf(update);
-  const task =
+  const spent = spentOf(update);
+  const known =
     taskTold === undefined ? subagent.task : { ...subagent.task, ...taskTold };
+  const task =
+    known === undefined || spent === undefined ? known : { ...known, spent };
 
   return {
     ...kept,
@@ -305,6 +311,68 @@ function patched(
  * its name, runtime and model, which no adapter's subagent has.
  */
 export const TASK_META = 'chord/task';
+
+/** Where a task's ending `subagent_update` carries what it spent (CHD-373). */
+export const TASK_SPENT_META = 'chord/spent';
+
+/** A count of tokens: whole, and none below nothing. */
+const COUNT = z.number().int().nonnegative();
+
+/**
+ * A cost as chord reads one an agent or a record gives: an amount, none
+ * below nothing, in a named currency.
+ */
+export const COST = z.object({
+  amount: z.number().nonnegative(),
+  currency: z.string().min(1),
+});
+
+/** A token field: its count, or left out where it is not one. */
+const FIELD = COUNT.optional().catch(undefined);
+
+/**
+ * A task's spend as its ending update carries it, which a record or an
+ * agent may have bent: each part that does not read as one is left out, a
+ * token count on its own, and `estimated` stands only with a cost.
+ */
+const SPENT = z.object({
+  tokens: z
+    .object({
+      inputTokens: FIELD,
+      outputTokens: FIELD,
+      cachedReadTokens: FIELD,
+      cachedWriteTokens: FIELD,
+      thoughtTokens: FIELD,
+      totalTokens: FIELD,
+    } satisfies Record<(typeof TOKEN_FIELDS)[number], typeof FIELD>)
+    .optional()
+    .catch(undefined),
+  cost: COST.optional().catch(undefined),
+  estimated: z.literal(true).optional().catch(undefined),
+});
+
+/** What a task's ending update says it spent; none when it says nothing. */
+function spentOf(update: SubagentUpdate): TaskSpent | undefined {
+  const read = SPENT.safeParse(update._meta?.[TASK_SPENT_META]);
+
+  if (!read.success) {
+    return undefined;
+  }
+
+  const counts = Object.fromEntries(
+    Object.entries(read.data.tokens ?? {}).filter(
+      ([, count]) => count !== undefined,
+    ),
+  ) as TokenUsage;
+  const { cost } = read.data;
+  const spent: TaskSpent = {
+    ...(Object.keys(counts).length === 0 ? {} : { tokens: counts }),
+    ...(cost === undefined ? {} : { cost }),
+    ...(cost !== undefined && read.data.estimated ? { estimated: true } : {}),
+  };
+
+  return Object.keys(spent).length === 0 ? undefined : spent;
+}
 
 /** The task a `subagent_update` describes, when chord sent it for one. */
 function taskOf(update: SubagentUpdate): TaskInfo | undefined {

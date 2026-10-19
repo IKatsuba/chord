@@ -9,6 +9,7 @@ import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { endWord, timeoutWords } from '../../session/monitors.ts';
+import { spentParts } from '../transcript/agents/subagents.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
 
 /** An item by its owner's session and its id there. */
@@ -46,6 +47,8 @@ const GAP = '  ';
 
 /** What one way of fitting keeps, as the columns give way. */
 interface Fit {
+  /** An ended task's money after its state, which goes after its model (CHD-373). */
+  readonly spent: boolean;
   /** A monitor's ` · N events` after its end. */
   readonly endedEvents: boolean;
   /** A task's model, then its runtime, after `task`. */
@@ -53,12 +56,17 @@ interface Fit {
   readonly runtime: boolean;
 }
 
-/** The fullest first: an end's events go, then a task's model, its runtime. */
+/**
+ * The fullest first: an end's events go, then a task's model, its money,
+ * then its runtime (CHD-373).
+ */
 const FITS: readonly Fit[] = [
-  { endedEvents: true, model: true, runtime: true },
-  { endedEvents: false, model: true, runtime: true },
-  { endedEvents: false, model: false, runtime: true },
-  { endedEvents: false, model: false, runtime: false },
+  { spent: true, endedEvents: true, model: true, runtime: true },
+  { spent: true, endedEvents: false, model: true, runtime: true },
+  // A task's model goes before its money, as on a group's rows (CHD-373).
+  { spent: true, endedEvents: false, model: false, runtime: true },
+  { spent: false, endedEvents: false, model: false, runtime: true },
+  { spent: false, endedEvents: false, model: false, runtime: false },
 ];
 
 /** `no events`, `1 event`, `3 events`. */
@@ -77,9 +85,16 @@ function after(ms: number): string {
 export function stateText(
   item: BackgroundItem,
   now: number,
-  { endedEvents = true }: { readonly endedEvents?: boolean } = {},
+  {
+    endedEvents = true,
+    spent = true,
+  }: { readonly endedEvents?: boolean; readonly spent?: boolean } = {},
 ): { readonly text: string; readonly group: BackgroundGroup } {
   const { status } = item;
+  // An ended task's money, after its state (CHD-373).
+  const money =
+    spent && item.kind === 'task' ? spentParts(item.spent).money : undefined;
+  const paid = money === undefined ? '' : ` · ${money}`;
   const events =
     item.events === undefined ? '' : ` · ${eventsWords(item.events)}`;
 
@@ -115,7 +130,7 @@ export function stateText(
 
       if (status.group === 'stopped') {
         return {
-          text: `■ ${status.word ?? 'stopped'} after ${ran}${tail}`,
+          text: `■ ${status.word ?? 'stopped'} after ${ran}${tail}${paid}`,
           group: 'stopped',
         };
       }
@@ -131,8 +146,8 @@ export function stateText(
 
       if (item.kind === 'task') {
         return status.group === 'done'
-          ? { text: `✓ reported after ${ran}`, group: 'done' }
-          : { text: `✗ failed after ${ran}`, group: 'failed' };
+          ? { text: `✓ reported after ${ran}${paid}`, group: 'done' }
+          : { text: `✗ failed after ${ran}${paid}`, group: 'failed' };
       }
 
       const glyph = status.group === 'done' ? '✓' : '✗';
@@ -233,7 +248,7 @@ export function viewRows(
   for (const fit of FITS) {
     const kinds = items.map((item) => kindText(item, fit));
     const states = items.map((item) =>
-      stateText(item, now, { endedEvents: fit.endedEvents }),
+      stateText(item, now, { endedEvents: fit.endedEvents, spent: fit.spent }),
     );
     const kindWidth = widest(kinds);
     const stateWidth = widest(states.map(({ text }) => text));

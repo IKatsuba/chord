@@ -16,6 +16,8 @@ import {
 import type { AppState } from '../app/state.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { contextEstimated, contextUsed } from '../status/status.ts';
+import { sessionFigure, type SpendPart } from './spend.ts';
+import { manySessions, spendTable } from './spend_table.ts';
 
 /** Said after a figure chord worked out itself, never the agent's. */
 export const ESTIMATE_NOTE = "(chord's estimate)";
@@ -44,6 +46,14 @@ export interface ReportFacts {
   readonly context?: Usage | undefined;
   /** The sessions open in the window, and how many wait on the person. */
   readonly sessions?: { readonly open: number; readonly waits: number };
+  /**
+   * What the whole window has spent, its closed agents and tabs too, and
+   * the columns its table is laid out in (CHD-373 S4).
+   */
+  readonly window?: {
+    readonly spend: readonly SpendPart[];
+    readonly width: number;
+  };
 }
 
 /** The facts the window holds, for a report run now. */
@@ -53,9 +63,11 @@ export function reportFacts(
   cwd: string,
   now: number,
   sessions?: { readonly open: number; readonly waits: number },
+  window?: ReportFacts['window'],
 ): ReportFacts {
   return {
     ...(sessions === undefined ? {} : { sessions }),
+    ...(window === undefined ? {} : { window }),
     agent,
     cwd,
     sessionId: state.sessionId,
@@ -176,18 +188,63 @@ export function formatCost(cost: Cost): string {
   }
 }
 
+/** Said after a cost chord worked out only some of. */
+export const PART_ESTIMATE_NOTE = "(part chord's estimate)";
+
+/** A day as `Oct 12`, as the row of an older record's sum names it. */
+const DAY = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+});
+
 /**
- * `/cost`: the session's tokens in and out, its cost as the last
- * `usage_update` gave it, and how long it ran.
+ * `/cost`: the session's whole cost, each of its turns' added up, from
+ * before a resume too, and its marks, its tokens in and out, and how long
+ * it ran; then, once the window holds more than one session, what the
+ * whole window has spent (CHD-373).
  */
 export function costReport(facts: ReportFacts): ReportRow[] {
+  const own = sessionReport(facts);
+  const window = facts.window;
+
+  return window === undefined || !manySessions(window.spend)
+    ? own
+    : [...own, { text: '' }, ...spendTable(window.spend, window.width)];
+}
+
+/** The session's own rows of `/cost`. */
+function sessionReport(facts: ReportFacts): ReportRow[] {
   const spent = sessionTokens(facts.spent);
+  const figure = sessionFigure(facts.spent);
   const cost =
-    facts.context?.cost === undefined
+    figure?.cost === undefined
       ? undefined
-      : facts.context.estimated?.includes('cost')
-        ? `${formatCost(facts.context.cost)} ${ESTIMATE_NOTE}`
-        : formatCost(facts.context.cost);
+      : figure.estimated === 'all'
+        ? `${formatCost(figure.cost)} ${ESTIMATE_NOTE}`
+        : figure.estimated === 'part'
+          ? `${formatCost(figure.cost)} ${PART_ESTIMATE_NOTE}`
+          : formatCost(figure.cost);
+  // An older record's sum, and turns left out, each a row of its own.
+  const marks: [string, string][] = [
+    ...(figure?.before === undefined
+      ? []
+      : [
+          [
+            figure.before.until === undefined
+              ? 'Before'
+              : `Before ${DAY.format(figure.before.until)}`,
+            `${formatCost(figure.before.cost)} as last reported`,
+          ] as [string, string],
+        ]),
+    ...(figure?.uncounted === undefined
+      ? []
+      : [
+          [
+            'Not counted',
+            `${figure.uncounted} ${figure.uncounted === 1 ? 'turn' : 'turns'}`,
+          ] as [string, string],
+        ]),
+  ];
   const time: [string, string][] =
     facts.since === undefined
       ? []
@@ -200,7 +257,8 @@ export function costReport(facts: ReportFacts): ReportRow[] {
       ? [RUNNING_TURN]
       : [];
 
-  if (spent === undefined && cost === undefined) {
+  // Nothing to say, but a turn left out or an older sum still is said.
+  if (spent === undefined && cost === undefined && marks.length === 0) {
     return aligned([
       `${facts.agent} has not reported what this session has used.`,
       ...running,
@@ -225,6 +283,7 @@ export function costReport(facts: ReportFacts): ReportRow[] {
 
   return aligned([
     ['Total cost', cost ?? `not reported by ${facts.agent}`],
+    ...marks,
     ...running,
     ...(spent === undefined
       ? [['Tokens', `not reported by ${facts.agent}`] as [string, string]]

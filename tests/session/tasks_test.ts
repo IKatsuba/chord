@@ -1,11 +1,29 @@
-import { expect, test } from 'bun:test';
-import type { ConversationEvent } from '../../src/session/conversation.ts';
+import { describe, expect, test } from 'bun:test';
+import {
+  Conversation,
+  type ConversationEvent,
+} from '../../src/session/conversation.ts';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { openSession } from '../../src/session/session.ts';
+import {
+  entryOf,
+  readPast,
+  recordActions,
+  type RecordEntry,
+} from '../../src/session/record.ts';
+import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
+import { emptyTranscript } from '../../src/session/transcript/types.ts';
+import { fakeAgentCommand } from '../fixtures/fake.ts';
 import {
   fromLine,
   senderName,
   TaskAgent,
   taskName,
   type TaskParent,
+  taskUpdate,
   type TaskSession,
   unwrapMessage,
   wrapMessage,
@@ -297,4 +315,263 @@ test("a team agent's first prompt has its team part ahead of the message, and re
     text: 'You lead.',
   });
   expect(unwrapMessage(lead)?.text).toStrictEqual('The job.');
+});
+
+test("a task's ending update carries what it spent: its turn's tokens and its last cost, marked when chord estimated it (CHD-373)", () => {
+  const ending = (
+    estimated: boolean,
+    tokens = { inputTokens: 1000, outputTokens: 200, totalTokens: 2000 },
+  ) => {
+    const { task, relayed } = harness();
+
+    task.heard(MODELS);
+    task.heard({ type: 'connected', sessionId: 's1' });
+    task.heard({ type: 'prompt', turnId: 'r1', text: 'taskchild', at: 1 });
+    task.heard({
+      type: 'update',
+      turnId: 'r1',
+      update: {
+        sessionUpdate: 'usage_update',
+        used: 2000,
+        size: 200_000,
+        cost: { amount: 0.0125, currency: 'USD' },
+        ...(estimated ? { _meta: { 'chord/filled': ['cost'] } } : {}),
+      },
+    });
+    task.heard({
+      type: 'result',
+      turnId: 'r1',
+      result: { status: 'completed', stopReason: 'end_turn', usage: tokens },
+    });
+
+    const last = relayed.at(-1);
+
+    return last?.type === 'update' ? last.update : undefined;
+  };
+
+  expect(ending(false)).toMatchObject({
+    sessionUpdate: 'subagent_update',
+    state: { state: 'completed' },
+    _meta: {
+      'chord/spent': {
+        tokens: { inputTokens: 1000, outputTokens: 200, totalTokens: 2000 },
+        cost: { amount: 0.0125, currency: 'USD' },
+      },
+    },
+  });
+  // The agent's own cost is not marked as chord's.
+  expect(JSON.stringify(ending(false))).not.toContain('estimated');
+  // A cost chord worked out says so.
+  expect(ending(true)).toMatchObject({
+    _meta: {
+      'chord/spent': { cost: { amount: 0.0125 }, estimated: true },
+    },
+  });
+});
+
+test('a task whose agent reported nothing ends with nothing said of its spend (CHD-373)', () => {
+  const { task, relayed } = harness();
+
+  task.heard(MODELS);
+  task.heard({ type: 'connected', sessionId: 's1' });
+  task.heard({ type: 'prompt', turnId: 'r1', text: 'taskchild', at: 1 });
+  task.heard({
+    type: 'result',
+    turnId: 'r1',
+    result: { status: 'completed', stopReason: 'end_turn' },
+  });
+
+  expect(relayed.at(-1)).toStrictEqual({
+    type: 'update',
+    turnId: '',
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'task-1',
+      state: { state: 'completed' },
+    },
+    at: 42,
+  });
+});
+
+test("a task's update keeps both what the task is and what it spent when it carries both (CHD-373)", () => {
+  expect(
+    taskUpdate(
+      'task-1',
+      'completed',
+      { name: 'Fix it', runtime: 'fake', prompt: 'go' },
+      { cost: { amount: 0.01, currency: 'USD' } },
+    ),
+  ).toMatchObject({
+    _meta: {
+      'chord/task': { name: 'Fix it', runtime: 'fake' },
+      'chord/spent': { cost: { amount: 0.01, currency: 'USD' } },
+    },
+  });
+});
+
+describe('CHD-373 S1 tester: fake task spend reaches the parent record', () => {
+  for (const mode of ['reported', 'tokens-only', 'no-usage'] as const) {
+    test(`${mode}: ending spend and task identity survive the record roundtrip`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-task-spend-'));
+      const relayed: ConversationEvent[] = [];
+      let ended = false;
+      const task = new TaskAgent(
+        {
+          id: 'priced-task',
+          name: 'Read the reply',
+          runtime: 'fake',
+          prompt: 'text',
+        },
+        {
+          relay: (event) => relayed.push(event),
+          deliver: () => {},
+          ahead: () => {},
+          ended: () => {
+            ended = true;
+          },
+        },
+        Date.now,
+      );
+      const conversation = new Conversation(
+        () =>
+          openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              ...(mode === 'reported' ? [] : [`--${mode}`]),
+            ),
+          }),
+        (event) => task.heard(event),
+      );
+
+      try {
+        task.begin(conversation);
+
+        while (!ended) {
+          await new Promise((resolve) => setTimeout(resolve, 1));
+        }
+
+        const updates = relayed.filter((event) => event.type === 'update');
+        const ending = updates.at(-1);
+
+        assert(ending?.type === 'update');
+
+        const spent = ending.update._meta?.['chord/spent'];
+
+        if (mode === 'no-usage') {
+          expect(spent).toBeUndefined();
+        } else {
+          expect(spent).toMatchObject({
+            tokens: { inputTokens: 1000, outputTokens: 200, totalTokens: 2000 },
+          });
+
+          if (mode === 'reported') {
+            expect(spent).toMatchObject({
+              cost: { amount: 0.0125, currency: 'USD' },
+            });
+          } else {
+            assert(
+              spent &&
+                typeof spent === 'object' &&
+                !Array.isArray(spent) &&
+                'cost' in spent,
+            );
+
+            const cost = spent.cost;
+
+            assert(
+              cost &&
+                typeof cost === 'object' &&
+                !Array.isArray(cost) &&
+                'amount' in cost &&
+                'currency' in cost,
+            );
+            expect(cost.currency).toBe('USD');
+            expect(cost.amount).toBeGreaterThan(0);
+            expect('estimated' in spent && spent.estimated).toBe(true);
+          }
+        }
+
+        const entries: RecordEntry[] = [
+          {
+            type: 'prompt',
+            turnId: 'parent',
+            prompt: 'spawn the task',
+            images: 0,
+            at: 0,
+          },
+        ];
+
+        for (const event of updates) {
+          const entry = entryOf(
+            { ...event, turnId: 'parent' },
+            { type: 'state', options: {} },
+          );
+
+          if (entry) {
+            entries.push(entry);
+          }
+        }
+
+        const path = join(dir, 'parent.jsonl');
+
+        await writeFile(
+          path,
+          entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n',
+        );
+
+        const replay = recordActions(await readPast(path))
+          .filter((action) => action.type !== 'usage')
+          .reduce(reduceTranscript, emptyTranscript);
+        const block = replay.entries.find((entry) => entry.kind === 'subagent');
+
+        assert(block?.kind === 'subagent');
+        expect(block.subagent.task).toMatchObject({
+          name: 'Read the reply',
+          runtime: 'fake',
+        });
+        expect(spent).toEqual(block.subagent.task?.spent);
+      } finally {
+        await conversation.close();
+        await rm(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  test('reported zero cost and zero token counts remain present at completion', () => {
+    const { task, relayed } = harness();
+
+    task.heard({ type: 'connected', sessionId: 's' });
+    task.heard({ type: 'prompt', turnId: 'r', text: 'text', at: 1 });
+    task.heard({
+      type: 'update',
+      turnId: 'r',
+      update: {
+        sessionUpdate: 'usage_update',
+        used: 0,
+        size: 1000,
+        cost: { amount: 0, currency: 'USD' },
+      },
+    });
+    task.heard({
+      type: 'result',
+      turnId: 'r',
+      result: {
+        status: 'completed',
+        stopReason: 'end_turn',
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      },
+    });
+    expect(relayed.at(-1)).toMatchObject({
+      update: {
+        _meta: {
+          'chord/spent': {
+            tokens: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+            cost: { amount: 0, currency: 'USD' },
+          },
+        },
+      },
+    });
+  });
 });

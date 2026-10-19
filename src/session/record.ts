@@ -26,7 +26,7 @@ import type {
   TranscriptAction,
   TurnResult,
 } from './transcript/types.ts';
-import type { TokenUsage } from './usage.ts';
+import { lastReading, type TurnFigures } from './turn_costs.ts';
 
 /** One line of a record. */
 export type RecordEntry =
@@ -149,11 +149,18 @@ export type RecordEntry =
       readonly turnId: string;
       readonly result: TurnResult;
     }
-  | {
-      readonly type: 'usage';
-      readonly turnId: string;
-      readonly usage: TokenUsage;
-    }
+  /**
+   * A turn's tokens as its answer gave them, empty for an agent's own cycle,
+   * and what the turn cost on its own, with the model it ended on
+   * (CHD-373). Written again, whole, when its cost comes after its end; the
+   * last line for a turn is its.
+   */
+  | ({ readonly type: 'usage' } & TurnFigures)
+  /**
+   * The session was opened, first or again: a turn's cost is found within
+   * one opening. A record written before these has none.
+   */
+  | { readonly type: 'opened'; readonly at: number }
   /** The model, mode and other config values in use from here on. */
   | {
       readonly type: 'state';
@@ -655,17 +662,19 @@ export function recordActions(
 
         break;
       case 'usage':
-        actions.push({
-          type: 'usage',
-          turnId: id(entry.turnId),
-          usage: entry.usage,
-        });
+        actions.push({ ...entry, turnId: id(entry.turnId) });
 
         break;
     }
   }
 
   end();
+
+  const before = spentBefore(entries);
+
+  if (before !== undefined) {
+    actions.push(before);
+  }
 
   if (
     entries.some(
@@ -694,6 +703,38 @@ export function recordActions(
   }
 
   return actions;
+}
+
+/**
+ * What a record spent before it kept each turn's cost, as one figure: the
+ * last cost its session's own updates gave before its first `opened` line,
+ * or in all of one written before those lines were (the owner's Q62).
+ */
+function spentBefore(
+  entries: readonly RecordEntry[],
+): Extract<PastAction, { type: 'usage' }> | undefined {
+  const opened = entries.findIndex((entry) => entry.type === 'opened');
+  const first = entries[opened];
+  const last = lastReading(
+    (opened < 0 ? entries : entries.slice(0, opened)).flatMap((entry) =>
+      entry.type === 'update' && entry.subagentId === undefined
+        ? [entry.update]
+        : [],
+    ),
+  );
+
+  if (last === undefined) {
+    return undefined;
+  }
+
+  return {
+    type: 'usage',
+    turnId: 'history-before',
+    usage: {},
+    cost: { amount: last.amount, currency: last.currency },
+    ...(last.estimated ? { estimated: true as const } : {}),
+    before: first?.type === 'opened' ? { until: first.at } : {},
+  };
 }
 
 /**
@@ -741,11 +782,7 @@ export function historyEntries(actions: readonly PastAction[]): RecordEntry[] {
 
         break;
       case 'usage':
-        entries.push({
-          type: 'usage',
-          turnId: action.turnId,
-          usage: action.usage,
-        });
+        entries.push(action);
 
         break;
     }
@@ -846,7 +883,7 @@ export function entryOf(
     case 'result':
       return { type: 'result', turnId: event.turnId, result: event.result };
     case 'usage':
-      return { type: 'usage', turnId: event.turnId, usage: event.usage };
+      return event;
     case 'model':
       return stateWith(state, { model: event.models?.current });
     case 'modes':
@@ -908,8 +945,9 @@ interface Child {
 /**
  * Writes a conversation's sessions into their records as they go. A session
  * opened from a record goes on in that file; any other starts one of its own.
- * Nothing is written until a prompt is, so a session only looked at leaves no
- * record, or no trace in the one it was opened from.
+ * Nothing is written until a prompt is, or the agent works on its own, so a
+ * session only looked at leaves no record, or no trace in the one it was
+ * opened from.
  */
 export class FileRecording implements Recording {
   readonly #dir: string;
@@ -930,6 +968,13 @@ export class FileRecording implements Recording {
   #flushing = false;
   #reported = false;
   readonly #child: Child | undefined;
+  /** The turn or cycle the session on screen began last. */
+  #lastTurn: string | undefined;
+  /**
+   * The records of sessions `/clear` let go, by the turn each was in, which
+   * may still say what it cost (CHD-373 S3c).
+   */
+  readonly #retired = new Map<string, string>();
 
   /**
    * `failed` hears, once, why a record could not be written; the session goes
@@ -962,6 +1007,7 @@ export class FileRecording implements Recording {
     this.#prompted = false;
     this.#state = stateOfSession(session);
 
+    const opened: RecordEntry = { type: 'opened', at: this.#now() };
     const parent = this.#child?.parent();
     const lines: RecordEntry[] =
       session.record === undefined
@@ -985,9 +1031,10 @@ export class FileRecording implements Recording {
             },
             // A past the agent replayed is in no record yet.
             ...historyEntries(session.history()),
+            opened,
             this.#state,
           ]
-        : [this.#state];
+        : [opened, this.#state];
 
     for (const line of lines) {
       this.#add(line);
@@ -1007,10 +1054,10 @@ export class FileRecording implements Recording {
       return;
     }
 
-    this.#prompted = true;
+    this.#begun();
 
-    for (const entry of this.#held.splice(0)) {
-      this.#add(entry);
+    if (into === undefined) {
+      this.#lastTurn = turnId;
     }
 
     this.#add({
@@ -1027,9 +1074,21 @@ export class FileRecording implements Recording {
   }
 
   heard(event: ConversationEvent): void {
+    if (event.type === 'retired_usage' || event.type === 'retired_update') {
+      this.#retiredLine(event);
+
+      return;
+    }
+
     if (event.type === 'cleared') {
+      // Its last turn may still say what it cost, into this record.
+      if (this.#path !== undefined && this.#lastTurn !== undefined) {
+        this.#retired.set(this.#lastTurn, this.#path);
+      }
+
       // The session it was let go for is opened next, and says so.
       this.#path = undefined;
+      this.#lastTurn = undefined;
       this.#held = [];
 
       this.#asking.clear();
@@ -1043,6 +1102,14 @@ export class FileRecording implements Recording {
 
     if (event.type === 'elicitation_requested') {
       this.#asking.set(event.elicitation.id, event.elicitation);
+    }
+
+    // The agent's own cycle is work the session spent on, as a prompt's
+    // turn is, though nobody sent one.
+    if (event.type === 'cycle_started') {
+      this.#begun();
+
+      this.#lastTurn = event.turnId;
     }
 
     const entry =
@@ -1096,6 +1163,41 @@ export class FileRecording implements Recording {
               }
           : answer,
     };
+  }
+
+  /**
+   * What a let-go session said after: its turn's figures, and a cost it
+   * said, which a resume counts on from, into that session's record.
+   */
+  #retiredLine(
+    event: Extract<
+      ConversationEvent,
+      { type: 'retired_usage' | 'retired_update' }
+    >,
+  ): void {
+    const path = this.#retired.get(event.turnId);
+
+    if (path === undefined) {
+      return;
+    }
+
+    const { type, ...rest } = event;
+    const entry: RecordEntry =
+      type === 'retired_update'
+        ? { type: 'update', turnId: event.turnId, update: event.update }
+        : { type: 'usage', ...(rest as TurnFigures) };
+
+    this.#queue.push({ path, line: `${JSON.stringify(entry)}\n` });
+    this.#flush();
+  }
+
+  /** Work began in the session: what was held for it is kept from now. */
+  #begun(): void {
+    this.#prompted = true;
+
+    for (const entry of this.#held.splice(0)) {
+      this.#add(entry);
+    }
   }
 
   flushed(): Promise<void> {

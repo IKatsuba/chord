@@ -670,3 +670,84 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
     ).toStrictEqual({ focus: t1, top: 0, laid: laidAt(76, 40) });
   });
 });
+
+test("an ended task's row says its money after its state, which gives way after its model (CHD-373)", () => {
+  const spent = {
+    cost: { amount: 0.0125, currency: 'USD' },
+    tokens: { totalTokens: 2000 },
+  };
+  const ended = task(
+    't1',
+    'Fix the tokenizer',
+    { group: 'failed', endedAt: NOW },
+    { spent, startedAt: NOW - 15_000 },
+  );
+
+  expect(stateText(ended, NOW).text).toBe('✗ failed after 15s · $0.0125');
+  expect(
+    stateText({ ...ended, spent: { ...spent, estimated: true } }, NOW).text,
+  ).toBe('✗ failed after 15s · ~$0.0125');
+  expect(stateText(ended, NOW, { spent: false }).text).toBe(
+    '✗ failed after 15s',
+  );
+  // While it works, none.
+  expect(
+    stateText({ ...ended, status: { group: 'running' } }, NOW).text,
+  ).not.toContain('$');
+
+  // Narrower and narrower: the model goes first, then the money, then the
+  // runtime (CHD-378.md, ac4ade0e).
+  const row = (width: number) =>
+    viewRows([ended], { width, focus: undefined, now: NOW })[0]!
+      .lines[0]!.map((cell) => cell.text)
+      .join('')
+      .trimEnd();
+  const seen: string[] = [];
+
+  for (let width = 120; width > 40; width--) {
+    const now = row(width);
+
+    if (now !== seen.at(-1)) {
+      seen.push(now);
+    }
+  }
+
+  const firstWithout = (part: string) =>
+    seen.findIndex((line) => !line.includes(part));
+
+  expect(seen[0]).toContain('Fake Small');
+  expect(seen[0]).toContain('· $0.0125');
+  expect(firstWithout('Fake Small')).toBeLessThan(firstWithout('$0.0125'));
+  expect(firstWithout('$0.0125')).toBeLessThan(firstWithout('task · fake'));
+  expect(seen).toContainEqual(
+    expect.stringMatching(/task · fake +✗ failed after 15s · \$0\.0125/),
+  );
+});
+
+describe('CHD-373 S2 tester: zero and absent money in background states', () => {
+  for (const group of ['done', 'failed', 'stopped'] as const) {
+    test(`${group} retains reported zero money while absent cost stays absent`, () => {
+      const item = task(
+        'zero',
+        'Zero cost',
+        { group, endedAt: NOW },
+        {
+          spent: {
+            cost: { amount: 0, currency: 'USD' },
+            tokens: { totalTokens: 0 },
+          },
+        },
+      );
+
+      expect(stateText(item, NOW).text).toContain('$0.0000');
+      expect(
+        stateText(task('missing', 'No cost', { group, endedAt: NOW }), NOW)
+          .text,
+      ).not.toContain('$');
+      expect(
+        stateText({ ...item, spent: { ...item.spent!, estimated: true } }, NOW)
+          .text,
+      ).toContain('~$0.0000');
+    });
+  }
+});

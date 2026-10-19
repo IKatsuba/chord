@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   type AppAction,
   type AppState,
@@ -687,4 +687,149 @@ test("the scroll keys move a permission request only while it overflows, and onl
   });
 
   expect(keyCommand('', pgdn, answered, '')).toStrictEqual('scroll_page_down');
+});
+
+test("a turn's usage keeps its own cost on the session, and the window keeps what closed agents spent (CHD-373)", () => {
+  const cost = { amount: 0.01, currency: 'USD' };
+  const spent = reduceApp(initialAppState, {
+    type: 'usage',
+    turnId: 't',
+    usage: { totalTokens: 5 },
+    model: 'm',
+    cost,
+    estimated: true,
+  }).spent;
+
+  expect(spent).toStrictEqual({
+    turns: { t: { totalTokens: 5 } },
+    costs: { t: { model: 'm', cost, estimated: true } },
+  });
+
+  const kept = (name: string) => ({
+    tab: 1,
+    part: { name, kind: 'agent' as const, figure: { cost } },
+  });
+  const window = [kept('docs'), kept('parser')]
+    .map((each): WindowedAction => ({ type: 'spend_kept', kept: each }))
+    .reduce(reduceWindowed, windowed(initialAppState, 1)).window;
+
+  expect(window.keptSpend).toStrictEqual([kept('docs'), kept('parser')]);
+});
+
+test('a closing session is held as it was, takes its last events in, and is kept once its close settles; one never held keeps nothing (CHD-373)', () => {
+  const cost = { amount: 0.02, currency: 'USD' };
+  const place = { tab: 1, name: 'docs', kind: 'agent' as const };
+  const closed = (
+    [
+      { type: 'spend_closing', key: 1, place },
+      { type: 'session_closed', key: 1, front: 1 },
+      {
+        type: 'closing_heard',
+        key: 1,
+        event: { type: 'usage', turnId: 't', usage: {}, cost },
+      },
+      // Not held, so nothing.
+      { type: 'spend_closed', key: 7 },
+      { type: 'spend_closed', key: 1 },
+    ] satisfies WindowedAction[]
+  ).reduce(reduceWindowed, windowed(initialAppState, 1));
+
+  expect(closed.closing).toStrictEqual({});
+  expect(closed.window.keptSpend).toStrictEqual([
+    {
+      tab: 1,
+      part: {
+        name: 'docs',
+        kind: 'agent',
+        figure: { cost },
+        ended: true,
+      },
+    },
+  ]);
+});
+
+test("a session /clear lets go is held under a key of its own, takes its running turn's end, and is kept once it has closed, as the tab goes on (CHD-373 S3c)", () => {
+  const cost = { amount: 0.01, currency: 'USD' };
+  const window = (
+    [
+      {
+        type: 'in_session',
+        key: 1,
+        action: { type: 'connected', sessionId: 'old' },
+      },
+      {
+        type: 'in_session',
+        key: 1,
+        action: { type: 'prompt', turnId: 't', text: 'go', at: 1 },
+      },
+      {
+        type: 'spend_closing',
+        key: -1,
+        from: 1,
+        place: { tab: 1, name: 'main', kind: 'main', agent: 'fake' },
+      },
+      { type: 'in_session', key: 1, action: { type: 'cleared' } },
+      {
+        type: 'in_session',
+        key: 1,
+        action: { type: 'connected', sessionId: 'new' },
+      },
+      // Not this session's turn: nowhere.
+      {
+        type: 'retired_heard',
+        from: 1,
+        event: { type: 'usage', turnId: 'other', usage: {}, cost },
+      },
+      {
+        type: 'retired_heard',
+        from: 1,
+        event: { type: 'usage', turnId: 't', usage: {}, cost },
+      },
+      { type: 'spend_closed', key: -1 },
+    ] satisfies WindowedAction[]
+  ).reduce(reduceWindowed, windowed(initialAppState, 1));
+
+  expect(window.window.keptSpend).toStrictEqual([
+    {
+      sessionId: 'old',
+      tab: 1,
+      part: {
+        name: 'main',
+        kind: 'main',
+        agent: 'fake',
+        figure: { cost },
+        ended: true,
+      },
+    },
+  ]);
+  expect(window.closing).toStrictEqual({});
+  // The tab goes on with the new session, which spent nothing.
+  expect(window.sessions[1]?.sessionId).toBe('new');
+  expect(window.sessions[1]?.spent?.costs).toBe(undefined);
+});
+
+describe('CHD-373 S3c tester: settled window spend survives session replacement', () => {
+  test('clearing the front session keeps the cost of sessions already retired', () => {
+    const kept = {
+      sessionId: 'earlier',
+      tab: 1,
+      part: {
+        name: 'main',
+        kind: 'main' as const,
+        ended: true as const,
+        figure: { cost: { amount: 0.02, currency: 'USD' } },
+      },
+    };
+    const before = reduceWindowed(windowed(initialAppState, 1), {
+      type: 'spend_kept',
+      kept,
+    });
+    const after = reduceWindowed(before, {
+      type: 'in_session',
+      key: 1,
+      action: { type: 'cleared' },
+    });
+
+    expect(after.window.keptSpend).toEqual([kept]);
+  });
 });

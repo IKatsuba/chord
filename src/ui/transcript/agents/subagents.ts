@@ -12,9 +12,12 @@ import type {
   Entry,
   PermissionWait,
   Subagent,
+  TaskSpent,
   SubagentState,
 } from '../../../session/transcript/types.ts';
 import { formatElapsed } from '../../../session/elapsed.ts';
+import { formatCost } from '../reports.ts';
+import { tokensIn } from '../spend.ts';
 import { type ArrowTone, outArrow } from '../message.ts';
 import {
   firstLine,
@@ -144,13 +147,55 @@ export function toolUses(subagent: Subagent): number {
  * What a subagent did and how long it took, as its ending says them; a task
  * whose work was lost with its record says only how long.
  */
-function countsOf(subagent: Subagent): string {
+/**
+ * What a subagent did, as its block and its group row say it: its tool uses,
+ * a task's tokens and money once it has ended, and how long it ran; the
+ * tokens or the money left out where a row gives them way (CHD-373).
+ */
+function countsOf(
+  subagent: Subagent,
+  { tokens = true, money = true }: { tokens?: boolean; money?: boolean } = {},
+): string {
+  const spent = spentParts(subagent.task?.spent);
+
   return [
     subagent.task?.workLost ? undefined : uses(toolUses(subagent)),
+    tokens ? spent.tokens : undefined,
+    money ? spent.money : undefined,
     ranFor(subagent),
   ]
     .filter((part) => part !== undefined)
     .join(' · ');
+}
+
+/**
+ * A task's spend as its ended block says it, as Claude Code's task line
+ * does with money added: `2.0k tokens · $0.0125`, the cost `~$…` when chord
+ * worked it out, and what its agent did not report left out (CHD-373).
+ */
+export function spentParts(spent: TaskSpent | undefined): {
+  readonly tokens?: string;
+  readonly money?: string;
+} {
+  const count = tokensIn(spent?.tokens);
+
+  return {
+    ...(count === undefined ? {} : { tokens: `${shortCount(count)} tokens` }),
+    ...(spent?.cost === undefined
+      ? {}
+      : {
+          money: `${spent.estimated ? '~' : ''}${formatCost(spent.cost)}`,
+        }),
+  };
+}
+
+/** `850`, `2.0k`, `12.4k`, `1.2M`, as Claude Code counts tokens. */
+export function shortCount(count: number): string {
+  return count < 1000
+    ? String(count)
+    : count < 1_000_000
+      ? `${(count / 1000).toFixed(1)}k`
+      : `${(count / 1_000_000).toFixed(1)}M`;
 }
 
 function uses(count: number): string {
@@ -405,18 +450,30 @@ export function groupRow(
 ): { readonly headline: Headline; readonly counts?: string } {
   const whole = agentHeadline(subagent);
   const head = agentHeadline(subagent, false);
-  const said = countsOf(subagent);
-  const counts = said === '' ? '' : ` · ${said}`;
+  const counted = (gives: { tokens?: boolean; money?: boolean }) => {
+    const said = countsOf(subagent, gives);
 
-  // A task's model goes first, then the counts, then the title is cut.
+    return said === '' ? '' : ` · ${said}`;
+  };
+
+  const counts = counted({});
+
+  // A task's model goes first, then its tokens, its money and the rest of
+  // the counts, then the title is cut (CHD-373).
   if (width - headlineWidth(whole) >= stringWidth(counts)) {
     return { headline: whole, counts };
   }
 
   const room = width - headlineWidth(head);
 
-  if (room >= stringWidth(counts)) {
-    return { headline: head, counts };
+  for (const fewer of [
+    counts,
+    counted({ tokens: false }),
+    counted({ tokens: false, money: false }),
+  ]) {
+    if (room >= stringWidth(fewer)) {
+      return { headline: head, counts: fewer };
+    }
   }
 
   if (room >= 0 || head.arg === undefined) {

@@ -10,7 +10,7 @@
 import * as acp from '@agentclientprotocol/sdk';
 import { readFileSync } from 'node:fs';
 import { parseTeam } from '../../../../src/teams.ts';
-import { LEAD_OPENS, PROPOSE_TEAM, STEP_MS } from '../options.ts';
+import { LEAD_OPENS, PROPOSE_TEAM, STEP_MS, TESTER_PLAYS } from '../options.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 import { TASK_ARGS } from './tasks.ts';
@@ -503,7 +503,12 @@ export const TEAMS = {
       for (const member of LEAD_OPENS) {
         await callChord(turn, client, 'open_agent', {
           member,
-          prompt: MEMBER_PROMPTS[member] ?? 'Wait for my word.',
+          // A scenario's name for tester's prompt is played in place of its
+          // role.
+          prompt:
+            (member === 'tester' ? TESTER_PLAYS : undefined) ??
+            MEMBER_PROMPTS[member] ??
+            'Wait for my word.',
         });
       }
 

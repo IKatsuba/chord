@@ -6,7 +6,8 @@
   every request answered, sessions listed, loaded and resumed, and a turn's
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
-  (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
+  (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`,
+  `costwait`, `costwaitlate`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `longresults`,
   `overlap`, `overlapfail`,
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
@@ -25,9 +26,10 @@
   `claudenostop`, `claudeslowstop`, `claudebetween`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
-  (`codexchordcalls`, `codexmodels`, `tasklong`, `tasktallname`, `tasktwo`,
-  `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`), `cycles.ts` (`claudecycle`,
-  `claudecyclebare`, `claudecycleask`, `codebuddycycle`) and
+  (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
+  `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`),
+  `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
+  `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
@@ -37,7 +39,8 @@
   A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `stepslater`, `calls`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlapfail`, `overlapask`, `subagentcall`,
-  `cutcalls`, `cutcallsback`, `tasklong`, `tasktallname`, `tasktwo`,
+  `cutcalls`, `cutcallsback`, `tasklong`, `taskcost`, `agentcost`,
+  `tasktallname`, `tasktwo`,
   `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `plan`, `proposal`,
@@ -45,7 +48,7 @@
   `teamtask`,
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
-  `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
+  `cancels`, `error`, `slow`, `long`, `costwait`, `costwaitlate`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
   `mcp`, `form`, `link`, `leftform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
@@ -117,7 +120,8 @@
   messages its parent through `send_message`, runs the tests and reports;
   `tasklong` starts one `taskwait` task, `tasktallname` the same under a
   name of about 600 characters, taller than the background frame at 80x24
-  (CHD-430), and `tasktwo` two drawn as a group, then leaves the parent
+  (CHD-430), `taskcost` one on `costwait`, which says a cost and works on
+  until stopped, and `tasktwo` two drawn as a group, then leaves the parent
   idle; `taskwait` works for a minute without asking
   permission, unless stopped; `taskbetween` starts `taskchild` and ends
   its turn at once, so the task asks between its parent's turns, and
@@ -146,7 +150,8 @@
   permission; `agentclose` closes `parser` and then messages it, which chord refuses;
   `agenttask`, `agentexit` and `agentfail` open `parser` on `task`, on
   `crash`, whose agent writes its last words to stderr and exits mid-turn,
-  and on `error`; `taskeffort` and `agenteffort` start a task and open an
+  and on `error`; `agentcost` opens it on `costwait`, to close it busy
+  with a cost said; `taskeffort` and `agenteffort` start a task and open an
   agent on `text` on high effort, `taskmaxeffort` and `agentmaxeffort` on
   max, which the fake does not offer, and each says the effort chord's
   answer says it started on, and its note; `team` and `team2` call `list_teams`, then `run_team` on
@@ -173,7 +178,9 @@
   when what it says is a scenario's name, plays that scenario, as a child's
   first prompt is its parent's message; and `--no-http` or `CHORD_FAKE_NO_HTTP=1` leaves HTTP out of its
   `mcpCapabilities`, so chord gives it no server of its own; `long` streams 200
-  numbered lines about 100 ms apart, to scroll back through by hand; `plan`
+  numbered lines about 100 ms apart, to scroll back through by hand;
+  `costwait` reports a cost, then works on until it is cancelled, and
+  `costwaitlate` also says a cost of 0.02 just after its cancelled answer; `plan`
   moves its three steps along about 2 s apart, to see the list mid-turn;
   `proposal` sends Codex's proposed plan by id about 2 s a step: markdown
   rewritten then grown, a file plan, then the markdown one removed;
@@ -272,7 +279,22 @@
   tokens in its answer; `--no-usage` or `CHORD_FAKE_NO_USAGE=1` reports none,
   and `--tokens-only` or `CHORD_FAKE_TOKENS_ONLY=1` only the tokens, no cost
   and no window, on two real models chord's price data knows,
-  `gpt-5.3-codex` (in use until switched) and `claude-haiku-4-5`. `session/list` gives the sessions the process created,
+  `gpt-5.3-codex` (in use until switched) and `claude-haiku-4-5`.
+  `--tester-plays <scenario>` (`CHORD_FAKE_TESTER_PLAYS`) has a team's lead
+  open `tester` on that scenario rather than its role, so with `taskcost` a
+  member starts a task agent of its own.
+  `--cost-from <usd>` (`CHORD_FAKE_COST_FROM`) counts each session's cost
+  from that amount, as an agent that keeps it with the session does after a
+  resume, and `--late-cost` (`CHORD_FAKE_LATE_COST=1`) sends the turn's
+  `usage_update` 100 ms after its answer, as Claude's adapter can.
+  `--cost-at-next` (`CHORD_FAKE_COST_AT_NEXT=1`) holds a turn's
+  `usage_update` until the next prompt, sending it before that prompt's work.
+  `--cycle-cost <usd>` (`CHORD_FAKE_CYCLE_COST`) puts the session's cost so
+  far, with that added, on the usage update that ends a Claude cycle (`0`
+  repeats it); without the flag, the cycle carries no cost.
+  `--cycle-on-resume` (`CHORD_FAKE_CYCLE_ON_RESUME=1`) runs such a cycle
+  after a resume goes quiet, with no prompt sent.
+  `session/list` gives the sessions the process created,
   newest first, and `session/set_model` takes either model. `session/load` takes any UUID and replays a short past (the
   `tools` and `text` scenarios) before it answers; any other id is not found,
   and `CHORD_FAKE_REFUSE_LOAD=1` refuses every load; `--resume-only` also

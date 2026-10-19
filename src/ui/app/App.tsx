@@ -648,6 +648,7 @@ export function App({
       saveTheme,
       saveEditorMode,
       settingsFile,
+      columns,
     },
     state,
     dispatch,

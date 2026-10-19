@@ -462,3 +462,102 @@ describe('CHD-2 tester: completion crossing a stop', () => {
     expect(only(again, 'a').endedAt).toBeUndefined();
   });
 });
+
+test("a task's block keeps what its ending update says it spent, beside its task (CHD-373)", () => {
+  const update = (meta: Record<string, unknown>, state: string) => ({
+    type: 'update' as const,
+    turnId: 't1',
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'task-1',
+      state: { state },
+      _meta: meta,
+    } as SessionUpdate,
+    at: 0,
+  });
+  const ended = fold([
+    { type: 'prompt', turnId: 't1', text: 'task', at: 0 },
+    update({ 'chord/task': { name: 'Fix it', runtime: 'fake' } }, 'running'),
+    update(
+      {
+        'chord/spent': {
+          tokens: { inputTokens: 1000, totalTokens: 2000 },
+          cost: { amount: 0.0125, currency: 'USD' },
+          estimated: true,
+        },
+      },
+      'completed',
+    ),
+  ]);
+  const block = ended.entries.find((entry) => entry.kind === 'subagent');
+
+  assert(block?.kind === 'subagent');
+  expect(block.subagent.task).toStrictEqual({
+    name: 'Fix it',
+    runtime: 'fake',
+    spent: {
+      tokens: { inputTokens: 1000, totalTokens: 2000 },
+      cost: { amount: 0.0125, currency: 'USD' },
+      estimated: true,
+    },
+  });
+});
+
+test("a task's spend that a record or an agent bent is read part by part, what does not read left out (CHD-373)", () => {
+  const spentFrom = (spent: unknown) => {
+    const block = fold([
+      { type: 'prompt', turnId: 't1', text: 'task', at: 0 },
+      {
+        type: 'update',
+        turnId: 't1',
+        update: {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'task-1',
+          state: { state: 'running' },
+          _meta: { 'chord/task': { name: 'Fix it', runtime: 'fake' } },
+        } as SessionUpdate,
+        at: 0,
+      },
+      {
+        type: 'update',
+        turnId: 't1',
+        update: {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'task-1',
+          state: { state: 'completed' },
+          _meta: { 'chord/spent': spent },
+        } as SessionUpdate,
+        at: 0,
+      },
+    ]).entries.find((entry) => entry.kind === 'subagent');
+
+    assert(block?.kind === 'subagent');
+
+    return block.subagent.task?.spent;
+  };
+
+  const cost = { amount: 0.0125, currency: 'USD' };
+
+  // A cost with no amount or currency is no cost; its estimate goes with it.
+  expect(
+    spentFrom({ cost: {}, estimated: true, tokens: { totalTokens: 2000 } }),
+  ).toStrictEqual({ tokens: { totalTokens: 2000 } });
+  expect(spentFrom({ cost: { amount: 'x', currency: 'USD' } })).toBe(undefined);
+  // A token count that is not one is left out, the others kept.
+  expect(
+    spentFrom({
+      tokens: { totalTokens: 'bad', inputTokens: 1000, outputTokens: -1 },
+      cost,
+    }),
+  ).toStrictEqual({ tokens: { inputTokens: 1000 }, cost });
+  expect(spentFrom({ tokens: { totalTokens: 1.5 } })).toBe(undefined);
+  // `estimated` stands only with a cost, and only as true.
+  expect(spentFrom({ cost, estimated: 'yes' })).toStrictEqual({ cost });
+  expect(spentFrom({ cost, estimated: true })).toStrictEqual({
+    cost,
+    estimated: true,
+  });
+  // Not an object at all: nothing.
+  expect(spentFrom('lots')).toBe(undefined);
+  expect(spentFrom(null)).toBe(undefined);
+});

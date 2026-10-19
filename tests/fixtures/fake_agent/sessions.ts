@@ -54,6 +54,9 @@ export const AVAILABLE_MODELS = TOKENS_ONLY
 export const FIRST_MODEL = AVAILABLE_MODELS[0]?.value ?? 'fake-large';
 export const locked = new Set<string>();
 
+/** Each session's cost so far, in USD, as its usage updates have said it. */
+export const costs = new Map<string, number>();
+
 /**
  * Says each session's id as a `_session/steering` request for it arrives,
  * before it is answered, for a turn that waits on a message steered in.

@@ -42,19 +42,15 @@ import { type Heard, pastActions } from './replay.ts';
 import type { Resume } from './sessions.ts';
 import { routed, type SessionTree, sessionTree } from './subagents.ts';
 import type { TranscriptAction, TurnResult } from './transcript/types.ts';
-import { tokensOf, type TokenUsage } from './usage.ts';
+import { tokensOf } from './usage.ts';
+import type { TurnFigures } from './turn_costs.ts';
 
 /**
  * One step of a session's past: what the transcript drew, or a turn's tokens,
  * which only a record keeps; an agent's replay carries none.
  */
 export type PastAction =
-  | TranscriptAction
-  | {
-      readonly type: 'usage';
-      readonly turnId: string;
-      readonly usage: TokenUsage;
-    };
+  TranscriptAction | ({ readonly type: 'usage' } & TurnFigures);
 
 export interface OpenSessionOptions {
   /** A name `chord agents` lists, or the label for `agentCommand`. */
@@ -317,6 +313,13 @@ export interface Session {
    * with `AgentExitError` if that exit cannot be seen even after a kill.
    */
   close(): Promise<void>;
+  /**
+   * Withdraws what the session still asks of the person, its permissions,
+   * forms and links, as its close does, and leaves it open for what its
+   * agent says after: a session `/clear` lets go, whose last turn may still
+   * say what it cost (CHD-373 S3c). A session that asks nothing has none.
+   */
+  withdraw?(): void;
 }
 
 export async function openSession(
@@ -719,6 +722,10 @@ export async function openSession(
       state = withOptions(state, answered.configOptions);
     },
     close: () => (closing ??= shutdown()),
+    withdraw: () => {
+      permissions.close();
+      elicitations.close();
+    },
   };
 }
 

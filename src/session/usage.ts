@@ -1,8 +1,10 @@
 /**
  * What a session has spent: each turn's tokens, as the agent's answer to its
- * prompt gives them, kept by chord for the life of the window.
+ * prompt gives them, and its own cost, as chord found it, kept by chord for
+ * the life of the window.
  */
 import type { Usage } from '@agentclientprotocol/sdk';
+import type { TurnCost } from './turn_costs.ts';
 
 /**
  * A turn's tokens. A field the agent did not report is absent, never zero,
@@ -35,16 +37,40 @@ export function tokensOf(usage: Usage): TokenUsage {
   );
 }
 
+/** A turn's own cost as a session keeps it, with the model it ended on. */
+export type SpentTurn = TurnCost & { readonly model?: string };
+
 export interface Spent {
   /** Each turn's tokens by the turn's id, every one the agent reported. */
   readonly turns: Readonly<Record<string, TokenUsage>>;
+  /**
+   * Each turn's own cost by the turn's id, the agent's own cycles' among
+   * them, where it had one or was left uncounted (CHD-373).
+   */
+  readonly costs?: Readonly<Record<string, SpentTurn>>;
 }
 
-/** `spent` with a turn's tokens; a turn reported again replaces its own. */
+/**
+ * `spent` with a turn's tokens, where it has any, and its cost; a turn
+ * reported again replaces its own.
+ */
 export function addTurn(
   spent: Spent | undefined,
   turnId: string,
   tokens: TokenUsage,
+  cost: SpentTurn = {},
 ): Spent {
-  return { turns: { ...spent?.turns, [turnId]: tokens } };
+  const { [turnId]: _, ...costs } = spent?.costs ?? {};
+  const counted = cost.cost !== undefined || cost.uncounted === true;
+
+  return {
+    ...spent,
+    turns:
+      Object.keys(tokens).length === 0
+        ? (spent?.turns ?? {})
+        : { ...spent?.turns, [turnId]: tokens },
+    ...(counted || spent?.costs !== undefined
+      ? { costs: counted ? { ...costs, [turnId]: cost } : costs }
+      : {}),
+  };
 }

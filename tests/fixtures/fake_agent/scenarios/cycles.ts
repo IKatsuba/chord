@@ -4,7 +4,9 @@
  * origin, and codebuddy's unasked turn, marked at both ends.
  */
 import type * as acp from '@agentclientprotocol/sdk';
-import { lifetime, pause, type Play, type Turn } from '../turn.ts';
+import { COST_FROM, CYCLE_COST } from '../options.ts';
+import { costs } from '../sessions.ts';
+import { type Client, lifetime, pause, type Play, type Turn } from '../turn.ts';
 
 /**
  * Longer than chord waits for a turn's tail to go quiet, so what follows is
@@ -15,19 +17,65 @@ const QUIET = 1500;
 /** Between one part of a cycle and the next. */
 const STEP = 200;
 
+/** Where a cycle's updates go: the client, and the session they are of. */
+type To = Pick<Turn, 'client' | 'sessionId'>;
+
 /** Sends `update` to the session with no turn running. */
-function send(turn: Turn, update: unknown): Promise<void> {
-  return turn.client.notify('session/update', {
-    sessionId: turn.sessionId,
+function send(to: To, update: unknown): Promise<void> {
+  return to.client.notify('session/update', {
+    sessionId: to.sessionId,
     update: update as acp.SessionUpdate,
   });
 }
 
-function say(turn: Turn, text: string): Promise<void> {
-  return send(turn, {
+function say(to: To, text: string): Promise<void> {
+  return send(to, {
     sessionUpdate: 'agent_message_chunk',
     content: { type: 'text', text },
   });
+}
+
+/**
+ * The usage update that ends a Claude cycle, as claude-agent-acp 0.93 sends
+ * it, of a `task-notification` origin; with `--cycle-cost`, the session's
+ * cost so far with the cycle's added (CHD-373).
+ */
+function cycleUsage(sessionId: string): acp.SessionUpdate {
+  const cost =
+    CYCLE_COST === undefined
+      ? undefined
+      : (costs.get(sessionId) ?? COST_FROM) + CYCLE_COST;
+
+  if (cost !== undefined) {
+    costs.set(sessionId, cost);
+  }
+
+  return {
+    sessionUpdate: 'usage_update',
+    used: 1200,
+    size: 200000,
+    ...(cost === undefined ? {} : { cost: { amount: cost, currency: 'USD' } }),
+    _meta: { '_claude/origin': { kind: 'task-notification' } },
+  };
+}
+
+/**
+ * A Claude cycle with no turn before it, once the session has gone quiet,
+ * ended by its usage: what `--cycle-on-resume` runs in a session resumed.
+ */
+export function runCycle(client: Client, sessionId: string): void {
+  const to = { client, sessionId };
+
+  void (async () => {
+    try {
+      await pause(lifetime.signal, QUIET);
+      await say(to, 'A background task ended while you were away.');
+      await pause(lifetime.signal, STEP);
+      await send(to, cycleUsage(sessionId));
+    } catch {
+      // The client went first.
+    }
+  })();
 }
 
 /**
@@ -47,12 +95,7 @@ function claudeCycle(usage: boolean): Play {
 
         if (usage) {
           await pause(lifetime.signal, STEP);
-          await send(turn, {
-            sessionUpdate: 'usage_update',
-            used: 1200,
-            size: 200000,
-            _meta: { '_claude/origin': { kind: 'task-notification' } },
-          });
+          await send(turn, cycleUsage(turn.sessionId));
         }
       } catch {
         // The client went first.
@@ -105,12 +148,7 @@ export const CYCLES = {
 
         await say(turn, `Permission: ${chosen}.`);
         await pause(lifetime.signal, STEP);
-        await send(turn, {
-          sessionUpdate: 'usage_update',
-          used: 1200,
-          size: 200000,
-          _meta: { '_claude/origin': { kind: 'task-notification' } },
-        });
+        await send(turn, cycleUsage(turn.sessionId));
       } catch {
         // The client went first.
       }

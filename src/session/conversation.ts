@@ -55,7 +55,8 @@ import type {
   TranscriptAction,
   TurnResult,
 } from './transcript/types.ts';
-import type { TokenUsage } from './usage.ts';
+import { costCountOf } from '../cost_counts.ts';
+import { costReading, type TurnFigures, TurnCosts } from './turn_costs.ts';
 import { type CutCall, cutNote } from './cut_off.ts';
 import { chordCallOf, servedFor } from './transcript/chord.ts';
 import { mergeToolCall } from './transcript/tools.ts';
@@ -103,11 +104,27 @@ export type ConversationEvent =
    * every mode change the agent answered.
    */
   | { readonly type: 'modes'; readonly modes: AgentModes | undefined }
-  /** A turn's tokens, as the agent's answer to its prompt gave them. */
+  /**
+   * A turn's tokens, as the agent's answer to its prompt gave them, and
+   * what it cost on its own, with the model it ended on (CHD-373); again
+   * when its cost comes after its end, and for the agent's own cycle, whose
+   * tokens are none.
+   */
+  | ({ readonly type: 'usage' } & TurnFigures)
+  /**
+   * The figures of a turn of a session `/clear` or a resume let go, at its
+   * end as it was cancelled, or a cost it said after: the session gone, it
+   * is still what it spent (CHD-373 S3c).
+   */
+  | ({ readonly type: 'retired_usage' } & TurnFigures)
+  /**
+   * A cost a session `/clear` or a resume let go said after, under its last
+   * turn: its record keeps it, so a resume counts on from it (CHD-373 S3c).
+   */
   | {
-      readonly type: 'usage';
+      readonly type: 'retired_update';
       readonly turnId: string;
-      readonly usage: TokenUsage;
+      readonly update: SessionUpdate;
     }
   /**
    * The agent's config options other than its mode and model, when they
@@ -277,6 +294,16 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * A session `/clear` or a resume let go, until it closes: its turns' costs,
+ * its running turn's end, and when it last said anything (CHD-373 S3c).
+ */
+interface Retired {
+  readonly costs: TurnCosts;
+  readonly ended: PromiseWithResolvers<void>;
+  heardAt: number;
+}
+
 /** How long the agent must be silent after an answer to have finished. */
 const QUIET_MS = 1000;
 /** How long the next queued prompt waits for that silence at most. */
@@ -338,6 +365,19 @@ export class Conversation {
    * its end is marked or a turn of the person's takes it over (CHD-426).
    */
   #cycle: string | undefined;
+  /** The session on screen's turns' costs, since it opened. */
+  #costs: TurnCosts | undefined;
+  /**
+   * The sessions `clear` let go while a turn of theirs ran, until they close:
+   * their turns' costs, and that turn's end, which their close waits for.
+   */
+  readonly #retired = new Map<Session, Retired>();
+  /**
+   * The task agents of the sessions `clear` let go, by id, with that
+   * session: their ending update, what they spent with it, still counts as
+   * that session's; nothing else of theirs is heard (CHD-373 S3c).
+   */
+  readonly #retiredTasks = new Map<string, Session>();
   /** When the last turn or cycle ended, on `performance.now()`'s clock. */
   #endedAt = 0;
   /**
@@ -565,12 +605,77 @@ export class Conversation {
    * the agent forgets the conversation, and the transcript starts empty. The
    * old agent is closed alongside; a turn in it ends with it.
    */
-  clear(): void {
+  /**
+   * Lets the session go and opens a new one. A turn of the old one still
+   * running is cancelled, and the old one closes once that turn has ended,
+   * or after `SETTLE_LIMIT_MS`, so what it cost to the end is said
+   * (`retired_usage`) and kept in its record; settles when it has closed.
+   */
+  clear(): Promise<void> {
     const opening = this.#opening;
 
     if (!opening || this.#closing) {
-      return;
+      return Promise.resolve();
     }
+
+    const old = this.#session;
+    const turn = this.#turn;
+    const cycle = this.#cycle;
+    const retiring: Retired | undefined =
+      old === undefined || this.#costs === undefined
+        ? undefined
+        : {
+            costs: this.#costs,
+            ended: Promise.withResolvers<void>(),
+            heardAt: this.#heardAt,
+          };
+
+    if (old !== undefined && retiring !== undefined) {
+      this.#retired.set(old, retiring);
+    }
+
+    // Nobody will answer what it asks: withdrawn now, as its close would,
+    // while its agent may still say what its turn cost.
+    old?.withdraw?.();
+
+    if (turn !== undefined) {
+      // Cancelled as an interrupt cancels it; its end says what it cost.
+      turn.turn.cancel().catch(() => {
+        // The turn may settle before the cancel lands; its result says so.
+      });
+    } else {
+      retiring?.ended.resolve();
+    }
+
+    // The agent's own cycle has no prompt to wait on: told to stop, it is
+    // over now, what it said it cost with it.
+    if (old !== undefined && turn === undefined && cycle !== undefined) {
+      old.cancel().catch(() => {
+        // The cycle may have ended before the cancel landed.
+      });
+    }
+
+    const cycleCost =
+      old !== undefined && turn === undefined && cycle !== undefined
+        ? this.#costs?.ended(cycle, undefined, old.models()?.current)
+        : undefined;
+
+    const retired = (
+      retiring === undefined ? Promise.resolve() : this.#retirement(retiring)
+    )
+      .then(() => opening)
+      .then((session) => session?.close())
+      .finally(() => {
+        if (old !== undefined) {
+          this.#retired.delete(old);
+
+          for (const [id, of] of this.#retiredTasks) {
+            if (of === old) {
+              this.#retiredTasks.delete(id);
+            }
+          }
+        }
+      });
 
     this.#opening = undefined;
     this.#session = undefined;
@@ -611,6 +716,12 @@ export class Conversation {
     // left for it.
     const tasks = [...this.#tasks.values()];
 
+    if (old !== undefined && retiring !== undefined) {
+      for (const task of tasks) {
+        this.#retiredTasks.set(task.id, old);
+      }
+    }
+
     this.#tasks.clear();
     this.#foreign.clear();
     this.#foreignBetween.clear();
@@ -629,13 +740,17 @@ export class Conversation {
     this.#monitorCount = 0;
 
     this.#emit({ type: 'cleared' });
+
+    // After `cleared`, so the record has it as the session it let go.
+    if (cycleCost !== undefined) {
+      this.#emit({ type: 'retired_usage', ...cycleCost });
+    }
+
     this.#retiring.push(
-      opening
-        .then((session) => session?.close())
-        .then(
-          () => undefined,
-          (error: unknown) => error,
-        ),
+      retired.then(
+        () => undefined,
+        (error: unknown) => error,
+      ),
       ...tasks.map((task) =>
         task.close().then(
           () => undefined,
@@ -645,6 +760,40 @@ export class Conversation {
       monitors,
     );
     this.start();
+
+    return retired.then(
+      () => {},
+      () => {},
+    );
+  }
+
+  /**
+   * Until a session let go may close: its turn ended, then quiet for as
+   * long as a turn's tail gets, as a cost can come after the answer, or
+   * `SETTLE_LIMIT_MS` from now, whichever comes first.
+   */
+  async #retirement(retiring: Retired): Promise<void> {
+    const giveUp = performance.now() + SETTLE_LIMIT_MS;
+    const limit = new AbortController();
+
+    await Promise.race([
+      retiring.ended.promise,
+      delay(SETTLE_LIMIT_MS, undefined, { signal: limit.signal }).catch(
+        () => {},
+      ),
+    ]);
+    limit.abort();
+
+    for (;;) {
+      const wait =
+        Math.min(retiring.heardAt + QUIET_MS, giveUp) - performance.now();
+
+      if (wait <= 0) {
+        return;
+      }
+
+      await delay(wait);
+    }
   }
 
   /**
@@ -1621,6 +1770,8 @@ export class Conversation {
 
         if (task) {
           this.#relay(event, task);
+        } else {
+          this.#retiredTaskEnded(id, event);
         }
       },
       deliver: (from, text) => {
@@ -1648,6 +1799,30 @@ export class Conversation {
         void closing.then(() => this.#endedTasks.delete(closing));
       },
     };
+  }
+
+  /**
+   * The block update of a task of a session `clear` let go, its ending
+   * with what it spent: that session's still, to its record and what the
+   * window keeps of it. Nothing else of the task's goes anywhere.
+   */
+  #retiredTaskEnded(id: string, event: ConversationEvent): void {
+    const session = this.#retiredTasks.get(id);
+    const turnId =
+      session === undefined
+        ? undefined
+        : this.#retired.get(session)?.costs.lastTurn;
+
+    if (
+      turnId === undefined ||
+      event.type !== 'update' ||
+      event.subagentId !== undefined ||
+      event.update.sessionUpdate !== 'subagent_update'
+    ) {
+      return;
+    }
+
+    this.#emit({ type: 'retired_update', turnId, update: event.update });
   }
 
   /** Lets a task go, and the requests of its still on screen. */
@@ -2189,6 +2364,16 @@ export class Conversation {
     // has the modes to walk as soon as the session is up.
     this.#report(session, true);
 
+    this.#costs = new TurnCosts(
+      costCountOf(session.agent),
+      session.record !== undefined,
+      past.flatMap((action) =>
+        action.type === 'update' && action.subagentId === undefined
+          ? [action.update]
+          : [],
+      ),
+    );
+
     // After the past, which the record holds already or takes from the
     // session, and before any update it has not heard.
     this.#recording?.opened(session);
@@ -2294,6 +2479,8 @@ export class Conversation {
     subagentId: string | undefined,
   ): void {
     if (!this.#current(session)) {
+      this.#retiredHeard(session, update, subagentId);
+
       return;
     }
 
@@ -2309,13 +2496,23 @@ export class Conversation {
       this.#track(session, update);
     }
 
+    const turnId = this.#stamp();
+
     this.#emit({
       type: 'update',
-      turnId: this.#stamp(),
+      turnId,
       update,
       ...(subagentId === undefined ? {} : { subagentId }),
       ...(TIMED_UPDATES.has(update.sessionUpdate) ? { at: this.#now() } : {}),
     });
+
+    // A cost that came after its turn's end, as Claude's can, is still its.
+    const late =
+      subagentId === undefined ? this.#costs?.heard(turnId, update) : undefined;
+
+    if (late !== undefined) {
+      this.#emit({ type: 'usage', ...late });
+    }
 
     if (mark === 'end') {
       this.#endCycle();
@@ -2323,6 +2520,43 @@ export class Conversation {
 
     if (subagentId === undefined && STATE_UPDATES.has(update.sessionUpdate)) {
       this.#report(session);
+    }
+  }
+
+  /**
+   * An update of a session let go: it keeps the session from closing until
+   * it is quiet, and a cost it says still counts, as its own, kept in its
+   * record so a resume counts on from it.
+   */
+  #retiredHeard(
+    session: Session,
+    update: SessionUpdate,
+    subagentId: string | undefined,
+  ): void {
+    const retired = this.#retired.get(session);
+
+    if (retired === undefined) {
+      return;
+    }
+
+    retired.heardAt = performance.now();
+
+    const turnId = retired.costs.lastTurn;
+
+    if (
+      subagentId !== undefined ||
+      turnId === undefined ||
+      costReading(update) === undefined
+    ) {
+      return;
+    }
+
+    this.#emit({ type: 'retired_update', turnId, update });
+
+    const late = retired.costs.heardLast(update);
+
+    if (late !== undefined) {
+      this.#emit({ type: 'retired_usage', ...late });
     }
   }
 
@@ -2360,6 +2594,8 @@ export class Conversation {
 
     this.#cycle = turnId;
 
+    this.#costs?.began(turnId);
+
     this.#emit({ type: 'cycle_started', turnId, at: this.#now() });
   }
 
@@ -2387,6 +2623,16 @@ export class Conversation {
         stopReason: status === 'completed' ? 'end_turn' : 'cancelled',
       },
     });
+
+    const figures = this.#costs?.ended(
+      turnId,
+      undefined,
+      this.#session?.models()?.current,
+    );
+
+    if (figures !== undefined) {
+      this.#emit({ type: 'usage', ...figures });
+    }
   }
 
   /**
@@ -2689,6 +2935,7 @@ export class Conversation {
       }
 
       if (links !== undefined && this.#session === session) {
+        this.#costs?.began(turnId);
         this.#recording?.sent(
           turnId,
           prompt,
@@ -2708,6 +2955,14 @@ export class Conversation {
     // in this session, never one `clear` started since.
     if (!went && cut.length > 0 && this.#session === session) {
       this.#cut = [...cut, ...this.#cut];
+    }
+
+    // A turn of a session let go: its end is its own, and touches nothing of
+    // the session that came after it.
+    if (this.#session !== session) {
+      this.#retiredEnded(session, turnId, went, result);
+
+      return;
     }
 
     // The turn has answered: nothing goes into it any more, and a steer
@@ -2731,6 +2986,13 @@ export class Conversation {
       await this.#quieten(session);
     }
 
+    // `clear` may have let the session go while that wait ran.
+    if (this.#session !== session) {
+      this.#retiredEnded(session, turnId, went, result);
+
+      return;
+    }
+
     if (this.#turn?.id === turnId) {
       this.#turn = undefined;
     }
@@ -2743,11 +3005,54 @@ export class Conversation {
     this.#withdrawAsks();
     ended({ type: 'result', turnId, result });
 
-    if (result.status !== 'failed' && result.usage) {
-      ended({ type: 'usage', turnId, usage: result.usage });
+    const figures = went
+      ? this.#costs?.ended(
+          turnId,
+          result.status !== 'failed' ? result.usage : undefined,
+          session.models()?.current,
+        )
+      : result.status !== 'failed' && result.usage
+        ? { turnId, usage: result.usage }
+        : undefined;
+
+    if (figures !== undefined) {
+      ended({ type: 'usage', ...figures });
     }
 
     await this.#advance(session);
+  }
+
+  /**
+   * The end of a turn of a session `/clear` or a resume let go: what it
+   * cost, as that session's, and the quiet its close waits for from now.
+   */
+  #retiredEnded(
+    session: Session,
+    turnId: string,
+    went: boolean,
+    result: TurnResult,
+  ): void {
+    const retired = this.#retired.get(session);
+
+    if (retired === undefined) {
+      return;
+    }
+
+    const figures = went
+      ? retired.costs.ended(
+          turnId,
+          result.status !== 'failed' ? result.usage : undefined,
+          session.models()?.current,
+        )
+      : undefined;
+
+    if (figures !== undefined) {
+      this.#emit({ type: 'retired_usage', ...figures });
+    }
+
+    retired.heardAt = performance.now();
+
+    retired.ended.resolve();
   }
 }
 

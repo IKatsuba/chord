@@ -2,6 +2,7 @@
  * chord's own slash commands as the window runs them, with the theme and
  * the editor mode they keep for the next start.
  */
+import type { SpendPart } from '../transcript/spend.ts';
 import { type Dispatch, useRef } from 'react';
 import type { Conversation } from '../../session/conversation.ts';
 import type { TeamShown } from '../../session/transcript/types.ts';
@@ -23,6 +24,8 @@ export interface CommandsOptions {
   saveEditorMode: ((mode: EditorMode) => Promise<void>) | undefined;
   /** The user's settings file, as the window shows paths. */
   settingsFile: string;
+  /** How wide the window is, which `/cost`'s table is laid out in. */
+  columns: number;
 }
 
 /** What the commands do to the sessions; see `useSessions`. */
@@ -37,6 +40,8 @@ export interface CommandsSessions {
   askQuit(): void;
   /** How many sessions are open, and how many of them wait on the person. */
   counted(): { readonly open: number; readonly waits: number };
+  /** What the whole window has spent, closed agents and tabs too. */
+  spend(): readonly SpendPart[];
   /**
    * `/clear` on the session in front, `before` done first; why it was
    * refused, if it was, and then nothing is done.
@@ -54,7 +59,14 @@ export interface CommandsSessions {
 }
 
 export function useCommands(
-  { agent, cwd, saveTheme, saveEditorMode, settingsFile }: CommandsOptions,
+  {
+    agent,
+    cwd,
+    saveTheme,
+    saveEditorMode,
+    settingsFile,
+    columns,
+  }: CommandsOptions,
   state: AppState,
   dispatch: Dispatch<WindowedAction>,
   sessions: CommandsSessions,
@@ -116,7 +128,12 @@ export function useCommands(
           command,
           rows: report(
             command,
-            reportFacts(state, agent, cwd, Date.now(), sessions.counted()),
+            reportFacts(state, agent, cwd, Date.now(), sessions.counted(), {
+              spend: sessions.spend(),
+              // Under the report's `⎿`, six columns in, inside the
+              // transcript's margins: a note never wraps.
+              width: columns - 8,
+            }),
           ),
         });
       case 'exit':

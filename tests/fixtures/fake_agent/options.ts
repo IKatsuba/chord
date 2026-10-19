@@ -72,6 +72,67 @@ export const PROPOSE_TEAM = valueOf(
   'CHORD_FAKE_PROPOSE_TEAM',
 );
 
+/**
+ * What a session's cost starts from, in USD: with `--cost-from 0.05`, or
+ * `CHORD_FAKE_COST_FROM`, each session reports its cost counted from its
+ * start, as an agent that keeps it with the session does once it is resumed
+ * (CHD-373); with neither, from when this process opened it, as Claude's.
+ */
+export const COST_FROM = Number(
+  (ARGS.includes('--cost-from')
+    ? ARGS[ARGS.indexOf('--cost-from') + 1]
+    : process.env.CHORD_FAKE_COST_FROM) ?? 0,
+);
+
+/**
+ * What the agent's own cycle adds to the session's cost, in USD: with
+ * `--cycle-cost 0.005`, or `CHORD_FAKE_CYCLE_COST`, the usage update that
+ * ends a Claude cycle carries the session's cost so far with it added; `0`
+ * repeats the cost as it was. With neither, it carries no cost, as the
+ * fake's cycles always did (CHD-373).
+ */
+export const CYCLE_COST = ARGS.includes('--cycle-cost')
+  ? Number(ARGS[ARGS.indexOf('--cycle-cost') + 1])
+  : process.env.CHORD_FAKE_CYCLE_COST === undefined
+    ? undefined
+    : Number(process.env.CHORD_FAKE_CYCLE_COST);
+
+/**
+ * A session resumed runs a Claude cycle of its own once it has gone quiet,
+ * with no prompt sent in it: `--cycle-on-resume` or
+ * `CHORD_FAKE_CYCLE_ON_RESUME=1`.
+ */
+export const CYCLE_ON_RESUME =
+  ARGS.includes('--cycle-on-resume') ||
+  process.env.CHORD_FAKE_CYCLE_ON_RESUME === '1';
+
+/**
+ * A turn's `usage_update` comes after its answer, as claude-agent-acp's
+ * can, rather than ahead of it: with `--late-cost` or
+ * `CHORD_FAKE_LATE_COST=1`.
+ */
+export const LATE_COST =
+  ARGS.includes('--late-cost') || process.env.CHORD_FAKE_LATE_COST === '1';
+
+/**
+ * A turn's `usage_update` is held until the session's next prompt has
+ * arrived, and goes ahead of that turn's work, as a cancelled turn's cost
+ * can come once the next has begun: `--cost-at-next` or
+ * `CHORD_FAKE_COST_AT_NEXT=1`.
+ */
+export const COST_AT_NEXT =
+  ARGS.includes('--cost-at-next') ||
+  process.env.CHORD_FAKE_COST_AT_NEXT === '1';
+
+/**
+ * A scenario a team's lead opens `tester` on, in place of its role: with
+ * `--tester-plays taskcost`, or `CHORD_FAKE_TESTER_PLAYS`, tester starts a
+ * task agent of its own (CHD-373).
+ */
+export const TESTER_PLAYS = ARGS.includes('--tester-plays')
+  ? ARGS[ARGS.indexOf('--tester-plays') + 1]
+  : process.env.CHORD_FAKE_TESTER_PLAYS;
+
 const HANGS = ['start', 'config', 'turn'] as const;
 
 function hangStep(): (typeof HANGS)[number] | undefined {

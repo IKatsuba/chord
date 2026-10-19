@@ -33,6 +33,15 @@
  * adapter can; its models are then real ones chord's price data knows,
  * `gpt-5.3-codex` (in use until switched), `claude-haiku-4-5`, and the
  * README's screenshots' `claude-opus-5-5` and `gpt-6.1-sol`.
+ * Started with `--cost-from <usd>`, or `CHORD_FAKE_COST_FROM`, each
+ * session's cost counts from that amount, as an agent that keeps it with the
+ * session reports after a resume; with `--late-cost`, or
+ * `CHORD_FAKE_LATE_COST=1`, the `usage_update` comes after the answer, as
+ * Claude's adapter can send it.
+ * `--cost-at-next` holds it for the session's next prompt instead.
+ * `--cycle-cost <usd>` adds that to the session's cost on the usage update
+ * that ends a Claude cycle, and `--cycle-on-resume` runs one in a session
+ * resumed (CHD-373).
  *
  * It takes images in a prompt, and answers each one first with a line naming
  * its media type and its size in bytes, so a capture shows what arrived, and
@@ -201,7 +210,8 @@
  * `agentlong` opens `parser` on a long markdown instruction;
  * `agenttask`, `agentexit` and `agentfail` open `parser` on `task`, on
  * `crash`, whose agent writes its last words to stderr and exits mid-turn,
- * and on `error`. `taskeffort` and `agenteffort` start a task and open an
+ * and on `error`; `agentcost` opens it on `costwait`, to close it busy with
+ * a cost said. `taskeffort` and `agenteffort` start a task and open an
  * agent on `text` on high effort, `taskmaxeffort` and `agentmaxeffort` on
  * max, which it does not offer, and say where chord's answer says they
  * started; `effort` says the effort the turn runs on. `team` and `team2` hand team `bugfix` a job through
@@ -235,6 +245,10 @@ import {
   STEER_LATE,
   STEERING,
   ADAPTER,
+  COST_AT_NEXT,
+  COST_FROM,
+  CYCLE_ON_RESUME,
+  LATE_COST,
   SAY_CANCELS,
   STEP_MS,
   TOKENS_ONLY,
@@ -249,7 +263,7 @@ import { PLANS } from './scenarios/plans.ts';
 import { SHELL } from './scenarios/shell.ts';
 import { claudeChildren, SUBAGENTS } from './scenarios/subagents.ts';
 import { TASKS } from './scenarios/tasks.ts';
-import { CYCLES } from './scenarios/cycles.ts';
+import { CYCLES, runCycle } from './scenarios/cycles.ts';
 import { AGENTS } from './scenarios/agents.ts';
 import { EFFORTS } from './scenarios/efforts.ts';
 import { MONITORS } from './scenarios/monitors.ts';
@@ -271,11 +285,13 @@ import {
   modes,
   steers,
   strayCancels,
+  costs,
 } from './sessions.ts';
 import {
   type Client,
   lifetime,
   loadMarks,
+  pause,
   type Play,
   Turn,
   type Update,
@@ -326,6 +342,8 @@ const SCENARIOS = [
   'status',
   'error',
   'slow',
+  'costwait',
+  'costwaitlate',
   'long',
   'todos',
   'exitplan',
@@ -376,6 +394,7 @@ const SCENARIOS = [
   'codebuddycycle',
   'taskchild',
   'tasklong',
+  'taskcost',
   'tasktallname',
   'tasktwo',
   'taskwait',
@@ -398,6 +417,7 @@ const SCENARIOS = [
   'codexprosechild',
   'agentlong',
   'agenttask',
+  'agentcost',
   'agentexit',
   'agentfail',
   'taskeffort',
@@ -584,6 +604,12 @@ const TURN_USAGE = {
 /** What each turn adds to the session's cost, in USD. */
 const TURN_COST = 0.0125;
 
+/** How long after its answer a late turn's cost comes. */
+const LATE_COST_MS = 100;
+
+/** A turn's cost held for its session's next prompt, with `--cost-at-next`. */
+const heldCosts = new Map<string, Update>();
+
 /** How many turns each session has reported usage for. */
 const reported = new Map<string, number>();
 
@@ -602,14 +628,42 @@ async function reportUsage(turn: Turn): Promise<void> {
 
   reported.set(turn.sessionId, count);
 
-  await turn.send({
+  const cost = (costs.get(turn.sessionId) ?? COST_FROM) + TURN_COST;
+
+  costs.set(turn.sessionId, cost);
+
+  const update: Update = {
     sessionUpdate: 'usage_update',
     used: TURN_USAGE.totalTokens * count,
     size: WINDOWS[models.get(turn.sessionId) ?? FIRST_MODEL] ?? 0,
-    cost: { amount: TURN_COST * count, currency: 'USD' },
-  });
+    cost: { amount: cost, currency: 'USD' },
+  };
 
   turn.usage = TURN_USAGE;
+
+  if (COST_AT_NEXT) {
+    heldCosts.set(turn.sessionId, update);
+
+    return;
+  }
+
+  if (!LATE_COST) {
+    await turn.send(update);
+
+    return;
+  }
+
+  void (async () => {
+    try {
+      await pause(lifetime.signal, LATE_COST_MS);
+      await turn.client.notify('session/update', {
+        sessionId: turn.sessionId,
+        update,
+      });
+    } catch {
+      // The client went first.
+    }
+  })();
 }
 
 /**
@@ -918,6 +972,10 @@ const connection = acp
     loadMarks.set(sessionId, crypto.randomUUID().slice(0, 8));
     advertiseCommands(client, sessionId);
 
+    if (CYCLE_ON_RESUME) {
+      runCycle(client, sessionId);
+    }
+
     return {
       ...sessionModes(),
       configOptions: configOptions(sessionId),
@@ -1031,6 +1089,17 @@ const connection = acp
     },
   )
   .onRequest('session/prompt', async ({ params, client }) => {
+    const held = heldCosts.get(params.sessionId);
+
+    // The last turn's cost, held for this one, which has now begun.
+    if (held !== undefined) {
+      heldCosts.delete(params.sessionId);
+      await client.notify('session/update', {
+        sessionId: params.sessionId,
+        update: held,
+      });
+    }
+
     const answered = playPrompt(client, params);
 
     prompted.set(params.sessionId, answered);

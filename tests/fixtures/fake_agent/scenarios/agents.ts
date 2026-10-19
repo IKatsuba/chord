@@ -428,6 +428,10 @@ export const AGENTS = {
   // Opens `parser` on `task`, so the child starts a task agent of its own.
   agenttask: (turn) => openParserOn(turn, 'task'),
 
+  // Opens `parser` on `costwait`, so the child reports a cost and works on
+  // until it is stopped, as one closed while busy (CHD-373).
+  agentcost: (turn) => openParserOn(turn, 'costwait'),
+
   // Opens `parser` on a long instruction, which it answers as a message.
   agentlong: (turn) => openParserOn(turn, LONG_INSTRUCTION),
 

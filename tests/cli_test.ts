@@ -296,8 +296,13 @@ test("a refused command for the agent starts nothing, chord's own command neithe
     );
 
     expect(status).toStrictEqual(1);
+    // The warning says what happens, then the refusal says it again.
     expect(said).toContain(
-      'codex not started: agents.codex.command in config/chord/settings.json: expected a string, got a number',
+      '"agents.codex.command": expected a string, got a number · codex will not start',
+    );
+    expect(said).not.toContain('ignored');
+    expect(said).toContain(
+      'chord: codex not started: agents.codex.command in config/chord/settings.json: expected a string, got a number',
     );
     expect(said).not.toContain('npx');
   } finally {

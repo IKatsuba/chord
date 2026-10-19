@@ -2050,3 +2050,31 @@ test("/cost while a turn runs says that turn is counted when it ends, beside the
       rows: 60,
     },
   ));
+
+describe('CHD-405 N2 tester: held requests do not imply running spend', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`cost has no current-turn row while a between-turn permission remains open at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'leftask');
+          await window.shows('main asks · between turns');
+
+          const cost = await reported(window, '/cost');
+
+          expect(cost).toContain('fake has not reported');
+          expect(cost).not.toContain('This turn:');
+          expect(window.frame()).toContain('ctrl+x a to answer');
+          expect(window.frame()).not.toContain('❯ 1. Allow');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--no-usage'),
+        },
+      ));
+  }
+});

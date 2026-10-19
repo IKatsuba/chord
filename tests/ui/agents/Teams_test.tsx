@@ -18,6 +18,8 @@ import {
 } from '../../fixtures/fake_agent/scenarios/teams.ts';
 import {
   DOWN,
+  ESC,
+  UP,
   leader,
   ready,
   send,
@@ -571,4 +573,97 @@ describe('a runtime whose command was refused (CHD-466)', () => {
       await opened.server.close();
     }
   });
+});
+
+describe('CHD-405 N2 tester: member spend follows the picked session', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a member running under idle main and idle member under running main report independently at ${columns} columns`, async () => {
+      const server = serveChord();
+      const command = fakeAgentCommand(
+        undefined,
+        '--no-usage',
+        '--step-ms',
+        '30',
+      );
+      const team = BUGFIX.replace(
+        /(- name: tester\n(?:.*\n)*?\s+agent: )fake/,
+        '$1codex',
+      );
+      const cost = async (window: Window) => {
+        await send(window, '/cost');
+        await window.shows('› /cost');
+
+        const lines = window.frame().split('\n');
+        const at = lines.findLastIndex((line) => line.includes('› /cost'));
+
+        return lines.slice(at + 1).join('\n');
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await started(window);
+            await leader(window, 'a');
+            await window.shows('╭─ tester · bugfix ─');
+            await window.press('3');
+            await window.shows('Not run; I will ask bugfix how to go on.');
+            await send(window, 'slow');
+            await window.shows('Working.');
+
+            const running = await cost(window);
+
+            expect(running).toContain('codex has not reported');
+            expect(running).toContain('counted when it ends');
+            await window.press(DOWN);
+
+            for (
+              let step = 0;
+              step < 8 && !/❯ main/.test(window.frame());
+              step++
+            ) {
+              await window.press(UP);
+            }
+
+            await window.press('\r');
+            await until(
+              'main is idle',
+              () => !window.frame().includes('Working…'),
+            );
+            expect(await cost(window)).not.toContain('This turn:');
+            await send(window, 'slow');
+            await window.shows('Working.');
+            await window.press(DOWN);
+
+            for (
+              let step = 0;
+              step < 8 && !/❯ ├─ tester/.test(window.frame());
+              step++
+            ) {
+              await window.press(DOWN);
+            }
+
+            await window.press('\r');
+            await window.shows('╭─ tester · bugfix ─');
+            await window.press(ESC);
+            await window.shows('Interrupted by user');
+            expect(await cost(window)).not.toContain('This turn:');
+          },
+          {
+            server,
+            teams: { bugfix: team },
+            runtimes: ['fake', 'codex'],
+            columns,
+            rows,
+            agentCommand: command,
+            startupOf: () => ({ agentCommand: command }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
 });

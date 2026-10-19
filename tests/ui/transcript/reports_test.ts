@@ -1,12 +1,15 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   contextReport,
+  reportFacts,
   costReport,
   formatCost,
   type ReportFacts,
   sessionTokens,
   statusReport,
 } from '../../../src/ui/transcript/reports.ts';
+
+import { initialAppState } from '../../../src/ui/app/state.ts';
 
 const FACTS: ReportFacts = {
   agent: 'fake',
@@ -234,4 +237,37 @@ test("/cost says the turn running is counted when it ends, until any of its spen
   expect(
     text(costReport({ ...FACTS, spent: earlier, context: estimated })),
   ).not.toContain('This turn:    counted when it ends');
+});
+
+describe('CHD-405 N2 tester: running spend boundaries', () => {
+  test('a held between-turn permission with no running turn adds no current-turn row', () => {
+    const state = {
+      ...initialAppState,
+      transcript: {
+        ...initialAppState.transcript,
+        turn: {
+          status: 'awaiting_permission' as const,
+          turnId: 'ended',
+          since: 100,
+          permissions: [{ id: 'held', options: [] }],
+          between: true as const,
+        },
+      },
+    };
+    const facts = reportFacts(state, 'codex', '/work', 500);
+
+    expect(facts.running).toBeUndefined();
+    expect(text(costReport(facts)).join('\n')).not.toContain('This turn:');
+  });
+
+  test('recorded zero spend counts as reported, and an unrelated turn does not', () => {
+    const spent = { turns: { current: { inputTokens: 0, outputTokens: 0 } } };
+
+    expect(
+      text(costReport({ ...FACTS, running: 'current', spent })).join('\n'),
+    ).not.toContain('This turn:');
+    expect(
+      text(costReport({ ...FACTS, running: 'next', spent })).join('\n'),
+    ).toContain('counted when it ends');
+  });
 });

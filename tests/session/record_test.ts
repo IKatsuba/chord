@@ -569,3 +569,242 @@ describe("CHD-373 S3a: the fake's own cycle with a cost, and a cost held for the
       ]);
     }));
 });
+
+describe('CHD-373 S3a tester: causal wire costs through Conversation', () => {
+  for (const [agent, increment, expected] of [
+    ['kilo', '0.005', 0.005],
+    ['kilo', '0', 0],
+    ['fake', '0.005', undefined],
+  ] as const) {
+    test(`${agent}: a no-prompt resumed cycle with increment ${increment} keeps its live and recorded attribution`, () =>
+      withDir(async (dir) => {
+        const id = await recordSession({
+          stateDir: join(dir, 'state'),
+          cwd: dir,
+          command: fakeAgentCommand(),
+          prompts: ['text'],
+          agent,
+        });
+        const record = await theRecord(dir);
+        const events: ConversationEvent[] = [];
+
+        await recordSession({
+          stateDir: join(dir, 'state'),
+          cwd: dir,
+          agent,
+          resume: { sessionId: id, cwd: dir, record: record.path },
+          prompts: [],
+          command: fakeAgentCommand(
+            undefined,
+            '--resume-only',
+            '--adapter',
+            'claude',
+            '--cycle-on-resume',
+            '--cycle-cost',
+            increment,
+            '--cost-from',
+            '0.0125',
+          ),
+          heard: (event) => events.push(event),
+          until: (event) =>
+            event.type === 'usage' && Object.keys(event.usage).length === 0,
+        });
+
+        const entries = await readPast(record.path);
+        const start = events.find((event) => event.type === 'cycle_started');
+
+        assert(start?.type === 'cycle_started');
+
+        const live = events
+          .filter((event) => event.type === 'usage')
+          .filter((event) => event.turnId === start.turnId);
+        const written = entries.filter(
+          (entry) => entry.type === 'usage' && entry.turnId === start.turnId,
+        );
+
+        expect(live).toHaveLength(1);
+        expect(written).toStrictEqual(live);
+        expect(live[0]?.usage).toStrictEqual({});
+        expect(live[0]?.model).toBe('fake-large');
+
+        if (expected === undefined) {
+          expect(live[0]?.cost).toBeUndefined();
+          expect(live[0]?.uncounted).toBe(true);
+        } else {
+          expect(live[0]?.cost?.amount).toBeCloseTo(expected, 9);
+          expect(live[0]?.cost?.currency).toBe('USD');
+          expect(live[0]?.uncounted).toBeUndefined();
+        }
+
+        const opening = entries.findLastIndex(
+          (entry) => entry.type === 'opened',
+        );
+
+        expect(entries.filter((entry) => entry.type === 'opened')).toHaveLength(
+          2,
+        );
+        expect(
+          entries.slice(opening).some((entry) => entry.type === 'prompt'),
+        ).toBe(false);
+        expect(
+          events.some(
+            (event) => event.type === 'result' && event.turnId === start.turnId,
+          ),
+        ).toBe(true);
+      }));
+  }
+
+  test('four queued prompts attribute each causally released prior cost once to the following turn', () =>
+    withDir(async (dir) => {
+      const events: ConversationEvent[] = [];
+
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        agent: 'claude',
+        command: fakeAgentCommand(undefined, '--cost-at-next'),
+        prompts: ['text', 'text', 'text', 'text'],
+        heard: (event) => events.push(event),
+      });
+
+      const entries = await readPast((await theRecord(dir)).path);
+      const prompts = events.filter((event) => event.type === 'prompt');
+      const readings = events
+        .filter((event) => event.type === 'update')
+        .filter(
+          (event) =>
+            event.update.sessionUpdate === 'usage_update' &&
+            event.update.cost !== undefined,
+        );
+      const live = events.filter((event) => event.type === 'usage');
+
+      expect(prompts).toHaveLength(4);
+      expect(readings).toHaveLength(3);
+      expect(readings.map((event) => event.turnId)).toStrictEqual(
+        prompts.slice(1).map((event) => event.turnId),
+      );
+
+      for (const [i, reading] of readings.entries()) {
+        expect(events.indexOf(reading)).toBeGreaterThan(
+          events.indexOf(prompts[i + 1]!),
+        );
+      }
+
+      expect(live.map((event) => event.cost?.amount)).toEqual([
+        undefined,
+        expect.closeTo(0.0125, 9),
+        expect.closeTo(0.0125, 9),
+        expect.closeTo(0.0125, 9),
+      ]);
+      expect(costs(entries)).toStrictEqual([
+        { model: 'fake-large' },
+        turn(0.0125),
+        turn(0.0125),
+        turn(0.0125),
+      ]);
+      expect(
+        recordActions(entries)
+          .filter((entry) => entry.type === 'usage')
+          .map((entry) => entry.cost),
+      ).toStrictEqual(live.map((event) => event.cost));
+    }));
+
+  test('a cost released into a permission turn survives cancellation of that turn', () =>
+    withDir(async (dir) => {
+      const events: ConversationEvent[] = [];
+      const failures: string[] = [];
+      const recording = new FileRecording(join(dir, 'state'), (message) =>
+        failures.push(message),
+      );
+      let owner: Session | undefined;
+      const conversation = new Conversation(
+        async () => {
+          owner = await openSession({
+            agent: 'claude',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(undefined, '--cost-at-next'),
+          });
+
+          return owner;
+        },
+        (event) => events.push(event),
+        Date.now,
+        {},
+        recording,
+      );
+      const wait = async (check: () => boolean) => {
+        const deadline = Date.now() + 10000;
+
+        while (!check()) {
+          assert(
+            Date.now() < deadline,
+            'expected cancellation cost transition',
+          );
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      };
+
+      try {
+        conversation.start();
+        await wait(() => events.some((event) => event.type === 'connected'));
+        conversation.send('text');
+        await wait(() => events.some((event) => event.type === 'usage'));
+        conversation.send('permission');
+        await wait(() =>
+          events.some((event) => event.type === 'permission_requested'),
+        );
+
+        const prompt = events.findLast((event) => event.type === 'prompt');
+
+        assert(prompt?.type === 'prompt');
+        expect(
+          events.some(
+            (event) =>
+              event.type === 'update' &&
+              event.turnId === prompt.turnId &&
+              event.update.sessionUpdate === 'usage_update' &&
+              event.update.cost?.amount === 0.0125,
+          ),
+        ).toBe(true);
+        conversation.interrupt();
+        await wait(() =>
+          events.some(
+            (event) =>
+              event.type === 'result' &&
+              event.turnId === prompt.turnId &&
+              event.result.status === 'cancelled',
+          ),
+        );
+        await wait(() =>
+          events.some(
+            (event) => event.type === 'usage' && event.turnId === prompt.turnId,
+          ),
+        );
+        await recording.flushed();
+        assert(recording.path !== undefined);
+
+        const entries = await readPast(recording.path);
+        const live = events
+          .filter((event) => event.type === 'usage')
+          .filter((event) => event.turnId === prompt.turnId);
+
+        expect(live).toHaveLength(1);
+        expect(live[0]?.cost).toStrictEqual({
+          amount: 0.0125,
+          currency: 'USD',
+        });
+        expect(
+          entries.filter(
+            (entry) => entry.type === 'usage' && entry.turnId === prompt.turnId,
+          ),
+        ).toStrictEqual(live);
+      } finally {
+        await conversation.close();
+      }
+
+      assert(owner !== undefined);
+      await owner.exited;
+      expect(owner.agentPids.size).toBe(0);
+      expect(failures).toStrictEqual([]);
+    }));
+});

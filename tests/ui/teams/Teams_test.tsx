@@ -4,8 +4,9 @@
  * and stops, `/team show` saved and running, and `/team new` and a change
  * in plain words going to main.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { fileURLToPath } from 'node:url';
 import { type ChordServer, serveChord } from '../../../src/server/server.ts';
 import { LEAD_REPORT } from '../../fixtures/fake_agent/scenarios/teams.ts';
@@ -342,3 +343,51 @@ test('/team with a child picked talks to main, and says so on the status line on
     // The report is main's, not the lead's.
     expect(!window.frame().includes('› /team show bugfix')).toBeTruthy();
   }));
+
+describe('CHD-407 R2 tester: opt-in proposal team', () => {
+  for (const extra of [false, true]) {
+    test(`${extra ? 'flagged' : 'default'} proposal retains its own model choices`, async () => {
+      const server = serveChord();
+      const file = fileURLToPath(
+        new URL(
+          '../../../scripts/dev/screenshots_proposal.md',
+          import.meta.url,
+        ),
+      );
+      const command = fakeAgentCommand(
+        undefined,
+        '--tokens-only',
+        ...(extra ? ['--propose-team', file] : []),
+      );
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, '/team new a team that fixes bugs');
+            await window.shows('Save team bugfix?');
+
+            const frame = window.frame();
+
+            expect(frame).toContain(
+              extra ? 'claude-opus-5-5' : 'claude · opus',
+            );
+            expect(frame).toContain(extra ? 'gpt-6.1-sol' : 'gpt-5.3-codex');
+            expect(frame).toContain('reviewer');
+          },
+          {
+            server,
+            teams: {},
+            runtimes: ['fake', 'claude', 'codex'],
+            agentCommand: command,
+            startupOf: () => ({ agentCommand: command }),
+            rows: 60,
+            columns: 120,
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

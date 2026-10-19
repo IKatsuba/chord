@@ -932,8 +932,9 @@ function waitAfter(
             since: before.unseen?.since ?? now,
           }
         : before.unseen;
+  // A cycle of the agent's own works as a turn does (CHD-426).
   const working =
-    event.type === 'prompt'
+    event.type === 'prompt' || event.type === 'cycle_started'
       ? (before.working ?? event.at)
       : event.type === 'result' || event.type === 'connect_failed'
         ? undefined

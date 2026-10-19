@@ -572,3 +572,191 @@ test("a turn the agent started on its own draws as a block of its own, closed by
   ]);
   expect(state.turn).toStrictEqual({ status: 'idle' });
 });
+
+test("an agent's own cycle works as a turn does, with nothing of the person's drawn, until its result (CHD-426)", () => {
+  const working = fold([
+    { type: 'prompt', turnId: 't1', text: 'hi', at: 0 },
+    {
+      type: 'result',
+      turnId: 't1',
+      result: { status: 'completed', stopReason: 'end_turn' },
+    },
+    { type: 'cycle_started', turnId: 'c1', at: 5000 },
+  ]);
+
+  expect(working.turn).toStrictEqual({
+    status: 'working',
+    turnId: 'c1',
+    since: 5000,
+    cycle: true,
+  });
+  expect(working.entries.map((entry) => entry.kind)).toStrictEqual(['user']);
+  expect(
+    fold(
+      [
+        {
+          type: 'result',
+          turnId: 'c1',
+          result: { status: 'completed', stopReason: 'end_turn' },
+        },
+      ],
+      working,
+    ).turn,
+  ).toStrictEqual({ status: 'idle' });
+});
+
+test("a permission held between turns stays held through the agent's own cycle (the owner's Q48)", () => {
+  const held = fold([
+    {
+      type: 'permission_requested',
+      turnId: 'session',
+      permission: { id: 'p1', options: [] },
+      at: 100,
+      between: true,
+    },
+    { type: 'cycle_started', turnId: 'c1', at: 5000 },
+  ]);
+
+  expect(held.turn).toMatchObject({
+    status: 'awaiting_permission',
+    turnId: 'c1',
+    between: true,
+  });
+});
+
+test("a permission asked in the agent's own cycle is held, and once answered the cycle works on (the owner's Q48, CHD-426)", () => {
+  const asked = fold([
+    { type: 'cycle_started', turnId: 'c1', at: 5000 },
+    {
+      type: 'permission_requested',
+      turnId: 'c1',
+      permission: { id: 'p1', options: [] },
+      at: 6000,
+      between: true,
+    },
+  ]);
+
+  // The wait counts from the request; the cycle's own start is kept.
+  expect(asked.turn).toMatchObject({
+    status: 'awaiting_permission',
+    turnId: 'c1',
+    since: 6000,
+    between: true,
+    cycle: true,
+    cycleSince: 5000,
+  });
+  expect(
+    fold(
+      [
+        {
+          type: 'permission_settled',
+          turnId: 'c1',
+          id: 'p1',
+          answer: { type: 'chosen', optionId: 'allow' },
+        },
+      ],
+      asked,
+    ).turn,
+  ).toStrictEqual({
+    status: 'working',
+    turnId: 'c1',
+    since: 5000,
+    cycle: true,
+  });
+});
+
+test('a permission held before the cycle, answered during it, leaves the cycle working until its end (CHD-426)', () => {
+  const answered = fold([
+    {
+      type: 'permission_requested',
+      turnId: 'session',
+      permission: { id: 'p1', options: [] },
+      at: 100,
+      between: true,
+    },
+    { type: 'cycle_started', turnId: 'c1', at: 5000 },
+    {
+      type: 'permission_settled',
+      turnId: 'c1',
+      id: 'p1',
+      answer: { type: 'chosen', optionId: 'allow' },
+    },
+  ]);
+
+  // Working again from when the cycle started, not from the old request.
+  expect(answered.turn).toStrictEqual({
+    status: 'working',
+    turnId: 'c1',
+    since: 5000,
+    cycle: true,
+  });
+  expect(
+    fold(
+      [
+        {
+          type: 'result',
+          turnId: 'c1',
+          result: { status: 'completed', stopReason: 'end_turn' },
+        },
+      ],
+      answered,
+    ).turn,
+  ).toStrictEqual({ status: 'idle' });
+});
+
+describe('CHD-426 U3 tester: several held requests keep the cycle clock', () => {
+  for (const order of [
+    ['old', 'new'],
+    ['new', 'old'],
+  ] as const) {
+    const permission = (id: string, at: number): TranscriptAction => ({
+      type: 'permission_requested',
+      turnId: id === 'old' ? 'session' : 'cycle',
+      permission: { id, options: [] },
+      at,
+      between: true,
+    });
+    const settle = (id: string): TranscriptAction => ({
+      type: 'permission_settled',
+      turnId: 'cycle',
+      id,
+      answer: { type: 'chosen', optionId: 'allow' },
+    });
+    const opening: TranscriptAction[] = [
+      permission('old', 100),
+      { type: 'cycle_started', turnId: 'cycle', at: 5000 },
+      permission('new', 9000),
+    ];
+
+    test(`${order.join(' then ')}: the last answer resumes the original cycle clock`, () => {
+      const waiting = fold([...opening, settle(order[0])]);
+
+      expect(waiting.turn).toMatchObject({
+        status: 'awaiting_permission',
+        cycle: true,
+        cycleSince: 5000,
+      });
+      expect(fold([settle(order[1])], waiting).turn).toEqual({
+        status: 'working',
+        turnId: 'cycle',
+        since: 5000,
+        cycle: true,
+      });
+    });
+
+    test(`${order.join(' then ')}: answers after the cycle ends cannot restart its clock`, () => {
+      const ended = fold([
+        ...opening,
+        {
+          type: 'result',
+          turnId: 'cycle',
+          result: { status: 'completed', stopReason: 'end_turn' },
+        },
+      ]);
+
+      assert(ended.turn.status === 'awaiting_permission');
+      expect(ended.turn.permissions).toHaveLength(2);
+      expect(fold(order.map(settle), ended).turn).toEqual({ status: 'idle' });
+    });
+  }
+});

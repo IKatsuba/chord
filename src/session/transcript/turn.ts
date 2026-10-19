@@ -62,6 +62,27 @@ export function prompted(
 }
 
 /**
+ * A cycle the agent began on its own: working, as a turn is, with nothing of
+ * the person's to draw. The permissions it found waiting stay, held as they
+ * were, as the person did not start it (the owner's Q48, CHD-426).
+ */
+export function cycleStarted(
+  state: Transcript,
+  turnId: string,
+  at: number,
+): Transcript {
+  const { turn } = state;
+
+  return {
+    ...state,
+    turn:
+      turn.status === 'awaiting_permission' && turn.permissions.length > 0
+        ? { ...turn, turnId, cycle: true, cycleSince: at }
+        : { status: 'working', turnId, since: at, cycle: true },
+  };
+}
+
+/**
  * The requests a turn leaves waiting as it ends: those of task agents still
  * running, which outlive it.
  */

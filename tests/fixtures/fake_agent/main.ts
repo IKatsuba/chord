@@ -233,6 +233,8 @@ import {
   SILENT_SET_MODE,
   STEER_LATE,
   STEERING,
+  ADAPTER,
+  SAY_CANCELS,
   STEP_MS,
   TOKENS_ONLY,
 } from './options.ts';
@@ -246,6 +248,7 @@ import { PLANS } from './scenarios/plans.ts';
 import { SHELL } from './scenarios/shell.ts';
 import { claudeChildren, SUBAGENTS } from './scenarios/subagents.ts';
 import { TASKS } from './scenarios/tasks.ts';
+import { CYCLES } from './scenarios/cycles.ts';
 import { AGENTS } from './scenarios/agents.ts';
 import { EFFORTS } from './scenarios/efforts.ts';
 import { MONITORS } from './scenarios/monitors.ts';
@@ -362,6 +365,10 @@ const SCENARIOS = [
   'codexchordcalls',
   'leftform',
   'bigaskleft',
+  'claudecycle',
+  'claudecyclebare',
+  'claudecycleask',
+  'codebuddycycle',
   'taskchild',
   'tasklong',
   'tasktallname',
@@ -476,6 +483,7 @@ const PLAY: Record<Scenario, Play> = {
   ...MISBEHAVING,
   ...CHORD_TOOLS,
   ...TASKS,
+  ...CYCLES,
   ...AGENTS,
   ...EFFORTS,
   ...MONITORS,
@@ -828,7 +836,7 @@ const connection = acp
           // whose steer cuts the turn's open calls off.
           agentInfo: {
             name:
-              STEERING === 'claude'
+              STEERING === 'claude' || ADAPTER === 'claude'
                 ? '@agentclientprotocol/claude-agent-acp'
                 : 'chord-fake-agent',
             version: '0.0.0',
@@ -1073,7 +1081,7 @@ const connection = acp
       return { outcome: 'startedNewTurn' };
     },
   )
-  .onNotification('session/cancel', ({ params }) => {
+  .onNotification('session/cancel', ({ params, client }) => {
     // A Claude subagent's own id stops that one alone.
     void claudeChildren
       .get(params.sessionId)?.()
@@ -1086,6 +1094,18 @@ const connection = acp
         params.sessionId,
         (strayCancels.get(params.sessionId) ?? 0) + 1,
       );
+
+      if (SAY_CANCELS) {
+        void client
+          .notify('session/update', {
+            sessionId: params.sessionId,
+            update: {
+              sessionUpdate: 'agent_message_chunk',
+              content: { type: 'text', text: 'Cancel heard with no turn.' },
+            },
+          })
+          .catch(() => {});
+      }
     }
 
     turn?.abort();

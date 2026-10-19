@@ -36,6 +36,14 @@ export const NO_MODES =
 export const STOP_GATE =
   ARGS.includes('--stop-gate') || process.env.CHORD_FAKE_STOP_GATE === '1';
 
+/**
+ * A `session/cancel` that comes with no turn playing is answered at once
+ * with `Cancel heard with no turn.`, so a test sees it arrived before
+ * sending what follows (CHD-426).
+ */
+export const SAY_CANCELS =
+  ARGS.includes('--say-cancels') || process.env.CHORD_FAKE_SAY_CANCELS === '1';
+
 const HANGS = ['start', 'config', 'turn'] as const;
 
 function hangStep(): (typeof HANGS)[number] | undefined {
@@ -85,6 +93,23 @@ function steeringAdapter(): (typeof STEERINGS)[number] | undefined {
  * `codex`; none by default, when it neither advertises nor takes it.
  */
 export const STEERING = steeringAdapter();
+
+/**
+ * The adapter the fake names itself as in `initialize`, `claude` as
+ * Claude's does, with `--adapter claude` or `CHORD_FAKE_ADAPTER=claude`,
+ * without steering as it: chord runs cycles of the agent's own only for
+ * that adapter (CHD-426).
+ */
+export const ADAPTER = (() => {
+  const flag = ARGS.indexOf('--adapter');
+  const chosen = flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_ADAPTER;
+
+  if (chosen !== undefined && chosen !== 'claude') {
+    throw new Error(`unknown adapter to name as "${chosen}"`);
+  }
+
+  return chosen;
+})();
 
 /**
  * A steer lands only once the turn playing has ended, as one sent just as a

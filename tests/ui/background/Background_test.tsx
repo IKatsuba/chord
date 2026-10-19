@@ -390,11 +390,17 @@ describe('CHD-424 tester: background frame edges', () => {
       await window.press('x');
       await window.shows('■ stopped after');
 
-      const stopped = window.frame();
+      // The parent keeps working, so its clock outside the frame may tick.
+      const background = () =>
+        window.frame().match(/╭[^\n]*\n│ Background ·[\s\S]*?╰[^\n]*/)?.[0];
+      const stopped = background();
+
+      expect(stopped).toContain('❯ Fix the tokenizer');
+      expect(stopped).toContain('■ stopped after');
 
       await window.press('x');
       await window.press(UP);
-      expect(window.frame()).toBe(stopped);
+      expect(background()).toBe(stopped);
       await window.press(ESC);
       await window.shows('❯ background  ■ 1 task stopped');
       expect(window.frame()).not.toContain('waiting for permission');

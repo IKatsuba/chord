@@ -247,6 +247,12 @@ export interface Session {
    */
   cutsCallsOnSteer(): boolean;
   /**
+   * Whether the agent runs cycles of its own once a turn has ended, which
+   * start unmarked and end on a usage update of an autonomous origin:
+   * Claude's adapter, by the name it gives in `initialize` (CHD-426, Q49).
+   */
+  startsOwnCycles(): boolean;
+  /**
    * Puts `text` into the turn the agent is running, asking an agent with
    * none running to do nothing with it; rejects when the request fails.
    */
@@ -624,6 +630,7 @@ export async function openSession(
       connection.init.agentCapabilities?.promptCapabilities?.image === true,
     steers: () => connection.steering,
     cutsCallsOnSteer: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
+    startsOwnCycles: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     steer: async (text) => {
       const { outcome } = await connection.steer({
         sessionId: id,

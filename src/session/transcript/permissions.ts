@@ -42,6 +42,23 @@ export function permissionRequested(
     };
   }
 
+  // One asked in the agent's own cycle is held as between turns: the
+  // person did not start it, and may be typing (the owner's Q48, CHD-426).
+  if (turn.status === 'working' && turn.cycle === true && outside) {
+    return {
+      ...state,
+      turn: {
+        status: 'awaiting_permission',
+        turnId: turn.turnId,
+        since: at,
+        permissions: [permission],
+        between: true,
+        cycle: true,
+        cycleSince: turn.since,
+      },
+    };
+  }
+
   if (
     turn.status === 'awaiting_permission' &&
     turn.between &&
@@ -131,9 +148,16 @@ export function permissionSettled(
     turn:
       permissions.length > 0
         ? { ...turn, permissions }
-        : turn.between
-          ? { status: 'idle' }
-          : { status: 'working', turnId: turn.turnId, since: turn.since },
+        : turn.cycle === true
+          ? {
+              status: 'working',
+              turnId: turn.turnId,
+              since: turn.cycleSince ?? turn.since,
+              cycle: true,
+            }
+          : turn.between
+            ? { status: 'idle' }
+            : { status: 'working', turnId: turn.turnId, since: turn.since },
   };
 }
 

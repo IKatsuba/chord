@@ -27,7 +27,13 @@ import {
 } from './shell.ts';
 import { childUpdate, mergeSubagent, subagentStopping } from './subagents.ts';
 import { mergeToolCall } from './tools.ts';
-import { cancelled, disconnected, prompted, settle } from './turn.ts';
+import {
+  cancelled,
+  cycleStarted,
+  disconnected,
+  prompted,
+  settle,
+} from './turn.ts';
 import type {
   Entry,
   Transcript,
@@ -212,6 +218,8 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
           },
         ],
       };
+    case 'cycle_started':
+      return cycleStarted(state, action.turnId, action.at);
     case 'self_started':
       return {
         ...state,

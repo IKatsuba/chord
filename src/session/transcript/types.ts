@@ -707,6 +707,11 @@ export type TurnState =
       readonly status: 'working';
       readonly turnId: string;
       readonly since: number;
+      /**
+       * A cycle of the agent's own, which the person did not start: what it
+       * asks is held as between turns (the owner's Q48, CHD-426).
+       */
+      readonly cycle?: true;
     }
   | {
       readonly status: 'awaiting_permission';
@@ -718,6 +723,16 @@ export type TurnState =
        * started it: the session is idle again once every request is answered.
        */
       readonly between?: true;
+      /**
+       * Asked in a cycle of the agent's own, which works on once every
+       * request is answered (CHD-426).
+       */
+      readonly cycle?: true;
+      /**
+       * When that cycle started, which its working line counts from again
+       * once every request is answered; `since` is when the wait began.
+       */
+      readonly cycleSince?: number;
     }
   | {
       /** Cancel was asked for; the turn has not settled yet. */
@@ -974,6 +989,15 @@ export type TranscriptAction =
       readonly type: 'self_started';
       readonly turnId: string;
       readonly from: MessageFrom;
+    }
+  /**
+   * The agent began a cycle of its own, `turnId`, with no turn of the
+   * person's running, at `at`; its `result` ends it (CHD-426).
+   */
+  | {
+      readonly type: 'cycle_started';
+      readonly turnId: string;
+      readonly at: number;
     };
 
 export const emptyTranscript: Transcript = {

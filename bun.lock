@@ -16,7 +16,7 @@
         "@modelcontextprotocol/sdk": "^1.32.1",
         "@opentui/core": "0.6.0",
         "@opentui/react": "0.6.0",
-        "@pydantic/genai-prices": "0.1.9",
+        "@pydantic/genai-prices": "0.1.13",
         "@renovatebot/pep440": "^5.0.1",
         "@replit/codemirror-vim-core": "0.1.0",
         "@resvg/resvg-wasm": "^2.6.2",
@@ -258,7 +258,7 @@
 
     "@puppeteer/browsers": ["@puppeteer/browsers@3.2.4", "", { "dependencies": { "modern-tar": "^0.8.5", "yargs": "^18.0.0" }, "peerDependencies": { "proxy-agent": ">=8.0.1", "yauzl": "^2.10.0 || ^3.4.0" }, "optionalPeers": ["proxy-agent", "yauzl"], "bin": { "browsers": "lib/main-cli.js" } }, "sha512-okJ6yQMc0SBexOKxMi966omwAV1uAPwgF/YMZdb04gZQPXVjWHl9bmXjZYtIcsN1+PN3Bz4iFfGK3g+c6lZJ0Q=="],
 
-    "@pydantic/genai-prices": ["@pydantic/genai-prices@0.1.9", "", { "bin": { "genai-prices": "dist/cli.js" } }, "sha512-M93O77DCs533HASyjenihMo9b2OTW6c8v49w6yS/W50osugJ1rkUX8baaDNCnw+ZPiMD6jIxUsa1Bz1MrpX3Uw=="],
+    "@pydantic/genai-prices": ["@pydantic/genai-prices@0.1.13", "", { "bin": { "genai-prices": "dist/cli.js" } }, "sha512-kKzGgPFJmKK/muihOFYDtuS8PXYliRFFYWDfzwDFy7bOgyZUnEnDXpBZpo4eT2aM8bz3bXvO50F8AhFSKvMxlw=="],
 
     "@renovatebot/pep440": ["@renovatebot/pep440@5.0.1", "", {}, "sha512-KmMz+X68YvrS6aN6TJWtDiH8aCIL2Igcvceh17STHxMUN3KxXsC24COoOXjMOl/Gb+okBwwduMm8PY/WY/0Cpg=="],
 

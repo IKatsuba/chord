@@ -16,7 +16,9 @@
  * of the person's settings, records or teams reaches a shot. There the
  * settings name the fake agent `claude` and `codex`, on Claude Opus 5.5 and
  * GPT-6.1 Sol, which its `--tokens-only` offers, the team the shots run is
- * `screenshots_team.md` beside this script, and the scenario each shot
+ * `screenshots_team.md` beside this script, whose lead opens all three of
+ * its members, `/team new` proposes the same team in short from
+ * `screenshots_proposal.md`, so the whole proposal fits, and the scenario each shot
  * plays comes from `CHORD_FAKE_SCENARIO`, so the prompt typed can be a
  * person's words.
  *
@@ -184,10 +186,17 @@ async function until(text: string, shot: string): Promise<void> {
 async function world(dir: string, team: boolean): Promise<string> {
   const home = join(dir, 'home');
   const project = join(home, 'src', 'app');
+  const teamFile = join(ROOT, 'scripts', 'dev', 'screenshots_team.md');
+  // Its team's lead opens every member, reviewer too, and a proposal is
+  // the same team in short, so the whole of it fits the frame.
   const fake = quote([
     process.execPath,
     join(ROOT, 'tests', 'fixtures', 'fake_agent', 'main.ts'),
     '--tokens-only',
+    '--lead-opens',
+    'tester,coder,reviewer',
+    '--propose-team',
+    join(ROOT, 'scripts', 'dev', 'screenshots_proposal.md'),
   ]);
 
   await mkdir(join(home, '.config', 'chord'), { recursive: true });
@@ -209,10 +218,7 @@ async function world(dir: string, team: boolean): Promise<string> {
     // settings give the fake.
     await writeFile(
       join(project, '.chord', 'teams', 'bugfix.md'),
-      await readFile(
-        join(ROOT, 'scripts', 'dev', 'screenshots_team.md'),
-        'utf8',
-      ),
+      await readFile(teamFile, 'utf8'),
     );
   }
 

@@ -412,6 +412,7 @@ const SCENARIOS = [
   'teamlead',
   'teamtester',
   'teamcoder',
+  'teamreviewer',
   'propose',
   'proposeagain',
   'proposeefforts',

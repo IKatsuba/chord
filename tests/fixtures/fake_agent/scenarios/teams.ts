@@ -8,7 +8,9 @@
  * by its part's role, as main.ts reads it, so the job reads as a real one.
  */
 import * as acp from '@agentclientprotocol/sdk';
-import { STEP_MS } from '../options.ts';
+import { readFileSync } from 'node:fs';
+import { parseTeam } from '../../../../src/teams.ts';
+import { LEAD_OPENS, PROPOSE_TEAM, STEP_MS } from '../options.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 import { TASK_ARGS } from './tasks.ts';
@@ -46,6 +48,17 @@ export const LEAD_REPORT =
   'coder waits for it and will edit src/parse/tokenize.ts only. I will ' +
   "report when the test fails for the bug's own reason.";
 
+/** What the lead opens `reviewer` with. */
+export const REVIEWER_PROMPT =
+  'Read the diff once coder has one, and the test with it. Edit nothing.';
+
+/** What the lead opens each member with, by its name. */
+const MEMBER_PROMPTS: Readonly<Record<string, string>> = {
+  tester: TESTER_PROMPT,
+  coder: CODER_PROMPT,
+  reviewer: REVIEWER_PROMPT,
+};
+
 /** `tester`'s report to its lead. */
 export const TESTER_REPORT =
   'It fails for that reason: "a" at the end of a line comes back as "a, ' +
@@ -59,6 +72,43 @@ export const TESTER_TO_CODER =
 /** `coder`'s message to `tester`. */
 export const CODER_TO_TESTER =
   'Reading src/parse/tokenize.ts now. Tell me when your test fails.';
+
+/** Names as a sentence says them: `tester and coder`, `a, b and c`. */
+function spoken(names: readonly string[]): string {
+  return names.length < 2
+    ? names.join('')
+    : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+}
+
+/**
+ * The team `propose` proposes: the one `--propose-team` names, read as
+ * chord reads a team file, else the fake's own.
+ */
+function proposedTeam(): ProposedTeam {
+  if (PROPOSE_TEAM === undefined) {
+    return PROPOSED_TEAM;
+  }
+
+  const read = parseTeam(
+    PROPOSED_TEAM.name,
+    readFileSync(PROPOSE_TEAM, 'utf8'),
+    ['claude', 'codex'],
+  );
+
+  if ('problem' in read) {
+    throw new Error(`--propose-team: ${read.problem}`);
+  }
+
+  const { description, lead, members, body } = read.team;
+
+  return {
+    name: PROPOSED_TEAM.name,
+    description,
+    lead,
+    members,
+    body,
+  };
+}
 
 /** A team agent's part, by its session, as main.ts read it off the prompt. */
 export const teamParts = new Map<
@@ -304,6 +354,9 @@ export const CHANGED_EFFORTS_TEAM = {
   ),
 };
 
+/** A team as `propose_team` takes it: the fake's own, or one read from a file. */
+type ProposedTeam = { readonly name: string } & Record<string, unknown>;
+
 /** What the fake proposes after a proposal, the person's words having changed it. */
 type Again = 'proposeagain' | 'proposeeffortsagain';
 
@@ -323,7 +376,7 @@ const SAVE_BOX_MS = 3_600_000;
  */
 async function propose(
   turn: Turn,
-  team: typeof PROPOSED_TEAM,
+  team: ProposedTeam,
   intro: string,
   again: Again = 'proposeagain',
 ): Promise<acp.StopReason> {
@@ -368,7 +421,7 @@ export const TEAMS = {
   propose: (turn) =>
     propose(
       turn,
-      PROPOSED_TEAM,
+      proposedTeam(),
       'A lead on Opus to split the work, and three members, one for each ' +
         'step. Only one of them edits a file at a time.',
     ),
@@ -447,14 +500,12 @@ export const TEAMS = {
     }
 
     try {
-      await callChord(turn, client, 'open_agent', {
-        member: 'tester',
-        prompt: TESTER_PROMPT,
-      });
-      await callChord(turn, client, 'open_agent', {
-        member: 'coder',
-        prompt: CODER_PROMPT,
-      });
+      for (const member of LEAD_OPENS) {
+        await callChord(turn, client, 'open_agent', {
+          member,
+          prompt: MEMBER_PROMPTS[member] ?? 'Wait for my word.',
+        });
+      }
 
       for (const other of others) {
         await callChord(turn, client, 'send_message', {
@@ -469,7 +520,9 @@ export const TEAMS = {
         to: 'main',
         text: LEAD_REPORT,
       });
-      await turn.say("tester and coder are open; I wait for tester's test.");
+      await turn.say(
+        `${spoken(LEAD_OPENS)} are open; I wait for tester's test.`,
+      );
     } finally {
       await client.close();
     }
@@ -527,6 +580,14 @@ export const TEAMS = {
     } finally {
       await client?.close();
     }
+
+    return 'end_turn';
+  },
+
+  // `reviewer`'s first turn, for a lead that opens one: it waits for the diff.
+  async teamreviewer(turn) {
+    await pause(turn.signal, TEAM_STEP_MS * 5);
+    await turn.say("Waiting for coder's diff.");
 
     return 'end_turn';
   },

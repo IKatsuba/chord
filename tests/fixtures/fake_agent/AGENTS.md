@@ -149,12 +149,15 @@
   `bugfix` (`tests/fixtures/teams/fake/bugfix.md`, all on the fake runtime)
   with an issue's job; `teamtask` runs `bugfix` and starts `taskchild`, so a
   member and main's task ask at once. A team agent's first prompt plays its
-  role, read off its team part, unless its message names a scenario, which it plays: `teamlead` opens `tester` and `coder`, asks the other runs'
+  role, read off its team part, unless its message names a scenario, which it plays: `teamlead` opens `tester` and `coder`, or the members `--lead-opens
+  tester,coder,reviewer` (`CHORD_FAKE_LEAD_OPENS`) names, asks the other runs'
   leads which files they hold and reports to main, `teamtester` writes a
   test, reports to its lead, messages `coder` directly and asks the person
-  to run the suite, and `teamcoder` messages `tester`; `propose`, or the
+  to run the suite, `teamcoder` messages `tester`, and `teamreviewer` waits
+  for the diff; `propose`, or the
   prompt `/team new` sends, behind any notes chord held for
-  main's next prompt, proposes `bugfix` on claude and codex through
+  main's next prompt, proposes `bugfix` on claude and codex, or the team
+  file `--propose-team <file>` (`CHORD_FAKE_PROPOSE_TEAM`) names, through
   `propose_team` and says where it was saved, and the next prompt after a
   proposal, whatever it says, is `proposeagain`: the same team with the
   reviewer on codex and tester in `bypassPermissions`; `soak` hands

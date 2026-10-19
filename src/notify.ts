@@ -98,14 +98,12 @@ export function askingNow(watch: Watch): AskingWait | undefined {
   return open.find((wait) => wait.kind === 'permission') ?? open[0];
 }
 
-/** The requests a turn's end leaves open (the owner's Q44, CHD-158). */
-function outliving(watch: Watch): Set<string> {
-  return new Set(
-    [...watch.asking].filter(
-      (id) =>
-        watch.lasting.has(id) || watch.asked.get(id)?.kind === 'permission',
-    ),
-  );
+/**
+ * The requests a turn's end leaves open: every one, a permission (the
+ * owner's Q44) and a form, question or link (Q53) alike (CHD-158).
+ */
+function outliving(watch: Watch): ReadonlySet<string> {
+  return watch.asking;
 }
 
 /** `asked` with only the requests `asking` still holds. */

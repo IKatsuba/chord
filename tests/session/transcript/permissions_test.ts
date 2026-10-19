@@ -53,22 +53,39 @@ test('each answer to a form leaves its record, and the form goes', () => {
   }
 });
 
-test('a turn that ends under an open form records it cancelled', () => {
+test('a turn that ends under an open form leaves it open, asked between turns now, and records nothing of it (Q53)', () => {
   const transcript = fold([
     ...ASKED,
     {
       type: 'result',
       turnId: 't1',
-      result: { status: 'cancelled', stopReason: 'cancelled' },
+      result: { status: 'completed', stopReason: 'end_turn' },
     },
   ]);
 
-  expect(transcript.asking).toStrictEqual([]);
+  expect(transcript.asking).toStrictEqual([{ ...FORM_WAIT, between: true }]);
   expect(
-    transcript.entries.map((entry) =>
-      entry.kind === 'elicitation' ? entry.outcome : entry.kind,
-    ),
-  ).toStrictEqual(['user', 'cancelled', 'cancelled']);
+    transcript.entries.some((entry) => entry.kind === 'elicitation'),
+  ).toBeFalsy();
+
+  // Its answer, after, leaves its record.
+  const answered = fold(
+    [
+      {
+        type: 'elicitation_settled',
+        turnId: 't1',
+        id: 'e1',
+        answer: { type: 'declined' },
+      },
+    ],
+    transcript,
+  );
+
+  expect(answered.asking).toStrictEqual([]);
+  expect(answered.entries.at(-1)).toMatchObject({
+    kind: 'elicitation',
+    outcome: 'declined',
+  });
 });
 
 test('a form asked by a turn that is no longer current is not shown', () => {

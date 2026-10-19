@@ -453,3 +453,47 @@ describe('CHD-1 tester: Droid multi-select schema', () => {
     }
   });
 });
+
+describe("a form left open at its turn's end (CHD-158 C5, the owner's Q53)", () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`stays answerable between turns, the queue behind it, at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'leftform');
+          // In its turn it has the keys.
+          await inputAsked(window);
+          await window.shows('❯ * Project name');
+          // Its turn over, it waits between turns, without the keys; at 80
+          // by 24 the form hides the turn's last words.
+          await window.shows('main asks for input · between turns');
+          await window.shows('ctrl+x a to answer');
+          expect(window.frame()).not.toContain('❯ * Project name');
+          expect(window.frame()).toContain('Set up the deploy target');
+          expect(window.frame()).not.toContain('Elicitation answer');
+
+          await window.type('text');
+          await window.press('\r');
+
+          // At 80 by 24 the form leaves the transcript a row, which the
+          // queued line shares with what was there (designer has it).
+          if (columns > 80) {
+            await window.shows('› after your answer: text');
+          }
+
+          expect(window.frame()).toContain('between turns');
+
+          await leader(window, 'a');
+          await window.shows('❯ * Project name');
+          await window.shows('› after your answer: text');
+          await window.press(ESC);
+          await window.shows('Elicitation answer: cancel');
+          await window.shows('Hello, world.');
+          expect(window.frame()).not.toContain('between turns');
+        },
+        { columns, rows },
+      ));
+  }
+});

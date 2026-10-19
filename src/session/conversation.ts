@@ -447,8 +447,6 @@ export class Conversation {
   readonly #foreign = new Map<string, TaskAgent>();
   /** Of those, the requests a task asked with no turn running (CHD-158). */
   readonly #foreignBetween = new Set<string>();
-  /** Of those, the permissions, which outlive the turn they came in. */
-  readonly #foreignPermissions = new Set<string>();
   /**
    * The quiet wait started once a request between turns was answered, which
    * a later answer starts again rather than ride out (CHD-158).
@@ -607,7 +605,6 @@ export class Conversation {
     this.#tasks.clear();
     this.#foreign.clear();
     this.#foreignBetween.clear();
-    this.#foreignPermissions.clear();
 
     this.#ahead = [];
 
@@ -790,7 +787,7 @@ export class Conversation {
   }
 
   /**
-   * The permissions turn `turnId` ended with still open, and its tasks',
+   * The requests turn `turnId` ended with still open, its tasks' too,
    * wait on the person between turns, as one asked then does: the queue holds behind them, and
    * what is queued says so (the owner's Q44, CHD-158).
    */
@@ -805,8 +802,17 @@ export class Conversation {
       }
     }
 
+    // So does a form, question or link still open (the owner's Q53).
+    for (const [id, asked] of this.#elicitations) {
+      if (asked.turnId === turnId && !asked.between) {
+        this.#elicitations.set(id, { ...asked, between: true });
+
+        left = true;
+      }
+    }
+
     // A task's, asked while the turn ran, waits between turns as well.
-    for (const id of this.#foreignPermissions) {
+    for (const id of this.#foreign.keys()) {
       if (!this.#foreignBetween.has(id)) {
         this.#foreignBetween.add(id);
 
@@ -1640,7 +1646,6 @@ export class Conversation {
     for (const [request, asker] of this.#foreign) {
       if (asker === task) {
         this.#foreign.delete(request);
-        this.#foreignPermissions.delete(request);
 
         released = this.#foreignBetween.delete(request) || released;
       }
@@ -1675,10 +1680,6 @@ export class Conversation {
 
         this.#foreign.set(id, task);
 
-        if (event.type === 'permission_requested') {
-          this.#foreignPermissions.add(id);
-        }
-
         if (!this.#turn) {
           this.#foreignBetween.add(id);
           this.#holdForAnswer();
@@ -1689,7 +1690,6 @@ export class Conversation {
       case 'permission_settled':
       case 'elicitation_settled':
         this.#foreign.delete(event.id);
-        this.#foreignPermissions.delete(event.id);
 
         released = this.#foreignBetween.delete(event.id);
 
@@ -2640,15 +2640,6 @@ export class Conversation {
 
     if (result.status !== 'failed' && result.usage) {
       ended({ type: 'usage', turnId, usage: result.usage });
-    }
-
-    // A form the turn ended under no longer matters; the transcript has it
-    // as cancelled already.
-    for (const [id, asked] of this.#elicitations) {
-      if (asked.turnId === turnId) {
-        this.#elicitations.delete(id);
-        asked.request.answer({ action: 'cancel' });
-      }
     }
 
     await this.#advance(session);

@@ -463,8 +463,8 @@ test("/team show paints an agent's state and mark in their colours past a model 
       },
     };
 
-    // Beside the row at 100, under it at 50.
-    for (const columns of [100, 50]) {
+    // Beside the row at 100, under it at 50, the mode with it at 26.
+    for (const columns of [100, 50, 26]) {
       const drawn = await draw(
         <Colours.Provider value={paletteOf('dark', true)}>
           <TeamEntry
@@ -475,7 +475,7 @@ test("/team show paints an agent's state and mark in their colours past a model 
             width={columns}
           />
         </Colours.Provider>,
-        { columns, rows: 12 },
+        { columns, rows: 20 },
       );
       const frame = drawn.frame();
 

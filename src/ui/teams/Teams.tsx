@@ -1,6 +1,7 @@
 import { useTerminalDimensions } from '@opentui/react';
 import { Fragment, useMemo } from 'react';
 import type {
+  TeamAgentShown,
   TeamRunShown,
   TeamShown,
 } from '../../session/transcript/types.ts';
@@ -24,6 +25,9 @@ import {
   Under,
 } from '../transcript/tools/Tool.tsx';
 import { runningHeader, runningTable } from './teams.ts';
+
+/** A state's or a mark's tone, as the agent list colours it. */
+type Tone = NonNullable<TeamAgentShown['state']>['tone'];
 
 /** How many of the body's lines `/team show` keeps folded, by the window's rows. */
 function keptLines(windowRows: number): number {
@@ -199,49 +203,47 @@ function RunningTeam({
       {/* Held: the report sits in the scrolling transcript (CHD-471). */}
       <box height={1} flexShrink={0} />
       {runningTable(team, run.agents, width).map((line, index) => {
-        const {
-          text,
-          state: [start, end],
-          mark,
-          stateLine,
-          under,
-          agent,
-        } = line;
-        const tone = agent.state?.tone;
-        const markTone = agent.mark?.tone;
-        const [markStart, markEnd] = mark ?? [end, end];
+        const { text, state, stateLine, mark, markLine, under, agent } = line;
+        const toned = (tone: Tone | undefined) =>
+          tone === undefined || tone === 'dim'
+            ? { attributes: DIM }
+            : fg(tones[tone]);
+        // The state's and the mark's spans in the line drawn, in order.
+        const spans = (at: number) =>
+          [
+            ...(at === stateLine
+              ? [{ span: state, tone: agent.state?.tone }]
+              : []),
+            ...(mark !== undefined && at === markLine
+              ? [{ span: mark, tone: agent.mark?.tone }]
+              : []),
+          ].sort((one, other) => one.span[0] - other.span[0]);
 
         return (
           <Fragment key={index}>
-            {[text, ...under].map((each, at) => (
-              <Under key={at} first={false}>
-                {at === stateLine ? (
+            {[text, ...under].map((each, at) => {
+              let from = 0;
+
+              return (
+                <Under key={at} first={false}>
                   <text {...ROWS}>
-                    <Ansi text={each.slice(0, start)} />
-                    <span
-                      {...(tone === undefined || tone === 'dim'
-                        ? { attributes: DIM }
-                        : fg(tones[tone]))}
-                    >
-                      <Ansi text={each.slice(start, end)} />
-                    </span>
-                    <Ansi text={each.slice(end, markStart)} />
-                    <span
-                      {...(markTone === undefined || markTone === 'dim'
-                        ? { attributes: DIM }
-                        : fg(tones[markTone]))}
-                    >
-                      <Ansi text={each.slice(markStart, markEnd)} />
-                    </span>
-                    <Ansi text={each.slice(markEnd)} />
+                    {spans(at).flatMap(({ span: [start, end], tone }, key) => {
+                      const before = each.slice(from, start);
+
+                      from = end;
+
+                      return [
+                        <Ansi key={`b${key}`} text={before} />,
+                        <span key={`s${key}`} {...toned(tone)}>
+                          <Ansi text={each.slice(start, end)} />
+                        </span>,
+                      ];
+                    })}
+                    <Ansi text={each.slice(from)} />
                   </text>
-                ) : (
-                  <text {...ROWS}>
-                    <Ansi text={each} />
-                  </text>
-                )}
-              </Under>
-            ))}
+                </Under>
+              );
+            })}
           </Fragment>
         );
       })}

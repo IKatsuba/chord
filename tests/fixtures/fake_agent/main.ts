@@ -210,7 +210,8 @@
  * `agentlong` opens `parser` on a long markdown instruction;
  * `agenttask`, `agentexit` and `agentfail` open `parser` on `task`, on
  * `crash`, whose agent writes its last words to stderr and exits mid-turn,
- * and on `error`. `taskeffort` and `agenteffort` start a task and open an
+ * and on `error`; `agentcost` opens it on `costwait`, to close it busy with
+ * a cost said. `taskeffort` and `agenteffort` start a task and open an
  * agent on `text` on high effort, `taskmaxeffort` and `agentmaxeffort` on
  * max, which it does not offer, and say where chord's answer says they
  * started; `effort` says the effort the turn runs on. `team` and `team2` hand team `bugfix` a job through
@@ -414,6 +415,7 @@ const SCENARIOS = [
   'codexprosechild',
   'agentlong',
   'agenttask',
+  'agentcost',
   'agentexit',
   'agentfail',
   'taskeffort',

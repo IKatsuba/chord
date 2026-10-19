@@ -17,8 +17,11 @@ import { THEME_SETTINGS, type ThemeSetting } from './ui/theme/theme.ts';
  */
 const AgentSettings = z
   .strictObject({
-    /** Starts this command instead of chord's own, as `--agent-command`. */
-    command: z.string().min(1),
+    /**
+     * Starts this command instead of chord's own, as `--agent-command`:
+     * a line the shell splits, or the program and its arguments, as a list.
+     */
+    command: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
     /** The model each session starts on, as `--model`. */
     model: z.string().min(1),
     /**
@@ -171,6 +174,34 @@ export function settingsFiles({
   ];
 }
 
+/** What chord was given in place of a command, as a refusal says it. */
+function given(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.length === 0
+      ? 'an empty list'
+      : 'a list with something not a string';
+  }
+
+  if (value === '') {
+    return 'an empty string';
+  }
+
+  return value === null
+    ? 'null'
+    : `${/^[aeiou]/u.test(typeof value) ? 'an' : 'a'} ${typeof value}`;
+}
+
+/** The value at `path` in `value`, if there is one. */
+function at(value: unknown, path: readonly PropertyKey[]): unknown {
+  return path.reduce<unknown>(
+    (parent, key) =>
+      typeof parent === 'object' && parent !== null
+        ? (parent as Record<PropertyKey, unknown>)[key]
+        : undefined,
+    value,
+  );
+}
+
 function keyOf(path: readonly PropertyKey[]): string {
   return path.map(String).join('.');
 }
@@ -202,7 +233,16 @@ function drop(value: unknown, path: readonly PropertyKey[]): boolean {
 export function parseSettings(
   file: string,
   text: string,
-): { settings: Settings; problems: SettingsProblem[] } {
+): {
+  settings: Settings;
+  problems: SettingsProblem[];
+  /**
+   * The agents whose `command` this file gives chord refused, each with
+   * why: such an agent is not started at all, rather than on chord's own
+   * command (CHD-466, the owner's Q52).
+   */
+  refused?: Record<string, string>;
+} {
   let input: unknown;
 
   try {
@@ -222,6 +262,11 @@ export function parseSettings(
   }
 
   const problems: SettingsProblem[] = [];
+  const refused: Record<string, string> = {};
+  const parsed = (settings: Settings) =>
+    Object.keys(refused).length === 0
+      ? { settings, problems }
+      : { settings, problems, refused };
 
   // Each round drops what the last one found; nested records can hide a
   // problem behind another, so a few rounds may be needed.
@@ -229,7 +274,7 @@ export function parseSettings(
     const result = SettingsFile.safeParse(input);
 
     if (result.success) {
-      return { settings: result.data, problems };
+      return parsed(result.data);
     }
 
     for (const issue of result.error.issues) {
@@ -239,6 +284,17 @@ export function parseSettings(
           : [issue.path];
 
       for (const path of paths) {
+        const [first, agent, key] = path;
+
+        if (
+          path.length === 3 &&
+          first === 'agents' &&
+          typeof agent === 'string' &&
+          key === 'command'
+        ) {
+          refused[agent] = `expected a string, got ${given(at(input, path))}`;
+        }
+
         if (path.length === 0 || !drop(input, path)) {
           return {
             settings: {},
@@ -320,6 +376,8 @@ export function mergeSettings(...layers: readonly Settings[]): Settings {
 export interface SettingsLayer {
   readonly file: string;
   readonly settings: Settings;
+  /** The agents whose command this file gives was refused, with why. */
+  readonly refused?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -382,7 +440,11 @@ export async function loadSettings(where: {
       });
     }
 
-    layers.push({ file, settings });
+    layers.push({
+      file,
+      settings,
+      ...(parsed.refused === undefined ? {} : { refused: parsed.refused }),
+    });
   }
 
   return {
@@ -410,10 +472,22 @@ export interface Sourced {
   readonly from: string;
 }
 
+/** Why an agent is not started: its command, refused in `file`. */
+export interface Refusal {
+  readonly file: string;
+  /** `expected a string, got a number`. */
+  readonly cause: string;
+}
+
 /** What chord starts with once flags, files and its own default are weighed. */
 export interface Startup {
   readonly agent: string;
-  readonly agentCommand?: string;
+  readonly agentCommand?: string | string[];
+  /**
+   * A file gave a command for the agent that chord refused: nothing starts
+   * on it, not even chord's own command, unless a flag gives one.
+   */
+  readonly refused?: Refusal;
   readonly model?: Sourced;
   readonly effort?: Sourced;
   readonly permissionMode?: Sourced;
@@ -452,6 +526,11 @@ export function resolveStartup(
   const settings = mergeSettings(...layers.map((layer) => layer.settings));
   const agent = flags.agent ?? settings.agent ?? defaultAgent;
   const agentCommand = flags.agentCommand ?? settings.agents?.[agent]?.command;
+  const refusedIn = layers.find((layer) => layer.refused?.[agent]);
+  const refused =
+    flags.agentCommand === undefined && refusedIn !== undefined
+      ? { file: refusedIn.file, cause: refusedIn.refused![agent]! }
+      : undefined;
   const model = sourced(
     { name: '--model', value: flags.model },
     layers,
@@ -473,11 +552,24 @@ export function resolveStartup(
 
   return {
     agent,
-    ...(agentCommand === undefined ? {} : { agentCommand }),
+    ...(refused === undefined
+      ? agentCommand === undefined
+        ? {}
+        : { agentCommand }
+      : { refused }),
     ...(model === undefined ? {} : { model }),
     ...(effort === undefined ? {} : { effort }),
     ...(permissionMode === undefined ? {} : { permissionMode }),
   };
+}
+
+/** `codex not started: agents.codex.command in <file>: expected a string, …`. */
+export function refusalLine(
+  agent: string,
+  { file, cause }: Refusal,
+  shown: { readonly cwd: string; readonly home: string | undefined },
+): string {
+  return `${agent} not started: agents.${agent}.command in ${shownPath(file, shown)}: ${cause}`;
 }
 
 /**
@@ -545,7 +637,7 @@ export function knownAgents(
 /** The command the settings files start each agent with, where one does. */
 export function agentCommands(
   layers: readonly SettingsLayer[],
-): Record<string, string> {
+): Record<string, string | string[]> {
   const settings = mergeSettings(...layers.map((layer) => layer.settings));
 
   return Object.fromEntries(

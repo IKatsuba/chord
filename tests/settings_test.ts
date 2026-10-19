@@ -12,6 +12,7 @@ import {
   parseSettings,
   problemLine,
   problemNote,
+  refusalLine,
   resolveStartup,
   resumedStartup,
   saveEditorMode,
@@ -714,4 +715,73 @@ test('a directory is shortened against the home directory alone, and the home pa
   expect(homePath('/srv/app', undefined)).toStrictEqual('/srv/app');
   // The working directory is not the shortening's, as it is shownPath's.
   expect(shownPath('/h', { cwd: '/w', home: '/h' })).toStrictEqual('~');
+});
+
+describe("an agent's command chord refuses (CHD-466, the owner's Q52)", () => {
+  const file = '/project/.chord/settings.json';
+  const layer = (codex: Record<string, unknown>) => {
+    const { settings, refused } = parseSettings(
+      file,
+      JSON.stringify({ agents: { codex } }),
+    );
+
+    return { file, settings, ...(refused === undefined ? {} : { refused }) };
+  };
+
+  test('a command given as a list is taken as the program and its arguments', () => {
+    const found = startupOf('codex', { agent: 'fake' }, [
+      layer({ command: ['bun', 'fake.ts'], model: 'fake-small' }),
+    ]);
+
+    expect(found.agentCommand).toStrictEqual(['bun', 'fake.ts']);
+    expect(found.refused).toBeUndefined();
+  });
+
+  test("any other command marks the agent refused, with the cause, and never falls back to chord's own", () => {
+    for (const [command, cause] of [
+      [7, 'expected a string, got a number'],
+      [true, 'expected a string, got a boolean'],
+      ['', 'expected a string, got an empty string'],
+      [[], 'expected a string, got an empty list'],
+      [['bun', 3], 'expected a string, got a list with something not a string'],
+      [{ run: 'x' }, 'expected a string, got an object'],
+    ] as const) {
+      const found = startupOf('codex', { agent: 'fake' }, [
+        layer({ command, model: 'fake-small' }),
+      ]);
+
+      expect(found.agentCommand, String(command)).toBeUndefined();
+      expect(found.refused).toStrictEqual({ file, cause });
+    }
+  });
+
+  test('a flag still gives the command; another agent is untouched', () => {
+    const layers = [layer({ command: 7 })];
+
+    expect(
+      resolveStartup(
+        { agent: 'codex', agentCommand: 'bun x.ts' },
+        layers,
+        'fake',
+      ).refused,
+    ).toBeUndefined();
+    expect(
+      startupOf('claude', { agent: 'fake' }, layers).refused,
+    ).toBeUndefined();
+  });
+
+  test('the refusal reads with its file as the window shows paths', () => {
+    expect(
+      refusalLine(
+        'codex',
+        {
+          file: '/h/.config/chord/settings.json',
+          cause: 'expected a string, got a number',
+        },
+        { cwd: '/project', home: '/h' },
+      ),
+    ).toStrictEqual(
+      'codex not started: agents.codex.command in ~/.config/chord/settings.json: expected a string, got a number',
+    );
+  });
 });

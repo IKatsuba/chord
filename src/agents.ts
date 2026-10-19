@@ -1,4 +1,5 @@
 import { which } from '@david/which';
+import { quote } from 'shell-quote';
 import { Table } from '@cliffy/table';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
@@ -171,6 +172,11 @@ export async function missingCommand(
 }
 
 /** The start as one line a person could type, for `chord agents`. */
+/** A command as a line: given as one, or its words quoted as a shell would. */
+export function commandLine(command: string | readonly string[]): string {
+  return typeof command === 'string' ? command : quote([...command]);
+}
+
 export function startLine({ command, env }: AgentStart): string {
   const words = typeof command === 'string' ? [command] : command;
 
@@ -202,7 +208,7 @@ export interface ListedAgent {
  * then the names only the settings files define, in their order.
  */
 export async function listedAgents(
-  commands: Readonly<Record<string, string>>,
+  commands: Readonly<Record<string, string | readonly string[]>>,
   lookup: Lookup = onPath,
 ): Promise<ListedAgent[]> {
   const known = await Promise.all(
@@ -210,7 +216,7 @@ export async function listedAgents(
       const command = commands[name];
 
       if (command !== undefined) {
-        return { name, title, start: command, from: 'settings' };
+        return { name, title, start: commandLine(command), from: 'settings' };
       }
 
       const [first] = start.command;
@@ -231,7 +237,7 @@ export async function listedAgents(
     .map(([name, command]): ListedAgent => ({
       name,
       title: undefined,
-      start: command,
+      start: commandLine(command),
       from: 'settings',
     }));
 

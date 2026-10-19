@@ -128,6 +128,7 @@ import {
 import {
   type AgentRow,
   agentMark,
+  agentsHeight,
   agentState,
   listRows,
   type ListTarget,
@@ -1715,12 +1716,13 @@ export function useSessions(
   const front = (): Tab<Conversation> | undefined => frontTab(sessions.tabs);
 
   /**
-   * Moves the pick in the list under the prompt `by` rows, the transcript
-   * and the box following; above `main` the focus goes back to the box.
+   * Moves the pick in the list under the prompt `by` rows, as it is drawn
+   * in `limit` lines at `width`, the transcript and the box following;
+   * above `main` the focus goes back to the box.
    */
-  const moveAgent = (by: number, limit: number) => {
+  const moveAgent = (by: number, limit: number, width: number) => {
     focusOn(
-      moveListFocus(listed(limit), by, {
+      moveListFocus(listed(limit, width), by, {
         summary: background().length > 0,
         onSummary: state.summaryFocus === true,
       }),
@@ -2269,10 +2271,14 @@ export function useSessions(
   };
 
   /**
-   * The list under the prompt as it is drawn in `limit` rows: the front
-   * tab's agents while it has a child, a team folded where they do not fit.
+   * The list under the prompt as it is drawn in `limit` lines at `width`:
+   * the front tab's agents while it has a child, a team folded where their
+   * lines do not fit, so a resize may fold or unfold one.
    */
-  const listed = (limit: number): AgentRow[] => listRows(agentRows(), limit);
+  const listed = (limit: number, width: number): AgentRow[] =>
+    listRows(agentRows(), limit, (rows) =>
+      agentsHeight(rows, { width, now: Date.now() }),
+    );
 
   /**
    * The front tab's background: every monitor and task of its `main` and

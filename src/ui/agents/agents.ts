@@ -2,11 +2,12 @@
  * The list of a session's agents under the prompt, kept out of the
  * component: `main` and each long-lived child, one row each with its
  * runtime, model and state, a team's members nested under its lead or
- * folded into its row, cut to the window's height and width; and where
- * ↑ ↓ move the `❯` in it, on to the background's summary line after it.
+ * folded into its row, laid out to the window's width, a row that does not
+ * fit wrapping, and to its height; and where ↑ ↓ move the `❯` in it, on to
+ * the background's summary line after it.
  */
-import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
+import wrapAnsi from 'wrap-ansi';
 import { type Failure, failureOf, type TabWait } from '../../session/tabs.ts';
 import { GLYPHS } from '../app/strip.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
@@ -281,14 +282,18 @@ export function agentsRowLimit(rows: number): number {
 
 /**
  * The list's rows: the agents, drawn only while there is a child. When they
- * all do not fit `limit` rows, each team the pick is not in folds to its
- * lead's row.
+ * all do not fit `limit` lines, as `height` counts them, each team the
+ * pick is not in folds to its lead's row; a row that wraps counts each of
+ * its lines (CHD-471).
  */
 export function listRows(
   agents: readonly AgentRow[],
   limit = Infinity,
+  height: (rows: readonly AgentRow[]) => number = (rows) => rows.length,
 ): AgentRow[] {
-  return teamRows(agents, { fold: agents.length > limit });
+  return teamRows(agents, {
+    fold: height(teamRows(agents, { fold: false })) > limit,
+  });
 }
 
 /**
@@ -332,6 +337,12 @@ export function moveListFocus(
     : { kind: 'agent', key: rows[at]!.key };
 }
 
+/** A run of a line in one tone. */
+export interface Toned {
+  readonly text: string;
+  readonly tone: AgentTone;
+}
+
 /** One row laid out: its columns, each padded to the widest. */
 export interface LaidRow {
   readonly row: AgentRow;
@@ -339,14 +350,32 @@ export interface LaidRow {
   readonly mark: string;
   /** A member's `├─ ` or `└─ `, drawn dim ahead of its name. */
   readonly branch?: string;
-  /** The name, padded so that with the branch it fills the column. */
+  /** The name's first line, padded so with the branch it fills the column. */
   readonly name: string;
+  /**
+   * The name's further lines: what stands under the branch (the tree's
+   * `│` or spaces), drawn dim, and the name's words, padded to fill the
+   * column.
+   */
+  readonly names: readonly { readonly tree: string; readonly text: string }[];
+  /** The name column's width, branch included, for a line under it. */
+  readonly nameWidth: number;
   /** Its runtime and model. */
   readonly detail: string;
-  /** Its state, padded so the marks after it start in one column. */
-  readonly state?: { readonly text: string; readonly tone: AgentTone };
+  /**
+   * Its state beside the detail, padded so the marks after it start in one
+   * column; none where it went under the detail.
+   */
+  readonly state?: Toned;
   /** What of it is not yet seen, in its own column after the state. */
-  readonly unseen?: { readonly text: string; readonly tone: AgentTone };
+  readonly unseen?: Toned;
+  /**
+   * Its state and mark under the detail, where the row had no room for
+   * them beside it: a line each, from the row's second line.
+   */
+  readonly below: readonly (readonly Toned[])[];
+  /** How many lines the row takes. */
+  readonly height: number;
 }
 
 export interface AgentsLayout {
@@ -355,44 +384,237 @@ export interface AgentsLayout {
   readonly more: number;
 }
 
-/** The least a name is ever cut to, so one stays readable. */
-const NAME_FLOOR = 12;
-
 /** The gap between the columns. */
 const GAP = '  ';
 
-/**
- * What one way of fitting the rows keeps: an agent's model and its effort,
- * and its state words and a folded team's size.
- */
+/** The `❯ ` or two spaces ahead of each row. */
+const MARK_WIDTH = 2;
+
+/** What one way of fitting the rows keeps: an agent's model and its effort. */
 interface Fit {
   readonly model: boolean;
   readonly effort: boolean;
   /** The words of what is not yet seen, beside its glyph. */
   readonly marks: boolean;
-  readonly words: boolean;
 }
 
 /**
  * Each way of fitting, the fullest first: an agent's effort goes first,
- * then its model, then the words of its mark, then its state words, each
- * leaving its glyph, as the state is always to be seen (CHD-471).
+ * then its model, then the words of its mark, leaving its glyph. Past the
+ * last a row's state goes under its detail (CHD-471).
  */
 const FITS: readonly Fit[] = [
-  { model: true, effort: true, marks: true, words: true },
-  { model: true, effort: false, marks: true, words: true },
-  { model: false, effort: false, marks: true, words: true },
-  { model: false, effort: false, marks: false, words: true },
-  { model: false, effort: false, marks: false, words: false },
+  { model: true, effort: true, marks: true },
+  { model: true, effort: false, marks: true },
+  { model: false, effort: false, marks: true },
+  { model: false, effort: false, marks: false },
 ];
 
+/** `text` wrapped at its spaces to `width`, a word wider broken. */
+function wrapped(text: string, width: number): string[] {
+  return wrapAnsi(text, Math.max(1, width), { hard: true, trim: true }).split(
+    '\n',
+  );
+}
+
 /**
- * The rows drawn in `limit` at `width`: past the limit, the last row is
- * `… +N more`, and while the list has the keys the rows shown move so the
- * picked one is among them. `focused` marks the picked row with the `❯`,
- * which is elsewhere while the summary line has it. A row that does not fit
- * gives way as `FITS` says; the name is cut last, never below twelve
- * columns.
+ * Every row laid out at `width`, none left out (CHD-471). The name column
+ * is never wider than a third of `width`, a longer name wrapping inside it;
+ * then, while a row does not fit, its effort goes, then its model, then its
+ * mark's words, as `FITS` says, and past them a row whose detail leaves no
+ * room puts its state and mark under the detail, wrapped at its spaces.
+ * The name and the state's words are never cut.
+ */
+function laidRows(
+  rows: readonly AgentRow[],
+  { width, focused, now }: { width: number; focused: boolean; now: number },
+): LaidRow[] {
+  const states = new Map(rows.map((row) => [row, agentState(row, now)]));
+  const marks = new Map(rows.map((row) => [row, agentMark(row)]));
+  const widest = (texts: readonly string[]) =>
+    Math.max(0, ...texts.map((text) => stringWidth(text)));
+  const branchOf = (row: AgentRow) =>
+    row.branch === undefined ? '' : `${row.branch} `;
+  // A folded team's members count too, under their branch as unfolded, so
+  // folding never moves a column.
+  const names = Math.min(
+    Math.max(1, Math.floor(width / 3)),
+    widest(
+      rows.flatMap((row) => [
+        branchOf(row) + row.name,
+        ...(row.folded ?? []).map((member) => `├─ ${member.name}`),
+      ]),
+    ),
+  );
+  const stateOf = (row: AgentRow): Toned => {
+    const state = states.get(row)!;
+
+    return { text: `${state.glyph} ${state.words}`, tone: state.tone };
+  };
+
+  const detailAt = MARK_WIDTH + names + GAP.length;
+
+  for (const fit of FITS) {
+    const runtimeOf = (row: AgentRow) =>
+      [
+        row.runtime,
+        // A folded lead's size stands where its model would: it says more.
+        row.folded !== undefined
+          ? `${row.folded.length + 1} agents`
+          : fit.model
+            ? row.model
+            : undefined,
+        // After its model, which it tunes.
+        row.folded === undefined && fit.model && fit.effort
+          ? row.effort
+          : undefined,
+      ]
+        .filter((part) => part !== undefined)
+        .join(' · ');
+    const markOf = (row: AgentRow): Toned | undefined => {
+      const mark = marks.get(row);
+
+      return (
+        mark && {
+          text: fit.marks ? `${mark.glyph} ${mark.words}` : mark.glyph,
+          tone: mark.tone,
+        }
+      );
+    };
+
+    // Which rows keep their state beside their detail, and how wide the
+    // columns are over them.
+    const measure = (beside: ReadonlySet<AgentRow>) => {
+      const kept = [...beside];
+      const states = widest(kept.map((row) => stateOf(row).text));
+      const unseen = widest(kept.map((row) => markOf(row)?.text ?? ''));
+      const detail = widest(kept.map(runtimeOf));
+
+      return {
+        detail,
+        states,
+        across:
+          detailAt +
+          detail +
+          GAP.length +
+          states +
+          (unseen === 0 ? 0 : GAP.length + unseen),
+      };
+    };
+
+    // What one row would take on its own: its detail, state and mark.
+    const own = (row: AgentRow) => {
+      const mark = markOf(row);
+
+      return (
+        detailAt +
+        stringWidth(runtimeOf(row)) +
+        GAP.length +
+        stringWidth(stateOf(row).text) +
+        (mark === undefined ? 0 : GAP.length + stringWidth(mark.text))
+      );
+    };
+
+    const beside = new Set(rows);
+    let measured = measure(beside);
+
+    if (fit !== FITS[FITS.length - 1]) {
+      if (measured.across > width) {
+        continue;
+      }
+    } else {
+      // Past the last way of fitting, the row that needs the most room puts
+      // its state under its detail, until the rest fit beside theirs.
+      while (beside.size > 0 && measured.across > width) {
+        beside.delete(
+          [...beside].reduce((one, other) =>
+            // The lowest of rows that need as much, the top kept whole.
+            own(other) >= own(one) ? other : one,
+          ),
+        );
+
+        measured = measure(beside);
+      }
+    }
+
+    return rows.map((row) => {
+      const branch = branchOf(row);
+      const room = names - stringWidth(branch);
+      const lines = wrapped(row.name, room).map((line) => pad(line, room));
+      // Under the branch, the tree goes on past a member that is not the last.
+      const under = pad(row.branch === '├─' ? '│' : '', stringWidth(branch));
+      const mark = markOf(row);
+      const shown = stateOf(row);
+      const isBeside = beside.has(row);
+      // Under the detail: the state, wrapped at its spaces, then the mark
+      // after it where it fits, else on a line of its own.
+      const below: Toned[][] = [];
+
+      if (!isBeside) {
+        const room = width - detailAt;
+
+        for (const text of wrapped(shown.text, room)) {
+          below.push([{ text, tone: shown.tone }]);
+        }
+
+        if (mark !== undefined) {
+          const last = below.at(-1)!;
+          const used = stringWidth(last.map((run) => run.text).join(''));
+
+          if (used + GAP.length + stringWidth(mark.text) <= room) {
+            last.push({ text: `${GAP}${mark.text}`, tone: mark.tone });
+          } else {
+            below.push([mark]);
+          }
+        }
+      }
+
+      const state =
+        isBeside && mark !== undefined
+          ? { ...shown, text: pad(shown.text, measured.states) }
+          : shown;
+
+      return {
+        row,
+        mark: focused && row.picked ? '❯ ' : '  ',
+        ...(branch === '' ? {} : { branch }),
+        name: lines[0]!,
+        names: lines.slice(1).map((text) => ({ tree: under, text })),
+        nameWidth: names,
+        detail: isBeside
+          ? pad(runtimeOf(row), measured.detail)
+          : runtimeOf(row),
+        ...(isBeside ? { state } : {}),
+        ...(isBeside && mark !== undefined ? { unseen: mark } : {}),
+        below,
+        height: Math.max(lines.length, 1 + below.length),
+      };
+    });
+  }
+
+  return [];
+}
+
+/**
+ * How many lines `rows` take at `width`, every row drawn: what folding a
+ * team weighs against the list's limit.
+ */
+export function agentsHeight(
+  rows: readonly AgentRow[],
+  { width, now }: { width: number; now: number },
+): number {
+  return laidRows(rows, { width, focused: false, now }).reduce(
+    (sum, row) => sum + row.height,
+    0,
+  );
+}
+
+/**
+ * The rows drawn in `limit` lines at `width`: past the limit, the last line
+ * is `… +N more`, and while the list has the keys the rows shown move so
+ * the picked one is among them. A wrapped row counts as many lines as it
+ * has. `focused` marks the picked row with the `❯`, which is elsewhere
+ * while the summary line has it.
  */
 export function agentsLayout(
   rows: readonly AgentRow[],
@@ -408,124 +630,48 @@ export function agentsLayout(
     readonly now: number;
   },
 ): AgentsLayout {
+  // Widths over every row, drawn or not, so scrolling never moves a column.
+  const laid = laidRows(rows, { width, focused, now });
   const room = Math.max(1, limit);
-  const fits = rows.length <= room;
-  const shown = fits ? rows.length : room - 1;
+  const total = laid.reduce((sum, row) => sum + row.height, 0);
+
+  if (total <= room) {
+    return { rows: laid, more: 0 };
+  }
+
+  // A line for `… +N more`; the rest from the first, or, while the list has
+  // the keys, from where the picked row is the last that fits.
+  const budget = Math.max(1, room - 1);
   const at = Math.max(
     0,
     rows.findIndex((row) => row.picked),
   );
-  const start =
-    fits || !focused
-      ? 0
-      : Math.min(Math.max(0, at - shown + 1), rows.length - shown);
-  const visible = rows.slice(start, start + shown);
-  const states = new Map(rows.map((row) => [row, agentState(row, now)]));
-  const marks = new Map(rows.map((row) => [row, agentMark(row)]));
-  // Widths over every row, drawn or not, so scrolling never moves a column.
-  const widest = (texts: readonly string[]) =>
-    Math.max(0, ...texts.map((text) => stringWidth(text)));
-  const branchOf = (row: AgentRow) =>
-    row.branch === undefined ? '' : `${row.branch} `;
-  // A folded team's members count too, under their branch as unfolded, so
-  // folding never moves a column.
-  const nameWidth = widest(
-    rows.flatMap((row) => [
-      branchOf(row) + row.name,
-      ...(row.folded ?? []).map((member) => `├─ ${member.name}`),
-    ]),
-  );
+  const fitting = (from: number) => {
+    let used = 0;
+    let count = 0;
 
-  for (const fit of FITS) {
-    // A folded lead's size stands where its model would, and stays while
-    // the states keep their words: it says more than a model.
-    const runtimeOf = (row: AgentRow) =>
-      [
-        row.runtime,
-        row.folded !== undefined
-          ? fit.words
-            ? `${row.folded.length + 1} agents`
-            : undefined
-          : fit.model
-            ? row.model
-            : undefined,
-        // After its model, which it tunes; a folded lead says its size.
-        row.folded === undefined && fit.model && fit.effort
-          ? row.effort
-          : undefined,
-      ]
-        .filter((part) => part !== undefined)
-        .join(' · ');
-    const stateOf = (row: AgentRow): LaidRow['state'] => {
-      const state = states.get(row);
-
-      return (
-        state && {
-          text: fit.words ? `${state.glyph} ${state.words}` : state.glyph,
-          tone: state.tone,
-        }
-      );
-    };
-
-    const markOf = (row: AgentRow): LaidRow['unseen'] => {
-      const mark = marks.get(row);
-
-      return (
-        mark && {
-          text: fit.marks ? `${mark.glyph} ${mark.words}` : mark.glyph,
-          tone: mark.tone,
-        }
-      );
-    };
-
-    const runtimeWidth = widest(rows.map(runtimeOf));
-    const stateWidth = widest(rows.map((row) => stateOf(row)?.text ?? ''));
-    const markWidth = widest(rows.map((row) => markOf(row)?.text ?? ''));
-    const fixed =
-      2 +
-      nameWidth +
-      GAP.length +
-      (stateWidth === 0 ? 0 : GAP.length + stateWidth) +
-      (markWidth === 0 ? 0 : GAP.length + markWidth);
-    const last = fit === FITS[FITS.length - 1];
-
-    if (fixed + runtimeWidth > width && !last) {
-      continue;
+    while (
+      from + count < laid.length &&
+      (count === 0 || used + laid[from + count]!.height <= budget)
+    ) {
+      used += laid[from + count]!.height;
+      count += 1;
     }
 
-    // Past the last fallback the name gives way, down to its floor.
-    const names = Math.max(
-      Math.min(nameWidth, NAME_FLOOR),
-      nameWidth - Math.max(0, fixed + runtimeWidth - width),
-    );
+    return count;
+  };
 
-    return {
-      more: rows.length - shown,
-      rows: visible.map((row) => {
-        const mark = markOf(row);
-        const shown = stateOf(row);
-        // Padded where a mark follows, so every mark starts in one column.
-        const state =
-          shown && mark !== undefined
-            ? { ...shown, text: pad(shown.text, stateWidth) }
-            : shown;
-        const branch = branchOf(row);
-        const room = names - stringWidth(branch);
+  let start = 0;
 
-        return {
-          row,
-          mark: focused && row.picked ? '❯ ' : '  ',
-          ...(branch === '' ? {} : { branch }),
-          name: pad(cliTruncate(row.name, room), room),
-          detail: pad(runtimeOf(row), runtimeWidth),
-          ...(state === undefined ? {} : { state }),
-          ...(mark === undefined ? {} : { unseen: mark }),
-        };
-      }),
-    };
+  if (focused) {
+    while (start < at && start + fitting(start) <= at) {
+      start += 1;
+    }
   }
 
-  return { rows: [], more: 0 };
+  const shown = laid.slice(start, start + fitting(start));
+
+  return { rows: shown, more: rows.length - shown.length };
 }
 
 function pad(text: string, width: number): string {

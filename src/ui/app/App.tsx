@@ -525,7 +525,7 @@ export function App({
   // The list under the prompt: those agents, then the background's
   // summary line, its last stop.
   const agentsLimit = agentsRowLimit(rows);
-  const listRows = sessions.listed(agentsLimit);
+  const listRows = sessions.listed(agentsLimit, columns - 4);
   const backgroundItems = sessions.background();
   const listShown = listRows.length > 0 || backgroundItems.length > 0;
   // With no agents drawn the summary line is the list's one stop.
@@ -717,7 +717,7 @@ export function App({
       case 'attend_session':
         return sessions.attend();
       case 'move_agent':
-        return sessions.moveAgent(step.by, agentsLimit);
+        return sessions.moveAgent(step.by, agentsLimit, columns - 4);
       case 'close_agent':
         return sessions.closePicked();
       case 'move_background':

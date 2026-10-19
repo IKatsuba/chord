@@ -1,5 +1,5 @@
 import { TextAttributes } from '@opentui/core';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useColours } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, fg, TEXT } from '../theme/text.ts';
@@ -10,6 +10,7 @@ import {
   type AgentTone,
   childLine,
   listTimed,
+  type Toned,
 } from './agents.ts';
 
 const clockListeners = new Set<(now: number) => void>();
@@ -95,37 +96,64 @@ export function AgentsList({
       {layout.rows.map((laid) => {
         const { row } = laid;
         const colour = agentColour(colours, row.colour);
+        const toned = ({ text, tone }: Toned, key: string) => (
+          <span
+            key={key}
+            {...fg(toneColour(tone, colours))}
+            attributes={tone === 'dim' ? DIM : 0}
+          >
+            {text}
+          </span>
+        );
+        const name = (text: string) => (
+          <span
+            {...fg(colour)}
+            attributes={row.picked ? TextAttributes.BOLD : 0}
+          >
+            <Ansi text={text} />
+          </span>
+        );
 
         return (
-          <text key={row.key} {...CUT}>
-            <span {...fg(colours.permission)}>{laid.mark}</span>
-            {laid.branch && <span attributes={DIM}>{laid.branch}</span>}
-            <span
-              {...fg(colour)}
-              attributes={row.picked ? TextAttributes.BOLD : 0}
-            >
-              <Ansi text={laid.name} />
-            </span>
-            <span attributes={DIM}>
-              <Ansi text={`  ${laid.detail}`} />
-            </span>
-            {laid.state && (
-              <span
-                {...fg(toneColour(laid.state.tone, colours))}
-                attributes={laid.state.tone === 'dim' ? DIM : 0}
-              >
-                {`  ${laid.state.text}`}
+          <Fragment key={row.key}>
+            <text {...CUT}>
+              <span {...fg(colours.permission)}>{laid.mark}</span>
+              {laid.branch && <span attributes={DIM}>{laid.branch}</span>}
+              {name(laid.name)}
+              <span attributes={DIM}>
+                <Ansi text={`  ${laid.detail}`} />
               </span>
-            )}
-            {laid.unseen && (
-              <span
-                {...fg(toneColour(laid.unseen.tone, colours))}
-                attributes={laid.unseen.tone === 'dim' ? DIM : 0}
-              >
-                {`  ${laid.unseen.text}`}
-              </span>
-            )}
-          </text>
+              {laid.state &&
+                toned({ ...laid.state, text: `  ${laid.state.text}` }, 'state')}
+              {laid.unseen &&
+                toned(
+                  { ...laid.unseen, text: `  ${laid.unseen.text}` },
+                  'unseen',
+                )}
+            </text>
+            {Array.from({ length: laid.height - 1 }, (_, at) => {
+              // Under the name its next line, or as many spaces, then the
+              // state and mark that went under the detail.
+              const under = laid.names[at];
+              const below = laid.below[at] ?? [];
+
+              return (
+                <text key={at} {...CUT}>
+                  {'  '}
+                  {under === undefined ? (
+                    ' '.repeat(laid.nameWidth)
+                  ) : (
+                    <>
+                      <span attributes={DIM}>{under.tree}</span>
+                      {name(under.text)}
+                    </>
+                  )}
+                  {below.length > 0 && '  '}
+                  {below.map((run, index) => toned(run, String(index)))}
+                </text>
+              );
+            })}
+          </Fragment>
         );
       })}
       {layout.more > 0 && (

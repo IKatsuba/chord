@@ -3,6 +3,7 @@ import { emptyWatch } from '../../../src/notify.ts';
 import type { TabWait } from '../../../src/session/tabs.ts';
 import {
   type AgentRow,
+  agentsHeight,
   agentsHint,
   agentsLayout,
   agentsRowLimit,
@@ -48,11 +49,22 @@ function drawn(
   const layout = agentsLayout(rows, { limit, width, focused, now: NOW });
 
   return [
-    ...layout.rows.map((laid) =>
+    ...layout.rows.flatMap((laid) => [
       `${laid.mark}${laid.branch ?? ''}${laid.name}  ${laid.detail}${
         laid.state === undefined ? '' : `  ${laid.state.text}`
       }${laid.unseen === undefined ? '' : `  ${laid.unseen.text}`}`.trimEnd(),
-    ),
+      // A wrapped row's further lines: the name's, the state under the detail.
+      ...Array.from({ length: laid.height - 1 }, (_, at) => {
+        const name = laid.names[at];
+        const below = (laid.below[at] ?? []).map(({ text }) => text).join('');
+
+        return `  ${
+          name === undefined
+            ? ' '.repeat(laid.nameWidth)
+            : name.tree + name.text
+        }${below === '' ? '' : `  ${below}`}`.trimEnd();
+      }),
+    ]),
     ...(layout.more > 0 ? [`  … +${layout.more} more`] : []),
   ];
 }
@@ -165,7 +177,7 @@ test('past its rows the list ends in … +N more, and moves so the picked row sh
   ]);
 });
 
-test('a narrow list drops the model, then the words, and cuts a name no shorter than twelve', () => {
+test("a narrow list drops the model, then puts a row's state under its detail, and wraps a long name in a third of the width, cutting nothing (CHD-471)", () => {
   const long = row('the-long-parser-name', {
     wait: { working: NOW - 41_000 },
   });
@@ -174,12 +186,24 @@ test('a narrow list drops the model, then the words, and cuts a name no shorter 
     '  main    claude  ◦ idle 0s',
     '  parser  codex   ✻ working 41s',
   ]);
-  expect(drawn([MAIN, PARSER], { width: 20 })).toStrictEqual([
-    '  main    claude  ◦',
-    '  parser  codex   ✻',
+  expect(drawn([MAIN, PARSER], { width: 20, limit: 6 })).toStrictEqual([
+    '  main    claude',
+    '          ◦ idle 0s',
+    '  parser  codex',
+    '          ✻ working',
+    '          41s',
   ]);
-  expect(drawn([long], { width: 20 })).toStrictEqual([
-    '  the-long-pa…  codex  ✻',
+  expect(drawn([long], { width: 20, limit: 6 })).toStrictEqual([
+    '  the-lo  codex',
+    '  ng-par  ✻ working',
+    '  ser-na  41s',
+    '  me',
+  ]);
+  // Each wrapped row counts its lines toward the limit.
+  expect(drawn([MAIN, PARSER], { width: 20 })).toStrictEqual([
+    '  main    claude',
+    '          ◦ idle 0s',
+    '  … +1 more',
   ]);
 });
 
@@ -711,9 +735,13 @@ test("a narrow list drops a mark's words before the state's, each leaving its gl
     '  main    claude  ◦ idle 4s',
     '  parser  codex   ◦ idle 13s  ✓',
   ]);
-  expect(drawn(rows, { width: 22 })).toStrictEqual([
-    '  main    claude  ◦',
-    '  parser  codex   ◦  ✓',
+  // Narrower still, each state goes whole under its detail, its mark after it.
+  expect(drawn(rows, { width: 22, limit: 6 })).toStrictEqual([
+    '  main    claude',
+    '          ◦ idle 4s',
+    '  parser  codex',
+    '          ◦ idle 13s',
+    '          ✓',
   ]);
 });
 
@@ -786,5 +814,94 @@ describe('CHD-471 tester: state and unseen marks are independent', () => {
 
     expect(agentState(quiet, NOW).words).toBe('idle 20s');
     expect(agentMark(quiet)).toBeUndefined();
+  });
+});
+
+describe('CHD-471 a row that does not fit wraps, and counts its lines', () => {
+  const asking = (since: number) => ({
+    asking: { on: { kind: 'permission' as const }, since: NOW - since },
+  });
+  const rows = [
+    row('main', { key: 1, runtime: 'fake', wait: { stopped: NOW - 4_000 } }),
+    row('parser', {
+      key: 2,
+      runtime: 'fake',
+      wait: {
+        stopped: NOW - 13_000,
+        unseen: { kind: 'replied', since: NOW },
+      },
+    }),
+    row('docs', {
+      key: 3,
+      runtime: 'fake',
+      wait: {
+        ...asking(17_000),
+        unseen: { kind: 'message', from: '@main', since: NOW },
+      },
+    }),
+    row('bugfix', {
+      key: 4,
+      runtime: 'team · fake',
+      team: 4,
+      wait: { stopped: NOW, unseen: { kind: 'replied', since: NOW } },
+    }),
+    row('tester', { key: 5, runtime: 'fake', team: 4, wait: asking(8_000) }),
+    row('coder', { key: 6, runtime: 'fake', team: 4 }),
+  ];
+  const height = (width: number) => (laid: readonly AgentRow[]) =>
+    agentsHeight(laid, { width, now: NOW });
+
+  test("only a row whose detail leaves its state no room puts it under the detail, the others' column set without it", () => {
+    const folded = listRows(rows, 5, height(39));
+
+    expect(drawn(folded, { width: 39, limit: 5 })).toStrictEqual([
+      '  main       fake  ◦ idle 4s',
+      '  parser     fake  ◦ idle 13s        ✓',
+      '  docs       fake  ● permission 17s  ←',
+      '  bugfix     team · fake · 3 agents',
+      '             ● tester: permission 8s  ✓',
+    ]);
+  });
+
+  test("a team folds when its rows' lines, not its rows, pass the limit, so the width can fold it", () => {
+    expect(listRows(rows, 6, height(116))).toHaveLength(6);
+    // At 30 the states go under, two lines a row: the team folds.
+    expect(listRows(rows, 6, height(30))).toHaveLength(4);
+  });
+
+  test('past the limit the list keeps whole rows, the picked one among them, and counts the rest', () => {
+    const picked = rows.map((each) => ({
+      ...each,
+      picked: each.name === 'coder',
+    }));
+
+    expect(drawn(picked, { width: 30, limit: 5, focused: true })).toStrictEqual(
+      [
+        '  tester  fake',
+        '          ● permission 8s',
+        '❯ coder   fake  ◦ idle 0s',
+        '  … +4 more',
+      ],
+    );
+  });
+
+  test("a member's long name wraps behind the tree's │, and the last member's behind spaces", () => {
+    const named = [
+      row('main', { key: 1, runtime: 'fake' }),
+      row('bugfix', { key: 2, runtime: 'team · fake', team: 2 }),
+      row('tester-with-a-long-name', { key: 3, runtime: 'fake', team: 2 }),
+      row('coder-with-a-long-name', { key: 4, runtime: 'fake', team: 2 }),
+    ];
+
+    expect(
+      drawn(teamRows(named, { fold: false }), { width: 60, limit: 9 }),
+    ).toStrictEqual([
+      '  main                  fake         ◦ idle 0s',
+      '  bugfix                team · fake  ◦ idle 0s',
+      '  ├─ tester-with-a-lon  fake         ◦ idle 0s',
+      '  │  g-name',
+      '  └─ coder-with-a-long  fake         ◦ idle 0s',
+      '     -name',
+    ]);
   });
 });

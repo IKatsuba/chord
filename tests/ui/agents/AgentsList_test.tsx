@@ -245,3 +245,47 @@ describe('CHD-471 tester: list clock lifecycle', () => {
     }
   });
 });
+
+test("a narrow list wraps a long name in its column and draws a state under its detail in the state's colour, cutting nothing (CHD-471)", async () => {
+  const level = chalk.level;
+
+  chalk.level = 3;
+
+  const agents: AgentRow[] = [
+    row('main', 1, { picked: true }),
+    row('a-child-with-a-long-name', 2, {
+      wait: {
+        watch: emptyWatch,
+        asking: { on: { kind: 'permission' }, since: Date.now() - 8_000 },
+      },
+    }),
+  ];
+  const drawn = await draw(
+    <Colours.Provider value={paletteOf('dark', true)}>
+      <AgentsList rows={agents} limit={6} width={30} focused={false} />
+    </Colours.Provider>,
+    { columns: 34, rows: 8 },
+  );
+
+  try {
+    const frame = drawn.frame();
+
+    expect(
+      stripAnsi(frame)
+        .split('\n')
+        .map((line) => line.trimEnd())
+        .filter((line) => line !== ''),
+    ).toStrictEqual([
+      '    main        fake  ◦ idle 0s',
+      '    a-child-wi  fake',
+      '    th-a-long-  ● permission 8s',
+      '    name',
+    ]);
+    // #ffc107, the dark palette's warning, on the state under the detail.
+    expect(frame).toContain('\x1b[38;2;255;193;7m● permission 8s');
+  } finally {
+    chalk.level = level;
+
+    await drawn.unmount();
+  }
+});

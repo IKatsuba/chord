@@ -66,7 +66,6 @@ describe('CHD-373 S3b tester: session close wiring', () => {
       const drive = useSessions(
         {
           agent,
-          agentCommand: command,
           place: {
             cwd: dir,
             startupOf: (runtime) =>

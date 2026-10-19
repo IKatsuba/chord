@@ -3762,8 +3762,11 @@ describe("an agent's own cycle after its turn (CHD-426, the owner's Q49)", () =>
       const turn = events.find((event) => event.type === 'prompt')!;
 
       expect(cycleOf(events)).toStrictEqual([]);
+      // From the prompt on: the session's own updates as it opens, its
+      // commands, may come before it.
       expect(
         events
+          .slice(events.indexOf(turn))
           .filter((event) => event.type === 'update')
           .every((event) => event.turnId === turn.turnId),
       ).toBeTruthy();

@@ -667,3 +667,44 @@ describe('CHD-405 N2 tester: member spend follows the picked session', () => {
     });
   }
 });
+
+describe('CHD-373 S4: a team member that starts a task agent', () => {
+  test("its task is a row under the run with its owner, and the run's own row adds up its lead and members alone", async () => {
+    const server = serveChord();
+    const command = fakeAgentCommand(undefined, '--tester-plays', 'taskcost');
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'team');
+          await window.shows('Team(bugfix) · fake · fake-large');
+          await window.shows('1 task running');
+          await send(window, '/cost');
+          await window.shows('This window');
+          await window.shows('task agent of tester, running');
+
+          const run = window
+            .frame()
+            .split('\n')
+            .find((line) => line.includes('team run: lead'));
+
+          // The run's breakdown names its lead and members, never the task.
+          expect(run, window.frame()).toBeDefined();
+          expect(run).not.toContain('Count the cost');
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 80,
+          columns: 160,
+          teams: { bugfix: BUGFIX },
+          agentCommand: command,
+          startupOf: () => ({ agentCommand: command }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});

@@ -279,6 +279,9 @@
   and `--tokens-only` or `CHORD_FAKE_TOKENS_ONLY=1` only the tokens, no cost
   and no window, on two real models chord's price data knows,
   `gpt-5.3-codex` (in use until switched) and `claude-haiku-4-5`.
+  `--tester-plays <scenario>` (`CHORD_FAKE_TESTER_PLAYS`) has a team's lead
+  open `tester` on that scenario rather than its role, so with `taskcost` a
+  member starts a task agent of its own.
   `--cost-from <usd>` (`CHORD_FAKE_COST_FROM`) counts each session's cost
   from that amount, as an agent that keeps it with the session does after a
   resume, and `--late-cost` (`CHORD_FAKE_LATE_COST=1`) sends the turn's

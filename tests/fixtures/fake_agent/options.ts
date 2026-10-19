@@ -124,6 +124,15 @@ export const COST_AT_NEXT =
   ARGS.includes('--cost-at-next') ||
   process.env.CHORD_FAKE_COST_AT_NEXT === '1';
 
+/**
+ * A scenario a team's lead opens `tester` on, in place of its role: with
+ * `--tester-plays taskcost`, or `CHORD_FAKE_TESTER_PLAYS`, tester starts a
+ * task agent of its own (CHD-373).
+ */
+export const TESTER_PLAYS = ARGS.includes('--tester-plays')
+  ? ARGS[ARGS.indexOf('--tester-plays') + 1]
+  : process.env.CHORD_FAKE_TESTER_PLAYS;
+
 const HANGS = ['start', 'config', 'turn'] as const;
 
 function hangStep(): (typeof HANGS)[number] | undefined {

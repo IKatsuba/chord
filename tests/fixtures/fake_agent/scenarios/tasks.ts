@@ -66,7 +66,37 @@ export const LONG_TASK_ARGS = {
   name: 'Watch the build',
 };
 
+/**
+ * A task name of about 600 characters, which wraps to more lines than the
+ * background frame holds at 80x24 (CHD-430).
+ */
+export const TALL_TASK_NAME =
+  'Rewrite the tokenizer as a single pass over the source that reads every token, string and comment once, keeping the line and column of each one so the parser can point at the exact place a mistake starts, with the old lookahead buffer replaced by a small ring of the last three tokens, the escapes inside strings decoded where they are read rather than in a second walk, the numbers parsed with their radix and separators checked as they come, every error message reworded to say what was expected and what was found instead, with the positions kept for the error messages the parser prints, and the old two-pass reader removed together';
+
 export const TASKS = {
+  // As tasklong, under a name taller than the background frame (CHD-430).
+  async tasktallname(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'spawn_task', {
+        ...LONG_TASK_ARGS,
+        name: TALL_TASK_NAME,
+      });
+      await turn.say('The tokenizer is being rewritten.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // Starts `taskwait` as a task agent and ends its turn at once, so the
   // task works on behind an idle parent, asking the person nothing.
   async tasklong(turn) {

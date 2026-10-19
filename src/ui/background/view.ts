@@ -29,18 +29,6 @@ export function focusedItem(
   return (focus && items.find((item) => sameItem(item, focus))) ?? items[0];
 }
 
-/** ↑ ↓: the item `by` rows from the focused one, stopping at either end. */
-export function moveViewFocus(
-  items: readonly BackgroundItem[],
-  focus: ItemRef | undefined,
-  by: number,
-): ItemRef | undefined {
-  const at = Math.max(0, items.indexOf(focusedItem(items, focus)!));
-  const next = items[Math.min(Math.max(0, at + by), items.length - 1)];
-
-  return next && { key: next.key, id: next.id };
-}
-
 /** The hint line on an agent item whose agent offers no stop of its own. */
 export const NO_STOP_HINT = 'this agent offers no stop';
 
@@ -405,6 +393,84 @@ export interface ViewWindow {
   readonly rows: readonly ViewRow[];
   readonly above: number;
   readonly below: number;
+  /**
+   * A focused row taller than the frame, shown alone: the line of it on top
+   * and how many lines are in sight (CHD-430).
+   */
+  readonly tall?: { readonly from: number; readonly height: number };
+}
+
+/**
+ * Where the `❯` is: its item, and, in a row taller than the frame, the line
+ * of it on top, for the size it was laid out at; at another size the row is
+ * shown from its first line again (CHD-430).
+ */
+export interface ViewAt {
+  readonly focus?: ItemRef;
+  readonly line?: number;
+  readonly laid?: string;
+}
+
+/** The size a row's lines were laid out at, which a line on top is of. */
+export function laidAt(width: number, height: number): string {
+  return `${width}x${height}`;
+}
+
+/** The line on top of a tall row: `at`'s, kept in the row, at this size. */
+function lineOf(
+  at: ViewAt | undefined,
+  row: ViewRow,
+  height: number,
+  laid: string,
+): number {
+  const line = at?.laid === laid ? (at.line ?? 0) : 0;
+
+  return Math.min(Math.max(0, line), Math.max(0, row.lines.length - height));
+}
+
+/**
+ * ↑ ↓ in the frame: through the lines of a focused row taller than it first,
+ * one at a time, then to the next row; a tall row reached with ↓ shows from
+ * its first line, and with ↑ from its last. Undefined with nothing listed.
+ */
+export function moveView(
+  items: readonly BackgroundItem[],
+  at: ViewAt | undefined,
+  by: 1 | -1,
+  { width, height, now }: { width: number; height: number; now: number },
+): ViewAt | undefined {
+  const laid = laidAt(width, height);
+  const rows = viewRows(items, { width, focus: at?.focus, now });
+  const index = rows.findIndex((row) => row.focused);
+  const row = rows[index];
+
+  if (row === undefined) {
+    return undefined;
+  }
+
+  const ref = (of: ViewRow) => ({ key: of.item.key, id: of.item.id });
+  const tall = (of: ViewRow) => of.lines.length > height;
+  const line = lineOf(at, row, height, laid);
+
+  if (tall(row)) {
+    const last = row.lines.length - height;
+
+    if ((by > 0 && line < last) || (by < 0 && line > 0)) {
+      return { focus: ref(row), line: line + by, laid };
+    }
+  }
+
+  const next = rows[index + by];
+
+  if (next === undefined) {
+    return { focus: ref(row), line, laid };
+  }
+
+  return {
+    focus: ref(next),
+    line: by < 0 && tall(next) ? next.lines.length - height : 0,
+    laid,
+  };
 }
 
 /**
@@ -415,12 +481,26 @@ export interface ViewWindow {
 export function viewWindow(
   rows: readonly ViewRow[],
   height: number,
+  at?: ViewAt,
+  laid?: string,
 ): ViewWindow {
   const lines = (row: ViewRow) => row.lines.length;
   const focused = Math.max(
     0,
     rows.findIndex((row) => row.focused),
   );
+  const row = rows[focused];
+
+  // Taller than the frame, the row is shown alone, from the line on top
+  // (CHD-430).
+  if (row !== undefined && lines(row) > height) {
+    return {
+      rows: [row],
+      above: focused,
+      below: rows.length - focused - 1,
+      tall: { from: lineOf(at, row, height, laid ?? ''), height },
+    };
+  }
 
   for (let start = 0; start <= focused; start++) {
     let room = height;
@@ -457,9 +537,17 @@ export interface ViewLine {
  * `❯` stands in, which keeps its place (CHD-462).
  */
 export function edgeMarked(shown: ViewWindow): ViewLine[] {
-  const lines = shown.rows.flatMap((row) =>
+  const all = shown.rows.flatMap((row) =>
     row.lines.map((line) => ({ row, cells: [...line] })),
   );
+  const { tall } = shown;
+  const lines =
+    tall === undefined ? all : all.slice(tall.from, tall.from + tall.height);
+  // A tall row's own lines out of sight count as rows do.
+  const above = shown.above > 0 || (tall !== undefined && tall.from > 0);
+  const below =
+    shown.below > 0 ||
+    (tall !== undefined && tall.from + tall.height < all.length);
   const mark = (line: ViewLine | undefined, edge: string) => {
     const [first, ...rest] = line?.cells ?? [];
 
@@ -480,11 +568,11 @@ export function edgeMarked(shown: ViewWindow): ViewLine[] {
     );
   };
 
-  if (shown.above > 0) {
+  if (above) {
     mark(lines[0], '↑ ');
   }
 
-  if (shown.below > 0) {
+  if (below) {
     mark(lines.at(-1), '↓ ');
   }
 

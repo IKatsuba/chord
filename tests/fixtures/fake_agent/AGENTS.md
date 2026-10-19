@@ -25,7 +25,8 @@
   `claudenostop`, `claudeslowstop`, `claudebetween`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
-  (`codexchordcalls`, `tasklong`, `tasktwo`, `taskwait`, `taskbetween`) and
+  (`codexchordcalls`, `tasklong`, `tasktallname`, `tasktwo`, `taskwait`,
+  `taskbetween`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
@@ -35,7 +36,8 @@
   A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `stepslater`, `calls`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlapfail`, `overlapask`, `subagentcall`,
-  `cutcalls`, `cutcallsback`, `tasklong`, `tasktwo`, `taskwait`,
+  `cutcalls`, `cutcallsback`, `tasklong`, `tasktallname`, `tasktwo`,
+  `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `plan`, `proposal`,
   `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`,
@@ -108,8 +110,10 @@
   call of its own that shares the task's call id `ask-1`; `taskchild`
   makes two calls, asks permission to edit,
   messages its parent through `send_message`, runs the tests and reports;
-  `tasklong` starts one `taskwait` task, and `tasktwo` two drawn as a group,
-  then leaves the parent idle; `taskwait` works for a minute without asking
+  `tasklong` starts one `taskwait` task, `tasktallname` the same under a
+  name of about 600 characters, taller than the background frame at 80x24
+  (CHD-430), and `tasktwo` two drawn as a group, then leaves the parent
+  idle; `taskwait` works for a minute without asking
   permission, unless stopped; `taskbetween` starts `taskchild` and ends
   its turn at once, so the task asks between its parent's turns;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both

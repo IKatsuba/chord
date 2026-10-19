@@ -804,3 +804,48 @@ describe('CHD-462 B1 tester: an arriving input hides and resumes the frame', () 
     }
   }
 });
+
+test('a task name taller than the frame scrolls by line at 80x24: ↓ through it, ↑ back from its last line, x acts on it wherever, and a resize or reopening shows it from its first line (CHD-430)', () =>
+  withBackground(
+    async (window) => {
+      await ready(window);
+      await send(window, 'tasktallname');
+      await window.shows('background  1 task running');
+      await send(window, 'tasklong');
+      await window.shows('background  2 tasks running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('│ ❯ Rewrite the tokenizer');
+      await window.shows('│ ↓   keeping the line and');
+
+      // Each ↓ a line of it; its first line gone, the gutter's ↑ stands in.
+      await window.press('j');
+      await window.shows('│ ↑   as a single pass over');
+      expect(window.frame()).not.toContain('❯ Rewrite');
+
+      // Down to its last line, then the row below.
+      for (let step = 0; step < 40; step++) {
+        await window.press('j');
+      }
+
+      await window.shows('│ ❯ Watch the build');
+      // Back with ↑: its last line at the bottom.
+      await window.press('k');
+      await window.shows('removed together');
+      await window.shows('│ ↑   instead, with the');
+
+      // x stops the row the view is in, whatever line of it is in sight.
+      await window.press('x');
+      await window.shows('background  1 task running · ■ 1 task stopped');
+
+      await window.resize({ columns: 82, rows: 24 });
+      await window.shows('│ ❯ Rewrite the tokenizer');
+
+      await window.press('j');
+      await window.shows('│ ↑ ');
+      await window.press(ESC);
+      await window.press('\r');
+      await window.shows('│ ❯ Rewrite the tokenizer');
+    },
+    { rows: 24, columns: 80 },
+  ));

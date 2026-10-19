@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
-  moveViewFocus,
+  laidAt,
+  moveView,
+  type ViewAt,
   stateText,
   stopRefused,
   type ViewRow,
@@ -241,6 +243,17 @@ test('a name past 24 cells wraps two cells short of its column, the rest two cel
 });
 
 test('↑ ↓ move the ❯ by rows, stopping at the first and last, and it follows its item', () => {
+  const moveViewFocus = (
+    items: readonly BackgroundItem[],
+    focus: { key: number; id: string } | undefined,
+    by: 1 | -1,
+  ) =>
+    moveView(items, focus === undefined ? undefined : { focus }, by, {
+      width: 116,
+      height: 40,
+      now: NOW,
+    })?.focus;
+
   expect(moveViewFocus(ITEMS, undefined, 1)).toStrictEqual({
     key: 1,
     id: 'm2',
@@ -557,4 +570,99 @@ test("the gutter says what is out of sight, as the pickers' edges do: ↑ on the
   ]);
   // Every line keeps its width.
   expect(marked(6)[0]!.slice(2)).toBe(marked(1)[1]!.slice(2).replace('2', '3'));
+});
+
+describe('a row taller than the frame scrolls by line inside it (CHD-430)', () => {
+  const tall = task('t1', 'word '.repeat(120).trim(), { group: 'running' });
+  const short = task('t2', 'Watch the build', { group: 'running' });
+  const items = [short, tall, task('t3', 'Lint', { group: 'running' })];
+  const frame = { width: 76, height: 6, now: NOW };
+  const laid = laidAt(frame.width, frame.height);
+  /** The lines in sight at `at`, each as text, its gutter first. */
+  const shown = (at: ViewAt) =>
+    edgeMarked(
+      viewWindow(
+        viewRows(items, { width: frame.width, focus: at.focus, now: NOW }),
+        frame.height,
+        at,
+        laid,
+      ),
+    ).map(({ cells }) => cells.map((cell) => cell.text).join(''));
+  const lines = viewRows(items, {
+    width: frame.width,
+    focus: undefined,
+    now: NOW,
+  })[1]!.lines.length;
+
+  test('reached with ↓, it shows from its first line, the ❯ on it; each ↓ scrolls a line, then the next row', () => {
+    let at = moveView(items, { focus: { key: 1, id: 't2' } }, 1, frame)!;
+
+    expect(at).toStrictEqual({ focus: { key: 1, id: 't1' }, line: 0, laid });
+    expect(shown(at)[0]).toStartWith('❯ word');
+    expect(shown(at)).toHaveLength(6);
+    expect(shown(at).at(-1)).toStartWith('↓ ');
+
+    for (let step = 1; step <= lines - 6; step++) {
+      at = moveView(items, at, 1, frame)!;
+
+      expect(at.line).toBe(step);
+    }
+
+    // Its first line out of sight, the gutter's ↑ stands for it.
+    expect(shown(at)[0]).toStartWith('↑ ');
+    expect(shown(at)).not.toContain(expect.stringContaining('❯'));
+    // Its last line at the bottom: the next ↓ goes to the row below.
+    expect(moveView(items, at, 1, frame)).toStrictEqual({
+      focus: { key: 1, id: 't3' },
+      line: 0,
+      laid,
+    });
+  });
+
+  test('reached with ↑, it shows from its last line, and each ↑ scrolls a line up, then the row above', () => {
+    let at = moveView(items, { focus: { key: 1, id: 't3' } }, -1, frame)!;
+
+    expect(at).toStrictEqual({
+      focus: { key: 1, id: 't1' },
+      line: lines - 6,
+      laid,
+    });
+    expect(shown(at)[0]).toStartWith('↑ ');
+    expect(shown(at).at(-1)).toStartWith('↓ ');
+
+    for (let step = lines - 7; step >= 0; step--) {
+      at = moveView(items, at, -1, frame)!;
+
+      expect(at.line).toBe(step);
+    }
+
+    expect(shown(at)[0]).toStartWith('❯ word');
+    expect(moveView(items, at, -1, frame)?.focus).toStrictEqual({
+      key: 1,
+      id: 't2',
+    });
+  });
+
+  test('at another size, or with no line kept, it shows from its first line again', () => {
+    const scrolled = { focus: { key: 1, id: 't1' }, line: 5, laid };
+
+    expect(shown(scrolled)[0]).toStartWith('↑ ');
+    expect(shown({ ...scrolled, laid: laidAt(70, 6) })[0]).toStartWith(
+      '❯ word',
+    );
+    expect(shown({ focus: { key: 1, id: 't1' } })[0]).toStartWith('❯ word');
+  });
+
+  test('a row that fits is moved over whole', () => {
+    expect(
+      moveView(items, { focus: { key: 1, id: 't2' } }, 1, {
+        ...frame,
+        height: 40,
+      }),
+    ).toStrictEqual({
+      focus: { key: 1, id: 't1' },
+      line: 0,
+      laid: laidAt(76, 40),
+    });
+  });
 });

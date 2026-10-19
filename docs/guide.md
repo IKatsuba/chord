@@ -341,6 +341,10 @@ tokens but no cost, as Codex can, gets a cost chord works out from the
 model's price, with `cost_estimated: true` beside it; `/cost` says
 `(chord's estimate)` after such a cost, and a context window chord took from
 the model's data is marked `~` on the status line.
+While the reported session's turn runs with none of its spend received,
+`/cost` adds `This turn:     counted when it ends` after `Total cost`, or
+after the sentence saying nothing is reported yet. A permission held
+inside the agent's own cycle counts as a running turn too.
 
 ## Settings
 

@@ -88,8 +88,8 @@ export const COST_FROM = Number(
  * What the agent's own cycle adds to the session's cost, in USD: with
  * `--cycle-cost 0.005`, or `CHORD_FAKE_CYCLE_COST`, the usage update that
  * ends a Claude cycle carries the session's cost so far with it added; `0`
- * repeats the cost as it was. With neither, it carries no cost, as
- * claude-agent-acp 0.93's does (CHD-373).
+ * repeats the cost as it was. With neither, it carries no cost, as the
+ * fake's cycles always did (CHD-373).
  */
 export const CYCLE_COST = ARGS.includes('--cycle-cost')
   ? Number(ARGS[ARGS.indexOf('--cycle-cost') + 1])

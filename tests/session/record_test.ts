@@ -1,16 +1,20 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { turnCost } from '../../src/session/prices.ts';
-import type { ConversationEvent } from '../../src/session/conversation.ts';
+import {
+  Conversation,
+  type ConversationEvent,
+} from '../../src/session/conversation.ts';
 import {
   FileRecording,
   readPast,
+  recordActions,
   type RecordEntry,
 } from '../../src/session/record.ts';
-import type { Session } from '../../src/session/session.ts';
+import { openSession, type Session } from '../../src/session/session.ts';
 import { readRecords } from '../../src/session/sessions.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
@@ -286,3 +290,176 @@ test('a session only looked at, with no prompt and no cycle, leaves no record', 
 
     expect(await readRecords(join(dir, 'state'))).toStrictEqual([]);
   }));
+
+describe('CHD-373 S3a tester: live and recorded turn costs', () => {
+  test('an explicit zero is kept in live usage, JSON and replay, followed by only the next increment', () =>
+    withDir(async (dir) => {
+      const heard: ConversationEvent[] = [];
+
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(undefined, '--cost-from', '-0.0125'),
+        prompts: ['text', 'text'],
+        agent: 'claude',
+        heard: (event) => heard.push(event),
+      });
+
+      const entries = await readPast((await theRecord(dir)).path);
+      const live = heard.filter((event) => event.type === 'usage');
+      const replayed = recordActions(entries).filter(
+        (event) => event.type === 'usage',
+      );
+
+      expect(live.map((event) => event.cost)).toStrictEqual([
+        { amount: 0, currency: 'USD' },
+        { amount: 0.0125, currency: 'USD' },
+      ]);
+      expect(costs(entries)).toStrictEqual([turn(0), turn(0.0125)]);
+      expect(replayed.map((event) => event.cost)).toStrictEqual(
+        live.map((event) => event.cost),
+      );
+      expect(
+        live.every(
+          (event) =>
+            event.estimated === undefined && event.uncounted === undefined,
+        ),
+      ).toBe(true);
+    }));
+
+  test('a resumed per-session zero stays explicit and the later increment is counted once', () =>
+    withDir(async (dir) => {
+      const entries = await resumed(dir, {
+        agent: 'kilo',
+        prompts: ['text'],
+        first: ['--cost-from', '-0.0125'],
+        flags: ['--cost-from', '-0.0125'],
+      });
+
+      expect(costs(entries)).toStrictEqual([turn(0), turn(0), turn(0.0125)]);
+      expect(entries.filter((entry) => entry.type === 'opened')).toHaveLength(
+        2,
+      );
+      expect(
+        recordActions(entries).filter((entry) => entry.type === 'usage'),
+      ).toHaveLength(3);
+    }));
+
+  test('simultaneous conversations keep their cumulative readings and turn costs apart', async () => {
+    await Promise.all(
+      [0, 0.2].map((from) =>
+        withDir(async (dir) => {
+          const events: ConversationEvent[] = [];
+
+          await recordSession({
+            stateDir: join(dir, 'state'),
+            cwd: dir,
+            command: fakeAgentCommand(undefined, '--cost-from', String(from)),
+            prompts: ['text', 'text'],
+            agent: 'claude',
+            heard: (event) => events.push(event),
+          });
+
+          const entries = await readPast((await theRecord(dir)).path);
+          const amounts = events
+            .filter((event) => event.type === 'usage')
+            .map((event) => event.cost?.amount);
+
+          expect(amounts).toHaveLength(2);
+          expect(amounts[0]).toBeCloseTo(from + 0.0125, 9);
+          expect(amounts[1]).toBeCloseTo(0.0125, 9);
+          expect(costs(entries)).toStrictEqual([
+            turn(from + 0.0125),
+            turn(0.0125),
+          ]);
+        }),
+      ),
+    );
+  });
+
+  test('clear starts a new cost baseline without changing the old record', () =>
+    withDir(async (dir) => {
+      const sessions: Session[] = [];
+      const events: ConversationEvent[] = [];
+      const failures: string[] = [];
+      const recording = new FileRecording(join(dir, 'state'), (message) =>
+        failures.push(message),
+      );
+      const conversation = new Conversation(
+        async () => {
+          const session = await openSession({
+            agent: 'claude',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--cost-from',
+              sessions.length === 0 ? '0.2' : '-0.0125',
+            ),
+          });
+
+          sessions.push(session);
+
+          return session;
+        },
+        (event) => events.push(event),
+        Date.now,
+        {},
+        recording,
+      );
+      const wait = async (check: () => boolean) => {
+        const deadline = Date.now() + 10000;
+
+        while (!check()) {
+          assert(
+            Date.now() < deadline,
+            'expected conversation cost transition',
+          );
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      };
+
+      const usages = () => events.filter((event) => event.type === 'usage');
+
+      try {
+        conversation.start();
+        await wait(() => events.some((event) => event.type === 'connected'));
+        conversation.send('text');
+        await wait(() => usages().length === 1);
+        conversation.send('text');
+        await wait(() => usages().length === 2);
+        await recording.flushed();
+
+        const oldPath = recording.path;
+
+        assert(oldPath !== undefined);
+
+        const old = await readPast(oldPath);
+
+        conversation.clear();
+        await wait(
+          () =>
+            events.filter((event) => event.type === 'connected').length === 2,
+        );
+        conversation.send('text');
+        await wait(() => usages().length === 3);
+        await recording.flushed();
+        assert(recording.path !== undefined && recording.path !== oldPath);
+        expect(costs(old)).toStrictEqual([turn(0.2125), turn(0.0125)]);
+        expect(costs(await readPast(recording.path))).toStrictEqual([turn(0)]);
+        expect(await readPast(oldPath)).toStrictEqual(old);
+        expect(usages().at(-1)?.cost).toStrictEqual({
+          amount: 0,
+          currency: 'USD',
+        });
+      } finally {
+        await conversation.close();
+      }
+
+      expect(failures).toStrictEqual([]);
+
+      for (const session of sessions) {
+        await session.exited;
+        expect(session.agentPids.size).toBe(0);
+      }
+    }));
+});

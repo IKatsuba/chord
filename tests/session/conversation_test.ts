@@ -2544,8 +2544,10 @@ describe('CHD-417 tester: cut-call note delivery', () => {
 });
 
 describe('CHD-423 tester: mixed queue holds', () => {
+  const refuseSteering = ['--steering', 'claude', '--steer-late'];
+
   test('answer-to-call reason replacement preserves the earlier call-held message and delivery order', () =>
-    onFake(['--steering', 'claude'], async (conversation, events) => {
+    onFake(refuseSteering, async (conversation, events) => {
       conversation.send('overlapask');
       await until(() =>
         events.some(
@@ -2588,8 +2590,13 @@ describe('CHD-423 tester: mixed queue holds', () => {
         ['Second, while the answer waits.', true, undefined],
       ]);
       expect(queued[1]!.turnId).toBe(queued[2]!.turnId);
+      // Refused steering requeues the message under the same row (CHD-467).
       expect(
-        queued.filter((event) => event.text.startsWith('First,')).length,
+        new Set(
+          queued
+            .filter((event) => event.text.startsWith('First,'))
+            .map((event) => event.turnId),
+        ).size,
       ).toBe(1);
       expect(
         promptsIn(events)

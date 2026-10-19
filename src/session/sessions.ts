@@ -5,7 +5,6 @@
  * directory (`/resume`). A whole window's, by its own record, is
  * `windows.ts`'s.
  */
-import { commandLine } from '../agents.ts';
 import { join } from 'node:path';
 import { readdir, readFile } from 'node:fs/promises';
 import { notFound } from '../not_found.ts';
@@ -353,12 +352,16 @@ function resumeOf(record: SessionRecord): Resume {
 export function resumeCommand(
   agent: string,
   sessionId: string,
-  agentCommand?: string | readonly string[],
+  /**
+   * The `--agent-command` the person gave, said again; a command from the
+   * settings is not, as the settings give it again (the owner's Q56).
+   */
+  agentCommand?: string,
 ): string {
   const words = ['chord', agent];
 
   if (agentCommand !== undefined) {
-    words.push('--agent-command', shellQuote(commandLine(agentCommand)));
+    words.push('--agent-command', shellQuote(agentCommand));
   }
 
   return [...words, '--resume', sessionId].join(' ');
@@ -383,7 +386,8 @@ export function resumeMessage(
   tabs: readonly ResumableTab[],
   override?: {
     readonly agent: string;
-    readonly agentCommand?: string | readonly string[];
+    /** The `--agent-command` the person gave, for `agent` alone. */
+    readonly agentCommand?: string;
   },
 ): string | undefined {
   const commands = tabs.map(({ agent, sessionId }) =>

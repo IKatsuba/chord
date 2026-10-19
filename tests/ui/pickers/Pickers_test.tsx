@@ -234,64 +234,75 @@ test('/resume with no earlier session says so', () =>
     ).toBeTruthy();
   }));
 
-test("ctrl+a lists every directory's sessions with their directories, and one from elsewhere is refused with its command", () =>
-  withWindow(
-    async (window) => {
-      const [there] = await sessionsIn(
-        window,
-        join(window.dir, 'other'),
-        '/echo over there',
-      );
+for (const typed of [undefined, 'my-agent --acp']) {
+  test(`ctrl+a lists every directory's sessions with their directories, and one from elsewhere is refused with its command, ${typed === undefined ? 'its settings command left to the settings' : 'the typed --agent-command said again'} (Q56)`, () =>
+    withWindow(
+      async (window) => {
+        const [there] = await sessionsIn(
+          window,
+          join(window.dir, 'other'),
+          '/echo over there',
+        );
 
-      await earlierSessions(window, '/echo right here');
+        await earlierSessions(window, '/echo right here');
 
-      const first = window.session();
+        const first = window.session();
 
-      await ready(window);
-      await window.type('/resume');
-      await window.press('\r');
-      await resuming(window);
-      expect(window.frame()).toContain('/echo right here');
-      expect(
-        !window.frame().includes('over there'),
-        'another directory showed',
-      ).toBeTruthy();
-      await window.shows('Ctrl+a for all directories');
-      await window.press('\x01');
-      await window.shows('/echo over there');
-      await window.shows('Ctrl+a for this directory');
+        await ready(window);
+        await window.type('/resume');
+        await window.press('\r');
+        await resuming(window);
+        expect(window.frame()).toContain('/echo right here');
+        expect(
+          !window.frame().includes('over there'),
+          'another directory showed',
+        ).toBeTruthy();
+        await window.shows('Ctrl+a for all directories');
+        await window.press('\x01');
+        await window.shows('/echo over there');
+        await window.shows('Ctrl+a for this directory');
 
-      const rows = window
-        .frame()
-        .split('\n')
-        .filter((line) => line.includes('/echo '));
+        const rows = window
+          .frame()
+          .split('\n')
+          .filter((line) => line.includes('/echo '));
 
-      // Newest first, each from ~, which the window was given as the test's
-      // directory.
-      expect(rows.length, window.frame()).toStrictEqual(2);
-      expect(rows[0]!).toContain('~  ');
-      expect(rows[0]!).toContain('/echo right here');
-      expect(rows[1]!).toContain('~/other');
-      expect(rows[1]!).toContain('/echo over there');
-      await window.press('2');
-      await window.shows(
-        'That session is in ~/other. Quit and open it there with:',
-      );
-      await window.shows(`--resume ${there}`);
-      expect(
-        !window.frame().includes('Resume a session'),
-        'the picker stayed',
-      ).toBeTruthy();
-      expect(window.session()).toStrictEqual(first);
-      await window.press('\x01');
-      await window.type('y');
-      await until(
-        'the draft',
-        () => promptRow(window)?.includes('› y') ?? false,
-      );
-    },
-    { home: (dir) => dir, columns: 160 },
-  ));
+        // Newest first, each from ~, which the window was given as the test's
+        // directory.
+        expect(rows.length, window.frame()).toStrictEqual(2);
+        expect(rows[0]!).toContain('~  ');
+        expect(rows[0]!).toContain('/echo right here');
+        expect(rows[1]!).toContain('~/other');
+        expect(rows[1]!).toContain('/echo over there');
+        await window.press('2');
+        await window.shows(
+          'That session is in ~/other. Quit and open it there with:',
+        );
+        await window.shows(`--resume ${there}`);
+        expect(window.frame()).toContain(
+          typed === undefined
+            ? `chord fake --resume ${there}`
+            : `chord fake --agent-command '${typed}' --resume ${there}`,
+        );
+        expect(
+          !window.frame().includes('Resume a session'),
+          'the picker stayed',
+        ).toBeTruthy();
+        expect(window.session()).toStrictEqual(first);
+        await window.press('\x01');
+        await window.type('y');
+        await until(
+          'the draft',
+          () => promptRow(window)?.includes('› y') ?? false,
+        );
+      },
+      {
+        home: (dir) => dir,
+        columns: 160,
+        ...(typed === undefined ? {} : { typedCommand: typed }),
+      },
+    ));
+}
 
 test('/resume opens on an empty list here when only another directory has sessions', () =>
   withWindow(async (window) => {

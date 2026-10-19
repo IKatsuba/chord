@@ -584,6 +584,7 @@ const cli = chordCommand().action(async (options, named) => {
       agent={agent}
       cwd={resume?.cwd ?? options.cwd}
       agentCommand={agentCommand}
+      typedCommand={flags.agentCommand}
       starting={{
         model: starting(model),
         effort: starting(effort),
@@ -675,7 +676,10 @@ const cli = chordCommand().action(async (options, named) => {
       ? windowMessage(saving.id)
       : resumeMessage(resumable, {
           agent,
-          ...(agentCommand === undefined ? {} : { agentCommand }),
+          // The flag's command alone: the settings give theirs again (Q56).
+          ...(flags.agentCommand === undefined
+            ? {}
+            : { agentCommand: flags.agentCommand }),
         });
 
   if (resuming !== undefined) {

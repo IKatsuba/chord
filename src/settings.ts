@@ -21,7 +21,11 @@ const AgentSettings = z
      * Starts this command instead of chord's own, as `--agent-command`:
      * a line the shell splits, or the program and its arguments, as a list.
      */
-    command: z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]),
+    command: z.union([
+      z.string().min(1),
+      // The program, then its arguments as written, an empty one too.
+      z.tuple([z.string().min(1)], z.string()),
+    ]),
     /** The model each session starts on, as `--model`. */
     model: z.string().min(1),
     /**
@@ -179,7 +183,9 @@ function given(value: unknown): string {
   if (Array.isArray(value)) {
     return value.length === 0
       ? 'an empty list'
-      : 'a list with something not a string';
+      : value.every((item) => typeof item === 'string')
+        ? 'a list whose program is empty'
+        : 'a list with something not a string';
   }
 
   if (value === '') {

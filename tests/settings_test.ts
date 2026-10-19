@@ -23,6 +23,9 @@ import {
   startupOf,
   unseenProblems,
 } from '../src/settings.ts';
+import { parse } from 'shell-quote';
+import { commandLine } from '../src/agents.ts';
+import { resumeCommand } from '../src/session/sessions.ts';
 
 describe('tester: copyOnSelect settings edges', () => {
   test('invalid booleans are reported without losing valid settings', () => {
@@ -727,6 +730,28 @@ describe("an agent's command chord refuses (CHD-466, the owner's Q52)", () => {
 
     return { file, settings, ...(refused === undefined ? {} : { refused }) };
   };
+
+  test('an empty argument after the program is kept as written, through the line it is shown and resumed by', () => {
+    const found = startupOf('codex', { agent: 'fake' }, [
+      layer({ command: ['tool', '--value', ''] }),
+    ]);
+
+    expect(found.agentCommand).toStrictEqual(['tool', '--value', '']);
+    expect(commandLine(found.agentCommand!)).toStrictEqual("tool --value ''");
+
+    // As a shell reads the resume line, then as chord splits the flag.
+    const words = parse(resumeCommand('codex', 'id', found.agentCommand));
+    const flag = words[words.indexOf('--agent-command') + 1];
+
+    expect(parse(String(flag))).toStrictEqual(['tool', '--value', '']);
+  });
+
+  test('a list whose program is empty is refused, saying so', () => {
+    expect(
+      startupOf('codex', { agent: 'fake' }, [layer({ command: ['', 'x'] })])
+        .refused?.cause,
+    ).toStrictEqual('expected a string, got a list whose program is empty');
+  });
 
   test('a command given as a list is taken as the program and its arguments', () => {
     const found = startupOf('codex', { agent: 'fake' }, [

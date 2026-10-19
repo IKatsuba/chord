@@ -36,6 +36,14 @@ export const NO_MODES =
 export const STOP_GATE =
   ARGS.includes('--stop-gate') || process.env.CHORD_FAKE_STOP_GATE === '1';
 
+/**
+ * A `session/cancel` that comes with no turn playing is answered at once
+ * with `Cancel heard with no turn.`, so a test sees it arrived before
+ * sending what follows (CHD-426).
+ */
+export const SAY_CANCELS =
+  ARGS.includes('--say-cancels') || process.env.CHORD_FAKE_SAY_CANCELS === '1';
+
 const HANGS = ['start', 'config', 'turn'] as const;
 
 function hangStep(): (typeof HANGS)[number] | undefined {

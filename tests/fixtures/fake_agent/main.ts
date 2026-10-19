@@ -234,6 +234,7 @@ import {
   STEER_LATE,
   STEERING,
   ADAPTER,
+  SAY_CANCELS,
   STEP_MS,
   TOKENS_ONLY,
 } from './options.ts';
@@ -1080,7 +1081,7 @@ const connection = acp
       return { outcome: 'startedNewTurn' };
     },
   )
-  .onNotification('session/cancel', ({ params }) => {
+  .onNotification('session/cancel', ({ params, client }) => {
     // A Claude subagent's own id stops that one alone.
     void claudeChildren
       .get(params.sessionId)?.()
@@ -1093,6 +1094,18 @@ const connection = acp
         params.sessionId,
         (strayCancels.get(params.sessionId) ?? 0) + 1,
       );
+
+      if (SAY_CANCELS) {
+        void client
+          .notify('session/update', {
+            sessionId: params.sessionId,
+            update: {
+              sessionUpdate: 'agent_message_chunk',
+              content: { type: 'text', text: 'Cancel heard with no turn.' },
+            },
+          })
+          .catch(() => {});
+      }
     }
 
     turn?.abort();

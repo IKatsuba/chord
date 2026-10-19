@@ -93,7 +93,10 @@
   behind the first; `late`
   sends a chunk after answering the prompt; `unknown` sends an update of a
   kind ACP does not have and a notification of its own; `cancels` says how
-  many `session/cancel` notifications its session got with no turn playing;
+  many `session/cancel` notifications its session got with no turn playing,
+  and with `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) each such cancel is
+  answered at once with `Cancel heard with no turn.`, so a test sees it
+  arrived before sending what follows;
   `mcp` answers with the MCP servers its session was opened with, as JSON;
   `chordtools` connects to chord's own, through the MCP SDK's client, calls
   `list_agents` and `list_sessions` and answers with what came back, as

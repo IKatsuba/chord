@@ -715,3 +715,35 @@ test("a turn's usage keeps its own cost on the session, and the window keeps wha
 
   expect(window.keptSpend).toStrictEqual([kept('docs'), kept('parser')]);
 });
+
+test('a closing session is held as it was, takes its last events in, and is kept once its close settles; one never held keeps nothing (CHD-373)', () => {
+  const cost = { amount: 0.02, currency: 'USD' };
+  const place = { tab: 1, name: 'docs', kind: 'agent' as const };
+  const closed = (
+    [
+      { type: 'spend_closing', key: 1, place },
+      { type: 'session_closed', key: 1, front: 1 },
+      {
+        type: 'closing_heard',
+        key: 1,
+        event: { type: 'usage', turnId: 't', usage: {}, cost },
+      },
+      // Not held, so nothing.
+      { type: 'spend_closed', key: 7 },
+      { type: 'spend_closed', key: 1 },
+    ] satisfies WindowedAction[]
+  ).reduce(reduceWindowed, windowed(initialAppState, 1));
+
+  expect(closed.closing).toStrictEqual({});
+  expect(closed.window.keptSpend).toStrictEqual([
+    {
+      tab: 1,
+      part: {
+        name: 'docs',
+        kind: 'agent',
+        figure: { cost },
+        ended: true,
+      },
+    },
+  ]);
+});

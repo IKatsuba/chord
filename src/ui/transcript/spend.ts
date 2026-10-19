@@ -13,7 +13,6 @@ import {
   TOKEN_FIELDS,
   type TokenUsage,
 } from '../../session/usage.ts';
-import { sessionTokens } from './reports.ts';
 
 /** The one currency costs are added up in; any other is not counted. */
 const SUMMED = 'USD';
@@ -75,7 +74,13 @@ export function sessionFigure(spent: Spent | undefined): Figure | undefined {
   );
   const uncounted = costs.length - added.length;
   const before = costs.find((each) => each.before !== undefined);
-  const tokens = tokensIn(sessionTokens(spent));
+  // Each turn's in all first: one that gave a total and one that gave
+  // only its kinds each count whole.
+  const each = Object.values(spent?.turns ?? {}).flatMap(
+    (turn) => tokensIn(turn) ?? [],
+  );
+  const tokens =
+    each.length === 0 ? undefined : each.reduce((a, b) => a + b, 0);
   const figure: Figure = {
     ...(added.length === 0
       ? {}

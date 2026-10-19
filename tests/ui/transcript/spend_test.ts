@@ -343,3 +343,18 @@ test('a closed session counts once: not where it closed while it is open again, 
     ['again', undefined, [['main', 0.03]]],
   ]);
 });
+
+test("a session's tokens are each turn's in all, added: a turn that gave only its kinds counts beside one that gave a total, an explicit zero as zero", () => {
+  expect(
+    sessionFigure(
+      spentOf([
+        ['a', { totalTokens: 2000 }],
+        ['b', { inputTokens: 1000, outputTokens: 200 }],
+        ['c', { totalTokens: 0, inputTokens: 50 }],
+      ]),
+    ),
+  ).toStrictEqual({ tokens: 3200 });
+  expect(sessionFigure(spentOf([['a', { totalTokens: 0 }]]))).toStrictEqual({
+    tokens: 0,
+  });
+});

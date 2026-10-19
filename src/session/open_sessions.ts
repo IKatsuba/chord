@@ -46,6 +46,12 @@ export interface OpenSessionsOptions<C extends Driven> {
     event: ConversationEvent,
     wait: Wait | undefined,
   ) => void;
+  /**
+   * Each event a closed tab's or child's conversation still reports as it
+   * closes, a cancelled turn's end among them: what it spent then still
+   * counts (CHD-373).
+   */
+  readonly closingHeard?: (key: number, event: ConversationEvent) => void;
   readonly now?: () => number;
 }
 
@@ -285,6 +291,8 @@ export class OpenSessions<C extends Driven> {
 
   #heard(key: number, event: ConversationEvent): void {
     if (!agentOf(this.#tabs, key)) {
+      this.#options.closingHeard?.(key, event);
+
       return;
     }
 

@@ -158,12 +158,8 @@ import {
 } from '../teams/teams.ts';
 import { firstLine, headline } from '../transcript/tools/tools.ts';
 import {
-  type KeptSpend,
-  sessionParts,
-  type SpendKind,
-} from '../transcript/spend.ts';
-import {
   type AppAction,
+  type KeptPlace,
   type AppState,
   canSend,
   resumableSession,
@@ -1275,59 +1271,41 @@ export function useSessions(
    * members go first, as a parent's children close with it.
    */
   /**
-   * Keeps what the session `key` spent, its task agents' with it, for the
-   * window's total as it closes or is cleared (CHD-373: closed agents
-   * count, the owner's answer).
+   * Holds session `key` as it closes, or is cleared, for the window's total
+   * (the owner's Q59: closed agents count): its last events still count,
+   * a cancelled turn's end among them, until `settled` is called with its
+   * close, or at once with none (CHD-373).
    */
-  const keepSpend = (
-    key: number,
-    name: string,
-    kind: SpendKind,
-    place: Omit<KeptSpend, 'part'> & { readonly agent?: string },
-  ) => {
-    const { agent: runtime, ...where } = place;
-    const [own, ...tasks] = sessionParts(
-      name,
-      kind,
-      all.sessions[key],
-      runtime,
-    );
+  const keepSpend = (key: number, place: KeptPlace) => {
+    dispatch({ type: 'spend_closing', key, place });
 
-    const sessionId = all.sessions[key]?.sessionId;
+    return (closed?: Promise<unknown>) => {
+      const kept = () => dispatch({ type: 'spend_closed', key });
 
-    dispatch({
-      type: 'spend_kept',
-      kept: {
-        ...where,
-        ...(sessionId === undefined ? {} : { sessionId }),
-        part: {
-          ...own!,
-          ended: true,
-          ...(tasks.length === 0 ? {} : { parts: tasks }),
-        },
-      },
-    });
+      if (closed === undefined) {
+        kept();
+      } else {
+        void closed.then(kept, kept);
+      }
+    };
   };
 
-  /** Keeps what a child of tab `tab` spent, by its team, as it closes. */
+  /** Holds what a child of tab `tab` spent, by its team, as it closes. */
   const keepChild = (
     tab: number,
     child: ChildInfo & { readonly key: number },
   ) =>
-    keepSpend(
-      child.key,
-      child.name,
-      child.team === undefined ? 'agent' : 'member',
-      {
-        tab,
-        ...(child.team === undefined ? {} : { team: child.team }),
-        ...(isLead(child)
-          ? { lead: child.id }
-          : child.lead === undefined
-            ? {}
-            : { lead: child.lead }),
-      },
-    );
+    keepSpend(child.key, {
+      tab,
+      name: child.name,
+      kind: child.team === undefined ? 'agent' : 'member',
+      ...(child.team === undefined ? {} : { team: child.team }),
+      ...(isLead(child)
+        ? { lead: child.id }
+        : child.lead === undefined
+          ? {}
+          : { lead: child.lead }),
+    });
 
   const dropChild = (key: number) => {
     const found = agentOf(sessions.tabs, key);
@@ -1350,9 +1328,12 @@ export function useSessions(
     }
 
     stopCommand(key);
-    keepChild(found.tab.key, child);
 
-    void sessions.closeChild(key).catch(() => {});
+    const kept = keepChild(found.tab.key, child);
+    const closed = sessions.closeChild(key);
+
+    kept(closed);
+    void closed.catch(() => {});
 
     dispatch({
       type: 'session_closed',
@@ -1457,6 +1438,8 @@ export function useSessions(
       new OpenSessions({
         conversation: conversationOf,
         heard: (key, event, wait) => hear.current(key, event, wait),
+        closingHeard: (key, event) =>
+          dispatch({ type: 'closing_heard', key, event }),
       }),
   );
   // What each runtime offers, read in each directory's place apart: its
@@ -2165,7 +2148,12 @@ export function useSessions(
 
     // Its session goes; what it spent still counts.
     if (tab !== undefined) {
-      keepSpend(tab.key, 'main', 'main', { tab: tab.key, agent: tab.agent });
+      keepSpend(tab.key, {
+        tab: tab.key,
+        name: 'main',
+        kind: 'main',
+        agent: tab.agent,
+      })();
     }
 
     conversation()?.clear();
@@ -2523,16 +2511,21 @@ export function useSessions(
       dropChild(child.key);
     }
 
-    keepSpend(front, 'main', 'main', {
+    const kept = keepSpend(front, {
       tab: front,
       tabName: named,
+      name: 'main',
+      kind: 'main',
       agent: tab.agent,
     });
 
     // Its command stops with it: nothing would be left to show or stop it.
     stopCommand(front);
 
-    void sessions.close(front).catch(() => {});
+    const closed = sessions.close(front);
+
+    kept(closed);
+    void closed.catch(() => {});
 
     places.current.delete(front);
 
@@ -2752,7 +2745,12 @@ export function useSessions(
     }
 
     if (tab !== undefined) {
-      keepSpend(tab.key, 'main', 'main', { tab: tab.key, agent: tab.agent });
+      keepSpend(tab.key, {
+        tab: tab.key,
+        name: 'main',
+        kind: 'main',
+        agent: tab.agent,
+      })();
       sessions.pick(tab.key);
       showFront();
       resuming.current.set(tab.key, chosen);
@@ -2839,17 +2837,20 @@ export function useSessions(
     if (reused) {
       const named = `${position(sessions.tabs, tab.key)} ${tab.agent}`;
 
-      for (const child of tab.children) {
-        keepChild(tab.key, child);
-      }
+      const kept = [
+        ...tab.children.map((child) => keepChild(tab.key, child)),
+        keepSpend(tab.key, {
+          tab: tab.key,
+          tabName: named,
+          name: 'main',
+          kind: 'main',
+          agent: tab.agent,
+        }),
+      ];
+      const closed = sessions.close(tab.key);
 
-      keepSpend(tab.key, 'main', 'main', {
-        tab: tab.key,
-        tabName: named,
-        agent: tab.agent,
-      });
-
-      void sessions.close(tab.key).catch(() => {});
+      kept.forEach((each) => each(closed));
+      void closed.catch(() => {});
 
       places.current.delete(tab.key);
     }

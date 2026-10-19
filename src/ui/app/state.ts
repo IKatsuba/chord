@@ -111,7 +111,11 @@ import {
   type ViewSession,
   type ViewWindow,
 } from '../transcript/state.ts';
-import type { KeptSpend } from '../transcript/spend.ts';
+import {
+  type KeptSpend,
+  sessionParts,
+  type SpendKind,
+} from '../transcript/spend.ts';
 
 export type Connection =
   | { readonly status: 'starting' }
@@ -959,6 +963,46 @@ export interface WindowedState {
   readonly window: WindowState;
   readonly sessions: Readonly<Record<number, SessionState>>;
   readonly front: number;
+  /**
+   * The sessions closing, by key, as their last events leave them, with
+   * where their spend is kept once the close settles (CHD-373).
+   */
+  readonly closing?: Readonly<Record<number, Closing>>;
+}
+
+/** Where a closing session's spend goes, and what it is under. */
+export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
+  readonly name: string;
+  readonly kind: SpendKind;
+  /** The agent a tab's own session is. */
+  readonly agent?: string | undefined;
+};
+
+/** A closing session, and where what it spent is kept. */
+interface Closing {
+  readonly session: SessionState;
+  readonly place: KeptPlace;
+}
+
+/** What `session` spent, kept at `place` (CHD-373, Q59). */
+export function keptSpend(
+  session: SessionState | undefined,
+  place: KeptPlace,
+): KeptSpend {
+  const { name, kind, agent, ...where } = place;
+  const [own, ...tasks] = sessionParts(name, kind, session, agent);
+
+  return {
+    ...where,
+    ...(session?.sessionId === undefined
+      ? {}
+      : { sessionId: session.sessionId }),
+    part: {
+      ...own!,
+      ended: true,
+      ...(tasks.length === 0 ? {} : { parts: tasks }),
+    },
+  };
 }
 
 export type WindowedAction =
@@ -974,6 +1018,23 @@ export type WindowedAction =
   | { readonly type: 'session_opened'; readonly key: number }
   /** An agent or tab closing: what it spent is kept for the window's total (CHD-373). */
   | { readonly type: 'spend_kept'; readonly kept: KeptSpend }
+  /**
+   * Session `key` is closing: it is held as it is, its last events still
+   * taken in, until its close settles (CHD-373).
+   */
+  | {
+      readonly type: 'spend_closing';
+      readonly key: number;
+      readonly place: KeptPlace;
+    }
+  /** An event a closing session reported after it left the window. */
+  | {
+      readonly type: 'closing_heard';
+      readonly key: number;
+      readonly event: AppAction;
+    }
+  /** Session `key`'s close settled: what it spent is kept. */
+  | { readonly type: 'spend_closed'; readonly key: number }
   /**
    * A long-lived agent opened under `key`, as it starts; it stays behind
    * until the person picks it.
@@ -1037,6 +1098,57 @@ export function reduceWindowed(
           keptSpend: [...(state.window.keptSpend ?? []), action.kept],
         },
       };
+    case 'spend_closing': {
+      const session = state.sessions[action.key];
+
+      return session === undefined
+        ? state
+        : {
+            ...state,
+            closing: {
+              ...state.closing,
+              [action.key]: { session, place: action.place },
+            },
+          };
+    }
+    case 'closing_heard': {
+      const closing = state.closing?.[action.key];
+
+      return closing === undefined
+        ? state
+        : {
+            ...state,
+            closing: {
+              ...state.closing,
+              [action.key]: {
+                ...closing,
+                session: sessionOf(
+                  reduceApp(
+                    { ...state.window, ...closing.session },
+                    action.event,
+                  ),
+                ),
+              },
+            },
+          };
+    }
+    case 'spend_closed': {
+      const { [action.key]: closing, ...rest } = state.closing ?? {};
+
+      return closing === undefined
+        ? state
+        : {
+            ...state,
+            closing: rest,
+            window: {
+              ...state.window,
+              keptSpend: [
+                ...(state.window.keptSpend ?? []),
+                keptSpend(closing.session, closing.place),
+              ],
+            },
+          };
+    }
     case 'agent_opened':
       return {
         ...state,

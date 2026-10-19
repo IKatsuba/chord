@@ -6,7 +6,8 @@
   every request answered, sessions listed, loaded and resumed, and a turn's
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
-  (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`),
+  (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`,
+  `costwait`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `longresults`,
   `overlap`, `overlapfail`,
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
@@ -45,7 +46,7 @@
   `teamtask`,
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
-  `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
+  `cancels`, `error`, `slow`, `long`, `costwait`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
   `mcp`, `form`, `link`, `leftform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
@@ -173,7 +174,8 @@
   when what it says is a scenario's name, plays that scenario, as a child's
   first prompt is its parent's message; and `--no-http` or `CHORD_FAKE_NO_HTTP=1` leaves HTTP out of its
   `mcpCapabilities`, so chord gives it no server of its own; `long` streams 200
-  numbered lines about 100 ms apart, to scroll back through by hand; `plan`
+  numbered lines about 100 ms apart, to scroll back through by hand;
+  `costwait` reports a cost, then works on until it is cancelled; `plan`
   moves its three steps along about 2 s apart, to see the list mid-turn;
   `proposal` sends Codex's proposed plan by id about 2 s a step: markdown
   rewritten then grown, a file plan, then the markdown one removed;

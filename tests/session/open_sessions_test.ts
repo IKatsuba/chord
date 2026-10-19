@@ -12,6 +12,12 @@ import {
 import { OpenSessions } from '../../src/session/open_sessions.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { tabOf } from '../../src/session/tabs.ts';
+import {
+  initialAppState,
+  reduceWindowed,
+  windowed,
+  type WindowedAction,
+} from '../../src/ui/app/state.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 
 function isAlive(pid: number): Promise<boolean> {
@@ -304,4 +310,88 @@ test('a child opens in its tab, its events heard under its own key; closing the 
   closes[1]!();
   await closing;
   expect(all).toStrictEqual(true);
+});
+
+test("a busy session closed once its turn reported a cost still reports that turn's end as it closes, and the window keeps it (CHD-373)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-tabs-'));
+  const heard: { key: number; event: ConversationEvent }[] = [];
+  const closing: { key: number; event: ConversationEvent }[] = [];
+  const open = new OpenSessions<Conversation>({
+    conversation: (agent, emit) =>
+      new Conversation(
+        () =>
+          openSession({ agent, cwd: dir, agentCommand: fakeAgentCommand() }),
+        emit,
+      ),
+    heard: (key, event) => heard.push({ key, event }),
+    closingHeard: (key, event) => closing.push({ key, event }),
+  });
+
+  try {
+    const key = open.open('fake')!;
+
+    await until(() => heard.some(({ event }) => event.type === 'connected'));
+    tabOf(open.tabs, key)!.conversation.send('costwait');
+    await until(() =>
+      heard.some(
+        ({ event }) =>
+          event.type === 'update' &&
+          event.update.sessionUpdate === 'usage_update',
+      ),
+    );
+
+    // As the window closes a busy tab: cancelled, held, then closed.
+    const seen = heard.length;
+
+    tabOf(open.tabs, key)!.conversation.interrupt();
+
+    const closed = open.close(key);
+    const held = heard.length;
+
+    await closed;
+
+    // The turn's end, its cost with it, came only once it had closed.
+    expect(
+      heard.slice(seen).some(({ event }) => event.type === 'usage'),
+    ).toBeFalsy();
+    expect(
+      closing.find(({ event }) => event.type === 'usage')?.event,
+    ).toMatchObject({ cost: { amount: 0.01, currency: 'USD' } });
+
+    // The window takes those in as sessions.ts dispatches them.
+    const before = heard
+      .slice(0, held)
+      .map(({ key: at, event }): WindowedAction => ({
+        type: 'in_session',
+        key: at,
+        action: event,
+      }));
+    const after: WindowedAction[] = [
+      {
+        type: 'spend_closing',
+        key,
+        place: { tab: key, name: 'main', kind: 'main', agent: 'fake' },
+      },
+      { type: 'session_closed', key, front: key },
+      ...closing.map(({ key: at, event }): WindowedAction => ({
+        type: 'closing_heard',
+        key: at,
+        event,
+      })),
+      { type: 'spend_closed', key },
+    ];
+    const window = [...before, ...after].reduce(
+      reduceWindowed,
+      windowed(initialAppState, key),
+    );
+
+    expect(window.window.keptSpend?.[0]?.part.figure?.cost).toStrictEqual({
+      amount: 0.01,
+      currency: 'USD',
+    });
+    expect(window.closing).toStrictEqual({});
+  } finally {
+    await open.closeAll();
+    await rm(dir, { recursive: true });
+  }
 });

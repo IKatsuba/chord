@@ -2,6 +2,7 @@
  * Replies: plain, thought first, markdown, long and slow, and a few that say
  * what reached the agent.
  */
+import { once } from 'node:events';
 import process from 'node:process';
 import {
   MARKDOWN_LINES,
@@ -10,7 +11,7 @@ import {
 } from '../../markdown.ts';
 import { STEP_MS } from '../options.ts';
 import { mcpServers } from '../sessions.ts';
-import { pause, type Play } from '../turn.ts';
+import { lifetime, pause, type Play } from '../turn.ts';
 
 /** How many items the `long` scenario's list has. */
 const LONG_LINES = 200;
@@ -82,6 +83,23 @@ export const TEXT = {
         '- plain **bold** then `code`',
       ].join('\n'),
     );
+
+    return 'end_turn';
+  },
+
+  // Reports the session's cost so far, then works on until it is
+  // cancelled, as a turn a person closes while it runs (CHD-373).
+  async costwait(turn) {
+    await turn.send({
+      sessionUpdate: 'usage_update',
+      used: 1200,
+      size: 200000,
+      cost: { amount: 0.01, currency: 'USD' },
+    });
+    await turn.say('Working until stopped.');
+    turn.signal.throwIfAborted();
+    await once(turn.signal, 'abort', { signal: lifetime.signal });
+    turn.signal.throwIfAborted();
 
     return 'end_turn';
   },

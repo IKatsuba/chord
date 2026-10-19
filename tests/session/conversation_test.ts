@@ -3426,3 +3426,50 @@ describe('CHD-158 tester: queued work across between-turn requests', () => {
     });
   }
 });
+
+test("a task's permission asked during the parent's turn holds the queue once that turn ends, until it is answered (CHD-158 C4)", async () => {
+  const stub = await steeringStub();
+  const { conversation, events, prompts } = stub;
+
+  conversation.send('go');
+  stub.go();
+  await stub.settled();
+
+  const { task } = adoptTask(conversation, 'task-a');
+
+  task.heard({ type: 'connected', sessionId: 'a' });
+  task.heard({
+    type: 'permission_requested',
+    turnId: 'child-turn',
+    permission: { id: 'request', options: [] },
+  });
+  stub.end();
+  await until(() => events.some((event) => event.type === 'result'));
+
+  expect(conversation.send('text')).toStrictEqual(true);
+  expect(conversation.tell(MAIN, 'Then the docs.')).toStrictEqual('queued');
+
+  const held = () =>
+    events.flatMap((event) =>
+      event.type === 'queued' ? [[event.text, event.afterAnswer === true]] : [],
+    );
+
+  expect(held()).toStrictEqual([
+    ['text', true],
+    ['Then the docs.', true],
+  ]);
+  // Long enough for a turn the queue let go to have started.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(prompts).toHaveLength(1);
+
+  conversation.choose('request', 'allow');
+  task.heard({
+    type: 'permission_settled',
+    turnId: 'child-turn',
+    id: 'request',
+    answer: { type: 'chosen', optionId: 'allow' },
+  });
+  await until(() => prompts.length >= 2);
+  expect(prompts[1]).toContain('text');
+  await conversation.close();
+});

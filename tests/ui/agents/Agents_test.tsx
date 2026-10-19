@@ -220,7 +220,12 @@ test("a child starts a task agent of its own, drawn in the child's turn, which r
     await leader(window, 'a');
     await window.shows('╭─ parser ─');
     await window.shows('Agent(Fix the tokenizer) · fake · fake-small');
-    await window.shows('Agent(Fix the tokenizer) · fake asks');
+    // Once parser's turn, a fixed 3 s, has ended, however the task's ask
+    // fell, it waits between turns for ctrl+x a, so '1' never races that
+    // end (CHD-470).
+    await window.shows('Agent(Fix the tokenizer) · fake asks · between turns');
+    await leader(window, 'a');
+    await window.shows('Esc to reject');
     await window.press('1');
     await window.shows('← from Fix the tokenizer · fake · report');
     await window.shows('Done (5 tool uses');

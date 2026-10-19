@@ -269,6 +269,7 @@ import {
   mcpServers,
   models,
   modes,
+  steers,
   strayCancels,
 } from './sessions.ts';
 import {
@@ -317,6 +318,7 @@ const SCENARIOS = [
   'mainbetweentwice',
   'taskbetween',
   'taskstays',
+  'tasktillsteered',
   'teamtask',
   'compact',
   'codexcompact',
@@ -1051,6 +1053,8 @@ const connection = acp
       if (STEERING === undefined) {
         throw acp.RequestError.methodNotFound('_session/steering');
       }
+
+      steers.emit(params.sessionId);
 
       const late = STEER_LATE ? prompted.get(params.sessionId) : undefined;
 

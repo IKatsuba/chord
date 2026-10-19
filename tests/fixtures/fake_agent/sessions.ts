@@ -4,6 +4,7 @@
  * them. Here rather than in `main.ts` because the scenarios that move a mode
  * read and write them too.
  */
+import { EventEmitter } from 'node:events';
 import * as acp from '@agentclientprotocol/sdk';
 import { NO_CONFIG, NO_MODES, TOKENS_ONLY } from './options.ts';
 
@@ -52,6 +53,12 @@ export const AVAILABLE_MODELS = TOKENS_ONLY
 
 export const FIRST_MODEL = AVAILABLE_MODELS[0]?.value ?? 'fake-large';
 export const locked = new Set<string>();
+
+/**
+ * Says each session's id as a `_session/steering` request for it arrives,
+ * before it is answered, for a turn that waits on a message steered in.
+ */
+export const steers = new EventEmitter();
 
 /**
  * How many `session/cancel`s each session got with no turn of its playing,

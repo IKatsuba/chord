@@ -279,6 +279,9 @@ reads `● permission asked between turns · ctrl+x a to answer`, or
 `● input asked between turns · ctrl+x a to answer` for a form or link.
 If `session:attention` is unbound, the box takes the keys at once. The
 request waits until answered; closing the session or quitting rejects it.
+A permission still open when its turn ends, including a task's, is held
+the same way: the keys return to the prompt and the box stays between turns.
+A form or link opened in the turn is cancelled when it ends.
 A task's request, or one arriving between turns, keeps its asking mark in
 the status line and agents list, and stays reachable by ctrl+x a, across
 turn endings until answered or withdrawn.

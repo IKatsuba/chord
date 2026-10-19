@@ -660,6 +660,10 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         ...initialAppState,
         // Every tab's, which another tab's clear leaves be.
         backgroundCleared: state.backgroundCleared,
+        // What closed agents and let-go sessions spent, which still counts.
+        ...(state.keptSpend === undefined
+          ? {}
+          : { keptSpend: state.keptSpend }),
         expanded: state.expanded,
         theme: state.theme,
         draft: state.draft,

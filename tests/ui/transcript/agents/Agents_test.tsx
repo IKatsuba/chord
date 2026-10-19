@@ -727,3 +727,63 @@ describe('CHD-404 tester: expanded subagent permission matching', () => {
     }
   });
 });
+
+describe('CHD-158 C4 tester: a subagent block with an unanswered permission', () => {
+  for (const state of ['running', 'ended'] as const) {
+    for (const [columns, rows] of [
+      [80, 24],
+      [120, 40],
+    ] as const) {
+      test(`the call keeps Waiting after the parent result when its subagent is ${state} at ${columns} columns`, async () => {
+        const drawn = await draw(
+          <Agents
+            agents={[
+              {
+                id: 'child',
+                title: 'Write the report',
+                state,
+                plan: [],
+                entries: [
+                  {
+                    kind: 'tool',
+                    turnId: 't',
+                    call: {
+                      id: 'write',
+                      title: 'Write notes/report.md',
+                      status: 'pending',
+                    },
+                  },
+                ],
+              },
+            ]}
+            turn={{
+              status: 'awaiting_permission',
+              turnId: 't',
+              since: 1,
+              between: true,
+              permissions: [
+                {
+                  id: 'request',
+                  toolCallId: 'write',
+                  subagentId: 'child',
+                  options: [],
+                },
+              ],
+            }}
+            agent='fake'
+            open
+            width={columns - 2}
+          />,
+          { columns, rows },
+        );
+
+        try {
+          expect(stripAnsi(drawn.frame())).toContain('Waiting…');
+          expect(stripAnsi(drawn.frame())).toContain('Write(notes/report.md)');
+        } finally {
+          await drawn.unmount();
+        }
+      });
+    }
+  }
+});

@@ -1,0 +1,6 @@
+$ bun scripts/dev.ts chord codex -C "/tmp/chord-qa.XXXX"
+chord: /tmp/chord-qa.XXXX/.chord/settings.json: "agents.codex.command": exp
+ected a string, got a number · codex will not start
+chord: codex not started: agents.codex.command in .chord/settings.json: expected a string, got a number
+error: script "dev" exited with code 1
+exit=1

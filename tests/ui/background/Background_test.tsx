@@ -180,6 +180,13 @@ describe('CHD-424 tester: standing background edges', () => {
       await send(window, 'task');
       await window.shows('background  ● 1 task asking');
       expect(window.frame()).not.toMatch(/^ {4}main\s/m);
+      // Once the parent's turn, a fixed 3 s, has ended, however the task's
+      // ask fell, it waits between turns for ctrl+x a (CHD-470).
+      await window.shows(
+        'Agent(Fix the tokenizer) · fake asks · between turns',
+      );
+      await leader(window, 'a');
+      await window.shows('Esc to reject');
       await window.press('1');
       await window.shows('background  ✓ 1 task done');
       await window.shows(
@@ -379,7 +386,9 @@ describe('CHD-424 tester: background frame edges', () => {
   test('an arriving permission hides the frame, then x stops its resumed task and a second x changes nothing', () =>
     withSlowTask(async (window) => {
       await ready(window);
-      await send(window, 'task');
+      // Its turn runs until it is cancelled, so the task asks within it
+      // however slow it is (CHD-470).
+      await send(window, 'taskstays');
       await window.shows('background  1 task running');
       await window.press(DOWN);
       await window.press('\r');

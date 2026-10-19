@@ -6,6 +6,7 @@
 import { once } from 'node:events';
 import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
+import { steeredInto } from '../sessions.ts';
 import { lifetime, pause, type Play, type Turn } from '../turn.ts';
 import { codexCall, callChord, chordClient } from './chord_tools.ts';
 
@@ -195,6 +196,37 @@ export const TASKS = {
       await once(turn.signal, 'abort', { signal: lifetime.signal });
       turn.signal.throwIfAborted();
     } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // As `task`, its turn running on until a message is steered into it, as
+  // the task's is, however long the task takes to ask and send it; for a
+  // session started with `--steering` (CHD-470).
+  async tasktillsteered(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    // Listening before the task starts, so its message is never missed.
+    const waiting = steeredInto(
+      turn.sessionId,
+      AbortSignal.any([turn.signal, lifetime.signal]),
+    );
+
+    try {
+      await turn.say('I will send a task agent on fake for the fix.');
+      await callChord(turn, client, 'spawn_task', TASK_ARGS);
+      await turn.say('It is running; I will check its report when it lands.');
+      await waiting.steered;
+    } finally {
+      waiting.stop();
       await client.close();
     }
 

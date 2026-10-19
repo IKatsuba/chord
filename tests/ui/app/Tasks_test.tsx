@@ -23,8 +23,22 @@ import {
   ready,
   send,
   until,
+  type Window,
   withWindow,
 } from './render.tsx';
+
+/**
+ * Answers the task's permission with `key` once its parent's `task` turn,
+ * a fixed 3 s, has ended: however the task's ask and that end fall, the
+ * request then waits between turns for ctrl+x a (CHD-158), so the key
+ * never races the turn's end (CHD-470).
+ */
+async function answerTask(window: Window, key: string): Promise<void> {
+  await window.shows('Agent(Fix the tokenizer) · fake asks · between turns');
+  await leader(window, 'a');
+  await window.shows('Esc to reject');
+  await window.press(key);
+}
 
 test("each session gets chord's server with a token of its own, good until its agent goes, and its tools read the window", async () => {
   const server = serveChord();
@@ -136,7 +150,7 @@ test("a task agent works nested in its parent's turn, asks the person in the par
         expect(!window.frame().includes('mcp__chord__spawn_task')).toBeTruthy();
         await window.shows('Agent(Fix the tokenizer) · fake asks');
         await window.shows('· waiting for permission');
-        await window.press('\r');
+        await answerTask(window, '\r');
         await window.shows('← from Fix the tokenizer · fake');
         await window.shows(
           'Received the message from Fix the tokenizer · fake.',
@@ -211,7 +225,7 @@ test("a resumed parent draws its task's work from the task's own record, and the
         await ready(window);
         await send(window, 'task');
         await window.shows('· waiting for permission');
-        await window.press('\r');
+        await answerTask(window, '\r');
         await window.shows('Done (5 tool uses');
 
         const stateDir = join(window.dir, 'state');
@@ -276,7 +290,9 @@ test("a task's message that goes as its parent's next turn after the task has en
     await withWindow(
       async (window) => {
         await ready(window);
-        await send(window, 'task');
+        // Its turn runs until the task's message is steered into it, so
+        // the task asks within it however slow it is (CHD-470).
+        await send(window, 'tasktillsteered');
         await window.shows('· waiting for permission');
         await window.press('1');
         await window.shows('Done (5 tool uses');
@@ -330,8 +346,7 @@ test('a task agent whose turn fails reports as failed, with the error', async ()
       async (window) => {
         await ready(window);
         await send(window, 'task');
-        await window.shows('Agent(Fix the tokenizer) · fake asks');
-        await window.press('2');
+        await answerTask(window, '2');
         await window.shows('← from Fix the tokenizer · fake · failed');
         await window.shows('was denied, so the tokenizer is not fixed.');
         expect(!window.frame().includes('· report')).toBeTruthy();
@@ -592,5 +607,50 @@ describe('CHD-158 tester: taskstays closes with its waiting parent', () => {
         }
       });
     }
+  }
+});
+
+describe('CHD-470 tester: a steering-gated task parent closes before any steer', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`quit releases the permission and steering waiter at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'tasktillsteered');
+            await window.shows('Agent(Fix the tokenizer) · fake asks');
+            expect(window.frame()).not.toContain('between turns');
+            expect(window.pids.length).toBeGreaterThanOrEqual(2);
+
+            const session = window.session();
+
+            assert(session !== undefined);
+            await quitAll(window);
+            await session.exited;
+            expect(session.agentPids.size).toBe(0);
+            expect(session.gone() ?? '').not.toMatch(/unhandled|AbortError/i);
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--steering',
+              'codex',
+              '--steer-late',
+            ),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
   }
 });

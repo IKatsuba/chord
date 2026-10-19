@@ -4,6 +4,7 @@
  * them. Here rather than in `main.ts` because the scenarios that move a mode
  * read and write them too.
  */
+import { EventEmitter, once } from 'node:events';
 import * as acp from '@agentclientprotocol/sdk';
 import { NO_CONFIG, NO_MODES, TOKENS_ONLY } from './options.ts';
 
@@ -52,6 +53,33 @@ export const AVAILABLE_MODELS = TOKENS_ONLY
 
 export const FIRST_MODEL = AVAILABLE_MODELS[0]?.value ?? 'fake-large';
 export const locked = new Set<string>();
+
+/**
+ * Says each session's id as a `_session/steering` request for it arrives,
+ * before it is answered, for a turn that waits on a message steered in.
+ */
+export const steers = new EventEmitter();
+
+/**
+ * Listens, from now, for a message steered into session `sessionId`, so
+ * one that comes before the wait is not missed: `steered` settles once one
+ * has, and rejects once `signal` aborts or `stop` is called, which also
+ * stops listening. Its rejection is handled here, so a turn that ends before
+ * awaiting it raises none.
+ */
+export function steeredInto(
+  sessionId: string,
+  signal: AbortSignal,
+): { readonly steered: Promise<unknown>; stop(): void } {
+  const done = new AbortController();
+  const steered = once(steers, sessionId, {
+    signal: AbortSignal.any([signal, done.signal]),
+  });
+
+  steered.catch(() => {});
+
+  return { steered, stop: () => done.abort() };
+}
 
 /**
  * How many `session/cancel`s each session got with no turn of its playing,

@@ -26,7 +26,7 @@
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `codexmodels`, `tasklong`, `tasktallname`, `tasktwo`,
-  `taskwait`, `taskbetween`, `taskstays`), `cycles.ts` (`claudecycle`,
+  `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`), `cycles.ts` (`claudecycle`,
   `claudecyclebare`, `claudecycleask`, `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
@@ -41,7 +41,7 @@
   `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `plan`, `proposal`,
-  `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`,
+  `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`, `tasktillsteered`,
   `teamtask`,
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
@@ -122,7 +122,8 @@
   permission, unless stopped; `taskbetween` starts `taskchild` and ends
   its turn at once, so the task asks between its parent's turns, and
   `taskstays` keeps its turn running until it is cancelled, so the task
-  asks within it however slow it is;
+  asks within it however slow it is, and `tasktillsteered` until a
+  message is steered into it, as the task's is, with `--steering`;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
   long-lived on the fake runtime, and messages `parser` twice;
   `agentcall` opens `parser` on `callchild` and messages it during its

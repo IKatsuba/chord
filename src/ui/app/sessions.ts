@@ -211,7 +211,8 @@ export interface OpeningTab {
 
 export interface SessionsOptions {
   agent: string;
-  agentCommand: string | string[] | undefined;
+  /** The `--agent-command` the person typed, which a resume line repeats. */
+  typedCommand?: string | undefined;
   /** The window's own place: where `agent`'s first session works. */
   place: Place;
   stateDir: string | undefined;
@@ -264,7 +265,7 @@ export interface SessionsWindow {
 export function useSessions(
   {
     agent,
-    agentCommand,
+    typedCommand,
     place,
     stateDir,
     readRecords,
@@ -2662,10 +2663,7 @@ export function useSessions(
       return sayResume(
         elsewhereRefusal(chosen, {
           agent: front,
-          agentCommand:
-            front === agent && typeof agentCommand === 'string'
-              ? agentCommand
-              : undefined,
+          agentCommand: front === agent ? typedCommand : undefined,
           shownCwd: homePath(chosen.cwd, home),
         }),
       );

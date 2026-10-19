@@ -26,7 +26,7 @@ import {
 import { parse } from 'shell-quote';
 import { commandLine, listedAgents } from '../src/agents.ts';
 import { commandArgv } from '../src/acp/process.ts';
-import { resumeCommand } from '../src/session/sessions.ts';
+import { resumeCommand, resumeMessage } from '../src/session/sessions.ts';
 
 describe('tester: copyOnSelect settings edges', () => {
   test('invalid booleans are reported without losing valid settings', () => {
@@ -732,19 +732,34 @@ describe("an agent's command chord refuses (CHD-466, the owner's Q52)", () => {
     return { file, settings, ...(refused === undefined ? {} : { refused }) };
   };
 
-  test('an empty argument after the program is kept as written, through the line it is shown and resumed by', () => {
+  test('an empty argument after the program is kept as written, and shown so by chord agents', () => {
     const found = startupOf('codex', { agent: 'fake' }, [
       layer({ command: ['tool', '--value', ''] }),
     ]);
 
     expect(found.agentCommand).toStrictEqual(['tool', '--value', '']);
     expect(commandLine(found.agentCommand!)).toStrictEqual("tool --value ''");
+  });
 
-    // As a shell reads the resume line, then as chord splits the flag.
-    const words = parse(resumeCommand('codex', 'id', found.agentCommand));
-    const flag = words[words.indexOf('--agent-command') + 1];
+  test("a resume line repeats the --agent-command the person gave, and never a settings command, which the settings give again (the owner's Q56)", () => {
+    // The settings' command, a list or a line: the resume line has none.
+    expect(
+      resumeMessage([{ agent: 'codex', sessionId: 'id', cwd: '/w' }], {
+        agent: 'codex',
+      }),
+    ).toBe('Resume this session with:\nchord codex --resume id');
 
-    expect(parse(String(flag))).toStrictEqual(['tool', '--value', '']);
+    // The flag's line, as typed: quoted once, read back whole by a shell.
+    const typed = "tool --value ''";
+    const words = parse(resumeCommand('codex', 'id', typed));
+
+    expect(words.slice(0, 3)).toStrictEqual([
+      'chord',
+      'codex',
+      '--agent-command',
+    ]);
+    expect(words[3]).toBe(typed);
+    expect(words.slice(-2)).toStrictEqual(['--resume', 'id']);
   });
 
   test("its warning says the agent will not start, not that the value is ignored; another setting's still is", () => {

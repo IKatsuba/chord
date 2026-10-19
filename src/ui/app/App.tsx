@@ -163,6 +163,11 @@ export interface AppProps {
   cwd: string;
   /** Replaces chord's own command for `agent`. */
   agentCommand?: string | string[] | undefined;
+  /**
+   * The `--agent-command` the person typed, which a resume line repeats;
+   * a command from the settings is not, as they give it again (Q56).
+   */
+  typedCommand?: string | undefined;
   /** The model and mode each session starts on; the agent's by default. */
   starting?: Starting | undefined;
   /**
@@ -317,6 +322,7 @@ export function App({
   agent,
   cwd,
   agentCommand,
+  typedCommand,
   starting,
   startupOf = (name) =>
     name === agent
@@ -427,7 +433,7 @@ export function App({
   const sessions = useSessions(
     {
       agent,
-      agentCommand,
+      typedCommand,
       place: { cwd, startupOf, mcpServers, mcpIgnored },
       stateDir,
       readRecords,

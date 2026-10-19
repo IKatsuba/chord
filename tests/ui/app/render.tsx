@@ -97,6 +97,7 @@ export async function withWindow(
     rows,
     columns,
     agentCommand = fakeAgentCommand(),
+    typedCommand,
     warnings,
     notifications,
     saveTheme,
@@ -130,6 +131,8 @@ export async function withWindow(
     rows?: number;
     columns?: number;
     agentCommand?: string[];
+    /** The `--agent-command` the person typed, which resume lines repeat. */
+    typedCommand?: string;
     warnings?: string[];
     notifications?: Notifications;
     saveTheme?: (theme: ThemeSetting) => Promise<void>;
@@ -208,6 +211,7 @@ export async function withWindow(
       cwd={dir}
       stateDir={join(dir, 'state')}
       agentCommand={agentCommand}
+      typedCommand={typedCommand}
       warnings={warnings}
       notifications={notifications}
       saveTheme={saveTheme}

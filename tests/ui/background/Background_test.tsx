@@ -845,6 +845,12 @@ test('a task name taller than the frame scrolls by line at 80x24: ↓ through it
       await window.resize({ columns: 82, rows: 24 });
       await window.shows('│ ❯ Rewrite the tokenizer');
 
+      // Straight back, with no move: not where it was scrolled at 80.
+      await window.resize({ columns: 80, rows: 24 });
+      await window.shows('│ ❯ Rewrite the tokenizer');
+      await window.resize({ columns: 82, rows: 24 });
+      await window.shows('│ ❯ Rewrite the tokenizer');
+
       // Back to the size it was scrolled at: still from its first line.
       await window.press('j');
       await window.shows('│ ↑ ');

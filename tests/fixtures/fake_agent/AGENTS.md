@@ -272,7 +272,11 @@
   tokens in its answer; `--no-usage` or `CHORD_FAKE_NO_USAGE=1` reports none,
   and `--tokens-only` or `CHORD_FAKE_TOKENS_ONLY=1` only the tokens, no cost
   and no window, on two real models chord's price data knows,
-  `gpt-5.3-codex` (in use until switched) and `claude-haiku-4-5`. `session/list` gives the sessions the process created,
+  `gpt-5.3-codex` (in use until switched) and `claude-haiku-4-5`.
+  `--cost-from <usd>` (`CHORD_FAKE_COST_FROM`) counts each session's cost
+  from that amount, as an agent that keeps it with the session does after a
+  resume, and `--late-cost` (`CHORD_FAKE_LATE_COST=1`) sends the turn's
+  `usage_update` 100 ms after its answer, as Claude's adapter can. `session/list` gives the sessions the process created,
   newest first, and `session/set_model` takes either model. `session/load` takes any UUID and replays a short past (the
   `tools` and `text` scenarios) before it answers; any other id is not found,
   and `CHORD_FAKE_REFUSE_LOAD=1` refuses every load; `--resume-only` also

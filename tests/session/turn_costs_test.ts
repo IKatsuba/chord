@@ -1,0 +1,178 @@
+import { expect, test } from 'bun:test';
+import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import { FILLED } from '../../src/session/enrich.ts';
+import { turnCost } from '../../src/session/prices.ts';
+import {
+  costOfTurn,
+  costReading,
+  type CostReading,
+  lastReading,
+  type OpeningCosts,
+} from '../../src/session/turn_costs.ts';
+
+const usd = (amount: number, estimated = false): CostReading => ({
+  amount,
+  currency: 'USD',
+  estimated,
+});
+
+const opening = (more: Partial<OpeningCosts> = {}): OpeningCosts => ({
+  counts: undefined,
+  resumed: false,
+  ...more,
+});
+
+const TOKENS = { inputTokens: 1000, outputTokens: 200 };
+
+test("a usage_update's cost is read with whether chord filled it in, and a session's last such is its cost so far", () => {
+  const agent: SessionUpdate = {
+    sessionUpdate: 'usage_update',
+    used: 1,
+    size: 2,
+    cost: { amount: 0.5, currency: 'USD' },
+  };
+  const chord: SessionUpdate = {
+    ...agent,
+    cost: { amount: 0.25, currency: 'USD' },
+    _meta: { [FILLED]: ['cost'] },
+  };
+
+  expect(costReading(agent)).toStrictEqual(usd(0.5));
+  expect(costReading(chord)).toStrictEqual(usd(0.25, true));
+  expect(costReading({ sessionUpdate: 'usage_update', used: 1, size: 2 })).toBe(
+    undefined,
+  );
+  expect(
+    lastReading([
+      agent,
+      { sessionUpdate: 'usage_update', used: 3, size: 4 },
+      {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: 'x' },
+      },
+    ]),
+  ).toStrictEqual(usd(0.5));
+  expect(lastReading([])).toBe(undefined);
+});
+
+test("within an opening a turn's cost is what the session's cost moved by in it, chord's estimate marked", () => {
+  const cost = (seen: CostReading, before: CostReading) =>
+    costOfTurn(opening({ seen }), before, TOKENS, 'm');
+
+  expect(cost(usd(0.0375), usd(0.025))).toStrictEqual({
+    cost: { amount: expect.closeTo(0.0125, 9), currency: 'USD' },
+  });
+  expect(cost(usd(0.3, true), usd(0.1, true))).toStrictEqual({
+    cost: { amount: expect.closeTo(0.2, 9), currency: 'USD' },
+    estimated: true,
+  });
+  // Another currency is not taken from.
+  expect(
+    costOfTurn(
+      opening({ seen: { amount: 3, currency: 'EUR', estimated: false } }),
+      usd(1),
+      TOKENS,
+      'm',
+    ),
+  ).toStrictEqual({});
+});
+
+test('a turn the cost did not move in has none', () => {
+  const seen = usd(0.5);
+
+  expect(costOfTurn(opening({ seen }), seen, TOKENS, 'm')).toStrictEqual({});
+  expect(costOfTurn(opening(), undefined, TOKENS, 'm')).toStrictEqual({});
+});
+
+test("a cost sent as the session opened is the opening's start, not a turn's", () => {
+  const atLoad = usd(0.4);
+
+  expect(
+    costOfTurn(
+      opening({ resumed: true, seen: usd(0.45) }),
+      atLoad,
+      TOKENS,
+      'm',
+    ),
+  ).toStrictEqual({
+    cost: { amount: expect.closeTo(0.05, 9), currency: 'USD' },
+  });
+});
+
+test("an opening's first cost is the turn's for a new session and for an agent that counts from each opening", () => {
+  const seen = usd(0.0125);
+
+  expect(costOfTurn(opening({ seen }), undefined, TOKENS, 'm')).toStrictEqual({
+    cost: { amount: 0.0125, currency: 'USD' },
+  });
+  expect(
+    costOfTurn(
+      opening({ counts: 'opening', resumed: true, past: usd(0.4), seen }),
+      undefined,
+      TOKENS,
+      'm',
+    ),
+  ).toStrictEqual({ cost: { amount: 0.0125, currency: 'USD' } });
+});
+
+test("after a resume, an agent that counts from the session's start has its first cost less the record's", () => {
+  expect(
+    costOfTurn(
+      opening({
+        counts: 'session',
+        resumed: true,
+        past: usd(0.025),
+        seen: usd(0.0375),
+      }),
+      undefined,
+      TOKENS,
+      'm',
+    ),
+  ).toStrictEqual({
+    cost: { amount: expect.closeTo(0.0125, 9), currency: 'USD' },
+  });
+  // A record with no cost of the agent's had it at nothing.
+  expect(
+    costOfTurn(
+      opening({ counts: 'session', resumed: true, seen: usd(0.0375) }),
+      undefined,
+      TOKENS,
+      'm',
+    ),
+  ).toStrictEqual({ cost: { amount: 0.0375, currency: 'USD' } });
+});
+
+test("chord's estimate after a resume goes on from the record's, so the first turn's is what it added", () => {
+  expect(
+    costOfTurn(
+      opening({ resumed: true, past: usd(0.1, true), seen: usd(0.13, true) }),
+      undefined,
+      TOKENS,
+      'm',
+    ),
+  ).toStrictEqual({
+    cost: { amount: expect.closeTo(0.03, 9), currency: 'USD' },
+    estimated: true,
+  });
+});
+
+test("after a resume, an agent whose counting is not known has its first turn priced from its tokens, and with none it is not counted (the owner's Q61)", () => {
+  const unknown = opening({ resumed: true, past: usd(0.2), seen: usd(0.25) });
+  const model = 'gpt-5.3-codex';
+  const priced = turnCost(model, TOKENS);
+
+  expect(priced).toBeNumber();
+  expect(costOfTurn(unknown, undefined, TOKENS, model)).toStrictEqual({
+    cost: { amount: priced!, currency: 'USD' },
+    estimated: true,
+  });
+  expect(costOfTurn(unknown, undefined, undefined, model)).toStrictEqual({
+    uncounted: true,
+  });
+  // A model chord has no price for cannot price it either.
+  expect(costOfTurn(unknown, undefined, TOKENS, 'fake-large')).toStrictEqual({
+    uncounted: true,
+  });
+  // From the second turn on, the difference holds.
+  expect(costOfTurn(unknown, usd(0.25), TOKENS, model)).toStrictEqual({});
+});

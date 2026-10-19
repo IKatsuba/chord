@@ -26,7 +26,9 @@ export interface Sending {
  * conversation reports, as the window would. With `permit`, each permission
  * the agent asks is answered with its first option, as a key would, and with
  * `answer`, each form or link with that reply, or `interrupt` for the
- * person interrupting the turn while it waits.
+ * person interrupting the turn while it waits. `agent` is the name the
+ * session is opened as, `fake` unless a test needs another's ways; with
+ * `lateCost`, each turn is waited on until its cost has come after it.
  */
 export async function recordSession({
   stateDir,
@@ -38,6 +40,8 @@ export async function recordSession({
   heard,
   permit = false,
   answer,
+  agent = 'fake',
+  lateCost = false,
 }: {
   stateDir: string;
   cwd: string;
@@ -48,6 +52,8 @@ export async function recordSession({
   heard?: (event: ConversationEvent) => void;
   permit?: boolean;
   answer?: ElicitationReply | 'interrupt';
+  agent?: string;
+  lateCost?: boolean;
 }): Promise<string> {
   const failures: string[] = [];
   const {
@@ -56,10 +62,12 @@ export async function recordSession({
     reject: failed,
   } = Promise.withResolvers<string>();
   let ended: (() => void) | undefined;
+  /** With `lateCost`, the turn has answered and its cost is still to come. */
+  let answered = false;
   const conversation = new Conversation(
     (signal) =>
       openSession({
-        agent: 'fake',
+        agent,
         cwd,
         agentCommand: command,
         signal,
@@ -99,6 +107,18 @@ export async function recordSession({
         event.type === 'result' &&
         !event.turnId.startsWith('history-')
       ) {
+        if (lateCost) {
+          answered = true;
+        } else {
+          ended?.();
+        }
+      } else if (
+        answered &&
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'usage_update'
+      ) {
+        answered = false;
+
         ended?.();
       }
     },

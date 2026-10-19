@@ -33,6 +33,11 @@
  * adapter can; its models are then real ones chord's price data knows,
  * `gpt-5.3-codex` (in use until switched), `claude-haiku-4-5`, and the
  * README's screenshots' `claude-opus-5-5` and `gpt-6.1-sol`.
+ * Started with `--cost-from <usd>`, or `CHORD_FAKE_COST_FROM`, each
+ * session's cost counts from that amount, as an agent that keeps it with the
+ * session reports after a resume; with `--late-cost`, or
+ * `CHORD_FAKE_LATE_COST=1`, the `usage_update` comes after the answer, as
+ * Claude's adapter can send it.
  *
  * It takes images in a prompt, and answers each one first with a line naming
  * its media type and its size in bytes, so a capture shows what arrived, and
@@ -235,6 +240,8 @@ import {
   STEER_LATE,
   STEERING,
   ADAPTER,
+  COST_FROM,
+  LATE_COST,
   SAY_CANCELS,
   STEP_MS,
   TOKENS_ONLY,
@@ -276,6 +283,7 @@ import {
   type Client,
   lifetime,
   loadMarks,
+  pause,
   type Play,
   Turn,
   type Update,
@@ -584,6 +592,9 @@ const TURN_USAGE = {
 /** What each turn adds to the session's cost, in USD. */
 const TURN_COST = 0.0125;
 
+/** How long after its answer a late turn's cost comes. */
+const LATE_COST_MS = 100;
+
 /** How many turns each session has reported usage for. */
 const reported = new Map<string, number>();
 
@@ -602,14 +613,32 @@ async function reportUsage(turn: Turn): Promise<void> {
 
   reported.set(turn.sessionId, count);
 
-  await turn.send({
+  const update: Update = {
     sessionUpdate: 'usage_update',
     used: TURN_USAGE.totalTokens * count,
     size: WINDOWS[models.get(turn.sessionId) ?? FIRST_MODEL] ?? 0,
-    cost: { amount: TURN_COST * count, currency: 'USD' },
-  });
+    cost: { amount: COST_FROM + TURN_COST * count, currency: 'USD' },
+  };
 
   turn.usage = TURN_USAGE;
+
+  if (!LATE_COST) {
+    await turn.send(update);
+
+    return;
+  }
+
+  void (async () => {
+    try {
+      await pause(lifetime.signal, LATE_COST_MS);
+      await turn.client.notify('session/update', {
+        sessionId: turn.sessionId,
+        update,
+      });
+    } catch {
+      // The client went first.
+    }
+  })();
 }
 
 /**

@@ -72,6 +72,26 @@ export const PROPOSE_TEAM = valueOf(
   'CHORD_FAKE_PROPOSE_TEAM',
 );
 
+/**
+ * What a session's cost starts from, in USD: with `--cost-from 0.05`, or
+ * `CHORD_FAKE_COST_FROM`, each session reports its cost counted from its
+ * start, as an agent that keeps it with the session does once it is resumed
+ * (CHD-373); with neither, from when this process opened it, as Claude's.
+ */
+export const COST_FROM = Number(
+  (ARGS.includes('--cost-from')
+    ? ARGS[ARGS.indexOf('--cost-from') + 1]
+    : process.env.CHORD_FAKE_COST_FROM) ?? 0,
+);
+
+/**
+ * A turn's `usage_update` comes after its answer, as claude-agent-acp's
+ * can, rather than ahead of it: with `--late-cost` or
+ * `CHORD_FAKE_LATE_COST=1`.
+ */
+export const LATE_COST =
+  ARGS.includes('--late-cost') || process.env.CHORD_FAKE_LATE_COST === '1';
+
 const HANGS = ['start', 'config', 'turn'] as const;
 
 function hangStep(): (typeof HANGS)[number] | undefined {

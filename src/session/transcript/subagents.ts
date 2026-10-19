@@ -318,6 +318,15 @@ export const TASK_SPENT_META = 'chord/spent';
 /** A count of tokens: whole, and none below nothing. */
 const COUNT = z.number().int().nonnegative();
 
+/**
+ * A cost as chord reads one an agent or a record gives: an amount, none
+ * below nothing, in a named currency.
+ */
+export const COST = z.object({
+  amount: z.number().nonnegative(),
+  currency: z.string().min(1),
+});
+
 /** A token field: its count, or left out where it is not one. */
 const FIELD = COUNT.optional().catch(undefined);
 
@@ -338,10 +347,7 @@ const SPENT = z.object({
     } satisfies Record<(typeof TOKEN_FIELDS)[number], typeof FIELD>)
     .optional()
     .catch(undefined),
-  cost: z
-    .object({ amount: z.number().nonnegative(), currency: z.string().min(1) })
-    .optional()
-    .catch(undefined),
+  cost: COST.optional().catch(undefined),
   estimated: z.literal(true).optional().catch(undefined),
 });
 

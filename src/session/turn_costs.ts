@@ -10,6 +10,7 @@ import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import type { CostCount } from '../cost_counts.ts';
 import { filledIn } from './enrich.ts';
 import { PRICE_CURRENCY, turnCost } from './prices.ts';
+import { COST } from './transcript/subagents.ts';
 import type { TokenUsage } from './usage.ts';
 
 /** A session's cost so far, as one `usage_update` gave it. */
@@ -46,19 +47,17 @@ export interface OpeningCosts {
 
 /** The cost a `usage_update` says the session has come to, if it says one. */
 export function costReading(update: SessionUpdate): CostReading | undefined {
-  if (
-    update.sessionUpdate !== 'usage_update' ||
-    typeof update.cost?.amount !== 'number' ||
-    typeof update.cost.currency !== 'string'
-  ) {
+  if (update.sessionUpdate !== 'usage_update') {
     return undefined;
   }
 
-  return {
-    amount: update.cost.amount,
-    currency: update.cost.currency,
-    estimated: filledIn(update).includes('cost'),
-  };
+  // An agent or a record may have bent it: one that does not read as a
+  // cost is none.
+  const cost = COST.safeParse(update.cost);
+
+  return cost.success
+    ? { ...cost.data, estimated: filledIn(update).includes('cost') }
+    : undefined;
 }
 
 /** The last cost among a session's own updates, as its record replays them. */
@@ -84,11 +83,9 @@ export function costOfTurn(
 ): TurnCost {
   const after = opening.seen;
 
-  // Nothing new in the turn: it cost nothing anyone reported.
-  if (
-    after === undefined ||
-    (after.amount === before?.amount && after.currency === before.currency)
-  ) {
+  // No cost came in the turn: it cost nothing anyone reported. One that
+  // came and did not move is a turn of nothing, which it says.
+  if (after === undefined || after === before) {
     return {};
   }
 
@@ -140,4 +137,122 @@ export function costOfTurn(
         cost: { amount: priced, currency: PRICE_CURRENCY },
         estimated: true,
       };
+}
+
+/** A turn's figures as the conversation reports them: its tokens and cost. */
+export type TurnFigures = {
+  readonly turnId: string;
+  readonly usage: TokenUsage;
+  /** The model the turn ended on. */
+  readonly model?: string;
+} & TurnCost;
+
+/** A turn or cycle as its cost is found, from its beginning to the next's. */
+interface CostTurn {
+  readonly id: string;
+  /** The opening's cost when it began. */
+  readonly before: CostReading | undefined;
+  /** It has ended; what comes under it now is its tail. */
+  over: boolean;
+  tokens?: TokenUsage | undefined;
+  model?: string | undefined;
+  /** Its cost as it was last reported. */
+  reported?: string;
+}
+
+/**
+ * One opening of a session's turns and their costs: each turn's figures as
+ * it ends, and again when its cost comes after its end, as Claude's can.
+ */
+export class TurnCosts {
+  #opening: OpeningCosts;
+  /**
+   * The turn or cycle that began last, until the next begins: a cost that
+   * comes after its end is still its.
+   */
+  #turn: CostTurn | undefined;
+
+  /**
+   * An opening of a session on an agent whose cost counts as `counts`
+   * says, going on in a record chord kept when `resumed`, whose own updates
+   * are `past`.
+   */
+  constructor(
+    counts: CostCount | undefined,
+    resumed: boolean,
+    past: readonly SessionUpdate[],
+  ) {
+    this.#opening = { counts, resumed, past: lastReading(past) };
+  }
+
+  /** A turn or the agent's own cycle began, from the cost there is now. */
+  began(turnId: string): void {
+    this.#turn = { id: turnId, before: this.#opening.seen, over: false };
+  }
+
+  /**
+   * One of the session's own updates, under `turnId`: the figures of the
+   * turn it came after the end of, when it moved that turn's cost.
+   */
+  heard(turnId: string, update: SessionUpdate): TurnFigures | undefined {
+    const reading = costReading(update);
+
+    if (reading === undefined) {
+      return undefined;
+    }
+
+    this.#opening = { ...this.#opening, seen: reading };
+
+    const turn = this.#turn;
+
+    return turn?.over === true && turn.id === turnId
+      ? this.#figures(turn, false)
+      : undefined;
+  }
+
+  /**
+   * A turn or cycle ended, with the tokens its answer gave and the model it
+   * was on: its figures, always for one with tokens, else only when it has a
+   * cost to say.
+   */
+  ended(
+    turnId: string,
+    tokens: TokenUsage | undefined,
+    model: string | undefined,
+  ): TurnFigures | undefined {
+    const turn = this.#turn;
+
+    if (turn?.id !== turnId) {
+      return tokens === undefined ? undefined : { turnId, usage: tokens };
+    }
+
+    turn.over = true;
+    turn.tokens = tokens;
+    turn.model = model;
+
+    return this.#figures(turn, tokens !== undefined);
+  }
+
+  #figures(turn: CostTurn, always: boolean): TurnFigures | undefined {
+    const cost = costOfTurn(
+      this.#opening,
+      turn.before,
+      turn.tokens,
+      turn.model,
+    );
+    const said = JSON.stringify(cost);
+
+    if (!always && said === (turn.reported ?? JSON.stringify({}))) {
+      return undefined;
+    }
+
+    turn.reported = said;
+
+    return {
+      turnId: turn.id,
+      usage: turn.tokens ?? {},
+      ...(turn.model === undefined ? {} : { model: turn.model }),
+      ...cost,
+    };
+  }
 }

@@ -55,7 +55,8 @@ import type {
   TranscriptAction,
   TurnResult,
 } from './transcript/types.ts';
-import type { TokenUsage } from './usage.ts';
+import { costCountOf } from '../cost_counts.ts';
+import { type TurnFigures, TurnCosts } from './turn_costs.ts';
 import { type CutCall, cutNote } from './cut_off.ts';
 import { chordCallOf, servedFor } from './transcript/chord.ts';
 import { mergeToolCall } from './transcript/tools.ts';
@@ -103,12 +104,13 @@ export type ConversationEvent =
    * every mode change the agent answered.
    */
   | { readonly type: 'modes'; readonly modes: AgentModes | undefined }
-  /** A turn's tokens, as the agent's answer to its prompt gave them. */
-  | {
-      readonly type: 'usage';
-      readonly turnId: string;
-      readonly usage: TokenUsage;
-    }
+  /**
+   * A turn's tokens, as the agent's answer to its prompt gave them, and
+   * what it cost on its own, with the model it ended on (CHD-373); again
+   * when its cost comes after its end, and for the agent's own cycle, whose
+   * tokens are none.
+   */
+  | ({ readonly type: 'usage' } & TurnFigures)
   /**
    * The agent's config options other than its mode and model, when they
    * differ from the last reported.
@@ -338,6 +340,8 @@ export class Conversation {
    * its end is marked or a turn of the person's takes it over (CHD-426).
    */
   #cycle: string | undefined;
+  /** The session on screen's turns' costs, since it opened. */
+  #costs: TurnCosts | undefined;
   /** When the last turn or cycle ended, on `performance.now()`'s clock. */
   #endedAt = 0;
   /**
@@ -2189,6 +2193,16 @@ export class Conversation {
     // has the modes to walk as soon as the session is up.
     this.#report(session, true);
 
+    this.#costs = new TurnCosts(
+      costCountOf(session.agent),
+      session.record !== undefined,
+      past.flatMap((action) =>
+        action.type === 'update' && action.subagentId === undefined
+          ? [action.update]
+          : [],
+      ),
+    );
+
     // After the past, which the record holds already or takes from the
     // session, and before any update it has not heard.
     this.#recording?.opened(session);
@@ -2309,13 +2323,23 @@ export class Conversation {
       this.#track(session, update);
     }
 
+    const turnId = this.#stamp();
+
     this.#emit({
       type: 'update',
-      turnId: this.#stamp(),
+      turnId,
       update,
       ...(subagentId === undefined ? {} : { subagentId }),
       ...(TIMED_UPDATES.has(update.sessionUpdate) ? { at: this.#now() } : {}),
     });
+
+    // A cost that came after its turn's end, as Claude's can, is still its.
+    const late =
+      subagentId === undefined ? this.#costs?.heard(turnId, update) : undefined;
+
+    if (late !== undefined) {
+      this.#emit({ type: 'usage', ...late });
+    }
 
     if (mark === 'end') {
       this.#endCycle();
@@ -2360,6 +2384,8 @@ export class Conversation {
 
     this.#cycle = turnId;
 
+    this.#costs?.began(turnId);
+
     this.#emit({ type: 'cycle_started', turnId, at: this.#now() });
   }
 
@@ -2387,6 +2413,16 @@ export class Conversation {
         stopReason: status === 'completed' ? 'end_turn' : 'cancelled',
       },
     });
+
+    const figures = this.#costs?.ended(
+      turnId,
+      undefined,
+      this.#session?.models()?.current,
+    );
+
+    if (figures !== undefined) {
+      this.#emit({ type: 'usage', ...figures });
+    }
   }
 
   /**
@@ -2689,6 +2725,7 @@ export class Conversation {
       }
 
       if (links !== undefined && this.#session === session) {
+        this.#costs?.began(turnId);
         this.#recording?.sent(
           turnId,
           prompt,
@@ -2743,8 +2780,18 @@ export class Conversation {
     this.#withdrawAsks();
     ended({ type: 'result', turnId, result });
 
-    if (result.status !== 'failed' && result.usage) {
-      ended({ type: 'usage', turnId, usage: result.usage });
+    const figures = went
+      ? this.#costs?.ended(
+          turnId,
+          result.status !== 'failed' ? result.usage : undefined,
+          session.models()?.current,
+        )
+      : result.status !== 'failed' && result.usage
+        ? { turnId, usage: result.usage }
+        : undefined;
+
+    if (figures !== undefined) {
+      ended({ type: 'usage', ...figures });
     }
 
     await this.#advance(session);

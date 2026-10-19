@@ -3,14 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ConversationEvent } from '../../src/session/conversation.ts';
 import { turnCost } from '../../src/session/prices.ts';
-import {
-  FileRecording,
-  readPast,
-  type RecordEntry,
-} from '../../src/session/record.ts';
-import type { Session } from '../../src/session/session.ts';
+import { readPast, type RecordEntry } from '../../src/session/record.ts';
 import { readRecords } from '../../src/session/sessions.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
@@ -203,100 +197,4 @@ test("a cost that comes after its turn's answer, as Claude's can, is still that 
       true,
     ]);
     expect(costs(entries)).toStrictEqual([turn(0.0125), turn(0.0125)]);
-  }));
-
-/** A session as far as its recording reads it. */
-const session = {
-  id: 's',
-  agent: 'claude',
-  cwd: '/',
-  history: () => [],
-  models: () => ({ current: 'm', available: [] }),
-  modes: () => undefined,
-  options: () => [],
-} as unknown as Session;
-
-const usageUpdate = (turnId: string, amount?: number): ConversationEvent => ({
-  type: 'update',
-  turnId,
-  update: {
-    sessionUpdate: 'usage_update',
-    used: 1,
-    size: 2,
-    ...(amount === undefined ? {} : { cost: { amount, currency: 'USD' } }),
-  },
-});
-
-test("an agent's own cycle has a line of its own with what its usage moved the cost by, and one whose usage says none has none", () =>
-  withDir(async (dir) => {
-    const recording = new FileRecording(dir, () => {});
-
-    const heard = (...events: ConversationEvent[]) =>
-      events.forEach((event) => recording.heard(event));
-    const ended = { status: 'completed', stopReason: 'end_turn' } as const;
-    const tokens = { totalTokens: 5 };
-
-    recording.opened(session);
-    recording.sent('t1', 'hello', 0, [], 1);
-    heard(
-      usageUpdate('t1', 0.01),
-      { type: 'result', turnId: 't1', result: { ...ended, usage: tokens } },
-      { type: 'usage', turnId: 't1', usage: tokens },
-      { type: 'cycle_started', turnId: 'c1', at: 2 },
-      usageUpdate('c1', 0.015),
-      { type: 'result', turnId: 'c1', result: ended },
-      { type: 'cycle_started', turnId: 'c2', at: 3 },
-      usageUpdate('c2'),
-      { type: 'result', turnId: 'c2', result: ended },
-    );
-    await recording.flushed();
-
-    const entries = await readPast(recording.path!);
-
-    expect(
-      entries.flatMap((entry) => (entry.type === 'usage' ? [entry] : [])),
-    ).toStrictEqual([
-      {
-        type: 'usage',
-        turnId: 't1',
-        usage: { totalTokens: 5 },
-        model: 'm',
-        cost: { amount: 0.01, currency: 'USD' },
-      },
-      {
-        type: 'usage',
-        turnId: 'c1',
-        usage: {},
-        model: 'm',
-        cost: { amount: expect.closeTo(0.005, 9) as number, currency: 'USD' },
-      },
-    ]);
-  }));
-
-test("a cost that comes after the next turn began is that turn's, so each is counted once", () =>
-  withDir(async (dir) => {
-    const recording = new FileRecording(dir, () => {});
-
-    const heard = (...events: ConversationEvent[]) =>
-      events.forEach((event) => recording.heard(event));
-    const cancelled = {
-      status: 'cancelled',
-      stopReason: 'cancelled',
-    } as const;
-
-    recording.opened(session);
-    recording.sent('t1', 'one', 0, [], 1);
-    heard({ type: 'result', turnId: 't1', result: cancelled });
-    recording.sent('t2', 'two', 0, [], 2);
-    // Both turns' cost, the first's late.
-    heard(usageUpdate('t2', 0.02), {
-      type: 'result',
-      turnId: 't2',
-      result: { status: 'completed', stopReason: 'end_turn' },
-    });
-    await recording.flushed();
-
-    expect(costs(await readPast(recording.path!))).toStrictEqual([
-      { model: 'm', cost: { amount: 0.02, currency: 'USD' } },
-    ]);
   }));

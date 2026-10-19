@@ -26,16 +26,7 @@ import type {
   TranscriptAction,
   TurnResult,
 } from './transcript/types.ts';
-import {
-  costOfTurn,
-  costReading,
-  type CostReading,
-  lastReading,
-  type OpeningCosts,
-  type TurnCost,
-} from './turn_costs.ts';
-import type { TokenUsage } from './usage.ts';
-import { costCountOf } from '../cost_counts.ts';
+import type { TurnFigures } from './turn_costs.ts';
 
 /** One line of a record. */
 export type RecordEntry =
@@ -159,17 +150,12 @@ export type RecordEntry =
       readonly result: TurnResult;
     }
   /**
-   * A turn's tokens as its answer gave them, empty for a turn or an agent's
-   * own cycle with none, and what the turn cost on its own, with the model
-   * it ended on (CHD-373). Written again, whole, when its cost comes after
-   * its end; the last line for a turn is its.
+   * A turn's tokens as its answer gave them, empty for an agent's own cycle,
+   * and what the turn cost on its own, with the model it ended on
+   * (CHD-373). Written again, whole, when its cost comes after its end; the
+   * last line for a turn is its.
    */
-  | ({
-      readonly type: 'usage';
-      readonly turnId: string;
-      readonly usage: TokenUsage;
-      readonly model?: string;
-    } & TurnCost)
+  | ({ readonly type: 'usage' } & TurnFigures)
   /**
    * The session was opened, first or again: a turn's cost is found within
    * one opening. A record written before these has none.
@@ -676,14 +662,7 @@ export function recordActions(
 
         break;
       case 'usage':
-        // A line for a turn's cost alone carries no tokens, as none came live.
-        if (Object.keys(entry.usage).length > 0) {
-          actions.push({
-            type: 'usage',
-            turnId: id(entry.turnId),
-            usage: entry.usage,
-          });
-        }
+        actions.push({ ...entry, turnId: id(entry.turnId) });
 
         break;
     }
@@ -765,11 +744,7 @@ export function historyEntries(actions: readonly PastAction[]): RecordEntry[] {
 
         break;
       case 'usage':
-        entries.push({
-          type: 'usage',
-          turnId: action.turnId,
-          usage: action.usage,
-        });
+        entries.push(action);
 
         break;
     }
@@ -870,7 +845,7 @@ export function entryOf(
     case 'result':
       return { type: 'result', turnId: event.turnId, result: event.result };
     case 'usage':
-      return { type: 'usage', turnId: event.turnId, usage: event.usage };
+      return event;
     case 'model':
       return stateWith(state, { model: event.models?.current });
     case 'modes':
@@ -916,20 +891,6 @@ function stateOfSession(session: Session): StateEntry {
   });
 }
 
-/** A turn or cycle as its cost is found, from its beginning to the next's. */
-interface CostTurn {
-  readonly id: string;
-  /** The opening's cost when it began. */
-  readonly before: CostReading | undefined;
-  /** It has ended; what comes under it now is its tail. */
-  over: boolean;
-  tokens?: TokenUsage;
-  /** The model it ended on. */
-  model?: string | undefined;
-  /** Its cost as its line last gave it. */
-  written?: string;
-}
-
 /** An agent another started, as its record names it. */
 interface Child {
   /** The agent's id for the session that started it, once it is open. */
@@ -968,13 +929,6 @@ export class FileRecording implements Recording {
   #flushing = false;
   #reported = false;
   readonly #child: Child | undefined;
-  /** What this opening of the session knows of its cost. */
-  #costs: OpeningCosts = { counts: undefined, resumed: false };
-  /**
-   * The turn or cycle that began last, with the cost before it, until the
-   * next begins: a cost that comes after its end is still its.
-   */
-  #turn: CostTurn | undefined;
 
   /**
    * `failed` hears, once, why a record could not be written; the session goes
@@ -1006,20 +960,6 @@ export class FileRecording implements Recording {
     this.#held = [];
     this.#prompted = false;
     this.#state = stateOfSession(session);
-    this.#turn = undefined;
-    this.#costs = {
-      counts: costCountOf(session.agent),
-      resumed: session.record !== undefined,
-      past: lastReading(
-        session
-          .history()
-          .flatMap((action) =>
-            action.type === 'update' && action.subagentId === undefined
-              ? [action.update]
-              : [],
-          ),
-      ),
-    };
 
     const opened: RecordEntry = { type: 'opened', at: this.#now() };
     const parent = this.#child?.parent();
@@ -1074,10 +1014,6 @@ export class FileRecording implements Recording {
       this.#add(entry);
     }
 
-    if (into === undefined) {
-      this.#began(turnId);
-    }
-
     this.#add({
       type: 'prompt',
       turnId,
@@ -1110,17 +1046,6 @@ export class FileRecording implements Recording {
       this.#asking.set(event.elicitation.id, event.elicitation);
     }
 
-    if (event.type === 'cycle_started') {
-      this.#began(event.turnId);
-    }
-
-    if (event.type === 'result' || event.type === 'usage') {
-      this.#ended(event);
-      this.#flush();
-
-      return;
-    }
-
     const entry =
       event.type === 'elicitation_settled'
         ? this.#answered(event)
@@ -1134,85 +1059,7 @@ export class FileRecording implements Recording {
       this.#add(entry);
     }
 
-    if (event.type === 'update' && event.subagentId === undefined) {
-      this.#heardCost(event.turnId, costReading(event.update));
-    }
-
     this.#flush();
-  }
-
-  /** The session's cost so far, if an update of its own under `turnId` said it. */
-  #heardCost(turnId: string, reading: CostReading | undefined): void {
-    if (reading === undefined) {
-      return;
-    }
-
-    this.#costs = { ...this.#costs, seen: reading };
-
-    // A cost that came after its turn's end, as Claude's does.
-    if (this.#turn?.over === true && this.#turn.id === turnId) {
-      this.#costed();
-    }
-  }
-
-  /** A turn or the agent's own cycle began, from the cost there is now. */
-  #began(turnId: string): void {
-    this.#turn = { id: turnId, before: this.#costs.seen, over: false };
-  }
-
-  /**
-   * A turn's end, its result and then its tokens, and its line, with its
-   * cost: at its tokens, or at its end when it has none to come.
-   */
-  #ended(event: Extract<ConversationEvent, { type: 'result' | 'usage' }>) {
-    if (event.type === 'result') {
-      this.#add({ type: 'result', turnId: event.turnId, result: event.result });
-    }
-
-    const turn = this.#turn;
-
-    if (turn?.id !== event.turnId) {
-      if (event.type === 'usage') {
-        this.#add({ type: 'usage', turnId: event.turnId, usage: event.usage });
-      }
-
-      return;
-    }
-
-    turn.over = true;
-    turn.model = this.#state.model;
-
-    if (event.type === 'usage') {
-      turn.tokens = event.usage;
-
-      this.#costed(true);
-    } else if (event.result.status === 'failed' || !event.result.usage) {
-      this.#costed();
-    }
-  }
-
-  /**
-   * Writes the last turn's line with its cost as it stands: always once its
-   * tokens are in, else only when it has a cost to keep and that has moved.
-   */
-  #costed(always = false): void {
-    const turn = this.#turn!;
-    const cost = costOfTurn(this.#costs, turn.before, turn.tokens, turn.model);
-    const line = JSON.stringify(cost);
-
-    if (!always && line === (turn.written ?? JSON.stringify({}))) {
-      return;
-    }
-
-    turn.written = line;
-
-    this.#add({
-      type: 'usage',
-      turnId: turn.id,
-      usage: turn.tokens ?? {},
-      ...(turn.model === undefined ? {} : { model: turn.model }),
-      ...cost,
-    });
   }
 
   /**

@@ -275,25 +275,31 @@ in the accent colour. A long-lived child uses its name, bold in its colour;
 a team member adds its team, dim: `tester · bugfix asks…`. Between turns,
 main uses `main` and the heading ends ` · between turns`.
 
-A permission, form or link arriving with no turn running leaves the keys
-and draft in the prompt. Its asker row ends ` · between turns`, and
+A permission, form, question or link arriving with no turn running leaves
+the keys and draft in the prompt. Its asker row ends ` · between turns`, and
 `ctrl+x a to answer` moves the keys into the box. The front status line
 reads `● permission asked between turns · ctrl+x a to answer`, or
-`● input asked between turns · ctrl+x a to answer` for a form or link.
+`● input asked between turns · ctrl+x a to answer` for a form, question or
+link.
 If `session:attention` is unbound, the box takes the keys at once. The
 request waits until answered; closing the session or quitting rejects it.
-A permission still open when its turn ends, including a task's, is held
+A request still open when its turn ends, including a task's, is held
 the same way: the keys return to the prompt and the box stays between turns.
-A form or link opened in the turn is cancelled when it ends.
-A task's request, or one arriving between turns, keeps its asking mark in
-the status line and agents list, and stays reachable by ctrl+x a, across
-turn endings until answered or withdrawn.
+It keeps its asking mark in the status line and agents list, reachable by
+ctrl+x a until answered or withdrawn.
 A prompt sent while it waits queues as `› after your answer: …`; messages
 from other agents wait too. After the answer, they wait for one second
 without an agent update, up to five seconds, before going to the agent.
 
-While the request overflows, pgup/pgdn scroll it by a page, shift+↑/↓ by
-a row, home/end to either end, and the wheel over the box scrolls it too.
+Held forms, questions and links keep `››› Waiting for your input… (Ns)`,
+timed from when they asked. On a short screen their bodies fold under
+`… N more lines`, keeping `ctrl+x a to answer` visible; that key opens the
+box whole. A held permission scrolls instead, its rules naming no key
+until ctrl+x a gives it the keys.
+
+Once a permission has the keys, pgup/pgdn scroll an overflowing request by
+a page, shift+↑/↓ by a row, home/end to either end. The wheel over the box
+scrolls it too.
 Dim rules count wrapped lines out of view: `↑ N lines above` and
 `↓ N lines below · pgdn to scroll`, with your bound key in the hint.
 When only one request row fits, the count sits beside the title. You can

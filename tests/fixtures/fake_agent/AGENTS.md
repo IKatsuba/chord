@@ -77,8 +77,9 @@
   reporting the answer;
   `leftask` asks permission to write during its turn, ends with it still
   open, then reports the answer once it comes;
-  `bigaskleft` does the same with `bigask`'s tall write;
-  `leftform` does the same with a form;
+  `bigaskleft` leaves `bigask`'s tall write open to check held scrolling;
+  `leftform` leaves a form with a field of each kind open to check folding;
+  both report the answer once it comes;
   `twins` asks a permission with two `allow_once` options and says the id
   picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the

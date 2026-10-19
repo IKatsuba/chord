@@ -17,6 +17,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CTRL_O,
+  DOWN,
   ESC,
   leader,
   quitAll,
@@ -652,5 +653,31 @@ describe('CHD-470 tester: a steering-gated task parent closes before any steer',
         await server.close();
       }
     });
+  }
+});
+
+test("an ended task's block says what it spent, its tokens and money, and its background row its money (CHD-373)", async () => {
+  const server = serveChord();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'task');
+        await answerTask(window, '\r');
+        await window.shows('Done (5 tool uses · 2.0k tokens · $0.0125 ·');
+        await window.shows(
+          'Received the message from Fix the tokenizer · fake · report.',
+        );
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('│ Background · 1 in this tab');
+        await window.shows('✓ reported after');
+        expect(window.frame()).toMatch(/✓ reported after \d+s · \$0\.0125/);
+      },
+      { server, runtimes: ['fake'], rows: 40, columns: 120 },
+    );
+  } finally {
+    await server.close();
   }
 });

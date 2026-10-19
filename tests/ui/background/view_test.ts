@@ -670,3 +670,39 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
     ).toStrictEqual({ focus: t1, top: 0, laid: laidAt(76, 40) });
   });
 });
+
+test("an ended task's row says its money after its state, the first thing to give way (CHD-373)", () => {
+  const spent = {
+    cost: { amount: 0.0125, currency: 'USD' },
+    tokens: { totalTokens: 2000 },
+  };
+  const ended = task(
+    't1',
+    'Fix the tokenizer',
+    { group: 'failed', endedAt: NOW },
+    { spent, startedAt: NOW - 15_000 },
+  );
+
+  expect(stateText(ended, NOW).text).toBe('✗ failed after 15s · $0.0125');
+  expect(
+    stateText({ ...ended, spent: { ...spent, estimated: true } }, NOW).text,
+  ).toBe('✗ failed after 15s · ~$0.0125');
+  expect(stateText(ended, NOW, { spent: false }).text).toBe(
+    '✗ failed after 15s',
+  );
+  // While it works, none.
+  expect(
+    stateText({ ...ended, status: { group: 'running' } }, NOW).text,
+  ).not.toContain('$');
+
+  // Wide, the money stays; a little narrower, it goes before anything else.
+  const row = (width: number) =>
+    viewRows([ended], { width, focus: undefined, now: NOW })[0]!
+      .lines[0]!.map((cell) => cell.text)
+      .join('')
+      .trimEnd();
+
+  expect(row(100)).toContain('· $0.0125');
+  expect(row(row(100).length - 2)).not.toContain('$0.0125');
+  expect(row(row(100).length - 2)).toContain('task · fake');
+});

@@ -11,6 +11,7 @@ import type {
   Entry,
   MonitorEnd,
   Subagent,
+  TaskSpent,
   Transcript,
 } from '../../session/transcript/types.ts';
 import { GLYPHS } from '../app/strip.ts';
@@ -101,6 +102,8 @@ export interface BackgroundItem {
   /** A task's runtime and model, as the agents list names an agent's. */
   readonly runtime?: string;
   readonly model?: string;
+  /** What a task spent, once it has ended (CHD-373). */
+  readonly spent?: TaskSpent;
   /** A task's `spawn_task` call, which `enter` scrolls to. */
   readonly callId?: string;
   /** An agent's own stop: its agent still offers one. */
@@ -215,6 +218,7 @@ function taskItems(agent: BackgroundAgent): BackgroundItem[] {
           status: taskStatus(subagent, startedAt, transcript),
           runtime: task.runtime,
           ...(task.model === undefined ? {} : { model: task.model }),
+          ...(task.spent === undefined ? {} : { spent: task.spent }),
           ...(subagent.callId === undefined ? {} : { callId: subagent.callId }),
         },
       ];

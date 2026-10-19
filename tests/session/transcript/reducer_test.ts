@@ -636,11 +636,14 @@ test("a permission asked in the agent's own cycle is held, and once answered the
     },
   ]);
 
+  // The wait counts from the request; the cycle's own start is kept.
   expect(asked.turn).toMatchObject({
     status: 'awaiting_permission',
     turnId: 'c1',
+    since: 6000,
     between: true,
     cycle: true,
+    cycleSince: 5000,
   });
   expect(
     fold(
@@ -654,7 +657,12 @@ test("a permission asked in the agent's own cycle is held, and once answered the
       ],
       asked,
     ).turn,
-  ).toMatchObject({ status: 'working', turnId: 'c1', cycle: true });
+  ).toStrictEqual({
+    status: 'working',
+    turnId: 'c1',
+    since: 5000,
+    cycle: true,
+  });
 });
 
 test('a permission held before the cycle, answered during it, leaves the cycle working until its end (CHD-426)', () => {
@@ -675,9 +683,11 @@ test('a permission held before the cycle, answered during it, leaves the cycle w
     },
   ]);
 
-  expect(answered.turn).toMatchObject({
+  // Working again from when the cycle started, not from the old request.
+  expect(answered.turn).toStrictEqual({
     status: 'working',
     turnId: 'c1',
+    since: 5000,
     cycle: true,
   });
   expect(

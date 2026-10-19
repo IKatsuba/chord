@@ -54,6 +54,7 @@ export function permissionRequested(
         permissions: [permission],
         between: true,
         cycle: true,
+        cycleSince: turn.since,
       },
     };
   }
@@ -151,7 +152,7 @@ export function permissionSettled(
           ? {
               status: 'working',
               turnId: turn.turnId,
-              since: turn.since,
+              since: turn.cycleSince ?? turn.since,
               cycle: true,
             }
           : turn.between

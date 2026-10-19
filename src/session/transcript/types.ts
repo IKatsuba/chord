@@ -728,6 +728,11 @@ export type TurnState =
        * request is answered (CHD-426).
        */
       readonly cycle?: true;
+      /**
+       * When that cycle started, which its working line counts from again
+       * once every request is answered; `since` is when the wait began.
+       */
+      readonly cycleSince?: number;
     }
   | {
       /** Cancel was asked for; the turn has not settled yet. */

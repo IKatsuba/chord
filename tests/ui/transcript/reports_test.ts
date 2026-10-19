@@ -189,3 +189,49 @@ test("a cost and a context chord worked out read as chord's estimate", () => {
     text(contextReport({ ...FACTS, context: { used: 4000, size: 0 } })),
   ).toStrictEqual(['fake has not reported how full its context window is.']);
 });
+
+test("/cost says the turn running is counted when it ends, until any of its spend has come (the owner's Q51, CHD-405)", () => {
+  const earlier = {
+    turns: {
+      a: { inputTokens: 1000, outputTokens: 200, cachedReadTokens: 800 },
+    },
+  };
+  const estimated = {
+    used: 4000,
+    size: 1_000_000,
+    cost: { amount: 0.025, currency: 'USD' },
+    estimated: ['cost'] as const,
+  };
+
+  // Earlier turns reported: the row goes right after the total.
+  expect(
+    text(
+      costReport({
+        ...FACTS,
+        spent: earlier,
+        context: estimated,
+        running: 'b',
+      }),
+    ),
+  ).toStrictEqual([
+    "Total cost:   $0.0250 (chord's estimate)",
+    'This turn:    counted when it ends',
+    'Tokens in:    1,000',
+    'Tokens out:   200',
+    'Cache read:   800',
+    'Session time: 1m 5s',
+  ]);
+  // A first turn with nothing reported: after the sentence, before the time.
+  expect(text(costReport({ ...FACTS, running: 'a' }))).toStrictEqual([
+    'fake has not reported what this session has used.',
+    'This turn:    counted when it ends',
+    'Session time: 1m 5s',
+  ]);
+  // Its spend in, or no turn running: no row.
+  expect(
+    text(costReport({ ...FACTS, spent: earlier, running: 'a' })),
+  ).not.toContain('This turn:    counted when it ends');
+  expect(
+    text(costReport({ ...FACTS, spent: earlier, context: estimated })),
+  ).not.toContain('This turn:    counted when it ends');
+});

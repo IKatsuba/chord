@@ -38,6 +38,8 @@ export interface ReportFacts {
   readonly modes: readonly AgentMode[];
   /** Each turn's tokens, as the agent answered its prompt. */
   readonly spent?: Spent | undefined;
+  /** The turn running now, by its id; none between turns. */
+  readonly running?: string | undefined;
   /** The context window and cost as the last `usage_update` gave them. */
   readonly context?: Usage | undefined;
   /** The sessions open in the window, and how many wait on the person. */
@@ -63,9 +65,30 @@ export function reportFacts(
     mode: state.transcript.mode,
     modes: state.modes,
     spent: state.spent,
+    running: runningTurn(state),
     context: state.transcript.usage,
   };
 }
+
+/**
+ * The turn of the session running now: one the person or the agent
+ * started, not a request held between turns with none running.
+ */
+function runningTurn(state: AppState): string | undefined {
+  const { turn } = state.transcript;
+
+  return turn.status === 'idle' ||
+    (turn.status === 'awaiting_permission' && turn.between === true)
+    ? undefined
+    : turn.turnId;
+}
+
+/**
+ * What `/cost` says of the turn running, none of whose spend has come yet:
+ * an agent reports a turn's spend when it ends, so the totals leave it out
+ * until then, and chord guesses nothing (the owner's Q51, CHD-405).
+ */
+const RUNNING_TURN: [string, string] = ['This turn', 'counted when it ends'];
 
 export function report(
   command: ReportCommand,
@@ -166,9 +189,17 @@ export function costReport(facts: ReportFacts): ReportRow[] {
       ? []
       : [['Session time', formatElapsed(facts.now - facts.since)]];
 
+  // Nothing of the running turn's spend has come while none of it is in.
+  const running: [string, string][] =
+    facts.running !== undefined &&
+    facts.spent?.turns[facts.running] === undefined
+      ? [RUNNING_TURN]
+      : [];
+
   if (spent === undefined && cost === undefined) {
     return aligned([
       `${facts.agent} has not reported what this session has used.`,
+      ...running,
       ...time,
     ]);
   }
@@ -190,6 +221,7 @@ export function costReport(facts: ReportFacts): ReportRow[] {
 
   return aligned([
     ['Total cost', cost ?? `not reported by ${facts.agent}`],
+    ...running,
     ...(spent === undefined
       ? [['Tokens', `not reported by ${facts.agent}`] as [string, string]]
       : counts),

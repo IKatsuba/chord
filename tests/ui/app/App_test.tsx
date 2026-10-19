@@ -2020,3 +2020,33 @@ describe('CHD-426 U2 tester: held inputs and cancellation silence', () => {
       ));
   }
 });
+
+test("/cost while a turn runs says that turn is counted when it ends, beside the earlier turns' estimate, and no longer once it has ended (CHD-405)", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await until('the turn to end', () => !window.frame().includes('Working'));
+      await send(window, 'slow');
+      await window.shows('Working');
+
+      const during = await reported(window, '/cost');
+
+      expect(during).toContain('Total cost:   $');
+      expect(during).toContain("(chord's estimate)");
+      expect(during).toMatch(
+        /Total cost:.*\n\s+This turn: {4}counted when it ends/,
+      );
+
+      await window.press(ESC);
+      await until(
+        'the turn to end',
+        () => !window.frame().includes('Working…'),
+      );
+      expect(await reported(window, '/cost')).not.toContain('This turn:');
+    },
+    {
+      agentCommand: fakeAgentCommand(undefined, '--tokens-only'),
+      rows: 60,
+    },
+  ));

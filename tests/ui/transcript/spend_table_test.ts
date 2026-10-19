@@ -228,3 +228,22 @@ test('the table is for a window of more than one session, a task or a closed one
     ]),
   ).toBe(true);
 });
+
+test("the Total says chord's estimate when all of it is, and part only when some is not", () => {
+  const estimated = (name: string): SpendPart => ({
+    name,
+    kind: 'tab',
+    parts: [
+      {
+        name: 'main',
+        kind: 'main',
+        agent: 'codex',
+        figure: { cost: USD(0.0047), estimated: 'all', tokens: 2000 },
+      },
+    ],
+  });
+
+  expect(lines([estimated('1 fake'), estimated('2 fake')], 114).at(-1)).toBe(
+    "Total        ~$0.0094   4,000  chord's estimate",
+  );
+});

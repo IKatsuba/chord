@@ -242,7 +242,7 @@ test("the window's spend: each tab's own agent and its tasks, its long-lived age
     [
       tab(1, 'fake', [
         child(2, 'a', 'docs'),
-        child(3, 'l', 'lead', { team: 'bugfix' }),
+        child(3, 'l', 'bugfix', { team: 'bugfix' }),
         child(4, 't', 'tester', { team: 'bugfix', lead: 'l' }),
       ]),
       tab(5, 'codex', []),

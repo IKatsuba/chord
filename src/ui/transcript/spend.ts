@@ -368,7 +368,8 @@ export function windowSpend<C>(
       name: lead.team ?? lead.name,
       kind: 'team',
       parts: [
-        ...sessionParts(lead.name, 'member', sessions[lead.key]),
+        // Its row is named by the team; its lead is `lead` under it.
+        ...sessionParts('lead', 'member', sessions[lead.key]),
         ...membersOf(tab, lead.id).flatMap((member) =>
           sessionParts(member.name, 'member', sessions[member.key]),
         ),

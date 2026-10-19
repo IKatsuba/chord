@@ -130,8 +130,9 @@ export function useCommands(
             command,
             reportFacts(state, agent, cwd, Date.now(), sessions.counted(), {
               spend: sessions.spend(),
-              // Under the report's `⎿`, six columns in.
-              width: columns - 6,
+              // Under the report's `⎿`, six columns in, inside the
+              // transcript's margins: a note never wraps.
+              width: columns - 8,
             }),
           ),
         });

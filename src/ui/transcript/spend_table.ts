@@ -256,9 +256,11 @@ function totalRow(parts: readonly SpendPart[]): Row {
   const summed = sum(parts);
   const tasks = running(parts);
   const notes: Note[] = [
-    ...(summed.estimated === 'none'
-      ? []
-      : [{ long: "part chord's estimate", short: 'part estimate' }]),
+    ...(summed.estimated === 'all'
+      ? [{ long: "chord's estimate", short: "chord's estimate" }]
+      : summed.estimated === 'part'
+        ? [{ long: "part chord's estimate", short: 'part estimate' }]
+        : []),
     ...(lastReported(parts)
       ? [{ long: 'part as last reported', short: 'part as last reported' }]
       : []),

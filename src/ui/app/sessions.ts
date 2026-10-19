@@ -1345,7 +1345,8 @@ export function useSessions(
   ) =>
     keepSpend(child.key, {
       tab,
-      name: child.name,
+      // A run's lead is `lead` under its team's row, as when it is open.
+      name: isLead(child) ? 'lead' : child.name,
       kind: child.team === undefined ? 'agent' : 'member',
       ...(child.team === undefined ? {} : { team: child.team }),
       ...(isLead(child)

@@ -2078,3 +2078,44 @@ describe('CHD-405 N2 tester: held requests do not imply running spend', () => {
       ));
   }
 });
+
+describe('CHD-405 N2 tester: cycle-held permission cost', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a held cycle has a current-turn row until its end, while a plain held request does not at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'claudecycleask');
+          await window.shows('main asks · between turns');
+          expect(await reported(window, '/cost')).toContain(
+            'counted when it ends',
+          );
+          await leader(window, 'a');
+          await window.shows('❯ 1. Allow');
+          await window.press('1');
+          await window.shows('Permission: allow.');
+          await until(
+            'the cycle ended',
+            () => !window.frame().includes('Working…'),
+          );
+          expect(await reported(window, '/cost')).not.toContain('This turn:');
+          await send(window, 'leftask');
+          await window.shows('main asks · between turns');
+          expect(await reported(window, '/cost')).not.toContain('This turn:');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--adapter',
+            'claude',
+            '--no-usage',
+          ),
+        },
+      ));
+  }
+});

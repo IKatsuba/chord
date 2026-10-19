@@ -1206,6 +1206,10 @@ describe("a permission left open at its turn's end (CHD-158 C4, the owner's Q44)
       await window.shows('main asks · between turns');
       await window.shows('ctrl+x a to answer');
       expect(window.frame()).not.toContain('❯ 1. Allow');
+      // The call that asked still says it waits, as the box does.
+      expect(window.frame()).toMatch(
+        /Write\(notes\/left\.md\)\n\s+⎿ {2}Waiting…/,
+      );
 
       await window.type('text');
       await window.press('\r');

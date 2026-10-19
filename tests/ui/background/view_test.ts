@@ -671,7 +671,7 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
   });
 });
 
-test("an ended task's row says its money after its state, the first thing to give way (CHD-373)", () => {
+test("an ended task's row says its money after its state, which gives way after its model (CHD-373)", () => {
   const spent = {
     cost: { amount: 0.0125, currency: 'USD' },
     tokens: { totalTokens: 2000 },
@@ -695,14 +695,31 @@ test("an ended task's row says its money after its state, the first thing to giv
     stateText({ ...ended, status: { group: 'running' } }, NOW).text,
   ).not.toContain('$');
 
-  // Wide, the money stays; a little narrower, it goes before anything else.
+  // Narrower and narrower: the model goes first, then the money, then the
+  // runtime (CHD-378.md, ac4ade0e).
   const row = (width: number) =>
     viewRows([ended], { width, focus: undefined, now: NOW })[0]!
       .lines[0]!.map((cell) => cell.text)
       .join('')
       .trimEnd();
+  const seen: string[] = [];
 
-  expect(row(100)).toContain('· $0.0125');
-  expect(row(row(100).length - 2)).not.toContain('$0.0125');
-  expect(row(row(100).length - 2)).toContain('task · fake');
+  for (let width = 120; width > 40; width--) {
+    const now = row(width);
+
+    if (now !== seen.at(-1)) {
+      seen.push(now);
+    }
+  }
+
+  const firstWithout = (part: string) =>
+    seen.findIndex((line) => !line.includes(part));
+
+  expect(seen[0]).toContain('Fake Small');
+  expect(seen[0]).toContain('· $0.0125');
+  expect(firstWithout('Fake Small')).toBeLessThan(firstWithout('$0.0125'));
+  expect(firstWithout('$0.0125')).toBeLessThan(firstWithout('task · fake'));
+  expect(seen).toContainEqual(
+    expect.stringMatching(/task · fake +✗ failed after 15s · \$0\.0125/),
+  );
 });

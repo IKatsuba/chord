@@ -47,7 +47,7 @@ const GAP = '  ';
 
 /** What one way of fitting keeps, as the columns give way. */
 interface Fit {
-  /** An ended task's money after its state, the first to go (CHD-373). */
+  /** An ended task's money after its state, which goes after its model (CHD-373). */
   readonly spent: boolean;
   /** A monitor's ` · N events` after its end. */
   readonly endedEvents: boolean;
@@ -59,8 +59,9 @@ interface Fit {
 /** The fullest first: an end's events go, then a task's model, its runtime. */
 const FITS: readonly Fit[] = [
   { spent: true, endedEvents: true, model: true, runtime: true },
-  { spent: false, endedEvents: true, model: true, runtime: true },
-  { spent: false, endedEvents: false, model: true, runtime: true },
+  { spent: true, endedEvents: false, model: true, runtime: true },
+  // A task's model goes before its money, as on a group's rows (CHD-373).
+  { spent: true, endedEvents: false, model: false, runtime: true },
   { spent: false, endedEvents: false, model: false, runtime: true },
   { spent: false, endedEvents: false, model: false, runtime: false },
 ];

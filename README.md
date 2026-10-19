@@ -78,8 +78,8 @@ there.
 When the agent fans out, its subagents run as one tree; ctrl+o shows their
 whole task, work and later messages. Stoppable subagents join monitors and
 spawned tasks in the `background` summary under the agents list. From an
-empty prompt, ↓ past the agents reaches it; Enter opens the list, where `x`
-stops an item alone.
+empty prompt, ↓ past the agents reaches it; Enter opens a frame above the
+prompt, at most half the screen. `x` stops the picked item alone.
 
 <img src="docs/images/subagents.png" alt="Two subagents running in parallel under one block" width="900">
 

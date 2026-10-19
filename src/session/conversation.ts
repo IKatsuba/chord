@@ -1765,6 +1765,22 @@ export class Conversation {
     this.#unhold();
     this.#withdrawAsks();
 
+    // The agent's own cycle has no prompt of chord's to cancel: the session
+    // is told to stop, and the cycle ends as a cancelled turn does (CHD-426).
+    const cycle = this.#cycle;
+    const session = this.#session;
+
+    if (!turn && cycle !== undefined && session !== undefined) {
+      this.#emit({ type: 'cancel', turnId: cycle, at: this.#now() });
+      session.cancel().catch(() => {
+        // The cycle may have ended before the cancel landed.
+      });
+
+      this.#endCycle('cancelled');
+
+      return;
+    }
+
     // The turn has answered and is only waiting out its trailing updates;
     // with the queue taken back, nothing is left to wait for or cancel. A
     // message left still waits them out, so they fold under their own turn.
@@ -2352,7 +2368,7 @@ export class Conversation {
    * as a turn's end (CHD-426); what the agent sends after it is folded
    * under it, as after a turn.
    */
-  #endCycle(): void {
+  #endCycle(status: 'completed' | 'cancelled' = 'completed'): void {
     const turnId = this.#cycle;
 
     if (turnId === undefined) {
@@ -2366,7 +2382,10 @@ export class Conversation {
     this.#emit({
       type: 'result',
       turnId,
-      result: { status: 'completed', stopReason: 'end_turn' },
+      result: {
+        status,
+        stopReason: status === 'completed' ? 'end_turn' : 'cancelled',
+      },
     });
   }
 

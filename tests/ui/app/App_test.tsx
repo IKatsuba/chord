@@ -1813,3 +1813,25 @@ describe('CHD-426 U1 tester: inputs during autonomous work', () => {
     }
   }
 });
+
+test("Esc in the agent's own cycle stops it: the working line goes, and a prompt after it is a turn as any (CHD-426 U2)", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'claudecyclebare');
+      await window.shows('The build passed.');
+      await window.shows('Working…');
+      await window.press(ESC);
+      await until(
+        'the cycle stopped',
+        () => !window.frame().includes('Working…'),
+      );
+      await send(window, 'text');
+      await window.shows('Hello, world. This reply came in chunks.');
+    },
+    {
+      agentCommand: fakeAgentCommand(undefined, '--adapter', 'claude'),
+      columns: 120,
+      rows: 40,
+    },
+  ));

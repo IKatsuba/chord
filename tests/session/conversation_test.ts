@@ -4010,3 +4010,46 @@ describe('CHD-426 U1 tester: cycle markers and pending requests', () => {
       ).toHaveLength(1);
     }));
 });
+
+describe("Esc in an agent's own cycle (CHD-426 U2)", () => {
+  test('sends session/cancel for it, and the cycle ends as a cancelled turn does', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('claudecyclebare');
+      await until(() => saidIn(events).includes('The build passed.'));
+
+      const started = events.find((event) => event.type === 'cycle_started');
+
+      assert(started?.type === 'cycle_started');
+      conversation.interrupt();
+
+      const after = events.slice(events.indexOf(started));
+
+      expect(
+        after.filter(
+          (event) => event.type === 'cancel' || event.type === 'result',
+        ),
+      ).toStrictEqual([
+        { type: 'cancel', turnId: started.turnId, at: expect.any(Number) },
+        {
+          type: 'result',
+          turnId: started.turnId,
+          result: { status: 'cancelled', stopReason: 'cancelled' },
+        },
+      ]);
+
+      // The agent was told, with no turn of chord's running; a prompt sent
+      // at once could meet the cancel first, as any after a cancel can (Q42).
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      conversation.send('cancels');
+      await until(() => saidIn(events).includes('Cancels with no turn:'));
+      expect(saidIn(events)).toContain('Cancels with no turn: 1.');
+    }));
+
+  test('with no cycle and no turn, Esc tells the agent nothing', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.interrupt();
+      conversation.send('cancels');
+      await until(() => saidIn(events).includes('Cancels with no turn:'));
+      expect(saidIn(events)).toContain('Cancels with no turn: 0.');
+    }));
+});

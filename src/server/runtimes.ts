@@ -148,10 +148,23 @@ function messageOf(error: unknown): string {
  */
 export function sessionProbe(
   cwd: string,
-  commandOf: (runtime: string) => string | string[] | undefined,
+  startOf: (runtime: string) =>
+    | {
+        readonly agentCommand?: string | string[] | undefined;
+        readonly refused?: string | undefined;
+      }
+    | undefined,
 ): Probe {
   return async (runtime, signal) => {
-    const agentCommand = commandOf(runtime);
+    const start = startOf(runtime);
+
+    // A runtime whose command was refused is not started even to be read:
+    // chord's own command would run in its place (CHD-466).
+    if (start?.refused !== undefined) {
+      throw new Error(start.refused);
+    }
+
+    const agentCommand = start?.agentCommand;
     const session = await openSession({
       agent: runtime,
       cwd,

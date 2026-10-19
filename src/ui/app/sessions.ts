@@ -176,6 +176,11 @@ function andList(names: readonly string[]): string {
 export interface SessionStart {
   /** Replaces the registry's command for the agent. */
   readonly agentCommand?: string | string[] | undefined;
+  /**
+   * Why the agent is not started at all, as said to the person: its command
+   * was refused (CHD-466). Nothing starts on chord's own command instead.
+   */
+  readonly refused?: string | undefined;
   readonly starting?: Starting | undefined;
 }
 
@@ -304,10 +309,14 @@ export function useSessions(
     key: number,
   ) => {
     const { cwd, mcpServers, startupOf } = placeOf(key);
-    const { agentCommand, starting } = startupOf(agent) ?? {};
+    const { agentCommand, starting, refused } = startupOf(agent) ?? {};
 
     return new Conversation(
       (signal) => {
+        if (refused !== undefined) {
+          throw new Error(refused);
+        }
+
         const next = resuming.current.get(key);
         // A token for each session the tab opens, `/clear`'s included, good
         // until that session's agent has gone.
@@ -386,6 +395,10 @@ export function useSessions(
       )}`;
     }
 
+    if (startup.refused !== undefined) {
+      return startup.refused;
+    }
+
     const known = await view.offer(args.agent, false);
 
     if (
@@ -438,6 +451,10 @@ export function useSessions(
 
     return new Conversation(
       (signal) => {
+        if (startup.refused !== undefined) {
+          throw new Error(startup.refused);
+        }
+
         const admitted = server?.admit(caller);
         const options = {
           agent: args.agent,
@@ -1383,10 +1400,7 @@ export function useSessions(
   const [runtimes] = useState(
     () =>
       new Runtimes({
-        probe: sessionProbe(
-          place.cwd,
-          (runtime) => place.startupOf(runtime)?.agentCommand,
-        ),
+        probe: sessionProbe(place.cwd, (runtime) => place.startupOf(runtime)),
       }),
   );
 
@@ -2200,13 +2214,20 @@ export function useSessions(
     const { tabs } = sessions;
     const here = frontPlace();
 
-    if (named !== undefined && here.startupOf(named) === undefined) {
+    const refused = here.startupOf(
+      named ?? frontTab(sessions.tabs)?.agent ?? agent,
+    )?.refused;
+
+    if (
+      (named !== undefined && here.startupOf(named) === undefined) ||
+      refused !== undefined
+    ) {
       return dispatch({
         type: 'noted',
         turnId: `new-${crypto.randomUUID()}`,
         // As typed, so the refusal stands under the name it refuses.
-        command: `new ${named}`,
-        text: `No agent named ${named} · chord agents lists them`,
+        command: named === undefined ? 'new' : `new ${named}`,
+        text: refused ?? `No agent named ${named} · chord agents lists them`,
         failed: true,
       });
     }
@@ -2651,6 +2672,14 @@ export function useSessions(
       return sayResume(
         windowElsewhereRefusal(chosen.id, homePath(elsewhere.cwd, home)),
       );
+    }
+
+    const refused = chosen.opening.tabs
+      .map((tab) => here.startupOf(tab.agent)?.refused)
+      .find((line) => line !== undefined);
+
+    if (refused !== undefined) {
+      return sayResume(refused);
     }
 
     const unknown = chosen.opening.tabs.find(

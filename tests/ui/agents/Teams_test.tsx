@@ -471,3 +471,58 @@ describe('CHD-389 U3 tester: same member name across runs', () => {
       }));
   }
 });
+
+describe('a runtime whose command was refused (CHD-466)', () => {
+  const REFUSED =
+    'codex not started: agents.codex.command in .chord/settings.json: expected a string, got a number';
+  const options = (team: string) => ({
+    server: serveChord(),
+    runtimes: ['fake', 'codex'],
+    rows: 80,
+    columns: 120,
+    teams: { bugfix: team },
+    // codex refused, as its command was; nothing starts it.
+    startupOf: (name: string) =>
+      name === 'codex'
+        ? { refused: REFUSED }
+        : { agentCommand: fakeAgentCommand() },
+  });
+
+  test('/new codex is refused with the cause, and no tab opens', async () => {
+    const opened = options(BUGFIX);
+
+    try {
+      await withWindow(async (window) => {
+        await ready(window);
+        await send(window, '/new codex');
+        await window.shows(REFUSED);
+        expect(window.frame()).not.toContain('2 codex');
+      }, opened);
+    } finally {
+      await opened.server.close();
+    }
+  });
+
+  test('a member on it is refused with the cause, which its lead hears', async () => {
+    const opened = options(
+      BUGFIX.replace(/(- name: tester\n(?:.*\n)*?\s+agent: )fake/, '$1codex'),
+    );
+
+    try {
+      await withWindow(async (window) => {
+        await ready(window);
+        await send(window, 'team');
+        await window.shows('Team(bugfix) · fake · fake-large');
+        // The lead's transcript has its open_agent's refusal.
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('╭─ bugfix ─');
+        await window.shows(REFUSED.slice(0, 60));
+        expect(window.frame()).not.toContain('├─ tester');
+      }, opened);
+    } finally {
+      await opened.server.close();
+    }
+  });
+});

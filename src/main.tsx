@@ -72,6 +72,7 @@ import {
   loadSettings,
   problemLine,
   problemNote,
+  refusalLine,
   resolveStartup,
   resumedStartup,
   saveEditorMode,
@@ -156,13 +157,24 @@ const cli = chordCommand().action(async (options, named) => {
     effort: options.effort,
     permissionMode: options.permissionMode,
   };
-  const { agent, agentCommand, ...invoked } = resolveStartup(
+  const { agent, agentCommand, refused, ...invoked } = resolveStartup(
     flags,
     loaded.layers,
     DEFAULT_AGENT,
   );
+  const refusedLine =
+    refused === undefined
+      ? undefined
+      : refusalLine(agent, refused, {
+          cwd: resolve(options.cwd),
+          home,
+        });
 
-  if (agentCommand === undefined && findAgent(agent) === undefined) {
+  if (
+    refused === undefined &&
+    agentCommand === undefined &&
+    findAgent(agent) === undefined
+  ) {
     throw new ValidationError(
       `Unknown agent "${agent}". \`chord agents\` lists them.`,
     );
@@ -176,10 +188,14 @@ const cli = chordCommand().action(async (options, named) => {
     starts: readonly {
       agent: string;
       agentCommand?: Parameters<typeof missingCommand>[1];
+      /** Why it is not started at all: its command was refused. */
+      refused?: string | undefined;
     }[],
   ) => {
     for (const start of starts) {
-      const missing = await missingCommand(start.agent, start.agentCommand);
+      const missing =
+        start.refused ??
+        (await missingCommand(start.agent, start.agentCommand));
 
       if (missing !== undefined) {
         await leaveStart();
@@ -190,7 +206,7 @@ const cli = chordCommand().action(async (options, named) => {
   };
 
   if (options.print !== undefined) {
-    await refuseMissing([{ agent, agentCommand }]);
+    await refuseMissing([{ agent, agentCommand, refused: refusedLine }]);
 
     const mcp = await loadMcpServers({
       layers: loaded.layers,
@@ -458,6 +474,10 @@ const cli = chordCommand().action(async (options, named) => {
           layers,
         );
 
+        if (found.refused !== undefined) {
+          return { refused: refusalLine(name, found.refused, shown) };
+        }
+
         return found.agentCommand === undefined && findAgent(name) === undefined
           ? undefined
           : {
@@ -509,10 +529,15 @@ const cli = chordCommand().action(async (options, named) => {
   }
 
   await refuseMissing(
-    resumes?.map((tab) => ({
-      agent: tab.agent,
-      agentCommand: tab.place.startupOf(tab.agent)!.agentCommand,
-    })) ?? [{ agent, agentCommand }],
+    resumes?.map((tab) => {
+      const start = tab.place.startupOf(tab.agent)!;
+
+      return {
+        agent: tab.agent,
+        agentCommand: start.agentCommand,
+        refused: start.refused,
+      };
+    }) ?? [{ agent, agentCommand, refused: refusedLine }],
   );
 
   const shown = { cwd, home };

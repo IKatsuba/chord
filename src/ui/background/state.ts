@@ -54,6 +54,11 @@ export type BackgroundAction =
    */
   | { readonly type: 'background_opened'; readonly over?: readonly string[] }
   | { readonly type: 'background_closed' }
+  /**
+   * The window took another size: the frame is found again from the `❯`,
+   * a tall row from its first line (CHD-430).
+   */
+  | { readonly type: 'background_resized' }
   /** ↑ ↓ in the view put the `❯` on `focus`. */
   | {
       readonly type: 'background_focused';
@@ -133,6 +138,17 @@ export function reduceBackground(
             ? {}
             : { over: action.over },
       };
+    case 'background_resized': {
+      const view = state.backgroundView;
+
+      if (view?.top === undefined && view?.laid === undefined) {
+        return state;
+      }
+
+      const { top: _, laid: __, ...kept } = view;
+
+      return { ...state, backgroundView: kept };
+    }
     case 'background_closed': {
       const { backgroundView: _, ...rest } = state;
 

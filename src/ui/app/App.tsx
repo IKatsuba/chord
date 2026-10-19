@@ -544,6 +544,12 @@ export function App({
     [agentRows.map((row) => `${row.name}:${row.colour}`).join('\n'), colours],
   );
 
+  // Another size wraps the background's rows again: the frame is found
+  // again from the `❯`, a tall row from its first line (CHD-430).
+  useEffect(() => {
+    dispatch({ type: 'background_resized' });
+  }, [columns, rows]);
+
   // A list gone while it had the keys hands them back to the box; a summary
   // line gone gives the `❯` back to the agent picked.
   useEffect(() => {

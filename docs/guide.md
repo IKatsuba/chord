@@ -264,6 +264,9 @@ scrolls under its pinned title; long lines wrap, and the answers stay on
 screen. The request takes the room left, at most half the window's rows;
 the transcript gives way first. With three answers and no asker row, it
 gets 6 rows at 80×24 and 20 at 120×40.
+A member's asker row reads `tester · bugfix asks`, the name bold in its
+colour and the team dim; between turns, `tester · bugfix asks · between
+turns`. A child's stays `docs asks`.
 
 Question, form and link headings name who asks, wrapped without cutting.
 In a turn, main uses its runtime: `claude asks you 2 questions`. A task

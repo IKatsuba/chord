@@ -1,0 +1,40 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › leftask
+
+ ⏺ Write(notes/left.md)
+   ⎿  Waiting…
+
+ ⏺ I asked; the turn ends with it open.
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                                                            │
+│ Write notes/left.md                                                                                                  │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│   1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ ctrl+x a to answer                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer · ? for shortcuts           Fake Large with a 1M context window · medium · 1% used

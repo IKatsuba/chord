@@ -225,7 +225,15 @@ export interface WindowView {
    * earlier, or, when `probe` is set, from one opened for the purpose and
    * closed. Undefined when none is known and `probe` is not set.
    */
-  offer(runtime: string, probe: boolean): Promise<RuntimeOffer | undefined>;
+  offer(
+    runtime: string,
+    probe: boolean,
+    /**
+     * The session asking, by its key: the directory it works in decides
+     * how the runtime starts, or that it does not (CHD-466).
+     */
+    key?: number,
+  ): Promise<RuntimeOffer | undefined>;
   /** Starts a task agent for the caller: the tab's session or its child. */
   spawn(caller: Caller, args: SpawnArgs): Promise<SpawnAnswer>;
   /** Opens a long-lived agent for the session in tab `key`. */
@@ -643,6 +651,7 @@ export interface AgentRow {
 export async function agentsAnswer(
   window: WindowView,
   agent?: string,
+  key?: number,
 ): Promise<AgentsAnswer> {
   const runtimes = window.runtimes();
 
@@ -660,12 +669,14 @@ export async function agentsAnswer(
       };
     }
 
-    return { agents: [row(agent, await window.offer(agent, true))] };
+    return { agents: [row(agent, await window.offer(agent, true, key))] };
   }
 
   return {
     agents: await Promise.all(
-      runtimes.map(async (name) => row(name, await window.offer(name, false))),
+      runtimes.map(async (name) =>
+        row(name, await window.offer(name, false, key)),
+      ),
     ),
   };
 }
@@ -874,7 +885,7 @@ const listAgents: Register = (server, caller) =>
         caller,
         'list_agents',
         input,
-        await agentsAnswer(caller.window, input.agent),
+        await agentsAnswer(caller.window, input.agent, caller.key),
       ),
   );
 

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ .chord/settings.json: "agents.codex.command": expected a string, got a
+   number · codex will not start
+
+ › /new codex
+ ⏺ codex not started: agents.codex.command in .chord/settings.json: expected a
+   string, got a number
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

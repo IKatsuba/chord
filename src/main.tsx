@@ -72,6 +72,7 @@ import {
   loadSettings,
   problemLine,
   problemNote,
+  refusalLine,
   resolveStartup,
   resumedStartup,
   saveEditorMode,
@@ -156,13 +157,24 @@ const cli = chordCommand().action(async (options, named) => {
     effort: options.effort,
     permissionMode: options.permissionMode,
   };
-  const { agent, agentCommand, ...invoked } = resolveStartup(
+  const { agent, agentCommand, refused, ...invoked } = resolveStartup(
     flags,
     loaded.layers,
     DEFAULT_AGENT,
   );
+  const refusedLine =
+    refused === undefined
+      ? undefined
+      : refusalLine(agent, refused, {
+          cwd: resolve(options.cwd),
+          home,
+        });
 
-  if (agentCommand === undefined && findAgent(agent) === undefined) {
+  if (
+    refused === undefined &&
+    agentCommand === undefined &&
+    findAgent(agent) === undefined
+  ) {
     throw new ValidationError(
       `Unknown agent "${agent}". \`chord agents\` lists them.`,
     );
@@ -176,21 +188,28 @@ const cli = chordCommand().action(async (options, named) => {
     starts: readonly {
       agent: string;
       agentCommand?: Parameters<typeof missingCommand>[1];
+      /** Why it is not started at all: its command was refused. */
+      refused?: string | undefined;
     }[],
   ) => {
     for (const start of starts) {
-      const missing = await missingCommand(start.agent, start.agentCommand);
+      const missing =
+        start.refused ??
+        (await missingCommand(start.agent, start.agentCommand));
 
       if (missing !== undefined) {
         await leaveStart();
-        console.error(missing);
+        // As every line chord says before its window, a missing command's too.
+        console.error(
+          start.refused === undefined ? missing : `chord: ${missing}`,
+        );
         process.exit(1);
       }
     }
   };
 
   if (options.print !== undefined) {
-    await refuseMissing([{ agent, agentCommand }]);
+    await refuseMissing([{ agent, agentCommand, refused: refusedLine }]);
 
     const mcp = await loadMcpServers({
       layers: loaded.layers,
@@ -457,6 +476,17 @@ const cli = chordCommand().action(async (options, named) => {
           },
           layers,
         );
+        // The window's own agent starts as it was invoked, but this place's
+        // files may refuse its command, unless a flag gave it one.
+        const refused =
+          found.refused ??
+          (name === agent && flags.agentCommand === undefined
+            ? resolveStartup({ agent: name }, layers, name).refused
+            : undefined);
+
+        if (refused !== undefined) {
+          return { refused: refusalLine(name, refused, shown) };
+        }
 
         return found.agentCommand === undefined && findAgent(name) === undefined
           ? undefined
@@ -509,10 +539,19 @@ const cli = chordCommand().action(async (options, named) => {
   }
 
   await refuseMissing(
-    resumes?.map((tab) => ({
-      agent: tab.agent,
-      agentCommand: tab.place.startupOf(tab.agent)!.agentCommand,
-    })) ?? [{ agent, agentCommand }],
+    resumes?.map((tab) => {
+      const start = tab.place.startupOf(tab.agent)!;
+
+      return {
+        agent: tab.agent,
+        agentCommand: start.agentCommand,
+        refused: start.refused,
+      };
+    }) ?? [
+      // A session resumed alone works in its record's directory, whose
+      // files may refuse what the command line's would not.
+      { agent, agentCommand, refused: first.startupOf(agent)?.refused },
+    ],
   );
 
   const shown = { cwd, home };
@@ -545,6 +584,7 @@ const cli = chordCommand().action(async (options, named) => {
       agent={agent}
       cwd={resume?.cwd ?? options.cwd}
       agentCommand={agentCommand}
+      typedCommand={flags.agentCommand}
       starting={{
         model: starting(model),
         effort: starting(effort),
@@ -636,7 +676,10 @@ const cli = chordCommand().action(async (options, named) => {
       ? windowMessage(saving.id)
       : resumeMessage(resumable, {
           agent,
-          ...(agentCommand === undefined ? {} : { agentCommand }),
+          // The flag's command alone: the settings give theirs again (Q56).
+          ...(flags.agentCommand === undefined
+            ? {}
+            : { agentCommand: flags.agentCommand }),
         });
 
   if (resuming !== undefined) {

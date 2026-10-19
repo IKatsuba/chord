@@ -8,6 +8,7 @@ import {
   readRecords,
   type ResumableTab,
 } from '../../../src/session/sessions.ts';
+import { serveChord } from '../../../src/server/server.ts';
 import { App } from '../../../src/ui/app/App.tsx';
 import * as ansi from '../../../src/ui/theme/Ansi.tsx';
 import { terminalOptions } from '../../../src/ui/app/renderer.tsx';
@@ -1423,6 +1424,114 @@ test('several resumed sessions open as tabs in order, the first in front, each o
       await session.close();
     }
 
+    await rm(dir, { recursive: true });
+  }
+});
+
+test("a runtime's models are read where the asking session works: never started where its command is refused, read where it is not (CHD-466)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
+  const here = join(dir, 'here');
+  const there = join(dir, 'there');
+  const sessions: Session[] = [];
+  const server = serveChord();
+  const start = { agentCommand: fakeAgentCommand() };
+  const refused = 'codex not started: refused there';
+  // Codex starts on the fake here; there, its command was refused.
+  const atHere = {
+    cwd: here,
+    startupOf: () => start,
+    mcpServers: [],
+    mcpIgnored: [],
+  };
+  const atThere = {
+    ...atHere,
+    cwd: there,
+    startupOf: (agent: string) => (agent === 'codex' ? { refused } : start),
+  };
+
+  await mkdir(here);
+  await mkdir(there);
+
+  const app = await draw(
+    <App
+      agent='fake'
+      cwd={here}
+      home={undefined}
+      stateDir={join(dir, 'state')}
+      agentCommand={fakeAgentCommand()}
+      startupOf={atHere.startupOf}
+      server={server}
+      runtimes={['fake', 'codex']}
+      resumes={[
+        {
+          agent: 'fake',
+          resume: { sessionId: crypto.randomUUID(), cwd: there },
+          place: atThere,
+        },
+        {
+          agent: 'fake',
+          resume: { sessionId: crypto.randomUUID(), cwd: here },
+          place: atHere,
+        },
+      ]}
+      open={async (options) => {
+        const session = await openSession(options);
+
+        sessions.push(session);
+
+        return session;
+      }}
+    />,
+    { rows: 80, columns: 160 },
+  );
+
+  const frame = () => app.frame();
+  const ask = async () => {
+    await app.write('codexmodels');
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await app.write('\r');
+  };
+
+  try {
+    await until('two sessions', () => sessions.length === 2);
+    await until('the past', () => frame().includes('Read it.'));
+    expect(frame()).toContain(there);
+
+    // Asked first there, nothing is read: were the window's place asked,
+    // the fake would start as codex and its models would show.
+    await ask();
+    await until('the answer there', () => frame().includes('Codex read:'));
+    expect(frame()).toContain(refused);
+    expect(frame()).not.toContain('Fake Small');
+
+    await app.write(CTRL_X);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await app.write('2');
+    await until('the second tab', () => !frame().includes(there));
+    await ask();
+    await until('the answer here', () => frame().includes('Codex read:'));
+    await until('its models', () => frame().includes('Fake Small'));
+    expect(frame()).not.toContain(refused);
+
+    // What was read here is not what the tab there is told.
+    await app.write(CTRL_X);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    await app.write('1');
+    await until('the first tab', () => frame().includes(there));
+    await ask();
+    await until(
+      'the second answer there',
+      () => frame().split('Codex read:').length === 3,
+    );
+    expect(frame()).not.toContain('Fake Small');
+  } finally {
+    await app.unmount();
+
+    for (const session of sessions) {
+      await session.close();
+    }
+
+    await server.close();
     await rm(dir, { recursive: true });
   }
 });

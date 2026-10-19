@@ -352,6 +352,10 @@ function resumeOf(record: SessionRecord): Resume {
 export function resumeCommand(
   agent: string,
   sessionId: string,
+  /**
+   * The `--agent-command` the person gave, said again; a command from the
+   * settings is not, as the settings give it again (the owner's Q56).
+   */
   agentCommand?: string,
 ): string {
   const words = ['chord', agent];
@@ -380,7 +384,11 @@ export interface ResumableTab {
  */
 export function resumeMessage(
   tabs: readonly ResumableTab[],
-  override?: { readonly agent: string; readonly agentCommand?: string },
+  override?: {
+    readonly agent: string;
+    /** The `--agent-command` the person gave, for `agent` alone. */
+    readonly agentCommand?: string;
+  },
 ): string | undefined {
   const commands = tabs.map(({ agent, sessionId }) =>
     resumeCommand(

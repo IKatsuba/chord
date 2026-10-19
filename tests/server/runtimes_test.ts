@@ -182,7 +182,9 @@ test("the probe reads the fake agent's two models, three modes and its model's e
   const dir = await mkdtemp(join(tmpdir(), 'chord-probe-'));
 
   try {
-    const probe = sessionProbe(dir, () => fakeAgentCommand());
+    const probe = sessionProbe(dir, () => ({
+      agentCommand: fakeAgentCommand(),
+    }));
 
     expect(await probe('fake', new AbortController().signal)).toStrictEqual({
       models: {
@@ -213,4 +215,21 @@ test("the probe reads the fake agent's two models, three modes and its model's e
   } finally {
     await rm(dir, { recursive: true });
   }
+});
+
+test('the probe starts nothing for a runtime whose command was refused, and says why (CHD-466)', async () => {
+  let asked = false;
+  const probe = sessionProbe('/nowhere', () => {
+    asked = true;
+
+    return {
+      refused:
+        'codex not started: agents.codex.command in .chord/settings.json: expected a string, got a number',
+    };
+  });
+
+  await expect(probe('codex', new AbortController().signal)).rejects.toThrow(
+    'codex not started',
+  );
+  expect(asked).toBeTrue();
 });

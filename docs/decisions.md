@@ -2342,7 +2342,7 @@ at 120×40 and 80×24 against the fake agent's `--tokens-only`.
   asked for and the agent's word holds. The fake's `--silent-set-mode` now
   answers the mode's config option that way too, which is what the window
   sends, so the Codex tests go through the enricher.
-- **@pydantic/genai-prices for prices and windows**, exact-pinned at 0.1.9
+- **@pydantic/genai-prices for prices and windows**, exact-pinned at 0.1.13
   as it is pre-1.0. Its data is in the package, so nothing is fetched and
   the data moves with the version, as the registry's does with its source;
   `updatePrices` is never called. It matches a model by rules per provider,

@@ -22,7 +22,7 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@opentui/core": "0.6.0",
     "@opentui/react": "0.6.0",
-    "@pydantic/genai-prices": "0.1.9",
+    "@pydantic/genai-prices": "0.1.13",
     "@renovatebot/pep440": "^5.0.1",
     "@replit/codemirror-vim-core": "0.1.0",
     "@resvg/resvg-wasm": "^2.6.2",

@@ -94,6 +94,7 @@ import {
   position,
   runName,
   shownKey,
+  shownWait,
   type Tab,
   tabOf,
   type TabWait,
@@ -2614,7 +2615,7 @@ export function useSessions(
 
       return {
         agent: tab.agent,
-        wait: mergedWait(tab),
+        wait: shownWait(tab),
         front: tab.key === sessions.tabs.front,
         prompt:
           first?.kind === 'user'
@@ -3113,7 +3114,7 @@ export function useSessions(
         number: index + 1,
         agent: tab.agent,
         front: tab.key === tabs.front,
-        glyphs: tabGlyphs(mergedWait(tab)),
+        glyphs: tabGlyphs(shownWait(tab)),
       })),
       homePath(frontPlace().cwd, home),
       // Inside the header's padding.

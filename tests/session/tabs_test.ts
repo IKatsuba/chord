@@ -33,6 +33,7 @@ import {
   runName,
   show,
   shownKey,
+  shownWait,
   tabName,
   tabOf,
   type Tabs,
@@ -1663,4 +1664,39 @@ test("a tab's merged wait last stopped when the last of its agents did, and exit
   tabs = heard(tabs, 1, [{ type: 'disconnected', turnId: '' }], 9000);
 
   expect(mergedWait(tabOf(tabs, 1)!).exited).toStrictEqual(true);
+});
+
+test("the picker and the strip draw a message only a child has not seen, which the tab's waits leave out (CHD-471)", () => {
+  const message = (turnId: string): ConversationEvent => ({
+    type: 'prompt',
+    turnId,
+    text: 'hi',
+    at: 0,
+    from: { name: 'main', reachable: true },
+  });
+  let tabs = withChildren(opened('claude'), 1, 'parser', 'docs');
+
+  tabs = heard(tabs, 1, [up]);
+  tabs = heard(tabs, 3, [up, message('m')], 4000);
+
+  // The tab's waits, its notices and ctrl+x a, leave it out; what is drawn has it.
+  expect(mergedWait(tabOf(tabs, 1)!).unseen).toStrictEqual(undefined);
+  expect(attentionOrder(tabs)).toStrictEqual([]);
+  expect(shownWait(tabOf(tabs, 1)!).unseen?.kind).toStrictEqual('message');
+  expect(shownWait(tabOf(tabs, 1)!).unseen?.from).toStrictEqual('@main');
+
+  // A failure or a reply goes before it, as the tab's waits have them.
+  tabs = heard(tabs, 2, [up, prompt('p'), failed('p')], 6000);
+
+  expect(shownWait(tabOf(tabs, 1)!).unseen?.kind).toStrictEqual('failed');
+  expect(shownWait(tabOf(tabs, 1)!)).toStrictEqual(mergedWait(tabOf(tabs, 1)!));
+
+  // Seen, the message is gone from what is drawn.
+  tabs = heard(withChildren(opened('claude'), 1, 'parser'), 2, [
+    up,
+    message('m'),
+  ]);
+
+  expect(shownWait(tabOf(tabs, 1)!).unseen?.kind).toStrictEqual('message');
+  expect(shownWait(tabOf(pick(tabs, 2), 1)!).unseen).toStrictEqual(undefined);
 });

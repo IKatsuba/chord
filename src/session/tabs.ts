@@ -328,6 +328,27 @@ export function mergedWait<C>(tab: Tab<C>): TabWait {
 }
 
 /**
+ * The tab's waits as the sessions picker and the tab strip draw them: as
+ * `mergedWait` has them, and with nothing else unseen, the earliest message
+ * its session or any child has not seen (CHD-471). Only what is drawn: the
+ * notices, the hint and `ctrl+x a` read `mergedWait`, where a message
+ * between its agents is no wait of the tab's.
+ */
+export function shownWait<C>(tab: Tab<C>): TabWait {
+  const merged = mergedWait(tab);
+  const message =
+    merged.unseen === undefined
+      ? earliest(
+          waitsOf(tab).map((wait) =>
+            wait.unseen?.kind === 'message' ? wait.unseen : undefined,
+          ),
+        )
+      : undefined;
+
+  return message === undefined ? merged : { ...merged, unseen: message };
+}
+
+/**
  * The child of `tab` whose wait `mergedWait` names, the one asking longest;
  * none when it is the tab's own or nobody asks.
  */

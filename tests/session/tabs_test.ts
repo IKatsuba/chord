@@ -1501,3 +1501,71 @@ test("from an agent put in front by hand, attention goes first to the longest wa
   expect(attend(first)?.front).toStrictEqual(2);
   expect(attend(attend(first)!)?.front).toStrictEqual(3);
 });
+
+describe('CHD-431 Q46 tester: attention after a hand pick', () => {
+  function withChild(): { tabs: Tabs<string>; child: number } {
+    const openedChild = openChild(
+      opened('main', 'other', 'quiet'),
+      1,
+      { id: 'worker', name: 'worker', runtime: 'fake', openedAt: 0 },
+      'child conversation',
+    )!;
+    let tabs = heard(openedChild.tabs, 1, [up, prompt('a'), asked('a', 'a')]);
+
+    tabs = heard(tabs, 2, [up, prompt('b'), asked('b', 'b')], 5000);
+    tabs = heard(tabs, openedChild.key, [up, prompt('c'), ended('c')], 9000);
+
+    return { tabs, child: openedChild.key };
+  }
+
+  test('a hand-picked child reaches the oldest wait and then walks across tabs', () => {
+    const { tabs, child } = withChild();
+    const first = attend(pick(tabs, child))!;
+    const second = attend(first)!;
+
+    expect(shownKey(first)).toBe(1);
+    expect(shownKey(second)).toBe(2);
+    expect(shownKey(attend(second)!)).toBe(1);
+  });
+
+  test('picking a waiting child excludes itself and names the oldest other wait', () => {
+    const { tabs, child } = withChild();
+    const waiting = heard(tabs, child, [prompt('d'), asked('d', 'd')], 15000);
+    const first = attend(pick(waiting, child))!;
+    const second = attend(first)!;
+    const third = attend(second)!;
+
+    expect([shownKey(first), shownKey(second), shownKey(third)]).toEqual([
+      1,
+      2,
+      child,
+    ]);
+    expect(shownKey(attend(third)!)).toBe(1);
+  });
+
+  test('another hand pick resets a previous walk to the oldest remaining wait', () => {
+    const { tabs, child } = withChild();
+    const walked = attend(attend(pick(tabs, child))!)!;
+
+    expect(shownKey(walked)).toBe(2);
+    expect(shownKey(attend(pick(walked, 3))!)).toBe(1);
+    expect(shownKey(attend(pick(walked, 1))!)).toBe(2);
+  });
+
+  test('without waits, unseen replies and failures are visited once in age order', () => {
+    let tabs = heard(opened('a', 'b', 'quiet'), 1, [
+      up,
+      prompt('a'),
+      ended('a'),
+    ]);
+
+    tabs = heard(tabs, 2, [up, prompt('b'), failed('b')], 5000);
+
+    const first = attend(pick(tabs, 3))!;
+    const second = attend(first)!;
+
+    expect(shownKey(first)).toBe(1);
+    expect(shownKey(second)).toBe(2);
+    expect(attend(second)).toBeUndefined();
+  });
+});

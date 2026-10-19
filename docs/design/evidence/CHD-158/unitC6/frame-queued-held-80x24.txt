@@ -1,0 +1,24 @@
+
+ ››› Waiting for permission… (1m 26s)
+ ← from Watch the build · fake · report · after your answer: Watchin...e build.
+ ← from Watch the deploy · fake · report · after your answer: Watchin... build.
+ ← from Watch the build · fake · report · after your answer: Watchin...e build.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 8 in this tab                                                   │
+│                                                                              │
+│ ❯ dev server errors  monitor      running 1m 46s · 1 event    main           │
+│   CI run 4812        monitor      running 1m 46s · no events  main           │
+│   Watch the build    task · fake  ✓ reported after 1m         main           │
+│   Watch the deploy   task · fake  ✓ reported after 1m         main           │
+│   Watch the build    task · fake  ✓ reported after 1m         main           │
+│ ↓ dev server errors  monitor      running 1m 31s · 1 event    main           │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer    Fake Large with a 1M context… · 2% used
+    background  ● 1 task asking · 4 monitors running · ✓ 3 tasks done

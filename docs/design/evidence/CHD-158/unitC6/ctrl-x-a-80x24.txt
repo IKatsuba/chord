@@ -1,0 +1,24 @@
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ››› Waiting for permission… (1m 32s)
+ ← from Watch the build · fake · report · after your answer: Watchin...e build.
+ ← from Watch the deploy · fake · report · after your answer: Watchin... build.
+ ← from Watch the build · fake · report · after your answer: Watchin...e build.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Fix the tokenizer) · fake asks · between turns                         │
+│ Edit src/parse/tokenize.ts                                                   │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 2% used
+    background  ● 1 task asking · 4 monitors running · ✓ 3 tasks done

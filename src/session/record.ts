@@ -907,8 +907,9 @@ interface Child {
 /**
  * Writes a conversation's sessions into their records as they go. A session
  * opened from a record goes on in that file; any other starts one of its own.
- * Nothing is written until a prompt is, so a session only looked at leaves no
- * record, or no trace in the one it was opened from.
+ * Nothing is written until a prompt is, or the agent works on its own, so a
+ * session only looked at leaves no record, or no trace in the one it was
+ * opened from.
  */
 export class FileRecording implements Recording {
   readonly #dir: string;
@@ -1008,12 +1009,7 @@ export class FileRecording implements Recording {
       return;
     }
 
-    this.#prompted = true;
-
-    for (const entry of this.#held.splice(0)) {
-      this.#add(entry);
-    }
-
+    this.#begun();
     this.#add({
       type: 'prompt',
       turnId,
@@ -1044,6 +1040,12 @@ export class FileRecording implements Recording {
 
     if (event.type === 'elicitation_requested') {
       this.#asking.set(event.elicitation.id, event.elicitation);
+    }
+
+    // The agent's own cycle is work the session spent on, as a prompt's
+    // turn is, though nobody sent one.
+    if (event.type === 'cycle_started') {
+      this.#begun();
     }
 
     const entry =
@@ -1097,6 +1099,15 @@ export class FileRecording implements Recording {
               }
           : answer,
     };
+  }
+
+  /** Work began in the session: what was held for it is kept from now. */
+  #begun(): void {
+    this.#prompted = true;
+
+    for (const entry of this.#held.splice(0)) {
+      this.#add(entry);
+    }
   }
 
   flushed(): Promise<void> {

@@ -4,7 +4,13 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { turnCost } from '../../src/session/prices.ts';
-import { readPast, type RecordEntry } from '../../src/session/record.ts';
+import type { ConversationEvent } from '../../src/session/conversation.ts';
+import {
+  FileRecording,
+  readPast,
+  type RecordEntry,
+} from '../../src/session/record.ts';
+import type { Session } from '../../src/session/session.ts';
 import { readRecords } from '../../src/session/sessions.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
@@ -197,4 +203,86 @@ test("a cost that comes after its turn's answer, as Claude's can, is still that 
       true,
     ]);
     expect(costs(entries)).toStrictEqual([turn(0.0125), turn(0.0125)]);
+  }));
+
+/** A session as far as its recording reads it, `record` its file if resumed. */
+const looked = (record?: string) =>
+  ({
+    id: 's',
+    agent: 'claude',
+    cwd: '/',
+    ...(record === undefined ? {} : { record }),
+    history: () => [],
+    models: () => ({ current: 'm', available: [] }),
+    modes: () => undefined,
+    options: () => [],
+  }) as unknown as Session;
+
+/** The agent's own cycle, with no prompt sent, as the conversation reports it. */
+const cycle: ConversationEvent[] = [
+  { type: 'cycle_started', turnId: 'c1', at: 2 },
+  {
+    type: 'update',
+    turnId: 'c1',
+    update: {
+      sessionUpdate: 'usage_update',
+      used: 1,
+      size: 2,
+      cost: { amount: 0.01, currency: 'USD' },
+    },
+  },
+  {
+    type: 'result',
+    turnId: 'c1',
+    result: { status: 'completed', stopReason: 'end_turn' },
+  },
+  {
+    type: 'usage',
+    turnId: 'c1',
+    usage: {},
+    model: 'm',
+    cost: { amount: 0.01, currency: 'USD' },
+  },
+];
+
+test("an agent's own cycle is kept with no prompt sent, in a new session and in one resumed, as what it spent counts", () =>
+  withDir(async (dir) => {
+    const fresh = new FileRecording(join(dir, 'state'), () => {});
+
+    fresh.opened(looked());
+    cycle.forEach((event) => fresh.heard(event));
+    await fresh.flushed();
+
+    const kept = await readPast(fresh.path!);
+
+    expect(kept.map((entry) => entry.type)).toStrictEqual([
+      'session',
+      'opened',
+      'state',
+      'update',
+      'result',
+      'usage',
+    ]);
+
+    // Opened again from its record, the cycle goes on in it.
+    const resumed = new FileRecording(join(dir, 'state'), () => {});
+
+    resumed.opened(looked(fresh.path!));
+    cycle.forEach((event) => resumed.heard(event));
+    await resumed.flushed();
+
+    expect(
+      (await readPast(fresh.path!)).slice(kept.length).map((each) => each.type),
+    ).toStrictEqual(['opened', 'state', 'update', 'result', 'usage']);
+  }));
+
+test('a session only looked at, with no prompt and no cycle, leaves no record', () =>
+  withDir(async (dir) => {
+    const recording = new FileRecording(join(dir, 'state'), () => {});
+
+    recording.opened(looked());
+    recording.heard(cycle[1]!);
+    await recording.flushed();
+
+    expect(await readRecords(join(dir, 'state'))).toStrictEqual([]);
   }));

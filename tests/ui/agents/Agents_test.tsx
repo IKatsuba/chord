@@ -1441,3 +1441,100 @@ describe('CHD-158 C5 tester: a task returns with input open', () => {
     });
   }
 });
+
+describe('CHD-466 U2 tester: refusal before cached offers and child starts', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a refusal beats a warm probe and child/task starts at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      const callers: Parameters<typeof admit>[0][] = [];
+      let refused = false;
+      const reason = 'codex not started: command refused in this project';
+
+      server.admit = (caller) => {
+        callers.push(caller);
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+
+            const main = callers.find((caller) => caller.agent === undefined);
+
+            assert(main);
+            expect(
+              await main.window.offer('codex', true, main.key),
+            ).toHaveProperty('models');
+            await main.window.open(main.key, {
+              agent: 'fake',
+              name: 'worker',
+              prompt: 'text',
+            });
+            await until('child admitted', () =>
+              callers.some((caller) => caller.agent !== undefined),
+            );
+
+            const child = callers.find((caller) => caller.agent !== undefined);
+
+            assert(child);
+            await until('child connected', () =>
+              main.window
+                .sessions()
+                .some((session) =>
+                  session.children.some(
+                    (item) =>
+                      item.id === child.agent && item.model !== undefined,
+                  ),
+                ),
+            );
+
+            refused = true;
+
+            for (const caller of [main, child]) {
+              for (const probe of [false, true]) {
+                expect(
+                  await caller.window.offer('codex', probe, caller.key),
+                ).toEqual({ error: reason });
+              }
+
+              expect(
+                await caller.window.spawn(caller, {
+                  agent: 'codex',
+                  prompt: 'text',
+                }),
+              ).toEqual({ error: reason });
+            }
+
+            expect(
+              await main.window.open(main.key, {
+                agent: 'codex',
+                prompt: 'text',
+              }),
+            ).toEqual({ error: reason });
+            await send(window, '/new codex');
+            await window.shows('codex not started:');
+            expect(window.frame()).not.toContain('2 codex');
+          },
+          {
+            server,
+            runtimes: ['fake', 'codex'],
+            columns,
+            rows,
+            startupOf: (agent) =>
+              agent === 'codex' && refused
+                ? { refused: reason, agentCommand: fakeAgentCommand() }
+                : { agentCommand: fakeAgentCommand() },
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

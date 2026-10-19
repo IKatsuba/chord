@@ -268,6 +268,30 @@ export const TASKS = {
     return 'end_turn';
   },
 
+  // codex's models and modes, which chord reads for the directory the
+  // asking session works in (CHD-466).
+  async codexmodels(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      const answer = await callChord(turn, client, 'list_agents', {
+        agent: 'codex',
+      });
+
+      await turn.say(`Codex read: ${answer ?? 'failed'}`);
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // The same lists as codex-acp calls them (CHD-377), after a call of
   // another server's with the same arguments as the first, which chord
   // served none of.

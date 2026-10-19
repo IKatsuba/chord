@@ -399,7 +399,7 @@ export function useSessions(
       return startup.refused;
     }
 
-    const known = await view.offer(args.agent, false);
+    const known = await view.offer(args.agent, false, key);
 
     if (
       args.model !== undefined &&
@@ -1397,12 +1397,32 @@ export function useSessions(
         heard: (key, event, wait) => hear.current(key, event, wait),
       }),
   );
-  const [runtimes] = useState(
-    () =>
-      new Runtimes({
-        probe: sessionProbe(place.cwd, (runtime) => place.startupOf(runtime)),
-      }),
-  );
+  // What each runtime offers, read in each directory's place apart: its
+  // files say how a runtime starts there, or that it does not (CHD-466).
+  const runtimesAt = useRef(new Map<Place, Runtimes>());
+  const runtimesOf = (at: Place): Runtimes => {
+    const known = runtimesAt.current.get(at);
+
+    if (known !== undefined) {
+      return known;
+    }
+
+    const made = new Runtimes({
+      probe: sessionProbe(at.cwd, (runtime) => at.startupOf(runtime)),
+    });
+
+    runtimesAt.current.set(at, made);
+
+    return made;
+  };
+
+  /** The place of the session `key`, a child's its tab's. */
+  const placeOfSession = (key: number | undefined) =>
+    placeOf(
+      key === undefined
+        ? undefined
+        : (agentOf(sessions.tabs, key)?.tab.key ?? key),
+    );
 
   /** What chord's MCP server reads of the window, when a session calls. */
   const view: WindowView = {
@@ -1425,11 +1445,24 @@ export function useSessions(
         };
       }),
     runtimes: () => runtimeNames,
-    offer: (runtime, probe) => {
-      const session = sessions.tabs.tabs.find(
-        (tab) =>
-          tab.agent === runtime && tab.conversation.session !== undefined,
-      )?.conversation.session;
+    offer: (runtime, probe, key) => {
+      const at = placeOfSession(key);
+      const refused = at.startupOf(runtime)?.refused;
+
+      // Refused where the asking session works: nothing is read, nor
+      // started to be.
+      if (refused !== undefined) {
+        return Promise.resolve({ error: refused });
+      }
+
+      const runtimes = runtimesOf(at);
+      const tab = sessions.tabs.tabs.find(
+        (each) =>
+          each.agent === runtime &&
+          each.conversation.session !== undefined &&
+          placeOf(each.key) === at,
+      );
+      const session = tab?.conversation.session;
 
       if (session !== undefined) {
         runtimes.heard(runtime, {
@@ -1546,7 +1579,11 @@ export function useSessions(
 
     return () => {
       forget();
-      runtimes.close();
+
+      for (const runtimes of runtimesAt.current.values()) {
+        runtimes.close();
+      }
+
       void sessions.closeAll().catch(() => {});
     };
   }, [sessions]);

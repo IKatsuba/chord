@@ -187,11 +187,11 @@ export function settle(
   const entries =
     added.length === 0 ? state.entries : [...state.entries, ...added];
 
-  // A task agent's requests outlive the turn, as the task does.
-  const kept = taskWaits(
-    state,
-    state.turn.status === 'awaiting_permission' ? state.turn.permissions : [],
-  );
+  // Every permission still open outlives the turn: a task agent's as the
+  // task does, and the agent's own, which still waits on the person, now
+  // between turns (the owner's Q44, CHD-158).
+  const kept =
+    state.turn.status === 'awaiting_permission' ? state.turn.permissions : [];
   const asking = state.asking.filter((wait) => wait.subagentId !== undefined);
 
   return {

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › leftask
+
+ ⏺ Write(notes/left.md)
+
+ ⏺ I asked; the turn ends with it open.
+   ⎿  Allowed Write notes/left.md · Allow
+
+ ⏺ Permission: allow.
+
+ › now tell me what the notes file says
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

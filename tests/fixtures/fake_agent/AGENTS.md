@@ -12,7 +12,8 @@
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
-  `bigask`, `bigasktwice`, `overlapask`, `mainbetween`, `mainbetweentwice`),
+  `bigask`, `bigasktwice`, `overlapask`, `mainbetween`, `leftask`,
+  `mainbetweentwice`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashcut`, `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
@@ -36,7 +37,8 @@
   `cutcalls`, `cutcallsback`, `tasklong`, `tasktwo`, `taskwait`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `plan`, `proposal`,
-  `mainbetween`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `teamtask`,
+  `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`,
+  `teamtask`,
   `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
@@ -72,6 +74,8 @@
   `mainbetween` asks for a write after its answer, and `mainbetweentwice`
   asks for a second write at once, then pauses at most half a second before
   reporting the answer;
+  `leftask` asks permission to write during its turn, ends with it still
+  open, then reports the answer once it comes;
   `twins` asks a permission with two `allow_once` options and says the id
   picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the

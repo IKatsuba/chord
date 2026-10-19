@@ -1,0 +1,24 @@
+
+ ⏺ Write(notes/left.md)
+   ⎿  Waiting…
+
+ ⏺ I asked; the turn ends with it open.
+
+ ››› Waiting for permission… (12s)
+ › after your answer: now tell me what the notes file says
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                    │
+│ Write notes/left.md                                                          │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

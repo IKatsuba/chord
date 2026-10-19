@@ -1194,3 +1194,93 @@ describe('CHD-158 tester: interrupting a mixed held queue', () => {
     }
   });
 });
+
+describe("a permission left open at its turn's end (CHD-158 C4, the owner's Q44)", () => {
+  test('stays answerable between turns, the queue behind it, through what follows', () =>
+    withWindow(async (window) => {
+      await send(window, 'leftask');
+      // In its turn it has the keys.
+      await window.shows('❯ 1. Allow');
+      await window.shows('I asked; the turn ends with it open.');
+      // Its turn over, it waits between turns, without the keys.
+      await window.shows('main asks · between turns');
+      await window.shows('ctrl+x a to answer');
+      expect(window.frame()).not.toContain('❯ 1. Allow');
+      // The call that asked still says it waits, as the box does.
+      expect(window.frame()).toMatch(
+        /Write\(notes\/left\.md\)\n\s+⎿ {2}Waiting…/,
+      );
+
+      await window.type('text');
+      await window.press('\r');
+      await window.shows('› after your answer: text');
+      expect(window.frame()).toContain('main asks · between turns');
+
+      await leader(window, 'a');
+      await window.shows('❯ 1. Allow');
+      await window.press('1');
+      await window.shows('Permission: allow.');
+      await window.shows('Hello, world.');
+      expect(window.frame()).not.toContain('between turns');
+    }));
+});
+
+describe('CHD-158 C4 tester: promoted permission keys and withdrawal', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a typed digit remains a draft across two promoted waits and withdrawing the second at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'leftask');
+          await window.shows('main asks · between turns');
+
+          const session = window.session();
+
+          assert(session);
+
+          const stop = new AbortController();
+          const answer = session.permissions.handler(
+            {
+              sessionId: session.id,
+              toolCall: {
+                toolCallId: 'queued-write',
+                title: 'Write queued.md',
+              },
+              options: [
+                { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+              ],
+            },
+            stop.signal,
+          );
+
+          try {
+            await window.type('2');
+            expect(promptRow(window)).toContain('› 2');
+            expect(window.frame()).not.toContain('❯ 1. Allow');
+            await leader(window, 'a');
+            await window.shows('❯ 1. Allow');
+            await window.press(ESC);
+            await window.shows('Write queued.md');
+            await window.shows('ctrl+x a to answer');
+            expect(window.frame()).not.toContain('❯ 1. Allow');
+            stop.abort();
+            expect(await answer).toMatchObject({
+              outcome: { outcome: 'cancelled' },
+            });
+            await until(
+              'the withdrawn permission box to leave',
+              () => !window.frame().includes('Write queued.md'),
+            );
+            await window.shows('› 2');
+            await window.shows('Permission: deny.');
+          } finally {
+            stop.abort();
+            await answer;
+          }
+        },
+        { columns, rows },
+      ));
+  }
+});

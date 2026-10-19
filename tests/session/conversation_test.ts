@@ -1854,7 +1854,7 @@ for (const wait of ['permission', 'form'] as const) {
   });
 }
 
-test('a message waiting on a question asked while the steer ahead was out goes as the next turn when the turn ends first', async () => {
+test("a message waiting on a question asked while the steer ahead was out waits on for the answer when the turn ends first, then goes as the next turn (the owner's Q44)", async () => {
   const stub = await steeringStub();
   const { conversation, events, steers, prompts } = stub;
 
@@ -1868,6 +1868,12 @@ test('a message waiting on a question asked while the steer ahead was out goes a
   steers[0]!.answer('injected');
   await stub.settled();
   stub.end();
+  // The question outlives the turn, between turns, and the message waits
+  // for its answer rather than start a turn that would hide it.
+  await until(() => events.some((event) => event.type === 'result'));
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(prompts).toHaveLength(1);
+  conversation.choose('first', 'allow');
   await until(() => prompts.length === 2);
 
   expect(steers).toHaveLength(1);
@@ -3413,6 +3419,188 @@ describe('CHD-158 tester: queued work across between-turn requests', () => {
         },
         (session) => {
           original ??= session;
+
+          return session;
+        },
+      );
+    });
+  }
+});
+
+test("a task's permission asked during the parent's turn holds the queue once that turn ends, until it is answered (CHD-158 C4)", async () => {
+  const stub = await steeringStub();
+  const { conversation, events, prompts } = stub;
+
+  conversation.send('go');
+  stub.go();
+  await stub.settled();
+
+  const { task } = adoptTask(conversation, 'task-a');
+
+  task.heard({ type: 'connected', sessionId: 'a' });
+  task.heard({
+    type: 'permission_requested',
+    turnId: 'child-turn',
+    permission: { id: 'request', options: [] },
+  });
+  stub.end();
+  await until(() => events.some((event) => event.type === 'result'));
+
+  expect(conversation.send('text')).toStrictEqual(true);
+  expect(conversation.tell(MAIN, 'Then the docs.')).toStrictEqual('queued');
+
+  const held = () =>
+    events.flatMap((event) =>
+      event.type === 'queued' ? [[event.text, event.afterAnswer === true]] : [],
+    );
+
+  expect(held()).toStrictEqual([
+    ['text', true],
+    ['Then the docs.', true],
+  ]);
+  // Long enough for a turn the queue let go to have started.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  expect(prompts).toHaveLength(1);
+
+  conversation.choose('request', 'allow');
+  task.heard({
+    type: 'permission_settled',
+    turnId: 'child-turn',
+    id: 'request',
+    answer: { type: 'chosen', optionId: 'allow' },
+  });
+  await until(() => prompts.length >= 2);
+  expect(prompts[1]).toContain('text');
+  await conversation.close();
+});
+
+describe('CHD-158 C4 tester: work queued before the parent result', () => {
+  for (const release of ['answer', 'withdraw', 'clear', 'close'] as const) {
+    test(`${release}: own and task permissions hold already queued work when the fake parent's turn ends`, async () => {
+      let owner: Session | undefined;
+
+      await onFake(
+        [],
+        async (conversation, events) => {
+          assert(owner);
+
+          const adopted = adoptTask(conversation, 'task-c4');
+          const task = adopted.task;
+          let ownId: string | undefined;
+          let queuedBeforeResult = false;
+          const stop = owner.permissions.subscribe(() => {
+            const request = events.find(
+              (event) =>
+                event.type === 'permission_requested' &&
+                event.permission.subagentId === undefined,
+            );
+
+            assert(request?.type === 'permission_requested');
+
+            ownId = request.permission.id;
+
+            task.heard({ type: 'connected', sessionId: 'task-session' });
+            task.heard({
+              type: 'permission_requested',
+              turnId: 'task-turn',
+              permission: { id: 'task-request', options: [] },
+            });
+            conversation.send('text');
+            conversation.tell(MAIN, 'After the answer.');
+
+            queuedBeforeResult = !events.some(
+              (event) => event.type === 'result',
+            );
+          });
+
+          try {
+            conversation.send('leftask');
+            await until(() => events.some((event) => event.type === 'result'));
+            expect(queuedBeforeResult).toBeTrue();
+            expect(
+              events.filter((event) => event.type === 'prompt'),
+            ).toHaveLength(1);
+            expect(
+              events.filter((event) => event.type === 'queued').slice(-2),
+            ).toMatchObject([
+              { text: 'text', afterAnswer: true },
+              { text: 'After the answer.', afterAnswer: true },
+            ]);
+            assert(ownId);
+
+            if (release === 'clear' || release === 'close') {
+              if (release === 'clear') {
+                conversation.clear();
+                await until(() =>
+                  events.some((event) => event.type === 'cleared'),
+                );
+                await until(
+                  () =>
+                    events.filter((event) => event.type === 'connected')
+                      .length === 2,
+                );
+                conversation.send('tools');
+                await until(
+                  () =>
+                    events.filter((event) => event.type === 'result').length ===
+                    2,
+                );
+              } else {
+                await conversation.close();
+              }
+
+              expect(adopted.asked).toContain('close');
+              expect(
+                events
+                  .filter((event) => event.type === 'prompt')
+                  .map((event) => event.text),
+              ).toStrictEqual(
+                release === 'clear' ? ['leftask', 'tools'] : ['leftask'],
+              );
+            } else {
+              conversation.choose(ownId, 'allow');
+              await until(() => saidIn(events).includes('Permission: allow.'));
+              expect(
+                events.filter((event) => event.type === 'prompt'),
+              ).toHaveLength(1);
+              expect(
+                events.filter((event) => event.type === 'queued').at(-1),
+              ).toMatchObject({ afterAnswer: true });
+
+              if (release === 'answer') {
+                conversation.choose('task-request', 'allow');
+              }
+
+              task.heard({
+                type: 'permission_settled',
+                turnId: 'task-turn',
+                id: 'task-request',
+                answer:
+                  release === 'answer'
+                    ? { type: 'chosen', optionId: 'allow' }
+                    : { type: 'withdrawn' },
+              });
+              await until(
+                () =>
+                  events.filter((event) => event.type === 'prompt').length >= 3,
+              );
+
+              const sent = events
+                .filter((event) => event.type === 'prompt')
+                .map((event) => event.text);
+
+              expect(sent).toStrictEqual([
+                'leftask',
+                'text',
+                'After the answer.',
+              ]);
+            }
+          } finally {
+            stop();
+          }
+        },
+        (session) => {
+          owner = session;
 
           return session;
         },

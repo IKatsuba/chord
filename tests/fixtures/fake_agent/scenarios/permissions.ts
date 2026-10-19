@@ -284,6 +284,26 @@ export const PERMISSIONS = {
   // The session's own agent asks once its turn has answered, with no turn
   // running, as an agent's background command's follow-up does (CHD-158),
   // and says what came back.
+  async leftask(turn) {
+    // Asks in its turn, then ends the turn with the request still open, as
+    // an agent may: the request outlives the turn (the owner's Q44,
+    // CHD-158), and its answer is said once it comes.
+    void (async () => {
+      try {
+        const chosen = await askBetween(turn, 'notes/left.md');
+
+        await sayBetween(turn, `Permission: ${chosen}.`);
+      } catch {
+        // The client went before it was answered.
+      }
+    })();
+
+    await pause(turn.signal, STEP_MS * 100);
+    await turn.say('I asked; the turn ends with it open.');
+
+    return 'end_turn';
+  },
+
   async mainbetween(turn) {
     void (async () => {
       try {

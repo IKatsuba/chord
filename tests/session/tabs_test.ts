@@ -412,7 +412,7 @@ test('a cancelled turn, or one a queued prompt follows, is not unseen', () => {
   expect(tabOf(queued, 1)?.wait.unseen).toStrictEqual(undefined);
 });
 
-test('a turn ending closes the wait on its permissions', () => {
+test("a turn ending leaves its permissions waiting, between turns (the owner's Q44)", () => {
   const tabs = heard(opened('a', 'b'), 1, [
     up,
     prompt('t1'),
@@ -420,7 +420,8 @@ test('a turn ending closes the wait on its permissions', () => {
     ended('t1'),
   ]);
 
-  expect(tabOf(tabs, 1)?.wait.asking).toStrictEqual(undefined);
+  expect(tabOf(tabs, 1)?.wait.asking?.since).toStrictEqual(2000);
+  // The turn's end is news too, behind the wait.
   expect(tabOf(tabs, 1)?.wait.unseen?.kind).toStrictEqual('replied');
 });
 
@@ -1425,7 +1426,7 @@ describe('CHD-431 tester: requester changes keep one wait', () => {
     }
   });
 
-  test('a result prunes a transient permission and reveals a lasting input, including after cancel', () => {
+  test('a result keeps an untimestamped permission ahead of a lasting input, including after cancel', () => {
     for (const cancelled of [false, true]) {
       const events: ConversationEvent[] = [
         up,
@@ -1453,11 +1454,12 @@ describe('CHD-431 tester: requester changes keep one wait', () => {
       ).tabs;
 
       expect(tabOf(next, 1)?.wait.asking).toStrictEqual({
-        on: { kind: 'input', message: 'form', subagentId: 'form' },
+        on: { kind: 'permission', title: undefined, subagentId: 'adapter' },
         since: 2000,
       });
       expect([...tabOf(next, 1)!.wait.watch.asked.keys()]).toStrictEqual([
         'form',
+        'adapter',
       ]);
     }
   });

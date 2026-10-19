@@ -438,7 +438,12 @@ function Work({
         key={index}
         call={item.entry.call}
         expanded
-        ended={endingOf(subagent.state) !== undefined}
+        // A call still asked about waits on the person, whether or not the
+        // subagent's own work has ended (the owner's Q44).
+        ended={
+          endingOf(subagent.state) !== undefined &&
+          !asksFor(turn, item.entry.call.id, subagent.id)
+        }
         asked={asksFor(turn, item.entry.call.id, subagent.id)}
         width={width}
       />

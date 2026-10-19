@@ -301,7 +301,7 @@ describe("a task's request across the turn that started it (CHD-266)", () => {
     at: 1000,
   });
 
-  test("stays open when the turn ends; the agent's own does not", () => {
+  test("stays open when the turn ends, as the agent's own does (the owner's Q44)", () => {
     const { watch } = play([
       connected,
       prompt('t1'),
@@ -310,7 +310,7 @@ describe("a task's request across the turn that started it (CHD-266)", () => {
       ended('t1'),
     ]);
 
-    expect([...watch.asking]).toStrictEqual(['p1']);
+    expect([...watch.asking]).toStrictEqual(['p1', 'p2']);
   });
 
   test('goes once answered or withdrawn, and a later one asks again', () => {
@@ -384,7 +384,7 @@ describe('CHD-266 tester: lasting request identity', () => {
     expect([...partly.lasting]).toStrictEqual(['link']);
   });
 
-  test('an adapter subagent permission without a task timestamp keeps the previous result behavior', () => {
+  test('an adapter subagent permission without a task timestamp survives the result as a between-turns wait', () => {
     const request: ConversationEvent = {
       type: 'permission_requested',
       turnId: 't1',
@@ -392,8 +392,11 @@ describe('CHD-266 tester: lasting request identity', () => {
     };
     const { watch } = play([connected, prompt('t1'), request, ended('t1')]);
 
-    expect(watch.asking.size).toBe(0);
-    expect(watch.lasting.size).toBe(0);
+    expect([...watch.asking]).toStrictEqual(['adapter']);
+    expect(watch.asked.get('adapter')).toMatchObject({
+      kind: 'permission',
+      subagentId: 'adapter-child',
+    });
   });
 
   test('withdrawal and clear remove lasting IDs so a later request can notify again', () => {

@@ -705,7 +705,7 @@ describe('CHD-423 tester: two held messages on screen', () => {
           async (window) => {
             await ready(window);
             await send(window, 'agentcallgated');
-            await window.shows('← message from @main');
+            await window.shows('← new message');
             expect(window.frame()).not.toContain('after the running calls');
             await window.press(DOWN);
             await window.press(DOWN);
@@ -755,7 +755,7 @@ describe('CHD-423 tester: two held messages on screen', () => {
           async (window) => {
             await ready(window);
             await send(window, 'agentcallgated');
-            await window.shows('← message from @main');
+            await window.shows('← new message');
             await window.press(DOWN);
             await window.press(DOWN);
             await window.shows(
@@ -810,7 +810,7 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
     [80, 24],
     [120, 40],
   ] as const) {
-    test(`failure ages, mixed notices and picker owners stay correct at ${columns}x${rows}; seeing each child clears only its news`, () =>
+    test(`idle time beside a failure mark, mixed notices and picker owners stay correct at ${columns}x${rows}; seeing each child clears only its news`, () =>
       withAgents(async (window) => {
         await window.resize({ columns, rows });
         await ready(window);
@@ -822,13 +822,15 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
             .frame()
             .split('\n')
             .find((line) => /^ {4}parser {2}fake/.test(line));
-        const age = () =>
-          Number(/turn failed (\d+)s ago/.exec(failedRow() ?? '')?.[1]);
+        const age = () => Number(/◦ idle (\d+)s/.exec(failedRow() ?? '')?.[1]);
         const first = age();
 
         expect(Number.isFinite(first)).toBe(true);
-        await until('failed-turn age advances', () => age() > first);
-        expect(failedRow()).toMatch(/✗ turn failed \d+s ago/);
+        await until(
+          'idle time advances beside the timeless failure mark',
+          () => age() > first,
+        );
+        expect(failedRow()).toMatch(/◦ idle \d+s +✗ turn failed$/);
         await anotherTab(window);
         await send(window, 'agentexit');
         await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a');
@@ -858,17 +860,19 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
   }
 });
 
-describe('CHD-364 tester: narrow reply age', () => {
-  test('the first reply at 80x24 starts fresh and then ages from the reply', () =>
+describe('CHD-364 tester: narrow idle time beside reply mark', () => {
+  test('idle at 80x24 counts from the last reply beside its timeless mark', () =>
     withAgents(
       async (window) => {
         await window.resize({ columns: 80, rows: 24 });
         await ready(window);
         await send(window, 'agents');
-        await window.shows('← message from @main');
+        await window.shows('← new message');
 
         const age = () =>
-          Number(/parser .*✓ replied (\d+)s ago/.exec(window.frame())?.[1]);
+          Number(
+            /parser .*◦ idle (\d+)s +✓ new reply/.exec(window.frame())?.[1],
+          );
 
         await until(
           'the narrow parser reply',
@@ -879,7 +883,10 @@ describe('CHD-364 tester: narrow reply age', () => {
         const first = age();
 
         expect(first).toBeLessThanOrEqual(2);
-        await until('reply age advances', () => age() > first);
+        await until(
+          'idle age advances beside the reply mark',
+          () => age() > first,
+        );
         expect(age()).toBeLessThan(10);
       },
       '--steering',

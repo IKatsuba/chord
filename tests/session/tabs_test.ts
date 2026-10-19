@@ -1599,3 +1599,52 @@ test("an agent's wait keeps when it last stopped working: when it came up, then 
   expect(stopped([up, prompt('t1'), ended('t1'), prompt('t2')])).toBe(3000);
   expect(stopped([up, prompt('t1'), failed('t1')])).toBe(3000);
 });
+
+describe('CHD-471 tester: stop time and seen marks', () => {
+  test('showing an agent clears only its unseen mark while its next turn keeps working', () => {
+    let tabs = heard(
+      opened('a', 'b'),
+      1,
+      [up, prompt('first'), ended('first')],
+      1000,
+    );
+    const stopped = tabOf(tabs, 1)!.wait.stopped;
+
+    expect(tabOf(tabs, 1)!.wait.unseen?.kind).toBe('replied');
+
+    tabs = heard(tabs, 1, [prompt('second')], 9000);
+
+    expect(tabOf(tabs, 1)!.wait.unseen?.kind).toBe('replied');
+
+    const working = tabOf(tabs, 1)!.wait.working;
+
+    expect(working).toBeDefined();
+
+    tabs = show(tabs, 1);
+
+    expect(tabOf(tabs, 1)!.wait.unseen).toBeUndefined();
+    expect(tabOf(tabs, 1)!.wait.working).toBe(working);
+    expect(tabOf(tabs, 1)!.wait.stopped).toBe(stopped);
+  });
+
+  test('reconnect preserves an existing stop, and a cycle end establishes a new one', () => {
+    let tabs = heard(opened('a', 'b'), 1, [up], 1000);
+
+    tabs = heard(tabs, 1, [up], 4000);
+
+    expect(tabOf(tabs, 1)!.wait.stopped).toBe(1000);
+
+    tabs = heard(
+      tabs,
+      1,
+      [{ type: 'cycle_started', turnId: 'cycle', at: 5000 }],
+      5000,
+    );
+
+    expect(tabOf(tabs, 1)!.wait.stopped).toBe(1000);
+
+    tabs = heard(tabs, 1, [ended('cycle')], 8000);
+
+    expect(tabOf(tabs, 1)!.wait.stopped).toBe(8000);
+  });
+});

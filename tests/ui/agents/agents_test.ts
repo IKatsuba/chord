@@ -625,7 +625,7 @@ test("a folded lead names the member that is gone, gravest first, and its mark i
 });
 
 describe('CHD-264 tester: failure age and row fallback', () => {
-  test('the failure clock ignores older news, and a narrow row retains its error glyph', () => {
+  test('an idle failed turn has a timeless mark, and a narrow row retains its error glyph', () => {
     const failed = row('parser', {
       wait: {
         unseen: {
@@ -637,16 +637,23 @@ describe('CHD-264 tester: failure age and row fallback', () => {
       },
     });
 
-    expect(agentState(failed, NOW)?.words).toBe('turn failed 12s ago');
-    expect(agentState(failed, NOW + 2000)?.words).toBe('turn failed 14s ago');
+    expect(agentState(failed, NOW).words).toBe('idle 0s');
+    expect(agentMark(failed)).toEqual({
+      glyph: '✗',
+      words: 'turn failed',
+      tone: 'error',
+    });
     expect(drawn([MAIN, failed], { width: 76 }).join(' ')).toContain(
-      '✗ turn failed 12s ago',
+      '◦ idle 0s  ✗ turn failed',
     );
     expect(drawn([MAIN, failed], { width: 20 }).join(' ')).toContain('✗');
     expect(
       agentState({ ...failed, wait: { ...failed.wait, exited: true } }, NOW)
         ?.words,
     ).toBe('exited');
+    expect(
+      agentMark({ ...failed, wait: { ...failed.wait, exited: true } }),
+    ).toBeUndefined();
   });
 });
 
@@ -708,4 +715,76 @@ test("a narrow list drops a mark's words before the state's, each leaving its gl
     '  main    claude  ◦',
     '  parser  codex   ◦  ✓',
   ]);
+});
+
+describe('CHD-471 tester: state and unseen marks are independent', () => {
+  test('working retains an older reply and a gone agent is no longer timed', () => {
+    const working = row('parser', {
+      wait: {
+        working: NOW - 9000,
+        stopped: NOW - 30000,
+        unseen: { kind: 'replied', since: NOW - 20000 },
+      },
+    });
+
+    expect(agentState(working, NOW).words).toBe('working 9s');
+    expect(agentState(working, NOW + 2000).words).toBe('working 11s');
+    expect(agentMark(working)?.words).toBe('new reply');
+    expect(drawn([working]).join(' ')).toContain('✻ working 9s  ✓ new reply');
+    expect(listTimed([working])).toBe(true);
+    expect(
+      listTimed([{ ...working, wait: { watch: emptyWatch, exited: true } }]),
+    ).toBe(false);
+  });
+
+  test('folding ranks state and marks independently, with idle from the latest stop', () => {
+    const [main, lead, ...members] = team('main');
+    const rows = [main!, lead!, ...members].map((each, index) => ({
+      ...each,
+      wait: { watch: emptyWatch, stopped: NOW - (index + 1) * 10000 },
+    }));
+    const marked = rows.map((each) => ({
+      ...each,
+      wait: {
+        ...each.wait,
+        ...(each.name === 'tester'
+          ? {
+              asking: {
+                on: { kind: 'permission' as const },
+                since: NOW - 4000,
+              },
+              unseen: { kind: 'message' as const, from: '@main', since: NOW },
+            }
+          : each.name === 'coder'
+            ? {
+                unseen: { kind: 'replied' as const, since: NOW },
+              }
+            : each.name === 'reviewer'
+              ? {
+                  unseen: {
+                    kind: 'failed' as const,
+                    failure: 'turn' as const,
+                    since: NOW,
+                  },
+                }
+              : {}),
+      },
+    }));
+    const folded = teamRows(marked, { fold: true })[1]!;
+
+    expect(agentState(folded, NOW).words).toBe('tester: permission 4s');
+    expect(agentMark(folded)?.words).toBe('turn failed');
+
+    const noFailure = teamRows(
+      marked.filter((each) => each.name !== 'reviewer'),
+      { fold: true },
+    )[1]!;
+
+    expect(agentMark(noFailure)?.words).toBe('new reply');
+
+    const quiet = teamRows(rows, { fold: true })[1]!;
+
+    expect(agentState(quiet, NOW).words).toBe('idle 20s');
+    expect(agentMark(quiet)).toBeUndefined();
+  });
 });

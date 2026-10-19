@@ -1,5 +1,6 @@
 /** The list under the prompt drawn on its own, its times counting. */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
+import { useEffect } from 'react';
 import { until } from '../app/render.tsx';
 import { draw } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
@@ -8,7 +9,7 @@ import { Colours } from '../../../src/ui/app/context.ts';
 import { paletteOf } from '../../../src/ui/theme/theme.ts';
 import { emptyWatch } from '../../../src/notify.ts';
 import { type AgentRow, listRows } from '../../../src/ui/agents/agents.ts';
-import { AgentsList } from '../../../src/ui/agents/Agents.tsx';
+import { AgentsList, useAgentsClock } from '../../../src/ui/agents/Agents.tsx';
 
 function row(name: string, key: number, more: Partial<AgentRow> = {}) {
   return {
@@ -66,7 +67,7 @@ test("a folded member's permission time goes on counting with its lead idle and 
 describe('CHD-264 tester: folded failure rendering', () => {
   for (const columns of [80, 120]) {
     for (const cause of ['turn', 'start', 'exited'] as const) {
-      test(`a folded member's ${cause} is named and coloured at ${columns} columns`, async () => {
+      test(`a folded member's ${cause} has its designed state or mark and colour at ${columns} columns`, async () => {
         const level = chalk.level;
 
         chalk.level = 3;
@@ -93,7 +94,7 @@ describe('CHD-264 tester: folded failure rendering', () => {
         ];
         const words =
           cause === 'turn'
-            ? 'turn failed 12s ago'
+            ? 'turn failed'
             : cause === 'start'
               ? 'failed to start'
               : 'exited';
@@ -112,10 +113,12 @@ describe('CHD-264 tester: folded failure rendering', () => {
         );
 
         try {
-          expect(stripAnsi(drawn.frame())).toContain(`✗ tester: ${words}`);
+          expect(stripAnsi(drawn.frame())).toContain(
+            cause === 'turn' ? `◦ idle 0s  ✗ ${words}` : `✗ tester: ${words}`,
+          );
           expect(stripAnsi(drawn.frame())).not.toMatch(/^ {4}tester /m);
           expect(drawn.frame()).toContain(
-            `\x1b[38;2;255;0;0m  ✗ tester: ${words}`,
+            `\x1b[38;2;255;0;0m  ✗ ${cause === 'turn' ? words : `tester: ${words}`}`,
           );
         } finally {
           await drawn.unmount();
@@ -127,17 +130,22 @@ describe('CHD-264 tester: folded failure rendering', () => {
   }
 });
 
-describe('CHD-364 tester: folded reply clock', () => {
+describe('CHD-364 tester: folded idle clock beside reply mark', () => {
   for (const columns of [80, 120]) {
-    test(`the folded lead uses its member's newest reply clock at ${columns} columns`, async () => {
+    test(`the folded lead uses its latest stop beside an unnamed reply mark at ${columns} columns`, async () => {
       const now = Date.now();
       const agents = [
         row('main', 1, { picked: true }),
-        row('bugfix', 2, { runtime: 'team · fake', team: 2 }),
+        row('bugfix', 2, {
+          runtime: 'team · fake',
+          team: 2,
+          wait: { watch: emptyWatch, stopped: now - 30000 },
+        }),
         row('coder', 3, {
           team: 2,
           wait: {
             watch: emptyWatch,
+            stopped: now - 1000,
             unseen: {
               kind: 'replied',
               since: now - 120_000,
@@ -145,8 +153,14 @@ describe('CHD-364 tester: folded reply clock', () => {
             },
           },
         }),
-        row('tester', 4, { team: 2 }),
-        row('reviewer', 5, { team: 2 }),
+        row('tester', 4, {
+          team: 2,
+          wait: { watch: emptyWatch, stopped: now - 30000 },
+        }),
+        row('reviewer', 5, {
+          team: 2,
+          wait: { watch: emptyWatch, stopped: now - 30000 },
+        }),
       ];
       const drawn = await draw(
         <AgentsList
@@ -159,10 +173,10 @@ describe('CHD-364 tester: folded reply clock', () => {
       );
 
       try {
-        expect(stripAnsi(drawn.frame())).toContain('coder: replied 1s ago');
+        expect(stripAnsi(drawn.frame())).toContain('◦ idle 1s  ✓ new reply');
         await until(
-          'the folded reply clock ticks',
-          () => stripAnsi(drawn.frame()).includes('coder: replied 3s ago'),
+          'the folded idle clock ticks beside the unchanged mark',
+          () => stripAnsi(drawn.frame()).includes('◦ idle 3s  ✓ new reply'),
           4000,
         );
       } finally {
@@ -170,4 +184,64 @@ describe('CHD-364 tester: folded reply clock', () => {
       }
     });
   }
+});
+
+describe('CHD-471 tester: list clock lifecycle', () => {
+  test('two live subscribers share ticks and the last unmount releases the interval', async () => {
+    const renders: number[] = [];
+    const intervals = spyOn(globalThis, 'setInterval');
+    const cleared = spyOn(globalThis, 'clearInterval');
+
+    function Clock() {
+      const now = useAgentsClock(true);
+
+      useEffect(() => {
+        renders.push(now);
+      }, [now]);
+
+      return <text>{`clock ${now}`}</text>;
+    }
+
+    const first = await draw(<Clock />);
+    let second: Awaited<ReturnType<typeof draw>> | undefined;
+
+    try {
+      const start = renders.length;
+
+      await until('first actual clock tick', () => renders.length > start);
+
+      second = await draw(<Clock />);
+
+      const timers = intervals.mock.calls.flatMap((args, index) =>
+        args[1] === 1000 ? [intervals.mock.results[index]!.value] : [],
+      );
+
+      expect(timers).toHaveLength(1);
+      await first.unmount();
+      expect(cleared.mock.calls.some(([timer]) => timer === timers[0])).toBe(
+        false,
+      );
+
+      const afterFirst = renders.length;
+
+      await until(
+        'remaining subscriber still ticks',
+        () => renders.length > afterFirst,
+      );
+      await second.unmount();
+      expect(cleared.mock.calls.some(([timer]) => timer === timers[0])).toBe(
+        true,
+      );
+
+      const afterLast = renders.length;
+
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      expect(renders).toHaveLength(afterLast);
+    } finally {
+      await first.unmount();
+      await second?.unmount();
+      intervals.mockRestore();
+      cleared.mockRestore();
+    }
+  });
 });

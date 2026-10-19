@@ -5,10 +5,17 @@
  * in plain words going to main.
  */
 import { describe, expect, test } from 'bun:test';
+import chalk from 'chalk';
 import { readFile } from 'node:fs/promises';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { fileURLToPath } from 'node:url';
 import { type ChordServer, serveChord } from '../../../src/server/server.ts';
+import type { TeamShown } from '../../../src/session/transcript/types.ts';
+import type { Team } from '../../../src/teams.ts';
+import { Colours } from '../../../src/ui/app/context.ts';
+import { TeamEntry } from '../../../src/ui/teams/Teams.tsx';
+import { paletteOf } from '../../../src/ui/theme/theme.ts';
+import { draw } from '../harness.tsx';
 import { LEAD_REPORT } from '../../fixtures/fake_agent/scenarios/teams.ts';
 import {
   CTRL_O,
@@ -421,3 +428,63 @@ test("/team show of a running team narrower than its own columns puts each agent
     await window.shows('              ● permission');
     await window.shows('              Bash(deno task test tests/parse)');
   }));
+
+test("/team show paints an agent's state and mark in their colours past a model id of wide characters (CHD-471)", async () => {
+  const level = chalk.level;
+
+  chalk.level = 3;
+
+  try {
+    const team: Team = {
+      description: 'Fixes a bug.',
+      body: '',
+      lead: { agent: 'fake', model: 'モデル-ラージ-🚀', mode: 'default' },
+      members: [],
+    };
+    const shown: TeamShown = {
+      kind: 'show',
+      name: 'bugfix',
+      file: '.chord/teams/bugfix.md',
+      team,
+      running: {
+        name: 'bugfix',
+        since: 0,
+        at: 8000,
+        job: 'fix it',
+        agents: [
+          {
+            name: 'lead',
+            lead: true,
+            open: true,
+            state: { glyph: '●', words: 'permission 8s', tone: 'warning' },
+            mark: { glyph: '✓', words: 'new reply', tone: 'success' },
+          },
+        ],
+      },
+    };
+
+    // Beside the row at 100, under it at 50.
+    for (const columns of [100, 50]) {
+      const drawn = await draw(
+        <Colours.Provider value={paletteOf('dark', true)}>
+          <TeamEntry
+            turnId='t'
+            command='team show bugfix'
+            shown={shown}
+            expanded={false}
+            width={columns}
+          />
+        </Colours.Provider>,
+        { columns, rows: 12 },
+      );
+      const frame = drawn.frame();
+
+      await drawn.unmount();
+      // #ffc107 and #4eba65, the dark palette's warning and success.
+      expect(frame).toContain('\x1b[38;2;255;193;7m● permission 8s\x1b[');
+      expect(frame).toContain('\x1b[38;2;78;186;101m✓ new reply\x1b[');
+    }
+  } finally {
+    chalk.level = level;
+  }
+});

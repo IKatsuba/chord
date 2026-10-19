@@ -553,6 +553,20 @@ describe("/team show's running form wraps its own columns where they are wider t
     ]);
   });
 
+  test('a model id of wide characters leaves the state and mark their own spans, beside the row and under it', () => {
+    const wide: Team = {
+      ...team,
+      members: [{ ...team.members[0]!, model: 'モデル-ラージ-🚀' }],
+    };
+
+    for (const width of [112, 72, 40]) {
+      expect(states(runningTable(wide, agents, width))).toStrictEqual([
+        ['◦ idle 9s', '✓ new reply'],
+        ['● permission 8s', '← new message'],
+      ]);
+    }
+  });
+
   test('a long name wraps in its column once the runtime has, and the model id stays whole where it fits the column', () => {
     const all = [
       ...agents,

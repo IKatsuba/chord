@@ -390,8 +390,8 @@ export function runningHeader(
 export interface RunningLine {
   readonly text: string;
   /**
-   * The state's cells, `[start, end)` in its line, to paint by its tone:
-   * `text`, or the line of `under` that `stateLine` names.
+   * The state, `[start, end)` as string indices in its line, to paint by
+   * its tone: `text`, or the line of `under` that `stateLine` names.
    */
   readonly state: readonly [number, number];
   /** Its mark's cells after the state, in the same line. */
@@ -457,7 +457,7 @@ export function runningTable(
 
     return mark === undefined
       ? ownState(agent)
-      : `${ownState(agent).padEnd(stateWidth)}${GAP}${mark}`;
+      : `${padded(ownState(agent), stateWidth)}${GAP}${mark}`;
   };
 
   const cellsOf = (effort: boolean) =>
@@ -492,11 +492,9 @@ export function runningTable(
     }
 
     const under = across(widths) > width;
-    const before = across(widths.slice(0, -1)) + GAP.length;
 
     return {
       widths,
-      before,
       under,
       room: under ? 0 : width - across(widths) - GAP.length,
     };
@@ -512,7 +510,7 @@ export function runningTable(
     (laidOut(withEffort).room >= BESIDE ||
       laidOut(cellsOf(false)).room < BESIDE);
   const cells = effort ? withEffort : cellsOf(false);
-  const { widths, before, under, room } = laidOut(cells);
+  const { widths, under, room } = laidOut(cells);
   const beside = room >= BESIDE;
   const runtimeAt = widths[0]! + GAP.length;
   // Beside, after the state's column; under, from the runtime's.
@@ -535,8 +533,13 @@ export function runningTable(
       .map((line) => line.trimEnd());
     const state = ownState(agent);
     const mark = markOf(agent);
-    const stateAt = under ? runtimeAt : before;
-    const markAt = stateAt + stateWidth + GAP.length;
+    const cell = row.at(-1)!;
+    // String indices, not cells: a wide character before the state, in a
+    // model id or a name, takes two cells and one or two code units. The
+    // state's cell ends its line, before a headline beside it.
+    const on = under ? ' '.repeat(runtimeAt) + cell : own[0]!;
+    const stateAt = on.length - cell.length;
+    const markAt = stateAt + cell.length - (mark?.length ?? 0);
     const latest = (agent.latest ?? '').replaceAll(/\s+/g, ' ').trim();
     const wrapped =
       latest === ''
@@ -553,7 +556,7 @@ export function runningTable(
         )
       : [
           ...own,
-          ...(under ? [' '.repeat(runtimeAt) + row.at(-1)!] : []),
+          ...(under ? [on] : []),
           ...wrapped.map((line) => ' '.repeat(latestAt) + line),
         ];
 

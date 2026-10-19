@@ -3,9 +3,10 @@
  * `spawn_task`, and the task's own turn, which messages its parent through
  * `send_message` before its report.
  */
+import { once } from 'node:events';
 import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
-import { pause, type Play, type Turn } from '../turn.ts';
+import { lifetime, pause, type Play, type Turn } from '../turn.ts';
 import { codexCall, callChord, chordClient } from './chord_tools.ts';
 
 /** A task's pace: 20 steps, a tenth of a second by default. */
@@ -175,7 +176,8 @@ export const TASKS = {
   },
 
   // As `task`, its turn running on until it is cancelled, however long
-  // the task takes to ask its permission and send its message.
+  // the task takes to ask its permission and send its message: no timer
+  // ends it, only the cancel, or the client going.
   async taskstays(turn) {
     const client = await chordClient(turn);
 
@@ -189,7 +191,9 @@ export const TASKS = {
       await turn.say('I will send a task agent on fake for the fix.');
       await callChord(turn, client, 'spawn_task', TASK_ARGS);
       await turn.say('It is running; I will check its report when it lands.');
-      await pause(turn.signal, 600_000);
+      turn.signal.throwIfAborted();
+      await once(turn.signal, 'abort', { signal: lifetime.signal });
+      turn.signal.throwIfAborted();
     } finally {
       await client.close();
     }

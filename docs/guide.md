@@ -119,8 +119,10 @@ close with it. Closing the last one
 quits. With several open and any of them busy, ctrl+d
 and `/exit` ask for a second press too and name the busy ones. Quitting
 closes every session, waits for each agent to exit, and prints a
-`chord <agent> --resume <id>` for the session a prompt went to. With two or
-more such sessions it saves the window instead
+`chord <agent> --resume <id>` for the session a prompt went to. It repeats
+`--agent-command` only when given as a flag; settings commands are read
+again from their files. With two or more such sessions it saves the window
+instead
 (`~/.local/state/chord/windows/`) and prints one command for all of them,
 `chord --resume w-<id>`, which opens every tab again in its order, each on
 its own agent where it works, the one that was in front in front. A window
@@ -720,11 +722,15 @@ agent's own: `/model`, `/config` and shift+tab show what an agent offers, and
 on offers. A starting model, effort or mode the agent refuses is said in the
 transcript, with where it was set and what the agent offers, and the session
 goes on as the agent chose; an agent with no effort starts on its own, and
-the line says it offers none. An unknown key, or a key with the wrong kind of value, is
-named with its file and left out, and the rest of the file still counts; a
-file that is not a JSON object is named and ignored. Either way chord starts:
-the problem is a line on stderr and a yellow line at the top of the
-transcript. `-p` takes `agent`, `command`, `effort` and `permissionMode`
+the line says it offers none. An unknown key or wrong-type value is named
+with its file and left out; the rest still counts. A file that is not a
+JSON object is named and ignored. A refused `agents.<name>.command`
+instead prevents that agent from starting: main, a tab, child, task or team
+member, and a session resumed alone in a directory that refuses it.
+The warning names the cause and says `<agent> will not start`; stderr
+reads `chord: <agent> not started: …`. chord never falls back to its own
+command. Other settings problems appear on stderr and in yellow at the
+transcript's top. `-p` takes `agent`, `command`, `effort` and `permissionMode`
 from the files, and says a refused effort or mode on stderr; `--model` is for
 the window. `--agent-command`, `--model`, `--effort` and `--permission-mode`
 speak for the agent the command line names: a session `/new` opens of another agent starts on that
@@ -746,8 +752,12 @@ agent says to install it, and exits before the window. chord downloads
 nothing for them: the registry also offers most of these as archives to
 unpack, but a CLI you installed and keep up to date is the one you already
 signed in to. Any other ACP agent starts with `agents.<name>.command` or
-`--agent-command`, which also replace the command chord knows for a name; a
-name your settings files alone give a command starts as `chord <name>` and
+`--agent-command`, which also replace the command chord knows for a name.
+A settings command may be a string or a list such as `["my-agent", "--acp"]`:
+the program, then its arguments as written, including empty arguments.
+The program must be nonempty and every item a string. The last settings
+file to give a command decides; `--agent-command` overrides all.
+A name your settings files alone give a command starts as `chord <name>` and
 opens with `/new <name>`. `chord agents` lists them all: each one's name and
 title (`from settings` for a name only they define), `npx` or `uvx` for the
 registry's, `own CLI · found` or `own CLI · not on PATH` for those that need

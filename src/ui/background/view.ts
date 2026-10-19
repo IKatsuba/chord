@@ -29,18 +29,6 @@ export function focusedItem(
   return (focus && items.find((item) => sameItem(item, focus))) ?? items[0];
 }
 
-/** ↑ ↓: the item `by` rows from the focused one, stopping at either end. */
-export function moveViewFocus(
-  items: readonly BackgroundItem[],
-  focus: ItemRef | undefined,
-  by: number,
-): ItemRef | undefined {
-  const at = Math.max(0, items.indexOf(focusedItem(items, focus)!));
-  const next = items[Math.min(Math.max(0, at + by), items.length - 1)];
-
-  return next && { key: next.key, id: next.id };
-}
-
 /** The hint line on an agent item whose agent offers no stop of its own. */
 export const NO_STOP_HINT = 'this agent offers no stop';
 
@@ -400,49 +388,171 @@ function stackedRows(
   });
 }
 
-/** The rows in sight, and how many are out of it above and below. */
+/**
+ * The lines in sight: the rows they are of, how many rows are wholly out of
+ * sight above and below, and which of those rows' lines are shown, `height`
+ * of them from `from`, the frame keeping its height while it is open
+ * (CHD-462, CHD-430).
+ */
 export interface ViewWindow {
   readonly rows: readonly ViewRow[];
   readonly above: number;
   readonly below: number;
+  readonly from: number;
+  readonly height: number;
 }
 
 /**
- * The rows that fit `height` lines with the `❯`'s in sight: from the top
- * while it is, else scrolled just far enough. What is out of sight is said
- * in the gutter, as the pickers say it (`edgeMarked`), so it takes no line.
+ * Where the frame is: the item with the `❯`, and the line of all the rows'
+ * on top, for the size it was laid out at; at another size the window is
+ * found again from the `❯`, a tall row from its first line (CHD-430).
  */
-export function viewWindow(
+export interface ViewAt {
+  readonly focus?: ItemRef;
+  readonly top?: number;
+  readonly laid?: string;
+}
+
+/** The size the rows' lines were laid out at, which a line on top is of. */
+export function laidAt(width: number, height: number): string {
+  return `${width}x${height}`;
+}
+
+/** Each row's first line among all the rows' lines, and how many there are. */
+function lineStarts(rows: readonly ViewRow[]): {
+  starts: number[];
+  total: number;
+} {
+  const starts: number[] = [];
+  let total = 0;
+
+  for (const row of rows) {
+    starts.push(total);
+
+    total += row.lines.length;
+  }
+
+  return { starts, total };
+}
+
+/**
+ * The line on top: `at`'s where it was laid out at this size, else the
+ * first that shows the `❯`'s row, from its first line if it is taller than
+ * the frame; moved only as far as keeps that row in sight.
+ */
+function topOf(
   rows: readonly ViewRow[],
-  height: number,
-): ViewWindow {
-  const lines = (row: ViewRow) => row.lines.length;
+  limit: number,
+  at: ViewAt | undefined,
+  laid: string | undefined,
+): { top: number; height: number } {
+  const { starts, total } = lineStarts(rows);
+  const height = Math.min(total, limit);
   const focused = Math.max(
     0,
     rows.findIndex((row) => row.focused),
   );
+  const first = starts[focused] ?? 0;
+  const end = first + (rows[focused]?.lines.length ?? 0);
+  const tall = end - first > height;
+  const kept = laid !== undefined && at?.laid === laid ? at.top : undefined;
+  let top = kept ?? (tall ? first : Math.max(0, end - height));
 
-  for (let start = 0; start <= focused; start++) {
-    let room = height;
-    let end = start;
+  if (tall) {
+    top = Math.min(Math.max(top, first), end - height);
+  } else {
+    top = Math.min(top, first);
+    top = Math.max(top, end - height);
+  }
 
-    while (end < rows.length && lines(rows[end]!) <= room) {
-      room -= lines(rows[end]!);
-      end += 1;
-    }
+  return { top: Math.min(Math.max(0, top), total - height), height };
+}
 
-    if (focused < end || start === focused) {
-      const shown = rows.slice(start, Math.max(end, start + 1));
+/**
+ * The lines that fit `limit` with the `❯`'s row in sight, or as much of it
+ * as fits where it is taller, from the line on top `at` keeps.
+ */
+export function viewWindow(
+  rows: readonly ViewRow[],
+  limit: number,
+  at?: ViewAt,
+  laid?: string,
+): ViewWindow {
+  const { starts } = lineStarts(rows);
+  const { top, height } = topOf(rows, limit, at, laid);
+  const inSight = (index: number) =>
+    starts[index]! < top + height &&
+    starts[index]! + rows[index]!.lines.length > top;
+  const firstIn = rows.findIndex((_, index) => inSight(index));
+  const first = firstIn < 0 ? 0 : firstIn;
+  let end = first;
 
-      return {
-        rows: shown,
-        above: start,
-        below: rows.length - start - shown.length,
-      };
+  while (end < rows.length && inSight(end)) {
+    end += 1;
+  }
+
+  return {
+    rows: rows.slice(first, end),
+    above: first,
+    below: rows.length - end,
+    from: top - (starts[first] ?? 0),
+    height,
+  };
+}
+
+/**
+ * ↑ ↓ in the frame: through the lines of a focused row taller than it first,
+ * a line at a time, then to the next row, scrolling only as far as brings
+ * that row whole into sight; a tall row reached with ↓ shows from its first
+ * line, and with ↑ from its last. Undefined with nothing listed.
+ */
+export function moveView(
+  items: readonly BackgroundItem[],
+  at: ViewAt | undefined,
+  by: 1 | -1,
+  { width, height, now }: { width: number; height: number; now: number },
+): ViewAt | undefined {
+  const laid = laidAt(width, height);
+  const rows = viewRows(items, { width, focus: at?.focus, now });
+  const index = rows.findIndex((row) => row.focused);
+  const row = rows[index];
+
+  if (row === undefined) {
+    return undefined;
+  }
+
+  const { starts } = lineStarts(rows);
+  const { top, height: shown } = topOf(rows, height, at, laid);
+  const ref = (of: ViewRow) => ({ key: of.item.key, id: of.item.id });
+  const first = starts[index]!;
+  const end = first + row.lines.length;
+
+  if (row.lines.length > shown) {
+    if ((by > 0 && top + shown < end) || (by < 0 && top > first)) {
+      return { focus: ref(row), top: top + by, laid };
     }
   }
 
-  return { rows, above: 0, below: 0 };
+  const next = rows[index + by];
+
+  if (next === undefined) {
+    return { focus: ref(row), top, laid };
+  }
+
+  const nextFirst = starts[index + by]!;
+  const nextEnd = nextFirst + next.lines.length;
+  const nextTop =
+    next.lines.length > shown
+      ? by > 0
+        ? nextFirst
+        : nextEnd - shown
+      : nextFirst < top
+        ? nextFirst
+        : nextEnd > top + shown
+          ? nextEnd - shown
+          : top;
+
+  return { focus: ref(next), top: nextTop, laid };
 }
 
 /** A line in sight, with the row it is of. */
@@ -452,14 +562,17 @@ export interface ViewLine {
 }
 
 /**
- * The lines in sight, the pickers' `↑` on the first where rows are out of
- * sight above and `↓` on the last where rows are below, in the gutter the
- * `❯` stands in, which keeps its place (CHD-462).
+ * The lines in sight, the pickers' `↑` on the first where anything is out
+ * of sight above and `↓` on the last where anything is below, in the gutter
+ * the `❯` stands in, which keeps its place (CHD-462, CHD-430).
  */
 export function edgeMarked(shown: ViewWindow): ViewLine[] {
-  const lines = shown.rows.flatMap((row) =>
+  const all = shown.rows.flatMap((row) =>
     row.lines.map((line) => ({ row, cells: [...line] })),
   );
+  const lines = all.slice(shown.from, shown.from + shown.height);
+  const above = shown.above > 0 || shown.from > 0;
+  const below = shown.below > 0 || shown.from + shown.height < all.length;
   const mark = (line: ViewLine | undefined, edge: string) => {
     const [first, ...rest] = line?.cells ?? [];
 
@@ -480,11 +593,11 @@ export function edgeMarked(shown: ViewWindow): ViewLine[] {
     );
   };
 
-  if (shown.above > 0) {
+  if (above) {
     mark(lines[0], '↑ ');
   }
 
-  if (shown.below > 0) {
+  if (below) {
     mark(lines.at(-1), '↓ ');
   }
 

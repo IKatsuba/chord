@@ -472,6 +472,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'background_cleared':
     case 'background_opened':
     case 'background_closed':
+    case 'background_resized':
     case 'background_focused':
     case 'background_stop_asked':
     case 'background_hinted':

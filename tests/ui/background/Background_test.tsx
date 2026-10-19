@@ -804,3 +804,137 @@ describe('CHD-462 B1 tester: an arriving input hides and resumes the frame', () 
     }
   }
 });
+
+test('a task name taller than the frame scrolls by line at 80x24: ↓ through it, ↑ back from its last line, x acts on it wherever, and a resize or reopening shows it from its first line (CHD-430)', () =>
+  withBackground(
+    async (window) => {
+      await ready(window);
+      await send(window, 'tasktallname');
+      await window.shows('background  1 task running');
+      await send(window, 'tasklong');
+      await window.shows('background  2 tasks running');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('│ ❯ Rewrite the tokenizer');
+      await window.shows('│ ↓   keeping the line and');
+
+      // Each ↓ a line of it; its first line gone, the gutter's ↑ stands in.
+      await window.press('j');
+      await window.shows('│ ↑   as a single pass over');
+      expect(window.frame()).not.toContain('❯ Rewrite');
+
+      // Down to its last line, then the row below.
+      for (let step = 0; step < 40; step++) {
+        await window.press('j');
+      }
+
+      await window.shows('│ ❯ Watch the build');
+      // The frame keeps its height: the tall row's last lines stay above,
+      // the gutter's ↑ saying there is more (CHD-462).
+      expect(window.frame()).toContain('│     removed together');
+      expect(window.frame()).toMatch(/│ ↑ {3}\S/);
+      // Back with ↑: its last line at the bottom.
+      await window.press('k');
+      await window.shows('removed together');
+      await window.shows('│ ↑   instead, with the');
+
+      // x stops the row the view is in, whatever line of it is in sight.
+      await window.press('x');
+      await window.shows('background  1 task running · ■ 1 task stopped');
+
+      await window.resize({ columns: 82, rows: 24 });
+      await window.shows('│ ❯ Rewrite the tokenizer');
+
+      // Straight back, with no move: not where it was scrolled at 80.
+      await window.resize({ columns: 80, rows: 24 });
+      await window.shows('│ ❯ Rewrite the tokenizer');
+      await window.resize({ columns: 82, rows: 24 });
+      await window.shows('│ ❯ Rewrite the tokenizer');
+
+      // Back to the size it was scrolled at: still from its first line.
+      await window.press('j');
+      await window.shows('│ ↑ ');
+      await window.resize({ columns: 80, rows: 24 });
+      await window.shows('│ ❯ Rewrite the tokenizer');
+      // A row more, the frame as tall as before: still a resize.
+      await window.press('j');
+      await window.shows('│ ↑ ');
+      await window.resize({ columns: 80, rows: 25 });
+      await window.shows('│ ❯ Rewrite the tokenizer');
+
+      await window.press('j');
+      await window.shows('│ ↑ ');
+      await window.press(ESC);
+      await window.press('\r');
+      await window.shows('│ ❯ Rewrite the tokenizer');
+    },
+    { rows: 24, columns: 80 },
+  ));
+
+describe('CHD-430 tester: a scrolled task keeps its identity', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a live addition keeps the line in sight and Enter goes to the tall task at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+
+      server.admit = (caller) => {
+        if (caller.agent === undefined && caller.task === undefined) {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'tasktallname');
+            await window.shows('background  1 task running');
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('│ ❯ Rewrite the tokenizer');
+            await window.press('j');
+            await window.shows('│ ↑ ');
+
+            const itemLines = () =>
+              window
+                .frame()
+                .split('\n')
+                .filter((line) => line.startsWith('│'))
+                .slice(2, -2)
+                .map((line) => line.trimEnd());
+            const before = itemLines();
+
+            assert(main);
+
+            const added = await main.window.spawn(main, {
+              agent: 'fake',
+              name: 'New live task',
+              prompt: 'taskwait',
+            });
+
+            expect(added).not.toHaveProperty('error');
+            await window.shows('Background · 2 in this tab');
+            expect(itemLines()).toEqual(before);
+            expect(window.frame()).not.toContain('❯ Rewrite');
+            await window.press('\r');
+            await until(
+              'the frame closes at the tall task call',
+              () => !window.frame().includes('│ Background'),
+            );
+            await window.shows('Rewrite the tokenizer');
+            expect(window.frame()).not.toContain('› New live task');
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

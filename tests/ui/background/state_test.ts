@@ -244,3 +244,22 @@ describe('the view over requests the front tab asks (CHD-462)', () => {
     expect(backgroundShown(arrived)).toBeFalsy();
   });
 });
+
+test('another size clears where the frame was scrolled to, keeping the ❯ on its item (CHD-430)', () => {
+  const focus = { key: 1, id: 't1' };
+  const scrolled = [
+    { type: 'background_opened' },
+    { type: 'background_focused', focus, top: 7, laid: '76x6' },
+  ] as const;
+  const resized = [...scrolled, { type: 'background_resized' } as const].reduce(
+    reduceBackground,
+    initialBackground,
+  );
+
+  expect(resized.backgroundView).toStrictEqual({ focus });
+  // A move after it is laid out anew.
+  expect(
+    reduceBackground(resized, { type: 'background_focused', focus })
+      .backgroundView,
+  ).toStrictEqual({ focus });
+});

@@ -81,7 +81,10 @@ import {
 import { agentsHint, agentsRowLimit, summaryHint } from '../agents/agents.ts';
 import { AgentsList, ChildLine } from '../agents/Agents.tsx';
 import { SummaryLine } from '../background/Background.tsx';
-import { BackgroundView } from '../background/BackgroundView.tsx';
+import {
+  BackgroundView,
+  backgroundRowLimit,
+} from '../background/BackgroundView.tsx';
 import { agentsHaveKeys, backgroundShown } from '../background/state.ts';
 import { startingVim } from '../prompt/vim.ts';
 import { useCommands } from './commands.ts';
@@ -541,6 +544,12 @@ export function App({
     [agentRows.map((row) => `${row.name}:${row.colour}`).join('\n'), colours],
   );
 
+  // Another size wraps the background's rows again: the frame is found
+  // again from the `❯`, a tall row from its first line (CHD-430).
+  useEffect(() => {
+    dispatch({ type: 'background_resized' });
+  }, [columns, rows]);
+
   // A list gone while it had the keys hands them back to the box; a summary
   // line gone gives the `❯` back to the agent picked.
   useEffect(() => {
@@ -705,7 +714,10 @@ export function App({
       case 'close_agent':
         return sessions.closePicked();
       case 'move_background':
-        return sessions.moveBackground(step.by);
+        return sessions.moveBackground(step.by, {
+          width: columns - 4,
+          height: backgroundRowLimit(rows),
+        });
       case 'stop_background':
         return sessions.stopBackground();
       case 'go_to_call':
@@ -1080,6 +1092,7 @@ export function App({
                 <BackgroundView
                   items={backgroundItems}
                   focus={state.backgroundView.focus}
+                  at={state.backgroundView}
                   hint={state.backgroundView.hint}
                   columns={columns}
                   rows={rows}

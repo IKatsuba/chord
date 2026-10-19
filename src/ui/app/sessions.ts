@@ -141,7 +141,7 @@ import {
 } from '../background/background.ts';
 import {
   focusedItem,
-  moveViewFocus,
+  moveView,
   NO_STOP_HINT,
   stopRefused,
 } from '../background/view.ts';
@@ -1599,11 +1599,22 @@ export function useSessions(
   };
 
   /** ↑ ↓ in the background view: the `❯` `by` rows on, stopping at the ends. */
-  const moveBackground = (by: number) => {
-    const focus = moveViewFocus(background(), state.backgroundView?.focus, by);
+  const moveBackground = (
+    by: 1 | -1,
+    frame: { readonly width: number; readonly height: number },
+  ) => {
+    const at = moveView(background(), state.backgroundView, by, {
+      ...frame,
+      now: Date.now(),
+    });
 
-    if (focus !== undefined) {
-      dispatch({ type: 'background_focused', focus });
+    if (at?.focus !== undefined) {
+      dispatch({
+        type: 'background_focused',
+        focus: at.focus,
+        ...(at.top === undefined ? {} : { top: at.top }),
+        ...(at.laid === undefined ? {} : { laid: at.laid }),
+      });
     }
   };
 

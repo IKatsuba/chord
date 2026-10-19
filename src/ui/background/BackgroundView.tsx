@@ -14,6 +14,8 @@ import type { BackgroundGroup, BackgroundItem } from './background.ts';
 import {
   edgeMarked,
   type ItemRef,
+  laidAt,
+  type ViewAt,
   type ViewCell,
   viewRows,
   viewWindow,
@@ -55,12 +57,15 @@ export function backgroundRowLimit(windowRows: number): number {
 export function BackgroundView({
   items,
   focus,
+  at,
   hint,
   columns,
   rows,
 }: {
   items: readonly BackgroundItem[];
   focus: ItemRef | undefined;
+  /** Where in a focused row taller than the frame it is (CHD-430). */
+  at?: ViewAt | undefined;
   /** Said in place of the keys, of the focused item's stop. */
   hint?: string | undefined;
   /** The window's width; the frame takes all of it. */
@@ -72,7 +77,10 @@ export function BackgroundView({
   // Times count a second at a time while the view is drawn.
   const now = useAgentsClock(true);
   const laid = viewRows(items, { width: columns - 4, focus, now });
-  const lines = edgeMarked(viewWindow(laid, backgroundRowLimit(rows)));
+  const height = backgroundRowLimit(rows);
+  const lines = edgeMarked(
+    viewWindow(laid, height, at, laidAt(columns - 4, height)),
+  );
   const stop = useHintKey('agents:close');
   const close = useCloseHint();
   const cell = (piece: ViewCell, item: BackgroundItem, focused: boolean) => {

@@ -94,7 +94,7 @@ export type Step =
   /** `x` in the list: the picked child closes, or asks again. */
   | { readonly type: 'close_agent' }
   /** The `❯` in the background view moves `by` rows. */
-  | { readonly type: 'move_background'; readonly by: number }
+  | { readonly type: 'move_background'; readonly by: 1 | -1 }
   /** `x` in the background view: the focused item stops. */
   | { readonly type: 'stop_background' }
   /** Enter in the background view: to the call that started the item. */

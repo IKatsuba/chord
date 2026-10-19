@@ -364,6 +364,7 @@ const SCENARIOS = [
   'bigaskleft',
   'taskchild',
   'tasklong',
+  'tasktallname',
   'tasktwo',
   'taskwait',
   'agents',

@@ -17,6 +17,12 @@ export interface BackgroundState {
   readonly backgroundView?: {
     readonly focus?: ItemRef;
     /**
+     * The line of all the rows' on top of the frame, for the size `laid`
+     * it was laid out at (CHD-430).
+     */
+    readonly top?: number;
+    readonly laid?: string;
+    /**
      * The requests already waiting on the person as it opened, which it
      * stays over, holding the keys, as the agents list did (CHD-462).
      */
@@ -48,8 +54,19 @@ export type BackgroundAction =
    */
   | { readonly type: 'background_opened'; readonly over?: readonly string[] }
   | { readonly type: 'background_closed' }
+  /**
+   * The window took another size: the frame is found again from the `❯`,
+   * a tall row from its first line (CHD-430).
+   */
+  | { readonly type: 'background_resized' }
   /** ↑ ↓ in the view put the `❯` on `focus`. */
-  | { readonly type: 'background_focused'; readonly focus: ItemRef }
+  | {
+      readonly type: 'background_focused';
+      readonly focus: ItemRef;
+      /** The line on top of the frame, at the size `laid`; kept if not given. */
+      readonly top?: number;
+      readonly laid?: string;
+    }
   /** `x` asked to stop `focus`, which may answer later, under `token`. */
   | {
       readonly type: 'background_stop_asked';
@@ -121,6 +138,17 @@ export function reduceBackground(
             ? {}
             : { over: action.over },
       };
+    case 'background_resized': {
+      const view = state.backgroundView;
+
+      if (view?.top === undefined && view?.laid === undefined) {
+        return state;
+      }
+
+      const { top: _, laid: __, ...kept } = view;
+
+      return { ...state, backgroundView: kept };
+    }
     case 'background_closed': {
       const { backgroundView: _, ...rest } = state;
 
@@ -137,10 +165,20 @@ export function reduceBackground(
       // on their item.
       const stays = same(view.focus, action.focus);
 
+      // Where in a tall row it is stays with the row, unless a move says.
+      const at =
+        action.top !== undefined
+          ? { top: action.top, laid: action.laid }
+          : stays
+            ? { top: view.top, laid: view.laid }
+            : {};
+
       return {
         ...state,
         backgroundView: {
           focus: action.focus,
+          ...(at.top === undefined ? {} : { top: at.top }),
+          ...(at.laid === undefined ? {} : { laid: at.laid }),
           ...(view.over === undefined ? {} : { over: view.over }),
           ...(stays && view.hint !== undefined ? { hint: view.hint } : {}),
           ...(view.stopping !== undefined &&

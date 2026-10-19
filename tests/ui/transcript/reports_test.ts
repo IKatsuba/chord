@@ -211,6 +211,11 @@ test("/cost says the turn running is counted when it ends, until any of its spen
     turns: {
       a: { inputTokens: 1000, outputTokens: 200, cachedReadTokens: 800 },
     },
+    // The earlier turn's own cost, chord's estimate: the total is theirs
+    // added (CHD-373).
+    costs: {
+      a: { cost: { amount: 0.025, currency: 'USD' }, estimated: true as const },
+    },
   };
   const estimated = {
     used: 4000,

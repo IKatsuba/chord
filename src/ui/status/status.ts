@@ -755,19 +755,34 @@ export function leaderLine(
 export function workingLine(
   turn: TurnState,
   now: number,
-  /** A form or link is open, below the line. */
-  asking = false,
+  /**
+   * A form or link is open, below the line, with when it was asked if known:
+   * held past its turn or asked between turns too, it still waits (CHD-158).
+   */
+  asking: boolean | { readonly at?: number | undefined } = false,
   /** The key that interrupts, named in the line; none when none is bound. */
   cancelKey: string | undefined,
   /** The agent is compacting the conversation within the turn. */
   compacting = false,
 ): { readonly label: string; readonly detail: string } | undefined {
-  if (asking && turn.status === 'working') {
-    // Esc answers the form below rather than interrupting the turn.
-    return {
-      label: 'Waiting for your input…',
-      detail: formatElapsed(now - turn.since),
-    };
+  if (asking !== false && turn.status !== 'awaiting_permission') {
+    const at = asking === true ? undefined : asking.at;
+
+    // Esc answers the form below rather than interrupting the turn; its time
+    // counts from when it asked, as a permission's does.
+    if (turn.status === 'working') {
+      return {
+        label: 'Waiting for your input…',
+        detail: formatElapsed(now - (at ?? turn.since)),
+      };
+    }
+
+    if (turn.status === 'idle') {
+      return {
+        label: 'Waiting for your input…',
+        detail: formatElapsed(now - (at ?? now)),
+      };
+    }
   }
 
   switch (turn.status) {

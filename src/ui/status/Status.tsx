@@ -51,11 +51,12 @@ export function Working({
   compacting,
 }: {
   turn: TurnState;
-  asking: boolean;
+  /** The form or link open below, if any, and when it asked. */
+  asking: { readonly at?: number | undefined } | undefined;
   compacting: boolean;
 }) {
   const [now, setNow] = useState(Date.now);
-  const busy = turn.status !== 'idle';
+  const busy = turn.status !== 'idle' || asking !== undefined;
 
   useEffect(() => {
     if (!busy) {
@@ -72,7 +73,7 @@ export function Working({
   const line = workingLine(
     turn,
     now,
-    asking,
+    asking ?? false,
     useHintKey('chat:cancel'),
     compacting,
   );

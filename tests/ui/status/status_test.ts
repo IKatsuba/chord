@@ -414,6 +414,18 @@ test('the spinner line follows the turn', () => {
     label: 'Interrupting…',
     detail: '12s',
   });
+  // A form waits on the person, counted from when it asked; held past its
+  // turn or asked between turns, it still does (CHD-158).
+  expect(
+    workingLine(turn('working'), 13_000, { at: 10_000 }, 'esc'),
+  ).toStrictEqual({ label: 'Waiting for your input…', detail: '3s' });
+  expect(workingLine(turn('working'), 13_000, true, 'esc')).toStrictEqual({
+    label: 'Waiting for your input…',
+    detail: '12s',
+  });
+  expect(
+    workingLine(turn('idle'), 13_000, { at: 10_000 }, 'esc'),
+  ).toStrictEqual({ label: 'Waiting for your input…', detail: '3s' });
   // A compaction within the turn is said where Working… was, as Claude Code does.
   expect(
     workingLine(turn('working'), 13_000, false, 'esc', true),

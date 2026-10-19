@@ -716,7 +716,6 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
       const drive = useSessions(
         {
           agent: 'fake',
-          agentCommand: command,
           place: {
             cwd: dir,
             startupOf: (agent) =>

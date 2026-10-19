@@ -452,7 +452,8 @@ test('Esc stops a running task agent, which sends no report, takes the queued pr
     await withWindow(
       async (window) => {
         await ready(window);
-        await send(window, 'task');
+        // Its turn runs until Esc, so the task asks and messages within it.
+        await send(window, 'taskstays');
         await window.shows('Agent(Fix the tokenizer) · fake asks');
         await window.press('\r');
         await window.shows('← from Fix the tokenizer · fake:');

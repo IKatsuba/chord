@@ -316,6 +316,7 @@ const SCENARIOS = [
   'leftask',
   'mainbetweentwice',
   'taskbetween',
+  'taskstays',
   'teamtask',
   'compact',
   'codexcompact',

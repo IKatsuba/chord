@@ -654,7 +654,7 @@ describe('CHD-373 S3a tester: causal wire costs through Conversation', () => {
       }));
   }
 
-  test('four queued prompts attribute each causally released prior cost once to the following turn', () =>
+  test('four successive prompts attribute each causally released prior cost once to the following turn', () =>
     withDir(async (dir) => {
       const events: ConversationEvent[] = [];
 

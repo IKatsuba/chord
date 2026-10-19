@@ -341,10 +341,23 @@ tokens but no cost, as Codex can, gets a cost chord works out from the
 model's price, with `cost_estimated: true` beside it; `/cost` says
 `(chord's estimate)` after such a cost, and a context window chord took from
 the model's data is marked `~` on the status line.
+`/cost` totals the session's earlier turns from its record and this window,
+each turn counted once. Older records show `Before <date>: $… as last
+reported`; turns whose spend could not be counted from cost or tokens show
+`Not counted: N turns`. The order is `Total cost`, `Before`, `Not counted`,
+`This turn`, tokens, then `Session time`, with absent parts left out.
 While the reported session's turn runs with none of its spend received,
-`/cost` adds `This turn:     counted when it ends` after `Total cost`, or
-after the sentence saying nothing is reported yet. A permission held
-inside the agent's own cycle counts as a running turn too.
+`This turn:     counted when it ends` follows those marks, or the sentence
+saying nothing is reported yet. A permission held inside the agent's own
+cycle counts as a running turn too.
+
+With more than one session, a task included, `/cost` adds a window table:
+each tab's subtotal, its own agent, children and team runs with their
+members, then the window's total. Tasks sit under whoever started them;
+a team's tasks have separate rows. Each row shows its own spend, except
+tab subtotals. Names and notes end in `…` where they do not fit; nothing
+wraps. `~` marks estimates in the table and task summaries. Closed children
+and tabs stay counted, as do sessions cleared or resumed in place.
 
 ## Settings
 
@@ -510,7 +523,10 @@ open;
 tab. `spawn_task` starts a task agent: another agent, on any runtime chord
 knows and a model it offers, does one job with no tab of its own. Its work
 draws in its parent's turn as a subagent's block does, `Agent(<name>) ·
-codex · gpt-5.3-codex`, its permission requests, forms and links come to you
+codex · gpt-5.3-codex`. Its ended block shows reported tokens and cost:
+`Done (5 tool uses · 2.0k tokens · $0.0125 · 13s)`; unreported parts are
+left out. Its background row adds `· $0.0125` after its state.
+Its permission requests, forms and links come to you
 in the parent's tab, and what it tells its parent with `send_message`, its
 one tool, and the report its first turn ends with reach the parent as
 messages, drawn as a `←` row: a turn of the parent's, or, while one runs,

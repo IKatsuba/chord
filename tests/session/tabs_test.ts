@@ -1483,3 +1483,21 @@ describe('CHD-431 tester: requester changes keep one wait', () => {
     expect(tabOf(again, 1)?.wait.asking?.on.subagentId).toBe('fresh');
   });
 });
+
+test("from an agent put in front by hand, attention goes first to the longest wait behind it, as the status line names it, then walks on (the owner's Q46)", () => {
+  let tabs = opened('a', 'b', 'c');
+
+  // a has waited longest, b asks later, c has a reply not yet seen.
+  tabs = heard(tabs, 1, [up, prompt('t'), asked('t', 'p')], 0);
+  tabs = heard(tabs, 2, [up, prompt('t'), asked('t', 'p')], 5000);
+  // b in front by hand, so c's end behind it is news.
+  tabs = goTo(tabs, 2);
+  tabs = heard(tabs, 3, [up, prompt('t'), ended('t')], 9000);
+
+  const first = attend(tabs)!;
+
+  expect(first.front).toStrictEqual(1);
+  // From there it walks as ever: the next wait, then the unseen reply.
+  expect(attend(first)?.front).toStrictEqual(2);
+  expect(attend(attend(first)!)?.front).toStrictEqual(3);
+});

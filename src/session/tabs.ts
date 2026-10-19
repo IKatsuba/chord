@@ -787,13 +787,19 @@ export function attentionOrder<C>(tabs: Tabs<C>): number[] {
 export function attend<C>(tabs: Tabs<C>): Tabs<C> | undefined {
   const order = ranked(tabs);
   const shown = shownKey(tabs);
-  const from =
-    tabs.attended?.key === shown
-      ? tabs.attended?.rank
-      : order.find(({ key }) => key === shown)?.rank;
+  const byHand = tabs.attended?.key !== shown;
+  const from = byHand
+    ? order.find(({ key }) => key === shown)?.rank
+    : tabs.attended?.rank;
   const others = order.filter(({ key }) => key !== shown);
+  // From an agent put in front by hand, the first goes to what the status
+  // line names, the longest wait behind it; the walk goes on from there
+  // (the owner's Q46, CHD-431).
+  const named = byHand ? others.find(({ rank }) => !rank.unseen) : undefined;
   const next =
-    (from && others.find(({ rank }) => compare(rank, from) > 0)) ?? others[0];
+    named ??
+    (from && others.find(({ rank }) => compare(rank, from) > 0)) ??
+    others[0];
 
   return next && { ...pick(tabs, next.key), attended: next };
 }

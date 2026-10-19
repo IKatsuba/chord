@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
@@ -254,6 +254,52 @@ test('--resume with no id asks for the picker, not an id, and is refused only wh
     expect(status).toStrictEqual(2);
     expect(said).toContain('--resume needs an id when not in a terminal');
     expect(!said.includes('Missing value'), said).toBeTruthy();
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test("a refused command for the agent starts nothing, chord's own command neither, and says why (CHD-466)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-cli-'));
+
+  try {
+    await mkdir(join(dir, 'config', 'chord'), { recursive: true });
+    await writeFile(
+      join(dir, 'config', 'chord', 'settings.json'),
+      JSON.stringify({ agents: { codex: { command: 7 } } }),
+    );
+
+    const { status, stderr: said } = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+        'codex',
+        '-p',
+        'hi',
+        '-C',
+        dir,
+      ],
+      {
+        env: {
+          ...process.env,
+          HOME: dir,
+          XDG_STATE_HOME: join(dir, 'state'),
+          XDG_CONFIG_HOME: join(dir, 'config'),
+          // No npx to run: were the registry's command tried, it would fail
+          // on PATH, not start the agent.
+          PATH: join(dir, 'bin'),
+          NO_COLOR: '1',
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+        encoding: 'utf8',
+      },
+    );
+
+    expect(status).toStrictEqual(1);
+    expect(said).toContain(
+      'codex not started: agents.codex.command in config/chord/settings.json: expected a string, got a number',
+    );
+    expect(said).not.toContain('npx');
   } finally {
     await rm(dir, { recursive: true });
   }

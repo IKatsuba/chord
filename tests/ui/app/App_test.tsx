@@ -1752,3 +1752,64 @@ test("a permission asked in the agent's own cycle is held: a digit typed is the 
       rows: 40,
     },
   ));
+
+describe('CHD-426 U1 tester: inputs during autonomous work', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const kind of ['form', 'link'] as const) {
+      test(`${kind} stays held and answering returns to the running cycle at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'claudecyclebare');
+            await window.shows('The build passed.');
+            await window.shows('Working…');
+
+            const session = window.session()!;
+            const answer = session.elicitations.handler(
+              kind === 'form'
+                ? {
+                    sessionId: session.id,
+                    mode: 'form',
+                    message: 'Cycle details',
+                    requestedSchema: {
+                      type: 'object',
+                      properties: { note: { type: 'string', title: 'Note' } },
+                    },
+                  }
+                : {
+                    sessionId: session.id,
+                    mode: 'url',
+                    message: 'Cycle approval',
+                    url: 'https://example.com/cycle',
+                    elicitationId: 'cycle-window-link',
+                  },
+              new AbortController().signal,
+            );
+
+            await window.shows('between turns');
+            await window.shows('ctrl+x a to answer');
+            await window.type('1');
+            expect(promptRow(window)).toContain('› 1');
+            await leader(window, 'a');
+            await window.shows('Esc to cancel');
+            await window.press(ESC);
+            expect(await answer).toMatchObject({ action: 'cancel' });
+            await window.shows('Working…');
+            await until(
+              'the held input is gone',
+              () => !window.frame().includes('between turns'),
+            );
+            expect(promptRow(window)).toContain('› 1');
+          },
+          {
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--adapter', 'claude'),
+          },
+        ));
+    }
+  }
+});

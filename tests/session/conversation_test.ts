@@ -5,6 +5,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RequestError, type SessionUpdate } from '@agentclientprotocol/sdk';
+import { cycleMark } from '../../src/session/cycles.ts';
 import type { AgentOption } from '../../src/session/config.ts';
 import {
   Conversation,
@@ -3801,5 +3802,211 @@ describe("an agent's own cycle after its turn (CHD-426, the owner's Q49)", () =>
         'text',
       ]);
       expect(events.some((event) => event.type === 'queued')).toBeFalsy();
+    }));
+});
+
+describe('CHD-426 U1 tester: cycle markers and pending requests', () => {
+  test('the cycle can end with a permission still held, and answering it does not start another cycle', async () => {
+    let source: Session | undefined;
+
+    await onFake(
+      ['--adapter', 'claude'],
+      async (conversation, events) => {
+        assert(source);
+
+        const owner = source;
+        let response: Promise<unknown> | undefined;
+        const stop = owner.subscribe((update) => {
+          if (
+            response === undefined &&
+            update.sessionUpdate === 'agent_message_chunk' &&
+            update.content.type === 'text' &&
+            update.content.text.includes('The background build ended;')
+          ) {
+            response = owner.permissions.handler(
+              {
+                sessionId: owner.id,
+                toolCall: {
+                  toolCallId: 'cycle-permission',
+                  title: 'Keep the log',
+                },
+                options: [
+                  { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+                ],
+              },
+              new AbortController().signal,
+            );
+          }
+        });
+
+        try {
+          conversation.send('claudecycle');
+          await until(() =>
+            events.some((event) => event.type === 'cycle_started'),
+          );
+
+          const cycle = events.find((event) => event.type === 'cycle_started');
+
+          assert(cycle?.type === 'cycle_started');
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'result' && event.turnId === cycle.turnId,
+            ),
+          );
+
+          const asked = events.find(
+            (event) => event.type === 'permission_requested',
+          );
+
+          assert(asked?.type === 'permission_requested');
+          expect(asked.between).toBe(true);
+          expect(
+            events.some((event) => event.type === 'permission_settled'),
+          ).toBe(false);
+          conversation.choose(asked.permission.id, 'allow');
+          expect(await response).toMatchObject({
+            outcome: { outcome: 'selected', optionId: 'allow' },
+          });
+          await until(() =>
+            events.some((event) => event.type === 'permission_settled'),
+          );
+          expect(
+            events.filter((event) => event.type === 'cycle_started'),
+          ).toHaveLength(1);
+          expect(
+            events.filter((event) => event.type === 'result'),
+          ).toHaveLength(2);
+        } finally {
+          stop();
+        }
+      },
+      (session) => (source = session),
+    );
+  });
+
+  test('form and link requested during a cycle remain held after its end and gate the next prompt together', async () => {
+    let source: Session | undefined;
+
+    await onFake(
+      ['--adapter', 'claude'],
+      async (conversation, events) => {
+        assert(source);
+
+        const owner = source;
+        const responses: Promise<unknown>[] = [];
+        const stop = owner.subscribe((update) => {
+          if (
+            responses.length === 0 &&
+            update.sessionUpdate === 'agent_message_chunk' &&
+            update.content.type === 'text' &&
+            update.content.text.includes('The background build ended;')
+          ) {
+            responses.push(
+              owner.elicitations.handler(
+                {
+                  sessionId: owner.id,
+                  mode: 'form',
+                  message: 'Cycle form',
+                  requestedSchema: { type: 'object', properties: {} },
+                },
+                new AbortController().signal,
+              ),
+            );
+            responses.push(
+              owner.elicitations.handler(
+                {
+                  sessionId: owner.id,
+                  mode: 'url',
+                  message: 'Cycle link',
+                  url: 'https://example.com/cycle',
+                  elicitationId: 'cycle-link',
+                },
+                new AbortController().signal,
+              ),
+            );
+          }
+        });
+
+        try {
+          conversation.send('claudecycle');
+          await until(
+            () =>
+              events.filter((event) => event.type === 'result').length === 2,
+          );
+
+          const asked = events.filter(
+            (event) => event.type === 'elicitation_requested',
+          );
+
+          expect(asked).toHaveLength(2);
+          expect(asked.every((event) => event.elicitation.between)).toBe(true);
+          conversation.send('text');
+          expect(
+            events.filter((event) => event.type === 'prompt'),
+          ).toHaveLength(1);
+          expect(
+            events.filter((event) => event.type === 'queued').at(-1),
+          ).toMatchObject({ afterAnswer: true });
+          conversation.answer(asked[0]!.elicitation.id, { action: 'cancel' });
+          expect(await responses[0]).toMatchObject({ action: 'cancel' });
+          expect(
+            events.filter((event) => event.type === 'prompt'),
+          ).toHaveLength(1);
+          conversation.answer(asked[1]!.elicitation.id, { action: 'cancel' });
+          expect(await responses[1]).toMatchObject({ action: 'cancel' });
+          await until(() => saidIn(events).includes('Hello, world.'));
+          expect(
+            events
+              .filter((event) => event.type === 'prompt')
+              .map((event) => event.text),
+          ).toEqual(['claudecycle', 'text']);
+        } finally {
+          stop();
+        }
+      },
+      (session) => (source = session),
+    );
+  });
+
+  test('a late autonomous end marker cannot finish the prompt that took over the cycle', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('claudecycle');
+      await until(() => events.some((event) => event.type === 'cycle_started'));
+
+      const cycle = events.find((event) => event.type === 'cycle_started');
+
+      assert(cycle?.type === 'cycle_started');
+      conversation.send('slow');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' && cycleMark(event.update) === 'end',
+        ),
+      );
+
+      const own = events.filter((event) => event.type === 'prompt').at(-1);
+
+      assert(own?.type === 'prompt');
+      expect(own.text).toBe('slow');
+      expect(
+        events.some(
+          (event) => event.type === 'result' && event.turnId === own.turnId,
+        ),
+      ).toBe(false);
+      expect(
+        events.some(
+          (event) => event.type === 'result' && event.turnId === cycle.turnId,
+        ),
+      ).toBe(false);
+      expect(events.some((event) => event.type === 'queued')).toBe(false);
+      await until(() =>
+        events.some(
+          (event) => event.type === 'result' && event.turnId === own.turnId,
+        ),
+      );
+      expect(
+        events.filter((event) => event.type === 'cycle_started'),
+      ).toHaveLength(1);
     }));
 });

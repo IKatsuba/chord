@@ -609,3 +609,48 @@ describe('CHD-158 tester: taskstays closes with its waiting parent', () => {
     }
   }
 });
+
+describe('CHD-470 tester: a steering-gated task parent closes before any steer', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`quit releases the permission and steering waiter at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'tasktillsteered');
+            await window.shows('Agent(Fix the tokenizer) · fake asks');
+            expect(window.frame()).not.toContain('between turns');
+            expect(window.pids.length).toBeGreaterThanOrEqual(2);
+
+            const session = window.session();
+
+            assert(session !== undefined);
+            await quitAll(window);
+            await session.exited;
+            expect(session.agentPids.size).toBe(0);
+            expect(session.gone() ?? '').not.toMatch(/unhandled|AbortError/i);
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--steering',
+              'codex',
+              '--steer-late',
+            ),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

@@ -174,6 +174,29 @@ export const TASKS = {
     return 'end_turn';
   },
 
+  // As `task`, its turn running on until it is cancelled, however long
+  // the task takes to ask its permission and send its message.
+  async taskstays(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await turn.say('I will send a task agent on fake for the fix.');
+      await callChord(turn, client, 'spawn_task', TASK_ARGS);
+      await turn.say('It is running; I will check its report when it lands.');
+      await pause(turn.signal, 600_000);
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // Starts `taskchild` as `task` does, then ends its turn at once, so the
   // task asks its write's permission with no turn of its parent's running
   // (CHD-158).

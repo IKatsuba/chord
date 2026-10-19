@@ -410,3 +410,67 @@ test('a session that reported nothing but a turn left out still says that turn',
 
 const text = (rows: readonly { label?: string; text: string }[]) =>
   rows.map(({ label, text }) => `${label ?? ''}${text}`);
+
+test("a name over several lines, a task's, an agent's or a run member's, stays on its row", () => {
+  const window: SpendPart[] = [
+    {
+      name: '1 fake',
+      kind: 'tab',
+      parts: [
+        {
+          name: 'main',
+          kind: 'main',
+          agent: 'fake',
+          figure: { cost: USD(0.01) },
+          parts: [
+            {
+              name: 'Read\ntests',
+              kind: 'task',
+              ended: true,
+              figure: { cost: USD(0.001) },
+            },
+          ],
+        },
+        { name: 'docs\r\nwriter', kind: 'agent', figure: { cost: USD(0.002) } },
+        {
+          name: 'bug\nfix',
+          kind: 'team',
+          parts: [
+            { name: 'lead', kind: 'member', figure: { cost: USD(0.003) } },
+            {
+              name: 'test\ner',
+              kind: 'member',
+              figure: { cost: USD(0.004) },
+              parts: [{ name: 'Run\n\tit', kind: 'task', running: true }],
+            },
+          ],
+        },
+      ],
+    },
+  ];
+
+  for (const width of [72, 112]) {
+    const drawn = lines(window, width);
+
+    for (const line of drawn) {
+      expect(line, line).not.toMatch(/[\r\n]/);
+      expect(stringWidth(line), line).toBeLessThanOrEqual(width);
+    }
+  }
+
+  const at112 = lines(window, 112);
+
+  expect(at112).toContain('    Read tests  $0.0010       —  task agent, ended');
+  expect(
+    at112.some((line) =>
+      line.includes('team run: lead $0.0030 · test er $0.0040'),
+    ),
+  ).toBe(true);
+  expect(
+    at112.some(
+      (line) =>
+        line.includes('Run it') &&
+        line.includes('task agent of test er, running'),
+    ),
+  ).toBe(true);
+});

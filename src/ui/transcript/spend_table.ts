@@ -340,6 +340,14 @@ function totalRow(parts: readonly SpendPart[]): Row {
   return sumRow('Total', 0, summed, notes);
 }
 
+/**
+ * `text` on one line, as a name a person or an agent gave may span several:
+ * every run of whitespace one space, as a prompt's line is shown.
+ */
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
 /** `text` cut to `cells` columns, an ellipsis where it was cut. */
 function cut(text: string, cells: number): string {
   if (stringWidth(text) <= cells) {
@@ -389,7 +397,9 @@ export function spendTable(
     ...rows.map((row) => stringWidth(row.tokens)),
   );
   const figures = 2 + costWidth + 2 + tokenWidth;
-  const names = rows.map((row) => `${'  '.repeat(row.depth)}${row.name}`);
+  const names = rows.map(
+    (row) => `${'  '.repeat(row.depth)}${oneLine(row.name)}`,
+  );
   // At most a third of the table, the figures never cut.
   const nameWidth = Math.min(
     Math.max(NAME_LEAST, ...names.map((name) => stringWidth(name))),
@@ -408,8 +418,8 @@ export function spendTable(
     ...rows.map((row, index) => {
       const shown = line(names[index]!, row.cost, row.tokens);
       const room = width - stringWidth(shown) - 2;
-      const long = row.notes.map((note) => note.long).join('; ');
-      const short = row.notes.map((note) => note.short).join('; ');
+      const long = oneLine(row.notes.map((note) => note.long).join('; '));
+      const short = oneLine(row.notes.map((note) => note.short).join('; '));
       const note =
         long === '' ? '' : stringWidth(long) <= room ? long : cut(short, room);
 

@@ -199,7 +199,10 @@ const cli = chordCommand().action(async (options, named) => {
 
       if (missing !== undefined) {
         await leaveStart();
-        console.error(missing);
+        // As every line chord says before its window, a missing command's too.
+        console.error(
+          start.refused === undefined ? missing : `chord: ${missing}`,
+        );
         process.exit(1);
       }
     }
@@ -473,9 +476,16 @@ const cli = chordCommand().action(async (options, named) => {
           },
           layers,
         );
+        // The window's own agent starts as it was invoked, but this place's
+        // files may refuse its command, unless a flag gave it one.
+        const refused =
+          found.refused ??
+          (name === agent && flags.agentCommand === undefined
+            ? resolveStartup({ agent: name }, layers, name).refused
+            : undefined);
 
-        if (found.refused !== undefined) {
-          return { refused: refusalLine(name, found.refused, shown) };
+        if (refused !== undefined) {
+          return { refused: refusalLine(name, refused, shown) };
         }
 
         return found.agentCommand === undefined && findAgent(name) === undefined

@@ -291,14 +291,16 @@ export function parseSettings(
 
       for (const path of paths) {
         const [first, agent, key] = path;
-
-        if (
+        const command =
           path.length === 3 &&
           first === 'agents' &&
           typeof agent === 'string' &&
           key === 'command'
-        ) {
-          refused[agent] = `expected a string, got ${given(at(input, path))}`;
+            ? agent
+            : undefined;
+
+        if (command !== undefined) {
+          refused[command] = `expected a string, got ${given(at(input, path))}`;
         }
 
         if (path.length === 0 || !drop(input, path)) {
@@ -316,10 +318,14 @@ export function parseSettings(
 
         problems.push({
           file,
+          // A refused command is not ignored: its agent will not start, which
+          // the person learns before trying it.
           message:
-            issue.code === 'unrecognized_keys'
-              ? `unknown key "${keyOf(path)}", ignored`
-              : `"${keyOf(path)}": ${issue.message.toLowerCase()}, ignored`,
+            command !== undefined
+              ? `"agents.${command}.command": ${refused[command]!} · ${command} will not start`
+              : issue.code === 'unrecognized_keys'
+                ? `unknown key "${keyOf(path)}", ignored`
+                : `"${keyOf(path)}": ${issue.message.toLowerCase()}, ignored`,
         });
       }
     }
@@ -532,10 +538,18 @@ export function resolveStartup(
   const settings = mergeSettings(...layers.map((layer) => layer.settings));
   const agent = flags.agent ?? settings.agent ?? defaultAgent;
   const agentCommand = flags.agentCommand ?? settings.agents?.[agent]?.command;
-  const refusedIn = layers.find((layer) => layer.refused?.[agent]);
+  // The last file to give the agent a command decides, as every setting
+  // merges: a refused one refuses the agent, never falling back to chord's
+  // own, and a later good one replaces it (the lead, on the owner's Q52).
+  const last = layers.findLast(
+    (layer) =>
+      layer.refused?.[agent] !== undefined ||
+      layer.settings.agents?.[agent]?.command !== undefined,
+  );
+  const cause = last?.refused?.[agent];
   const refused =
-    flags.agentCommand === undefined && refusedIn !== undefined
-      ? { file: refusedIn.file, cause: refusedIn.refused![agent]! }
+    flags.agentCommand === undefined && cause !== undefined
+      ? { file: last!.file, cause }
       : undefined;
   const model = sourced(
     { name: '--model', value: flags.model },

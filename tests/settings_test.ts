@@ -747,6 +747,18 @@ describe("an agent's command chord refuses (CHD-466, the owner's Q52)", () => {
     expect(parse(String(flag))).toStrictEqual(['tool', '--value', '']);
   });
 
+  test("its warning says the agent will not start, not that the value is ignored; another setting's still is", () => {
+    const { problems } = parseSettings(
+      file,
+      JSON.stringify({ agents: { codex: { command: 7, model: 3 } } }),
+    );
+
+    expect(problems.map(({ message }) => message)).toStrictEqual([
+      '"agents.codex.command": expected a string, got a number · codex will not start',
+      '"agents.codex.model": invalid input: expected string, received number, ignored',
+    ]);
+  });
+
   test('a list whose program is empty is refused, saying so', () => {
     expect(
       startupOf('codex', { agent: 'fake' }, [layer({ command: ['', 'x'] })])
@@ -779,6 +791,30 @@ describe("an agent's command chord refuses (CHD-466, the owner's Q52)", () => {
       expect(found.agentCommand, String(command)).toBeUndefined();
       expect(found.refused).toStrictEqual({ file, cause });
     }
+  });
+
+  test("the last file to give a command decides, as settings merge: a later good one replaces a refused one, a later refused one refuses (the lead's call on Q52)", () => {
+    const user = {
+      ...layer({ command: 7 }),
+      file: '/h/.config/chord/settings.json',
+    };
+    const good = layer({ command: ['bun', 'fake.ts'] });
+
+    const replaced = startupOf('codex', { agent: 'fake' }, [user, good]);
+
+    expect(replaced.refused).toBeUndefined();
+    expect(replaced.agentCommand).toStrictEqual(['bun', 'fake.ts']);
+
+    const refusedLater = startupOf('codex', { agent: 'fake' }, [
+      { ...good, file: '/h/.config/chord/settings.json' },
+      layer({ command: 7 }),
+    ]);
+
+    expect(refusedLater.agentCommand).toBeUndefined();
+    expect(refusedLater.refused).toStrictEqual({
+      file,
+      cause: 'expected a string, got a number',
+    });
   });
 
   test('a flag still gives the command; another agent is untouched', () => {

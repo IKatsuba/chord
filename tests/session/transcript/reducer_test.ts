@@ -572,3 +572,53 @@ test("a turn the agent started on its own draws as a block of its own, closed by
   ]);
   expect(state.turn).toStrictEqual({ status: 'idle' });
 });
+
+test("an agent's own cycle works as a turn does, with nothing of the person's drawn, until its result (CHD-426)", () => {
+  const working = fold([
+    { type: 'prompt', turnId: 't1', text: 'hi', at: 0 },
+    {
+      type: 'result',
+      turnId: 't1',
+      result: { status: 'completed', stopReason: 'end_turn' },
+    },
+    { type: 'cycle_started', turnId: 'c1', at: 5000 },
+  ]);
+
+  expect(working.turn).toStrictEqual({
+    status: 'working',
+    turnId: 'c1',
+    since: 5000,
+  });
+  expect(working.entries.map((entry) => entry.kind)).toStrictEqual(['user']);
+  expect(
+    fold(
+      [
+        {
+          type: 'result',
+          turnId: 'c1',
+          result: { status: 'completed', stopReason: 'end_turn' },
+        },
+      ],
+      working,
+    ).turn,
+  ).toStrictEqual({ status: 'idle' });
+});
+
+test("a permission held between turns stays held through the agent's own cycle (the owner's Q48)", () => {
+  const held = fold([
+    {
+      type: 'permission_requested',
+      turnId: 'session',
+      permission: { id: 'p1', options: [] },
+      at: 100,
+      between: true,
+    },
+    { type: 'cycle_started', turnId: 'c1', at: 5000 },
+  ]);
+
+  expect(held.turn).toMatchObject({
+    status: 'awaiting_permission',
+    turnId: 'c1',
+    between: true,
+  });
+});

@@ -1701,3 +1701,27 @@ describe('CHD-429 tester: mouse focus boundaries', () => {
       ));
   }
 });
+
+test("an agent's own cycle after its turn shows it working until its end is marked, then the window is as after a turn (CHD-426)", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'claudecycle');
+      await window.shows(
+        'The build runs in the background; I will read it after.',
+      );
+      await until('the turn over', () => !window.frame().includes('Working…'));
+      // The cycle: the agent at work again with no prompt of the person's.
+      await window.shows('Working…');
+      await window.shows('The build passed.');
+      await until('the cycle over', () => !window.frame().includes('Working…'));
+      expect(window.frame()).toContain(
+        'The background build ended; reading its log. The build passed.',
+      );
+    },
+    {
+      agentCommand: fakeAgentCommand(undefined, '--adapter', 'claude'),
+      columns: 120,
+      rows: 40,
+    },
+  ));

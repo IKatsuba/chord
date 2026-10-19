@@ -3699,3 +3699,107 @@ describe('CHD-158 C5 tester: closing carried inputs in concurrent sessions', () 
     );
   });
 });
+
+describe("an agent's own cycle after its turn (CHD-426, the owner's Q49)", () => {
+  /** The events from the first `cycle_started` on, by type and turn. */
+  const cycleOf = (events: readonly ConversationEvent[]) => {
+    const at = events.findIndex((event) => event.type === 'cycle_started');
+
+    return at < 0 ? [] : events.slice(at);
+  };
+
+  test("Claude's: its work after the turn has gone quiet is a cycle of its own, ended by the autonomous usage", () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('claudecycle');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      const turn = events.find((event) => event.type === 'prompt')!;
+
+      await until(() => cycleOf(events).some((e) => e.type === 'result'));
+
+      const cycle = cycleOf(events);
+      const started = cycle[0]!;
+
+      assert(started.type === 'cycle_started');
+      expect(started.turnId).not.toBe(turn.turnId);
+      // Its updates fold under its own turn, and its result ends it.
+      expect(
+        cycle
+          .filter((event) => event.type === 'update' || event.type === 'result')
+          .every(
+            (event) => 'turnId' in event && event.turnId === started.turnId,
+          ),
+      ).toBeTruthy();
+      expect(saidIn(cycle)).toBe(
+        'The background build ended; reading its log. The build passed.',
+      );
+      expect(cycle.at(-1)).toStrictEqual({
+        type: 'result',
+        turnId: started.turnId,
+        result: { status: 'completed', stopReason: 'end_turn' },
+      });
+    }));
+
+  test("Claude's with no usage to end it stays working: no result comes", () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('claudecyclebare');
+      await until(() => saidIn(events).includes('The build passed.'));
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const cycle = cycleOf(events);
+
+      expect(cycle[0]?.type).toBe('cycle_started');
+      expect(cycle.some((event) => event.type === 'result')).toBeFalsy();
+    }));
+
+  test("an agent that is not Claude's has no unmarked cycle: its work after the turn folds under that turn, as before", () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('claudecycle');
+      await until(() => saidIn(events).includes('The build passed.'));
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const turn = events.find((event) => event.type === 'prompt')!;
+
+      expect(cycleOf(events)).toStrictEqual([]);
+      expect(
+        events
+          .filter((event) => event.type === 'update')
+          .every((event) => event.turnId === turn.turnId),
+      ).toBeTruthy();
+    }));
+
+  test("codebuddy's: its marker starts a cycle and session_end ends it", () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('codebuddycycle');
+      await until(() => cycleOf(events).some((e) => e.type === 'result'));
+
+      const cycle = cycleOf(events);
+      const started = cycle[0]!;
+
+      assert(started.type === 'cycle_started');
+      expect(saidIn(cycle)).toBe(
+        'The background task drained; all checks are green.',
+      );
+      expect(cycle.at(-1)).toStrictEqual({
+        type: 'result',
+        turnId: started.turnId,
+        result: { status: 'completed', stopReason: 'end_turn' },
+      });
+    }));
+
+  test('a prompt sent while a cycle runs goes at once and takes it over (the owner’s Q47)', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('claudecyclebare');
+      await until(() => cycleOf(events).length > 0);
+      conversation.send('text');
+      await until(() => saidIn(events).includes('Hello, world.'));
+
+      const prompts = events.filter((event) => event.type === 'prompt');
+
+      expect(prompts.map((event) => event.text)).toStrictEqual([
+        'claudecyclebare',
+        'text',
+      ]);
+      expect(events.some((event) => event.type === 'queued')).toBeFalsy();
+    }));
+});

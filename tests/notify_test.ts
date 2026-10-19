@@ -429,3 +429,21 @@ describe('CHD-266 tester: lasting request identity', () => {
     );
   });
 });
+
+test("an agent's own cycle rings at its end, as a turn does, and not as it starts (CHD-426)", () => {
+  const cycle: ConversationEvent = {
+    type: 'cycle_started',
+    turnId: 'c1',
+    at: 0,
+  };
+
+  expect(
+    play([connected, prompt('t1'), ended('t1'), cycle]).written,
+  ).toHaveLength(1);
+  expect(
+    play([connected, prompt('t1'), ended('t1'), cycle, ended('c1')]).written,
+  ).toStrictEqual([
+    '\x1b]9;claude is waiting for your input\x07',
+    '\x1b]9;claude is waiting for your input\x07',
+  ]);
+});

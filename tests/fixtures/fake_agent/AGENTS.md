@@ -26,7 +26,8 @@
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `tasklong`, `tasktallname`, `tasktwo`, `taskwait`,
-  `taskbetween`) and
+  `taskbetween`), `cycles.ts` (`claudecycle`, `claudecyclebare`,
+  `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
@@ -49,7 +50,8 @@
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
-  `claudeslowstop`, `chordtools`, `codexchordcalls`)
+  `claudeslowstop`, `chordtools`, `codexchordcalls`, `claudecycle`,
+  `claudecyclebare`, `codebuddycycle`)
   plays that scenario; `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second;
   `longresults` plays an MCP result, command output, an edit and terminal
@@ -277,6 +279,14 @@
   steer only once the turn playing has answered, as one that meets a turn's
   end does, Codex's answering a while after; as Codex's, a prompt that comes
   while a turn plays opens with `Started alongside a turn still playing.`.
+  `--adapter claude` (`CHORD_FAKE_ADAPTER=claude`) names it in `initialize`
+  as Claude's adapter without steering as it, which chord runs cycles of the
+  agent's own for (CHD-426). `claudecycle` ends its turn, then, a second and
+  a half on, says a few words as Claude Code does when a background task
+  ends and ends that cycle with a `usage_update` whose `_claude/origin` is
+  `task-notification`; `claudecyclebare` sends no such update, so the cycle
+  never ends; `codebuddycycle` runs codebuddy's unasked turn, started by
+  `_meta["codebuddy.ai/unsolicitedTurn"]` and ended by `session_end`.
   `tests/fixtures/recorder.ts`
   plays one through the session layer and returns what the interface would
   hand the transcript reducer, and `run` gathers a prompt's updates and its

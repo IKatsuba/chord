@@ -87,6 +87,23 @@ function steeringAdapter(): (typeof STEERINGS)[number] | undefined {
 export const STEERING = steeringAdapter();
 
 /**
+ * The adapter the fake names itself as in `initialize`, `claude` as
+ * Claude's does, with `--adapter claude` or `CHORD_FAKE_ADAPTER=claude`,
+ * without steering as it: chord runs cycles of the agent's own only for
+ * that adapter (CHD-426).
+ */
+export const ADAPTER = (() => {
+  const flag = ARGS.indexOf('--adapter');
+  const chosen = flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_ADAPTER;
+
+  if (chosen !== undefined && chosen !== 'claude') {
+    throw new Error(`unknown adapter to name as "${chosen}"`);
+  }
+
+  return chosen;
+})();
+
+/**
  * A steer lands only once the turn playing has ended, as one sent just as a
  * turn ends does: Claude's adapter then refuses it, Codex's starts a turn of
  * its own with it.

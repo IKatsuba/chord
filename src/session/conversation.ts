@@ -1,4 +1,5 @@
 import type { AvailableCommand, SessionUpdate } from '@agentclientprotocol/sdk';
+import { CYCLE_WORK, cycleMark } from './cycles.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { ResourceLink } from '../files.ts';
 import { type AgentOption, sameOptions, valueName } from './config.ts';
@@ -333,6 +334,13 @@ export class Conversation {
    */
   #selfTurnId: string | undefined;
   /**
+   * The cycle the agent runs on its own, by the turn id chord gave it, until
+   * its end is marked or a turn of the person's takes it over (CHD-426).
+   */
+  #cycle: string | undefined;
+  /** When the last turn or cycle ended, on `performance.now()`'s clock. */
+  #endedAt = 0;
+  /**
    * The turn whose prompt has gone to the agent. One with mentions waits on
    * their walk first, and a steer before it went would find no turn running.
    */
@@ -569,6 +577,7 @@ export class Conversation {
     this.#turn = undefined;
     this.#lastTurnId = 'session';
     this.#selfTurnId = undefined;
+    this.#cycle = undefined;
     this.#wentId = undefined;
     // They go with the session they were queued in.
     this.#queued = [];
@@ -1573,7 +1582,9 @@ export class Conversation {
 
   /** The turn an event that came outside any is folded under. */
   #stamp(): string {
-    return this.#selfTurnId ?? this.#turn?.id ?? this.#lastTurnId;
+    return (
+      this.#selfTurnId ?? this.#turn?.id ?? this.#cycle ?? this.#lastTurnId
+    );
   }
 
   /**
@@ -2270,9 +2281,15 @@ export class Conversation {
       return;
     }
 
-    this.#heardAt = performance.now();
+    const now = performance.now();
+    // Silent since the last turn ended: what comes now is not its tail.
+    const quiet = now - Math.max(this.#heardAt, this.#endedAt) >= QUIET_MS;
+    const mark = subagentId === undefined ? cycleMark(update) : undefined;
+
+    this.#heardAt = now;
 
     if (subagentId === undefined) {
+      this.#beginCycle(session, update, mark, quiet);
       this.#track(session, update);
     }
 
@@ -2284,9 +2301,73 @@ export class Conversation {
       ...(TIMED_UPDATES.has(update.sessionUpdate) ? { at: this.#now() } : {}),
     });
 
+    if (mark === 'end') {
+      this.#endCycle();
+    }
+
     if (subagentId === undefined && STATE_UPDATES.has(update.sessionUpdate)) {
       this.#report(session);
     }
+  }
+
+  /**
+   * Begins a cycle of the agent's own with `update`, when nothing of the
+   * person's runs and the agent marks one: codebuddy's marker, or, on an
+   * agent that runs them unmarked, its work once the last turn has gone
+   * quiet. Only agents that mark a cycle's end have one (the owner's Q49).
+   */
+  #beginCycle(
+    session: Session,
+    update: SessionUpdate,
+    mark: 'start' | 'end' | undefined,
+    quiet: boolean,
+  ): void {
+    if (
+      this.#cycle !== undefined ||
+      this.#selfTurnId !== undefined ||
+      !this.#idle()
+    ) {
+      return;
+    }
+
+    const starts =
+      mark === 'start' ||
+      (session.startsOwnCycles() &&
+        quiet &&
+        CYCLE_WORK.has(update.sessionUpdate));
+
+    if (!starts) {
+      return;
+    }
+
+    const turnId = crypto.randomUUID();
+
+    this.#cycle = turnId;
+
+    this.#emit({ type: 'cycle_started', turnId, at: this.#now() });
+  }
+
+  /**
+   * Ends the agent's own cycle as a turn ends, which the person is told of
+   * as a turn's end (CHD-426); what the agent sends after it is folded
+   * under it, as after a turn.
+   */
+  #endCycle(): void {
+    const turnId = this.#cycle;
+
+    if (turnId === undefined) {
+      return;
+    }
+
+    this.#cycle = undefined;
+    this.#lastTurnId = turnId;
+    this.#endedAt = performance.now();
+
+    this.#emit({
+      type: 'result',
+      turnId,
+      result: { status: 'completed', stopReason: 'end_turn' },
+    });
   }
 
   /**
@@ -2574,6 +2655,9 @@ export class Conversation {
       this.#servedNow = [];
       this.#lastTurnId = turnId;
       this.#selfTurnId = undefined;
+      // A prompt takes the agent's own cycle over, its turn in the cycle's
+      // place (the owner's Q47).
+      this.#cycle = undefined;
 
       // Recorded once it went, with the links found for it, before the
       // agent can answer: a prompt a cancel kept back never reached it.
@@ -2631,6 +2715,8 @@ export class Conversation {
     if (this.#turn?.id === turnId) {
       this.#turn = undefined;
     }
+
+    this.#endedAt = performance.now();
 
     this.#leftOpen(turnId);
 

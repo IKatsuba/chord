@@ -974,6 +974,15 @@ export type TranscriptAction =
       readonly type: 'self_started';
       readonly turnId: string;
       readonly from: MessageFrom;
+    }
+  /**
+   * The agent began a cycle of its own, `turnId`, with no turn of the
+   * person's running, at `at`; its `result` ends it (CHD-426).
+   */
+  | {
+      readonly type: 'cycle_started';
+      readonly turnId: string;
+      readonly at: number;
     };
 
 export const emptyTranscript: Transcript = {

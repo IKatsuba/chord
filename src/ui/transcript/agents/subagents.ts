@@ -16,8 +16,8 @@ import type {
   SubagentState,
 } from '../../../session/transcript/types.ts';
 import { formatElapsed } from '../../../session/elapsed.ts';
-import { TOKEN_FIELDS, type TokenUsage } from '../../../session/usage.ts';
 import { formatCost } from '../reports.ts';
+import { tokensIn } from '../spend.ts';
 import { type ArrowTone, outArrow } from '../message.ts';
 import {
   firstLine,
@@ -177,8 +177,7 @@ export function spentParts(spent: TaskSpent | undefined): {
   readonly tokens?: string;
   readonly money?: string;
 } {
-  const count =
-    spent?.tokens === undefined ? undefined : tokenCount(spent.tokens);
+  const count = tokensIn(spent?.tokens);
 
   return {
     ...(count === undefined ? {} : { tokens: `${shortCount(count)} tokens` }),
@@ -188,19 +187,6 @@ export function spentParts(spent: TaskSpent | undefined): {
           money: `${spent.estimated ? '~' : ''}${formatCost(spent.cost)}`,
         }),
   };
-}
-
-/** A turn's tokens in all: its total, else every kind it gave added up. */
-function tokenCount(tokens: TokenUsage): number | undefined {
-  if (tokens.totalTokens !== undefined) {
-    return tokens.totalTokens;
-  }
-
-  const each = TOKEN_FIELDS.flatMap((field) =>
-    field === 'totalTokens' ? [] : (tokens[field] ?? []),
-  );
-
-  return each.length === 0 ? undefined : each.reduce((a, b) => a + b, 0);
 }
 
 /** `850`, `2.0k`, `12.4k`, `1.2M`, as Claude Code counts tokens. */

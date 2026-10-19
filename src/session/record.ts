@@ -26,7 +26,7 @@ import type {
   TranscriptAction,
   TurnResult,
 } from './transcript/types.ts';
-import type { TurnFigures } from './turn_costs.ts';
+import { lastReading, type TurnFigures } from './turn_costs.ts';
 
 /** One line of a record. */
 export type RecordEntry =
@@ -670,6 +670,12 @@ export function recordActions(
 
   end();
 
+  const before = spentBefore(entries);
+
+  if (before !== undefined) {
+    actions.push(before);
+  }
+
   if (
     entries.some(
       (entry) =>
@@ -697,6 +703,38 @@ export function recordActions(
   }
 
   return actions;
+}
+
+/**
+ * What a record spent before it kept each turn's cost, as one figure: the
+ * last cost its session's own updates gave before its first `opened` line,
+ * or in all of one written before those lines were (the owner's Q62).
+ */
+function spentBefore(
+  entries: readonly RecordEntry[],
+): Extract<PastAction, { type: 'usage' }> | undefined {
+  const opened = entries.findIndex((entry) => entry.type === 'opened');
+  const first = entries[opened];
+  const last = lastReading(
+    (opened < 0 ? entries : entries.slice(0, opened)).flatMap((entry) =>
+      entry.type === 'update' && entry.subagentId === undefined
+        ? [entry.update]
+        : [],
+    ),
+  );
+
+  if (last === undefined) {
+    return undefined;
+  }
+
+  return {
+    type: 'usage',
+    turnId: 'history-before',
+    usage: {},
+    cost: { amount: last.amount, currency: last.currency },
+    ...(last.estimated ? { estimated: true as const } : {}),
+    before: first?.type === 'opened' ? { until: first.at } : {},
+  };
 }
 
 /**

@@ -808,3 +808,98 @@ describe('CHD-373 S3a tester: causal wire costs through Conversation', () => {
       expect(failures).toStrictEqual([]);
     }));
 });
+
+describe("CHD-373 S3b: an older record's spend before it kept each turn's (the owner's Q62)", () => {
+  const header: RecordEntry = {
+    type: 'session',
+    version: 1,
+    sessionId: 's',
+    agent: 'claude',
+    cwd: '/',
+    at: 1,
+  };
+  const costed = (turnId: string, amount: number): RecordEntry => ({
+    type: 'update',
+    turnId,
+    update: {
+      sessionUpdate: 'usage_update',
+      used: 1,
+      size: 2,
+      cost: { amount, currency: 'USD' },
+    },
+  });
+  const before = (actions: ReturnType<typeof recordActions>) =>
+    actions.filter(
+      (action) => action.type === 'usage' && action.before !== undefined,
+    );
+
+  test('a record written before openings were kept counts its last cost as one figure, as last reported', () => {
+    expect(
+      before(
+        recordActions([
+          header,
+          costed('a', 0.01),
+          { type: 'usage', turnId: 'a', usage: { totalTokens: 5 } },
+          costed('b', 0.04),
+        ]),
+      ),
+    ).toStrictEqual([
+      {
+        type: 'usage',
+        turnId: 'history-before',
+        usage: {},
+        cost: { amount: 0.04, currency: 'USD' },
+        before: {},
+      },
+    ]);
+  });
+
+  test('one that began keeping them later counts what came before its first opening, up to then, and its turns after on their own', () => {
+    const actions = recordActions([
+      header,
+      costed('a', 0.04),
+      { type: 'opened', at: 1_760_900_000_000 },
+      costed('b', 0.05),
+      {
+        type: 'usage',
+        turnId: 'b',
+        usage: {},
+        cost: { amount: 0.01, currency: 'USD' },
+      },
+    ]);
+
+    expect(before(actions)).toStrictEqual([
+      {
+        type: 'usage',
+        turnId: 'history-before',
+        usage: {},
+        cost: { amount: 0.04, currency: 'USD' },
+        before: { until: 1_760_900_000_000 },
+      },
+    ]);
+    expect(actions).toContainEqual({
+      type: 'usage',
+      turnId: 'history-b',
+      usage: {},
+      cost: { amount: 0.01, currency: 'USD' },
+    });
+  });
+
+  test('a record that kept each turn from its first opening, or a cost a subagent sent, has nothing before', () => {
+    expect(
+      before(
+        recordActions([header, { type: 'opened', at: 2 }, costed('a', 0.01)]),
+      ),
+    ).toStrictEqual([]);
+    // A task's cost, under its id, is the task's, not the session's.
+    expect(
+      before(
+        recordActions([
+          header,
+          { ...costed('a', 0.5), subagentId: 'task' } as RecordEntry,
+          { type: 'opened', at: 2 },
+        ]),
+      ),
+    ).toStrictEqual([]);
+  });
+});

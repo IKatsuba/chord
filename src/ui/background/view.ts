@@ -56,7 +56,10 @@ interface Fit {
   readonly runtime: boolean;
 }
 
-/** The fullest first: an end's events go, then a task's model, its runtime. */
+/**
+ * The fullest first: an end's events go, then a task's model, its money,
+ * then its runtime (CHD-373).
+ */
 const FITS: readonly Fit[] = [
   { spent: true, endedEvents: true, model: true, runtime: true },
   { spent: true, endedEvents: false, model: true, runtime: true },

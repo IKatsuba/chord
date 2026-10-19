@@ -31,6 +31,12 @@ export interface TurnCost {
    * out of the session's sum, and said to be.
    */
   readonly uncounted?: true;
+  /**
+   * Not a turn's: what an older record spent before it kept each turn's
+   * cost, its last cost then, as last reported, up to when it began to,
+   * where it says (the owner's Q62).
+   */
+  readonly before?: { readonly until?: number };
 }
 
 /** What one opening of a session knows of its cost. */

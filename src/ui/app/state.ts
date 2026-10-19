@@ -111,6 +111,7 @@ import {
   type ViewSession,
   type ViewWindow,
 } from '../transcript/state.ts';
+import type { KeptSpend } from '../transcript/spend.ts';
 
 export type Connection =
   | { readonly status: 'starting' }
@@ -192,6 +193,11 @@ export interface WindowState
    * which, for the line to name it; a second press of either quits.
    */
   readonly quitArmed: false | 'ctrl+c' | 'ctrl+d';
+  /**
+   * The agents and tabs closed since the window opened, with what they had
+   * spent then, which the window's total still counts (CHD-373, Q59).
+   */
+  readonly keptSpend?: readonly KeptSpend[];
   /**
    * `ctrl+x k` was pressed once on the busy session with this key; a second
    * press while it holds stops and closes it.
@@ -574,11 +580,11 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         ? started
         : { ...started, models: action.models };
     }
-    case 'usage':
-      return {
-        ...state,
-        spent: addTurn(state.spent, action.turnId, action.usage),
-      };
+    case 'usage': {
+      const { type: _, turnId, usage, model: __, ...cost } = action;
+
+      return { ...state, spent: addTurn(state.spent, turnId, usage, cost) };
+    }
     case 'options':
       return { ...state, options: action.options };
     case 'resume_listed': {
@@ -966,6 +972,8 @@ export type WindowedAction =
     }
   /** A session opened under `key`, as it starts, and comes to the front. */
   | { readonly type: 'session_opened'; readonly key: number }
+  /** An agent or tab closing: what it spent is kept for the window's total (CHD-373). */
+  | { readonly type: 'spend_kept'; readonly kept: KeptSpend }
   /**
    * A long-lived agent opened under `key`, as it starts; it stays behind
    * until the person picks it.
@@ -1021,6 +1029,14 @@ export function reduceWindowed(
         front: action.key,
       };
     }
+    case 'spend_kept':
+      return {
+        ...state,
+        window: {
+          ...state.window,
+          keptSpend: [...(state.window.keptSpend ?? []), action.kept],
+        },
+      };
     case 'agent_opened':
       return {
         ...state,

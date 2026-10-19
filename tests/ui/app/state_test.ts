@@ -688,3 +688,30 @@ test("the scroll keys move a permission request only while it overflows, and onl
 
   expect(keyCommand('', pgdn, answered, '')).toStrictEqual('scroll_page_down');
 });
+
+test("a turn's usage keeps its own cost on the session, and the window keeps what closed agents spent (CHD-373)", () => {
+  const cost = { amount: 0.01, currency: 'USD' };
+  const spent = reduceApp(initialAppState, {
+    type: 'usage',
+    turnId: 't',
+    usage: { totalTokens: 5 },
+    model: 'm',
+    cost,
+    estimated: true,
+  }).spent;
+
+  expect(spent).toStrictEqual({
+    turns: { t: { totalTokens: 5 } },
+    costs: { t: { cost, estimated: true } },
+  });
+
+  const kept = (name: string) => ({
+    tab: 1,
+    part: { name, kind: 'agent' as const, figure: { cost } },
+  });
+  const window = [kept('docs'), kept('parser')]
+    .map((each): WindowedAction => ({ type: 'spend_kept', kept: each }))
+    .reduce(reduceWindowed, windowed(initialAppState, 1)).window;
+
+  expect(window.keptSpend).toStrictEqual([kept('docs'), kept('parser')]);
+});

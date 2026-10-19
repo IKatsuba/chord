@@ -890,7 +890,7 @@ describe('CHD-466 U1 tester: command settings boundaries', () => {
     }
   });
 
-  test('literal special and empty arguments survive display and a resume flag', () => {
+  test('settings argv is display-only while a typed resume flag is preserved verbatim', () => {
     const command: [string, ...string[]] = [
       'a program',
       '',
@@ -904,11 +904,27 @@ describe('CHD-466 U1 tester: command settings boundaries', () => {
       '\\path',
     ];
     const line = commandLine(command);
-    const resume = parse(resumeCommand('custom', 'session-id', command));
+    const typed = "tool --literal '*' --empty '' --value 'two words'";
+    const resume = parse(resumeCommand('custom', 'session-id', typed));
     const flag = resume[resume.indexOf('--agent-command') + 1];
 
-    expect(commandArgv(line)).toEqual(command);
-    expect(commandArgv(String(flag))).toEqual(command);
+    expect(line).toStartWith("'a program' '' 'two words'");
+    expect(flag).toBe(typed);
+    expect(commandArgv(typed)).toEqual([
+      'tool',
+      '--literal',
+      '*',
+      '--empty',
+      '',
+      '--value',
+      'two words',
+    ]);
+    expect(
+      resumeMessage(
+        [{ agent: 'custom', sessionId: 'session-id', cwd: '/work' }],
+        { agent: 'custom' },
+      ),
+    ).toBe('Resume this session with:\nchord custom --resume session-id');
     expect(resume.slice(-2)).toEqual(['--resume', 'session-id']);
   });
 

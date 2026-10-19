@@ -19,6 +19,7 @@ import {
   CTRL_O,
   ESC,
   leader,
+  quitAll,
   ready,
   send,
   until,
@@ -557,4 +558,39 @@ describe('CHD-387 tester: sent messages in the window', () => {
       await server.close();
     }
   });
+});
+
+describe('CHD-158 tester: taskstays closes with its waiting parent', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const stage of ['permission', 'message'] as const) {
+      test(`quit at the ${stage} closes parent and task at ${columns} columns`, async () => {
+        const server = serveChord();
+
+        try {
+          await withWindow(
+            async (window) => {
+              await ready(window);
+              await send(window, 'taskstays');
+              await window.shows('Agent(Fix the tokenizer) · fake asks');
+              expect(window.frame()).not.toContain('between turns');
+
+              if (stage === 'message') {
+                await window.press('\r');
+                await window.shows('← from Fix the tokenizer · fake:');
+              }
+
+              expect(window.pids.length).toBeGreaterThanOrEqual(2);
+              await quitAll(window);
+            },
+            { server, runtimes: ['fake'], rows, columns },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
+  }
 });

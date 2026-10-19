@@ -173,7 +173,7 @@ function kindText(item: BackgroundItem, fit: Fit): string {
 /** A run of a row's line, by what it is, which its colour follows. */
 export interface ViewCell {
   readonly text: string;
-  readonly role: 'mark' | 'name' | 'kind' | 'state' | 'owner' | 'gap';
+  readonly role: 'mark' | 'edge' | 'name' | 'kind' | 'state' | 'owner' | 'gap';
   /** A state's group, for its colour. */
   readonly group?: BackgroundGroup;
 }
@@ -409,37 +409,24 @@ export interface ViewWindow {
 
 /**
  * The rows that fit `height` lines with the `❯`'s in sight: from the top
- * while it is, else scrolled just far enough, a `… N above` and `… N below`
- * line taking the place of the rows out of sight.
+ * while it is, else scrolled just far enough. What is out of sight is said
+ * in the gutter, as the pickers say it (`edgeMarked`), so it takes no line.
  */
 export function viewWindow(
   rows: readonly ViewRow[],
   height: number,
 ): ViewWindow {
   const lines = (row: ViewRow) => row.lines.length;
-  const total = rows.reduce((sum, row) => sum + lines(row), 0);
-
-  if (total <= height) {
-    return { rows, above: 0, below: 0 };
-  }
-
   const focused = Math.max(
     0,
     rows.findIndex((row) => row.focused),
   );
 
   for (let start = 0; start <= focused; start++) {
-    let room = height - (start > 0 ? 1 : 0);
+    let room = height;
     let end = start;
 
     while (end < rows.length && lines(rows[end]!) <= room) {
-      // The last row's place goes to `… N below` while any are left after.
-      const left = end + 1 < rows.length ? 1 : 0;
-
-      if (lines(rows[end]!) + left > room) {
-        break;
-      }
-
       room -= lines(rows[end]!);
       end += 1;
     }
@@ -455,9 +442,51 @@ export function viewWindow(
     }
   }
 
-  return {
-    rows: rows.slice(focused, focused + 1),
-    above: focused,
-    below: rows.length - focused - 1,
+  return { rows, above: 0, below: 0 };
+}
+
+/** A line in sight, with the row it is of. */
+export interface ViewLine {
+  readonly row: ViewRow;
+  readonly cells: ViewCell[];
+}
+
+/**
+ * The lines in sight, the pickers' `↑` on the first where rows are out of
+ * sight above and `↓` on the last where rows are below, in the gutter the
+ * `❯` stands in, which keeps its place (CHD-462).
+ */
+export function edgeMarked(shown: ViewWindow): ViewLine[] {
+  const lines = shown.rows.flatMap((row) =>
+    row.lines.map((line) => ({ row, cells: [...line] })),
+  );
+  const mark = (line: ViewLine | undefined, edge: string) => {
+    const [first, ...rest] = line?.cells ?? [];
+
+    if (
+      line === undefined ||
+      first === undefined ||
+      first.text.startsWith('❯')
+    ) {
+      return;
+    }
+
+    line.cells.splice(
+      0,
+      line.cells.length,
+      { text: edge, role: 'edge' },
+      { ...first, text: first.text.slice(edge.length) },
+      ...rest,
+    );
   };
+
+  if (shown.above > 0) {
+    mark(lines[0], '↑ ');
+  }
+
+  if (shown.below > 0) {
+    mark(lines.at(-1), '↓ ');
+  }
+
+  return lines;
 }

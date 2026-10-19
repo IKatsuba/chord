@@ -3,6 +3,8 @@
  * prompt in each tab, which clears the tab's ended items, and the view of
  * them while it is open.
  */
+import type { Transcript } from '../../session/transcript/types.ts';
+import { askedIds } from '../dialogs/state.ts';
 import type { ItemRef } from './view.ts';
 
 export interface BackgroundState {
@@ -14,6 +16,11 @@ export interface BackgroundState {
    */
   readonly backgroundView?: {
     readonly focus?: ItemRef;
+    /**
+     * The requests already waiting on the person as it opened, which it
+     * stays over, holding the keys, as the agents list did (CHD-462).
+     */
+    readonly over?: readonly string[];
     /**
      * What the hint line says in place of the keys, about the focused item's
      * stop, until the `❯` moves.
@@ -35,8 +42,11 @@ export type BackgroundAction =
       readonly tab: number;
       readonly at: number;
     }
-  /** `enter` on the summary line opened the view; esc closes it. */
-  | { readonly type: 'background_opened' }
+  /**
+   * `enter` on the summary line opened the view over the requests `over`
+   * already waiting; esc closes it.
+   */
+  | { readonly type: 'background_opened'; readonly over?: readonly string[] }
   | { readonly type: 'background_closed' }
   /** ↑ ↓ in the view put the `❯` on `focus`. */
   | { readonly type: 'background_focused'; readonly focus: ItemRef }
@@ -58,6 +68,34 @@ export type BackgroundAction =
 
 export const initialBackground: BackgroundState = { backgroundCleared: {} };
 
+/**
+ * Whether the background view is on screen: open, and not hidden by a
+ * permission or form the front tab asked since it opened, as every picker
+ * is; it comes back as it was once that is answered. Those already waiting
+ * as it opened it stays over, the keys its own (CHD-462).
+ */
+export function backgroundShown(
+  state: BackgroundState & { readonly transcript: Transcript },
+): boolean {
+  const view = state.backgroundView;
+
+  return (
+    view !== undefined &&
+    askedIds(state.transcript).every((id) => view.over?.includes(id))
+  );
+}
+
+/**
+ * Whether the list under the prompt has the keys: focused, and the view
+ * opened from its summary line not open, which takes them while it is up
+ * and hands them to what the front tab asks while it is hidden.
+ */
+export function agentsHaveKeys(
+  state: BackgroundState & { readonly agentsFocus?: true },
+): boolean {
+  return state.agentsFocus === true && state.backgroundView === undefined;
+}
+
 function same(a: ItemRef | undefined, b: ItemRef | undefined): boolean {
   return a !== undefined && b !== undefined && a.key === b.key && a.id === b.id;
 }
@@ -76,7 +114,13 @@ export function reduceBackground(
         },
       };
     case 'background_opened':
-      return { ...state, backgroundView: {} };
+      return {
+        ...state,
+        backgroundView:
+          action.over === undefined || action.over.length === 0
+            ? {}
+            : { over: action.over },
+      };
     case 'background_closed': {
       const { backgroundView: _, ...rest } = state;
 
@@ -97,6 +141,7 @@ export function reduceBackground(
         ...state,
         backgroundView: {
           focus: action.focus,
+          ...(view.over === undefined ? {} : { over: view.over }),
           ...(stays && view.hint !== undefined ? { hint: view.hint } : {}),
           ...(view.stopping !== undefined &&
           same(view.stopping.focus, action.focus)

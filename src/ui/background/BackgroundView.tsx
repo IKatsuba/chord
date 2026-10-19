@@ -1,11 +1,23 @@
 import { TextAttributes } from '@opentui/core';
-import { hintOf, useColours, useHintKey } from '../app/context.ts';
+import {
+  hintOf,
+  useCloseHint,
+  useColours,
+  useHintKey,
+} from '../app/context.ts';
 import { useAgentsClock } from '../agents/Agents.tsx';
+import { borderOf } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { agentColour, type Palette } from '../theme/theme.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
-import { type ItemRef, type ViewCell, viewRows, viewWindow } from './view.ts';
+import {
+  edgeMarked,
+  type ItemRef,
+  type ViewCell,
+  viewRows,
+  viewWindow,
+} from './view.ts';
 
 /** A state's colour: its group's role, or dim for those at work or stopped. */
 function groupColour(
@@ -24,13 +36,21 @@ function groupColour(
   }
 }
 
-/** The lines the title, the gap under it and the hint with its gap take. */
-const CHROME = 4;
+/**
+ * The frame's lines besides its rows: the border, the title and the gap
+ * under it, and the hint with the gap above it.
+ */
+const CHROME = 6;
+
+/** The most lines the frame takes: half the window (CHD-462). */
+export function backgroundRowLimit(windowRows: number): number {
+  return Math.max(1, Math.floor(windowRows / 2) - CHROME);
+}
 
 /**
- * The background view: the whole window, with no header, transcript, prompt
- * or status line, a row per item of the tab, the `❯` on one. It takes no
- * keys itself; the window routes them.
+ * The background view: the pickers' frame above the prompt, full width, a
+ * row per item of the tab, the `❯` on one, as tall as its rows up to half
+ * the window (CHD-462). It takes no keys itself; the window routes them.
  */
 export function BackgroundView({
   items,
@@ -43,20 +63,24 @@ export function BackgroundView({
   focus: ItemRef | undefined;
   /** Said in place of the keys, of the focused item's stop. */
   hint?: string | undefined;
+  /** The window's width; the frame takes all of it. */
   columns: number;
+  /** The window's height, half of which the frame takes at most. */
   rows: number;
 }) {
   const colours = useColours();
   // Times count a second at a time while the view is drawn.
   const now = useAgentsClock(true);
   const laid = viewRows(items, { width: columns - 4, focus, now });
-  const shown = viewWindow(laid, Math.max(1, rows - CHROME));
+  const lines = edgeMarked(viewWindow(laid, backgroundRowLimit(rows)));
   const stop = useHintKey('agents:close');
-  const close = useHintKey('select:cancel');
+  const close = useCloseHint();
   const cell = (piece: ViewCell, item: BackgroundItem, focused: boolean) => {
     switch (piece.role) {
       case 'mark':
         return { ...fg(colours.permission), attributes: 0 };
+      case 'edge':
+        return { attributes: DIM };
       case 'name':
         return { attributes: focused ? TextAttributes.BOLD : 0 };
       case 'state': {
@@ -75,34 +99,30 @@ export function BackgroundView({
   };
 
   return (
-    <box width={columns} height={rows} flexShrink={0}>
-      <box paddingX={1} flexShrink={0}>
-        <text {...TEXT}>
-          <span attributes={TextAttributes.BOLD}>Background</span>
-          <span attributes={DIM}>{` · ${items.length} in this tab`}</span>
-        </text>
+    <box
+      {...borderOf(colours.permission)}
+      paddingX={1}
+      marginTop={1}
+      flexShrink={0}
+    >
+      <text {...TEXT}>
+        <span {...fg(colours.permission)} attributes={TextAttributes.BOLD}>
+          Background
+        </span>
+        <span attributes={DIM}>{` · ${items.length} in this tab`}</span>
+      </text>
+      <box marginTop={1} flexShrink={0}>
+        {lines.map(({ row, cells }, index) => (
+          <text key={index} {...TEXT}>
+            {cells.map((piece, at) => (
+              <span key={at} {...cell(piece, row.item, row.focused)}>
+                {piece.text}
+              </span>
+            ))}
+          </text>
+        ))}
       </box>
-      <box height={1} flexShrink={0} />
-      <box paddingX={2} flexGrow={1} flexShrink={1}>
-        {shown.above > 0 && (
-          <text {...TEXT} attributes={DIM}>{`  … ${shown.above} above`}</text>
-        )}
-        {shown.rows.map((row) =>
-          row.lines.map((line, index) => (
-            <text key={`${row.item.key}:${row.item.id}:${index}`} {...TEXT}>
-              {line.map((piece, at) => (
-                <span key={at} {...cell(piece, row.item, row.focused)}>
-                  {piece.text}
-                </span>
-              ))}
-            </text>
-          )),
-        )}
-        {shown.below > 0 && (
-          <text {...TEXT} attributes={DIM}>{`  … ${shown.below} below`}</text>
-        )}
-      </box>
-      <box paddingX={1} flexShrink={0}>
+      <box marginTop={1} flexShrink={0}>
         {hint !== undefined ? (
           // An agent's error, cut to one line.
           <text {...CUT} attributes={DIM}>
@@ -111,10 +131,9 @@ export function BackgroundView({
         ) : (
           <text {...TEXT} attributes={DIM}>
             {hintOf(
-              '↑ ↓ to move',
-              'enter to go to its call',
+              'Enter to go to its call',
               stop && `${stop} to stop`,
-              close && `${close} to close`,
+              close,
             )}
           </text>
         )}

@@ -278,12 +278,16 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     await window.press(DOWN);
     await window.shows('❯ background');
     await window.press('\r');
-    await window.shows(' Background · 2 in this tab');
-    await window.shows(
-      '↑ ↓ to move · enter to go to its call · x to stop · esc to close',
-    );
-    // The whole window: no prompt box, no status line.
-    expect(!window.frame().includes('╭')).toBeTruthy();
+    await window.shows('│ Background · 2 in this tab');
+    await window.shows('Enter to go to its call · x to stop · Esc to close');
+    // A picker's frame above the prompt: the transcript, the prompt box,
+    // the status line and the summary line stay, the summary's ❯ gone as
+    // the keys are the frame's (CHD-462).
+    expect(window.frame()).toContain('Two monitors are running.');
+    expect(window.frame()).toContain('│ ›');
+    expect(window.frame()).toContain('? for shortcuts');
+    expect(window.frame()).toContain('    background  2 monitors running');
+    expect(window.frame()).not.toContain('❯ background');
     expect(window.frame()).toMatch(
       /❯ dev server errors {2}monitor {2}running \d+s · 1 event +main/,
     );
@@ -303,7 +307,7 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     // The stop is told in the transcript as before.
     await window.shows('← from CI run 4812 · monitor · stopped');
     await window.press('\r');
-    await window.shows(' Background · 2 in this tab');
+    await window.shows('│ Background · 2 in this tab');
     await window.press(ESC);
     await window.press(ESC);
     await until('the ❯ gone', () => !window.frame().includes('❯ background'));
@@ -334,7 +338,7 @@ test('the view is modal: the window’s session keys do nothing in it, and esc g
     await window.shows('    background  2 monitors running');
     await window.press(DOWN);
     await window.press('\r');
-    await window.shows(' Background · 2 in this tab');
+    await window.shows('│ Background · 2 in this tab');
 
     // ctrl+x w would open the sessions picker; ctrl+x c a new tab.
     await window.press(CTRL_X);
@@ -342,8 +346,8 @@ test('the view is modal: the window’s session keys do nothing in it, and esc g
     await window.press(CTRL_X);
     await window.press('c');
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(window.frame()).toContain(' Background · 2 in this tab');
-    expect(!window.frame().includes('╭')).toBeTruthy();
+    expect(window.frame()).toContain('│ Background · 2 in this tab');
+    expect(window.frame()).not.toContain('Sessions in');
 
     await window.press(ESC);
     await window.shows('❯ background  2 monitors running');

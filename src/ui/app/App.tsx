@@ -82,6 +82,7 @@ import { agentsHint, agentsRowLimit, summaryHint } from '../agents/agents.ts';
 import { AgentsList, ChildLine } from '../agents/Agents.tsx';
 import { SummaryLine } from '../background/Background.tsx';
 import { BackgroundView } from '../background/BackgroundView.tsx';
+import { agentsHaveKeys, backgroundShown } from '../background/state.ts';
 import { startingVim } from '../prompt/vim.ts';
 import { useCommands } from './commands.ts';
 import {
@@ -492,8 +493,12 @@ export function App({
   const theming = themePickerShown(state);
   const listingMcp = mcpShown(state);
   const listingTeams = teamsPickerShown(state);
+  const viewing = backgroundShown(state);
+  // The list under the prompt has the keys, not the view opened from it.
+  const listFocus = agentsHaveKeys(state);
   // Any picker holds the keys the prompt would otherwise take.
   const choosing =
+    viewing ||
     picking ||
     resumingShown ||
     configuring ||
@@ -775,7 +780,7 @@ export function App({
     !choosing &&
     state.pendingKeys === undefined &&
     !state.search &&
-    !state.agentsFocus;
+    !listFocus;
 
   // Only the tail's entries are mounted, from the tail's first or the one
   // held while scrolled back; it costs only the tail to find.
@@ -840,7 +845,7 @@ export function App({
         between={inputBetween}
         windowRows={rows}
         width={columns}
-        active={listening && !state.agentsFocus && !held}
+        active={listening && !listFocus && !viewing && !held}
         held={held}
         onFill={(answering) =>
           dispatch({
@@ -863,7 +868,7 @@ export function App({
         between={inputBetween}
         windowRows={rows}
         width={columns}
-        active={listening && !state.agentsFocus && !held}
+        active={listening && !listFocus && !viewing && !held}
         held={held}
         onFill={(form) =>
           dispatch({ type: 'form_filled', id: inputAsked.id, form })
@@ -877,7 +882,7 @@ export function App({
         agent={inputAgent}
         asker={inputAsker}
         between={inputBetween}
-        active={listening && !state.agentsFocus && !held}
+        active={listening && !listFocus && !viewing && !held}
         held={held}
         onAnswer={(answer) =>
           answerLink(openUrl, conversation(), inputAsked, answer)
@@ -903,20 +908,9 @@ export function App({
             )}
             {/* Under the splash the window is laid out but not drawn, so the
         keys pressed meanwhile land in it as if typed there. */}
-            {state.backgroundView && !splashing && (
-              <BackgroundView
-                items={backgroundItems}
-                focus={state.backgroundView.focus}
-                hint={state.backgroundView.hint}
-                columns={columns}
-                rows={rows}
-              />
-            )}
-            {/* Hidden under the background view, not let go, so esc gives
-        the transcript back as it was. */}
             <box
               // Always given, so a window shown again is not left hidden.
-              visible={!splashing && state.backgroundView === undefined}
+              visible={!splashing}
               width={columns}
               height={rows}
               {...mouse}
@@ -1048,7 +1042,10 @@ export function App({
               {state.queue.length > 0 && (
                 <Queue queue={state.queue} limit={queueRowLimit(rows)} />
               )}
-              {asked && !listingSessions && (
+              {/* One box above the prompt at a time: the background view
+        opened over a request waiting takes its place until it closes
+        (CHD-462). */}
+              {asked && !listingSessions && !viewing && (
                 <PermissionPrompt
                   key={asked.id}
                   wait={asked}
@@ -1061,7 +1058,7 @@ export function App({
                   between={between}
                   held={held}
                   width={columns - 4}
-                  active={listening && !state.agentsFocus}
+                  active={listening && !listFocus && !viewing}
                   onChoose={(optionId) =>
                     conversation()?.choose(asked.id, optionId)
                   }
@@ -1073,6 +1070,15 @@ export function App({
                       overflows,
                     })
                   }
+                />
+              )}
+              {viewing && state.backgroundView && (
+                <BackgroundView
+                  items={backgroundItems}
+                  focus={state.backgroundView.focus}
+                  hint={state.backgroundView.hint}
+                  columns={columns}
+                  rows={rows}
                 />
               )}
               {picking && (
@@ -1167,8 +1173,8 @@ export function App({
                       })}
                 />
               )}
-              {held && inputDialog}
-              {inputDialog !== undefined && !held ? (
+              {held && !viewing && inputDialog}
+              {inputDialog !== undefined && !held && !viewing ? (
                 inputDialog
               ) : (
                 <PromptInput
@@ -1256,11 +1262,11 @@ export function App({
                       }
                       // While the list has the keys, the line says what they
                       // do; its rows show what waits.
-                      waits={state.agentsFocus ? undefined : waits}
+                      waits={listFocus ? undefined : waits}
                       armed={armed}
                       draft={draft}
                       width={columns - 4}
-                      {...(state.agentsFocus
+                      {...(listFocus
                         ? {
                             hint: summaryFocused
                               ? summaryHint(columns - 4)
@@ -1284,12 +1290,12 @@ export function App({
                 rows={listRows}
                 limit={agentsLimit}
                 width={columns - 4}
-                focused={state.agentsFocus === true && !summaryFocused}
+                focused={listFocus && !summaryFocused}
               />
               <SummaryLine
                 items={backgroundItems}
                 width={columns - 4}
-                focused={state.agentsFocus === true && summaryFocused}
+                focused={listFocus && summaryFocused}
               />
             </box>
           </Keys.Provider>

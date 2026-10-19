@@ -94,6 +94,18 @@ export function asksPerson(transcript: Transcript): boolean {
   );
 }
 
+/** The ids of every permission and form the transcript asks the person. */
+export function askedIds(transcript: Transcript): string[] {
+  const { turn } = transcript;
+
+  return [
+    ...(turn.status === 'awaiting_permission'
+      ? turn.permissions.map((wait) => wait.id)
+      : []),
+    ...transcript.asking.map((wait) => wait.id),
+  ];
+}
+
 /**
  * The form or link on screen: the oldest the turn asks for, once no
  * permission is asked, as that prompt answers first.

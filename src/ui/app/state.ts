@@ -45,8 +45,10 @@ import {
 } from '../shortcuts/state.ts';
 import {
   type BackgroundAction,
+  backgroundShown,
   type BackgroundState,
   initialBackground,
+  agentsHaveKeys,
   reduceBackground,
 } from '../background/state.ts';
 import {
@@ -1278,7 +1280,7 @@ function pressCommand(
     stroke !== undefined &&
     state.pendingKeys === undefined &&
     types(stroke) &&
-    ((inputWithKeys(state) !== undefined && !state.agentsFocus) ||
+    ((inputWithKeys(state) !== undefined && !agentsHaveKeys(state)) ||
       state.search !== undefined);
   const pressed =
     stroke === undefined || typed
@@ -1299,7 +1301,7 @@ function pressCommand(
   }
 
   // The background view begins no chord: its keys are its own.
-  if (state.backgroundView) {
+  if (backgroundShown(state)) {
     return state.pendingKeys === undefined ? undefined : 'key_dropped';
   }
 
@@ -1388,7 +1390,7 @@ function boundCommand(
 
   // The background view is modal: it takes every key, the window's
   // sessions' and the pickers' too, which wait until Esc closes it.
-  if (state.backgroundView) {
+  if (backgroundShown(state)) {
     return backgroundCommand(input, key, state, on);
   }
 
@@ -1443,7 +1445,7 @@ function boundCommand(
   // letter does nothing, so a stray key never lands in a child's prompt. A
   // permission or form of the agent picked waits until Enter or Esc goes
   // back to it, so moving through the list never answers one.
-  if (state.agentsFocus && !pickerShown(state)) {
+  if (agentsHaveKeys(state) && !pickerShown(state)) {
     return agentsCommand(input, key, state, on);
   }
 

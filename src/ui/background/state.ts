@@ -17,10 +17,10 @@ export interface BackgroundState {
   readonly backgroundView?: {
     readonly focus?: ItemRef;
     /**
-     * In a focused row taller than the frame, the line of it on top, for
-     * the size `laid` it was laid out at (CHD-430).
+     * The line of all the rows' on top of the frame, for the size `laid`
+     * it was laid out at (CHD-430).
      */
-    readonly line?: number;
+    readonly top?: number;
     readonly laid?: string;
     /**
      * The requests already waiting on the person as it opened, which it
@@ -58,8 +58,8 @@ export type BackgroundAction =
   | {
       readonly type: 'background_focused';
       readonly focus: ItemRef;
-      /** The line on top of a tall row, at the size `laid`; kept if not given. */
-      readonly line?: number;
+      /** The line on top of the frame, at the size `laid`; kept if not given. */
+      readonly top?: number;
       readonly laid?: string;
     }
   /** `x` asked to stop `focus`, which may answer later, under `token`. */
@@ -151,17 +151,17 @@ export function reduceBackground(
 
       // Where in a tall row it is stays with the row, unless a move says.
       const at =
-        action.line !== undefined
-          ? { line: action.line, laid: action.laid }
+        action.top !== undefined
+          ? { top: action.top, laid: action.laid }
           : stays
-            ? { line: view.line, laid: view.laid }
+            ? { top: view.top, laid: view.laid }
             : {};
 
       return {
         ...state,
         backgroundView: {
           focus: action.focus,
-          ...(at.line === undefined ? {} : { line: at.line }),
+          ...(at.top === undefined ? {} : { top: at.top }),
           ...(at.laid === undefined ? {} : { laid: at.laid }),
           ...(view.over === undefined ? {} : { over: view.over }),
           ...(stays && view.hint !== undefined ? { hint: view.hint } : {}),

@@ -1612,7 +1612,7 @@ export function useSessions(
       dispatch({
         type: 'background_focused',
         focus: at.focus,
-        ...(at.line === undefined ? {} : { line: at.line }),
+        ...(at.top === undefined ? {} : { top: at.top }),
         ...(at.laid === undefined ? {} : { laid: at.laid }),
       });
     }

@@ -588,81 +588,83 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
         laid,
       ),
     ).map(({ cells }) => cells.map((cell) => cell.text).join(''));
+  // The tall row's lines, which start on the second line of all.
   const lines = viewRows(items, {
     width: frame.width,
     focus: undefined,
     now: NOW,
   })[1]!.lines.length;
+  const t1 = { key: 1, id: 't1' };
 
-  test('reached with ↓, it shows from its first line, the ❯ on it; each ↓ scrolls a line, then the next row', () => {
+  test('reached with ↓, it shows from its first line, the ❯ on it; each ↓ scrolls a line, then the next row comes whole into sight below its last lines', () => {
     let at = moveView(items, { focus: { key: 1, id: 't2' } }, 1, frame)!;
 
-    expect(at).toStrictEqual({ focus: { key: 1, id: 't1' }, line: 0, laid });
+    expect(at).toStrictEqual({ focus: t1, top: 1, laid });
     expect(shown(at)[0]).toStartWith('❯ word');
-    expect(shown(at)).toHaveLength(6);
     expect(shown(at).at(-1)).toStartWith('↓ ');
 
     for (let step = 1; step <= lines - 6; step++) {
       at = moveView(items, at, 1, frame)!;
 
-      expect(at.line).toBe(step);
+      expect(at.top).toBe(1 + step);
+      expect(shown(at)).toHaveLength(6);
     }
 
     // Its first line out of sight, the gutter's ↑ stands for it.
     expect(shown(at)[0]).toStartWith('↑ ');
-    expect(shown(at)).not.toContain(expect.stringContaining('❯'));
-    // Its last line at the bottom: the next ↓ goes to the row below.
-    expect(moveView(items, at, 1, frame)).toStrictEqual({
+    expect(shown(at).some((line) => line.includes('❯'))).toBeFalsy();
+
+    // Off it: the next row comes whole into sight, its last lines above.
+    const off = moveView(items, at, 1, frame)!;
+
+    expect(off).toStrictEqual({
       focus: { key: 1, id: 't3' },
-      line: 0,
+      top: lines + 2 - 6,
       laid,
     });
+    expect(shown(off)).toHaveLength(6);
+    expect(shown(off)[0]).toStartWith('↑ ');
+    expect(shown(off).at(-1)).toStartWith('❯ Lint');
   });
 
   test('reached with ↑, it shows from its last line, and each ↑ scrolls a line up, then the row above', () => {
     let at = moveView(items, { focus: { key: 1, id: 't3' } }, -1, frame)!;
 
-    expect(at).toStrictEqual({
-      focus: { key: 1, id: 't1' },
-      line: lines - 6,
-      laid,
-    });
+    expect(at).toStrictEqual({ focus: t1, top: lines + 1 - 6, laid });
     expect(shown(at)[0]).toStartWith('↑ ');
     expect(shown(at).at(-1)).toStartWith('↓ ');
 
-    for (let step = lines - 7; step >= 0; step--) {
+    while (at.top! > 1) {
       at = moveView(items, at, -1, frame)!;
 
-      expect(at.line).toBe(step);
+      expect(at.focus).toStrictEqual(t1);
     }
 
     expect(shown(at)[0]).toStartWith('❯ word');
-    expect(moveView(items, at, -1, frame)?.focus).toStrictEqual({
-      key: 1,
-      id: 't2',
-    });
+
+    const off = moveView(items, at, -1, frame)!;
+
+    expect(off).toStrictEqual({ focus: { key: 1, id: 't2' }, top: 0, laid });
+    expect(shown(off)[0]).toStartWith('❯ Watch the build');
+    expect(shown(off)).toHaveLength(6);
   });
 
-  test('at another size, or with no line kept, it shows from its first line again', () => {
-    const scrolled = { focus: { key: 1, id: 't1' }, line: 5, laid };
+  test('at another size, or with no line kept, a tall row shows from its first line again', () => {
+    const scrolled = { focus: t1, top: 5, laid };
 
     expect(shown(scrolled)[0]).toStartWith('↑ ');
     expect(shown({ ...scrolled, laid: laidAt(70, 6) })[0]).toStartWith(
       '❯ word',
     );
-    expect(shown({ focus: { key: 1, id: 't1' } })[0]).toStartWith('❯ word');
+    expect(shown({ focus: t1 })[0]).toStartWith('❯ word');
   });
 
-  test('a row that fits is moved over whole', () => {
+  test('rows that all fit are moved over whole, nothing scrolled', () => {
     expect(
       moveView(items, { focus: { key: 1, id: 't2' } }, 1, {
         ...frame,
         height: 40,
       }),
-    ).toStrictEqual({
-      focus: { key: 1, id: 't1' },
-      line: 0,
-      laid: laidAt(76, 40),
-    });
+    ).toStrictEqual({ focus: t1, top: 0, laid: laidAt(76, 40) });
   });
 });

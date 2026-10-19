@@ -829,6 +829,10 @@ test('a task name taller than the frame scrolls by line at 80x24: ↓ through it
       }
 
       await window.shows('│ ❯ Watch the build');
+      // The frame keeps its height: the tall row's last lines stay above,
+      // the gutter's ↑ saying there is more (CHD-462).
+      expect(window.frame()).toContain('│     removed together');
+      expect(window.frame()).toMatch(/│ ↑ {3}\S/);
       // Back with ↑: its last line at the bottom.
       await window.press('k');
       await window.shows('removed together');

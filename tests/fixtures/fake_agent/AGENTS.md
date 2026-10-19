@@ -276,7 +276,13 @@
   `--cost-from <usd>` (`CHORD_FAKE_COST_FROM`) counts each session's cost
   from that amount, as an agent that keeps it with the session does after a
   resume, and `--late-cost` (`CHORD_FAKE_LATE_COST=1`) sends the turn's
-  `usage_update` 100 ms after its answer, as Claude's adapter can. `session/list` gives the sessions the process created,
+  `usage_update` 100 ms after its answer, as Claude's adapter can.
+  `--cost-at-next` (`CHORD_FAKE_COST_AT_NEXT=1`) holds a turn's
+  `usage_update` until the session's next prompt arrives and sends it first.
+  `--cycle-cost <usd>` (`CHORD_FAKE_CYCLE_COST`) puts the session's cost so
+  far, with that added, on the usage update that ends a Claude cycle (`0`
+  repeats it), and `--cycle-on-resume` (`CHORD_FAKE_CYCLE_ON_RESUME=1`) runs
+  such a cycle in a session resumed, once quiet, with no prompt sent. `session/list` gives the sessions the process created,
   newest first, and `session/set_model` takes either model. `session/load` takes any UUID and replays a short past (the
   `tools` and `text` scenarios) before it answers; any other id is not found,
   and `CHORD_FAKE_REFUSE_LOAD=1` refuses every load; `--resume-only` also

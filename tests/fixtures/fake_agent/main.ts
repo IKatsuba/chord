@@ -38,6 +38,10 @@
  * session reports after a resume; with `--late-cost`, or
  * `CHORD_FAKE_LATE_COST=1`, the `usage_update` comes after the answer, as
  * Claude's adapter can send it.
+ * `--cost-at-next` holds it for the session's next prompt instead.
+ * `--cycle-cost <usd>` adds that to the session's cost on the usage update
+ * that ends a Claude cycle, and `--cycle-on-resume` runs one in a session
+ * resumed (CHD-373).
  *
  * It takes images in a prompt, and answers each one first with a line naming
  * its media type and its size in bytes, so a capture shows what arrived, and
@@ -240,7 +244,9 @@ import {
   STEER_LATE,
   STEERING,
   ADAPTER,
+  COST_AT_NEXT,
   COST_FROM,
+  CYCLE_ON_RESUME,
   LATE_COST,
   SAY_CANCELS,
   STEP_MS,
@@ -256,7 +262,7 @@ import { PLANS } from './scenarios/plans.ts';
 import { SHELL } from './scenarios/shell.ts';
 import { claudeChildren, SUBAGENTS } from './scenarios/subagents.ts';
 import { TASKS } from './scenarios/tasks.ts';
-import { CYCLES } from './scenarios/cycles.ts';
+import { CYCLES, runCycle } from './scenarios/cycles.ts';
 import { AGENTS } from './scenarios/agents.ts';
 import { EFFORTS } from './scenarios/efforts.ts';
 import { MONITORS } from './scenarios/monitors.ts';
@@ -278,6 +284,7 @@ import {
   modes,
   steers,
   strayCancels,
+  costs,
 } from './sessions.ts';
 import {
   type Client,
@@ -595,6 +602,9 @@ const TURN_COST = 0.0125;
 /** How long after its answer a late turn's cost comes. */
 const LATE_COST_MS = 100;
 
+/** A turn's cost held for its session's next prompt, with `--cost-at-next`. */
+const heldCosts = new Map<string, Update>();
+
 /** How many turns each session has reported usage for. */
 const reported = new Map<string, number>();
 
@@ -613,14 +623,24 @@ async function reportUsage(turn: Turn): Promise<void> {
 
   reported.set(turn.sessionId, count);
 
+  const cost = (costs.get(turn.sessionId) ?? COST_FROM) + TURN_COST;
+
+  costs.set(turn.sessionId, cost);
+
   const update: Update = {
     sessionUpdate: 'usage_update',
     used: TURN_USAGE.totalTokens * count,
     size: WINDOWS[models.get(turn.sessionId) ?? FIRST_MODEL] ?? 0,
-    cost: { amount: COST_FROM + TURN_COST * count, currency: 'USD' },
+    cost: { amount: cost, currency: 'USD' },
   };
 
   turn.usage = TURN_USAGE;
+
+  if (COST_AT_NEXT) {
+    heldCosts.set(turn.sessionId, update);
+
+    return;
+  }
 
   if (!LATE_COST) {
     await turn.send(update);
@@ -947,6 +967,10 @@ const connection = acp
     loadMarks.set(sessionId, crypto.randomUUID().slice(0, 8));
     advertiseCommands(client, sessionId);
 
+    if (CYCLE_ON_RESUME) {
+      runCycle(client, sessionId);
+    }
+
     return {
       ...sessionModes(),
       configOptions: configOptions(sessionId),
@@ -1060,6 +1084,17 @@ const connection = acp
     },
   )
   .onRequest('session/prompt', async ({ params, client }) => {
+    const held = heldCosts.get(params.sessionId);
+
+    // The last turn's cost, held for this one, which has now begun.
+    if (held !== undefined) {
+      heldCosts.delete(params.sessionId);
+      await client.notify('session/update', {
+        sessionId: params.sessionId,
+        update: held,
+      });
+    }
+
     const answered = playPrompt(client, params);
 
     prompted.set(params.sessionId, answered);

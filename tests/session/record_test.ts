@@ -15,7 +15,7 @@ import {
   type RecordEntry,
 } from '../../src/session/record.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
-import { readRecords } from '../../src/session/sessions.ts';
+import { readRecords, type Resume } from '../../src/session/sessions.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
 
@@ -461,5 +461,111 @@ describe('CHD-373 S3a tester: live and recorded turn costs', () => {
         await session.exited;
         expect(session.agentPids.size).toBe(0);
       }
+    }));
+});
+
+describe("CHD-373 S3a: the fake's own cycle with a cost, and a cost held for the next prompt", () => {
+  /** The cycle's figures, a `usage` event with no tokens. */
+  const cycleEnded = (event: ConversationEvent) =>
+    event.type === 'usage' && Object.keys(event.usage).length === 0;
+
+  async function played(
+    dir: string,
+    flags: string[],
+    prompts: string[],
+    more: { agent?: string; resume?: Resume; waits?: boolean } = {},
+  ): Promise<RecordEntry[]> {
+    const { agent = 'claude', resume, waits = true } = more;
+
+    await recordSession({
+      stateDir: join(dir, 'state'),
+      cwd: dir,
+      command: fakeAgentCommand(undefined, ...flags),
+      prompts,
+      agent,
+      ...(resume === undefined ? {} : { resume }),
+      ...(waits ? { until: cycleEnded } : {}),
+    });
+
+    return await readPast((await theRecord(dir)).path);
+  }
+
+  const cycled = (amount: number) => ({
+    model: 'fake-large',
+    cost: { amount: expect.closeTo(amount, 9), currency: 'USD' },
+  });
+
+  test("a Claude cycle after a turn has a line of its own with what it added to the session's cost", () =>
+    withDir(async (dir) => {
+      const entries = await played(
+        dir,
+        ['--adapter', 'claude', '--cycle-cost', '0.005'],
+        ['claudecycle'],
+      );
+
+      expect(costs(entries)).toStrictEqual([turn(0.0125), cycled(0.005)]);
+    }));
+
+  test('a cycle whose usage repeats the cost as it was says it cost nothing', () =>
+    withDir(async (dir) => {
+      const entries = await played(
+        dir,
+        ['--adapter', 'claude', '--cycle-cost', '0'],
+        ['claudecycle'],
+      );
+
+      expect(costs(entries)).toStrictEqual([turn(0.0125), cycled(0)]);
+    }));
+
+  test('a cycle in a resumed session with no prompt sent is kept in its record, as its opening counts it', () =>
+    withDir(async (dir) => {
+      const id = await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(),
+        prompts: ['text'],
+        agent: 'claude',
+      });
+      const record = await theRecord(dir);
+      const entries = await played(
+        dir,
+        [
+          '--resume-only',
+          '--adapter',
+          'claude',
+          '--cycle-on-resume',
+          '--cycle-cost',
+          '0.005',
+        ],
+        [],
+        { resume: { sessionId: id, cwd: dir, record: record.path } },
+      );
+
+      expect(entries.filter((entry) => entry.type === 'opened')).toHaveLength(
+        2,
+      );
+
+      // No prompt went in the second opening.
+      const again = entries.findLastIndex((entry) => entry.type === 'opened');
+
+      expect(
+        entries.slice(again).some((entry) => entry.type === 'prompt'),
+      ).toBe(false);
+      // Claude's counts from each opening: the cycle's first cost is its own.
+      expect(costs(entries)).toStrictEqual([turn(0.0125), cycled(0.005)]);
+    }));
+
+  test("a turn's cost that comes once the next prompt has begun is the next turn's, so each is counted once", () =>
+    withDir(async (dir) => {
+      const entries = await played(dir, ['--cost-at-next'], ['text', 'text'], {
+        waits: false,
+      });
+
+      // The first turn's cost came with the second; the second's own is
+      // held for a prompt that never came.
+      expect(costs(entries)).toStrictEqual([
+        { model: 'fake-large' },
+        turn(0.0125),
+      ]);
     }));
 });

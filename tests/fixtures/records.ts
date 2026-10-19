@@ -28,7 +28,9 @@ export interface Sending {
  * `answer`, each form or link with that reply, or `interrupt` for the
  * person interrupting the turn while it waits. `agent` is the name the
  * session is opened as, `fake` unless a test needs another's ways; with
- * `lateCost`, each turn is waited on until its cost has come after it.
+ * `lateCost`, each turn is waited on until its cost has come after it, and
+ * with `until`, the session is closed only once an event it holds for has
+ * come, the agent's own work after the prompts.
  */
 export async function recordSession({
   stateDir,
@@ -42,6 +44,7 @@ export async function recordSession({
   answer,
   agent = 'fake',
   lateCost = false,
+  until,
 }: {
   stateDir: string;
   cwd: string;
@@ -54,6 +57,7 @@ export async function recordSession({
   answer?: ElicitationReply | 'interrupt';
   agent?: string;
   lateCost?: boolean;
+  until?: (event: ConversationEvent) => boolean;
 }): Promise<string> {
   const failures: string[] = [];
   const {
@@ -64,6 +68,7 @@ export async function recordSession({
   let ended: (() => void) | undefined;
   /** With `lateCost`, the turn has answered and its cost is still to come. */
   let answered = false;
+  const { promise: held, resolve: hold } = Promise.withResolvers<void>();
   const conversation = new Conversation(
     (signal) =>
       openSession({
@@ -75,6 +80,10 @@ export async function recordSession({
       }),
     (event) => {
       heard?.(event);
+
+      if (until?.(event) === true) {
+        hold();
+      }
 
       const option =
         event.type === 'permission_requested'
@@ -152,6 +161,10 @@ export async function recordSession({
       }
 
       await promise;
+    }
+
+    if (until !== undefined) {
+      await held;
     }
   } finally {
     await conversation.close();

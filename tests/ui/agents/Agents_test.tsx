@@ -279,10 +279,10 @@ test("a child's turn that fails tells the parent, and the child stays open", () 
     );
     await window.shows('Received the message from chord.');
     expect(window.frame()).toContain('    parser  fake');
-    // Behind, its row says its turn failed and since when, not that it is
-    // gone, and so does the status line.
+    // Behind, its row reads open and idle, the failed turn its mark beside
+    // that (CHD-471), not that it is gone, and so does the status line.
     expect(window.frame()).toMatch(
-      / {4}parser {2}fake.* {2}✗ turn failed \d+s ago$/m,
+      / {4}parser {2}fake.* {2}◦ idle \d+s +✗ turn failed$/m,
     );
     await window.shows("✗ parser's turn failed · ctrl+x a to go");
     // Once looked at, the failed turn clears, and parser reads open and idle.
@@ -312,22 +312,22 @@ test("a child's exit in a tab behind is named for the child, in that tab", () =>
     expect(!window.frame().includes('2 fake exited')).toBeTruthy();
   }));
 
-test("a child's reply to a message reads its age from the reply, not from the message (CHD-364)", () =>
+test("a child's message not yet seen, then its reply, are marks beside its state, whose idle time counts from its reply (CHD-364, CHD-471)", () =>
   withAgents(
     async (window) => {
       await ready(window);
       await send(window, 'agents');
-      await window.shows('← message from @main');
+      await window.shows('← new message');
       await until(
         'parser replied',
-        () => /parser .*✓ replied/.test(window.frame()),
+        () => /parser .*✓ new reply/.test(window.frame()),
         30_000,
       );
 
-      const age = /parser .*✓ replied (\d+)s ago/.exec(window.frame());
+      const idle = /parser .*◦ idle (\d+)s +✓ new reply/.exec(window.frame());
 
-      // The message came seconds before; the reply has only just come.
-      expect(Number(age?.[1])).toBeLessThanOrEqual(2);
+      // The message came seconds before; it stopped as its reply came.
+      expect(Number(idle?.[1])).toBeLessThanOrEqual(2);
     },
     '--steering',
     'codex',

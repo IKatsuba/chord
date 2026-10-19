@@ -1516,3 +1516,67 @@ test('hidden under the background view, a permission keeps its highlighted choic
     await drawn.unmount();
   }
 });
+
+describe('CHD-462 B1 tester: hidden permission scroll state', () => {
+  for (const columns of [80, 120]) {
+    test(`scroll position survives hiding and showing at ${columns} columns`, async () => {
+      const control: { set?: (hidden: boolean) => void } = {};
+      const scroller: { current: RequestScroller | undefined } = {
+        current: undefined,
+      };
+      const wait = {
+        id: 'kept-scroll',
+        title: 'Review the release notes',
+        rawInput: {
+          notes: Array.from({ length: 60 }, (_, n) => `Release note ${n + 1}`),
+        },
+        options: [
+          { optionId: 'allow', name: 'Allow', kind: 'allow_once' as const },
+        ],
+      };
+
+      function Hidden() {
+        const [hidden, setHidden] = useState(false);
+
+        control.set = setHidden;
+
+        return (
+          <box height={18}>
+            <PermissionPrompt
+              wait={wait}
+              width={columns - 4}
+              active={!hidden}
+              hidden={hidden}
+              onChoose={() => {}}
+              scroller={scroller}
+            />
+          </box>
+        );
+      }
+
+      const drawn = await draw(<Hidden />, { columns, rows: 24 });
+
+      try {
+        await until('scrollable request', () =>
+          drawn.frame().includes('lines below'),
+        );
+        scroller.current?.('page_down');
+        await until('scrolled request', () =>
+          drawn.frame().includes('lines above'),
+        );
+
+        const before = drawn.frame();
+
+        control.set?.(true);
+        await until(
+          'request hidden',
+          () => !drawn.frame().includes('Review the release notes'),
+        );
+        control.set?.(false);
+        await until('scroll restored', () => drawn.frame() === before);
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});

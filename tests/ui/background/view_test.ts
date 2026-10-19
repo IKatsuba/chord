@@ -366,7 +366,7 @@ describe('CHD-424 tester: view layout edges', () => {
     expect(stateText(working, NOW + 2_000).text).toBe('working 34s');
   });
 
-  test('every focus stays visible among variable-height rows and the indicators count items', () => {
+  test('every focus stays visible among variable-height rows and gutter marks consume no extra lines', () => {
     const many = Array.from({ length: 30 }, (_, index) =>
       monitor(
         `m${index + 1}`,
@@ -387,10 +387,7 @@ describe('CHD-424 tester: view layout edges', () => {
           }),
           20,
         );
-        const occupied =
-          shown.rows.reduce((n, row) => n + row.lines.length, 0) +
-          Number(shown.above > 0) +
-          Number(shown.below > 0);
+        const occupied = shown.rows.reduce((n, row) => n + row.lines.length, 0);
 
         expect(
           shown.rows

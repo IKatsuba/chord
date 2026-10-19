@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { serveChord } from '../../../src/server/server.ts';
 import { openSession } from '../../../src/session/session.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
@@ -984,5 +985,63 @@ describe('CHD-158 C5 tester: questions and links carried past result', () => {
         },
         { columns, rows },
       ));
+  }
+});
+
+describe('CHD-462 B1 tester: hidden question choice', () => {
+  for (const columns of [80, 120]) {
+    test(`the selected option survives the frame at ${columns} columns`, async () => {
+      const control: { set?: (hidden: boolean) => void } = {};
+      const { questions } = askedCodex();
+
+      function Hidden() {
+        const [hidden, setHidden] = useState(false);
+
+        control.set = setHidden;
+
+        return (
+          <QuestionBox
+            wait={{
+              id: 'kept-question',
+              mode: 'form',
+              message: CODEX_QUESTIONS.message,
+              schema: CODEX_QUESTIONS.requestedSchema,
+            }}
+            questions={questions}
+            agent='fake'
+            width={columns}
+            windowRows={24}
+            active={!hidden}
+            hidden={hidden}
+            onAnswer={() => {}}
+          />
+        );
+      }
+
+      const drawn = await draw(<Hidden />, { columns, rows: 24 });
+
+      try {
+        await drawn.write(DOWN);
+        await until('second option selected', () =>
+          drawn.frame().includes('❯ 2.'),
+        );
+
+        const before = drawn
+          .frame()
+          .split('\n')
+          .find((line) => line.includes('❯ 2.'));
+
+        assert(before);
+
+        control.set?.(true);
+        await until('question hidden', () => !drawn.frame().includes('❯ 2.'));
+        control.set?.(false);
+        await until('question choice restored', () =>
+          drawn.frame().split('\n').includes(before),
+        );
+      } finally {
+        await drawn.unmount();
+      }
+    });
   }
 });

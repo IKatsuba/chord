@@ -185,9 +185,14 @@ cmd+arrows work only where the terminal passes them to chord:
   ctrl+a/e for line moves, or a terminal preset that sends those keys.
 
 ctrl+g opens the prompt in your editor (`$VISUAL`, then `$EDITOR`, then
-`vi`), run through your shell; what it saves comes back as the prompt when
-it exits. An editor that exits with an error or is killed leaves the
-prompt as it was, and the status line says so.
+`vi`), run through your shell; what it saves comes back as the prompt with
+the cursor at its end, as when recalling history with ↑/↓ or ctrl+r.
+Control characters from the editor, history or a paste stay in the prompt
+and are sent as held. The box shows them as `^L`, `^?` or `<85>`; the
+transcript's prompt echo and ctrl+r's match show no notation. A paste
+removes escape sequences; C1 CSI (0x9b) also takes the byte after it.
+An editor that exits with an error or is killed leaves the prompt as it
+was, and the status line says so.
 
 ctrl+v puts the image on the clipboard into the prompt as `[Image #1]`, at
 the cursor, and Enter sends it after the text. So does the terminal's own

@@ -270,9 +270,11 @@
   `plan` scenario sends its plan as Codex's adapter does: as a `plan_update`
   with an id to a client that declares `clientCapabilities.plan`, and as
   reply text to any other. Every session
-  advertises two slash commands, `greet` and `echo` (`tests/fixtures/commands.ts`), just
-  after `session/new`, as Claude's adapter does; a prompt starting with one
-  plays it. Shell output sent ahead of a prompt is answered first with a
+  advertises two slash commands, `greet` and `echo`
+  (`tests/fixtures/commands.ts`), just after `session/new`, as Claude's
+  adapter does; a prompt starting with one plays it. `verbatim <text>`
+  answers with the text as a JSON string, escaping every C0, DEL and C1
+  character as `\uXXXX`. Shell output sent ahead of a prompt gets a
   `Received` line naming each command and its first line of output, and
   each image in a prompt with one naming its media type and size in bytes,
   and each `resource_link` with one naming it and its URI;

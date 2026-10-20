@@ -385,6 +385,7 @@ const SCENARIOS = [
   'claudewaiting',
   'claudenostop',
   'subagentstates',
+  'subagentstatesstay',
   'chordtools',
   'cutcalls',
   'cutcallsback',

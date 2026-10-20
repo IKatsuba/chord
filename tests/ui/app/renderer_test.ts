@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import type { CliRenderer } from '@opentui/core';
+import { useRenderer } from '@opentui/react';
 import { createElement } from 'react';
 import {
   closeOnForcedExit,
@@ -6,7 +8,7 @@ import {
   leave,
 } from '../../../src/ui/app/renderer.tsx';
 import { draw } from '../harness.tsx';
-import { until } from './render.tsx';
+import { statusReports, until } from './render.tsx';
 
 test('a forced exit waits for every close still asked for, a failed one too, and forgets them (CHD-331)', async () => {
   const closed: string[] = [];
@@ -90,6 +92,33 @@ test('a signal during a forced exit is held until the closes settle, then the fi
     slow.resolve();
     off();
   }
+});
+
+test("a forced exit clears chord's status before it gives the terminal back (CHD-382)", async () => {
+  const log: string[] = [];
+  let renderer: CliRenderer | undefined;
+  const Grab = () => {
+    renderer = useRenderer();
+
+    return createElement('text', null, 'hi');
+  };
+
+  const drawn = await draw(createElement(Grab), {}, { log });
+
+  renderer!.setProgramStatus({ state: 'working', app: 'chord' });
+  await renderer!.idle();
+  await leave(renderer);
+
+  const written = log.join('');
+  const clear = written.lastIndexOf('\x1b]7501;state=clear');
+
+  expect(statusReports(log).at(-1)).toStrictEqual({ state: 'clear' });
+  // Ahead of the alternate screen's end, which gives the terminal back.
+  expect(clear).toBeGreaterThan(-1);
+  expect(clear).toBeLessThan(written.lastIndexOf('\x1b[?1049l'));
+  // Once destroyed, the renderer takes no report.
+  expect(renderer!.setProgramStatus({ state: 'idle' })).toBe(false);
+  await drawn.unmount();
 });
 
 /** The mouse modes a terminal was told to turn on, in the order told. */

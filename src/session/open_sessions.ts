@@ -9,6 +9,7 @@ import {
   full,
   goTo,
   hear,
+  keyed,
   movePick,
   nextTab,
   noTabs,
@@ -261,6 +262,11 @@ export class OpenSessions<C extends Driven> {
 
   next(): void {
     this.#tabs = nextTab(this.#tabs);
+  }
+
+  /** A key pressed in chord: the agent shown has been looked at. */
+  keyed(): void {
+    this.#tabs = keyed(this.#tabs);
   }
 
   previous(): void {

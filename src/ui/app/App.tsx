@@ -29,6 +29,7 @@ import {
 } from '../../agents.ts';
 import type { ChordServer } from '../../server/server.ts';
 import { frontTab, noTabs } from '../../session/tabs.ts';
+import { programStatus } from '../../status.ts';
 import { promptLine } from '../../session/record.ts';
 import { type EditorMode, homePath } from '../../settings.ts';
 import { runShell, type ShellOptions, type ShellProcess } from '../../shell.ts';
@@ -114,6 +115,7 @@ import {
 } from './terminal.ts';
 import type { Copy } from './selection.ts';
 import { useMouse, usePasted, usePress } from './input.ts';
+import { useProgramStatus } from './renderer.tsx';
 import { Clip } from './Clip.tsx';
 import { useMeasured } from './layout.ts';
 import { useTimers } from './timers.ts';
@@ -790,8 +792,17 @@ export function App({
     }
   });
 
+  // The terminal hears where every agent stands after each draw, and after a
+  // key, which has the agent shown looked at whether or not it draws.
+  const reportStatus = useProgramStatus();
+
+  useEffect(() => reportStatus(programStatus(sessions.sessions.tabs)));
+
   // A key of chord's that would also type is kept from the textarea.
   usePress((input, key) => {
+    sessions.sessions.keyed();
+    reportStatus(programStatus(sessions.sessions.tabs));
+
     const steps = keySteps(input, key, context());
 
     play(steps);

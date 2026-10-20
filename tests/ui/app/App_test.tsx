@@ -32,6 +32,7 @@ import {
   quitAll,
   ready,
   send,
+  statusReports,
   TAB,
   until,
   UP,
@@ -2617,4 +2618,107 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
       },
     );
   });
+});
+
+/** The last program status the terminal was told, its fields as written. */
+function lastStatus(
+  log: readonly string[],
+): Record<string, string> | undefined {
+  return statusReports(log).at(-1);
+}
+
+test("the terminal hears chord work, then done with the notification's words, then idle at the next key (CHD-382)", () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await until(
+        'idle to be reported',
+        () => lastStatus(log)?.state === 'idle',
+      );
+      expect(lastStatus(log)).toStrictEqual({ state: 'idle', app: 'chord' });
+      await send(window, 'slow');
+      await until(
+        'working to be reported',
+        () => lastStatus(log)?.state === 'working',
+      );
+      await until(
+        'done to be reported',
+        () => lastStatus(log)?.state === 'done',
+      );
+      expect(lastStatus(log)).toStrictEqual({
+        state: 'done',
+        app: 'chord',
+        msg: 'fake is waiting for your input',
+      });
+
+      const sent = statusReports(log).length;
+
+      await window.type('x');
+      await until(
+        'idle to be reported',
+        () => lastStatus(log)?.state === 'idle',
+      );
+      // Each change once: a draw that changes nothing reports nothing.
+      expect(statusReports(log).slice(sent)).toStrictEqual([
+        { state: 'idle', app: 'chord' },
+      ]);
+    },
+    { log },
+  );
+});
+
+test('a permission is reported blocked with its kind and words, and the answer goes back to work (CHD-382)', () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'permission');
+      await asked(window);
+      expect(lastStatus(log)).toStrictEqual({
+        state: 'blocked',
+        kind: 'permission',
+        app: 'chord',
+        msg: 'fake needs your permission: Write notes.txt',
+      });
+      await window.press('1');
+      await until(
+        'done to be reported',
+        () => lastStatus(log)?.state === 'done',
+      );
+    },
+    { log },
+  );
+});
+
+test("ctrl+g clears chord's status for the editor and reports it again once back (CHD-382)", () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await window.press(CTRL_G);
+      await window.shows('from the editor');
+
+      const editor = log.findIndex((chunk) => chunk.startsWith('editor: '));
+      const reports = (chunks: readonly string[]) => statusReports(chunks);
+
+      expect(reports(log.slice(0, editor)).at(-1)).toStrictEqual({
+        state: 'clear',
+      });
+      expect(reports(log.slice(editor))).toStrictEqual([
+        { state: 'idle', app: 'chord' },
+      ]);
+    },
+    {
+      log,
+      editor: (draft) => {
+        log.push(`editor: ${draft}`);
+
+        return Promise.resolve({ text: 'from the editor' });
+      },
+    },
+  );
 });

@@ -22,6 +22,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     selftest: record('selftest'),
     release: record('release'),
     chord: record('chord'),
+    qa: record('qa'),
     test: record('test'),
     check: record('check'),
     fmt: record('fmt'),
@@ -133,6 +134,19 @@ describe('chord', () => {
     expect(await parsed(['chord', 'codex', '--resume'])).toStrictEqual([
       ['chord', false, ['codex', '--resume']],
     ]);
+  });
+
+  test('--qa <name> makes /tmp/chord-qa.<name> afresh and runs chord there, ahead of its own arguments (CHD-427)', async () => {
+    expect(
+      await parsed(['chord', '--qa', 'tabs', '--fake', '-p', 'hi']),
+    ).toStrictEqual([
+      ['qa', '/tmp/chord-qa.tabs'],
+      ['chord', true, ['-C', '/tmp/chord-qa.tabs', '-p', 'hi']],
+    ]);
+
+    for (const name of ['../home', 'a/b', '..', 'with space']) {
+      await expect(parsed(['chord', '--qa', name]), name).rejects.toThrow();
+    }
   });
 
   test("--fake before chord's arguments is its own", async () => {

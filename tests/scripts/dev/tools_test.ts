@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'bun:test';
-import { cp, mkdtemp, realpath, rm, symlink } from 'node:fs/promises';
+import {
+  cp,
+  mkdtemp,
+  readdir,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -9,6 +17,7 @@ import {
   chord,
   fmt,
   lint,
+  qaPlace,
   type Run,
   spawn,
   test as suite,
@@ -195,4 +204,18 @@ describe('spawn', () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
+});
+
+test('qaPlace makes a capture directory afresh, emptying one left from before (CHD-427)', async () => {
+  const dir = `/tmp/chord-qa.tools-test-${process.pid}`;
+
+  try {
+    qaPlace(dir);
+    await writeFile(join(dir, 'left.txt'), 'from before');
+    qaPlace(dir);
+
+    expect(await readdir(dir)).toStrictEqual([]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

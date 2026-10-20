@@ -36,10 +36,27 @@ export interface DevActions {
     version: string | undefined,
   ): void | Promise<void>;
   chord(fake: boolean, args: readonly string[]): void | Promise<void>;
+  /** Makes `dir`, a capture's directory for `chord --qa`, afresh. */
+  qa(dir: string): void | Promise<void>;
   test(args: readonly string[]): void | Promise<void>;
   check(options: { static: boolean }): void | Promise<void>;
   fmt(): void | Promise<void>;
   lint(args: readonly string[]): void | Promise<void>;
+}
+
+/**
+ * Where `chord --qa <name>` runs: a fixed place under /tmp, named by the
+ * capture, never the per-user temp directory, whose path names the machine
+ * (CHD-427). A name that is not a plain word is refused.
+ */
+export function qaDir(name: string): string {
+  if (!/^[A-Za-z0-9._-]+$/.test(name) || /^\.+$/.test(name)) {
+    throw new ValidationError(
+      `--qa takes letters, digits, . _ and -, not ${JSON.stringify(name)}`,
+    );
+  }
+
+  return `/tmp/chord-qa.${name}`;
 }
 
 const RUN: DevActions = {
@@ -66,6 +83,7 @@ const RUN: DevActions = {
   chord: async (fake, args) => {
     process.exitCode = (await import('./dev/tools.ts')).chord(fake, args);
   },
+  qa: async (dir) => (await import('./dev/tools.ts')).qaPlace(dir),
   test: async (args) => {
     process.exitCode = (await import('./dev/tools.ts')).test(args);
   },
@@ -115,14 +133,32 @@ export function devCommand(actions: DevActions = RUN) {
             'On the fake agent in tests/fixtures/fake_agent/ instead of a real one.',
             { default: false },
           )
+          .option(
+            '--qa <name:string>',
+            "In /tmp/chord-qa.<name>, made afresh, as its directory: a capture's neutral place, never the per-user temp one (letters, digits, . _ -).",
+          )
           .arguments('[args...:string]')
           // Everything from chord's first word or option on is chord's.
           .stopEarly()
           .example('an agent', 'bun dev chord codex')
           .example('the fake agent, one prompt', 'bun dev chord --fake -p hi')
           .example("chord's own help", 'bun dev chord -- --help')
-          .action(function ({ fake }, ...args) {
-            return actions.chord(fake, [...args, ...this.getLiteralArgs()]);
+          .example(
+            'a capture of the fake, in /tmp/chord-qa.tabs',
+            'bun dev chord --qa tabs --fake',
+          )
+          .action(async function ({ fake, qa }, ...args) {
+            const given = [...args, ...this.getLiteralArgs()];
+
+            if (qa === undefined) {
+              return actions.chord(fake, given);
+            }
+
+            const dir = qaDir(qa);
+
+            await actions.qa(dir);
+
+            return actions.chord(fake, ['-C', dir, ...given]);
           }),
       )
       .command(

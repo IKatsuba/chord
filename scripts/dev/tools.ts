@@ -10,6 +10,7 @@
  * directly (the release) as much as through `bun dev`.
  */
 import { spawnSync } from 'node:child_process';
+import { mkdirSync, rmSync } from 'node:fs';
 import { constants } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -57,6 +58,12 @@ export function chord(
     ...(fake ? ['fake', '--agent-command', agent] : []),
     ...args,
   ]);
+}
+
+/** `dir`, a capture's directory, made afresh: emptied if it was there. */
+export function qaPlace(dir: string): void {
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
 }
 
 /** The whole suite, a worker per core, `args` passed on to bun test. */

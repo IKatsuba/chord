@@ -548,6 +548,10 @@ describe('CHD-471 L2 tester: inspecting a run preserves unread marks', () => {
         await window.press(UP);
         await window.shows('❯ main');
         await window.press('\x1b');
+        await until(
+          'Esc returns the keys to the prompt',
+          () => !window.frame().includes('❯ main'),
+        );
         await send(window, '/team show bugfix');
         await until(
           'opening coder cleared only its mark in the next snapshot',

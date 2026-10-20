@@ -1897,6 +1897,7 @@ describe('CHD-471 L1b tester: tall row actions and summary boundary', () => {
           window.frame().split('\n').slice(-budget).join('\n'),
         ).not.toContain('❯ Summarise');
         await window.press('\r');
+        await window.shows('Hello, world. This reply came in chunks.');
         await send(window, '/echo tall-row-target');
         await window.shows('tall-row-target');
         await window.press(DOWN);

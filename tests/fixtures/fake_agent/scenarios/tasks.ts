@@ -324,6 +324,51 @@ export const TASKS = {
     return 'end_turn';
   },
 
+  // As `taskask`, its turn running on until it is cancelled, so the task's
+  // questions are asked within it however slow the person's answer is: a
+  // turn ended first moves them between turns, out of the keys (CHD-467).
+  async taskaskstays(turn) {
+    const toolCallId = turn.callId('ask');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: 'Asking for your input',
+      kind: 'other',
+      status: 'completed',
+      content: [
+        {
+          type: 'content',
+          content: { type: 'text', text: "The parent's own call." },
+        },
+      ],
+    });
+
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'spawn_task', {
+        ...TASK_ARGS,
+        prompt: 'askclaude',
+        name: 'Ask the person',
+      });
+      await turn.say('It is asking; I will read its report when it lands.');
+      turn.signal.throwIfAborted();
+      await once(turn.signal, 'abort', { signal: lifetime.signal });
+      turn.signal.throwIfAborted();
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // chord's tools as calls an agent makes: both lists, the models of the
   // fake runtime, the sessions, and a task on a runtime chord does not know,
   // which chord refuses.

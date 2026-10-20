@@ -27,7 +27,8 @@
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
-  `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`),
+  `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`,
+  `taskask`, `taskaskstays`),
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
@@ -41,7 +42,7 @@
   `longcommand`, `overlap`, `overlapfail`, `overlapask`, `subagentcall`,
   `cutcalls`, `cutcallsback`, `tasklong`, `taskcost`, `agentcost`,
   `tasktallname`, `tasktwo`,
-  `taskwait`,
+  `taskwait`, `taskask`, `taskaskstays`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `agenttitled`, `plan`, `proposal`,
   `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`, `tasktillsteered`,
@@ -116,7 +117,8 @@
   then plays the prompt as if it came alone;
   `task` starts `taskchild` as a task agent on the fake runtime and
   works on a while, and `taskask` one whose job is `askclaude`, after a
-  call of its own that shares the task's call id `ask-1`; `taskchild`
+  call of its own that shares the task's call id `ask-1`; `taskaskstays`
+  does the same, holding the parent's turn until cancelled; `taskchild`
   makes two calls, asks permission to edit,
   messages its parent through `send_message`, runs the tests and reports;
   `tasklong` starts one `taskwait` task, `tasktallname` the same under a

@@ -736,7 +736,7 @@ describe('CHD-1 tester: task question collision in the window', () => {
       try {
         await withWindow(
           async (window) => {
-            await send(window, 'taskask');
+            await send(window, 'taskaskstays');
             await inputAsked(window, 'fake asks you 2 questions');
             expect(window.frame()).toContain("The parent's own call.");
 

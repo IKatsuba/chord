@@ -1182,7 +1182,10 @@ describe('CHD-158 tester: interrupting a mixed held queue', () => {
 
           await window.shows('← from @sender · fake · after your answer:');
           await window.press(ESC);
-          expect(promptRow(window)).toContain('My queued prompt.');
+          await until(
+            'Esc restores the typed prompt',
+            () => promptRow(window)?.includes('My queued prompt.') ?? false,
+          );
           expect(window.frame()).toContain('main asks · between turns');
           expect(window.frame()).toContain(
             '← from @sender · fake · after your answer:',

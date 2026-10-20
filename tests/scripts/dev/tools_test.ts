@@ -145,14 +145,22 @@ describe('check', () => {
   test("stops at the first failure, with that tool's status", () => {
     const { run, ran } = faked([0, 2]);
 
-    expect(check({ static: false }, run)).toBe(2);
+    expect(check({ static: false }, run, () => {})).toBe(2);
     expect(ran).toStrictEqual(STATIC.slice(0, 2));
   });
 
   test("a failing suite is the check's status", () => {
     const { run } = faked([0, 0, 0, 0, 0, 1]);
 
-    expect(check({ static: false }, run)).toBe(1);
+    expect(check({ static: false }, run, () => {})).toBe(1);
+  });
+
+  test('a failing step is named with its status, as one may say nothing (CHD-467)', () => {
+    const said: string[] = [];
+    const { run } = faked([0, 1]);
+
+    expect(check({ static: false }, run, (line) => said.push(line))).toBe(1);
+    expect(said).toStrictEqual(['check: covered failed with status 1\n']);
   });
 });
 

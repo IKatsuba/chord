@@ -506,6 +506,7 @@ describe('CHD-377 tester: Codex call session isolation', () => {
           await send(window, 'codexchordcalls');
           await window.shows('Listed as Codex.');
           await window.shows('1 open · 1 fake (you)');
+          await ready(window);
           await leader(window, 'c');
           await ready(window);
           await send(window, 'codexchordcalls');

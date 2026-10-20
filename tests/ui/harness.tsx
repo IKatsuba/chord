@@ -2,20 +2,22 @@
  * The one test module that draws chord's interface in a test terminal: every
  * window and component test renders, types, pastes, resizes, reads the frame
  * and unmounts through it, so a move to another renderer changes this module
- * and not every test. It draws on OpenTUI's `testRender` (the trial is in
- * docs/decisions.md, under "Moving to OpenTUI").
+ * and not every test. It draws on OpenTUI's test renderer, as `testRender`
+ * does (the trial is in docs/decisions.md, under "Moving to OpenTUI").
  */
 import { Readable, Writable } from 'node:stream';
 import { act, type ReactNode } from 'react';
 import {
   type BaseRenderable,
   type CapturedSpan,
+  NativeSession,
   RendererControlState,
   TextBufferRenderable,
   type RGBA,
   TextAttributes,
 } from '@opentui/core';
-import { testRender } from '@opentui/react/test-utils';
+import { createTestRenderer } from '@opentui/core/testing';
+import { createRoot, type Root } from '@opentui/react';
 import chalk from 'chalk';
 import { Exits, Output, terminalOptions } from '../../src/ui/app/renderer.tsx';
 
@@ -65,6 +67,8 @@ export interface Drawn {
 /** The test terminal's size where a test gives none, as Ink's test one was wide. */
 const COLUMNS = 100;
 const ROWS = 24;
+/** How long a graceful close may take, about 7× the slowest seen to finish. */
+const CLOSE_TIMEOUT_MS = 10_000;
 
 /**
  * Draws `node` in a terminal of `size`, the test terminal's own otherwise.
@@ -90,38 +94,74 @@ export async function draw(
 
   const frames: string[] = [];
   const written: string[] = [];
-  // testRender marks the test an act() one, and what the first render set
-  // off (an effect's promise, a session's first answer) runs before the
-  // await below returns, so the mount and its aftermath are enclosed.
-  const setup = await act(() =>
-    testRender(
+  // testRender's own pieces, as it puts them together, but for the order:
+  // it renders before the terminal is set up, so a first frame still out
+  // under load made the setup fail with InvalidPhase (CHD-467). As
+  // createCliRenderer does for the window's own, the terminal is set up
+  // first: OpenTUI 0.6 suspends only a terminal it has set up, and ctrl+g's
+  // editor suspends it.
+  let root: Root | null = null;
+  const terminal =
+    logged === undefined
+      ? quietTerminal(columns, rows)
+      : {
+          ...terminalOptions({ mouse: logged.mouse ?? true }),
+          ...loggedTerminal(logged.log, columns, rows),
+        };
+
+  actEnvironment(true);
+
+  const setup = await createTestRenderer({
+    width: columns,
+    height: rows,
+    // ctrl+c is a key, as chord's own renderer takes it, and the test's
+    // process signals are the test runner's.
+    exitOnCtrlC: false,
+    exitSignals: [],
+    // As chord's own renderer: a click gives no widget the keys.
+    autoFocus: false,
+    ...terminal,
+    // OpenTUI's graceful close gives up after 1 s, and under load a close
+    // took up to 1.5 s and still finished (p99.9 1.1 s, max 1.5 s of 6,909
+    // timed for CHD-467), so a slow close failed the test it ended. The
+    // session that takes a longer one needs its output on a stream, so the
+    // plain terminal's goes to one that keeps nothing.
+    nativeSession: new NativeSession(terminal.stdout, {
+      closeTimeoutMs: CLOSE_TIMEOUT_MS,
+    }),
+    onDestroy() {
+      act(() => {
+        root?.unmount();
+
+        root = null;
+      });
+
+      actEnvironment(false);
+    },
+  });
+
+  await setup.renderer.setupTerminal();
+
+  const mounted = createRoot(setup.renderer);
+
+  root = mounted;
+
+  // What the first render set off (an effect's promise, a session's first
+  // answer) runs before the await below returns, so the mount and its
+  // aftermath are enclosed.
+  await act(() => {
+    mounted.render(
       <Exits exit={() => void unmount()}>
         <Output write={(bytes) => void written.push(bytes)}>{node}</Output>
       </Exits>,
-      // ctrl+c is a key, as chord's own renderer takes it, and the test's
-      // process signals are the test runner's.
-      {
-        width: columns,
-        height: rows,
-        exitOnCtrlC: false,
-        exitSignals: [],
-        // As chord's own renderer: a click gives no widget the keys.
-        autoFocus: false,
-        ...(logged === undefined
-          ? {}
-          : {
-              ...terminalOptions({ mouse: logged.mouse ?? true }),
-              ...loggedTerminal(logged.log, columns, rows),
-            }),
-      },
-    ),
-  );
+    );
+
+    return Promise.resolve();
+  });
 
   // The window updates on its own as the agent replies and its timers run,
   // outside any act(), and the tests' own waits do the waiting.
-  (
-    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
-  ).IS_REACT_ACT_ENVIRONMENT = false;
+  actEnvironment(false);
 
   // A destroyed renderer's buffers are freed, a suspended one's are not to
   // be read, and a frame on its way out is held by the native writer
@@ -150,9 +190,6 @@ export async function draw(
       ? Promise.resolve()
       : setup.waitForVisualIdle({ maxFrames: frames }).catch(() => {});
 
-  // As createCliRenderer does for the window's own: OpenTUI 0.6 suspends
-  // only a terminal it has set up, and ctrl+g's editor suspends it.
-  await setup.renderer.setupTerminal();
   await setup.renderOnce();
   await settled();
   // A text is fitted to its width in a second pass, which React schedules
@@ -184,6 +221,13 @@ export async function draw(
     },
     unmount,
   };
+}
+
+/** Whether React takes what runs now as a test's act() work, as `testRender` sets it. */
+function actEnvironment(on: boolean): void {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = on;
 }
 
 /** Whether `node` or a renderable under it is a text holding `text`. */
@@ -221,6 +265,29 @@ function loggedTerminal(log: string[], columns: number, rows: number) {
     stdin: stdin as unknown as NodeJS.ReadStream,
     stdout: stdout as unknown as NodeJS.WriteStream,
     screenMode: 'alternate-screen',
+    bufferedOutput: 'stdout',
+  } as const;
+}
+
+/**
+ * The streams of a terminal that is only drawn in, as OpenTUI's test
+ * renderer makes its own (which it does not export): what it is told is
+ * dropped, never reaching the test's own stdout.
+ */
+function quietTerminal(columns: number, rows: number) {
+  const stdin = new Readable({ read() {} });
+  const stdout = Object.assign(
+    new Writable({
+      write(_chunk, _encoding, done) {
+        done();
+      },
+    }),
+    { isTTY: true, columns, rows, getColorDepth: () => 24 },
+  );
+
+  return {
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream,
     bufferedOutput: 'stdout',
   } as const;
 }

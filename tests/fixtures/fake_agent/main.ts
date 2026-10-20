@@ -364,6 +364,7 @@ const SCENARIOS = [
   'askdimcode',
   'askcodexwait',
   'taskask',
+  'taskaskstays',
   'mode',
   'effort',
   'late',

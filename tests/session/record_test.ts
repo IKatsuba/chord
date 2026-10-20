@@ -1502,4 +1502,37 @@ describe('CHD-467 tester: answer and cost settlement in either wire order', () =
       );
       expect(after.filter((entry) => entry.type === 'opened')).toHaveLength(2);
     }));
+
+  test('each opening keeps its startup commands without fixing their position relative to the first prompt', () =>
+    withDir(async (dir) => {
+      const entries = await resumed(dir, { agent: 'claude' });
+      const openings = entries.flatMap((entry, index) =>
+        entry.type === 'opened' ? [index] : [],
+      );
+
+      expect(openings).toHaveLength(2);
+      expect(entries.filter((entry) => entry.type === 'session')).toHaveLength(
+        1,
+      );
+
+      for (const [at, index] of openings.entries()) {
+        const own = entries.slice(index, openings[at + 1] ?? entries.length);
+        const metadata = own
+          .filter((entry) => entry.type !== 'update')
+          .map((entry) => entry.type);
+        const commands = own.filter(
+          (entry) =>
+            entry.type === 'update' &&
+            entry.update.sessionUpdate === 'available_commands_update',
+        );
+
+        expect(metadata.slice(0, 3)).toEqual(['opened', 'state', 'prompt']);
+        expect(own.filter((entry) => entry.type === 'prompt')).toHaveLength(2);
+        expect(commands).toHaveLength(1);
+      }
+
+      expect(costs(entries)).toEqual(
+        Array.from({ length: 4 }, () => turn(0.0125)),
+      );
+    }));
 });

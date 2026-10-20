@@ -2023,7 +2023,15 @@ describe('CHD-424 tester: shared background keys', () => {
   });
 });
 
-test('every key quits the crash screen, as its hint says (CHD-468)', async () => {
+test("every key quits the crash screen, as the panel's any key line says (CHD-468)", async () => {
+  expect(
+    SHORTCUTS.some(
+      (shortcut) =>
+        shortcut.key === 'any key' &&
+        shortcut.does === 'to quit the crash screen',
+    ),
+  ).toBeTruthy();
+
   let quits = 0;
 
   function Throws(): never {

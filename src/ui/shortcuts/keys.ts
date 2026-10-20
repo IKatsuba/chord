@@ -67,6 +67,12 @@ export interface Shortcut {
   /** Written before the bound keys when `actions` are named as bound. */
   readonly before?: string;
   /**
+   * An action whose first key, after `before`, is named after `actions`'
+   * own as another way to it, `or` between them: the backslash newline's
+   * send key beside the newline's.
+   */
+  readonly after?: Action;
+  /**
    * What also does it, such as the wheel, which no key binding moves: named
    * after the bound keys, and alone when none is bound.
    */
@@ -150,24 +156,22 @@ export const SHORTCUTS: readonly Shortcut[] = [
     prompt: ['enter'],
     actions: ['chat:submit'],
   },
-  // The terminal-proof newline, for the terminals that do not report
-  // shift+enter. It is two presses, so the key test cannot press it alone;
-  // the second is whatever sends, as the backslash is read on send.
+  // Both newlines on one line, so the panel keeps its 40 lines at 80x24
+  // (the owner's Q80): shift+enter, and the terminal-proof \ + enter for the
+  // terminals that do not report it. That one is two presses, so the key
+  // test cannot press it alone; the second is whatever sends, as the
+  // backslash is read on send.
   {
-    key: '\\ + enter',
-    does: 'for a newline',
-    commands: [],
-    actions: ['chat:submit'],
-    before: '\\ + ',
-  },
-  {
-    key: 'shift + enter',
+    key: 'shift or \\ + enter',
     does: 'for a newline',
     commands: [],
     // ctrl+j is the line feed some terminals send for shift+enter, and
     // option+enter the newline macOS users reach for; one line covers them.
     prompt: ['shift + enter', 'alt + enter', 'ctrl + j'],
     actions: ['chat:newline'],
+    before: '\\ + ',
+    after: 'chat:submit',
+    first: true,
   },
   {
     key: 'ctrl + g',
@@ -506,6 +510,13 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: ['toggle_help'],
     actions: ['help:toggle'],
   },
+  // The crash screen's (CHD-468): the panel cannot be opened there, but
+  // names its key where every key is; keys_test presses every key on it.
+  {
+    key: 'any key',
+    does: 'to quit the crash screen',
+    commands: [],
+  },
 ];
 
 /**
@@ -523,7 +534,10 @@ export function shortcuts(keymap: Keymap = DEFAULT_KEYMAP): Shortcut[] {
 
     if (
       actions === undefined ||
-      actions.every((action) => isDefault(keymap, action))
+      [
+        ...actions,
+        ...(shortcut.after === undefined ? [] : [shortcut.after]),
+      ].every((action) => isDefault(keymap, action))
     ) {
       return [shortcut];
     }
@@ -545,6 +559,16 @@ export function shortcuts(keymap: Keymap = DEFAULT_KEYMAP): Shortcut[] {
           key: key === '' ? shortcut.also : `${key} or ${shortcut.also}`,
         },
       ];
+    }
+
+    if (shortcut.after !== undefined) {
+      const [then] = keysOf(keymap, shortcut.after).map(sequencePanel);
+      const keys = [
+        ...(key === '' ? [] : [key]),
+        ...(then === undefined ? [] : [`${shortcut.before ?? ''}${then}`]),
+      ];
+
+      return keys.length === 0 ? [] : [{ ...shortcut, key: keys.join(' or ') }];
     }
 
     if (key === '') {

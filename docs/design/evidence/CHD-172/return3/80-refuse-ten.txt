@@ -15,11 +15,11 @@ Options:
                                                for this
                                                program.
   -C, --cwd                       <dir>      - Directory the   (Default:
-                                               session works   "/private/var/fo
-                                               in.             lders/j6/1vnjt67
-                                                               d3h541g_33c_70w5
-                                                               c0000gn/T/tmp.jW
-                                                               tFkLICSp/proj")
+                                               session works   "/tmp/chord-qa.X
+                                               in.             XXX/proj")      
+                                                                               
+                                                                               
+                                                                              
   --agent-command                 <command>  - Start this ACP
                                                agent command
                                                instead of the

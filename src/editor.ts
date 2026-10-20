@@ -85,11 +85,6 @@ export function editorFailure(name: string, code: number): string {
   return `${name} exited with code ${code}; the draft is unchanged`;
 }
 
-/** What the status line says of an editor's text the box cannot hold. */
-export function editorRefused(character: string): string {
-  return `The prompt cannot hold ${character} from the editor; the draft is unchanged`;
-}
-
 /**
  * Stands between the library and the user's shell. The library reads an
  * exit by signal as 0, so a shell or editor that was killed would hand back

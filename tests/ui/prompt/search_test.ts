@@ -127,11 +127,11 @@ test('the text is split where the query is, found or not, nothing measured', () 
   expect(foundPieces('', 'auth')).toStrictEqual([{ text: '', found: false }]);
 });
 
-test('ctrl+r steps over a prompt the box cannot hold (CHD-323)', () => {
-  const prompts = ['auth one', 'auth\u000cbad', 'auth two'];
+test('ctrl+r finds a prompt with a control character', () => {
+  const prompts = ['auth one', 'auth\u000cform feed', 'auth two'];
   const found = searched(emptySearch, prompts, 'auth');
 
   expect(found.match).toStrictEqual(2);
-  expect(searchedOlder(found, prompts).match).toStrictEqual(0);
-  expect(searched(emptySearch, prompts, 'bad').failed).toStrictEqual(true);
+  expect(searchedOlder(found, prompts).match).toStrictEqual(1);
+  expect(searched(emptySearch, prompts, 'form').match).toStrictEqual(1);
 });

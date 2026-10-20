@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › claudesubagents
+
+ ⏺ I will send four agents.
+
+ ⏺ 4 agents ended · 1 failed, 1 untracked, 1 cancelled (ctrl+o to expand)
+   ├─ Agent(explorer (Explore)) · 3 tool uses · 3s
+   │  ⎿  Done
+   ├─ Agent(reviewer (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Failed
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(watcher) · 1 tool use · 0s
+      ⎿  Untracked
+
+ ⏺ Each agent has ended.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › verbatim a^Lb                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used
+    background  ✗ 1 agent failed · ? 1 agent untracked · ✓ 1 agent done ·
+                ■ 1 agent stopped

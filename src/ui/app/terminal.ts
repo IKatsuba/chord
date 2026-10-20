@@ -13,7 +13,7 @@ import {
   useMemo,
   useRef,
 } from 'react';
-import { type EditorEnd, editorRefused } from '../../editor.ts';
+import type { EditorEnd } from '../../editor.ts';
 import type { ClipboardReader, ImageFileReader } from '../../images.ts';
 import type { LinkOpener } from '../../links.ts';
 import {
@@ -31,7 +31,7 @@ import {
   takeImagePaths,
 } from '../prompt/images.ts';
 import { matchFiles } from '../prompt/mentions.ts';
-import { type Cursor, endOf, unholdable } from '../prompt/prompt.ts';
+import { type Cursor, endOf } from '../prompt/prompt.ts';
 import { SLOW_MATCH_MS } from '../prompt/state.ts';
 import { useApp, useStdout } from './renderer.tsx';
 import { type Copy, copies } from './selection.ts';
@@ -160,15 +160,6 @@ export function useEditor(
 
     if (end === undefined || 'failed' in end) {
       return end && dispatch({ type: 'editor_failed', message: end.failed });
-    }
-
-    const refused = unholdable(end.text);
-
-    if (refused !== undefined) {
-      return dispatch({
-        type: 'editor_failed',
-        message: editorRefused(refused),
-      });
     }
 
     dispatch({ type: 'draft_edited' });

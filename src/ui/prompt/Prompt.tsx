@@ -30,6 +30,28 @@ import {
   type TextareaRenderable,
 } from './TextArea.tsx';
 
+// The textarea's column counts the cells it lays its line out in: a wide
+// character two, a tab to its stop, a control character's notation. chord's
+// `Cursor` counts the line's string, so each crossing goes through the
+// buffer's own measure.
+
+/** `cursor`, a string index into its line, as the textarea's row and column. */
+function boxCursor(
+  textarea: TextareaRenderable,
+  [line, column]: Cursor,
+): [number, number] {
+  const text = textarea.plainText.split('\n')[line] ?? '';
+
+  return [line, textarea.editBuffer.measureText(text.slice(0, column))];
+}
+
+/** The textarea's cursor as chord's, its column a string index. */
+function draftCursor(textarea: TextareaRenderable): Cursor {
+  const { row, col } = textarea.logicalCursor;
+
+  return [row, textarea.getTextRangeByCoords(row, 0, row, col).length];
+}
+
 /**
  * The prompt box, on OpenTUI's textarea, which grows with its rows, up to
  * `rows` here, and scrolls after, its gutter marking what is scrolled out.
@@ -158,13 +180,15 @@ export function PromptInput({
       textarea.setText(value);
     }
 
-    textarea.setCursor(...cursor);
+    textarea.setCursor(...boxCursor(textarea, cursor));
   }, [value]);
 
   // Normal mode's cursor is the window's alone, moved by vim's keys.
   useLayoutEffect(() => {
-    if (normal) {
-      area.current?.setCursor(...cursor);
+    const textarea = area.current;
+
+    if (normal && textarea !== null) {
+      textarea.setCursor(...boxCursor(textarea, cursor));
     }
   }, [normal, cursor[0], cursor[1]]);
 
@@ -201,10 +225,10 @@ export function PromptInput({
   };
 
   const tellCursor = () => {
-    const at = area.current?.logicalCursor;
+    const textarea = area.current;
 
-    if (at !== undefined && focused.current) {
-      onCursorChange([at.row, at.col]);
+    if (textarea !== null && focused.current) {
+      onCursorChange(draftCursor(textarea));
     }
   };
 
@@ -223,7 +247,7 @@ export function PromptInput({
       said.current = draft;
 
       textarea.setText(draft);
-      textarea.setCursor(...at);
+      textarea.setCursor(...boxCursor(textarea, at));
     }
   };
 
@@ -253,13 +277,19 @@ export function PromptInput({
     }
 
     const { row, col } = textarea.logicalCursor;
-    const length = wordCut(textarea.getTextRangeByCoords(row, 0, row, col));
+    const before = textarea.getTextRangeByCoords(row, 0, row, col);
+    const length = wordCut(before);
 
     if (length === 0) {
       return false;
     }
 
-    textarea.deleteRange(row, col - length, row, col);
+    textarea.deleteRange(
+      row,
+      textarea.editBuffer.measureText(before.slice(0, before.length - length)),
+      row,
+      col,
+    );
 
     return true;
   };

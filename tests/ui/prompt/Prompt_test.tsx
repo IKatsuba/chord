@@ -37,6 +37,27 @@ const CTRL_W = '\x17';
 const CTRL_Y = '\x19';
 const CTRL_Z = '\x1a';
 
+describe('CHD-480 tester: editing a search result with held controls', () => {
+  for (const columns of [80, 120]) {
+    test(`ctrl+r restores the cursor across control and wide cells at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await window.paste('verbatim search a\u000cb\t中c');
+          await window.press('\r');
+          await window.shows('"search a\\u000cb\\u0009中c"');
+          await window.press(CTRL_R);
+          await window.type('search');
+          await window.press('\r');
+          await window.press(LEFT);
+          await window.type('!');
+          await window.press('\r');
+          await window.shows('"search a\\u000cb\\u0009中!c"');
+        },
+        { columns, rows: columns === 80 ? 24 : 40 },
+      ));
+  }
+});
+
 test('Enter during a turn queues the prompt, and the queue runs in order', () =>
   withWindow(async (window) => {
     await send(window, 'plan');
@@ -158,20 +179,80 @@ test('a failing editor leaves the draft and says so in the status line', () =>
     },
   ));
 
-test("the editor's text with a character the box cannot hold is refused, and the draft stays (CHD-323)", () =>
+// The textarea's column counts cells, chord's cursor the string: after text
+// whose cells and length differ, the cursor still lands at its end, and `\`
+// before Enter still breaks the line (CHD-480).
+test("the cursor lands at the end of the editor's text, and after a control character typing goes there", () =>
   withWindow(
     async (window) => {
-      await window.type('keep this draft');
       await window.press(CTRL_G);
-      await window.shows(
-        'The prompt cannot hold U+000C from the editor; the draft is unchanged',
-      );
-      expect(window.frame()).toContain('› keep this draft');
+      await window.shows('› verbatim a^Lb中c');
       await window.type('!');
-      await window.shows('› keep this draft!');
+      await window.shows('› verbatim a^Lb中c!');
+      await window.press('\r');
+      await window.shows('"a\\u000cb中c!"');
     },
-    { editor: () => Promise.resolve({ text: 'bad\u000cinput' }) },
+    { editor: () => Promise.resolve({ text: 'verbatim a\u000cb中c' }) },
   ));
+
+test('a recalled prompt with a control character, a tab and a wide character is edited at its end', () =>
+  withWindow(async (window) => {
+    await window.paste('verbatim a\u000cb\t中c');
+    await window.press('\r');
+    await window.shows('"a\\u000cb\\u0009中c"');
+    await window.press(UP);
+    await window.type('!');
+    await window.press('\r');
+    await window.shows('"a\\u000cb\\u0009中c!"');
+  }));
+
+test('\\ before Enter breaks the line after a control character', () =>
+  withWindow(async (window) => {
+    await window.paste('verbatim a\u000cb\\');
+    await window.press('\r');
+    await window.type('next');
+    await window.press('\r');
+    await window.shows('"a\\u000cb\\u000anext"');
+  }));
+
+// OpenTUI 0.6.6's box holds a control character, drawn as Vim does, and
+// chord sends it as written (CHD-480).
+test("a control character in the editor's text is held, drawn as ^L, and sent as written", () =>
+  withWindow(
+    async (window) => {
+      await window.type('draft');
+      await window.press(CTRL_G);
+      await window.shows('› verbatim from^Leditor');
+      await window.press('\r');
+      await window.shows('"from\\u000ceditor"');
+    },
+    { editor: () => Promise.resolve({ text: 'verbatim from\u000ceditor' }) },
+  ));
+
+test('a pasted control character is held, and ↑ and ctrl+r bring the prompt back as written', () =>
+  withWindow(async (window) => {
+    await window.paste('verbatim pasted\u000cform\u007ffeed');
+    await window.shows('› verbatim pasted^Lform^?feed');
+    await window.press('\r');
+    await window.shows('"pasted\\u000cform\\u007ffeed"');
+    await window.press(UP);
+    await window.shows('› verbatim pasted^Lform^?feed');
+    await window.press('\r');
+    await until(
+      'the recalled prompt to be answered too',
+      () => window.frame().split('"pasted\\u000cform\\u007ffeed"').length === 3,
+    );
+    await window.press(CTRL_R);
+    await window.type('pasted');
+    await window.shows('search prompts: pasted');
+    await window.press('\r');
+    await window.shows('› verbatim pasted^Lform^?feed');
+    await window.press('\r');
+    await until(
+      'the found prompt to be answered too',
+      () => window.frame().split('"pasted\\u000cform\\u007ffeed"').length === 4,
+    );
+  }));
 
 test('ctrl+g while a permission is asked opens no editor', () => {
   let opened = 0;

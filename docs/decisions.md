@@ -5466,7 +5466,8 @@ notes were read in full against chord.
   status line names the character, `U+000C` — and ↑, ↓ and ctrl+r step
   over a prompt with one. Dropping the characters, or drawing a stand-in,
   would change what the person wrote. One check, `unholdable` in
-  `src/ui/prompt/prompt.ts`, holds the set.
+  `src/ui/prompt/prompt.ts`, held the set. 0.6.1 holds them, and the owner
+  dropped the refusal on 0.6.6 ("OpenTUI 0.6.0 → 0.6.6", CHD-480).
 - Not chord's: the `Clipboard` class (chord reads images through
   `@mariozechner/clipboard`), `SyntaxStyle` and buffer owners (chord makes
   neither since CHD-306 dropped the search's highlight), paint hooks that
@@ -6833,3 +6834,55 @@ Without one, the release is package.json's version, as before.
   caught: a killed run may leave the commit, dropped with
   `git reset --keep HEAD~1`, as the release's help says.
 - **A stopped publish resumes package.json's version only.**
+
+## 2026-10-20 — OpenTUI 0.6.0 → 0.6.6 (CHD-480)
+
+`@opentui/core` and `@opentui/react` are pinned to exactly 0.6.6, for
+CHD-382's `renderer.setProgramStatus` (owner, Q67). The release notes of
+0.6.1 to 0.6.6 were read against chord; types, lint and the suite passed
+on 0.6.6 with no change to `src/`.
+
+### What 0.6.6 changed for chord
+
+- **The textarea holds control characters** (0.6.1, OpenTUI #1636).
+  `setText`, `insertText` and `initialValue` no longer throw for C0 but
+  tab, LF and CR, or for DEL and C1; the box draws one as Vim does, `^L`
+  in two cells, `<85>` in four, and gives it back as written. A paste
+  keeps them too: 0.6.0's `handlePaste` dropped them
+  (`unsupportedPasteCharacters` in its `Textarea.ts`), 0.6.6's strips
+  only escape sequences, a lone ESC among them. Its `stripAnsiSequences`
+  takes a C1 CSI, 0x9b, as a sequence's start, so a paste loses it and the
+  byte after it (`c` 0x9b `d` reaches the box as `c`); chord takes that as
+  it is. A DEL is kept. chord passes a paste on
+  unchanged, so on 0.6.0 a pasted `\f` was gone before it reached the
+  box, and on 0.6.6 it is sent.
+- **CHD-323's refusal is gone** (owner, CHD-480, option 1). ctrl+g's
+  editor text, and ↑, ↓ and ctrl+r's history, take a control character as
+  a paste does, and chord sends what the box holds. `unholdable`, the
+  status line's `The prompt cannot hold …` and the skipping in
+  `history.ts` and `search.ts` were removed. Text that is not the box's
+  own still gives a control character no cells, as OpenTUI's read-only
+  text does: the transcript's echo of the prompt, and the match ctrl+r
+  draws over the box.
+- **A style prop dropped is reset** (0.6.6, OpenTUI #1678). A layout prop
+  a React element no longer passes goes back to the default it has when
+  never given; `visible` given `null` or `undefined` shows the node. The
+  agents list's rows named `paddingLeft: 0` beside the border for a row
+  that stops being last (Q41); they no longer do, and a test in
+  `Agents_test.tsx` holds a row's padding and border to what it is now.
+- **Combining marks** (0.6.2, OpenTUI #1651). A mark in a chunk of its
+  own is drawn on the character before it; 0.6.0 drew `e` + U+0301 typed
+  apart as `e`. Text typed after it goes in before the mark on 0.6.0 and
+  0.6.6 alike, as a bare textarea shows (`e`, U+0301, ` y` holds `e ý`);
+  0.6.6 draws what the box holds. Accepted as it is (owner).
+- **Width of joined emoji typed in parts** (0.6.2, #1650): a skin tone or
+  ZWJ sequence typed into the box takes its real width.
+- **The last column's attributes** (0.6.2, #1652): a styled cell at a
+  row's end no longer passes its attributes to the next cells drawn.
+- `strip-ansi` left OpenTUI's dependencies (0.6.1); chord declares its
+  own.
+- Not chord's: the embedded terminal's fixes (0.6.2), `measureEditText`
+  and `EditBuffer.measureText` (0.6.1, 0.6.2; chord counts no editor
+  offsets from string widths), Kitty images in iTerm2 (0.6.4), the Yoga
+  style getters (0.6.5), `defaultDimension` (0.6.6; chord has no custom
+  renderable), and `setProgramStatus` (0.6.3), which CHD-382 takes up.

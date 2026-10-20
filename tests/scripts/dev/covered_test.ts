@@ -43,10 +43,10 @@ test('a tracked TypeScript file missing from tsc’s list is named, by its exact
   ).toStrictEqual([]);
 });
 
-test('eslint.config.ts is left out by name until the owner settles its types (CHD-474 Q64)', () => {
+test('eslint.config.ts is found missing like any other tracked file (CHD-475)', () => {
   expect(
     uncovered(['eslint.config.ts', 'lint/style.ts'], [], root),
-  ).toStrictEqual(['lint/style.ts']);
+  ).toStrictEqual(['eslint.config.ts', 'lint/style.ts']);
 });
 
 test('a tracked name git would quote, with a quote or a non-ASCII letter, is read as it is and found missing (CHD-474)', async () => {
@@ -237,7 +237,31 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
       expect(await readdir(repo)).not.toContain('compiler.called');
     }));
 
-  test('declarations stay covered and the provisional exemption names only the root config', () => {
+  test('a tracked root config fails the actual guard until the compiler lists it (CHD-475)', () =>
+    withRepo(async (repo) => {
+      await writeFile(join(repo, 'eslint.config.ts'), 'export {};\n');
+      execFileSync('git', ['add', '--', 'eslint.config.ts'], {
+        cwd: repo,
+        stdio: 'pipe',
+      });
+
+      const omitted = run(repo);
+
+      expect(omitted.status).toBe(1);
+      expect(omitted.stderr).toBe(
+        "tsc leaves out 1 tracked file; list each in tsconfig.json's files:\n" +
+          '  eslint.config.ts\n',
+      );
+
+      const covered = run(repo, {
+        listed: [...names, 'eslint.config.ts'].map((name) => join(repo, name)),
+      });
+
+      expect(covered.status).toBe(0);
+      expect(covered.stderr).toBe('');
+    }));
+
+  test('declarations stay covered and eslint.config.ts is found missing like any other file (CHD-475)', () => {
     expect(
       uncovered(
         [
@@ -249,7 +273,11 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
         [`${root}-other/types/public.d.ts`],
         root,
       ),
-    ).toEqual(['types/public.d.ts', 'scripts/eslint.config.ts']);
+    ).toEqual([
+      'types/public.d.ts',
+      'eslint.config.ts',
+      'scripts/eslint.config.ts',
+    ]);
     expect(
       uncovered(
         ['types/public.d.ts'],

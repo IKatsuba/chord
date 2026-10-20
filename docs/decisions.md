@@ -4388,6 +4388,20 @@ nothing left to place. Prettier's options come as close to the current
 style as they reach: `printWidth: 80`, `singleQuote` and `jsxSingleQuote`,
 and `bracketSpacing`. The `deno lint` rules map as the entry above says.
 
+### The style plugin's cast
+
+`tsc` checks `eslint.config.ts` like the rest of the tree, and one cast
+lets it: `lint/style.ts` goes into `plugins` as
+`style as unknown as ESLint.Plugin`. Its rules are typescript-eslint 8's
+`RuleModule`, whose nodes are typed more narrowly than ESLint 10's; the
+latest of both, typescript-eslint 8.72 and ESLint 10.13, still disagree.
+Retyping the rules with ESLint's own types costs twenty errors in the rules
+(ranges that may be missing, statements without a parent), so the cast
+stays at the one place the two meet, as `lint/style_test.ts` already does
+for `RuleTester`. The owner agreed to it (CHD-475). eslint-plugin-react-hooks
+needs no cast: only its `rules` are passed, since its `configs` are what
+ESLint 10's `Plugin` type rejects, and chord takes none of them.
+
 ### The parts, revised
 
 Each part keeps `check` green at every commit.

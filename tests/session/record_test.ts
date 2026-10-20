@@ -196,7 +196,7 @@ test("chord's estimate is each turn's tokens priced, marked, also after a resume
     expect(costs(entries)).toStrictEqual([each, each]);
   }));
 
-test("a cost that comes after its turn's answer, as Claude's can, is still that turn's: its line is written again with it", () =>
+test("a turn's cost said around its answer, as Claude's can say it, is still that turn's in either wire order: its last line has it", () =>
   withDir(async (dir) => {
     await recordSession({
       stateDir: join(dir, 'state'),
@@ -1108,7 +1108,7 @@ describe('CHD-373 S3c: a turn running as its session is let go', () => {
     return { ...opening, record };
   }
 
-  test("a cost said after the cancelled turn's answer, as Claude's adapter says it, is still that turn's, and its record keeps the cost too", () =>
+  test("a cost said around the cancelled turn's answer, as Claude's adapter says it, is still that turn's in either wire order, and its record keeps the cost too", () =>
     withDir(async (dir) => {
       const { events, conversation, record } = await clearedIn(
         dir,

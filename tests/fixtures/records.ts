@@ -67,7 +67,6 @@ export async function recordSession({
     reject: failed,
   } = Promise.withResolvers<string>();
   let ended: (() => void) | undefined;
-  /** With `lateCost`, what of the turn has come: its answer, its cost. */
   /**
    * With `lateCost`, what of each turn has come, by its id: its answer and
    * its cost. Only the turn the last prompt started ends it; a replayed

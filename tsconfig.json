@@ -19,7 +19,7 @@
       "convert-layout/ru.js": ["./src/ui/shortcuts/convert-layout.d.ts"]
     }
   },
-  "include": ["src/", "tests/", "scripts/", "lint/"],
+  "include": ["src/", "tests/", "scripts/", "lint/", "eslint.config.ts"],
   "files": [
     "tests/ui/agents/Agents_test.tsx",
     "tests/ui/app/Selection_test.tsx",

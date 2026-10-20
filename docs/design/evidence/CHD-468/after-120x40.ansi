@@ -1,0 +1,40 @@
+[38;2;255;255;255m
+
+  [38;2;255;0;0mError: codex not started: agents.codex.command in .chord/settings.json: expected a string, got a number[38;2;255;255;255m
+  [38;2;255;0;0m    at <anonymous> (/$bunfs/root/chord:216192:24)[38;2;255;255;255m
+  [38;2;255;0;0m    at start (/$bunfs/root/chord:214348:31)[38;2;255;255;255m
+  [38;2;255;0;0m    at open (/$bunfs/root/chord:215693:23)[38;2;255;255;255m
+  [38;2;255;0;0m    at <anonymous> (/$bunfs/root/chord:216811:20)[38;2;255;255;255m
+  [38;2;255;0;0m    at commitHookEffectListMount (/$bunfs/root/chord:4702:34)[38;2;255;255;255m
+  [38;2;255;0;0m    at commitPassiveMountOnFiber (/$bunfs/root/chord:5591:52)[38;2;255;255;255m
+  [38;2;255;0;0m    at recursivelyTraversePassiveMountEffects (/$bunfs/root/chord:5582:36)[38;2;255;255;255m
+  [38;2;255;0;0m    at commitPassiveMountOnFiber (/$bunfs/root/chord:5590:49)[38;2;255;255;255m
+  [38;2;255;0;0m    at recursivelyTraversePassiveMountEffects (/$bunfs/root/chord:5582:36)[38;2;255;255;255m
+  [38;2;255;0;0m    at commitPassiveMountOnFiber (/$bunfs/root/chord:5632:49)[38;2;255;255;255m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,40 @@
+
+
+  Error: codex not started: agents.codex.command in .chord/settings.json: expected a string, got a number
+      at <anonymous> (/$bunfs/root/chord:216192:24)
+      at start (/$bunfs/root/chord:214348:31)
+      at open (/$bunfs/root/chord:215693:23)
+      at <anonymous> (/$bunfs/root/chord:216811:20)
+      at commitHookEffectListMount (/$bunfs/root/chord:4702:34)
+      at commitPassiveMountOnFiber (/$bunfs/root/chord:5591:52)
+      at recursivelyTraversePassiveMountEffects (/$bunfs/root/chord:5582:36)
+      at commitPassiveMountOnFiber (/$bunfs/root/chord:5590:49)
+      at recursivelyTraversePassiveMountEffects (/$bunfs/root/chord:5582:36)
+      at commitPassiveMountOnFiber (/$bunfs/root/chord:5632:49)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

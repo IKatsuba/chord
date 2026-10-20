@@ -109,7 +109,7 @@ leave that stage out. See `docs/guide.md` for failure and signal cleanup.
   `bun dev check --static` runs `scripts/dev/covered.ts`, which fails and
   names any tracked TS/TSX file left unchecked, with no exemptions.
 - **Tests never reach a real model or a real agent.** Drive the UI through
-  `tests/ui/harness.tsx`, on OpenTUI's `testRender`; drive the session layer
+  `tests/ui/harness.tsx`, on OpenTUI's test renderer; drive the session layer
   with a fake ACP agent in `tests/fixtures/` speaking the protocol over stdio. A live agent is for a
   person checking by hand, not for `bun dev check`.
 - **Comments say why, not what.** A doc comment on a type says what it is for.

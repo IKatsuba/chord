@@ -233,6 +233,7 @@ test('a form or link waits as input', () => {
   expect(tabOf(tabs, 1)?.wait.asking?.on).toStrictEqual({
     kind: 'input',
     message: 'Sign in',
+    mode: 'url',
   });
 });
 
@@ -1373,6 +1374,7 @@ describe('a wait names the oldest request still open (CHD-431)', () => {
     expect(asking?.on).toStrictEqual({
       kind: 'input',
       message: 'Sign in',
+      mode: 'url',
       subagentId: 'task-a',
     });
   });

@@ -379,10 +379,33 @@ export interface LaidRow {
   readonly height: number;
 }
 
+/** A row as the list draws it: which of its lines are in sight. */
+export interface ShownRow extends LaidRow {
+  /**
+   * Its lines in sight, in order: 0 its first, the rest its further lines
+   * by their place; each with what stands in the gutter, the `❯`, a `↑` or
+   * `↓` where lines are out of sight, or two spaces.
+   */
+  readonly lines: readonly { readonly at: number; readonly gutter: string }[];
+}
+
 export interface AgentsLayout {
-  readonly rows: readonly LaidRow[];
+  readonly rows: readonly ShownRow[];
   /** How many rows `… +N more` stands for; 0 when all are drawn. */
   readonly more: number;
+  /** The list's line at the top, counting every row's lines from the first. */
+  readonly top: number;
+}
+
+/**
+ * Where the list's lines start while its picked row is taller than its
+ * budget and read by line (CHD-471): the line at its top, for that row at
+ * that width; another row or width starts it again.
+ */
+export interface AgentsView {
+  readonly key: number;
+  readonly width: number;
+  readonly top: number;
 }
 
 /** The gap between the columns. */
@@ -619,12 +642,55 @@ export function agentsHeight(
   );
 }
 
+/** Every line of `laid` in sight, its gutter the row's own mark. */
+function whole(laid: LaidRow): ShownRow {
+  return {
+    ...laid,
+    lines: Array.from({ length: laid.height }, (_, at) => ({
+      at,
+      gutter: at === 0 ? laid.mark : '  ',
+    })),
+  };
+}
+
 /**
- * The rows drawn in `limit` lines at `width`: past the limit, the last line
- * is `… +N more`, and while the list has the keys the rows shown move so
- * the picked one is among them. A wrapped row counts as many lines as it
- * has. `focused` marks the picked row with the `❯`, which is elsewhere
- * while the summary line has it.
+ * The line the list's window starts at while its picked row is taller than
+ * the list: `view`'s, where it is that row's at this width, kept so the
+ * row's first line or a line of it is in sight; else the least move from
+ * the list's top that brings the row's first line into sight.
+ */
+function windowTop(
+  laid: readonly LaidRow[],
+  at: number,
+  limit: number,
+  width: number,
+  view: AgentsView | undefined,
+): number {
+  const first = laid.slice(0, at).reduce((sum, row) => sum + row.height, 0);
+  const total = laid.reduce((sum, row) => sum + row.height, 0);
+  const lowest = Math.max(0, first - limit + 1);
+  const highest = Math.max(
+    lowest,
+    Math.min(total - limit, first + laid[at]!.height - limit),
+  );
+  const top =
+    view !== undefined && view.key === laid[at]!.row.key && view.width === width
+      ? view.top
+      : lowest;
+
+  return Math.min(highest, Math.max(lowest, top));
+}
+
+/**
+ * The rows drawn in `limit` lines at `width`, never more (CHD-471): past
+ * the limit, the last line is `… +N more`, and while the list has the keys
+ * the rows shown move so the picked one is among them. A wrapped row counts
+ * as many lines as it has. A row taller than the limit shows the lines that
+ * fit, `↓` beside its last in sight; picked while the list has the keys, it
+ * is read by line in a window of `limit` lines from `view`'s top, `↑` and
+ * `↓` in the gutter where lines are out of sight. `focused` marks the
+ * picked row with the `❯`, which is elsewhere while the summary line has
+ * it.
  */
 export function agentsLayout(
   rows: readonly AgentRow[],
@@ -633,11 +699,13 @@ export function agentsLayout(
     width,
     focused,
     now,
+    view,
   }: {
     readonly limit: number;
     readonly width: number;
     readonly focused: boolean;
     readonly now: number;
+    readonly view?: AgentsView | undefined;
   },
 ): AgentsLayout {
   // Widths over every row, drawn or not, so scrolling never moves a column.
@@ -646,42 +714,174 @@ export function agentsLayout(
   const total = laid.reduce((sum, row) => sum + row.height, 0);
 
   if (total <= room) {
-    return { rows: laid, more: 0 };
+    return { rows: laid.map(whole), more: 0, top: 0 };
   }
 
-  // A line for `… +N more`; the rest from the first, or, while the list has
-  // the keys, from where the picked row is the last that fits.
-  const budget = Math.max(1, room - 1);
   const at = Math.max(
     0,
     rows.findIndex((row) => row.picked),
   );
-  const fitting = (from: number) => {
-    let used = 0;
-    let count = 0;
 
-    while (
-      from + count < laid.length &&
-      (count === 0 || used + laid[from + count]!.height <= budget)
-    ) {
-      used += laid[from + count]!.height;
-      count += 1;
+  if (focused && laid[at] !== undefined && laid[at].height > room) {
+    // Read by line: a window of the list's lines, no `… +N more`.
+    const top = windowTop(laid, at, room, width, view);
+    const bottom = top + room;
+    let first = 0;
+
+    return {
+      more: 0,
+      top,
+      rows: laid.flatMap((row) => {
+        const from = first;
+
+        first += row.height;
+
+        const lines = Array.from({ length: row.height }, (_, line) => ({
+          at: line,
+          place: from + line,
+        }))
+          .filter(({ place }) => place >= top && place < bottom)
+          .map(({ at: line, place }) => ({
+            at: line,
+            gutter:
+              line === 0 && row.row.picked
+                ? row.mark
+                : place === top && top > 0
+                  ? '↑ '
+                  : place === bottom - 1 && bottom < total
+                    ? '↓ '
+                    : '  ',
+          }));
+
+        return lines.length === 0 ? [] : [{ ...row, lines }];
+      }),
+    };
+  }
+
+  // A line for `… +N more`, but after the last row; the rest from the
+  // first, or, while the list has the keys, from where the picked row is
+  // the last that fits. A row that cannot fit whole, taller than the list
+  // or the first, shows the lines left, `↓` beside its last.
+  const budget = Math.max(1, room - 1);
+  const fitting = (from: number) => {
+    const shown: ShownRow[] = [];
+    let used = 0;
+
+    for (const row of laid.slice(from)) {
+      // The last row takes the `… +N more` line where no row is hidden.
+      const left = (row === laid.at(-1) && from === 0 ? room : budget) - used;
+
+      if (row.height <= left) {
+        shown.push(whole(row));
+
+        used += row.height;
+
+        continue;
+      }
+
+      if (left > 0 && (shown.length === 0 || row.height > room)) {
+        shown.push({
+          ...row,
+          lines: Array.from({ length: left }, (_, line) => ({
+            at: line,
+            // The `❯` before the `↓` on a row with one line in sight.
+            gutter:
+              line === 0 && row.mark !== '  '
+                ? row.mark
+                : line === left - 1
+                  ? '↓ '
+                  : '  ',
+          })),
+        });
+      }
+
+      break;
     }
 
-    return count;
+    return shown;
   };
 
   let start = 0;
 
   if (focused) {
-    while (start < at && start + fitting(start) <= at) {
+    while (start < at && start + fitting(start).length <= at) {
       start += 1;
     }
   }
 
-  const shown = laid.slice(start, start + fitting(start));
+  const shown = fitting(start);
 
-  return { rows: shown, more: rows.length - shown.length };
+  return {
+    rows: shown,
+    more: rows.length - shown.length,
+    top: laid.slice(0, start).reduce((sum, row) => sum + row.height, 0),
+  };
+}
+
+/**
+ * `↑ ↓` in the list on a picked row taller than it (CHD-471): the window a
+ * line on while the row has lines that way out of sight; none where it has
+ * not, and the pick moves as `moveListFocus` says.
+ */
+export function scrolledView(
+  rows: readonly AgentRow[],
+  by: number,
+  {
+    limit,
+    width,
+    now,
+    view,
+  }: {
+    readonly limit: number;
+    readonly width: number;
+    readonly now: number;
+    readonly view: AgentsView | undefined;
+  },
+): AgentsView | undefined {
+  const laid = laidRows(rows, { width, focused: true, now });
+  const at = rows.findIndex((row) => row.picked);
+  const room = Math.max(1, limit);
+
+  if (at < 0 || laid[at]!.height <= room) {
+    return undefined;
+  }
+
+  const top = windowTop(laid, at, room, width, view);
+  const first = laid.slice(0, at).reduce((sum, row) => sum + row.height, 0);
+  const key = rows[at]!.key;
+
+  return by > 0 && first + laid[at]!.height > top + room
+    ? { key, width, top: top + 1 }
+    : by < 0 && first < top
+      ? { key, width, top: top - 1 }
+      : undefined;
+}
+
+/**
+ * The window on a row just picked, where it is taller than the list: moved
+ * the least from `top`, where the list was, that brings its first line into
+ * sight. None for a row that fits.
+ */
+export function enteredView(
+  rows: readonly AgentRow[],
+  top: number,
+  { limit, width, now }: { limit: number; width: number; now: number },
+): AgentsView | undefined {
+  const laid = laidRows(rows, { width, focused: true, now });
+  const at = rows.findIndex((row) => row.picked);
+  const room = Math.max(1, limit);
+
+  if (at < 0 || laid[at]!.height <= room) {
+    return undefined;
+  }
+
+  const first = laid.slice(0, at).reduce((sum, row) => sum + row.height, 0);
+
+  return {
+    key: rows[at]!.key,
+    width,
+    top: Math.min(first, Math.max(first - room + 1, top)),
+  };
 }
 
 function pad(text: string, width: number): string {

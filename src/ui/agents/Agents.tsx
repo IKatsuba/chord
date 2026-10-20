@@ -7,6 +7,7 @@ import { agentColour, type Palette } from '../theme/theme.ts';
 import {
   type AgentRow,
   agentsLayout,
+  type AgentsView,
   type AgentTone,
   childLine,
   listTimed,
@@ -74,12 +75,15 @@ export function AgentsList({
   limit,
   width,
   focused,
+  view,
 }: {
   rows: readonly AgentRow[];
   limit: number;
   /** Cells inside the list's padding. */
   width: number;
   focused: boolean;
+  /** Where the lines start on a picked row taller than the list. */
+  view?: AgentsView | undefined;
 }) {
   const colours = useColours();
   // The times on the rows go on counting, as the working line's does.
@@ -89,7 +93,7 @@ export function AgentsList({
     return null;
   }
 
-  const layout = agentsLayout(rows, { limit, width, focused, now });
+  const layout = agentsLayout(rows, { limit, width, focused, now, view });
 
   return (
     <box paddingX={2} flexShrink={0}>
@@ -114,32 +118,48 @@ export function AgentsList({
           </span>
         );
 
+        // The `❯` in its colour; a `↑` or `↓` for lines out of sight, dim.
+        const gutter = (text: string) =>
+          text === laid.mark ? (
+            <span {...fg(colours.permission)}>{text}</span>
+          ) : (
+            <span attributes={DIM}>{text}</span>
+          );
+
         return (
           <Fragment key={row.key}>
-            <text {...CUT}>
-              <span {...fg(colours.permission)}>{laid.mark}</span>
-              {laid.branch && <span attributes={DIM}>{laid.branch}</span>}
-              {name(laid.name)}
-              <span attributes={DIM}>
-                <Ansi text={`  ${laid.detail}`} />
-              </span>
-              {laid.state &&
-                toned({ ...laid.state, text: `  ${laid.state.text}` }, 'state')}
-              {laid.unseen &&
-                toned(
-                  { ...laid.unseen, text: `  ${laid.unseen.text}` },
-                  'unseen',
-                )}
-            </text>
-            {Array.from({ length: laid.height - 1 }, (_, at) => {
-              // Under the name its next line, or as many spaces, then the
-              // state and mark that went under the detail.
-              const under = laid.names[at];
-              const below = laid.below[at] ?? [];
+            {laid.lines.map(({ at, gutter: beside }) => {
+              if (at === 0) {
+                return (
+                  <text key={at} {...CUT}>
+                    {gutter(beside)}
+                    {laid.branch && <span attributes={DIM}>{laid.branch}</span>}
+                    {name(laid.name)}
+                    <span attributes={DIM}>
+                      <Ansi text={`  ${laid.detail}`} />
+                    </span>
+                    {laid.state &&
+                      toned(
+                        { ...laid.state, text: `  ${laid.state.text}` },
+                        'state',
+                      )}
+                    {laid.unseen &&
+                      toned(
+                        { ...laid.unseen, text: `  ${laid.unseen.text}` },
+                        'unseen',
+                      )}
+                  </text>
+                );
+              }
+
+              // Under the name its next line, or as many spaces, then what
+              // went under the detail.
+              const under = laid.names[at - 1];
+              const below = laid.below[at - 1] ?? [];
 
               return (
                 <text key={at} {...CUT}>
-                  {'  '}
+                  {gutter(beside)}
                   {under === undefined ? (
                     ' '.repeat(laid.nameWidth)
                   ) : (

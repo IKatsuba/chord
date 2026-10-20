@@ -7,6 +7,8 @@ import {
   agentsHint,
   agentsLayout,
   agentsRowLimit,
+  type AgentsView,
+  enteredView,
   agentMark,
   agentState,
   childLine,
@@ -14,6 +16,7 @@ import {
   listRows,
   listTimed,
   moveListFocus,
+  scrolledView,
   summaryHint,
   teamRows,
 } from '../../../src/ui/agents/agents.ts';
@@ -44,27 +47,43 @@ function row(
 /** The rows as the list draws them, without the colours. */
 function drawn(
   rows: readonly AgentRow[],
-  { limit = 4, width = 116, focused = false } = {},
+  {
+    limit = 4,
+    width = 116,
+    focused = false,
+    view,
+  }: {
+    limit?: number;
+    width?: number;
+    focused?: boolean;
+    view?: AgentsView | undefined;
+  } = {},
 ): string[] {
-  const layout = agentsLayout(rows, { limit, width, focused, now: NOW });
+  const layout = agentsLayout(rows, { limit, width, focused, now: NOW, view });
 
   return [
-    ...layout.rows.flatMap((laid) => [
-      `${laid.mark}${laid.branch ?? ''}${laid.name}  ${laid.detail}${
-        laid.state === undefined ? '' : `  ${laid.state.text}`
-      }${laid.unseen === undefined ? '' : `  ${laid.unseen.text}`}`.trimEnd(),
-      // A wrapped row's further lines: the name's, the state under the detail.
-      ...Array.from({ length: laid.height - 1 }, (_, at) => {
-        const name = laid.names[at];
-        const below = (laid.below[at] ?? []).map(({ text }) => text).join('');
+    ...layout.rows.flatMap((laid) =>
+      laid.lines.map(({ at, gutter }) => {
+        if (at === 0) {
+          return `${gutter}${laid.branch ?? ''}${laid.name}  ${laid.detail}${
+            laid.state === undefined ? '' : `  ${laid.state.text}`
+          }${laid.unseen === undefined ? '' : `  ${laid.unseen.text}`}`.trimEnd();
+        }
 
-        return `  ${
+        // A wrapped row's further lines: the name's, what went under the
+        // detail.
+        const name = laid.names[at - 1];
+        const below = (laid.below[at - 1] ?? [])
+          .map(({ text }) => text)
+          .join('');
+
+        return `${gutter}${
           name === undefined
             ? ' '.repeat(laid.nameWidth)
             : name.tree + name.text
         }${below === '' ? '' : `  ${below}`}`.trimEnd();
       }),
-    ]),
+    ),
     ...(layout.more > 0 ? [`  … +${layout.more} more`] : []),
   ];
 }
@@ -924,4 +943,116 @@ test('a detail wider than its line on its own wraps under its start, inside a wo
     '          words',
     '          ◦ idle 4s',
   ]);
+});
+
+describe('CHD-471 a row taller than the list is read by line, the list never past its limit', () => {
+  const title =
+    'Summarise the release notes for 0.56.0 from the commits since 0.55.2, grouped by area, with a line for each user-facing change and a note for each breaking one, then draft the announcement for the forum and the changelog entry, and list the open questions for the owner to settle before the tag.';
+  const rows = [
+    row('main', {
+      key: 1,
+      runtime: 'fake',
+      model: undefined,
+      wait: { stopped: NOW - 4_000 },
+    }),
+    row(title, {
+      key: 2,
+      runtime: 'fake',
+      model: undefined,
+      wait: { working: NOW - 41_000 },
+    }),
+    row('docs', { key: 3, runtime: 'fake', model: undefined }),
+  ];
+  const frame = { limit: 4, width: 76, now: NOW };
+  const pick = (key: number) =>
+    rows.map((each) => ({ ...each, picked: each.key === key }));
+
+  test('with the prompt keeping the keys, the tall row shows the lines that fit, ↓ beside its last, and … +N more counts the rows after it', () => {
+    expect(drawn(rows, { width: 76 })).toStrictEqual([
+      '  main                       fake  ◦ idle 4s',
+      '  Summarise the release      fake  ✻ working 41s',
+      '↓ notes for 0.56.0 from the',
+      '  … +1 more',
+    ]);
+  });
+
+  test('picked, it comes into sight the least move from where the list was, and ↓ moves a line of it a press, ↑ and ↓ marking what is out of sight', () => {
+    const { top } = agentsLayout(pick(1), { ...frame, focused: true });
+    let view = enteredView(pick(2), top, frame);
+
+    expect(drawn(pick(2), { width: 76, focused: true, view })).toStrictEqual([
+      '  main                       fake  ◦ idle 4s',
+      '❯ Summarise the release      fake  ✻ working 41s',
+      '  notes for 0.56.0 from the',
+      '↓ commits since 0.55.2,',
+    ]);
+
+    for (let press = 0; press < 4; press += 1) {
+      view = scrolledView(pick(2), 1, { ...frame, view });
+    }
+
+    expect(drawn(pick(2), { width: 76, focused: true, view })).toStrictEqual([
+      '↑ grouped by area, with a',
+      '  line for each user-facing',
+      '  change and a note for',
+      '↓ each breaking one, then',
+    ]);
+
+    // ↑ goes back a line a press until its first line is in sight, then
+    // the pick moves on as moveListFocus says.
+    view = scrolledView(pick(2), -1, { ...frame, view });
+
+    expect(view?.top).toStrictEqual(3);
+
+    let back = view;
+
+    while (back !== undefined) {
+      view = back;
+      back = scrolledView(pick(2), -1, { ...frame, view });
+    }
+
+    expect(view?.top).toStrictEqual(1);
+    expect(drawn(pick(2), { width: 76, focused: true, view })[0]).toStrictEqual(
+      '❯ Summarise the release      fake  ✻ working 41s',
+    );
+  });
+
+  test('read to its last line, ↓ goes no further in it, and picked from below it shows from its first line', () => {
+    let view = enteredView(pick(2), 0, frame);
+    let next = view;
+
+    while (next !== undefined) {
+      view = next;
+      next = scrolledView(pick(2), 1, { ...frame, view });
+    }
+
+    expect(drawn(pick(2), { width: 76, focused: true, view })).toStrictEqual([
+      '↑ changelog entry, and list',
+      '  the open questions for',
+      '  the owner to settle',
+      '↓ before the tag.',
+    ]);
+
+    // From docs, below, ↑ picks it: the least move shows its first line.
+    const { top } = agentsLayout(pick(3), { ...frame, focused: true, view });
+
+    expect(enteredView(pick(2), top, frame)?.top).toStrictEqual(1);
+  });
+
+  test('another width, or no view, starts it again the least move from the top; the list is never past its limit', () => {
+    const view = { key: 2, width: 76, top: 6 };
+
+    expect(drawn(pick(2), { width: 60, focused: true, view })).toHaveLength(4);
+    expect(drawn(pick(2), { width: 76, focused: true })[1]).toStrictEqual(
+      '❯ Summarise the release      fake  ✻ working 41s',
+    );
+
+    for (const width of [30, 50, 76, 116]) {
+      for (const focused of [false, true]) {
+        expect(
+          drawn(pick(2), { width, focused, limit: 4 }).length,
+        ).toBeLessThanOrEqual(4);
+      }
+    }
+  });
 });

@@ -129,10 +129,13 @@ import {
   type AgentRow,
   agentMark,
   agentsHeight,
+  agentsLayout,
   agentState,
+  enteredView,
   listRows,
   type ListTarget,
   moveListFocus,
+  scrolledView,
 } from '../agents/agents.ts';
 import {
   type BackgroundAgent,
@@ -1718,15 +1721,44 @@ export function useSessions(
   /**
    * Moves the pick in the list under the prompt `by` rows, as it is drawn
    * in `limit` lines at `width`, the transcript and the box following;
-   * above `main` the focus goes back to the box.
+   * above `main` the focus goes back to the box. On a picked row taller
+   * than the list it moves a line of it first, and a row so tall picked
+   * comes into sight the least move from where the list was (CHD-471).
    */
   const moveAgent = (by: number, limit: number, width: number) => {
-    focusOn(
-      moveListFocus(listed(limit, width), by, {
-        summary: background().length > 0,
-        onSummary: state.summaryFocus === true,
-      }),
-    );
+    const rows = listed(limit, width);
+    const now = Date.now();
+    const frame = { limit, width, now };
+    const view = state.agentsView;
+    const scrolled =
+      state.summaryFocus === true
+        ? undefined
+        : scrolledView(rows, by, { ...frame, view });
+
+    if (scrolled !== undefined) {
+      dispatch({ type: 'agents_scrolled', view: scrolled });
+
+      return;
+    }
+
+    const { top } = agentsLayout(rows, { ...frame, focused: true, view });
+    const target = moveListFocus(rows, by, {
+      summary: background().length > 0,
+      onSummary: state.summaryFocus === true,
+    });
+
+    dispatch({
+      type: 'agents_scrolled',
+      view:
+        target?.kind === 'agent'
+          ? enteredView(
+              rows.map((row) => ({ ...row, picked: row.key === target.key })),
+              top,
+              frame,
+            )
+          : undefined,
+    });
+    focusOn(target);
   };
 
   /**

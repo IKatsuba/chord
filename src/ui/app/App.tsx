@@ -1314,6 +1314,7 @@ export function App({
                 limit={agentsLimit}
                 width={columns - 4}
                 focused={listFocus && !summaryFocused}
+                view={state.agentsView}
               />
               <SummaryLine
                 items={backgroundItems}

@@ -324,3 +324,36 @@ test('a detail wider than the list on its own is drawn whole, wrapped under its 
     await drawn.unmount();
   }
 });
+
+test('a picked row taller than the list is drawn in the list’s lines and no more, ↑ and ↓ in the gutter (CHD-471)', async () => {
+  const title =
+    'Summarise the release notes for 0.56.0 from the commits since 0.55.2, grouped by area, with a line for each user-facing change and a note for each breaking one, then draft the announcement.';
+  const agents: AgentRow[] = [
+    row('main', 1, { model: undefined }),
+    row(title, 2, { model: undefined, picked: true }),
+    row('docs', 3, { model: undefined }),
+  ];
+
+  for (const view of [undefined, { key: 2, width: 76, top: 3 }]) {
+    const drawn = await draw(
+      <AgentsList rows={agents} limit={4} width={76} focused view={view} />,
+      { columns: 80, rows: 12 },
+    );
+
+    try {
+      const lines = stripAnsi(drawn.frame())
+        .split('\n')
+        .map((line) => line.trimEnd())
+        .filter((line) => line !== '');
+
+      expect(lines).toHaveLength(4);
+      expect(lines.at(-1)).toMatch(/^ {2}↓ /);
+
+      if (view !== undefined) {
+        expect(lines[0]).toMatch(/^ {2}↑ /);
+      }
+    } finally {
+      await drawn.unmount();
+    }
+  }
+});

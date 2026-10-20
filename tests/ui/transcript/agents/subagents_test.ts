@@ -518,7 +518,7 @@ describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {
     ).toMatchObject({ text: 'Done (2 tool uses · 13s)' });
   });
 
-  test('a shrinking estimated group row drops its model, tokens, money, then counts in that order', () => {
+  test('a shrinking estimated group row wraps without losing its title, model, tokens, money, tool uses or time', () => {
     const task = {
       ...SPENT_TASK,
       task: {
@@ -527,19 +527,29 @@ describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {
         spent: { ...SPENT_TASK.task!.spent!, estimated: true as const },
       },
     };
-    const rows = Array.from({ length: 199 }, (_, index) =>
-      groupRow(task, 200 - index),
-    );
-    const lostModel = rows.findIndex(
-      (row) => !row.headline.note?.includes('A deliberately long model'),
-    );
-    const lostTokens = rows.findIndex((row) => !row.counts?.includes('tokens'));
-    const lostMoney = rows.findIndex((row) => !row.counts?.includes('~$'));
-    const lostCounts = rows.findIndex((row) => row.counts === undefined);
+    const said = (width: number) =>
+      groupRow(task, width)
+        .map((runs) => runs.map(({ text }) => text).join(''))
+        .join(' ');
 
-    expect(lostModel).toBeGreaterThan(0);
-    expect(lostModel).toBeLessThan(lostTokens);
-    expect(lostTokens).toBeLessThan(lostMoney);
-    expect(lostMoney).toBeLessThan(lostCounts);
+    for (let width = 200; width > 10; width--) {
+      const text = said(width);
+
+      for (const part of [
+        'Agent',
+        'fake',
+        'A deliberately long model',
+        '2.0k tokens',
+        '~$0.0125',
+        '2 tool uses',
+        '13s',
+      ]) {
+        expect(text.replace(/\s/g, ''), `width ${width}`).toContain(
+          part.replace(/\s/g, ''),
+        );
+      }
+
+      expect(text, `width ${width}`).not.toContain('…');
+    }
   });
 });

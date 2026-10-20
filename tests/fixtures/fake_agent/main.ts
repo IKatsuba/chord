@@ -546,7 +546,7 @@ const CUT_NOTE =
 
 /**
  * A prompt that starts with one of `FAKE_COMMANDS`: `greet` answers with a
- * fixed line, `echo` with what follows it.
+ * fixed line, `echo` with what follows it; or with `verbatim`.
  */
 async function playCommand(
   turn: Turn,
@@ -561,6 +561,16 @@ async function playCommand(
       .startsWith('The person asks for a team of agents through /team new')
   ) {
     return await PLAY.propose(turn);
+  }
+
+  // `verbatim <text>` says the text back as a JSON string, so a control
+  // character chord sent shows on screen as its escape.
+  const verbatim = /^verbatim (.*)$/s.exec(text);
+
+  if (verbatim) {
+    await turn.say(JSON.stringify(verbatim[1]));
+
+    return 'end_turn';
   }
 
   const [, name, rest = ''] = /^\/(\S+)\s*(.*)$/s.exec(text) ?? [];

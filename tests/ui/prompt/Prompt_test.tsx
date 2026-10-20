@@ -158,20 +158,44 @@ test('a failing editor leaves the draft and says so in the status line', () =>
     },
   ));
 
-test("the editor's text with a character the box cannot hold is refused, and the draft stays (CHD-323)", () =>
+// OpenTUI 0.6.6's box holds a control character, drawn as Vim does, and
+// chord sends it as written (CHD-480).
+test("a control character in the editor's text is held, drawn as ^L, and sent as written", () =>
   withWindow(
     async (window) => {
-      await window.type('keep this draft');
+      await window.type('draft');
       await window.press(CTRL_G);
-      await window.shows(
-        'The prompt cannot hold U+000C from the editor; the draft is unchanged',
-      );
-      expect(window.frame()).toContain('› keep this draft');
-      await window.type('!');
-      await window.shows('› keep this draft!');
+      await window.shows('› verbatim from^Leditor');
+      await window.press('\r');
+      await window.shows('"from\\feditor"');
     },
-    { editor: () => Promise.resolve({ text: 'bad\u000cinput' }) },
+    { editor: () => Promise.resolve({ text: 'verbatim from\u000ceditor' }) },
   ));
+
+test('a pasted control character is held, and ↑ and ctrl+r bring the prompt back as written', () =>
+  withWindow(async (window) => {
+    await window.paste('verbatim pasted\u000cform');
+    await window.shows('› verbatim pasted^Lform');
+    await window.press('\r');
+    await window.shows('"pasted\\fform"');
+    await window.press(UP);
+    await window.shows('› verbatim pasted^Lform');
+    await window.press('\r');
+    await until(
+      'the recalled prompt to be answered too',
+      () => window.frame().split('"pasted\\fform"').length === 3,
+    );
+    await window.press(CTRL_R);
+    await window.type('pasted');
+    await window.shows('search prompts: pasted');
+    await window.press('\r');
+    await window.shows('› verbatim pasted^Lform');
+    await window.press('\r');
+    await until(
+      'the found prompt to be answered too',
+      () => window.frame().split('"pasted\\fform"').length === 4,
+    );
+  }));
 
 test('ctrl+g while a permission is asked opens no editor', () => {
   let opened = 0;

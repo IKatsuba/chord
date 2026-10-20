@@ -86,21 +86,15 @@ test('a recalled prompt brings back the images it sent', () => {
   ).toStrictEqual([]);
 });
 
-test('↑ and ↓ step over a prompt the box cannot hold (CHD-323)', () => {
-  const kept = ['first', 'bad\u000cinput', 'last'].reduce(
+test('↑ and ↓ bring back a prompt with a control character as it was sent', () => {
+  const kept = ['first', 'with\u000cform feed', 'last'].reduce(
     recorded,
     emptyHistory,
   );
   const last = older(kept, 'draft')!;
-  const first = older(last.history, last.text)!;
+  const middle = older(last.history, last.text)!;
 
-  expect(last.text).toStrictEqual('last');
-  expect(first.text).toStrictEqual('first');
-  expect(older(first.history, first.text)).toStrictEqual(undefined);
-  expect(newer(first.history)?.text).toStrictEqual('last');
-
-  // Alone, it is as if there were no history.
-  const only = recorded(emptyHistory, 'bad\u000cinput');
-
-  expect(older(only, 'draft')).toStrictEqual(undefined);
+  expect(middle.text).toStrictEqual('with\u000cform feed');
+  expect(older(middle.history, middle.text)?.text).toStrictEqual('first');
+  expect(newer(middle.history)?.text).toStrictEqual('last');
 });

@@ -1,5 +1,4 @@
 import type { PastedImage } from './images.ts';
-import { unholdable } from './prompt.ts';
 
 /**
  * The prompts sent this session, walked with ↑ and ↓ as a shell walks its
@@ -73,27 +72,13 @@ export function left(history: History): History {
 }
 
 /**
- * A prompt the box cannot hold, which ↑ and ↓ step over rather than have the
- * box throw on it (CHD-323); false past either end.
- */
-function skipped(prompt: string | undefined): boolean {
-  return prompt !== undefined && unholdable(prompt) !== undefined;
-}
-
-/**
  * One prompt older, with what the box should show; undefined at the oldest.
- * A prompt the box cannot hold is skipped.
  */
 export function older(
   history: History,
   draft: string,
 ): { history: History; text: string } | undefined {
-  let index = (history.index ?? history.prompts.length) - 1;
-
-  while (skipped(history.prompts[index])) {
-    index--;
-  }
-
+  const index = (history.index ?? history.prompts.length) - 1;
   const text = history.prompts[index];
 
   if (text === undefined) {
@@ -112,7 +97,6 @@ export function older(
 
 /**
  * One prompt newer, the kept draft after the newest; undefined off the walk.
- * A prompt the box cannot hold is skipped.
  */
 export function newer(
   history: History,
@@ -121,12 +105,7 @@ export function newer(
     return undefined;
   }
 
-  let index = history.index + 1;
-
-  while (skipped(history.prompts[index])) {
-    index++;
-  }
-
+  const index = history.index + 1;
   const text = history.prompts[index];
 
   if (text === undefined) {

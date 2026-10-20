@@ -6,7 +6,6 @@ import {
   promptRows,
   type Row,
   shownRows,
-  unholdable,
 } from '../../../src/ui/prompt/prompt.ts';
 
 test('Enter after a \\ breaks the line there instead of sending', () => {
@@ -97,14 +96,4 @@ test('the rows shown are those from the top the box is scrolled to', () => {
   ]);
   // An empty box still has its first row.
   expect(shownRows([], [], 0, 3)).toStrictEqual([row(0, 0, true)]);
-});
-
-test('the box holds tab, newlines and any printable text, and names the first control character it cannot', () => {
-  expect(unholdable('a\tb\nc\r\nd é 👩‍💻 ⚠️')).toStrictEqual(undefined);
-  expect(unholdable('bad\u000cinput\u001b')).toStrictEqual('U+000C');
-  expect(unholdable('\u0000')).toStrictEqual('U+0000');
-  expect(unholdable('\u000b')).toStrictEqual('U+000B');
-  expect(unholdable('del\u007f')).toStrictEqual('U+007F');
-  expect(unholdable('c1\u009b')).toStrictEqual('U+009B');
-  expect(unholdable('nbsp ')).toStrictEqual(undefined);
 });

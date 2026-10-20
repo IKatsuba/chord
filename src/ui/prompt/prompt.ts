@@ -39,24 +39,6 @@ export function endOf(text: string): Cursor {
   return [lines.length - 1, lines.at(-1)?.length ?? 0];
 }
 
-// OpenTUI 0.6's textarea throws on these rather than hold them: C0 but tab,
-// LF and CR, then DEL and C1. A paste it cleans itself; text put in with
-// setText it does not, and the owner chose refusing over rewriting (CHD-323).
-// eslint-disable-next-line no-control-regex
-const UNHOLDABLE = /[\0-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/;
-
-/**
- * The first character in `text` the box cannot hold, named as `U+000C`;
- * undefined when the box can take all of it.
- */
-export function unholdable(text: string): string | undefined {
-  const found = UNHOLDABLE.exec(text)?.[0];
-
-  return found === undefined
-    ? undefined
-    : `U+${found.charCodeAt(0).toString(16).toUpperCase().padStart(4, '0')}`;
-}
-
 /**
  * Enter right after a `\`: the `\` becomes a line break, as in Claude Code,
  * for the terminals that do not report shift+Enter. Undefined when Enter

@@ -4,8 +4,6 @@
  * the next older one. The match is plain substring, as in Claude Code.
  */
 
-import { unholdable } from './prompt.ts';
-
 export interface Search {
   /** What is typed after `search prompts:`. */
   readonly query: string;
@@ -30,7 +28,7 @@ export const emptySearch: Search = {
 /**
  * The newest prompt before `before` that contains `query`. A prompt sent more
  * than once counts where it was sent last, so ctrl+r never shows it twice. An
- * empty query matches nothing, and a prompt the box cannot hold is skipped.
+ * empty query matches nothing.
  */
 function find(
   prompts: readonly string[],
@@ -44,11 +42,7 @@ function find(
   for (let index = before - 1; index >= 0; index--) {
     const prompt = prompts[index]!;
 
-    if (
-      prompt.includes(query) &&
-      prompts.lastIndexOf(prompt) === index &&
-      unholdable(prompt) === undefined
-    ) {
+    if (prompt.includes(query) && prompts.lastIndexOf(prompt) === index) {
       return index;
     }
   }

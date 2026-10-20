@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -892,5 +892,41 @@ test('an open given up while the agent never answers initialize leaves nothing r
     // Whatever failed above, the open is given up and its agent stopped.
     stop.abort(new Error('given up'));
     await opening.catch(() => {});
+  }
+});
+
+describe('CHD-467 tester: EOF releases the fake gate without a termination signal', () => {
+  for (const count of [0, 1]) {
+    test(`closing stdin while bashtwo has ${count} messages exits normally`, () =>
+      withAgent(['--steering', 'claude'], async (agent, seen, cwd) => {
+        const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
+        const running = agent.prompt({ sessionId, prompt: [text('bashtwo')] });
+
+        running.catch(() => {});
+
+        await eventually(() =>
+          seen
+            .updates()
+            .some(
+              (update) =>
+                update.sessionUpdate === 'tool_call_update' &&
+                update.status === 'completed',
+            ),
+        );
+
+        if (count === 1) {
+          expect(
+            await agent.steer({ sessionId, prompt: [text('Only one.')] }),
+          ).toMatchObject({ outcome: 'injected' });
+        }
+
+        await agent.close();
+
+        const exit = await agent.exited;
+
+        expect(exit).toEqual({ code: 0 });
+        expect(seen.said()).not.toContain('Two files changed.');
+        await running.catch(() => {});
+      }));
   }
 });

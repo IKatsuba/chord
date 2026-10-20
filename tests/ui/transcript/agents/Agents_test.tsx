@@ -8,6 +8,7 @@ import {
   asked,
   CTRL_O,
   ESC,
+  left,
   send,
   until,
   withWindow,
@@ -785,5 +786,84 @@ describe('CHD-158 C4 tester: a subagent block with an unanswered permission', ()
         }
       });
     }
+  }
+});
+
+describe('CHD-473 T2 tester: selecting a wrapped group row', () => {
+  for (const columns of [28, 42, 80]) {
+    test(`the wrapped title, runtime and model select without tree glyphs, counts or the next agent at ${columns} columns`, async () => {
+      const first: Subagent = {
+        id: 'first',
+        title: 'Read\nUnicode 👩🏽‍💻日本語 files\r\nwith care',
+        state: 'completed',
+        entries: [],
+        plan: [],
+        startedAt: 0,
+        endedAt: 13_000,
+        task: {
+          name: 'Read files',
+          runtime: 'fake',
+          model: 'A\nmodel with a long public name',
+          spent: {
+            tokens: { totalTokens: 2000 },
+            cost: { amount: 0.0125, currency: 'USD' },
+            estimated: true,
+          },
+        },
+      };
+      const drawn = await draw(
+        <Agents
+          agents={[
+            first,
+            {
+              id: 'second',
+              title: 'Next agent',
+              state: 'completed',
+              entries: [],
+              plan: [],
+            },
+          ]}
+          turn={{ status: 'idle' }}
+          agent='fake'
+          open={false}
+          width={columns - 4}
+        />,
+        { columns, rows: 80 },
+      );
+
+      try {
+        const lines = stripAnsi(drawn.frame()).split('\n');
+        const start = lines.findIndex((line) => line.includes('├─ Agent('));
+        const end = lines.findIndex(
+          (line, index) => index > start && line.includes('⎿  Done'),
+        );
+
+        expect(start).toBeGreaterThanOrEqual(0);
+        expect(end).toBeGreaterThan(start + 1);
+        expect(lines.slice(start, end).some((line) => line.includes('│'))).toBe(
+          true,
+        );
+        await drawn.write(left(lines[start]!.indexOf('Agent('), start, 'down'));
+        await drawn.write(left(columns - 1, end - 1, 'drag'));
+        await drawn.write(left(columns - 1, end - 1, 'up'));
+        expect(drawn.selected().replace(/\s/g, '')).toBe(
+          'Agent(ReadUnicode👩🏽‍💻日本語fileswithcare)·fake·Amodelwithalongpublicname',
+        );
+        expect(drawn.selected()).not.toMatch(
+          /[├└│]|tool uses|tokens|0\.0125|13s|Next agent/,
+        );
+
+        const money = lines.findIndex((line) => line.includes('~$0.0125'));
+        const x = lines[money]!.indexOf('~$0.0125');
+
+        expect(money).toBeGreaterThanOrEqual(start);
+        await drawn.write(left(x, money, 'down'));
+        await drawn.write(left(columns - 1, money, 'drag'));
+        await drawn.write(left(columns - 1, money, 'up'));
+        expect(drawn.selected()).toBe('');
+      } finally {
+        await drawn.unmount();
+      }
+    });
   }
 });

@@ -643,3 +643,74 @@ describe('CHD-473 a group row breaks only between whole graphemes, its title and
     expect(rows.flat().some((run) => /[\r\n\t]/.test(run.text))).toBe(false);
   });
 });
+
+describe('CHD-473 T2 tester: grapheme and selectable-run boundaries', () => {
+  const graphemes = (text: string) =>
+    [
+      ...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(
+        text,
+      ),
+    ].map(({ segment }) => segment);
+  const compact = (text: string) => text.normalize('NFC').replace(/\s/g, '');
+  const rich = {
+    ...SPENT_TASK,
+    title: 'Read\n👩🏽‍💻日本語🇯🇵é1️⃣\r\nfiles\twithout loss',
+    task: {
+      ...SPENT_TASK.task!,
+      model: 'Public\n👨‍👩‍👧‍👦é🇺🇳1️⃣\tmodel',
+      spent: { ...SPENT_TASK.task!.spent!, estimated: true as const },
+    },
+  };
+
+  test('each narrow line and styled run ends at a grapheme boundary, with every visible part retained', () => {
+    const canonical = groupRow(rich, 500)
+      .flat()
+      .map(({ text }) => text)
+      .join('');
+
+    for (let width = 2; width <= 80; width++) {
+      const rows = groupRow(rich, width);
+      const texts = rows.map((runs) => runs.map(({ text }) => text).join(''));
+
+      expect(texts.flatMap(graphemes), `line boundaries at ${width}`).toEqual(
+        graphemes(texts.join('')),
+      );
+
+      for (const runs of rows) {
+        const text = runs.map(({ text }) => text).join('');
+
+        expect(
+          stringWidth(text),
+          `width ${width}: ${text}`,
+        ).toBeLessThanOrEqual(width);
+        expect(runs.flatMap(({ text }) => graphemes(text))).toEqual(
+          graphemes(text),
+        );
+        expect(text).not.toMatch(/[\r\n\t]/);
+      }
+
+      expect(compact(texts.join(''))).toBe(compact(canonical));
+      expect(texts.join('')).not.toContain('…');
+      expect(texts.join('')).not.toContain('�');
+    }
+  });
+
+  test('wrapping never changes which runtime/model runs select or which counts stay dim and unselectable', () => {
+    for (const width of [-1, 0, 1, 2, 11, 24, 73, 200]) {
+      const rows = groupRow(rich, width);
+      const selectable = rows.flat().filter((run) => run.counts !== true);
+      const counts = rows.flat().filter((run) => run.counts === true);
+
+      expect(compact(selectable.map(({ text }) => text).join(''))).toBe(
+        compact(
+          'Agent(Read👩🏽‍💻日本語🇯🇵é1️⃣fileswithoutloss)·fake·Public👨‍👩‍👧‍👦é🇺🇳1️⃣model',
+        ),
+      );
+      expect(compact(counts.map(({ text }) => text).join(''))).toBe(
+        '·2tooluses·2.0ktokens·~$0.0125·13s',
+      );
+      expect(counts.every((run) => run.style === 'dim')).toBe(true);
+      expect(rows.flat().every((run) => !/[\r\n\t]/.test(run.text))).toBe(true);
+    }
+  });
+});

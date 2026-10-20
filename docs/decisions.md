@@ -6886,3 +6886,54 @@ on 0.6.6 with no change to `src/`.
   offsets from string widths), Kitty images in iTerm2 (0.6.4), the Yoga
   style getters (0.6.5), `defaultDimension` (0.6.6; chord has no custom
   renderable), and `setProgramStatus` (0.6.3), which CHD-382 takes up.
+
+## 2026-10-20 — CHD-467: the test harness sets the terminal up before the first render (owner, Q76)
+
+`tests/ui/harness.tsx` drew through `@opentui/react`'s `testRender`, then
+called `renderer.setupTerminal()`, as `createCliRenderer` does for chord's
+own window. Under load the setup failed now and then with
+`ot_session_setup_terminal failed: InvalidPhase`.
+
+- **Why.** `testRender` renders the React root before it returns, so the
+  harness set the terminal up while the renderer's first frame could
+  still be out: at a failing call the native terminal phase was
+  Uninitialized and the renderer's scheduler `isRendering`. The native
+  session refuses a setup in that phase. `createCliRenderer` sets the
+  terminal up before any render.
+- **Tried.** A probe drew a busy renderer and a second one beside it, 40
+  times a run, under 12 busy loops and 16 copies: 3 of 320 runs failed
+  before, none of 320 after.
+- **Options.** (1) Build from `testRender`'s public parts,
+  `createTestRenderer` and `createRoot`, in `createCliRenderer`'s order.
+  (2) Wait until the renderer is idle before the setup, which an
+  animating window may never be. (3) Retry the setup on InvalidPhase,
+  a workaround.
+- **Choice: (1)** (owner, Q76). `draw()` makes the renderer, sets the
+  terminal up, then renders inside `act()`; `testRender`'s teardown, the
+  root unmounted on destroy and the act environment cleared, is kept as
+  it was. `testRender` itself is no longer called.
+
+## 2026-10-20 — CHD-467: a graceful close in the test harness may take 10 s (owner, Q77)
+
+OpenTUI's `NativeSession` cancels a graceful close after 1 s, and a test
+whose close ran late failed with `NativeSession graceful close timed out`.
+
+- **Why.** Timed under load, 6,909 closes finished: p50 47 ms, p99.9
+  1,076 ms, the longest 1,464 ms. Ten finished past 1 s, as the deadline
+  is checked only when the session's pump runs. The 3 that failed, of
+  3,456 runs, fell in the same band, nothing pending on chord's side.
+- **Options.** The session's `closeTimeoutMs` is public, but the renderer
+  takes a `nativeSession` only with stdout-buffered output, which changes
+  two of the plain path's defaults that public config cannot set back:
+  `remote` goes from unset (the native side decides) to true, and with it
+  the forwarded environment (`TERM`, `TMUX`, `COLORTERM` and the rest of
+  OpenTUI's list, which it does not export) goes to none. (1) Take both.
+  (2) Pass `remote: false`, which is neither the old default nor proven
+  the same. (3) Revert, and ask upstream for a close timeout on the
+  memory-buffered test renderer.
+- **Choice: (1)** (owner, Q77). `draw()` gives its session
+  `closeTimeoutMs: 10_000`, about 7× the slowest close seen to finish,
+  and the plain terminal writes to a stream that keeps nothing. The
+  plain path is now as the logged one already was: remote, with no
+  environment of the person running the tests. chord's own window keeps
+  OpenTUI's 1 s.

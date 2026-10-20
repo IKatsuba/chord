@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import { costReport } from '../../../src/ui/transcript/reports.ts';
 import type { SpendPart } from '../../../src/ui/transcript/spend.ts';
@@ -649,4 +649,184 @@ test("a note left fewer than 20 cells beside the figures goes below them, from t
   expect(lines(window, 72).at(-1)).toBe(
     'Total                          $0.0500   8,000  parser not reported',
   );
+});
+
+describe('CHD-473 tester: full cells at the note floor and nested accounting', () => {
+  const name = 'Long_closed_agent_name_that_needs_several_lines';
+  const parts: SpendPart[] = [
+    {
+      name: '1 fake',
+      kind: 'tab',
+      parts: [
+        { name: 'main', kind: 'main', figure: { cost: USD(0.01) } },
+        { name, kind: 'agent', ended: true, figure: { cost: USD(0.02) } },
+      ],
+    },
+  ];
+
+  test('exactly twenty note cells stay beside figures; nineteen move to the second line at the cost edge', () => {
+    for (const width of [57, 58]) {
+      const drawn = lines(parts, width);
+      const at = drawn.findIndex((line) => line.startsWith('  Long_'));
+      const end = drawn.findIndex((line) => line.startsWith('Total'));
+      const block = drawn.slice(at, end);
+      const note = block.find((line) => line.includes('agent, closed'));
+
+      expect(at).toBeGreaterThan(0);
+      expect(note).toBeDefined();
+      expect(block[0]).toContain('$0.0200');
+      expect(block.join(' ').match(/\$0\.0200/g)).toHaveLength(1);
+      expect(
+        block.map((line) => line.match(/^ {2}(\S+)/)?.[1] ?? '').join(''),
+      ).toBe(name);
+
+      if (width === 57) {
+        expect(block[0]).not.toContain('agent, closed');
+        expect(block[1]).toBe(note);
+        expect(note!.indexOf('agent, closed')).toBe(21);
+      } else {
+        expect(block[0]).toBe(note);
+        expect(note!.indexOf('agent, closed')).toBe(38);
+      }
+
+      expect(drawn.every((line) => stringWidth(line) <= width)).toBe(true);
+    }
+  });
+
+  test('every word of estimate, legacy and uncounted notes survives each width across the floor', () => {
+    const detailed: SpendPart[] = [
+      {
+        name: '1 fake',
+        kind: 'tab',
+        parts: [
+          { name: 'main', kind: 'main', figure: { cost: USD(0.01) } },
+          {
+            name,
+            kind: 'agent',
+            ended: true,
+            figure: {
+              cost: USD(0.02),
+              estimated: 'all',
+              models: ['model-with-a-very-long-public-name'],
+              before: { cost: USD(0.01), until: Date.UTC(2026, 9, 12, 12) },
+              uncounted: 3,
+            },
+          },
+        ],
+      },
+    ];
+    const expected =
+      "agent, closed; chord's estimate from model-with-a-very-long-public-name's price; as last reported before Oct 12; 3 turns not counted";
+
+    for (let width = 42; width <= 120; width++) {
+      const drawn = lines(detailed, width);
+      const at = drawn.findIndex((line) => line.startsWith('  Long_'));
+      const end = drawn.findIndex((line) => line.startsWith('Total'));
+      const block = drawn.slice(at, end);
+      const nameWidth = Math.floor(width / 3);
+      const beside = width - nameWidth - 20 >= 20;
+      const notes = block
+        .slice(beside ? 0 : 1)
+        .map((line) => line.slice(nameWidth + (beside ? 20 : 2)))
+        .join('');
+
+      expect(notes.replace(/\s/g, ''), `notes at ${width}`).toBe(
+        expected.replace(/\s/g, ''),
+      );
+      expect(
+        drawn.every((line) => stringWidth(line) <= width),
+        `width ${width}`,
+      ).toBe(true);
+      expect(drawn.join('')).not.toContain('…');
+      expect(block.join(' ').match(/~\$0\.0200/g)).toHaveLength(1);
+    }
+  });
+
+  test('Unicode names keep their whole graphemes and nesting while each task figure contributes once', () => {
+    const child = '日本語🧪解析器の非常に長い名前';
+    const grandchild = '🧵入れ子の作業名を最後まで読む';
+    const nested: SpendPart[] = [
+      {
+        name: '1 fake',
+        kind: 'tab',
+        parts: [
+          {
+            name: 'main',
+            kind: 'main',
+            figure: { cost: USD(0.01), tokens: 100 },
+            parts: [
+              {
+                name: child,
+                kind: 'task',
+                ended: true,
+                figure: { cost: USD(0.002), tokens: 200 },
+                parts: [
+                  {
+                    name: grandchild,
+                    kind: 'task',
+                    ended: true,
+                    figure: { cost: USD(0.003), tokens: 300 },
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            name: 'run',
+            kind: 'team',
+            parts: [
+              {
+                name: 'lead',
+                kind: 'member',
+                figure: { cost: USD(0.004), tokens: 400 },
+              },
+              {
+                name: 'tester',
+                kind: 'member',
+                figure: { cost: USD(0.005), tokens: 500 },
+                parts: [
+                  {
+                    name: 'Owned_task',
+                    kind: 'task',
+                    ended: true,
+                    figure: { cost: USD(0.006), tokens: 600 },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    for (const width of [42, 57, 58, 72, 112]) {
+      const drawn = lines(nested, width);
+      const text = drawn.join('\n');
+      const byDepth = (depth: number) =>
+        drawn
+          .flatMap(
+            (line) => line.match(new RegExp(`^ {${depth}}(\\S+)`))?.[1] ?? [],
+          )
+          .join('');
+      const run = drawn.find((line) => line.startsWith('  run'))!;
+      const total = drawn.find((line) => line.startsWith('Total'))!;
+      const tab = drawn.find((line) => line.startsWith('1 fake'))!;
+
+      expect(byDepth(4)).toBe(child + 'Owned_task');
+      expect(byDepth(6)).toBe(grandchild);
+      expect(run).toContain('$0.0090');
+      expect(run).toContain('900');
+      expect(tab).toContain('$0.0300');
+      expect(total).toContain('$0.0300');
+      expect(total).toContain('2,100');
+
+      for (const amount of ['0.0020', '0.0030', '0.0060']) {
+        expect(text.split('$' + amount)).toHaveLength(2);
+      }
+
+      expect(drawn.every((line) => stringWidth(line) <= width)).toBe(true);
+      expect(text).not.toContain('…');
+      expect(text).not.toContain('�');
+    }
+  });
 });

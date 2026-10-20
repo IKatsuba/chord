@@ -338,7 +338,7 @@ function pad(text: string, cells: number, start = false): string {
 
 /**
  * The least a note's cell keeps beside the figures; narrower, the note goes
- * under its row (CHD-473).
+ * below them (CHD-473).
  */
 const NOTE_LEAST = 20;
 
@@ -350,7 +350,7 @@ const NAME_LEAST = 'This window'.length;
  * token columns as wide as their widest figure, on a row's first line; the
  * name column at most a third of the table, a longer name wrapping in it
  * under its first letter; the note the rest, wrapping between its parts,
- * or under the row where that leaves it fewer than `NOTE_LEAST` cells.
+ * or below the figures where that leaves it fewer than `NOTE_LEAST` cells.
  * A row is as tall as its tallest cell, and nothing is cut (CHD-473).
  */
 export function spendTable(
@@ -396,24 +396,28 @@ export function spendTable(
       ).map((each) => indent(row) + each);
       const note = oneLine(row.notes.join('; '));
 
-      // Too narrow beside the figures, the note goes under the row, from
-      // under its name, and wraps there.
+      // Too narrow beside the figures, the note goes below them: from the
+      // row's second line, at the cost column's left edge, beside the
+      // name's next lines, to the table's end; under the name it would read
+      // as a row of its own.
       if (!beside) {
-        const under = indent(row);
+        const below = note === '' ? [] : noteLines(note, width - nameWidth - 2);
 
-        return [
-          ...names.map((name, at) => ({
-            text: (at === 0
-              ? line(name, row.cost, row.tokens)
-              : name
-            ).trimEnd(),
-          })),
-          ...(note === ''
-            ? []
-            : noteLines(note, width - stringWidth(under)).map((said) => ({
-                text: under + said,
-              }))),
-        ];
+        return Array.from(
+          { length: Math.max(names.length, 1 + below.length) },
+          (_, at) => {
+            const said = at === 0 ? undefined : below[at - 1];
+
+            return {
+              text: (at === 0
+                ? line(names[0]!, row.cost, row.tokens)
+                : said === undefined
+                  ? (names[at] ?? '')
+                  : `${pad(names[at] ?? '', nameWidth)}  ${said}`
+              ).trimEnd(),
+            };
+          },
+        );
       }
 
       const notes = note === '' ? [] : noteLines(note, noteWidth);

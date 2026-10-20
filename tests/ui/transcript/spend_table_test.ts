@@ -138,16 +138,18 @@ test('an estimate says whose prices, a figure nobody reported says so, and the t
     '3 gemini     not reported        —',
     "Total            ~$0.4370  192,400  part chord's estimate; gemini not reported",
   ]);
-  // Narrow, a note left fewer than 20 cells beside the figures goes
-  // under its row, from under its name (CHD-473).
+  // Narrow, a note left fewer than 20 cells beside the figures goes below
+  // them, from the cost column on the row's second line (CHD-473).
   expect(lines(mixed, 50)).toStrictEqual([
     'This window          Cost   Tokens',
     '1 fake            $0.0250    4,000',
     '2 codex          ~$0.4120  188,400',
-    "chord's estimate from gpt-5.3-codex's price",
+    "             chord's estimate from gpt-5.3-codex's",
+    '             price',
     '3 gemini     not reported        —',
     'Total            ~$0.4370  192,400',
-    "part chord's estimate; gemini not reported",
+    "             part chord's estimate;",
+    '             gemini not reported',
   ]);
 });
 
@@ -605,7 +607,7 @@ test("the window's table reads as CHD-378's mocks at 120 and 80 columns: names a
   ]);
 });
 
-test('a note left fewer than 20 cells beside the figures goes under its row, from under its name, and wraps there (CHD-473)', () => {
+test("a note left fewer than 20 cells beside the figures goes below them, from the cost column on the row's second line, beside the name's next lines (CHD-473)", () => {
   const window: SpendPart[] = [
     {
       name: '1 fake',
@@ -616,14 +618,16 @@ test('a note left fewer than 20 cells beside the figures goes under its row, fro
           kind: 'main',
           agent: 'fake',
           figure: { cost: USD(0.0375), tokens: 6000 },
+          parts: [
+            {
+              name: 'Run the whole parser suite',
+              kind: 'task',
+              ended: true,
+              figure: { cost: USD(0.0125), tokens: 2000 },
+            },
+          ],
         },
         { name: 'parser', kind: 'agent' },
-        {
-          name: 'Run the whole parser suite',
-          kind: 'task',
-          ended: true,
-          figure: { cost: USD(0.0125), tokens: 2000 },
-        },
       ],
     },
   ];
@@ -632,14 +636,14 @@ test('a note left fewer than 20 cells beside the figures goes under its row, fro
     'This window             Cost  Tokens',
     '1 fake               $0.0500   8,000',
     '  main               $0.0375   6,000',
+    '    Run the          $0.0125   2,000',
+    '    whole       task agent, ended',
+    '    parser',
+    '    suite',
     '  parser        not reported       —',
-    '  agent',
-    '  Run the            $0.0125   2,000',
-    '  whole parser',
-    '  suite',
-    '  task agent, ended',
+    '                agent',
     'Total                $0.0500   8,000',
-    'parser not reported',
+    '                parser not reported',
   ]);
   // With 20 cells or more it stays beside them.
   expect(lines(window, 72).at(-1)).toBe(

@@ -414,6 +414,8 @@ export function App({
   const cutting = useRef(false);
   // How the permission box on screen scrolls its request, while one is up.
   const requestScroller = useRef<RequestScroller | undefined>(undefined);
+  // How the background frame scrolls an error taller than its room.
+  const backgroundScroller = useRef<RequestScroller | undefined>(undefined);
 
   useEffect(() => {
     cutting.current = false;
@@ -745,6 +747,8 @@ export function App({
         return conversation()?.reject(step.id);
       case 'scroll_request':
         return requestScroller.current?.(step.step);
+      case 'scroll_background_hint':
+        return backgroundScroller.current?.(step.step);
       case 'set_mode':
         return conversation()?.setMode(step.mode);
       case 'read_commands':
@@ -1113,6 +1117,7 @@ export function App({
                   hint={state.backgroundView.hint}
                   columns={columns}
                   rows={rows}
+                  scroller={backgroundScroller}
                 />
               )}
               {picking && (

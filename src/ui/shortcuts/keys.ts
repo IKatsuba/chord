@@ -265,6 +265,9 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'scroll_page_down',
       'request_page_up',
       'request_page_down',
+      // An error taller than the background frame's room (CHD-473).
+      'background_page_up',
+      'background_page_down',
     ],
     // Terminal.app passes these on only with shift held.
     presses: ['pgup', 'pgdn', 'shift + pgup', 'shift + pgdn'],

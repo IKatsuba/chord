@@ -1929,6 +1929,16 @@ function backgroundCommand(
     return 'go_to_call';
   }
 
+  // An error taller than its room scrolls by the transcript's page keys,
+  // which the view has no other use for (CHD-473).
+  if (on('scroll:pageUp')) {
+    return 'background_page_up';
+  }
+
+  if (on('scroll:pageDown')) {
+    return 'background_page_down';
+  }
+
   return on('select:cancel') ? 'close_background' : undefined;
 }
 

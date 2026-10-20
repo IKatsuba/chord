@@ -8,6 +8,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
+import type { RequestScroller } from '../../../src/ui/dialogs/Permission.tsx';
 import { hintLines, stopRefused } from '../../../src/ui/background/view.ts';
 import assert from 'node:assert/strict';
 import { FORM_SCHEMA } from '../../fixtures/forms.ts';
@@ -1028,4 +1029,85 @@ describe('CHD-473 the frame says its hint, or an error in its place, whole', () 
       await drawn.unmount();
     }
   });
+});
+
+test("an error taller than the frame's room scrolls in it by a page, the rows given way to the ❯ row's first line, the frame within half the window (CHD-473)", async () => {
+  const items: BackgroundItem[] = [
+    'CI run 4812',
+    'dev server errors',
+    'parser tests',
+  ].map((name, index) => ({
+    kind: 'monitor',
+    id: `m${index}`,
+    key: 1,
+    name,
+    startedAt: Date.now(),
+    status: { group: 'running' },
+  }));
+  const hint = stopRefused(
+    new Error(
+      [
+        'Broken pipe',
+        'while writing session/cancel to the agent process',
+        'at transport.write (stdio.ts:211)',
+        'at Connection.notify (connection.ts:96)',
+        'at Session.cancel (session.ts:412)',
+        'at Window.stop (window.ts:88)',
+        'at Background.stop (background.ts:140)',
+        'at keys (keys.ts:612)',
+      ].join('\n'),
+    ),
+  );
+  const scroller: { current: RequestScroller | undefined } = {
+    current: undefined,
+  };
+  const drawn = await draw(
+    <BackgroundView
+      items={items}
+      focus={items[0]}
+      hint={hint}
+      columns={46}
+      rows={24}
+      scroller={scroller}
+    />,
+    { columns: 46, rows: 24 },
+  );
+  const frame = () =>
+    drawn
+      .frame()
+      .split('\n')
+      .filter((line) => /^[╭│╰]/.test(line))
+      .slice(0, 12);
+
+  try {
+    expect(frame()).toStrictEqual([
+      '╭────────────────────────────────────────────╮',
+      '│ Background · 3 in this tab                 │',
+      '│                                            │',
+      '│ ❯ CI run 4812        monitor               │',
+      '│                                            │',
+      '│ could not stop: Broken pipe                │',
+      '│ while writing session/cancel to the agent  │',
+      '│ process                                    │',
+      '│ at transport.write (stdio.ts:211)          │',
+      '│ at Connection.notify (connection.ts:96)    │',
+      '│ ── ↓ 4 lines below · pagedown to scroll ── │',
+      '╰────────────────────────────────────────────╯',
+    ]);
+
+    scroller.current?.('page_down');
+    await until('a page on', () =>
+      frame().some((line) => line.includes('↑ 4 lines above')),
+    );
+    expect(frame().slice(5, 11)).toStrictEqual([
+      '│ ── ↑ 4 lines above · pageup to scroll ──── │',
+      '│ at Connection.notify (connection.ts:96)    │',
+      '│ at Session.cancel (session.ts:412)         │',
+      '│ at Window.stop (window.ts:88)              │',
+      '│ at Background.stop (background.ts:140)     │',
+      '│ at keys (keys.ts:612)                      │',
+    ]);
+  } finally {
+    await drawn.unmount();
+  }
 });

@@ -1,4 +1,5 @@
 import { TextAttributes } from '@opentui/core';
+import { type RefObject, useCallback, useEffect, useState } from 'react';
 import {
   hintOf,
   useCloseHint,
@@ -6,10 +7,18 @@ import {
   useHintKey,
 } from '../app/context.ts';
 import { useAgentsClock } from '../agents/Agents.tsx';
+import type { RequestScroller } from '../dialogs/Permission.tsx';
+import {
+  hiddenRows,
+  requestRule,
+  requestStep,
+  requestView,
+} from '../dialogs/permission.ts';
 import { borderOf } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { DIM, fg, TEXT } from '../theme/text.ts';
 import { agentColour, type Palette } from '../theme/theme.ts';
+import type { ScrollStep } from '../transcript/scroll.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
 import {
   edgeMarked,
@@ -45,13 +54,18 @@ function groupColour(
  */
 const CHROME = 6;
 
+/** The lines the frame's rows and its hint share: half the window less its other lines. */
+function frameRoom(windowRows: number): number {
+  return Math.floor(windowRows / 2) - (CHROME - 1);
+}
+
 /**
  * The lines the frame's rows take at most: half the window less its other
  * lines (CHD-462), a hint of `hintHeight` lines among them; the rows give
- * way to a hint that wraps, never the hint (CHD-473).
+ * way to a hint that wraps, down to one line (CHD-473).
  */
 export function backgroundRowLimit(windowRows: number, hintHeight = 1): number {
-  return Math.max(1, Math.floor(windowRows / 2) - CHROME - (hintHeight - 1));
+  return Math.max(1, frameRoom(windowRows) - hintHeight);
 }
 
 /**
@@ -79,6 +93,7 @@ export function BackgroundView({
   hint,
   columns,
   rows,
+  scroller,
 }: {
   items: readonly BackgroundItem[];
   focus: ItemRef | undefined;
@@ -90,6 +105,8 @@ export function BackgroundView({
   columns: number;
   /** The window's height, half of which the frame takes at most. */
   rows: number;
+  /** Where the window finds how to scroll an error taller than its room. */
+  scroller?: RefObject<RequestScroller | undefined>;
 }) {
   const colours = useColours();
   // Times count a second at a time while the view is drawn.
@@ -101,6 +118,37 @@ export function BackgroundView({
   const lines = edgeMarked(
     viewWindow(laid, height, at, laidAt(columns - 4, height)),
   );
+  // An error taller than what the rows leave it scrolls in that room, as a
+  // request does in its box (CHD-246, CHD-462 f929ae37).
+  const room = Math.max(1, frameRoom(rows) - lines.length);
+  const [top, setTop] = useState(0);
+  const shown = requestView(said.length, room, top);
+  const hidden = hiddenRows(said.length, shown.top, shown.shown);
+  const pageUp = useHintKey('scroll:pageUp');
+  const pageDown = useHintKey('scroll:pageDown');
+  const scroll = useCallback(
+    (step: ScrollStep) =>
+      setTop((at) => requestStep(step, said.length, room, at)),
+    [said.length, room],
+  );
+
+  // Another error, or none, starts from its first line.
+  useEffect(() => {
+    setTop(0);
+  }, [hint]);
+
+  useEffect(() => {
+    if (scroller === undefined) {
+      return;
+    }
+
+    scroller.current = scroll;
+
+    return () => {
+      scroller.current = undefined;
+    };
+  }, [scroller, scroll]);
+
   const cell = (piece: ViewCell, item: BackgroundItem, focused: boolean) => {
     switch (piece.role) {
       case 'mark':
@@ -149,11 +197,21 @@ export function BackgroundView({
         ))}
       </box>
       <box marginTop={1} flexShrink={0}>
-        {said.map((line, at) => (
+        {shown.above && (
+          <text {...TEXT} attributes={DIM}>
+            {requestRule('↑', hidden.above, pageUp, columns - 4)}
+          </text>
+        )}
+        {said.slice(shown.top, shown.top + shown.shown).map((line, at) => (
           <text key={at} {...TEXT} attributes={DIM}>
             <Ansi text={line} />
           </text>
         ))}
+        {shown.below && (
+          <text {...TEXT} attributes={DIM}>
+            {requestRule('↓', hidden.below, pageDown, columns - 4)}
+          </text>
+        )}
       </box>
     </box>
   );

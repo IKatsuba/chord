@@ -207,6 +207,12 @@ export type KeyCommand =
   /** ↑ and ↓, or k and j, in the background view: the row above or below. */
   | 'background_up'
   | 'background_down'
+  /**
+   * pgup and pgdn in the background view: an error taller than its room
+   * scrolls by a page (CHD-473).
+   */
+  | 'background_page_up'
+  | 'background_page_down'
   /** Enter in the background view: to the call that started the item. */
   | 'go_to_call'
   /** x in the background view: the focused item stops at once. */

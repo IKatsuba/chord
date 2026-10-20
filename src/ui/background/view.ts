@@ -33,11 +33,14 @@ export function focusedItem(
 /** The hint line on an agent item whose agent offers no stop of its own. */
 export const NO_STOP_HINT = 'this agent offers no stop';
 
-/** The hint line on a stop that could not be sent: its error's first line. */
+/**
+ * What the frame says of a stop that could not be sent: its error whole,
+ * every line of it (CHD-462 f929ae37).
+ */
 export function stopRefused(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
 
-  return `could not stop: ${message.split('\n')[0]}`;
+  return `could not stop: ${message}`;
 }
 
 /** A name's column at most; a longer name wraps inside it. */
@@ -177,11 +180,14 @@ function kindIn(kind: string, width: number): string[] {
 
 /**
  * The frame's hint, or an error in its place, in lines of at most `width`
- * cells: broken after a ` · ` and at its spaces, never cut (CHD-473,
- * CHD-462 3a1cf656).
+ * cells: its own line breaks kept, each line broken after a ` · ` and at
+ * its spaces, never cut (CHD-473, CHD-462 3a1cf656, f929ae37).
  */
 export function hintLines(text: string, width: number): string[] {
-  return kindIn(oneLine(text), Math.max(1, width));
+  // An error's own line breaks stay lines; within each, a tab is a space.
+  return text
+    .split(/\r\n|\r|\n/)
+    .flatMap((line) => kindIn(oneLine(line), Math.max(1, width)));
 }
 
 /** The least a state's column holds: its widest word, with a `·` beside it. */

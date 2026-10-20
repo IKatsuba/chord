@@ -554,9 +554,9 @@ describe('CHD-2 tester: agent row clocks and wrapping', () => {
   });
 });
 
-test("a stop that could not be sent says its error's first line", () => {
+test('a stop that could not be sent says its error whole, every line of it (CHD-462 f929ae37)', () => {
   expect(stopRefused(new Error('Session not found\nat line 2'))).toBe(
-    'could not stop: Session not found',
+    'could not stop: Session not found\nat line 2',
   );
   expect(stopRefused('closed')).toBe('could not stop: closed');
 });
@@ -978,9 +978,23 @@ test("the frame's hint, or an error in its place, wraps after a ` · ` and at it
     expect(line.length, line).toBeLessThanOrEqual(30);
   }
 
-  expect(lines.join(' ')).toBe(error);
+  expect(lines.join(' ')).toBe(error.replaceAll('\n', ' '));
   expect(hintLines('this agent offers no stop', 20)).toStrictEqual([
     'this agent offers no',
     'stop',
+  ]);
+});
+
+test("an error's own line breaks stay lines in the frame, each wrapped at its spaces, a tab a space (CHD-473)", () => {
+  expect(
+    hintLines(
+      'could not stop: Broken pipe\nwhile writing session/cancel to the agent process\r\nat\ttransport.write (stdio.ts:211)',
+      42,
+    ),
+  ).toStrictEqual([
+    'could not stop: Broken pipe',
+    'while writing session/cancel to the agent',
+    'process',
+    'at transport.write (stdio.ts:211)',
   ]);
 });

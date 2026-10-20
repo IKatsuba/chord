@@ -131,6 +131,51 @@ export const LONG_TERMINAL =
   'string at the end of a line to be kept, but the token ended one ' +
   'character early and the quote was read as the start of the next one\n';
 
+/**
+ * How long a step waits for the messages it waits on, so one never steered
+ * in fails its test rather than hanging the turn.
+ */
+const TOLD_WITHIN_MS = 10_000;
+
+/**
+ * `overlap`'s two calls, then its last step once `untilTold` messages were
+ * steered into the turn, or after `TOLD_WITHIN_MS` without them.
+ */
+async function overlapping(turn: Turn, untilTold: number) {
+  const open = (toolCallId: string, title: string) =>
+    turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title,
+      kind: 'execute',
+      status: 'in_progress',
+    });
+  const end = (toolCallId: string) =>
+    turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'completed',
+    });
+
+  await open('overlap-a', '`sleep 1`');
+  await pause(turn.signal, STEP_MS * 20);
+  await open('overlap-b', '`sleep 2`');
+  await pause(turn.signal, STEP_MS * 20);
+  await end('overlap-a');
+  await pause(turn.signal, STEP_MS * 20);
+  await end('overlap-b');
+
+  const deadline = Date.now() + TOLD_WITHIN_MS;
+
+  while (turn.told < untilTold && Date.now() < deadline) {
+    await pause(turn.signal);
+  }
+
+  await turn.say('Both slept.');
+
+  return 'end_turn' as const;
+}
+
 export const TOOLS = {
   steps,
 
@@ -356,33 +401,12 @@ export const TOOLS = {
   // Two calls that overlap: `a` opens, then `b` a while later, then `a`
   // ends and, a while after, `b`, so a message told while only `a` was
   // open is seen to wait for `a` alone.
-  async overlap(turn) {
-    const open = (toolCallId: string, title: string) =>
-      turn.send({
-        sessionUpdate: 'tool_call',
-        toolCallId,
-        title,
-        kind: 'execute',
-        status: 'in_progress',
-      });
-    const end = (toolCallId: string) =>
-      turn.send({
-        sessionUpdate: 'tool_call_update',
-        toolCallId,
-        status: 'completed',
-      });
+  overlap: (turn) => overlapping(turn, 0),
 
-    await open('overlap-a', '`sleep 1`');
-    await pause(turn.signal, STEP_MS * 20);
-    await open('overlap-b', '`sleep 2`');
-    await pause(turn.signal, STEP_MS * 20);
-    await end('overlap-a');
-    await pause(turn.signal, STEP_MS * 20);
-    await end('overlap-b');
-    await turn.say('Both slept.');
-
-    return 'end_turn';
-  },
+  // As `overlap`, its next step after `b` waiting until two messages were
+  // steered in, as a model's next step comes only after the tool's result:
+  // chord steers one held behind `b` once `b` ends (CHD-399).
+  overlaptwo: (turn) => overlapping(turn, 2),
 
   // What a client has to survive: an update before its call, the call sent
   // twice, and a stale status after the call finished.

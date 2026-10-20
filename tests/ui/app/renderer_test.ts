@@ -1,14 +1,81 @@
 import { describe, expect, test } from 'bun:test';
-import type { CliRenderer } from '@opentui/core';
+import type { CliRenderer, ProgramStatus } from '@opentui/core';
 import { useRenderer } from '@opentui/react';
 import { createElement } from 'react';
 import {
   closeOnForcedExit,
   dieBySignal,
   leave,
+  useApp,
+  useProgramStatus,
 } from '../../../src/ui/app/renderer.tsx';
 import { draw } from '../harness.tsx';
 import { statusReports, until } from './render.tsx';
+
+describe('CHD-382 U2 tester: status while the editor owns the terminal', () => {
+  for (const rejects of [false, true]) {
+    test(`only the latest status returns after an editor that ${rejects ? 'rejects' : 'resolves'}`, async () => {
+      const log: string[] = [];
+      let report!: (status: ProgramStatus) => void;
+      let suspend!: ReturnType<typeof useApp>['suspendTerminal'];
+
+      const Grab = () => {
+        report = useProgramStatus();
+        suspend = useApp().suspendTerminal;
+
+        return createElement('text', null, 'editor lifecycle');
+      };
+
+      const drawn = await draw(createElement(Grab), {}, { log });
+      const release = Promise.withResolvers<void>();
+      const entered = Promise.withResolvers<void>();
+
+      try {
+        report({ state: 'working', app: 'chord' });
+
+        const away = suspend(async () => {
+          entered.resolve();
+          await release.promise;
+        });
+
+        // Attach the rejection handler before letting the editor fail.
+        const settled = away.then(
+          () => 'resolved',
+          () => 'rejected',
+        );
+
+        await entered.promise;
+
+        const before = statusReports(log);
+
+        expect(before.at(-1)).toStrictEqual({ state: 'clear' });
+        report({ state: 'done', app: 'chord', message: 'old reply' });
+        report({ state: 'error', app: 'chord', message: 'latest failure' });
+        expect(statusReports(log)).toStrictEqual(before);
+
+        if (rejects) {
+          release.reject(new Error('editor failed'));
+        } else {
+          release.resolve();
+        }
+
+        expect(await settled).toBe(rejects ? 'rejected' : 'resolved');
+        await until(
+          'the latest status to return',
+          () => statusReports(log).at(-1)?.state === 'error',
+        );
+        expect(statusReports(log).slice(before.length)).toStrictEqual([
+          { state: 'error', app: 'chord', msg: 'latest failure' },
+        ]);
+        report({ state: 'error', app: 'chord', message: 'latest failure' });
+        expect(statusReports(log).length).toBe(before.length + 1);
+      } finally {
+        release.resolve();
+        await drawn.unmount();
+      }
+    });
+  }
+});
 
 test('a forced exit waits for every close still asked for, a failed one too, and forgets them (CHD-331)', async () => {
   const closed: string[] = [];

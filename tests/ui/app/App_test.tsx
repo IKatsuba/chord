@@ -43,6 +43,93 @@ import manifest from '../../../package.json' with { type: 'json' };
 
 const VERSION = manifest.version;
 
+describe('CHD-382 U2 tester: cancellation and error reports', () => {
+  test('a blocked tab behind wins over a working front tab', () => {
+    const log: string[] = [];
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await leader(window, 'c');
+        await until('the second agent', () => window.pids.length === 2);
+        await ready(window);
+        await send(window, 'permission');
+        await asked(window);
+        await leader(window, '1');
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        expect(statusReports(log).at(-1)).toStrictEqual({
+          state: 'blocked',
+          kind: 'permission',
+          app: 'chord',
+          msg: 'fake (2) needs your permission: Write notes.txt',
+        });
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+        expect(statusReports(log).at(-1)?.state).toBe('blocked');
+        await quitAll(window);
+      },
+      { columns: 80, rows: 24, log },
+    );
+  });
+
+  for (const columns of [80, 120]) {
+    test(`Esc returns a cancelled turn to idle without done at ${columns} columns`, () => {
+      const log: string[] = [];
+
+      return withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'slow');
+          await until(
+            'working report',
+            () => statusReports(log).at(-1)?.state === 'working',
+          );
+
+          const from = statusReports(log).length;
+
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await until(
+            'idle after cancel',
+            () => statusReports(log).at(-1)?.state === 'idle',
+          );
+          expect(statusReports(log).slice(from)).toStrictEqual([
+            { state: 'idle', app: 'chord' },
+          ]);
+        },
+        { columns, rows: columns === 80 ? 24 : 40, log },
+      );
+    });
+
+    test(`a failed turn reports error until a key at ${columns} columns`, () => {
+      const log: string[] = [];
+
+      return withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'error');
+          await until(
+            'failed turn report',
+            () => statusReports(log).at(-1)?.state === 'error',
+          );
+          expect(statusReports(log).at(-1)).toStrictEqual({
+            state: 'error',
+            app: 'chord',
+            msg: "fake's turn failed",
+          });
+          await window.type('x');
+          await until(
+            'idle after seeing failure',
+            () => statusReports(log).at(-1)?.state === 'idle',
+          );
+        },
+        { columns, rows: columns === 80 ? 24 : 40, log },
+      );
+    });
+  }
+});
+
 test('the header names the agent and the directory', () =>
   withWindow(async (window) => {
     await window.shows('chord');

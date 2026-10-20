@@ -1341,7 +1341,11 @@ test("on Claude's adapter, every message held behind an open call waits in the q
 
 test("on Claude's adapter, two messages held behind an open call go into the turn in the order they were told", () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
-    conversation.send('bash');
+    // Its next step after the command waits for both, as the model's comes
+    // only after the tool's result: chord sends the second once the first is
+    // answered, which under load could otherwise meet the turn's end
+    // (CHD-467).
+    conversation.send('bashtwo');
     await callOpen(events);
     conversation.tell(MAIN, 'Run the tests.');
     conversation.tell(MAIN, 'Then the docs.');

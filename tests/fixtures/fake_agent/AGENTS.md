@@ -17,7 +17,7 @@
   `mainbetweentwice`, `bigaskleft`),
   `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`,
   `leftform`),
-  `shell.ts` (`shell`, `shellcut`, `bash`, `bashcut`, `bashask`),
+  `shell.ts` (`shell`, `shellcut`, `bash`, `bashtwo`, `bashcut`, `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -46,7 +46,8 @@
   `callchildtwo`, `agenttitled`, `plan`, `proposal`,
   `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`, `tasktillsteered`,
   `teamtask`,
-  `shell`, `shellcut`, `bash`, `bashcut`, `bashask`, `compact`, `codexcompact`,
+  `shell`, `shellcut`, `bash`, `bashtwo`, `bashcut`, `bashask`, `compact`,
+  `codexcompact`,
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `costwait`, `costwaitlate`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
   `mcp`, `form`, `link`, `leftform`, `bigaskleft`,
@@ -194,6 +195,8 @@
   Claude's does: to a client that asks for terminal output in `_meta`, the
   terminal up front and the whole output, then the exit, once it is done
   about half a second later, and to any other a `console` code block;
+  `bashtwo` the same, its next step after the command waiting until two
+  messages were steered in;
   `bashcut` leaves a command running and a call unstarted for about 10 s;
   Esc ends both failed with Claude's messages and no terminal exit code.
   Left alone, the turn ends and the command fails for a missing result;

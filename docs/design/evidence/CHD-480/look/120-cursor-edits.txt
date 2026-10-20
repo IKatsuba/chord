@@ -1,0 +1,20 @@
+-- paste  cursor=30,37
+│ › verbatim a^Lb  c 漢字 👍 d                                                                                         │
+-- recalled  cursor=30,37
+│ › verbatim a^Lb  c 漢字 👍 d                                                                                         │
+-- typed-Z-at-end  cursor=31,37
+│ › verbatim a^Lb  c 漢字 👍 dZ                                                                                        │
+-- left5-Q  cursor=26,37
+│ › verbatim a^Lb  c 漢字Q 👍 dZ                                                                                       │
+-- home-H  cursor=27,37
+│ › verbatim a^Lb  c 漢字QH 👍 dZ                                                                                      │
+-- end-bs2  cursor=25,37
+│ › verbatim a^Lb  c 漢字 👍 dZ                                                                                        │
+-- backslash-pasted  cursor=10,37
+│ › x^L漢\                                                                                                             │
+-- after-enter  cursor=4,37
+│ › x^L漢                                                                                                              │
+│                                                                                                                      │
+-- next-line  cursor=8,37
+│ › x^L漢                                                                                                              │
+│   next                                                                                                               │

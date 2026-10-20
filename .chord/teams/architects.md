@@ -135,6 +135,8 @@ One writer per file. A member who needs a change in another's file asks that own
 
 Every commit is signed: main's branch rules refuse a pull request with one unsigned commit in it, and only the owner can rewrite one that got in. Commit with plain `git commit`, never with `-c commit.gpgsign=false`, `--no-gpg-sign` or any other override of signing, and after each commit check that it carries a signature (`git cat-file commit HEAD` shows a `gpgsig` header). If signing fails, do not commit without it: stop and tell the lead, who takes it to main.
 
+All work for a task happens on that task's own branch, made from origin/main (`git switch -c <key> origin/main`): code, tests, docs, design and captures alike. Nobody commits on local main, and nobody leaves a task's commit on another task's branch. The lead reports a task ready with its branch and head; main opens the PR from that branch, so everything the task produced reaches the pull request. Before reporting, check `git log origin/main..<branch>` holds exactly the task's commits and that no commit of the task sits anywhere else.
+
 ## Reporting
 
 For the lead and every member, send_message always goes alone, never in a parallel batch with other tool calls. If it fails with an empty error or one that gives no reason, retry it once at once, alone. If it fails again, write the same text as a board comment on the task (`board comment <KEY> '<text>'`) and carry on; never stop and wait. A message steered into a running turn can cut off a batch; Claude Code then shows the other calls a "doesn't want to take this action… STOP" text that is not the person.

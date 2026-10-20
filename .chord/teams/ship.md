@@ -252,6 +252,8 @@ Everything written is in English and names no private path, per AGENTS.md. Follo
 
 Every commit is signed: main's branch rules refuse a pull request with one unsigned commit in it, and only the owner can rewrite one that got in. Commit with plain `git commit`, never with `-c commit.gpgsign=false`, `--no-gpg-sign` or any other override of signing, and after each commit check that it carries a signature (`git cat-file commit HEAD` shows a `gpgsig` header). If signing fails, do not commit without it: stop and tell the lead, who takes it to main.
 
+All work for a task happens on that task's own branch, made from origin/main (`git switch -c <key> origin/main`): code, tests, docs, design and captures alike. Nobody commits on local main, and nobody leaves a task's commit on another task's branch. The lead reports a task ready with its branch and head; main opens the PR from that branch, so everything the task produced reaches the pull request. Before reporting, check `git log origin/main..<branch>` holds exactly the task's commits and that no commit of the task sits anywhere else.
+
 ## Handing on
 
 Nobody guesses. A member acts on a unit only after the member before it in the line has handed it over by message: designer after developer says "this screen unit is done, commit X", reviewer after developer (or designer, for a screen unit) hands it on, tester after reviewer says "this unit passed review, commit X". Code seen in the tree that has not been handed over is work in progress: do not look at it, review it, test it, or write tests ahead for it. If a member needs something from another and has had no answer, it asks again or asks the lead; it does not act on what it supposes the answer is.

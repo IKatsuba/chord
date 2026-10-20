@@ -28,7 +28,8 @@ export interface Sending {
  * `answer`, each form or link with that reply, or `interrupt` for the
  * person interrupting the turn while it waits. `agent` is the name the
  * session is opened as, `fake` unless a test needs another's ways; with
- * `lateCost`, each turn is waited on until its cost has come after it, and
+ * `lateCost`, each turn is waited on until both its answer and its cost have
+ * come, in whichever order the wire brings them (CHD-467), and
  * with `until`, the session is closed only once an event it holds for has
  * come, the agent's own work after the prompts.
  */
@@ -66,8 +67,28 @@ export async function recordSession({
     reject: failed,
   } = Promise.withResolvers<string>();
   let ended: (() => void) | undefined;
-  /** With `lateCost`, the turn has answered and its cost is still to come. */
-  let answered = false;
+  /** With `lateCost`, what of the turn has come: its answer, its cost. */
+  /**
+   * With `lateCost`, what of each turn has come, by its id: its answer and
+   * its cost. Only the turn the last prompt started ends it; a replayed
+   * history's usage, or an earlier turn's late cost, is no turn of it.
+   */
+  const came = new Map<string, { answered: boolean; costed: boolean }>();
+  let current: string | undefined;
+  const mark = (turnId: string, part: 'answered' | 'costed') => {
+    const seen = came.get(turnId) ?? { answered: false, costed: false };
+
+    seen[part] = true;
+
+    came.set(turnId, seen);
+
+    if (turnId === current && seen.answered && seen.costed) {
+      current = undefined;
+
+      ended?.();
+    }
+  };
+
   const { promise: held, resolve: hold } = Promise.withResolvers<void>();
   const conversation = new Conversation(
     (signal) =>
@@ -117,18 +138,33 @@ export async function recordSession({
         !event.turnId.startsWith('history-')
       ) {
         if (lateCost) {
-          answered = true;
+          mark(event.turnId, 'answered');
         } else {
           ended?.();
         }
       } else if (
-        answered &&
+        lateCost &&
         event.type === 'update' &&
-        event.update.sessionUpdate === 'usage_update'
+        event.update.sessionUpdate === 'usage_update' &&
+        !event.turnId.startsWith('history-')
       ) {
-        answered = false;
+        mark(event.turnId, 'costed');
+      } else if (
+        lateCost &&
+        event.type === 'prompt' &&
+        event.into === undefined
+      ) {
+        // The turn this prompt started, which the wait is for; what of it
+        // came before its prompt was heard counts too.
+        current = event.turnId;
 
-        ended?.();
+        const seen = came.get(current);
+
+        if (seen?.answered === true && seen.costed) {
+          current = undefined;
+
+          ended?.();
+        }
       }
     },
     Date.now,

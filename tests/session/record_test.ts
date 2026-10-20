@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { turnCost } from '../../src/session/prices.ts';
@@ -117,12 +117,15 @@ test("each opening of a session is a line of its own, and each turn's line keeps
   withDir(async (dir) => {
     const entries = await resumed(dir, { agent: 'claude' });
 
-    expect(entries.map((entry) => entry.type).slice(0, 4)).toStrictEqual([
-      'session',
-      'opened',
-      'state',
-      'prompt',
-    ]);
+    // The agent's own updates are left out: it says its commands just after
+    // it opens, which the record writes before the first prompt or after it,
+    // as they come (CHD-467).
+    expect(
+      entries
+        .filter((entry) => entry.type !== 'update')
+        .map((entry) => entry.type)
+        .slice(0, 4),
+    ).toStrictEqual(['session', 'opened', 'state', 'prompt']);
     expect(entries.filter((entry) => entry.type === 'opened')).toHaveLength(2);
     // Claude's counts from each opening: the fake started again starts its
     // cost again, and the first turn after is the turn's alone.
@@ -205,15 +208,24 @@ test("a cost that comes after its turn's answer, as Claude's can, is still that 
     });
 
     const entries = await readPast((await theRecord(dir)).path);
-    const usage = entries.filter((entry) => entry.type === 'usage');
+    const usage = entries.flatMap((entry) =>
+      entry.type === 'usage' ? [entry] : [],
+    );
+    const turns = [...new Set(usage.map((entry) => entry.turnId))];
 
-    // Each turn's line once at its end, with no cost yet, then again.
-    expect(usage.map((entry) => 'cost' in entry)).toStrictEqual([
-      false,
-      true,
-      false,
-      true,
-    ]);
+    // Each turn's last line has its cost: written again with it where the
+    // cost came after the answer, or once where it came first, which of the
+    // two the wire decides (CHD-467); the after-the-answer path itself is
+    // pinned by TurnCosts' own tests.
+    expect(turns).toHaveLength(2);
+
+    for (const id of turns) {
+      const lines = usage.filter((entry) => entry.turnId === id);
+
+      expect('cost' in lines.at(-1)!, id).toBe(true);
+      expect(lines.length, id).toBeLessThanOrEqual(2);
+    }
+
     expect(costs(entries)).toStrictEqual([turn(0.0125), turn(0.0125)]);
   }));
 
@@ -1104,11 +1116,19 @@ describe('CHD-373 S3c: a turn running as its session is let go', () => {
       );
 
       try {
-        expect(
-          events.flatMap((event) =>
-            event.type === 'retired_usage' ? [event.cost?.amount] : [],
-          ),
-        ).toStrictEqual([0.01, 0.02]);
+        const retired = events.flatMap((event) =>
+          event.type === 'retired_usage' ? [event.cost?.amount] : [],
+        );
+
+        // The turn's last cost is the late one: said again after its 0.01
+        // where it came after the answer, or alone where the wire brought it
+        // first (CHD-467); the after-the-answer path itself is pinned by
+        // TurnCosts' own tests.
+        expect(retired.at(-1)).toBe(0.02);
+        expect(retired.slice(0, -1).every((amount) => amount === 0.01)).toBe(
+          true,
+        );
+        expect(retired.length).toBeLessThanOrEqual(2);
 
         const entries = await readPast(record);
 
@@ -1344,5 +1364,175 @@ describe('CHD-373 S3c: a task running as its parent is let go', () => {
         await child?.close();
         await conversation.close();
       }
+    }));
+});
+
+describe('CHD-467 tester: answer and cost settlement in either wire order', () => {
+  function completed(
+    events: readonly ConversationEvent[],
+    amounts: readonly number[],
+  ) {
+    const prompts = events.flatMap((event, index) =>
+      event.type === 'prompt' &&
+      event.into === undefined &&
+      !event.turnId.startsWith('history-')
+        ? [{ event, index }]
+        : [],
+    );
+
+    expect(prompts).toHaveLength(amounts.length);
+
+    for (const [at, { event, index }] of prompts.entries()) {
+      const end = prompts[at + 1]?.index ?? events.length;
+      const between = events.slice(index + 1, end);
+
+      expect(
+        between.some(
+          (next) =>
+            next.type === 'result' &&
+            next.turnId === event.turnId &&
+            next.result.status === 'completed',
+        ),
+      ).toBe(true);
+      expect(
+        between.some(
+          (next) =>
+            next.type === 'update' &&
+            next.update.sessionUpdate === 'usage_update' &&
+            Math.abs((next.update.cost?.amount ?? -1) - amounts[at]!) < 1e-9,
+        ),
+      ).toBe(true);
+    }
+  }
+
+  test('each successive prompt waits for both prior arrivals and keeps a distinct final cost', () =>
+    withDir(async (dir) => {
+      const events: ConversationEvent[] = [];
+
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(undefined, '--late-cost'),
+        prompts: ['text', 'text', 'text', 'text'],
+        agent: 'claude',
+        lateCost: true,
+        heard: (event) => events.push(event),
+      });
+      completed(events, [0.0125, 0.025, 0.0375, 0.05]);
+
+      const entries = await readPast((await theRecord(dir)).path);
+      const ids = new Set(
+        entries.flatMap((entry) =>
+          entry.type === 'usage' ? [entry.turnId] : [],
+        ),
+      );
+
+      expect(ids.size).toBe(4);
+      expect(costs(entries)).toEqual(
+        Array.from({ length: 4 }, () => turn(0.0125)),
+      );
+    }));
+
+  test('concurrent recordings cannot satisfy another session answer or cost wait', () =>
+    withDir(async (dir) => {
+      await Promise.all(
+        [2, 3].map(async (count) => {
+          const cwd = join(dir, `session-${count}`);
+          const events: ConversationEvent[] = [];
+
+          await mkdir(cwd);
+          await recordSession({
+            stateDir: join(cwd, 'state'),
+            cwd,
+            command: fakeAgentCommand(undefined, '--late-cost'),
+            prompts: Array.from({ length: count }, () => 'text'),
+            agent: 'claude',
+            lateCost: true,
+            heard: (event) => events.push(event),
+          });
+          completed(
+            events,
+            Array.from({ length: count }, (_, index) => (index + 1) * 0.0125),
+          );
+          expect(costs(await readPast((await theRecord(cwd)).path))).toEqual(
+            Array.from({ length: count }, () => turn(0.0125)),
+          );
+        }),
+      );
+    }));
+
+  test('resuming a recorded session keeps the prior baseline while waiting for each new answer and cost', () =>
+    withDir(async (dir) => {
+      const stateDir = join(dir, 'state');
+      const id = await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(undefined, '--late-cost'),
+        prompts: ['text', 'text'],
+        agent: 'kilo',
+        lateCost: true,
+      });
+      const record = await theRecord(dir);
+      const before = await readPast(record.path);
+      const events: ConversationEvent[] = [];
+
+      await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(
+          undefined,
+          '--resume-only',
+          '--late-cost',
+          '--cost-from',
+          '0.025',
+        ),
+        prompts: ['text', 'text'],
+        agent: 'kilo',
+        lateCost: true,
+        resume: { sessionId: id, cwd: dir, record: record.path },
+        heard: (event) => events.push(event),
+      });
+      completed(events, [0.0375, 0.05]);
+
+      const after = await readPast(record.path);
+
+      expect(after.slice(0, before.length)).toEqual(before);
+      expect(costs(after)).toEqual(
+        Array.from({ length: 4 }, () => turn(0.0125)),
+      );
+      expect(after.filter((entry) => entry.type === 'opened')).toHaveLength(2);
+    }));
+
+  test('each opening keeps its startup commands without fixing their position relative to the first prompt', () =>
+    withDir(async (dir) => {
+      const entries = await resumed(dir, { agent: 'claude' });
+      const openings = entries.flatMap((entry, index) =>
+        entry.type === 'opened' ? [index] : [],
+      );
+
+      expect(openings).toHaveLength(2);
+      expect(entries.filter((entry) => entry.type === 'session')).toHaveLength(
+        1,
+      );
+
+      for (const [at, index] of openings.entries()) {
+        const own = entries.slice(index, openings[at + 1] ?? entries.length);
+        const metadata = own
+          .filter((entry) => entry.type !== 'update')
+          .map((entry) => entry.type);
+        const commands = own.filter(
+          (entry) =>
+            entry.type === 'update' &&
+            entry.update.sessionUpdate === 'available_commands_update',
+        );
+
+        expect(metadata.slice(0, 3)).toEqual(['opened', 'state', 'prompt']);
+        expect(own.filter((entry) => entry.type === 'prompt')).toHaveLength(2);
+        expect(commands).toHaveLength(1);
+      }
+
+      expect(costs(entries)).toEqual(
+        Array.from({ length: 4 }, () => turn(0.0125)),
+      );
     }));
 });

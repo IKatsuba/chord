@@ -340,3 +340,71 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
     ).toEqual([]);
   });
 });
+
+describe('CHD-467 tester: command failure diagnostics reach the caller', () => {
+  async function command(script?: string) {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-covered-diagnostics-'));
+
+    try {
+      if (script !== undefined) {
+        await writeFile(join(dir, 'git'), `#!/bin/sh\n${script}\n`, {
+          mode: 0o755,
+        });
+      }
+
+      return spawnSync(
+        process.execPath,
+        [
+          '-e',
+          'const { trackedFiles } = await import(process.argv[1]); trackedFiles(process.cwd());',
+          new URL('../../../scripts/dev/covered.ts', import.meta.url).href,
+        ],
+        {
+          cwd: dir,
+          env: { ...process.env, PATH: dir },
+          encoding: 'utf8',
+          timeout: 5000,
+        },
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
+
+  test('a nonzero command names its status and retains both output streams', async () => {
+    const result = await command(
+      'printf "stdout context\\n"\nprintf "stderr context\\n" >&2\nexit 23',
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(23);
+    expect(result.stderr).toContain(
+      'covered: git ls-files -z exited with status 23',
+    );
+    expect(result.stderr).toContain('stdout context');
+    expect(result.stderr).toContain('stderr context');
+  });
+
+  test('a killed command names its signal without dumping partial file names', async () => {
+    const result = await command(
+      'printf "partial file names\\n"\nprintf "signal context\\n" >&2\nkill -TERM $$',
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'covered: git ls-files -z was killed by SIGTERM',
+    );
+    expect(result.stderr).toContain('signal context');
+    expect(result.stderr).not.toContain('partial file names');
+  });
+
+  test('a missing executable names the failed command and spawn error', async () => {
+    const result = await command();
+
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('covered: git ls-files -z');
+    expect(result.stderr).toMatch(/ENOENT|Executable not found/);
+  });
+});

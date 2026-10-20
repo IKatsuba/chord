@@ -426,3 +426,31 @@ export async function inputAsked(
   await window.shows(title);
   await new Promise((resolve) => setTimeout(resolve, 150));
 }
+
+/**
+ * The program status reports in what the terminal was told, in order, each
+ * as its fields with `msg` decoded; OpenTUI's probe left out.
+ */
+export function statusReports(
+  log: readonly string[],
+): Record<string, string>[] {
+  // eslint-disable-next-line no-control-regex
+  const reports = /\x1b\]7501;([^\x07\x1b]*)(?:\x07|\x1b\\)/g;
+
+  return [...log.join('').matchAll(reports)]
+    .map(([, body]) => body!)
+    .filter((body) => body !== '?')
+    .map((body) =>
+      Object.fromEntries(
+        body.split(':').map((field) => {
+          const at = field.indexOf('=');
+          const [name, value] = [field.slice(0, at), field.slice(at + 1)];
+
+          return [
+            name,
+            name === 'msg' ? Buffer.from(value, 'base64').toString() : value,
+          ];
+        }),
+      ),
+    );
+}

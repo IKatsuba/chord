@@ -8,6 +8,7 @@ import {
   type CliRenderer,
   type CliRendererConfig,
   createCliRenderer,
+  type ProgramStatus,
 } from '@opentui/core';
 import { createRoot, useRenderer } from '@opentui/react';
 import {
@@ -16,6 +17,7 @@ import {
   useContext,
   useSyncExternalStore,
 } from 'react';
+import { sameStatus } from '../../status.ts';
 
 const Exit = createContext<() => void>(() => {});
 
@@ -41,14 +43,83 @@ export function useApp(): {
   return {
     exit,
     async suspendTerminal(during) {
+      const own = reportedBy(renderer);
+
+      // The terminal is the editor's meanwhile, as it is a shell's after
+      // chord: nothing of chord's stays on it, nor is sent to it (Q72).
+      report(renderer, CLEAR);
+
+      own.away = true;
+
       await renderer.suspend();
 
       try {
         await during();
       } finally {
         await renderer.resume();
+
+        own.away = false;
+
+        if (own.wanted !== undefined) {
+          report(renderer, own.wanted);
+        }
       }
     },
+  };
+}
+
+/** Every record of chord's taken off the terminal. */
+const CLEAR: ProgramStatus = { state: 'clear' };
+
+/** What a renderer has told the terminal of chord's status, and was asked to. */
+interface Reported {
+  /** The last the window asked for, which comes back after a suspend. */
+  wanted?: ProgramStatus;
+  /** The last OpenTUI took; until one is, the next draw tries again. */
+  sent?: ProgramStatus;
+  /** The terminal is another program's while suspended. */
+  away?: boolean;
+}
+
+const reported = new WeakMap<CliRenderer, Reported>();
+
+function reportedBy(renderer: CliRenderer): Reported {
+  const own = reported.get(renderer) ?? {};
+
+  reported.set(renderer, own);
+
+  return own;
+}
+
+/** Sends `status` unless it is what the terminal has already. */
+function report(renderer: CliRenderer, status: ProgramStatus): void {
+  const own = reportedBy(renderer);
+
+  if (
+    (own.sent === undefined || !sameStatus(own.sent, status)) &&
+    renderer.setProgramStatus(status)
+  ) {
+    own.sent = status;
+  }
+}
+
+/**
+ * Reports chord's status to the terminal through OpenTUI's
+ * `setProgramStatus` (OSC 7501), only when it changed: as OpenTUI ships it,
+ * whether or not the terminal answered its probe (CHD-382, the owner's Q67
+ * and Q70).
+ */
+export function useProgramStatus(): (status: ProgramStatus) => void {
+  const renderer = useRenderer();
+
+  return (status) => {
+    const own = reportedBy(renderer);
+
+    own.wanted = status;
+
+    if (!own.away) {
+      report(renderer, status);
+    }
   };
 }
 
@@ -172,6 +243,8 @@ let taken: CliRenderer | undefined;
  * the output failed or did not finish within OpenTUI's second.
  */
 async function giveBack(renderer: CliRenderer | undefined): Promise<void> {
+  // Queued before `destroy`, which still writes it; after, it is refused.
+  renderer?.setProgramStatus(CLEAR);
   renderer?.destroy();
   await renderer?.closed;
 }

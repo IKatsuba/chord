@@ -78,6 +78,7 @@ Done when chord is the interface its authors open by default.
 | Startup header with the logo              | the logo, version, model, directory | client (Chorded's mark as pixel art)         |
 | Startup splash                            | the mark drifting while the agent starts | client (the mark at 8 rows, dim)        |
 | Notify when the agent waits               | terminal bell, OS notification      | client (BEL, OSC 9 / OSC 777)                |
+| Status in the terminal's tab            | OSC 7501, cleared on exit           | client: one root record folding every agent, through OpenTUI's `setProgramStatus` (OSC 7501) |
 | Live terminal output of a running command | streaming under the call            | the tool call's `_meta` (`terminal_output_delta`, `terminal_exit`), as Codex's and Claude's adapters send it |
 | Subagents shown nested                    | indented task blocks                | ACP `subagent_update` (unstable), each subagent's work under its own session id; enricher: the adapters' `subagent_spawned` and `subagent_state_update` read as it |
 | Elicitation forms                         | MCP elicitation                     | ACP `elicitation/create`                     |

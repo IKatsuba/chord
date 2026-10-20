@@ -59,6 +59,13 @@ export interface TabWait {
         readonly repliedAt?: number;
       }
     | undefined;
+  /**
+   * A turn that ended or failed, or an agent that never came up, in front or
+   * not, as the terminal's status reports it (CHD-382): gone once the person
+   * goes to the agent, presses a key while it is shown, or its next turn
+   * starts. `failure` as `unseen`'s is.
+   */
+  readonly ended?: { readonly failure?: Failure } | undefined;
   /** When the turn running now began, while one runs. */
   readonly working?: number | undefined;
   /**
@@ -559,9 +566,47 @@ export function closeChild<C>(tabs: Tabs<C>, key: number): Tabs<C> {
   };
 }
 
-/** `wait` with its `✓`, `✗` or `←` seen. */
+/** `wait` with its `✓`, `✗` or `←` seen, and its turn's end. */
 function seen(wait: TabWait): TabWait {
-  return wait.unseen === undefined ? wait : { ...wait, unseen: undefined };
+  return wait.unseen === undefined && wait.ended === undefined
+    ? wait
+    : { ...wait, unseen: undefined, ended: undefined };
+}
+
+/**
+ * A key pressed in chord: the agent shown has been looked at, so its turn's
+ * end is seen. Its `✓` or `✗` is already gone, as it was in front.
+ */
+export function keyed<C>(tabs: Tabs<C>): Tabs<C> {
+  const key = shownKey(tabs);
+  const found = key === undefined ? undefined : agentOf(tabs, key);
+
+  if (
+    found === undefined ||
+    (found.child ?? found.tab).wait.ended === undefined
+  ) {
+    return tabs;
+  }
+
+  const clear = (wait: TabWait): TabWait => ({ ...wait, ended: undefined });
+
+  return {
+    ...tabs,
+    tabs: tabs.tabs.map((tab) =>
+      tab !== found.tab
+        ? tab
+        : found.child === undefined
+          ? { ...tab, wait: clear(tab.wait) }
+          : {
+              ...tab,
+              children: tab.children.map((child) =>
+                child === found.child
+                  ? { ...child, wait: clear(child.wait) }
+                  : child,
+              ),
+            },
+    ),
+  };
 }
 
 /** `tab` with agent `key` picked and looked at. */
@@ -966,6 +1011,26 @@ function waitAfter(
             since: before.unseen?.since ?? now,
           }
         : before.unseen;
+  const failedNow = failed
+    ? exits
+      ? 'exited'
+      : event.type === 'connect_failed'
+        ? 'start'
+        : 'turn'
+    : undefined;
+  const endedFailure =
+    failedNow === undefined
+      ? before.ended?.failure
+      : graver(before.ended?.failure, failedNow);
+  // The next turn's start leaves the last one's end behind.
+  const endedNow =
+    event.type === 'prompt' || event.type === 'cycle_started'
+      ? undefined
+      : ended
+        ? endedFailure === undefined
+          ? {}
+          : { failure: endedFailure }
+        : before.ended;
   // A cycle of the agent's own works as a turn does (CHD-426).
   const working =
     event.type === 'prompt' || event.type === 'cycle_started'
@@ -984,6 +1049,7 @@ function waitAfter(
     watch,
     asking,
     unseen,
+    ...(endedNow === undefined ? {} : { ended: endedNow }),
     working,
     ...(stopped === undefined ? {} : { stopped }),
     ...(event.type === 'disconnected' || before.exited

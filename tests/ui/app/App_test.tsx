@@ -32,6 +32,7 @@ import {
   quitAll,
   ready,
   send,
+  statusReports,
   TAB,
   until,
   UP,
@@ -41,6 +42,93 @@ import {
 import manifest from '../../../package.json' with { type: 'json' };
 
 const VERSION = manifest.version;
+
+describe('CHD-382 U2 tester: cancellation and error reports', () => {
+  test('a blocked tab behind wins over a working front tab', () => {
+    const log: string[] = [];
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await leader(window, 'c');
+        await until('the second agent', () => window.pids.length === 2);
+        await ready(window);
+        await send(window, 'permission');
+        await asked(window);
+        await leader(window, '1');
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        expect(statusReports(log).at(-1)).toStrictEqual({
+          state: 'blocked',
+          kind: 'permission',
+          app: 'chord',
+          msg: 'fake (2) needs your permission: Write notes.txt',
+        });
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+        expect(statusReports(log).at(-1)?.state).toBe('blocked');
+        await quitAll(window);
+      },
+      { columns: 80, rows: 24, log },
+    );
+  });
+
+  for (const columns of [80, 120]) {
+    test(`Esc returns a cancelled turn to idle without done at ${columns} columns`, () => {
+      const log: string[] = [];
+
+      return withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'slow');
+          await until(
+            'working report',
+            () => statusReports(log).at(-1)?.state === 'working',
+          );
+
+          const from = statusReports(log).length;
+
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await until(
+            'idle after cancel',
+            () => statusReports(log).at(-1)?.state === 'idle',
+          );
+          expect(statusReports(log).slice(from)).toStrictEqual([
+            { state: 'idle', app: 'chord' },
+          ]);
+        },
+        { columns, rows: columns === 80 ? 24 : 40, log },
+      );
+    });
+
+    test(`a failed turn reports error until a key at ${columns} columns`, () => {
+      const log: string[] = [];
+
+      return withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'error');
+          await until(
+            'failed turn report',
+            () => statusReports(log).at(-1)?.state === 'error',
+          );
+          expect(statusReports(log).at(-1)).toStrictEqual({
+            state: 'error',
+            app: 'chord',
+            msg: "fake's turn failed",
+          });
+          await window.type('x');
+          await until(
+            'idle after seeing failure',
+            () => statusReports(log).at(-1)?.state === 'idle',
+          );
+        },
+        { columns, rows: columns === 80 ? 24 : 40, log },
+      );
+    });
+  }
+});
 
 test('the header names the agent and the directory', () =>
   withWindow(async (window) => {
@@ -2617,4 +2705,107 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
       },
     );
   });
+});
+
+/** The last program status the terminal was told, its fields as written. */
+function lastStatus(
+  log: readonly string[],
+): Record<string, string> | undefined {
+  return statusReports(log).at(-1);
+}
+
+test("the terminal hears chord work, then done with the notification's words, then idle at the next key (CHD-382)", () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await until(
+        'idle to be reported',
+        () => lastStatus(log)?.state === 'idle',
+      );
+      expect(lastStatus(log)).toStrictEqual({ state: 'idle', app: 'chord' });
+      await send(window, 'slow');
+      await until(
+        'working to be reported',
+        () => lastStatus(log)?.state === 'working',
+      );
+      await until(
+        'done to be reported',
+        () => lastStatus(log)?.state === 'done',
+      );
+      expect(lastStatus(log)).toStrictEqual({
+        state: 'done',
+        app: 'chord',
+        msg: 'fake is waiting for your input',
+      });
+
+      const sent = statusReports(log).length;
+
+      await window.type('x');
+      await until(
+        'idle to be reported',
+        () => lastStatus(log)?.state === 'idle',
+      );
+      // Each change once: a draw that changes nothing reports nothing.
+      expect(statusReports(log).slice(sent)).toStrictEqual([
+        { state: 'idle', app: 'chord' },
+      ]);
+    },
+    { log },
+  );
+});
+
+test('a permission is reported blocked with its kind and words, and the answer goes back to work (CHD-382)', () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'permission');
+      await asked(window);
+      expect(lastStatus(log)).toStrictEqual({
+        state: 'blocked',
+        kind: 'permission',
+        app: 'chord',
+        msg: 'fake needs your permission: Write notes.txt',
+      });
+      await window.press('1');
+      await until(
+        'done to be reported',
+        () => lastStatus(log)?.state === 'done',
+      );
+    },
+    { log },
+  );
+});
+
+test("ctrl+g clears chord's status for the editor and reports it again once back (CHD-382)", () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await window.press(CTRL_G);
+      await window.shows('from the editor');
+
+      const editor = log.findIndex((chunk) => chunk.startsWith('editor: '));
+      const reports = (chunks: readonly string[]) => statusReports(chunks);
+
+      expect(reports(log.slice(0, editor)).at(-1)).toStrictEqual({
+        state: 'clear',
+      });
+      expect(reports(log.slice(editor))).toStrictEqual([
+        { state: 'idle', app: 'chord' },
+      ]);
+    },
+    {
+      log,
+      editor: (draft) => {
+        log.push(`editor: ${draft}`);
+
+        return Promise.resolve({ text: 'from the editor' });
+      },
+    },
+  );
 });

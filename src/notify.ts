@@ -47,6 +47,8 @@ export type Wait =
   | {
       readonly kind: 'input';
       readonly message: string;
+      /** A link to open, usually a sign-in; a form has none. */
+      readonly mode?: 'url';
       readonly subagentId?: string;
     };
 
@@ -188,6 +190,7 @@ export function watchWaits(
       const wait: AskingWait = {
         kind: 'input',
         message: event.elicitation.message,
+        ...(event.elicitation.mode === 'url' ? { mode: 'url' as const } : {}),
         ...(event.elicitation.subagentId === undefined
           ? {}
           : { subagentId: event.elicitation.subagentId }),

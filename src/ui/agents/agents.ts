@@ -400,11 +400,12 @@ export interface AgentsLayout {
 /**
  * Where the list's lines start while its picked row is taller than its
  * budget and read by line (CHD-471): the line at its top, for that row at
- * that width; another row or width starts it again.
+ * that width and limit; another row or size starts it again.
  */
 export interface AgentsView {
   readonly key: number;
   readonly width: number;
+  readonly limit: number;
   readonly top: number;
 }
 
@@ -674,7 +675,10 @@ function windowTop(
     Math.min(total - limit, first + laid[at]!.height - limit),
   );
   const top =
-    view !== undefined && view.key === laid[at]!.row.key && view.width === width
+    view !== undefined &&
+    view.key === laid[at]!.row.key &&
+    view.width === width &&
+    view.limit === limit
       ? view.top
       : lowest;
 
@@ -851,9 +855,9 @@ export function scrolledView(
   const key = rows[at]!.key;
 
   return by > 0 && first + laid[at]!.height > top + room
-    ? { key, width, top: top + 1 }
+    ? { key, width, limit: room, top: top + 1 }
     : by < 0 && first < top
-      ? { key, width, top: top - 1 }
+      ? { key, width, limit: room, top: top - 1 }
       : undefined;
 }
 
@@ -880,6 +884,7 @@ export function enteredView(
   return {
     key: rows[at]!.key,
     width,
+    limit: room,
     top: Math.min(first, Math.max(first - room + 1, top)),
   };
 }

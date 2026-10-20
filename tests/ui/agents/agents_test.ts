@@ -1040,9 +1040,14 @@ describe('CHD-471 a row taller than the list is read by line, the list never pas
   });
 
   test('another width, or no view, starts it again the least move from the top; the list is never past its limit', () => {
-    const view = { key: 2, width: 76, top: 6 };
+    const view = { key: 2, width: 76, limit: 4, top: 6 };
 
     expect(drawn(pick(2), { width: 60, focused: true, view })).toHaveLength(4);
+    // The same width at another height: a view for another limit is not
+    // this one's.
+    expect(
+      drawn(pick(2), { width: 76, limit: 6, focused: true, view })[1],
+    ).toStrictEqual('❯ Summarise the release      fake  ✻ working 41s');
     expect(drawn(pick(2), { width: 76, focused: true })[1]).toStrictEqual(
       '❯ Summarise the release      fake  ✻ working 41s',
     );

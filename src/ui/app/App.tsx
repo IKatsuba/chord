@@ -554,6 +554,8 @@ export function App({
   // again from the `❯`, a tall row from its first line (CHD-430).
   useEffect(() => {
     dispatch({ type: 'background_resized' });
+    // And the agents list's tall row from its first line (CHD-471).
+    dispatch({ type: 'agents_resized' });
   }, [columns, rows]);
 
   // A list gone while it had the keys hands them back to the box; a summary

@@ -334,7 +334,7 @@ test('a picked row taller than the list is drawn in the list’s lines and no mo
     row('docs', 3, { model: undefined }),
   ];
 
-  for (const view of [undefined, { key: 2, width: 76, top: 3 }]) {
+  for (const view of [undefined, { key: 2, width: 76, limit: 4, top: 3 }]) {
     const drawn = await draw(
       <AgentsList rows={agents} limit={4} width={76} focused view={view} />,
       { columns: 80, rows: 12 },

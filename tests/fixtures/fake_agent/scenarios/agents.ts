@@ -42,6 +42,17 @@ export const MAIN_MESSAGES = [
 ] as const;
 
 /**
+ * What `agenttitled` names the child it opens: a session title long enough
+ * that its row is taller than the agents list at 80x24 (CHD-471).
+ */
+export const LONG_TITLE =
+  'Summarise the release notes for 0.56.0 from the commits since 0.55.2, ' +
+  'grouped by area, with a line for each user-facing change and a note for ' +
+  'each breaking one, then draft the announcement for the forum and the ' +
+  'changelog entry, and list the open questions for the owner to settle ' +
+  'before the tag.';
+
+/**
  * A long instruction with markdown in it, as a parent opens a child on, so
  * the child's view has a body that folds and has weight and code in it.
  */
@@ -143,7 +154,11 @@ export const CHILD_MESSAGES = [
 ] as const;
 
 /** Opens `parser` with `prompt` as its first turn, then waits on it. */
-async function openParserOn(turn: Turn, prompt: string): Promise<'end_turn'> {
+async function openParserOn(
+  turn: Turn,
+  prompt: string,
+  name = PARSER_ARGS.name,
+): Promise<'end_turn'> {
   const client = await chordClient(turn);
 
   if (client === undefined) {
@@ -153,8 +168,12 @@ async function openParserOn(turn: Turn, prompt: string): Promise<'end_turn'> {
   }
 
   try {
-    await callChord(turn, client, 'open_agent', { ...PARSER_ARGS, prompt });
-    await turn.say('Waiting on parser.');
+    await callChord(turn, client, 'open_agent', {
+      ...PARSER_ARGS,
+      prompt,
+      name,
+    });
+    await turn.say(`Waiting on ${name === PARSER_ARGS.name ? name : 'it'}.`);
   } finally {
     await client.close();
   }
@@ -440,6 +459,9 @@ export const AGENTS = {
 
   // Opens `parser` on `error`, whose first turn fails with its agent up.
   agentfail: (turn) => openParserOn(turn, 'error'),
+
+  // Opens a child on `text` under `LONG_TITLE`, a row taller than the list.
+  agenttitled: (turn) => openParserOn(turn, 'text', LONG_TITLE),
 
   // A child's turn whose agent goes: a test run, its last words on stderr,
   // then the exit, with the turn never answered.

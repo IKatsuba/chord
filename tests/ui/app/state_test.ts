@@ -833,3 +833,25 @@ describe('CHD-373 S3c tester: settled window spend survives session replacement'
     expect(after.window.keptSpend).toEqual([kept]);
   });
 });
+
+test("a resize lets go of where the agents list's tall row was read from, keeping the list's keys and pick (CHD-471)", () => {
+  const view = { key: 2, width: 76, limit: 4, top: 5 };
+  const scrolled = [
+    { type: 'agents_focused', focused: true },
+    { type: 'agents_scrolled', view },
+  ].reduce<AppState>(
+    (state, action) => reduceApp(state, action as AppAction),
+    ready,
+  );
+
+  expect(scrolled.agentsView).toStrictEqual(view);
+
+  const resized = reduceApp(scrolled, { type: 'agents_resized' });
+
+  expect(resized.agentsView).toBeUndefined();
+  expect(resized.agentsFocus).toStrictEqual(true);
+  // Letting go of the keys lets go of it too.
+  expect(
+    reduceApp(scrolled, { type: 'agents_focused', focused: false }).agentsView,
+  ).toBeUndefined();
+});

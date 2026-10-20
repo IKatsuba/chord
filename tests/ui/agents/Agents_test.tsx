@@ -1735,3 +1735,48 @@ describe('CHD-471 L2 tester: child messages in the strip and picker', () => {
     });
   }
 });
+
+test("a child's row taller than the list at 80x24 is read by line with ↑ ↓, and a resize, away and back or in height alone, reads it from its first line again (CHD-471)", () =>
+  withAgents(async (window) => {
+    const list = (lines: number) =>
+      window.frame().split('\n').slice(-lines).join('\n');
+    const FIRST = '  ❯ Summarise the release      fake';
+
+    await window.resize({ columns: 80, rows: 24 });
+    await ready(window);
+    await send(window, 'agenttitled');
+    // The prompt keeps the keys: the last row fills the list, ↓ beside it.
+    await window.shows('  ↓ commits since 0.55.2,');
+    await window.press(DOWN);
+    await window.press(DOWN);
+    await window.shows(FIRST);
+
+    for (let press = 0; press < 4; press += 1) {
+      await window.press(DOWN);
+    }
+
+    await until('read four lines on', () =>
+      list(4).startsWith('  ↑ grouped by area, with a'),
+    );
+    expect(list(4)).toContain('  ↓ each breaking one, then');
+    expect(list(4)).not.toContain('❯');
+
+    // To 82 and back with no key: from its first line again.
+    await window.resize({ columns: 82, rows: 24 });
+    await window.resize({ columns: 80, rows: 24 });
+    await until('its first line again', () => list(4).includes(FIRST));
+
+    for (let press = 0; press < 4; press += 1) {
+      await window.press(DOWN);
+    }
+
+    await until('read on again', () =>
+      list(4).startsWith('  ↑ grouped by area, with a'),
+    );
+
+    // The same width, another height.
+    await window.resize({ columns: 80, rows: 30 });
+    await until('its first line after a taller window', () =>
+      list(5).includes(FIRST),
+    );
+  }));

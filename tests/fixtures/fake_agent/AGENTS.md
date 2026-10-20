@@ -151,7 +151,8 @@
   `agenttask`, `agentexit` and `agentfail` open `parser` on `task`, on
   `crash`, whose agent writes its last words to stderr and exits mid-turn,
   and on `error`; `agentcost` opens it on `costwait`, to close it busy
-  with a cost said; `taskeffort` and `agenteffort` start a task and open an
+  with a cost said; `agenttitled` opens one on `text` under a title too
+  long for the agents list at 80x24; `taskeffort` and `agenteffort` start a task and open an
   agent on `text` on high effort, `taskmaxeffort` and `agentmaxeffort` on
   max, which the fake does not offer, and each says the effort chord's
   answer says it started on, and its note; `team` and `team2` call `list_teams`, then `run_team` on

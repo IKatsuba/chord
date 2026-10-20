@@ -278,6 +278,8 @@ export type AppAction =
   | { readonly type: 'summary_focused'; readonly focused: boolean }
   /** The list's window moved on a tall row, or let go of it. */
   | { readonly type: 'agents_scrolled'; readonly view: AgentsView | undefined }
+  /** The window resized: a tall row is read from its first line again. */
+  | { readonly type: 'agents_resized' }
   /** `x` on the busy child `key` asks for a second press. */
   | { readonly type: 'agent_close_armed'; readonly key: number }
   | { readonly type: 'agent_close_disarmed' }
@@ -776,6 +778,12 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       return action.view === undefined
         ? rest
         : { ...rest, agentsView: action.view };
+    }
+    case 'agents_resized': {
+      // The pick and the list's keys stay; only where its lines start goes.
+      const { agentsView: _, ...rest } = state;
+
+      return rest;
     }
     case 'agent_close_armed': {
       const { sessionsNote: _, ...rest } = state;

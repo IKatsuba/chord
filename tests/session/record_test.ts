@@ -117,12 +117,15 @@ test("each opening of a session is a line of its own, and each turn's line keeps
   withDir(async (dir) => {
     const entries = await resumed(dir, { agent: 'claude' });
 
-    expect(entries.map((entry) => entry.type).slice(0, 4)).toStrictEqual([
-      'session',
-      'opened',
-      'state',
-      'prompt',
-    ]);
+    // The agent's own updates are left out: it says its commands just after
+    // it opens, which the record writes before the first prompt or after it,
+    // as they come (CHD-467).
+    expect(
+      entries
+        .filter((entry) => entry.type !== 'update')
+        .map((entry) => entry.type)
+        .slice(0, 4),
+    ).toStrictEqual(['session', 'opened', 'state', 'prompt']);
     expect(entries.filter((entry) => entry.type === 'opened')).toHaveLength(2);
     // Claude's counts from each opening: the fake started again starts its
     // cost again, and the first turn after is the turn's alone.

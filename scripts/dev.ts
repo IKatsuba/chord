@@ -45,11 +45,16 @@ export interface DevActions {
 }
 
 /**
- * Where `chord --qa <name>` runs: a fixed place under /tmp, named by the
+ * Where `chord --qa [name]` runs: a fixed place under /tmp, named by the
  * capture, never the per-user temp directory, whose path names the machine
- * (CHD-427). A name that is not a plain word is refused.
+ * (CHD-427); `/tmp/chord-qa` for a bare `--qa`, which the parser gives as
+ * `true`. A name that is not a plain word is refused.
  */
-export function qaDir(name: string): string {
+export function qaDir(name: string | true): string {
+  if (name === true) {
+    return '/tmp/chord-qa';
+  }
+
   if (!/^[A-Za-z0-9._-]+$/.test(name) || /^\.+$/.test(name)) {
     throw new ValidationError(
       `--qa takes letters, digits, . _ and -, not ${JSON.stringify(name)}`,
@@ -134,8 +139,8 @@ export function devCommand(actions: DevActions = RUN) {
             { default: false },
           )
           .option(
-            '--qa <name:string>',
-            "In /tmp/chord-qa.<name>, made afresh, as its directory: a capture's neutral place, never the per-user temp one (letters, digits, . _ -).",
+            '--qa [name:string]',
+            "In /tmp/chord-qa.<name>, made afresh, as its directory: a capture's neutral place, never the per-user temp one (letters, digits, . _ -); with no name, /tmp/chord-qa. An empty name, as --qa '' or --qa=, is dropped by the parser: chord then runs where it is, as with no --qa.",
           )
           .arguments('[args...:string]')
           // Everything from chord's first word or option on is chord's.

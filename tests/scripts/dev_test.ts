@@ -144,6 +144,21 @@ describe('chord', () => {
       ['chord', true, ['-C', '/tmp/chord-qa.tabs', '-p', 'hi']],
     ]);
 
+    // Bare, the default place, the owner's Q65, before chord's own options.
+    expect(await parsed(['chord', '--qa', '--fake'])).toStrictEqual([
+      ['qa', '/tmp/chord-qa'],
+      ['chord', true, ['-C', '/tmp/chord-qa']],
+    ]);
+    expect(await parsed(['chord', '--qa'])).toStrictEqual([
+      ['qa', '/tmp/chord-qa'],
+      ['chord', false, ['-C', '/tmp/chord-qa']],
+    ]);
+    // An empty name the parser drops: a run as with no --qa, as its help
+    // says (Q65).
+    expect(await parsed(['chord', '--qa', ''])).toStrictEqual([
+      ['chord', false, []],
+    ]);
+
     for (const name of ['../home', 'a/b', '..', 'with space']) {
       await expect(parsed(['chord', '--qa', name]), name).rejects.toThrow();
     }

@@ -356,8 +356,9 @@ With more than one session, a task included, `/cost` adds a window table:
 each tab's subtotal, its own agent, children and team runs with their
 members, then the window's total. Tasks sit under whoever started them;
 a team's tasks have separate rows. Each row shows its own spend, except
-tab subtotals. Names and notes end in `…` where they do not fit; nothing
-wraps. `~` marks estimates in the table and task summaries. Closed children
+tab subtotals. Names and full notes wrap inside their cells; cost and tokens
+stay aligned. A note with fewer than 20 cells of room moves under the row's
+figures. `~` marks estimates in the table and task summaries. Closed children
 and tabs stay counted, as do sessions cleared or resumed in place.
 
 ## Settings
@@ -526,7 +527,9 @@ knows and a model it offers, does one job with no tab of its own. Its work
 draws in its parent's turn as a subagent's block does, `Agent(<name>) ·
 codex · gpt-5.3-codex`. Its ended block shows reported tokens and cost:
 `Done (5 tool uses · 2.0k tokens · $0.0125 · 13s)`; unreported parts are
-left out. Its background row adds `· $0.0125` after its state.
+left out. In a group such as `Running 2 agents…`, a row that does not fit
+wraps behind `│`, keeping its model, tokens, cost, tool uses and time.
+Its background row adds `· $0.0125` after its state.
 Its permission requests, forms and links come to you
 in the parent's tab, and what it tells its parent with `send_message`, its
 one tool, and the report its first turn ends with reach the parent as
@@ -679,6 +682,7 @@ agents reaches it; Enter opens the background view above the prompt, full
 width in the pickers' rounded frame in the permission colour. It is as tall
 as its rows, at most half the screen; the prompt, status line and summary
 stay visible. Rows show name, kind, state with time and owner, oldest first.
+The kind and state cells wrap, keeping every part, including monitor events.
 ↑ ↓ or j k move between rows. A row taller than the frame scrolls one line
 at a time before moving to the next row. Its `❯` stays on its first line;
 a dim `↑` in the gutter stands in when that line is out of sight. Resizing
@@ -690,8 +694,11 @@ means it needs action but no request reaches you. Its end reads `✓ done`, `✗
 summary group: the agent lost sight of the subagent, which may still work.
 `x` stops the focused item alone, without confirmation; an agent reads
 `■ stopping` until its agent reports the end. A stop that cannot be sent
-says `could not stop: …` on the hint line; one no longer offered says
-`this agent offers no stop`. An ended or stopping item ignores `x`.
+says `could not stop: …` in place of the hint; one no longer offered says
+`this agent offers no stop`. The hint and error wrap under the rows; the
+whole error stays, with its line breaks kept. At the half-screen cap, rows
+give way first, then pgup/pgdn scroll an error taller than its remaining
+room. An ended or stopping item ignores `x`.
 Esc in the transcript leaves individually stoppable subagents running.
 
 Enter picks the owner and scrolls to the item's call or subagent block;

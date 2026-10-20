@@ -22,6 +22,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     selftest: record('selftest'),
     release: record('release'),
     chord: record('chord'),
+    qa: record('qa'),
     test: record('test'),
     check: record('check'),
     fmt: record('fmt'),
@@ -133,6 +134,34 @@ describe('chord', () => {
     expect(await parsed(['chord', 'codex', '--resume'])).toStrictEqual([
       ['chord', false, ['codex', '--resume']],
     ]);
+  });
+
+  test('--qa <name> makes /tmp/chord-qa.<name> afresh and runs chord there, ahead of its own arguments (CHD-427)', async () => {
+    expect(
+      await parsed(['chord', '--qa', 'tabs', '--fake', '-p', 'hi']),
+    ).toStrictEqual([
+      ['qa', '/tmp/chord-qa.tabs'],
+      ['chord', true, ['-C', '/tmp/chord-qa.tabs', '-p', 'hi']],
+    ]);
+
+    // Bare, the default place, the owner's Q65, before chord's own options.
+    expect(await parsed(['chord', '--qa', '--fake'])).toStrictEqual([
+      ['qa', '/tmp/chord-qa'],
+      ['chord', true, ['-C', '/tmp/chord-qa']],
+    ]);
+    expect(await parsed(['chord', '--qa'])).toStrictEqual([
+      ['qa', '/tmp/chord-qa'],
+      ['chord', false, ['-C', '/tmp/chord-qa']],
+    ]);
+    // An empty name the parser drops: a run as with no --qa, as its help
+    // says (Q65).
+    expect(await parsed(['chord', '--qa', ''])).toStrictEqual([
+      ['chord', false, []],
+    ]);
+
+    for (const name of ['../home', 'a/b', '..', 'with space']) {
+      await expect(parsed(['chord', '--qa', name]), name).rejects.toThrow();
+    }
   });
 
   test("--fake before chord's arguments is its own", async () => {
@@ -307,6 +336,7 @@ describe('tester: migrated command boundaries', () => {
       selftest: unexpected,
       release: unexpected,
       chord: unexpected,
+      qa: unexpected,
       test: unexpected,
       check: unexpected,
       fmt: unexpected,

@@ -20,8 +20,13 @@ type Finding = { line: number; text: string };
  *
  * The macOS prefix alone is private too: a capture cut off after it still
  * says whose machine it came from, and nothing public needs to write it.
+ * So is macOS's per-user temp directory, var's folders, two hashed names,
+ * then T, whole or as chord cuts a long path, an ellipsis before the T: its
+ * hash names the machine and its user (CHD-427).
  */
 const privatePatterns = [
+  /\/var\/folders\/\S*/g,
+  /…\/T\/\S*/g,
   /\/Users\/[^/\s]*/g,
   /\/home\/[^/\s]+/g,
   /\b[A-Za-z]:\\Users\\[^\\\s]+/g,
@@ -52,9 +57,42 @@ function homePatterns(home: string | undefined): RegExp[] {
   return patterns;
 }
 
+/**
+ * The hash of the per-user temp directory of whoever runs the check, the
+ * second of its two hashed names on macOS: anywhere, so it is caught
+ * written without the rest of the path, and any run of its last ten
+ * characters or more, as a capture cut from the front leaves it; none
+ * elsewhere.
+ */
+function tempPatterns(temp: string | undefined): RegExp[] {
+  const hash = /^(?:\/private)?\/var\/folders\/[^/]+\/([^/]+)\/T\/?$/.exec(
+    temp ?? '',
+  )?.[1];
+
+  if (hash === undefined || hash.length < 8) {
+    return [];
+  }
+
+  const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Longest first, so the whole of what is there is what is named.
+  const tails = Array.from({ length: Math.max(1, hash.length - 9) }, (_, cut) =>
+    hash.slice(cut),
+  );
+
+  return [new RegExp(tails.map(escape).join('|'), 'g')];
+}
+
 /** Every line of `text` that names a private path, with what it names. */
-function privatePaths(text: string, home: string | undefined): Finding[] {
-  const patterns = [...privatePatterns, ...homePatterns(home)];
+function privatePaths(
+  text: string,
+  home: string | undefined,
+  temp?: string,
+): Finding[] {
+  const patterns = [
+    ...privatePatterns,
+    ...homePatterns(home),
+    ...tempPatterns(temp),
+  ];
 
   return text.split('\n').flatMap((content, index) => {
     // The same path can match a general pattern and the home one.
@@ -209,7 +247,11 @@ test('no file git tracks names a private path', async () => {
       continue;
     }
 
-    for (const { line, text } of privatePaths(decoder.decode(bytes), home)) {
+    for (const { line, text } of privatePaths(
+      decoder.decode(bytes),
+      home,
+      tmpdir(),
+    )) {
       found.push(`${file}:${line}: ${text}`);
     }
   }
@@ -217,6 +259,44 @@ test('no file git tracks names a private path', async () => {
   expect(
     found,
     'a tracked file names a private path; retake captures with ' +
-      '`-C $(mktemp -d /tmp/chord-qa.XXXX)` (the chord-tui skill)',
+      '`bun dev chord --qa <name>`, which runs in /tmp/chord-qa.<name>',
   ).toStrictEqual([]);
+});
+
+test("macOS's per-user temp directory is private, whole or as chord cuts it, and the running machine's own hash anywhere (CHD-427)", () => {
+  // Built from parts, as above: written whole, they would fail this file.
+  const folders = ['', 'var', 'folders', 'ab', 'cdefgh12345678_xy', 'T'].join(
+    '/',
+  );
+  const cut = ['…', 'T', 'tmp.Ab12'].join('/');
+
+  expect(
+    privatePaths(`chord · ${folders}/tmp.Ab12`, undefined).map((f) => f.text),
+  ).toStrictEqual([`${folders}/tmp.Ab12`]);
+  expect(privatePaths(`  ${cut}`, undefined).map((f) => f.text)).toStrictEqual([
+    cut,
+  ]);
+  // The running machine's hash, with no path around it.
+  expect(
+    privatePaths('hash cdefgh12345678_xy here', undefined, folders).map(
+      (f) => f.text,
+    ),
+  ).toStrictEqual(['cdefgh12345678_xy']);
+  // Cut from its front, as vim's status line cut it in a capture: any run
+  // of its last ten characters or more, none shorter.
+  expect(
+    privatePaths(
+      `<${'cdefgh12345678_xy'.slice(5)}/T/inquirer-editor-…`,
+      undefined,
+      folders,
+    ).map((f) => f.text),
+  ).toStrictEqual(['h12345678_xy']);
+  expect(privatePaths('ends 345678_xy here', undefined, folders)).toStrictEqual(
+    [],
+  );
+  // Elsewhere there is no such directory, and a neutral one is fine.
+  expect(
+    privatePaths('in /tmp/chord-qa.tabs', undefined, '/tmp'),
+  ).toStrictEqual([]);
+  expect(privatePaths('a T/ that is no path', undefined)).toStrictEqual([]);
 });

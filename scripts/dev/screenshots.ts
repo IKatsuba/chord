@@ -26,8 +26,7 @@
  * macOS's usual place.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { AnsiUp } from 'ansi_up';
@@ -227,7 +226,13 @@ async function world(dir: string, team: boolean): Promise<string> {
 
 /** The shot's screen as chord drew it, with its colours. */
 async function capture(shot: Shot): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), 'chord-shot-'));
+  // A fixed, neutral place, never the system's per-user temp directory,
+  // so no path of a person's machine can reach a shot, whatever chord
+  // shows of its directory (CHD-427).
+  const dir = `/tmp/chord-shot.${shot.name}`;
+
+  await rm(dir, { recursive: true, force: true });
+  await mkdir(dir, { recursive: true });
 
   try {
     const home = await world(dir, shot.team ?? true);

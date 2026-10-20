@@ -12,9 +12,9 @@ Options:
   -V, --version                              - Show the version number for this
                                                program.
   -C, --cwd                       <dir>      - Directory the session works in.    (Default:
-                                                                                  "/private/var/folders/j6/1vnjt67d3h54
-                                                                                  1g_33c_70w5c0000gn/T/tmp.jWtFkLICSp/p
-                                                                                  roj")
+                                                                                  "/tmp/chord-qa.XXXX/proj")           
+                                                                                                                       
+                                                                                       
   --agent-command                 <command>  - Start this ACP agent command
                                                instead of the registry's;
                                                [agent] only names it.

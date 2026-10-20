@@ -149,10 +149,13 @@ an unrelated change.
 ## Checking the interface by hand
 
 chord is a terminal program, so a check runs it in a real terminal of a known
-size and reads the screen back as text:
+size and reads the screen back as text. For captures, use
+`bun dev chord --qa <name>`: it recreates the fixed `/tmp/chord-qa.<name>`,
+never a directory from `mktemp -d`. A bare `--qa` uses `/tmp/chord-qa`;
+an empty name is treated as no `--qa`.
 
 ```sh
-tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord'
+tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord --qa capture'
 tmux send-keys -t chord-qa 'hello' Enter
 tmux capture-pane -t chord-qa -p        # the screen as text; -e keeps colours
 tmux kill-session -t chord-qa

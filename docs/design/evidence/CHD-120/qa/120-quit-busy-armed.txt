@@ -1,4 +1,4 @@
- chord   1 fake ●    2 fake                     /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/chord-qa.ofox6ids/work
+ chord   1 fake ●    2 fake                     /tmp/chord-qa.XXXX/work                                                
 
 
 

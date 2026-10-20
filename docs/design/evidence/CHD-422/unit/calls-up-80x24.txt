@@ -1,6 +1,6 @@
  ▀▄     chord v0.55.1
  ▀▀▀▄   fake · Fake Large with a 1M context window
- ▄▀▀▀   /var/folders/j6/1vnjt67d3h541g_33c_70w5c0000gn/T/tmp.vs3Cr57wAz
+ ▄▀▀▀   /tmp/chord-qa.XXXX                                             
  ▀▀     ? for shortcuts · /help
 
  › calls

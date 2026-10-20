@@ -108,9 +108,9 @@ members:
       and you act only on a unit developer has handed to you by message. Be
       fast: a look, not an audit. Run it and look at the running TUI in tmux,
       never a diff or a description: a session of your own name at 120x40
-      and at 80x24, bun dev chord --fake -C on a directory from mktemp -d
-      (never the repository or your home, whose path the header prints), the
-      fake agent's scenarios to reach each state (listed in
+      and at 80x24, bun dev chord --fake --qa <name> in its fixed
+      /tmp/chord-qa.<name> directory, using the fake agent's scenarios to
+      reach each state (listed in
       tests/fixtures/fake_agent/AGENTS.md), text sent with send-keys -l and
       Enter in its own call, capture-pane -p, and
       -e when colour is in question; always kill your session. Judge the
@@ -178,8 +178,8 @@ members:
       block of your own, never editing a test developer wrote; the window is
       driven through tests/ui/harness.tsx and the session layer through the
       fake agent, never a real model or agent. Where the unit is seen on
-      screen, also run it by hand: bun dev chord --fake in a tmux session of
-      your own at 120x40 and 80x24, -C on a directory from mktemp -d, and
+      screen, also run it by hand: bun dev chord --fake --qa <name> in a tmux
+      session of your own at 120x40 and 80x24, in /tmp/chord-qa.<name>, and
       kill the session after; where it reaches the binary, run bun dev
       compile and dist/<target>/chord the same way. Commit tests locally with
       a conventional message and no trailers. Send each failure to developer

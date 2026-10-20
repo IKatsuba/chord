@@ -68,12 +68,22 @@ export async function recordSession({
   } = Promise.withResolvers<string>();
   let ended: (() => void) | undefined;
   /** With `lateCost`, what of the turn has come: its answer, its cost. */
-  let answered = false;
-  let costed = false;
-  const both = () => {
-    if (answered && costed) {
-      answered = false;
-      costed = false;
+  /**
+   * With `lateCost`, what of each turn has come, by its id: its answer and
+   * its cost. Only the turn the last prompt started ends it; a replayed
+   * history's usage, or an earlier turn's late cost, is no turn of it.
+   */
+  const came = new Map<string, { answered: boolean; costed: boolean }>();
+  let current: string | undefined;
+  const mark = (turnId: string, part: 'answered' | 'costed') => {
+    const seen = came.get(turnId) ?? { answered: false, costed: false };
+
+    seen[part] = true;
+
+    came.set(turnId, seen);
+
+    if (turnId === current && seen.answered && seen.costed) {
+      current = undefined;
 
       ended?.();
     }
@@ -128,20 +138,33 @@ export async function recordSession({
         !event.turnId.startsWith('history-')
       ) {
         if (lateCost) {
-          answered = true;
-
-          both();
+          mark(event.turnId, 'answered');
         } else {
           ended?.();
         }
       } else if (
         lateCost &&
         event.type === 'update' &&
-        event.update.sessionUpdate === 'usage_update'
+        event.update.sessionUpdate === 'usage_update' &&
+        !event.turnId.startsWith('history-')
       ) {
-        costed = true;
+        mark(event.turnId, 'costed');
+      } else if (
+        lateCost &&
+        event.type === 'prompt' &&
+        event.into === undefined
+      ) {
+        // The turn this prompt started, which the wait is for; what of it
+        // came before its prompt was heard counts too.
+        current = event.turnId;
 
-        both();
+        const seen = came.get(current);
+
+        if (seen?.answered === true && seen.costed) {
+          current = undefined;
+
+          ended?.();
+        }
       }
     },
     Date.now,

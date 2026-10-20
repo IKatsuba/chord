@@ -592,14 +592,35 @@ describe('CHD-405 N2 tester: member spend follows the picked session', () => {
         /(- name: tester\n(?:.*\n)*?\s+agent: )fake/,
         '$1codex',
       );
-      const cost = async (window: Window) => {
+      const cost = async (window: Window, agent: string) => {
         await send(window, '/cost');
-        await window.shows('› /cost');
+        await until('the cost report has its Total row', () =>
+          window.mounted('Total'),
+        );
 
-        const lines = window.frame().split('\n');
-        const at = lines.findLastIndex((line) => line.includes('› /cost'));
+        // The wrapped table can put its command and session figure above
+        // the viewport. Read this report's own section, not its old prompt.
+        for (let step = 0; step < 12; step++) {
+          const lines = window.frame().split('\n');
+          const at = lines.findLastIndex((line) =>
+            line.includes(`${agent} has not reported`),
+          );
+          const table = lines.findIndex(
+            (line, index) => index > at && line.includes('This window'),
+          );
 
-        return lines.slice(at + 1).join('\n');
+          if (at >= 0 && table > at) {
+            const report = lines.slice(at, table).join('\n');
+
+            await window.press('\x1b[1;2F');
+
+            return report;
+          }
+
+          await window.press(at < 0 ? '\x1b[5~' : '\x1b[1;2B');
+        }
+
+        throw new Error(`session cost figure not in view: ${window.frame()}`);
       };
 
       try {
@@ -613,7 +634,7 @@ describe('CHD-405 N2 tester: member spend follows the picked session', () => {
             await send(window, 'slow');
             await window.shows('Working.');
 
-            const running = await cost(window);
+            const running = await cost(window, 'codex');
 
             expect(running).toContain('codex has not reported');
             expect(running).toContain('counted when it ends');
@@ -632,7 +653,7 @@ describe('CHD-405 N2 tester: member spend follows the picked session', () => {
               'main is idle',
               () => !window.frame().includes('Working…'),
             );
-            expect(await cost(window)).not.toContain('This turn:');
+            expect(await cost(window, 'fake')).not.toContain('This turn:');
             await send(window, 'slow');
             await window.shows('Working.');
             await window.press(DOWN);
@@ -649,7 +670,7 @@ describe('CHD-405 N2 tester: member spend follows the picked session', () => {
             await window.shows('╭─ tester · bugfix ─');
             await window.press(ESC);
             await window.shows('Interrupted by user');
-            expect(await cost(window)).not.toContain('This turn:');
+            expect(await cost(window, 'codex')).not.toContain('This turn:');
           },
           {
             server,

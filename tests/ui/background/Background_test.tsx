@@ -4,6 +4,7 @@
  * cleared of what ended by the person's next prompt.
  */
 import { describe, expect, test } from 'bun:test';
+import { useState } from 'react';
 import { serveChord } from '../../../src/server/server.ts';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
@@ -1110,4 +1111,84 @@ test("an error taller than the frame's room scrolls in it by a page, the rows gi
   } finally {
     await drawn.unmount();
   }
+});
+
+describe('CHD-473 T4 tester: error scroller lifetime', () => {
+  test('a same-height new error starts at its first line, and unmount removes the callback before remount', async () => {
+    const scroller: { current: RequestScroller | undefined } = {
+      current: undefined,
+    };
+    const item: BackgroundItem = {
+      kind: 'monitor',
+      id: 'm',
+      key: 1,
+      name: 'CI run',
+      startedAt: 0,
+      status: { group: 'running' },
+    };
+    const message = (prefix: string) =>
+      Array.from({ length: 20 }, (_, index) => `${prefix} ${index}`).join('\n');
+    let update: (hint: string) => void = () => {};
+
+    let mount: (shown: boolean) => void = () => {};
+
+    function Panel() {
+      const [hint, setHint] = useState(message('OLD'));
+      const [shown, setShown] = useState(true);
+
+      update = setHint;
+      mount = setShown;
+
+      return shown ? (
+        <BackgroundView
+          items={[item]}
+          focus={item}
+          hint={hint}
+          columns={46}
+          rows={24}
+          scroller={scroller}
+        />
+      ) : (
+        <text>closed panel</text>
+      );
+    }
+
+    const drawn = await draw(<Panel />, { columns: 46, rows: 24 });
+
+    try {
+      expect(scroller.current).toBeDefined();
+      scroller.current?.('page_down');
+      await until('scrolled old error', () =>
+        drawn.frame().includes('lines above'),
+      );
+      update(message('NEW'));
+      await until(
+        'new error resets to top',
+        () =>
+          drawn.frame().includes('NEW 0') &&
+          !drawn.frame().includes('lines above'),
+      );
+      scroller.current?.('page_down');
+      await until('scrolled new error', () =>
+        drawn.frame().includes('lines above'),
+      );
+      mount(false);
+      await until('panel unmounted', () =>
+        drawn.frame().includes('closed panel'),
+      );
+      expect(scroller.current).toBeUndefined();
+      mount(true);
+      await until(
+        'panel remounted at top',
+        () =>
+          drawn.frame().includes('NEW 0') &&
+          !drawn.frame().includes('lines above'),
+      );
+      expect(scroller.current).toBeDefined();
+    } finally {
+      await drawn.unmount();
+    }
+
+    expect(scroller.current).toBeUndefined();
+  });
 });

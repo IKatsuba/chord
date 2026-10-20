@@ -437,3 +437,171 @@ describe('CHD-2 tester: pending stops and deferred refusals in the window', () =
       },
     ));
 });
+
+describe('CHD-473 T4 tester: error paging through the window', () => {
+  for (const [columns, rows, rebound] of [
+    [46, 24, false],
+    [80, 24, false],
+    [46, 24, true],
+    [120, 40, true],
+  ] as const) {
+    test(`every refused-stop line is reachable, reset and capped at ${columns} columns with ${rebound ? 'rebound' : 'default'} paging`, async () => {
+      const server = serveChord();
+      const details = Array.from(
+        { length: 16 },
+        (_, index) => `Detail ${String(index).padStart(2, '0')} 日本語`,
+      );
+      const down = rebound ? '\x0e' : '\x1b[6~';
+      const up = rebound ? '\x10' : '\x1b[5~';
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'claudebackground');
+            await window.shows('background  2 agents running');
+
+            const session = window.session();
+
+            assert(session);
+
+            const stop = spyOn(session, 'stopSubagent')
+              .mockRejectedValueOnce(
+                new Error(['Broken pipe', ...details].join('\n')),
+              )
+              .mockRejectedValueOnce(
+                new Error('Replacement refusal\nFinal detail'),
+              );
+            const cap = () => {
+              const lines = window.frame().split('\n');
+              const top = lines.findIndex(
+                (line, index) =>
+                  line.startsWith('╭') &&
+                  lines[index + 1]?.includes('Background'),
+              );
+              const bottom = lines.findIndex(
+                (line, index) => index > top && line.startsWith('╰'),
+              );
+
+              expect(top).toBeGreaterThanOrEqual(0);
+              expect(bottom - top + 1).toBeLessThanOrEqual(
+                Math.floor(window.frame().split('\n').length / 2),
+              );
+              expect(window.frame()).toContain('❯ Run the test suite');
+            };
+
+            try {
+              await window.press(DOWN);
+              await window.press('\r');
+              await window.shows('❯ Run the test suite');
+              await window.press('x');
+              await window.shows('could not stop: Broken pipe');
+              await window.shows(
+                rebound ? 'ctrl+n to scroll' : 'pagedown to scroll',
+              );
+              cap();
+
+              if (rebound) {
+                await window.press('\x1b[6~');
+                expect(window.frame()).toContain('could not stop: Broken pipe');
+                expect(window.frame()).not.toContain('lines above');
+              }
+
+              const seen = new Set<string>();
+
+              for (let page = 0; page < 20; page++) {
+                const frame = window.frame();
+
+                for (const detail of details) {
+                  if (frame.includes(detail)) {
+                    seen.add(detail);
+                  }
+                }
+
+                cap();
+
+                if (!frame.includes('lines below')) {
+                  break;
+                }
+
+                await window.press(down);
+                await until(
+                  'the next error page',
+                  () => window.frame() !== frame,
+                );
+              }
+
+              expect([...seen].sort()).toEqual([...details].sort());
+              expect(window.frame()).toContain('lines above');
+              await window.resize({ columns: columns + 2, rows: 20 });
+              cap();
+
+              for (
+                let page = 0;
+                page < 20 && window.frame().includes('lines above');
+                page++
+              ) {
+                const frame = window.frame();
+
+                await window.press(up);
+                await until(
+                  'the previous error page',
+                  () => window.frame() !== frame,
+                );
+              }
+
+              await window.shows('could not stop: Broken pipe');
+              await window.press(down);
+              await window.shows('lines above');
+              await window.press('x');
+              await window.shows('Replacement refusal');
+              await window.shows('Final detail');
+              expect(window.frame()).not.toContain('lines above');
+              expect(window.frame()).not.toContain('Detail 15');
+              cap();
+              await window.press('j');
+              await until(
+                'moving clears the refusal',
+                () => !window.frame().includes('Replacement refusal'),
+              );
+              await window.press(ESC);
+              await window.press(down);
+              expect(window.frame()).not.toContain('Final detail');
+              expect(stop).toHaveBeenCalledTimes(2);
+            } finally {
+              stop.mockRestore();
+            }
+          },
+          {
+            columns,
+            rows,
+            server,
+            runtimes: ['fake'],
+            agentCommand: fakeAgentCommand(undefined, '--stop-gate'),
+            ...(rebound
+              ? {
+                  keybindings: JSON.stringify({
+                    bindings: [
+                      {
+                        context: 'Scroll',
+                        bindings: {
+                          pageup: null,
+                          'shift+pageup': null,
+                          pagedown: null,
+                          'shift+pagedown': null,
+                          'ctrl+n': 'scroll:pageDown',
+                          'ctrl+p': 'scroll:pageUp',
+                        },
+                      },
+                    ],
+                  }),
+                }
+              : {}),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

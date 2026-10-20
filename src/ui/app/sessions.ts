@@ -1747,17 +1747,30 @@ export function useSessions(
       onSummary: state.summaryFocus === true,
     });
 
-    dispatch({
-      type: 'agents_scrolled',
-      view:
-        target?.kind === 'agent'
-          ? enteredView(
-              rows.map((row) => ({ ...row, picked: row.key === target.key })),
-              top,
-              frame,
-            )
-          : undefined,
-    });
+    // The last stays the last: where ↓ leaves the pick on the row it was
+    // on, the window stays where that row was read to (CHD-471).
+    const stays =
+      target?.kind === 'agent' &&
+      state.summaryFocus !== true &&
+      target.key === rows.find((row) => row.picked)?.key;
+
+    if (!stays) {
+      dispatch({
+        type: 'agents_scrolled',
+        view:
+          target?.kind === 'agent'
+            ? enteredView(
+                rows.map((row) => ({
+                  ...row,
+                  picked: row.key === target.key,
+                })),
+                top,
+                frame,
+              )
+            : undefined,
+      });
+    }
+
     focusOn(target);
   };
 

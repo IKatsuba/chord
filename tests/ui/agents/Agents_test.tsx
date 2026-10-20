@@ -1780,3 +1780,33 @@ test("a child's row taller than the list at 80x24 is read by line with ↑ ↓, 
       list(5).includes(FIRST),
     );
   }));
+
+test("↓ past a last row's last line leaves the list at its end, as the last stays the last, and goes round nothing (CHD-471)", () =>
+  withAgents(async (window) => {
+    const list = () => window.frame().split('\n').slice(-4).join('\n');
+
+    await window.resize({ columns: 80, rows: 24 });
+    await ready(window);
+    await send(window, 'agenttitled');
+    await window.shows('  ↓ commits since 0.55.2,');
+    await window.press(DOWN);
+    await window.press(DOWN);
+    await window.shows('  ❯ Summarise the release      fake');
+
+    // Thirteen lines in a four-line list: nine presses read it to its end,
+    // and the ones after stay there.
+    for (let press = 0; press < 12; press += 1) {
+      await window.press(DOWN);
+    }
+
+    await until('at its end', () => list().endsWith('    before the tag.'));
+    expect(list()).toMatch(/^ {2}↑ /);
+    expect(list()).not.toContain('❯');
+    expect(list()).not.toContain('↓');
+
+    await window.press(DOWN);
+    await window.press(DOWN);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(list().endsWith('    before the tag.')).toBeTruthy();
+    expect(list()).not.toContain('Summarise the release');
+  }));

@@ -175,6 +175,15 @@ function kindIn(kind: string, width: number): string[] {
   return lines;
 }
 
+/**
+ * The frame's hint, or an error in its place, in lines of at most `width`
+ * cells: broken after a ` · ` and at its spaces, never cut (CHD-473,
+ * CHD-462 3a1cf656).
+ */
+export function hintLines(text: string, width: number): string[] {
+  return kindIn(oneLine(text), Math.max(1, width));
+}
+
 /** The least a state's column holds: its widest word, with a `·` beside it. */
 function stateLeast(states: readonly string[]): number {
   return Math.max(

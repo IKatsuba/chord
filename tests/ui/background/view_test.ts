@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
+  hintLines,
   laidAt,
   moveView,
   type ViewAt,
@@ -954,4 +955,32 @@ describe('CHD-473 T3 tester: complete metadata across layouts', () => {
       expect(items[0]).toBe(tall);
     }
   });
+});
+
+test("the frame's hint, or an error in its place, wraps after a ` · ` and at its spaces, never cut (CHD-473)", () => {
+  const keys = 'Enter to go to its call · x to stop · Esc to close';
+
+  expect(hintLines(keys, 112)).toStrictEqual([keys]);
+  // At 46 columns, 42 inside the frame.
+  expect(hintLines(keys, 42)).toStrictEqual([
+    'Enter to go to its call · x to stop ·',
+    'Esc to close',
+  ]);
+
+  const error = stopRefused(
+    new Error(
+      'the adapter refused the stop because the task had already\nhanded its result back',
+    ),
+  );
+  const lines = hintLines(error, 30);
+
+  for (const line of lines) {
+    expect(line.length, line).toBeLessThanOrEqual(30);
+  }
+
+  expect(lines.join(' ')).toBe(error);
+  expect(hintLines('this agent offers no stop', 20)).toStrictEqual([
+    'this agent offers no',
+    'stop',
+  ]);
 });

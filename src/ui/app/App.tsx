@@ -84,7 +84,9 @@ import { SummaryLine } from '../background/Background.tsx';
 import {
   BackgroundView,
   backgroundRowLimit,
+  useBackgroundHint,
 } from '../background/BackgroundView.tsx';
+import { hintLines } from '../background/view.ts';
 import { agentsHaveKeys, backgroundShown } from '../background/state.ts';
 import { startingVim } from '../prompt/vim.ts';
 import { useCommands } from './commands.ts';
@@ -527,6 +529,9 @@ export function App({
   const agentsLimit = agentsRowLimit(rows);
   const listRows = sessions.listed(agentsLimit, columns - 4);
   const backgroundItems = sessions.background();
+  // What the background frame says under its rows, whose lines its rows
+  // give way to (CHD-473).
+  const backgroundHint = useBackgroundHint(state.backgroundView?.hint);
   const listShown = listRows.length > 0 || backgroundItems.length > 0;
   // With no agents drawn the summary line is the list's one stop.
   const summaryFocused =
@@ -725,7 +730,10 @@ export function App({
       case 'move_background':
         return sessions.moveBackground(step.by, {
           width: columns - 4,
-          height: backgroundRowLimit(rows),
+          height: backgroundRowLimit(
+            rows,
+            hintLines(backgroundHint, columns - 4).length,
+          ),
         });
       case 'stop_background':
         return sessions.stopBackground();

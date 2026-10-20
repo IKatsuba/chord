@@ -8,11 +8,12 @@ import {
 import { useAgentsClock } from '../agents/Agents.tsx';
 import { borderOf } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
-import { CUT, DIM, fg, TEXT } from '../theme/text.ts';
+import { DIM, fg, TEXT } from '../theme/text.ts';
 import { agentColour, type Palette } from '../theme/theme.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
 import {
   edgeMarked,
+  hintLines,
   type ItemRef,
   laidAt,
   type ViewAt,
@@ -44,9 +45,26 @@ function groupColour(
  */
 const CHROME = 6;
 
-/** The most lines the frame takes: half the window (CHD-462). */
-export function backgroundRowLimit(windowRows: number): number {
-  return Math.max(1, Math.floor(windowRows / 2) - CHROME);
+/**
+ * The lines the frame's rows take at most: half the window less its other
+ * lines (CHD-462), a hint of `hintHeight` lines among them; the rows give
+ * way to a hint that wraps, never the hint (CHD-473).
+ */
+export function backgroundRowLimit(windowRows: number, hintHeight = 1): number {
+  return Math.max(1, Math.floor(windowRows / 2) - CHROME - (hintHeight - 1));
+}
+
+/**
+ * What the frame says under its rows: `hint`, an agent's stop error, in
+ * place of its keys, or the keys.
+ */
+export function useBackgroundHint(hint: string | undefined): string {
+  const stop = useHintKey('agents:close');
+  const close = useCloseHint();
+
+  return (
+    hint ?? hintOf('Enter to go to its call', stop && `${stop} to stop`, close)
+  );
 }
 
 /**
@@ -77,12 +95,12 @@ export function BackgroundView({
   // Times count a second at a time while the view is drawn.
   const now = useAgentsClock(true);
   const laid = viewRows(items, { width: columns - 4, focus, now });
-  const height = backgroundRowLimit(rows);
+  // The hint, or an error in its place, whole on as many lines as it takes.
+  const said = hintLines(useBackgroundHint(hint), columns - 4);
+  const height = backgroundRowLimit(rows, said.length);
   const lines = edgeMarked(
     viewWindow(laid, height, at, laidAt(columns - 4, height)),
   );
-  const stop = useHintKey('agents:close');
-  const close = useCloseHint();
   const cell = (piece: ViewCell, item: BackgroundItem, focused: boolean) => {
     switch (piece.role) {
       case 'mark':
@@ -131,20 +149,11 @@ export function BackgroundView({
         ))}
       </box>
       <box marginTop={1} flexShrink={0}>
-        {hint !== undefined ? (
-          // An agent's error, cut to one line.
-          <text {...CUT} attributes={DIM}>
-            <Ansi text={hint} />
+        {said.map((line, at) => (
+          <text key={at} {...TEXT} attributes={DIM}>
+            <Ansi text={line} />
           </text>
-        ) : (
-          <text {...TEXT} attributes={DIM}>
-            {hintOf(
-              'Enter to go to its call',
-              stop && `${stop} to stop`,
-              close,
-            )}
-          </text>
-        )}
+        ))}
       </box>
     </box>
   );

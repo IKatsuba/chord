@@ -8,7 +8,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
-import { stopRefused } from '../../../src/ui/background/view.ts';
+import { hintLines, stopRefused } from '../../../src/ui/background/view.ts';
 import assert from 'node:assert/strict';
 import { FORM_SCHEMA } from '../../fixtures/forms.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -952,4 +952,77 @@ describe('CHD-430 tester: a scrolled task keeps its identity', () => {
       }
     });
   }
+});
+
+describe('CHD-473 the frame says its hint, or an error in its place, whole', () => {
+  const crowd: BackgroundItem[] = Array.from({ length: 30 }, (_, index) => ({
+    kind: 'task',
+    id: `task-${index}`,
+    key: 1,
+    name: `task ${index}`,
+    startedAt: Date.now(),
+    status: { group: 'running' },
+    runtime: 'fake',
+    model: 'Fake Small',
+  }));
+  const inside = (line: string) =>
+    line.replace(/^│ ?/, '').replace(/ *│$/, '').trim();
+
+  test('at 46 columns the keys wrap after a `·`, and the rows give way to them within half the window', async () => {
+    const drawn = await draw(
+      <BackgroundView items={crowd} focus={crowd[0]} columns={46} rows={24} />,
+      { columns: 46, rows: 24 },
+    );
+
+    try {
+      const lines = drawn.frame().split('\n');
+      const top = lines.findIndex((line) => line.startsWith('╭'));
+      const bottom = lines.findIndex((line) => line.startsWith('╰'));
+
+      expect(bottom - top + 1).toBeLessThanOrEqual(12);
+      expect(inside(lines[bottom - 2]!)).toBe(
+        'Enter to go to its call · x to stop ·',
+      );
+      expect(inside(lines[bottom - 1]!)).toBe('Esc to close');
+      expect(drawn.frame()).toContain('❯ task 0');
+    } finally {
+      await drawn.unmount();
+    }
+  });
+
+  test('a stop error is said whole on as many lines as it takes, nothing cut', async () => {
+    const hint = stopRefused(
+      new Error(
+        'the adapter refused the stop because the task had already handed its result back',
+      ),
+    );
+    const drawn = await draw(
+      <BackgroundView
+        items={crowd.slice(0, 3)}
+        focus={crowd[0]}
+        hint={hint}
+        columns={46}
+        rows={24}
+      />,
+      { columns: 46, rows: 24 },
+    );
+
+    try {
+      const lines = drawn.frame().split('\n');
+      const bottom = lines.findIndex((line) => line.startsWith('╰'));
+      // The frame's last lines, 42 cells inside it at 46 columns.
+      const height = hintLines(hint, 42).length;
+
+      expect(height).toBeGreaterThan(1);
+      expect(
+        lines
+          .slice(bottom - height, bottom)
+          .map(inside)
+          .join(' '),
+      ).toBe(hint);
+      expect(drawn.frame()).not.toContain('…');
+    } finally {
+      await drawn.unmount();
+    }
+  });
 });

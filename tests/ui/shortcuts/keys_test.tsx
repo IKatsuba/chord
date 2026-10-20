@@ -1911,7 +1911,8 @@ describe('CHD-386 tester: movement panel entries', () => {
     expect(lines).toContain('tab to complete a command');
     expect(lines).toContain('tab enter to add a file');
     expect(lines).toContain('esc to close a picker or shortcuts');
-    expect(lines.at(-1)).toStrictEqual('? for shortcuts');
+    expect(lines.at(-2)).toStrictEqual('? for shortcuts');
+    expect(lines.at(-1)).toStrictEqual('any key to quit the crash screen');
   });
 
   test('the shared navigation line follows rebound keys once and disappears when unbound', () => {

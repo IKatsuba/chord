@@ -45,30 +45,6 @@ export const NAME_CELLS = 24;
 
 const GAP = '  ';
 
-/** What one way of fitting keeps, as the columns give way. */
-interface Fit {
-  /** An ended task's money after its state, which goes after its model (CHD-373). */
-  readonly spent: boolean;
-  /** A monitor's ` · N events` after its end. */
-  readonly endedEvents: boolean;
-  /** A task's model, then its runtime, after `task`. */
-  readonly model: boolean;
-  readonly runtime: boolean;
-}
-
-/**
- * The fullest first: an end's events go, then a task's model, its money,
- * then its runtime (CHD-373).
- */
-const FITS: readonly Fit[] = [
-  { spent: true, endedEvents: true, model: true, runtime: true },
-  { spent: true, endedEvents: false, model: true, runtime: true },
-  // A task's model goes before its money, as on a group's rows (CHD-373).
-  { spent: true, endedEvents: false, model: false, runtime: true },
-  { spent: false, endedEvents: false, model: false, runtime: true },
-  { spent: false, endedEvents: false, model: false, runtime: false },
-];
-
 /** `no events`, `1 event`, `3 events`. */
 function eventsWords(events: number): string {
   return events === 0
@@ -85,15 +61,10 @@ function after(ms: number): string {
 export function stateText(
   item: BackgroundItem,
   now: number,
-  {
-    endedEvents = true,
-    spent = true,
-  }: { readonly endedEvents?: boolean; readonly spent?: boolean } = {},
 ): { readonly text: string; readonly group: BackgroundGroup } {
   const { status } = item;
   // An ended task's money, after its state (CHD-373).
-  const money =
-    spent && item.kind === 'task' ? spentParts(item.spent).money : undefined;
+  const money = item.kind === 'task' ? spentParts(item.spent).money : undefined;
   const paid = money === undefined ? '' : ` · ${money}`;
   const events =
     item.events === undefined ? '' : ` · ${eventsWords(item.events)}`;
@@ -126,11 +97,10 @@ export function stateText(
       };
     default: {
       const ran = after(status.endedAt - item.startedAt);
-      const tail = endedEvents ? events : '';
 
       if (status.group === 'stopped') {
         return {
-          text: `■ ${status.word ?? 'stopped'} after ${ran}${tail}${paid}`,
+          text: `■ ${status.word ?? 'stopped'} after ${ran}${events}${paid}`,
           group: 'stopped',
         };
       }
@@ -155,7 +125,7 @@ export function stateText(
         status.end === undefined ? status.group : endWord(status.end);
 
       return {
-        text: `${glyph} ${word} after ${ran}${tail}`,
+        text: `${glyph} ${word} after ${ran}${events}`,
         group: status.group,
       };
     }
@@ -163,14 +133,55 @@ export function stateText(
 }
 
 /** An item's kind as its row says it: a task's with its runtime and model. */
-function kindText(item: BackgroundItem, fit: Fit): string {
-  return [
-    item.kind,
-    fit.runtime ? item.runtime : undefined,
-    fit.runtime && fit.model ? item.model : undefined,
-  ]
+function kindText(item: BackgroundItem): string {
+  return [item.kind, item.runtime, item.model]
     .filter((part) => part !== undefined)
     .join(' · ');
+}
+
+/**
+ * A kind in lines of at most `width` cells: broken after a ` · `, the `·`
+ * ending the line, or starting the next where even it does not fit; a part
+ * wider than a line wraps at its spaces (CHD-473).
+ */
+function kindIn(kind: string, width: number): string[] {
+  const lines: string[] = [];
+
+  for (const part of kind.split(' · ')) {
+    const last = lines.at(-1);
+
+    if (last === undefined) {
+      lines.push(...wrapped(part, width));
+    } else if (stringWidth(`${last} · ${part}`) <= width) {
+      lines[lines.length - 1] = `${last} · ${part}`;
+    } else if (stringWidth(`${last} ·`) <= width) {
+      lines[lines.length - 1] = `${last} ·`;
+
+      lines.push(...wrapped(part, width));
+    } else {
+      lines.push(...wrapped(`· ${part}`, width));
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * The least a kind's column holds: its widest part with a `·` beside it,
+ * after it or, where the line before is full, ahead of it, so a part never
+ * breaks inside itself there.
+ */
+function kindLeast(kinds: readonly string[]): number {
+  return Math.max(
+    0,
+    ...kinds.flatMap((kind) => {
+      const parts = kind.split(' · ');
+
+      return parts.map(
+        (part) => stringWidth(part) + (parts.length > 1 ? 2 : 0),
+      );
+    }),
+  );
 }
 
 /** A run of a row's line, by what it is, which its colour follows. */
@@ -217,8 +228,10 @@ function nameIn(name: string, width: number): string[] {
 
 /**
  * Every item's row in `width` cells: the columns padded to their widest, two
- * cells apart, giving way as `FITS` says; past the last, the state and the
- * owner go under the name, so nothing is cut.
+ * cells apart, and nothing gives way (CHD-473). Where they do not fit the
+ * kind wraps in the room the others leave it, after a ` · `, and the row
+ * grows a line; where even its widest part does not fit there, the state
+ * and the owner go under the name, so nothing is cut.
  */
 export function viewRows(
   items: readonly BackgroundItem[],
@@ -244,98 +257,105 @@ export function viewRows(
     text: item === focused ? '❯ ' : '  ',
     role: 'mark',
   });
+  const kinds = items.map(kindText);
+  const states = items.map((item) => stateText(item, now));
+  const stateWidth = widest(states.map(({ text }) => text));
+  const kindWidth = Math.min(
+    widest(kinds),
+    width -
+      (2 +
+        nameWidth +
+        GAP.length +
+        GAP.length +
+        stateWidth +
+        GAP.length +
+        ownerWidth),
+  );
 
-  for (const fit of FITS) {
-    const kinds = items.map((item) => kindText(item, fit));
-    const states = items.map((item) =>
-      stateText(item, now, { endedEvents: fit.endedEvents, spent: fit.spent }),
-    );
-    const kindWidth = widest(kinds);
-    const stateWidth = widest(states.map(({ text }) => text));
-    const total =
-      2 +
-      nameWidth +
-      GAP.length +
-      kindWidth +
-      GAP.length +
-      stateWidth +
-      GAP.length +
-      ownerWidth;
-
-    if (total > width && fit !== FITS[FITS.length - 1]) {
-      continue;
-    }
-
-    if (total > width) {
-      return stackedRows(items, {
-        names,
-        states,
-        owners,
-        nameWidth,
-        width,
-      }).map((lines, index) => ({
-        item: items[index]!,
-        focused: items[index] === focused,
-        lines: [[mark(items[index]!), ...lines[0]!], ...lines.slice(1)],
-      }));
-    }
-
-    return items.map((item, index) => {
-      const nameLines = nameIn(names[index]!, nameWidth);
-      const state = states[index]!;
-
-      return {
-        item,
-        focused: item === focused,
-        lines: nameLines.map((line, at): ViewCell[] =>
-          at === 0
-            ? [
-                mark(item),
-                { text: pad(line, nameWidth), role: 'name' },
-                { text: GAP, role: 'gap' },
-                { text: pad(kinds[index]!, kindWidth), role: 'kind' },
-                { text: GAP, role: 'gap' },
-                {
-                  text: pad(state.text, stateWidth),
-                  role: 'state',
-                  group: state.group,
-                },
-                { text: GAP, role: 'gap' },
-                { text: owners[index]!, role: 'owner' },
-              ]
-            : [
-                { text: '    ', role: 'gap' },
-                { text: line, role: 'name' },
-              ],
-        ),
-      };
-    });
+  if (kindWidth < kindLeast(kinds)) {
+    return stackedRows(items, {
+      names,
+      kinds,
+      states,
+      owners,
+      nameWidth,
+      width,
+    }).map((lines, index) => ({
+      item: items[index]!,
+      focused: items[index] === focused,
+      lines: [[mark(items[index]!), ...lines[0]!], ...lines.slice(1)],
+    }));
   }
 
-  return [];
+  return items.map((item, index) => {
+    const nameLines = nameIn(names[index]!, nameWidth);
+    const kindLines = kindIn(kinds[index]!, kindWidth);
+    const state = states[index]!;
+
+    return {
+      item,
+      focused: item === focused,
+      lines: Array.from(
+        { length: Math.max(nameLines.length, kindLines.length) },
+        (_, at): ViewCell[] => {
+          const name = nameLines[at] ?? '';
+          const kind = kindLines[at];
+
+          if (at === 0) {
+            return [
+              mark(item),
+              { text: pad(name, nameWidth), role: 'name' },
+              { text: GAP, role: 'gap' },
+              { text: pad(kind ?? '', kindWidth), role: 'kind' },
+              { text: GAP, role: 'gap' },
+              {
+                text: pad(state.text, stateWidth),
+                role: 'state',
+                group: state.group,
+              },
+              { text: GAP, role: 'gap' },
+              { text: owners[index]!, role: 'owner' },
+            ];
+          }
+
+          // Under the name two in, the kind's next line in its column.
+          return kind === undefined
+            ? [UNDER, { text: name, role: 'name' }]
+            : [
+                UNDER,
+                { text: pad(name, nameWidth - 2), role: 'name' },
+                { text: GAP, role: 'gap' },
+                { text: kind, role: 'kind' },
+              ];
+        },
+      ),
+    };
+  });
 }
 
 /** What every line of a row after its first starts with: under the name, two in. */
 const UNDER: ViewCell = { text: '    ', role: 'gap' };
 
 /**
- * Rows too wide for one line, two lines each: the name with its kind, its
- * parts giving way as `FITS` says, then the state and the owner, every line
- * after the first two cells further in than the name, so each name alone is
- * at the left edge. Where a name and even a bare kind do not fit, the kind
- * goes to a line of its own; a part longer than a line wraps, never cut. The
- * `❯` is the caller's, ahead of the first line.
+ * Rows too wide for one line, two lines each: the name with its kind, then
+ * the state and the owner, every line after the first two cells further in
+ * than the name, so each name alone is at the left edge. Where a name and
+ * its kind do not fit, the kind goes to lines of its own, wrapped after a
+ * ` · `; a part longer than a line wraps, never cut. The `❯` is the
+ * caller's, ahead of the first line.
  */
 function stackedRows(
   items: readonly BackgroundItem[],
   {
     names,
+    kinds: full,
     states,
     owners,
     nameWidth,
     width,
   }: {
     readonly names: readonly string[];
+    readonly kinds: readonly string[];
     readonly states: readonly {
       readonly text: string;
       readonly group: BackgroundGroup;
@@ -348,10 +368,9 @@ function stackedRows(
   const room = Math.max(1, width - UNDER.text.length);
   const widest = (texts: readonly string[]) =>
     Math.max(0, ...texts.map((text) => stringWidth(text)));
-  // The fullest kinds that fit beside the names on every row.
-  const kinds = FITS.map((fit) =>
-    items.map((item) => kindText(item, fit)),
-  ).find((each) => 2 + nameWidth + GAP.length + widest(each) <= width);
+  // The kinds beside the names where every one fits there.
+  const kinds =
+    2 + nameWidth + GAP.length + widest(full) <= width ? full : undefined;
   const kindWidth = kinds === undefined ? 0 : widest(kinds);
   const under = (
     text: string,
@@ -384,7 +403,10 @@ function stackedRows(
         .slice(1)
         .map((line): ViewCell[] => [UNDER, { text: line, role: 'name' }]),
       ...(kinds === undefined
-        ? under(kindText(item, FITS[FITS.length - 1]!), 'kind')
+        ? kindIn(full[index]!, room).map((line): ViewCell[] => [
+            UNDER,
+            { text: line, role: 'kind' },
+          ])
         : []),
       ...(together
         ? [

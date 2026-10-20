@@ -167,30 +167,36 @@ test('a row is name, kind, state and owner in columns two cells apart, the ❯ o
   ]);
 });
 
-test("narrower, an end's events go first, then a task's model, then its runtime; the state and owner stay", () => {
+test("narrower, nothing gives way: a task's kind wraps in the room the other columns leave it, after a ` · `, and its row grows a line (CHD-473)", () => {
   const at = (width: number) =>
     text(viewRows(ITEMS, { width, focus: undefined, now: NOW }));
 
   expect(at(85)).toStrictEqual([
-    '❯ CI run 4812        monitor                   ✗ exit code 1 after 3m 12s  main',
-    '  dev server errors  monitor                   running 4m 2s · 1 event     main',
-    '  parser tests       monitor                   running 2m 3s · 4 events    parser',
-    '  Fix the tokenizer  task · fake · Fake Small  ● permission 13s            main',
-    '  Fix the printer    task · fake · Fake Large  working 32s                 coder',
+    '❯ CI run 4812        monitor            ✗ exit code 1 after 3m 12s · 3 events  main',
+    '  dev server errors  monitor            running 4m 2s · 1 event                main',
+    '  parser tests       monitor            running 2m 3s · 4 events               parser',
+    '  Fix the tokenizer  task · fake ·      ● permission 13s                       main',
+    '                     Fake Small',
+    '  Fix the printer    task · fake ·      working 32s                            coder',
+    '                     Fake Large',
   ]);
+  // Less room than the kind's widest part: the state and owner go under
+  // the name, the kind whole beside it.
   expect(at(76)).toStrictEqual([
-    '❯ CI run 4812        monitor      ✗ exit code 1 after 3m 12s  main',
-    '  dev server errors  monitor      running 4m 2s · 1 event     main',
-    '  parser tests       monitor      running 2m 3s · 4 events    parser',
-    '  Fix the tokenizer  task · fake  ● permission 13s            main',
-    '  Fix the printer    task · fake  working 32s                 coder',
+    '❯ CI run 4812        monitor',
+    '    ✗ exit code 1 after 3m 12s · 3 events  main',
+    '  dev server errors  monitor',
+    '    running 4m 2s · 1 event  main',
+    '  parser tests       monitor',
+    '    running 2m 3s · 4 events  parser',
+    '  Fix the tokenizer  task · fake · Fake Small',
+    '    ● permission 13s  main',
+    '  Fix the printer    task · fake · Fake Large',
+    '    working 32s  coder',
   ]);
-  expect(at(66)[3]).toStrictEqual(
-    '  Fix the tokenizer  task     ● permission 13s            main',
-  );
 });
 
-test('narrower still, each item takes two lines: its name and kind, then its state and owner two cells further in', () => {
+test('narrower still, each item takes two lines or more: its name and kind, then its state and owner two cells further in, nothing given way (CHD-473)', () => {
   const at = (width: number) =>
     text(viewRows(ITEMS.slice(2, 4), { width, focus: undefined, now: NOW }));
 
@@ -200,16 +206,19 @@ test('narrower still, each item takes two lines: its name and kind, then its sta
     '  Fix the tokenizer  task · fake · Fake Small',
     '    ● permission 13s  main',
   ]);
-  // The kind's parts give way before it leaves the name's line.
+  // The kind does not fit beside the name: it goes to lines of its own,
+  // whole.
   expect(at(40)).toStrictEqual([
-    '❯ parser tests       monitor',
+    '❯ parser tests',
+    '    monitor',
     '    running 2m 3s · 4 events  parser',
-    '  Fix the tokenizer  task · fake',
+    '  Fix the tokenizer',
+    '    task · fake · Fake Small',
     '    ● permission 13s  main',
   ]);
 
-  // Not even a bare kind beside the name: it goes to a line of its own,
-  // and a state and owner too wide together go one under the other.
+  // A kind wider than a line wraps after a ` · `, and a state and owner
+  // too wide together go one under the other.
   const narrow = at(24);
 
   expect(narrow).toStrictEqual([
@@ -219,7 +228,8 @@ test('narrower still, each item takes two lines: its name and kind, then its sta
     '    events',
     '    parser',
     '  Fix the tokenizer',
-    '    task',
+    '    task · fake ·',
+    '    Fake Small',
     '    ● permission 13s',
     '    main',
   ]);
@@ -671,7 +681,7 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
   });
 });
 
-test("an ended task's row says its money after its state, which gives way after its model (CHD-373)", () => {
+test("an ended task's row says its money after its state, which never gives way (CHD-373, CHD-473)", () => {
   const spent = {
     cost: { amount: 0.0125, currency: 'USD' },
     tokens: { totalTokens: 2000 },
@@ -687,41 +697,20 @@ test("an ended task's row says its money after its state, which gives way after 
   expect(
     stateText({ ...ended, spent: { ...spent, estimated: true } }, NOW).text,
   ).toBe('✗ failed after 15s · ~$0.0125');
-  expect(stateText(ended, NOW, { spent: false }).text).toBe(
-    '✗ failed after 15s',
-  );
   // While it works, none.
   expect(
     stateText({ ...ended, status: { group: 'running' } }, NOW).text,
   ).not.toContain('$');
 
-  // Narrower and narrower: the model goes first, then the money, then the
-  // runtime (CHD-378.md, ac4ade0e).
-  const row = (width: number) =>
-    viewRows([ended], { width, focus: undefined, now: NOW })[0]!
-      .lines[0]!.map((cell) => cell.text)
-      .join('')
-      .trimEnd();
-  const seen: string[] = [];
+  // At any width its model, its money and its runtime all stay (CHD-473).
+  const drawn = (width: number) =>
+    text(viewRows([ended], { width, focus: undefined, now: NOW })).join(' ');
 
-  for (let width = 120; width > 40; width--) {
-    const now = row(width);
-
-    if (now !== seen.at(-1)) {
-      seen.push(now);
+  for (let width = 120; width > 30; width--) {
+    for (const part of ['task', 'fake', 'Fake Small', '$0.0125']) {
+      expect(drawn(width), `${width}`).toContain(part);
     }
   }
-
-  const firstWithout = (part: string) =>
-    seen.findIndex((line) => !line.includes(part));
-
-  expect(seen[0]).toContain('Fake Small');
-  expect(seen[0]).toContain('· $0.0125');
-  expect(firstWithout('Fake Small')).toBeLessThan(firstWithout('$0.0125'));
-  expect(firstWithout('$0.0125')).toBeLessThan(firstWithout('task · fake'));
-  expect(seen).toContainEqual(
-    expect.stringMatching(/task · fake +✗ failed after 15s · \$0\.0125/),
-  );
 });
 
 describe('CHD-373 S2 tester: zero and absent money in background states', () => {

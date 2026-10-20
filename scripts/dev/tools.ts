@@ -82,10 +82,14 @@ export function fmt(run: Run = spawn): number {
   return run([process.execPath, 'run', 'prettier', '--write', '.']);
 }
 
-/** The static checks in order, then the suite unless `only` static. */
+/**
+ * The static checks in order, then the suite unless `only` static; after
+ * tsc, that it checked every tracked TypeScript file (`covered.ts`).
+ */
 export function check(only: { static?: boolean }, run: Run = spawn): number {
   const steps = [
     () => run([process.execPath, 'run', 'tsc']),
+    () => run([process.execPath, 'scripts/dev/covered.ts']),
     () => lint([], run),
     () => run([process.execPath, 'run', 'prettier', '--check', '.']),
     () => run([process.execPath, 'test', 'lint/']),

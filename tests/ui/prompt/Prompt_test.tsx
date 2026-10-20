@@ -37,6 +37,27 @@ const CTRL_W = '\x17';
 const CTRL_Y = '\x19';
 const CTRL_Z = '\x1a';
 
+describe('CHD-480 tester: editing a search result with held controls', () => {
+  for (const columns of [80, 120]) {
+    test(`ctrl+r restores the cursor across control and wide cells at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await window.paste('verbatim search a\u000cb\t中c');
+          await window.press('\r');
+          await window.shows('"search a\\u000cb\\u0009中c"');
+          await window.press(CTRL_R);
+          await window.type('search');
+          await window.press('\r');
+          await window.press(LEFT);
+          await window.type('!');
+          await window.press('\r');
+          await window.shows('"search a\\u000cb\\u0009中!c"');
+        },
+        { columns, rows: columns === 80 ? 24 : 40 },
+      ));
+  }
+});
+
 test('Enter during a turn queues the prompt, and the queue runs in order', () =>
   withWindow(async (window) => {
     await send(window, 'plan');

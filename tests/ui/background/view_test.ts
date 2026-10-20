@@ -783,3 +783,175 @@ test("a task's runtime or model with CR, LF or tabs reads as spaces in every lay
     '❯ Fix the tokenizer  task · fake local · Fake Small model  working 32s  main',
   );
 });
+
+describe('CHD-473 T3 tester: complete metadata across layouts', () => {
+  const item = task(
+    'rich',
+    'Read 日本語 files and keep every name visible',
+    { group: 'done', endedAt: NOW },
+    {
+      runtime: 'fake\nlocal',
+      model: 'Public\t👩🏽‍💻🇯🇵é model',
+      owner: { name: '解析器', colour: 0 },
+      spent: { cost: { amount: 0.0125, currency: 'USD' }, estimated: true },
+    },
+  );
+  const compact = (text: string) => text.normalize('NFC').replace(/\s/g, '');
+  const graphemes = (text: string) =>
+    [
+      ...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(
+        text,
+      ),
+    ].map(({ segment }) => segment);
+
+  test('every field survives the column-to-stack boundary, without line overflow or changes to stored items', () => {
+    const before = structuredClone(item);
+    const layouts = new Set<boolean>();
+
+    for (let width = 24; width <= 180; width++) {
+      const row = viewRows([item], {
+        width,
+        focus: { key: 1, id: 'rich' },
+        now: NOW,
+      })[0]!;
+      const fields = (role: 'name' | 'kind' | 'state' | 'owner') =>
+        row.lines
+          .flat()
+          .filter((cell) => cell.role === role)
+          .map(({ text }) => text);
+
+      layouts.add(row.lines[0]!.some((cell) => cell.role === 'state'));
+      expect(row.item).toBe(item);
+      expect(row.focused).toBe(true);
+      expect(compact(fields('name').join(''))).toBe(compact(item.name));
+      expect(compact(fields('kind').join(''))).toBe(
+        compact('task · fake local · Public 👩🏽‍💻🇯🇵é model'),
+      );
+      expect(compact(fields('state').join(''))).toBe(
+        compact(stateText(item, NOW).text),
+      );
+      expect(compact(fields('owner').join(''))).toBe('解析器');
+
+      for (const line of row.lines) {
+        const text = line.map((cell) => cell.text).join('');
+
+        expect(
+          stringWidth(text),
+          `width ${width}: ${text}`,
+        ).toBeLessThanOrEqual(width);
+        expect(text).not.toMatch(/[\r\n\t]/);
+        expect(text).not.toContain('…');
+      }
+
+      for (const role of ['name', 'kind', 'state', 'owner'] as const) {
+        const pieces = fields(role).map(compact);
+
+        expect(
+          pieces.flatMap(graphemes),
+          `${role} graphemes at ${width}`,
+        ).toEqual(graphemes(pieces.join('')));
+      }
+
+      expect(item).toEqual(before);
+    }
+
+    expect(layouts).toEqual(new Set([false, true]));
+  });
+
+  test('zero and missing cost stay distinct while an ended state wraps', () => {
+    for (const width of [24, 36, 46, 60, 76, 116]) {
+      const zero: BackgroundItem = {
+        ...item,
+        spent: { cost: { amount: 0, currency: 'USD' }, estimated: true },
+      };
+      const { spent: _, ...missing } = item;
+      const state = (value: BackgroundItem) =>
+        compact(
+          viewRows([value], { width, focus: undefined, now: NOW })[0]!
+            .lines.flat()
+            .filter((cell) => cell.role === 'state')
+            .map(({ text }) => text)
+            .join(''),
+        );
+
+      expect(state(zero)).toContain('~$0.0000');
+      expect(state(missing)).not.toContain('$');
+      expect(state(zero)).toContain('reportedafter32s');
+    }
+  });
+
+  test('kind-driven tall rows scroll through every line with stable focus and keep metadata after resizing', () => {
+    const tall = {
+      ...item,
+      model: 'Public_model_with_every_part_kept '.repeat(12).trim(),
+    };
+    const other = task('other', 'Other task', { group: 'running' });
+    const items = [tall, other];
+
+    for (const width of [46, 76, 116]) {
+      const frame = { width, height: 4, now: NOW };
+      const rows = viewRows(items, {
+        width,
+        focus: { key: 1, id: 'rich' },
+        now: NOW,
+      });
+      const expected = rows[0]!.lines.length;
+      let at: ViewAt = { focus: { key: 1, id: 'rich' } };
+      const seen = new Set<number>();
+
+      expect(expected).toBeGreaterThan(frame.height);
+
+      for (let step = 0; step < expected + 4; step++) {
+        const shown = viewWindow(
+          viewRows(items, { width, focus: at.focus, now: NOW }),
+          frame.height,
+          at,
+          laidAt(width, frame.height),
+        );
+        const marked = edgeMarked(shown);
+
+        for (let line = shown.from; line < shown.from + shown.height; line++) {
+          if (line < expected) {
+            seen.add(line);
+          }
+        }
+
+        expect(marked.length).toBeLessThanOrEqual(frame.height);
+        expect(
+          marked.every(
+            ({ cells }) =>
+              stringWidth(cells.map(({ text }) => text).join('')) <= width,
+          ),
+        ).toBe(true);
+
+        if (seen.size === expected) {
+          break;
+        }
+
+        const next = moveView(items, at, 1, frame);
+
+        expect(next).toBeDefined();
+        expect(next!.focus).toEqual({ key: 1, id: 'rich' });
+
+        at = next!;
+      }
+
+      expect(seen.size).toBe(expected);
+
+      const resized = viewWindow(
+        viewRows(items, { width: width + 2, focus: at.focus, now: NOW }),
+        frame.height,
+        at,
+        laidAt(width + 2, frame.height),
+      );
+
+      expect(resized.from).toBe(0);
+      expect(
+        edgeMarked(resized)[0]!
+          .cells.map(({ text }) => text)
+          .join(''),
+      ).toStartWith('❯ Read');
+      expect(items[0]).toBe(tall);
+    }
+  });
+});

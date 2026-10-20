@@ -1,6 +1,6 @@
- ▀▄     chord v0.55.2
+ ▀▄     chord v0.56.0
  ▀▀▀▄   fake · Fake Large with a 1M context window
- ▄▀▀▀   /private/tmp/chord-qa.after
+ ▄▀▀▀   /private/tmp/chord-qa.panel/work
  ▀▀     ? for shortcuts · /help
 
 

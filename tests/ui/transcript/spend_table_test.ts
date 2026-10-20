@@ -80,13 +80,17 @@ test("the window's table at 120 columns reads as CHD-378's mock: each tab with i
   ]);
 });
 
-test('at 80 columns a note that would not fit takes its short form', () => {
-  expect(lines(WINDOW, 74)).toContain(
-    '  bugfix             $0.0500   8,000  team run of 3',
-  );
-  expect(lines(WINDOW, 74)).toContain(
+test('at 80 columns a note that does not fit wraps in its cell after a ` · `, under its first letter, no word dropped (CHD-473)', () => {
+  expect(lines(WINDOW, 72)).toStrictEqual([
+    'This window             Cost  Tokens',
+    '1 fake               $0.0875  14,000',
+    '  main               $0.0250   4,000',
     '  Fix the tokenizer  $0.0125   2,000  task agent, ended',
-  );
+    '  bugfix             $0.0500   8,000  team run: lead $0.0250 ·',
+    '                                      tester $0.0125 · coder $0.0125',
+    '2 fake               $0.0125   2,000',
+    'Total                $0.1000  16,000',
+  ]);
 });
 
 test('an estimate says whose prices, a figure nobody reported says so, and the total gathers both', () => {
@@ -134,10 +138,21 @@ test('an estimate says whose prices, a figure nobody reported says so, and the t
     '3 gemini     not reported        —',
     "Total            ~$0.4370  192,400  part chord's estimate; gemini not reported",
   ]);
-  // Too narrow for even the short one whole: cut at the row's end.
-  expect(lines(mixed, 50).at(-1)).toBe(
-    'Total            ~$0.4370  192,400  part estimate…',
-  );
+  // Narrow, each note wraps in its cell, at its spaces, and inside a word
+  // only where that word alone is wider than the cell (CHD-473).
+  expect(lines(mixed, 50)).toStrictEqual([
+    'This window          Cost   Tokens',
+    '1 fake            $0.0250    4,000',
+    "2 codex          ~$0.4120  188,400  chord's",
+    '                                    estimate from',
+    "                                    gpt-5.3-codex'",
+    '                                    s price',
+    '3 gemini     not reported        —',
+    "Total            ~$0.4370  192,400  part chord's",
+    '                                    estimate;',
+    '                                    gemini not',
+    '                                    reported',
+  ]);
 });
 
 test('closed agents and tabs, sessions /clear let go, a running task, an older sum and turns left out each say so', () => {
@@ -322,7 +337,7 @@ test("each task sits under the session that started it, a closed agent's too, ev
   ]);
 });
 
-test('no row is wider than the table: a long name is cut at a third of it by display width, CJK never split, and notes cut last part first', () => {
+test('no row is wider than the table and nothing is cut: a long name wraps in a third of it by display width, CJK never split, and notes wrap between their parts (CHD-473)', () => {
   const window: SpendPart[] = [
     {
       name: '1 fake',
@@ -373,21 +388,36 @@ test('no row is wider than the table: a long name is cut at a third of it by dis
       expect(stringWidth(line), line).toBeLessThanOrEqual(width);
     }
 
-    expect(drawn.some((line) => line.includes('…'))).toBe(true);
+    expect(drawn.some((line) => line.includes('…'))).toBe(false);
   }
 
-  const at72 = lines(window, 72);
-
-  // A third of 72, the indent counted: the name column is 24 cells.
-  expect(at72[3]).toStartWith('  Rewrite the tokenizer…');
-  // Two cells a character: cut whole, never half one.
-  expect(at72[4]).toStartWith('  日本語のエージェント…');
-
-  // Its notes as far as the row goes, the last cut, the first whole.
-  const docs = at72.find((line) => line.startsWith('  docs'))!;
-
-  expect(stringWidth(docs)).toBe(72);
-  expect(docs).toMatch(/~\$0\.0200 +— {2}closed; part estimate; .*…$/);
+  expect(lines(window, 72)).toStrictEqual([
+    'This window                       Cost  Tokens',
+    '1 fake                        ~$0.0445   2,000',
+    '  main                         $0.0100       —',
+    // A third of 72, the indent counted: the name column is 24 cells, and
+    // the name's next lines start under its first letter.
+    '  Rewrite the tokenizer        $0.0125   2,000  task agent, ended',
+    '  as a single pass over',
+    '  the source that reads',
+    '  every token once',
+    // Two cells a character: whole ones on each line, never half of one.
+    '  日本語のエージェントの       $0.0020       —  agent',
+    '  名前',
+    '  🧪 tester               not reported       —  agent',
+    // Each part whole on a line, but one wider than the cell.
+    '  docs                        ~$0.0200       —  agent, closed;',
+    "                                                part chord's estimate;",
+    '                                                as last reported before',
+    '                                                Oct 12;',
+    '                                                2 turns not counted',
+    '2 gemini                  not reported       —',
+    "Total                         ~$0.0445   2,000  part chord's estimate;",
+    '                                                part as last reported;',
+    '                                                2 turns not counted;',
+    '                                                🧪 tester not reported;',
+    '                                                gemini not reported',
+  ]);
 });
 
 test('a session that reported nothing but a turn left out still says that turn', () => {
@@ -473,4 +503,108 @@ test("a name over several lines, a task's, an agent's or a run member's, stays o
         line.includes('task agent of test er, running'),
     ),
   ).toBe(true);
+});
+
+test("the window's table reads as CHD-378's mocks at 120 and 80 columns: names and notes wrap in their cells, figures on a row's first line (CHD-473)", () => {
+  const window: SpendPart[] = [
+    {
+      name: '1 fake',
+      kind: 'tab',
+      parts: [
+        {
+          name: 'main',
+          kind: 'main',
+          agent: 'fake',
+          figure: { cost: USD(0.025), tokens: 4000 },
+          parts: [
+            {
+              name: 'Rewrite the tokenizer as a single pass over the source',
+              kind: 'task',
+              ended: true,
+              figure: { cost: USD(0.0125), tokens: 2000 },
+            },
+          ],
+        },
+        {
+          name: 'bugfix',
+          kind: 'team',
+          parts: [
+            {
+              name: 'lead',
+              kind: 'member',
+              figure: { cost: USD(0.025), tokens: 4000 },
+            },
+            {
+              name: 'tester',
+              kind: 'member',
+              figure: { cost: USD(0.025), tokens: 4000 },
+              parts: [
+                {
+                  name: 'Run the parser suite',
+                  kind: 'task',
+                  ended: true,
+                  figure: { cost: USD(0.0125), tokens: 2000 },
+                },
+              ],
+            },
+            {
+              name: 'coder',
+              kind: 'member',
+              figure: { cost: USD(0.025), tokens: 4000 },
+            },
+          ],
+        },
+        {
+          name: 'docs',
+          kind: 'agent',
+          figure: {
+            cost: USD(0.0375),
+            tokens: 6000,
+            estimated: 'all',
+            models: ['gpt-6.1-sol'],
+            uncounted: 1,
+          },
+        },
+        { name: 'parser', kind: 'agent' },
+      ],
+    },
+  ];
+
+  expect(lines(window, 112)).toStrictEqual([
+    'This window                                    Cost  Tokens',
+    '1 fake                                     ~$0.1625  26,000',
+    '  main                                      $0.0250   4,000',
+    '    Rewrite the tokenizer as a single       $0.0125   2,000  task agent, ended',
+    '    pass over the source',
+    '  bugfix                                    $0.0750  12,000  team run: lead $0.0250 · tester $0.0250 ·',
+    '                                                             coder $0.0250',
+    '    Run the parser suite                    $0.0125   2,000  task agent of tester, ended',
+    "  docs                                     ~$0.0375   6,000  agent; chord's estimate from gpt-6.1-sol's price;",
+    '                                                             1 turn not counted',
+    '  parser                               not reported       —  agent',
+    "Total                                      ~$0.1625  26,000  part chord's estimate; 1 turn not counted;",
+    '                                                             parser not reported',
+  ]);
+  expect(lines(window, 72)).toStrictEqual([
+    'This window                       Cost  Tokens',
+    '1 fake                        ~$0.1625  26,000',
+    '  main                         $0.0250   4,000',
+    '    Rewrite the                $0.0125   2,000  task agent, ended',
+    '    tokenizer as a',
+    '    single pass over the',
+    '    source',
+    '  bugfix                       $0.0750  12,000  team run: lead $0.0250 ·',
+    '                                                tester $0.0250 ·',
+    '                                                coder $0.0250',
+    '    Run the parser suite       $0.0125   2,000  task agent of tester,',
+    '                                                ended',
+    '  docs                        ~$0.0375   6,000  agent;',
+    "                                                chord's estimate from",
+    "                                                gpt-6.1-sol's price;",
+    '                                                1 turn not counted',
+    '  parser                  not reported       —  agent',
+    "Total                         ~$0.1625  26,000  part chord's estimate;",
+    '                                                1 turn not counted;',
+    '                                                parser not reported',
+  ]);
 });

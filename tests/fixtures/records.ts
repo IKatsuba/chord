@@ -28,7 +28,8 @@ export interface Sending {
  * `answer`, each form or link with that reply, or `interrupt` for the
  * person interrupting the turn while it waits. `agent` is the name the
  * session is opened as, `fake` unless a test needs another's ways; with
- * `lateCost`, each turn is waited on until its cost has come after it, and
+ * `lateCost`, each turn is waited on until both its answer and its cost have
+ * come, in whichever order the wire brings them (CHD-467), and
  * with `until`, the session is closed only once an event it holds for has
  * come, the agent's own work after the prompts.
  */
@@ -66,8 +67,18 @@ export async function recordSession({
     reject: failed,
   } = Promise.withResolvers<string>();
   let ended: (() => void) | undefined;
-  /** With `lateCost`, the turn has answered and its cost is still to come. */
+  /** With `lateCost`, what of the turn has come: its answer, its cost. */
   let answered = false;
+  let costed = false;
+  const both = () => {
+    if (answered && costed) {
+      answered = false;
+      costed = false;
+
+      ended?.();
+    }
+  };
+
   const { promise: held, resolve: hold } = Promise.withResolvers<void>();
   const conversation = new Conversation(
     (signal) =>
@@ -118,17 +129,19 @@ export async function recordSession({
       ) {
         if (lateCost) {
           answered = true;
+
+          both();
         } else {
           ended?.();
         }
       } else if (
-        answered &&
+        lateCost &&
         event.type === 'update' &&
         event.update.sessionUpdate === 'usage_update'
       ) {
-        answered = false;
+        costed = true;
 
-        ended?.();
+        both();
       }
     },
     Date.now,

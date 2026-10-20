@@ -205,15 +205,24 @@ test("a cost that comes after its turn's answer, as Claude's can, is still that 
     });
 
     const entries = await readPast((await theRecord(dir)).path);
-    const usage = entries.filter((entry) => entry.type === 'usage');
+    const usage = entries.flatMap((entry) =>
+      entry.type === 'usage' ? [entry] : [],
+    );
+    const turns = [...new Set(usage.map((entry) => entry.turnId))];
 
-    // Each turn's line once at its end, with no cost yet, then again.
-    expect(usage.map((entry) => 'cost' in entry)).toStrictEqual([
-      false,
-      true,
-      false,
-      true,
-    ]);
+    // Each turn's last line has its cost: written again with it where the
+    // cost came after the answer, or once where it came first, which of the
+    // two the wire decides (CHD-467); the after-the-answer path itself is
+    // pinned by TurnCosts' own tests.
+    expect(turns).toHaveLength(2);
+
+    for (const id of turns) {
+      const lines = usage.filter((entry) => entry.turnId === id);
+
+      expect('cost' in lines.at(-1)!, id).toBe(true);
+      expect(lines.length, id).toBeLessThanOrEqual(2);
+    }
+
     expect(costs(entries)).toStrictEqual([turn(0.0125), turn(0.0125)]);
   }));
 
@@ -1104,11 +1113,19 @@ describe('CHD-373 S3c: a turn running as its session is let go', () => {
       );
 
       try {
-        expect(
-          events.flatMap((event) =>
-            event.type === 'retired_usage' ? [event.cost?.amount] : [],
-          ),
-        ).toStrictEqual([0.01, 0.02]);
+        const retired = events.flatMap((event) =>
+          event.type === 'retired_usage' ? [event.cost?.amount] : [],
+        );
+
+        // The turn's last cost is the late one: said again after its 0.01
+        // where it came after the answer, or alone where the wire brought it
+        // first (CHD-467); the after-the-answer path itself is pinned by
+        // TurnCosts' own tests.
+        expect(retired.at(-1)).toBe(0.02);
+        expect(retired.slice(0, -1).every((amount) => amount === 0.01)).toBe(
+          true,
+        );
+        expect(retired.length).toBeLessThanOrEqual(2);
 
         const entries = await readPast(record);
 

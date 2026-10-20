@@ -7,6 +7,7 @@
  * subagents that outlive their turn.
  */
 import stringWidth from 'string-width';
+import wrapAnsi from 'wrap-ansi';
 import type { PlanEntry } from '@agentclientprotocol/sdk';
 import type {
   Entry,
@@ -439,81 +440,176 @@ export function groupHeader(agents: readonly Subagent[]): {
   };
 }
 
+/** A run of a group row's line, styled as a call's headline is drawn. */
+export interface RowRun {
+  readonly text: string;
+  readonly style: 'bold' | 'dim' | 'plain';
+  /** Chord's counts after the title, which a selection leaves out. */
+  readonly counts?: true;
+}
+
+/** A word of a row: one or more runs that stay together on a line. */
+type Word = readonly RowRun[];
+
+function wordWidth(word: Word): number {
+  return word.reduce((all, run) => all + stringWidth(run.text), 0);
+}
+
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/** `text` on one line: every run of whitespace one space, as a title is shown. */
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+/** `word` in lines of at most `width` cells, a character never split. */
+function broken(word: Word, width: number): RowRun[][] {
+  const lines: RowRun[][] = [[]];
+  let used = 0;
+
+  for (const run of word) {
+    // By grapheme, as the terminal draws them: a family emoji or a letter
+    // with its accents is one character, never split, its width its own.
+    for (const { segment: char } of GRAPHEMES.segment(run.text)) {
+      const cells = stringWidth(char);
+
+      if (used + cells > width && used > 0) {
+        lines.push([]);
+
+        used = 0;
+      }
+
+      const line = lines.at(-1)!;
+      const last = line.at(-1);
+
+      if (last?.style === run.style && last.counts === run.counts) {
+        line[line.length - 1] = { ...last, text: last.text + char };
+      } else {
+        line.push({ ...run, text: char });
+      }
+
+      used += cells;
+    }
+  }
+
+  return lines;
+}
+
 /**
  * A child's row in a group, laid out for `width` cells: `Agent(<title>)`,
- * then what it did and, once it has ended, how long it took. The counts go
- * first when it does not fit, then the title is cut, its brackets kept.
+ * its task's runtime and model, then what it did and, once it has ended,
+ * how long it took. Nothing gives way and nothing is cut (CHD-473): a row
+ * that does not fit wraps, after a ` · ` where it can, inside the title at
+ * its spaces where it must, and inside a word only where that word alone is
+ * wider; its lines after the first start under the title's first letter.
  */
-export function groupRow(
-  subagent: Subagent,
-  width: number,
-): { readonly headline: Headline; readonly counts?: string } {
-  const whole = agentHeadline(subagent);
-  const head = agentHeadline(subagent, false);
-  const counted = (gives: { tokens?: boolean; money?: boolean }) => {
-    const said = countsOf(subagent, gives);
+export function groupRow(subagent: Subagent, width: number): RowRun[][] {
+  const headline = agentHeadline(subagent);
+  // Shown on lines of their own making: a title's or a model's line breaks
+  // and tabs are spaces here, as a prompt's are in a row.
+  const { name, tag } = headline;
+  const arg = headline.arg === undefined ? undefined : oneLine(headline.arg);
+  const note =
+    headline.note === undefined
+      ? undefined
+      : ` · ${oneLine(headline.note.replace(/^ · /, ''))}`;
+  const said = oneLine(countsOf(subagent));
+  // What follows the title, each part whole where it fits: its task's
+  // runtime and model, then chord's counts.
+  const noted = note === undefined ? [] : note.replace(/^ · /, '').split(' · ');
+  const parts = [...noted, ...(said === '' ? [] : said.split(' · '))];
+  const head: RowRun[] = [
+    { text: name, style: 'bold' },
+    ...(tag === undefined ? [] : [{ text: tag, style: 'dim' as const }]),
+  ];
+  const titled = (arg ?? '').split(' ');
+  // The title's words, the name and the bracket held to the first and last.
+  const words: Word[] =
+    arg === undefined
+      ? [head]
+      : titled.map((each, at) => [
+          ...(at === 0
+            ? [...head, { text: '(', style: 'plain' as const }]
+            : []),
+          { text: each, style: 'plain' as const },
+          ...(at === titled.length - 1
+            ? [{ text: ')', style: 'plain' as const }]
+            : []),
+        ]);
+  const room = Math.max(1, width);
+  const lines: RowRun[][] = [];
+  let line: RowRun[] = [];
+  let used = 0;
+  const start = (word: Word) => {
+    // A part too wide for a line wraps at its own spaces first, a word in
+    // it only where that word alone is wider; the title's first word, which
+    // holds the name, breaks where it must.
+    const pieces =
+      wordWidth(word) <= room
+        ? [[...word]]
+        : word.length === 1
+          ? wrapAnsi(word[0]!.text, room, { trim: true })
+              .split('\n')
+              .flatMap((text) => broken([{ ...word[0]!, text }], room))
+          : broken(word, room);
 
-    return said === '' ? '' : ` · ${said}`;
+    lines.push(...pieces.slice(0, -1));
+
+    line = pieces.at(-1)!;
+    used = wordWidth(line);
   };
 
-  const counts = counted({});
+  for (const word of words) {
+    if (line.length === 0) {
+      start(word);
+    } else if (used + 1 + wordWidth(word) <= room) {
+      line.push({ text: ' ', style: 'plain' }, ...word);
 
-  // A task's model goes first, then its tokens, its money and the rest of
-  // the counts, then the title is cut (CHD-373).
-  if (width - headlineWidth(whole) >= stringWidth(counts)) {
-    return { headline: whole, counts };
-  }
-
-  const room = width - headlineWidth(head);
-
-  for (const fewer of [
-    counts,
-    counted({ tokens: false }),
-    counted({ tokens: false, money: false }),
-  ]) {
-    if (room >= stringWidth(fewer)) {
-      return { headline: head, counts: fewer };
+      used += 1 + wordWidth(word);
+    } else {
+      lines.push(line);
+      start(word);
     }
   }
 
-  if (room >= 0 || head.arg === undefined) {
-    return { headline: head };
+  for (const [at, part] of parts.entries()) {
+    // A count, and the `·` before it, is chord's.
+    const dim = {
+      style: 'dim' as const,
+      ...(at >= noted.length ? { counts: true as const } : {}),
+    };
+    const word: Word = [{ text: part, ...dim }];
+
+    if (used + 3 + wordWidth(word) <= room) {
+      line.push({ text: ` · ${part}`, ...dim });
+
+      used += 3 + wordWidth(word);
+    } else if (used + 2 <= room) {
+      // Broken after its `·`, the next part starting the next line.
+      line.push({ text: ' ·', ...dim });
+      lines.push(line);
+      start(word);
+    } else {
+      // No room left for the `·` either: it starts the next line.
+      lines.push(line);
+      start([{ text: `· ${part}`, ...dim }]);
+    }
   }
 
-  return {
-    headline: {
-      ...head,
-      arg: cutEnd(head.arg, Math.max(stringWidth(head.arg) + room, 1)),
-    },
-  };
-}
+  // Each line's runs of one style as one.
+  return [...lines, line].map((runs) =>
+    runs.reduce<RowRun[]>((merged, run) => {
+      const last = merged.at(-1);
 
-function headlineWidth({ name, arg, tag, note }: Headline): number {
-  return (
-    stringWidth(name) +
-    (tag === undefined ? 0 : stringWidth(tag)) +
-    (arg === undefined ? 0 : stringWidth(arg) + 2) +
-    (note === undefined ? 0 : stringWidth(note))
+      if (last?.style === run.style && last.counts === run.counts) {
+        merged[merged.length - 1] = { ...last, text: last.text + run.text };
+      } else {
+        merged.push(run);
+      }
+
+      return merged;
+    }, []),
   );
-}
-
-/** `text` in at most `width` cells, `…` the last when it was cut. */
-function cutEnd(text: string, width: number): string {
-  if (stringWidth(text) <= width) {
-    return text;
-  }
-
-  let kept = '';
-
-  for (const char of text) {
-    if (stringWidth(`${kept}${char}…`) > width) {
-      break;
-    }
-
-    kept += char;
-  }
-
-  return `${kept.trimEnd()}…`;
 }
 
 /**

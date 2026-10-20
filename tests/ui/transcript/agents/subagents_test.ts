@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import stringWidth from 'string-width';
 import type {
   Entry,
   PermissionWait,
@@ -269,7 +270,7 @@ test('the group header runs, then finishes, or says what went wrong', () => {
   });
 });
 
-test('a row drops its counts before its title is cut, and keeps its brackets', () => {
+test('a row that does not fit wraps after a ` · `, inside its title at its spaces where it must, and drops nothing (CHD-473)', () => {
   const timed = agent({
     ...DRAW,
     state: 'completed',
@@ -277,22 +278,56 @@ test('a row drops its counts before its title is cut, and keeps its brackets', (
     endedAt: 28_000,
     entries: [tool('c', 'Read a.ts'), tool('d', 'Read b.ts')],
   });
-  const title = { name: 'Agent', arg: DRAW.title! };
+  const lines = (width: number) =>
+    groupRow(timed, width).map((runs) => runs.map(({ text }) => text).join(''));
 
-  expect(groupRow(timed, 120)).toStrictEqual({
-    headline: title,
-    counts: ' · 2 tool uses · 28s',
-  });
-  // `Agent(…)` is 66 cells; the counts need 20 more.
-  expect(groupRow(timed, 80)).toStrictEqual({ headline: title });
-  expect(groupRow(timed, 66)).toStrictEqual({ headline: title });
-  expect(groupRow(timed, 30)).toStrictEqual({
-    headline: { name: 'Agent', arg: 'Find where tool calls…' },
-  });
-  expect(groupRow(agent({ id: 'a' }), 20)).toStrictEqual({
-    headline: { name: 'Agent' },
-    counts: ' · 0 tool uses',
-  });
+  // The name bold, the title plain, what follows dim.
+  expect(groupRow(timed, 120)).toStrictEqual([
+    [
+      { text: 'Agent', style: 'bold' },
+      { text: `(${DRAW.title!})`, style: 'plain' },
+      { text: ' · 2 tool uses · 28s', style: 'dim', counts: true },
+    ],
+  ]);
+  // `Agent(…)` is 66 cells.
+  // `Agent(…)` fills 66 cells: the `·` starts the next line.
+  expect(lines(66)).toStrictEqual([
+    `Agent(${DRAW.title!})`,
+    '· 2 tool uses · 28s',
+  ]);
+  expect(lines(70)).toStrictEqual([
+    `Agent(${DRAW.title!}) ·`,
+    '2 tool uses · 28s',
+  ]);
+  expect(lines(30)).toStrictEqual([
+    'Agent(Find where tool calls',
+    'are drawn on screen and how',
+    'they fold) · 2 tool uses · 28s',
+  ]);
+  // Where even the `·` does not fit after a part, it starts the next line.
+  expect(lines(12)).toStrictEqual([
+    'Agent(Find',
+    'where tool',
+    'calls are',
+    'drawn on',
+    'screen and',
+    'how they',
+    'fold) ·',
+    '2 tool uses',
+    '· 28s',
+  ]);
+
+  for (const width of [12, 30, 66, 80, 120]) {
+    for (const line of lines(width)) {
+      expect(line.length, line).toBeLessThanOrEqual(width);
+    }
+  }
+
+  expect(
+    groupRow(agent({ id: 'a' }), 20).map((runs) =>
+      runs.map(({ text }) => text).join(''),
+    ),
+  ).toStrictEqual(['Agent · 0 tool uses']);
 });
 
 test("a child's permission names the way down to it, whole, however long", () => {
@@ -441,29 +476,19 @@ test("an ended task's block says its tokens and money between its tool uses and 
   ).toBe('Done (2 tool uses · 1.2M tokens · 13s)');
 });
 
-test("an ended task's group row gives its tokens way first, then its money, then the rest of its counts (CHD-373)", () => {
-  const counts = (width: number) => groupRow(SPENT_TASK, width).counts;
+test("an ended task's group row keeps its tokens, its money and its counts at every width, wrapping where they do not fit (CHD-373, CHD-473)", () => {
+  const said = (width: number) =>
+    groupRow(SPENT_TASK, width)
+      .map((runs) => runs.map(({ text }) => text).join(''))
+      .join(' ');
 
-  expect(counts(200)).toBe(' · 2 tool uses · 2.0k tokens · $0.0125 · 13s');
+  expect(said(200)).toContain(' · 2 tool uses · 2.0k tokens · $0.0125 · 13s');
 
-  // Narrower and narrower: the tokens go first, then the money, then the
-  // rest of the counts.
-  const seen: (string | undefined)[] = [];
-
-  for (let width = 200; width > 0; width--) {
-    const now = counts(width);
-
-    if (now !== seen.at(-1)) {
-      seen.push(now);
+  for (let width = 200; width > 10; width--) {
+    for (const part of ['2 tool uses', '2.0k tokens', '$0.0125', '13s']) {
+      expect(said(width), `${width}`).toContain(part);
     }
   }
-
-  expect(seen).toStrictEqual([
-    ' · 2 tool uses · 2.0k tokens · $0.0125 · 13s',
-    ' · 2 tool uses · $0.0125 · 13s',
-    ' · 2 tool uses · 13s',
-    undefined,
-  ]);
 });
 
 describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {
@@ -518,7 +543,7 @@ describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {
     ).toMatchObject({ text: 'Done (2 tool uses · 13s)' });
   });
 
-  test('a shrinking estimated group row drops its model, tokens, money, then counts in that order', () => {
+  test('a shrinking estimated group row wraps without losing its title, model, tokens, money, tool uses or time', () => {
     const task = {
       ...SPENT_TASK,
       task: {
@@ -527,19 +552,165 @@ describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {
         spent: { ...SPENT_TASK.task!.spent!, estimated: true as const },
       },
     };
-    const rows = Array.from({ length: 199 }, (_, index) =>
-      groupRow(task, 200 - index),
-    );
-    const lostModel = rows.findIndex(
-      (row) => !row.headline.note?.includes('A deliberately long model'),
-    );
-    const lostTokens = rows.findIndex((row) => !row.counts?.includes('tokens'));
-    const lostMoney = rows.findIndex((row) => !row.counts?.includes('~$'));
-    const lostCounts = rows.findIndex((row) => row.counts === undefined);
+    const said = (width: number) =>
+      groupRow(task, width)
+        .map((runs) => runs.map(({ text }) => text).join(''))
+        .join(' ');
 
-    expect(lostModel).toBeGreaterThan(0);
-    expect(lostModel).toBeLessThan(lostTokens);
-    expect(lostTokens).toBeLessThan(lostMoney);
-    expect(lostMoney).toBeLessThan(lostCounts);
+    for (let width = 200; width > 10; width--) {
+      const text = said(width);
+
+      for (const part of [
+        'Agent',
+        'fake',
+        'A deliberately long model',
+        '2.0k tokens',
+        '~$0.0125',
+        '2 tool uses',
+        '13s',
+      ]) {
+        expect(text.replace(/\s/g, ''), `width ${width}`).toContain(
+          part.replace(/\s/g, ''),
+        );
+      }
+
+      expect(text, `width ${width}`).not.toContain('…');
+    }
+  });
+});
+
+describe('CHD-473 a group row breaks only between whole graphemes, its title and task on lines of their own making', () => {
+  const graphemes = (text: string) =>
+    [
+      ...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(
+        text,
+      ),
+    ].map(({ segment }) => segment);
+  const family = '👨‍👩‍👧‍👦';
+  const accented = 'é';
+
+  for (const [label, word] of [
+    ['a ZWJ family', family.repeat(6)],
+    ['combining accents', accented.repeat(12)],
+  ] as const) {
+    test(`a first word of ${label} wider than the line breaks between whole graphemes, its width kept`, () => {
+      const rows = groupRow(agent({ id: 'g', title: word }), 8);
+      const texts = rows.map((runs) => runs.map(({ text }) => text).join(''));
+
+      for (const text of texts) {
+        expect(stringWidth(text), text).toBeLessThanOrEqual(8);
+      }
+
+      // Every grapheme whole, and all of them, in order.
+      expect(texts.flatMap(graphemes)).toStrictEqual(graphemes(texts.join('')));
+      // Nothing lost or added but the spaces the line breaks stand for.
+      expect(texts.join('').replaceAll(' ', '')).toBe(
+        `Agent(${word})·0tooluses`,
+      );
+      // The name bold, the title plain, the counts dim and chord's.
+      expect(rows[0]![0]).toStrictEqual({ text: 'Agent', style: 'bold' });
+      expect(rows.flat().filter((run) => run.counts === true)).not.toHaveLength(
+        0,
+      );
+      expect(
+        rows
+          .flat()
+          .filter((run) => run.text.includes(word.slice(0, 2)))
+          .every((run) => run.style === 'plain' && run.counts === undefined),
+      ).toBe(true);
+    });
+  }
+
+  test("a title's or a task's CR, LF and tabs read as spaces, no run holding a line break", () => {
+    const rows = groupRow(
+      agent({
+        id: 't',
+        title: 'Read\nfiles\r\nand\tthe tests',
+        task: {
+          name: 'Read files',
+          runtime: 'fake',
+          model: 'fake\nlarge',
+        },
+      }),
+      200,
+    );
+
+    expect(
+      rows.map((runs) => runs.map(({ text }) => text).join('')),
+    ).toStrictEqual([
+      'Agent(Read files and the tests) · fake · fake large · 0 tool uses',
+    ]);
+    expect(rows.flat().some((run) => /[\r\n\t]/.test(run.text))).toBe(false);
+  });
+});
+
+describe('CHD-473 T2 tester: grapheme and selectable-run boundaries', () => {
+  const graphemes = (text: string) =>
+    [
+      ...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(
+        text,
+      ),
+    ].map(({ segment }) => segment);
+  const compact = (text: string) => text.normalize('NFC').replace(/\s/g, '');
+  const rich = {
+    ...SPENT_TASK,
+    title: 'Read\n👩🏽‍💻日本語🇯🇵é1️⃣\r\nfiles\twithout loss',
+    task: {
+      ...SPENT_TASK.task!,
+      model: 'Public\n👨‍👩‍👧‍👦é🇺🇳1️⃣\tmodel',
+      spent: { ...SPENT_TASK.task!.spent!, estimated: true as const },
+    },
+  };
+
+  test('each narrow line and styled run ends at a grapheme boundary, with every visible part retained', () => {
+    const canonical = groupRow(rich, 500)
+      .flat()
+      .map(({ text }) => text)
+      .join('');
+
+    for (let width = 2; width <= 80; width++) {
+      const rows = groupRow(rich, width);
+      const texts = rows.map((runs) => runs.map(({ text }) => text).join(''));
+
+      expect(texts.flatMap(graphemes), `line boundaries at ${width}`).toEqual(
+        graphemes(texts.join('')),
+      );
+
+      for (const runs of rows) {
+        const text = runs.map(({ text }) => text).join('');
+
+        expect(
+          stringWidth(text),
+          `width ${width}: ${text}`,
+        ).toBeLessThanOrEqual(width);
+        expect(runs.flatMap(({ text }) => graphemes(text))).toEqual(
+          graphemes(text),
+        );
+        expect(text).not.toMatch(/[\r\n\t]/);
+      }
+
+      expect(compact(texts.join(''))).toBe(compact(canonical));
+      expect(texts.join('')).not.toContain('…');
+      expect(texts.join('')).not.toContain('�');
+    }
+  });
+
+  test('wrapping never changes which runtime/model runs select or which counts stay dim and unselectable', () => {
+    for (const width of [-1, 0, 1, 2, 11, 24, 73, 200]) {
+      const rows = groupRow(rich, width);
+      const selectable = rows.flat().filter((run) => run.counts !== true);
+      const counts = rows.flat().filter((run) => run.counts === true);
+
+      expect(compact(selectable.map(({ text }) => text).join(''))).toBe(
+        compact(
+          'Agent(Read👩🏽‍💻日本語🇯🇵é1️⃣fileswithoutloss)·fake·Public👨‍👩‍👧‍👦é🇺🇳1️⃣model',
+        ),
+      );
+      expect(compact(counts.map(({ text }) => text).join(''))).toBe(
+        '·2tooluses·2.0ktokens·~$0.0125·13s',
+      );
+      expect(counts.every((run) => run.style === 'dim')).toBe(true);
+      expect(rows.flat().every((run) => !/[\r\n\t]/.test(run.text))).toBe(true);
+    }
   });
 });

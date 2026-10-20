@@ -310,27 +310,50 @@ function AgentGroup({
       {agents.map((subagent, index) => {
         const last = index === agents.length - 1;
         // The row's glyphs take three cells after the block's two.
-        const row = groupRow(subagent, width - 3);
+        const rows = groupRow(subagent, width - 3);
         const line = rowLine(subagent, waits, chordServer);
         // Its counts are on its row, so its ending is the word alone.
         const ending = endingOf(subagent.state);
 
         return (
           <box key={subagent.id} id={agentTarget(subagent.id)}>
-            <box flexDirection='row' paddingLeft={2}>
-              <Gutter width={3} dimColor>
-                {last ? '└─' : '├─'}
-              </Gutter>
-              {/* The agent's title, as a lone block's; its counts are chord's. */}
-              <text {...CUT} {...selectable}>
-                {headlineText(row.headline, colours)}
-              </text>
-              {row.counts !== undefined && (
-                <text {...CUT} attributes={DIM}>
-                  {row.counts}
-                </text>
-              )}
-            </box>
+            {/* The agent's title, as a lone block's, then its counts,
+                chord's; a row that does not fit wraps behind the tree's `│`. */}
+            {rows.map((runs, at) => (
+              <box key={at} flexDirection='row' paddingLeft={2}>
+                <Gutter width={3} dimColor>
+                  {at > 0 ? (last ? ' ' : '│') : last ? '└─' : '├─'}
+                </Gutter>
+                {/* The title selects; chord's counts after it do not. */}
+                {[false, true].map((counts) => {
+                  const own = runs.filter(
+                    (run) => (run.counts === true) === counts,
+                  );
+
+                  return own.length === 0 ? null : (
+                    <text
+                      key={String(counts)}
+                      {...(counts ? CUT : { ...CUT, ...selectable })}
+                    >
+                      {own.map((run, index) => (
+                        <span
+                          key={index}
+                          attributes={
+                            run.style === 'bold'
+                              ? TextAttributes.BOLD
+                              : run.style === 'dim'
+                                ? DIM
+                                : 0
+                          }
+                        >
+                          <Ansi text={run.text} />
+                        </span>
+                      ))}
+                    </text>
+                  );
+                })}
+              </box>
+            ))}
             <box
               marginLeft={2}
               // Named on both sides: a row that stops being last keeps no

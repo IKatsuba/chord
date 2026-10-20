@@ -190,6 +190,13 @@ describe('the view over requests the front tab asks (CHD-462)', () => {
     expect(keyCommand('x', plain, over, '')).toBe('stop_background');
     expect(keyCommand('j', plain, over, '')).toBe('background_down');
     expect(keyCommand('k', plain, over, '')).toBe('background_up');
+    // The page keys scroll an error taller than the frame's room (CHD-473).
+    expect(keyCommand('', { ...plain, pageUp: true }, over, '')).toBe(
+      'background_page_up',
+    );
+    expect(keyCommand('', { ...plain, pageDown: true }, over, '')).toBe(
+      'background_page_down',
+    );
     expect(keyCommand('', enter, over, '')).toBe('go_to_call');
     expect(keyCommand('', escape, over, '')).toBe('close_background');
     // Nothing typed reaches the form beneath.

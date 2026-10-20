@@ -2,8 +2,8 @@
  * `/cost`'s table of what the window has spent, once it holds more than one
  * session: a row for each tab with its subtotal, then its own agent and
  * each agent under it, closed ones too, and the window's total, each with a
- * note in a long form, or a short one where the long does not fit (CHD-373
- * S4, CHD-378's C as settled for the build).
+ * note (CHD-373 S4, CHD-378's C as settled for the build); a cell that does
+ * not fit wraps inside itself, and nothing is cut (CHD-473).
  */
 import type { Cost } from '@agentclientprotocol/sdk';
 import stringWidth from 'string-width';
@@ -15,19 +15,13 @@ import { type Figure, type SpendPart, sum, type Summed } from './spend.ts';
 /** A figure no part reported, in a cost or token column. */
 const NONE = '—';
 
-/** A note in its two forms: at 120 columns, and where that does not fit. */
-interface Note {
-  readonly long: string;
-  readonly short: string;
-}
-
 /** A row before it is laid out: its name, figures and notes. */
 interface Row {
   readonly name: string;
   readonly depth: number;
   readonly cost: string;
   readonly tokens: string;
-  readonly notes: readonly Note[];
+  readonly notes: readonly string[];
 }
 
 const TOKENS = new Intl.NumberFormat('en-US');
@@ -53,40 +47,35 @@ function costText(cost: Cost, estimated: boolean): string {
 }
 
 /** What a figure says beside itself: whose estimate, older sums, turns left out. */
-function figureNotes(figure: Figure | undefined): Note[] {
-  const notes: Note[] = [];
+function figureNotes(figure: Figure | undefined): string[] {
+  const notes: string[] = [];
 
   if (figure?.estimated === 'all') {
     const [model, ...more] = figure.models ?? [];
 
-    notes.push({
-      long:
-        model !== undefined && more.length === 0
-          ? `chord's estimate from ${model}'s price`
-          : "chord's estimate from its models' prices",
-      short: "chord's estimate",
-    });
+    notes.push(
+      model !== undefined && more.length === 0
+        ? `chord's estimate from ${model}'s price`
+        : "chord's estimate from its models' prices",
+    );
   } else if (figure?.estimated === 'part') {
-    notes.push({ long: "part chord's estimate", short: 'part estimate' });
+    notes.push("part chord's estimate");
   }
 
   if (figure?.before !== undefined) {
     const until = figure.before.until;
-    const day = until === undefined ? undefined : DAY.format(until);
 
     notes.push(
-      day === undefined
-        ? { long: 'as last reported', short: 'as last reported' }
-        : { long: `as last reported before ${day}`, short: `before ${day}` },
+      until === undefined
+        ? 'as last reported'
+        : `as last reported before ${DAY.format(until)}`,
     );
   }
 
   if (figure?.uncounted !== undefined && figure.uncounted > 0) {
-    const turns = `${figure.uncounted} ${
-      figure.uncounted === 1 ? 'turn' : 'turns'
-    } not counted`;
-
-    notes.push({ long: turns, short: turns });
+    notes.push(
+      `${figure.uncounted} ${figure.uncounted === 1 ? 'turn' : 'turns'} not counted`,
+    );
   }
 
   return notes;
@@ -97,7 +86,7 @@ function ownRow(
   name: string,
   depth: number,
   figure: Figure | undefined,
-  kind: readonly Note[] = [],
+  kind: readonly string[] = [],
 ): Row {
   return {
     name,
@@ -116,7 +105,7 @@ function sumRow(
   name: string,
   depth: number,
   summed: Summed,
-  notes: readonly Note[] = [],
+  notes: readonly string[] = [],
 ): Row {
   return {
     name,
@@ -154,16 +143,9 @@ function taskRows(task: SpendPart, depth: number, owner?: string): Row[] {
           depth,
           cost: NONE,
           tokens: NONE,
-          notes: [
-            {
-              long: `${kind}, running: counted when it ends`,
-              short: 'running',
-            },
-          ],
+          notes: [`${kind}, running: counted when it ends`],
         }
-      : ownRow(task.name, depth, task.figure, [
-          { long: `${kind}, ended`, short: 'ended' },
-        ]),
+      : ownRow(task.name, depth, task.figure, [`${kind}, ended`]),
     ...(task.parts ?? []).flatMap((under) => taskRows(under, depth + 1, owner)),
   ];
 }
@@ -173,7 +155,7 @@ function sessionRows(
   part: SpendPart,
   name: string,
   depth: number,
-  kind: readonly Note[] = [],
+  kind: readonly string[] = [],
 ): Row[] {
   return [
     ownRow(name, depth, part.figure, kind),
@@ -182,8 +164,8 @@ function sessionRows(
 }
 
 /**
- * A team run's rows: its lead and members added up, each named in the long
- * note, then the task agents they started, each with its owner.
+ * A team run's rows: its lead and members added up, each named in its note,
+ * then the task agents they started, each with its owner.
  */
 function teamRows(team: SpendPart, depth: number): Row[] {
   const members = team.parts ?? [];
@@ -204,10 +186,7 @@ function teamRows(team: SpendPart, depth: number): Row[] {
 
   return [
     sumRow(team.name, depth, sum(members.map(alone)), [
-      {
-        long: `team run${ended ? ', ended' : ''}: ${each}`,
-        short: `team run of ${members.length}${ended ? ', ended' : ''}`,
-      },
+      `team run${ended ? ', ended' : ''}: ${each}`,
     ]),
     ...members.flatMap((member) =>
       (member.parts ?? []).flatMap((task) =>
@@ -226,9 +205,7 @@ function childRows(part: SpendPart, depth: number): Row[] {
       return taskRows(part, depth);
     default:
       return sessionRows(part, part.name, depth, [
-        part.ended === true
-          ? { long: 'agent, closed', short: 'closed' }
-          : { long: 'agent', short: 'agent' },
+        part.ended === true ? 'agent, closed' : 'agent',
       ]);
   }
 }
@@ -249,7 +226,7 @@ function tabRows(tab: SpendPart): Row[] {
   const own = closed ? mains.at(-1) : mains.find((part) => part.ended !== true);
   const cleared = mains.filter((part) => part !== own);
   const rest = parts.filter((part) => part.kind !== 'main');
-  const mark: Note[] = closed ? [{ long: 'closed', short: 'closed' }] : [];
+  const mark = closed ? ['closed'] : [];
 
   if (cleared.length === 0 && rest.length === 0 && own?.parts === undefined) {
     return [ownRow(tab.name, 0, own?.figure, mark)];
@@ -265,14 +242,7 @@ function tabRows(tab: SpendPart): Row[] {
             'before /clear',
             1,
             sum(cleared.map(alone)),
-            cleared.length > 1
-              ? [
-                  {
-                    long: `${cleared.length} sessions`,
-                    short: `${cleared.length} sessions`,
-                  },
-                ]
-              : [],
+            cleared.length > 1 ? [`${cleared.length} sessions`] : [],
           ),
           ...cleared.flatMap((session) =>
             (session.parts ?? []).flatMap((task) => taskRows(task, 2)),
@@ -303,38 +273,20 @@ function lastReported(parts: readonly SpendPart[]): boolean {
 function totalRow(parts: readonly SpendPart[]): Row {
   const summed = sum(parts);
   const tasks = running(parts);
-  const notes: Note[] = [
+  const notes = [
     ...(summed.estimated === 'all'
-      ? [{ long: "chord's estimate", short: "chord's estimate" }]
+      ? ["chord's estimate"]
       : summed.estimated === 'part'
-        ? [{ long: "part chord's estimate", short: 'part estimate' }]
+        ? ["part chord's estimate"]
         : []),
-    ...(lastReported(parts)
-      ? [{ long: 'part as last reported', short: 'part as last reported' }]
-      : []),
+    ...(lastReported(parts) ? ['part as last reported'] : []),
     ...(summed.uncounted === 0
       ? []
       : [
-          {
-            long: `${summed.uncounted} ${
-              summed.uncounted === 1 ? 'turn' : 'turns'
-            } not counted`,
-            short: `${summed.uncounted} not counted`,
-          },
+          `${summed.uncounted} ${summed.uncounted === 1 ? 'turn' : 'turns'} not counted`,
         ]),
-    ...(summed.missing.length === 0
-      ? []
-      : [
-          {
-            long: summed.missing
-              .map((name) => `${name} not reported`)
-              .join('; '),
-            short: `${summed.missing.length} not reported`,
-          },
-        ]),
-    ...(tasks === 0
-      ? []
-      : [{ long: `${tasks} running`, short: `${tasks} running` }]),
+    ...summed.missing.map((name) => `${name} not reported`),
+    ...(tasks === 0 ? [] : [`${tasks} running`]),
   ];
 
   return sumRow('Total', 0, summed, notes);
@@ -348,23 +300,33 @@ function oneLine(text: string): string {
   return text.replace(/\s+/g, ' ').trim();
 }
 
-/** `text` cut to `cells` columns, an ellipsis where it was cut. */
-function cut(text: string, cells: number): string {
-  if (stringWidth(text) <= cells) {
-    return text;
+/** `text` wrapped to `cells` at its spaces, a word wider broken. */
+function wrapped(text: string, cells: number): string[] {
+  return wrapAnsi(text, Math.max(1, cells), { hard: true, trim: true }).split(
+    '\n',
+  );
+}
+
+/**
+ * A note's lines in `cells`: it breaks between its parts, after a `; ` or a
+ * ` · `, where it can, and inside a part only where that part alone is
+ * wider, so `1 turn not counted` stays whole on a line (CHD-473).
+ */
+function noteLines(note: string, cells: number): string[] {
+  const parts = note.split(/(?<=;|·) /);
+  const lines: string[] = [];
+
+  for (const part of parts) {
+    const last = lines.at(-1);
+
+    if (last !== undefined && stringWidth(`${last} ${part}`) <= cells) {
+      lines[lines.length - 1] = `${last} ${part}`;
+    } else {
+      lines.push(...wrapped(part, cells));
+    }
   }
 
-  if (cells <= 1) {
-    return cells === 1 ? '…' : '';
-  }
-
-  const [head = ''] = wrapAnsi(text, cells - 1, {
-    hard: true,
-    trim: false,
-    wordWrap: false,
-  }).split('\n');
-
-  return `${head}…`;
+  return lines;
 }
 
 /** `text` padded with spaces to `cells` columns, at its end or its start. */
@@ -374,14 +336,22 @@ function pad(text: string, cells: number, start = false): string {
   return start ? fill + text : text + fill;
 }
 
+/**
+ * The least a note's cell keeps beside the figures; narrower, the note goes
+ * below them (CHD-473).
+ */
+const NOTE_LEAST = 20;
+
 /** The header's name, which the name column is never narrower than. */
 const NAME_LEAST = 'This window'.length;
 
 /**
- * The table's lines for the window's spend in `width` cells, none wider:
- * names cut where the figures would not fit beside them, and each note in
- * its long form where the row then fits, else its short one, cut at the
- * row's end where even that does not; a note never wraps.
+ * The table's lines for the window's spend in `width` cells: the cost and
+ * token columns as wide as their widest figure, on a row's first line; the
+ * name column at most a third of the table, a longer name wrapping in it
+ * under its first letter; the note the rest, wrapping between its parts,
+ * or below the figures where that leaves it fewer than `NOTE_LEAST` cells.
+ * A row is as tall as its tallest cell, and nothing is cut (CHD-473).
  */
 export function spendTable(
   parts: readonly SpendPart[],
@@ -397,35 +367,75 @@ export function spendTable(
     ...rows.map((row) => stringWidth(row.tokens)),
   );
   const figures = 2 + costWidth + 2 + tokenWidth;
-  const names = rows.map(
-    (row) => `${'  '.repeat(row.depth)}${oneLine(row.name)}`,
-  );
-  // At most a third of the table, the figures never cut.
+  const indent = (row: Row) => '  '.repeat(row.depth);
+  // At most a third of the table, the figures never moved.
   const nameWidth = Math.min(
-    Math.max(NAME_LEAST, ...names.map((name) => stringWidth(name))),
+    Math.max(
+      NAME_LEAST,
+      ...rows.map((row) => stringWidth(indent(row) + oneLine(row.name))),
+    ),
     Math.max(NAME_LEAST, Math.floor(width / 3)),
     Math.max(1, width - figures),
   );
+  const noteWidth = width - nameWidth - figures - 2;
+  const beside = noteWidth >= NOTE_LEAST;
   const line = (name: string, cost: string, tokens: string) =>
-    `${pad(cut(name, nameWidth), nameWidth)}  ${pad(cost, costWidth, true)}  ${pad(
+    `${pad(name, nameWidth)}  ${pad(cost, costWidth, true)}  ${pad(
       tokens,
       tokenWidth,
       true,
     )}`;
 
   return [
-    { text: cut(line('This window', 'Cost', 'Tokens'), width) },
-    ...rows.map((row, index) => {
-      const shown = line(names[index]!, row.cost, row.tokens);
-      const room = width - stringWidth(shown) - 2;
-      const long = oneLine(row.notes.map((note) => note.long).join('; '));
-      const short = oneLine(row.notes.map((note) => note.short).join('; '));
-      const note =
-        long === '' ? '' : stringWidth(long) <= room ? long : cut(short, room);
+    { text: line('This window', 'Cost', 'Tokens') },
+    ...rows.flatMap((row) => {
+      // The name's next lines under its first letter, the indent held.
+      const names = wrapped(
+        oneLine(row.name),
+        nameWidth - stringWidth(indent(row)),
+      ).map((each) => indent(row) + each);
+      const note = oneLine(row.notes.join('; '));
 
-      return {
-        text: cut(note === '' ? shown : `${shown}  ${note}`, width),
-      };
+      // Too narrow beside the figures, the note goes below them: from the
+      // row's second line, at the cost column's left edge, beside the
+      // name's next lines, to the table's end; under the name it would read
+      // as a row of its own.
+      if (!beside) {
+        const below = note === '' ? [] : noteLines(note, width - nameWidth - 2);
+
+        return Array.from(
+          { length: Math.max(names.length, 1 + below.length) },
+          (_, at) => {
+            const said = at === 0 ? undefined : below[at - 1];
+
+            return {
+              text: (at === 0
+                ? line(names[0]!, row.cost, row.tokens)
+                : said === undefined
+                  ? (names[at] ?? '')
+                  : `${pad(names[at] ?? '', nameWidth)}  ${said}`
+              ).trimEnd(),
+            };
+          },
+        );
+      }
+
+      const notes = note === '' ? [] : noteLines(note, noteWidth);
+
+      return Array.from(
+        { length: Math.max(names.length, notes.length) },
+        (_, at) => {
+          const shown =
+            at === 0
+              ? line(names[0]!, row.cost, row.tokens)
+              : line(names[at] ?? '', '', '');
+          const said = notes[at];
+
+          return {
+            text: (said === undefined ? shown : `${shown}  ${said}`).trimEnd(),
+          };
+        },
+      );
     }),
   ];
 }

@@ -4,11 +4,13 @@
  * cleared of what ended by the person's next prompt.
  */
 import { describe, expect, test } from 'bun:test';
+import { useState } from 'react';
 import { serveChord } from '../../../src/server/server.ts';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
-import { stopRefused } from '../../../src/ui/background/view.ts';
+import type { RequestScroller } from '../../../src/ui/dialogs/Permission.tsx';
+import { hintLines, stopRefused } from '../../../src/ui/background/view.ts';
 import assert from 'node:assert/strict';
 import { FORM_SCHEMA } from '../../fixtures/forms.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -662,7 +664,7 @@ test('x on an agent that took its own stop back says so on the hint line, and st
 
 describe('CHD-2 tester: stopping and refusal rendering', () => {
   for (const columns of [80, 120]) {
-    test(`stopping and rolled-back waiting rows retain focus with a first-line refusal at ${columns} columns`, async () => {
+    test(`stopping and rolled-back waiting rows retain focus with a whole multiline refusal at ${columns} columns`, async () => {
       const item: BackgroundItem = {
         kind: 'agent',
         id: 'a',
@@ -708,7 +710,10 @@ describe('CHD-2 tester: stopping and refusal rendering', () => {
         expect(refused.frame()).toContain('● waiting');
         expect(refused.frame()).toContain('❯ Run the tests');
         expect(refused.frame()).toContain('could not stop: Broken pipe');
-        expect(refused.frame()).not.toContain('transport detail');
+        expect(refused.frame()).toContain('transport detail');
+        expect(refused.frame()).toMatch(
+          /could not stop: Broken pipe[^\n]*\n[^\n]*transport detail/,
+        );
         expect(refused.frame()).not.toContain('■ stopping');
         expect(refused.frame()).not.toContain('x to stop');
       } finally {
@@ -952,4 +957,238 @@ describe('CHD-430 tester: a scrolled task keeps its identity', () => {
       }
     });
   }
+});
+
+describe('CHD-473 the frame says its hint, or an error in its place, whole', () => {
+  const crowd: BackgroundItem[] = Array.from({ length: 30 }, (_, index) => ({
+    kind: 'task',
+    id: `task-${index}`,
+    key: 1,
+    name: `task ${index}`,
+    startedAt: Date.now(),
+    status: { group: 'running' },
+    runtime: 'fake',
+    model: 'Fake Small',
+  }));
+  const inside = (line: string) =>
+    line.replace(/^│ ?/, '').replace(/ *│$/, '').trim();
+
+  test('at 46 columns the keys wrap after a `·`, and the rows give way to them within half the window', async () => {
+    const drawn = await draw(
+      <BackgroundView items={crowd} focus={crowd[0]} columns={46} rows={24} />,
+      { columns: 46, rows: 24 },
+    );
+
+    try {
+      const lines = drawn.frame().split('\n');
+      const top = lines.findIndex((line) => line.startsWith('╭'));
+      const bottom = lines.findIndex((line) => line.startsWith('╰'));
+
+      expect(bottom - top + 1).toBeLessThanOrEqual(12);
+      expect(inside(lines[bottom - 2]!)).toBe(
+        'Enter to go to its call · x to stop ·',
+      );
+      expect(inside(lines[bottom - 1]!)).toBe('Esc to close');
+      expect(drawn.frame()).toContain('❯ task 0');
+    } finally {
+      await drawn.unmount();
+    }
+  });
+
+  test('a stop error is said whole on as many lines as it takes, nothing cut', async () => {
+    const hint = stopRefused(
+      new Error(
+        'the adapter refused the stop because the task had already handed its result back',
+      ),
+    );
+    const drawn = await draw(
+      <BackgroundView
+        items={crowd.slice(0, 3)}
+        focus={crowd[0]}
+        hint={hint}
+        columns={46}
+        rows={24}
+      />,
+      { columns: 46, rows: 24 },
+    );
+
+    try {
+      const lines = drawn.frame().split('\n');
+      const bottom = lines.findIndex((line) => line.startsWith('╰'));
+      // The frame's last lines, 42 cells inside it at 46 columns.
+      const height = hintLines(hint, 42).length;
+
+      expect(height).toBeGreaterThan(1);
+      expect(
+        lines
+          .slice(bottom - height, bottom)
+          .map(inside)
+          .join(' '),
+      ).toBe(hint);
+      expect(drawn.frame()).not.toContain('…');
+    } finally {
+      await drawn.unmount();
+    }
+  });
+});
+
+test("an error taller than the frame's room scrolls in it by a page, the rows given way to the ❯ row's first line, the frame within half the window (CHD-473)", async () => {
+  const items: BackgroundItem[] = [
+    'CI run 4812',
+    'dev server errors',
+    'parser tests',
+  ].map((name, index) => ({
+    kind: 'monitor',
+    id: `m${index}`,
+    key: 1,
+    name,
+    startedAt: Date.now(),
+    status: { group: 'running' },
+  }));
+  const hint = stopRefused(
+    new Error(
+      [
+        'Broken pipe',
+        'while writing session/cancel to the agent process',
+        'at transport.write (stdio.ts:211)',
+        'at Connection.notify (connection.ts:96)',
+        'at Session.cancel (session.ts:412)',
+        'at Window.stop (window.ts:88)',
+        'at Background.stop (background.ts:140)',
+        'at keys (keys.ts:612)',
+      ].join('\n'),
+    ),
+  );
+  const scroller: { current: RequestScroller | undefined } = {
+    current: undefined,
+  };
+  const drawn = await draw(
+    <BackgroundView
+      items={items}
+      focus={items[0]}
+      hint={hint}
+      columns={46}
+      rows={24}
+      scroller={scroller}
+    />,
+    { columns: 46, rows: 24 },
+  );
+  const frame = () =>
+    drawn
+      .frame()
+      .split('\n')
+      .filter((line) => /^[╭│╰]/.test(line))
+      .slice(0, 12);
+
+  try {
+    expect(frame()).toStrictEqual([
+      '╭────────────────────────────────────────────╮',
+      '│ Background · 3 in this tab                 │',
+      '│                                            │',
+      '│ ❯ CI run 4812        monitor               │',
+      '│                                            │',
+      '│ could not stop: Broken pipe                │',
+      '│ while writing session/cancel to the agent  │',
+      '│ process                                    │',
+      '│ at transport.write (stdio.ts:211)          │',
+      '│ at Connection.notify (connection.ts:96)    │',
+      '│ ── ↓ 4 lines below · pagedown to scroll ── │',
+      '╰────────────────────────────────────────────╯',
+    ]);
+
+    scroller.current?.('page_down');
+    await until('a page on', () =>
+      frame().some((line) => line.includes('↑ 4 lines above')),
+    );
+    expect(frame().slice(5, 11)).toStrictEqual([
+      '│ ── ↑ 4 lines above · pageup to scroll ──── │',
+      '│ at Connection.notify (connection.ts:96)    │',
+      '│ at Session.cancel (session.ts:412)         │',
+      '│ at Window.stop (window.ts:88)              │',
+      '│ at Background.stop (background.ts:140)     │',
+      '│ at keys (keys.ts:612)                      │',
+    ]);
+  } finally {
+    await drawn.unmount();
+  }
+});
+
+describe('CHD-473 T4 tester: error scroller lifetime', () => {
+  test('a same-height new error starts at its first line, and unmount removes the callback before remount', async () => {
+    const scroller: { current: RequestScroller | undefined } = {
+      current: undefined,
+    };
+    const item: BackgroundItem = {
+      kind: 'monitor',
+      id: 'm',
+      key: 1,
+      name: 'CI run',
+      startedAt: 0,
+      status: { group: 'running' },
+    };
+    const message = (prefix: string) =>
+      Array.from({ length: 20 }, (_, index) => `${prefix} ${index}`).join('\n');
+    let update: (hint: string) => void = () => {};
+
+    let mount: (shown: boolean) => void = () => {};
+
+    function Panel() {
+      const [hint, setHint] = useState(message('OLD'));
+      const [shown, setShown] = useState(true);
+
+      update = setHint;
+      mount = setShown;
+
+      return shown ? (
+        <BackgroundView
+          items={[item]}
+          focus={item}
+          hint={hint}
+          columns={46}
+          rows={24}
+          scroller={scroller}
+        />
+      ) : (
+        <text>closed panel</text>
+      );
+    }
+
+    const drawn = await draw(<Panel />, { columns: 46, rows: 24 });
+
+    try {
+      expect(scroller.current).toBeDefined();
+      scroller.current?.('page_down');
+      await until('scrolled old error', () =>
+        drawn.frame().includes('lines above'),
+      );
+      update(message('NEW'));
+      await until(
+        'new error resets to top',
+        () =>
+          drawn.frame().includes('NEW 0') &&
+          !drawn.frame().includes('lines above'),
+      );
+      scroller.current?.('page_down');
+      await until('scrolled new error', () =>
+        drawn.frame().includes('lines above'),
+      );
+      mount(false);
+      await until('panel unmounted', () =>
+        drawn.frame().includes('closed panel'),
+      );
+      expect(scroller.current).toBeUndefined();
+      mount(true);
+      await until(
+        'panel remounted at top',
+        () =>
+          drawn.frame().includes('NEW 0') &&
+          !drawn.frame().includes('lines above'),
+      );
+      expect(scroller.current).toBeDefined();
+    } finally {
+      await drawn.unmount();
+    }
+
+    expect(scroller.current).toBeUndefined();
+  });
 });

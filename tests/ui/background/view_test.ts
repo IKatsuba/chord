@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
+  hintLines,
   laidAt,
   moveView,
   type ViewAt,
@@ -167,30 +168,46 @@ test('a row is name, kind, state and owner in columns two cells apart, the ❯ o
   ]);
 });
 
-test("narrower, an end's events go first, then a task's model, then its runtime; the state and owner stay", () => {
+test("narrower, nothing gives way: a task's kind wraps in its column after a ` · `, then a state in its own, and the row grows a line (CHD-473)", () => {
   const at = (width: number) =>
     text(viewRows(ITEMS, { width, focus: undefined, now: NOW }));
 
   expect(at(85)).toStrictEqual([
-    '❯ CI run 4812        monitor                   ✗ exit code 1 after 3m 12s  main',
-    '  dev server errors  monitor                   running 4m 2s · 1 event     main',
-    '  parser tests       monitor                   running 2m 3s · 4 events    parser',
-    '  Fix the tokenizer  task · fake · Fake Small  ● permission 13s            main',
-    '  Fix the printer    task · fake · Fake Large  working 32s                 coder',
+    '❯ CI run 4812        monitor            ✗ exit code 1 after 3m 12s · 3 events  main',
+    '  dev server errors  monitor            running 4m 2s · 1 event                main',
+    '  parser tests       monitor            running 2m 3s · 4 events               parser',
+    '  Fix the tokenizer  task · fake ·      ● permission 13s                       main',
+    '                     Fake Small',
+    '  Fix the printer    task · fake ·      working 32s                            coder',
+    '                     Fake Large',
   ]);
+  // Narrower, the state wraps in its column too, after a ` · ` and at its
+  // spaces; the columns hold.
   expect(at(76)).toStrictEqual([
-    '❯ CI run 4812        monitor      ✗ exit code 1 after 3m 12s  main',
-    '  dev server errors  monitor      running 4m 2s · 1 event     main',
-    '  parser tests       monitor      running 2m 3s · 4 events    parser',
-    '  Fix the tokenizer  task · fake  ● permission 13s            main',
-    '  Fix the printer    task · fake  working 32s                 coder',
+    '❯ CI run 4812        monitor        ✗ exit code 1 after 3m 12s ·      main',
+    '                                    3 events',
+    '  dev server errors  monitor        running 4m 2s · 1 event           main',
+    '  parser tests       monitor        running 2m 3s · 4 events          parser',
+    '  Fix the tokenizer  task · fake ·  ● permission 13s                  main',
+    '                     Fake Small',
+    '  Fix the printer    task · fake ·  working 32s                       coder',
+    '                     Fake Large',
   ]);
-  expect(at(66)[3]).toStrictEqual(
-    '  Fix the tokenizer  task     ● permission 13s            main',
-  );
+  expect(at(60).slice(0, 3)).toStrictEqual([
+    '❯ CI run 4812        monitor        ✗ exit code 1     main',
+    '                                    after 3m 12s ·',
+    '                                    3 events',
+  ]);
+  // Not even the state's widest word beside the kind's widest part: the
+  // state and owner go under the name.
+  expect(at(46).slice(0, 3)).toStrictEqual([
+    '❯ CI run 4812        monitor',
+    '    ✗ exit code 1 after 3m 12s · 3 events',
+    '    main',
+  ]);
 });
 
-test('narrower still, each item takes two lines: its name and kind, then its state and owner two cells further in', () => {
+test('narrower still, each item takes two lines or more: its name and kind, then its state and owner two cells further in, nothing given way (CHD-473)', () => {
   const at = (width: number) =>
     text(viewRows(ITEMS.slice(2, 4), { width, focus: undefined, now: NOW }));
 
@@ -200,16 +217,19 @@ test('narrower still, each item takes two lines: its name and kind, then its sta
     '  Fix the tokenizer  task · fake · Fake Small',
     '    ● permission 13s  main',
   ]);
-  // The kind's parts give way before it leaves the name's line.
+  // The kind does not fit beside the name: it goes to lines of its own,
+  // whole.
   expect(at(40)).toStrictEqual([
-    '❯ parser tests       monitor',
+    '❯ parser tests',
+    '    monitor',
     '    running 2m 3s · 4 events  parser',
-    '  Fix the tokenizer  task · fake',
+    '  Fix the tokenizer',
+    '    task · fake · Fake Small',
     '    ● permission 13s  main',
   ]);
 
-  // Not even a bare kind beside the name: it goes to a line of its own,
-  // and a state and owner too wide together go one under the other.
+  // A kind wider than a line wraps after a ` · `, and a state and owner
+  // too wide together go one under the other.
   const narrow = at(24);
 
   expect(narrow).toStrictEqual([
@@ -219,7 +239,8 @@ test('narrower still, each item takes two lines: its name and kind, then its sta
     '    events',
     '    parser',
     '  Fix the tokenizer',
-    '    task',
+    '    task · fake ·',
+    '    Fake Small',
     '    ● permission 13s',
     '    main',
   ]);
@@ -533,9 +554,9 @@ describe('CHD-2 tester: agent row clocks and wrapping', () => {
   });
 });
 
-test("a stop that could not be sent says its error's first line", () => {
+test('a stop that could not be sent says its error whole, every line of it (CHD-462 f929ae37)', () => {
   expect(stopRefused(new Error('Session not found\nat line 2'))).toBe(
-    'could not stop: Session not found',
+    'could not stop: Session not found\nat line 2',
   );
   expect(stopRefused('closed')).toBe('could not stop: closed');
 });
@@ -671,7 +692,7 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
   });
 });
 
-test("an ended task's row says its money after its state, which gives way after its model (CHD-373)", () => {
+test("an ended task's row says its money after its state, which never gives way (CHD-373, CHD-473)", () => {
   const spent = {
     cost: { amount: 0.0125, currency: 'USD' },
     tokens: { totalTokens: 2000 },
@@ -687,41 +708,20 @@ test("an ended task's row says its money after its state, which gives way after 
   expect(
     stateText({ ...ended, spent: { ...spent, estimated: true } }, NOW).text,
   ).toBe('✗ failed after 15s · ~$0.0125');
-  expect(stateText(ended, NOW, { spent: false }).text).toBe(
-    '✗ failed after 15s',
-  );
   // While it works, none.
   expect(
     stateText({ ...ended, status: { group: 'running' } }, NOW).text,
   ).not.toContain('$');
 
-  // Narrower and narrower: the model goes first, then the money, then the
-  // runtime (CHD-378.md, ac4ade0e).
-  const row = (width: number) =>
-    viewRows([ended], { width, focus: undefined, now: NOW })[0]!
-      .lines[0]!.map((cell) => cell.text)
-      .join('')
-      .trimEnd();
-  const seen: string[] = [];
+  // At any width its model, its money and its runtime all stay (CHD-473).
+  const drawn = (width: number) =>
+    text(viewRows([ended], { width, focus: undefined, now: NOW })).join(' ');
 
-  for (let width = 120; width > 40; width--) {
-    const now = row(width);
-
-    if (now !== seen.at(-1)) {
-      seen.push(now);
+  for (let width = 120; width > 30; width--) {
+    for (const part of ['task', 'fake', 'Fake Small', '$0.0125']) {
+      expect(drawn(width), `${width}`).toContain(part);
     }
   }
-
-  const firstWithout = (part: string) =>
-    seen.findIndex((line) => !line.includes(part));
-
-  expect(seen[0]).toContain('Fake Small');
-  expect(seen[0]).toContain('· $0.0125');
-  expect(firstWithout('Fake Small')).toBeLessThan(firstWithout('$0.0125'));
-  expect(firstWithout('$0.0125')).toBeLessThan(firstWithout('task · fake'));
-  expect(seen).toContainEqual(
-    expect.stringMatching(/task · fake +✗ failed after 15s · \$0\.0125/),
-  );
 });
 
 describe('CHD-373 S2 tester: zero and absent money in background states', () => {
@@ -750,4 +750,251 @@ describe('CHD-373 S2 tester: zero and absent money in background states', () => 
       ).toContain('~$0.0000');
     });
   }
+});
+
+test("a task's runtime or model with CR, LF or tabs reads as spaces in every layout, no line holding a line break and no word lost (CHD-473)", () => {
+  const odd = task(
+    't9',
+    'Fix the tokenizer',
+    { group: 'running' },
+    { runtime: 'fake\tlocal', model: 'Fake\r\nSmall\nmodel' },
+  );
+
+  for (const width of [116, 60, 40, 24]) {
+    const drawn = text(
+      viewRows([ITEMS[0]!, odd], { width, focus: undefined, now: NOW }),
+    );
+
+    expect(
+      drawn.some((line) => /[\r\n\t]/.test(line)),
+      `${width}`,
+    ).toBe(false);
+    expect(drawn.join(' ').replace(/\s+/g, ' '), `${width}`).toContain(
+      'fake local',
+    );
+
+    for (const word of ['Fake', 'Small', 'model']) {
+      expect(drawn.join(' '), `${width}`).toContain(word);
+    }
+  }
+
+  expect(
+    text(viewRows([odd], { width: 116, focus: undefined, now: NOW }))[0],
+  ).toBe(
+    '❯ Fix the tokenizer  task · fake local · Fake Small model  working 32s  main',
+  );
+});
+
+describe('CHD-473 T3 tester: complete metadata across layouts', () => {
+  const item = task(
+    'rich',
+    'Read 日本語 files and keep every name visible',
+    { group: 'done', endedAt: NOW },
+    {
+      runtime: 'fake\nlocal',
+      model: 'Public\t👩🏽‍💻🇯🇵é model',
+      owner: { name: '解析器', colour: 0 },
+      spent: { cost: { amount: 0.0125, currency: 'USD' }, estimated: true },
+    },
+  );
+  const compact = (text: string) => text.normalize('NFC').replace(/\s/g, '');
+  const graphemes = (text: string) =>
+    [
+      ...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(
+        text,
+      ),
+    ].map(({ segment }) => segment);
+
+  test('every field survives the column-to-stack boundary, without line overflow or changes to stored items', () => {
+    const before = structuredClone(item);
+    const layouts = new Set<boolean>();
+
+    for (let width = 24; width <= 180; width++) {
+      const row = viewRows([item], {
+        width,
+        focus: { key: 1, id: 'rich' },
+        now: NOW,
+      })[0]!;
+      const fields = (role: 'name' | 'kind' | 'state' | 'owner') =>
+        row.lines
+          .flat()
+          .filter((cell) => cell.role === role)
+          .map(({ text }) => text);
+
+      layouts.add(row.lines[0]!.some((cell) => cell.role === 'state'));
+      expect(row.item).toBe(item);
+      expect(row.focused).toBe(true);
+      expect(compact(fields('name').join(''))).toBe(compact(item.name));
+      expect(compact(fields('kind').join(''))).toBe(
+        compact('task · fake local · Public 👩🏽‍💻🇯🇵é model'),
+      );
+      expect(compact(fields('state').join(''))).toBe(
+        compact(stateText(item, NOW).text),
+      );
+      expect(compact(fields('owner').join(''))).toBe('解析器');
+
+      for (const line of row.lines) {
+        const text = line.map((cell) => cell.text).join('');
+
+        expect(
+          stringWidth(text),
+          `width ${width}: ${text}`,
+        ).toBeLessThanOrEqual(width);
+        expect(text).not.toMatch(/[\r\n\t]/);
+        expect(text).not.toContain('…');
+      }
+
+      for (const role of ['name', 'kind', 'state', 'owner'] as const) {
+        const pieces = fields(role).map(compact);
+
+        expect(
+          pieces.flatMap(graphemes),
+          `${role} graphemes at ${width}`,
+        ).toEqual(graphemes(pieces.join('')));
+      }
+
+      expect(item).toEqual(before);
+    }
+
+    expect(layouts).toEqual(new Set([false, true]));
+  });
+
+  test('zero and missing cost stay distinct while an ended state wraps', () => {
+    for (const width of [24, 36, 46, 60, 76, 116]) {
+      const zero: BackgroundItem = {
+        ...item,
+        spent: { cost: { amount: 0, currency: 'USD' }, estimated: true },
+      };
+      const { spent: _, ...missing } = item;
+      const state = (value: BackgroundItem) =>
+        compact(
+          viewRows([value], { width, focus: undefined, now: NOW })[0]!
+            .lines.flat()
+            .filter((cell) => cell.role === 'state')
+            .map(({ text }) => text)
+            .join(''),
+        );
+
+      expect(state(zero)).toContain('~$0.0000');
+      expect(state(missing)).not.toContain('$');
+      expect(state(zero)).toContain('reportedafter32s');
+    }
+  });
+
+  test('kind-driven tall rows scroll through every line with stable focus and keep metadata after resizing', () => {
+    const tall = {
+      ...item,
+      model: 'Public_model_with_every_part_kept '.repeat(12).trim(),
+    };
+    const other = task('other', 'Other task', { group: 'running' });
+    const items = [tall, other];
+
+    for (const width of [46, 76, 116]) {
+      const frame = { width, height: 4, now: NOW };
+      const rows = viewRows(items, {
+        width,
+        focus: { key: 1, id: 'rich' },
+        now: NOW,
+      });
+      const expected = rows[0]!.lines.length;
+      let at: ViewAt = { focus: { key: 1, id: 'rich' } };
+      const seen = new Set<number>();
+
+      expect(expected).toBeGreaterThan(frame.height);
+
+      for (let step = 0; step < expected + 4; step++) {
+        const shown = viewWindow(
+          viewRows(items, { width, focus: at.focus, now: NOW }),
+          frame.height,
+          at,
+          laidAt(width, frame.height),
+        );
+        const marked = edgeMarked(shown);
+
+        for (let line = shown.from; line < shown.from + shown.height; line++) {
+          if (line < expected) {
+            seen.add(line);
+          }
+        }
+
+        expect(marked.length).toBeLessThanOrEqual(frame.height);
+        expect(
+          marked.every(
+            ({ cells }) =>
+              stringWidth(cells.map(({ text }) => text).join('')) <= width,
+          ),
+        ).toBe(true);
+
+        if (seen.size === expected) {
+          break;
+        }
+
+        const next = moveView(items, at, 1, frame);
+
+        expect(next).toBeDefined();
+        expect(next!.focus).toEqual({ key: 1, id: 'rich' });
+
+        at = next!;
+      }
+
+      expect(seen.size).toBe(expected);
+
+      const resized = viewWindow(
+        viewRows(items, { width: width + 2, focus: at.focus, now: NOW }),
+        frame.height,
+        at,
+        laidAt(width + 2, frame.height),
+      );
+
+      expect(resized.from).toBe(0);
+      expect(
+        edgeMarked(resized)[0]!
+          .cells.map(({ text }) => text)
+          .join(''),
+      ).toStartWith('❯ Read');
+      expect(items[0]).toBe(tall);
+    }
+  });
+});
+
+test("the frame's hint, or an error in its place, wraps after a ` · ` and at its spaces, never cut (CHD-473)", () => {
+  const keys = 'Enter to go to its call · x to stop · Esc to close';
+
+  expect(hintLines(keys, 112)).toStrictEqual([keys]);
+  // At 46 columns, 42 inside the frame.
+  expect(hintLines(keys, 42)).toStrictEqual([
+    'Enter to go to its call · x to stop ·',
+    'Esc to close',
+  ]);
+
+  const error = stopRefused(
+    new Error(
+      'the adapter refused the stop because the task had already\nhanded its result back',
+    ),
+  );
+  const lines = hintLines(error, 30);
+
+  for (const line of lines) {
+    expect(line.length, line).toBeLessThanOrEqual(30);
+  }
+
+  expect(lines.join(' ')).toBe(error.replaceAll('\n', ' '));
+  expect(hintLines('this agent offers no stop', 20)).toStrictEqual([
+    'this agent offers no',
+    'stop',
+  ]);
+});
+
+test("an error's own line breaks stay lines in the frame, each wrapped at its spaces, a tab a space (CHD-473)", () => {
+  expect(
+    hintLines(
+      'could not stop: Broken pipe\nwhile writing session/cancel to the agent process\r\nat\ttransport.write (stdio.ts:211)',
+      42,
+    ),
+  ).toStrictEqual([
+    'could not stop: Broken pipe',
+    'while writing session/cancel to the agent',
+    'process',
+    'at transport.write (stdio.ts:211)',
+  ]);
 });

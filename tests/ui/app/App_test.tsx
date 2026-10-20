@@ -2134,6 +2134,19 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
 
   const row = (window: Window, name: string) =>
     table(window).find((line) => line.trimStart().startsWith(name)) ?? '';
+  const teamBreakdown = (window: Window) => {
+    const shown = table(window);
+
+    return shown
+      .slice(
+        shown.findIndex((line) => line.trimStart().startsWith('bugfix')),
+        shown.findIndex((line) =>
+          line.trimStart().startsWith('Count the cost'),
+        ),
+      )
+      .join(' ');
+  };
+
   const showCost = async (window: Window, total?: string) => {
     await send(window, '/cost');
     await window.shows('This window');
@@ -2385,7 +2398,11 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
           expect(task).toMatch(/Count the cost\s+—\s+—/);
 
           if (columns === 80) {
-            expect(run).toContain('team run of 3');
+            expect(run).toContain('team run: lead');
+
+            for (const member of ['lead', 'tester', 'coder']) {
+              expect(teamBreakdown(window)).toContain(member + ' ');
+            }
           }
 
           if (columns === 120) {
@@ -2453,7 +2470,11 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
           );
 
           if (columns === 80) {
-            expect(keptRun).toContain('team run of 3');
+            expect(keptRun).toMatch(/team run(, ended)?: lead/);
+
+            for (const member of ['lead', 'tester', 'coder']) {
+              expect(teamBreakdown(window)).toContain(member + ' ');
+            }
           }
         },
         columns,

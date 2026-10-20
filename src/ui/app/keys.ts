@@ -103,6 +103,8 @@ export type Step =
   | { readonly type: 'reject_permission'; readonly id: string }
   /** A scroll key moves the permission request in its box (CHD-246). */
   | { readonly type: 'scroll_request'; readonly step: ScrollStep }
+  /** An error in the background view, taller than its room, a page on. */
+  | { readonly type: 'scroll_background_hint'; readonly step: ScrollStep }
   | { readonly type: 'set_mode'; readonly mode: string }
   | { readonly type: 'read_commands' }
   | { readonly type: 'send'; readonly text: string }
@@ -609,6 +611,10 @@ function commandSteps(
       return [{ type: 'move_background', by: -1 }];
     case 'background_down':
       return [{ type: 'move_background', by: 1 }];
+    case 'background_page_up':
+      return [{ type: 'scroll_background_hint', step: 'page_up' }];
+    case 'background_page_down':
+      return [{ type: 'scroll_background_hint', step: 'page_down' }];
     case 'stop_background':
       return [{ type: 'stop_background' }];
     case 'go_to_call':

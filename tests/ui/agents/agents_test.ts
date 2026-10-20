@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import stringWidth from 'string-width';
 import { emptyWatch } from '../../../src/notify.ts';
 import type { TabWait } from '../../../src/session/tabs.ts';
 import {
@@ -689,7 +690,9 @@ describe('CHD-264 tester: failure age and row fallback', () => {
     expect(drawn([MAIN, failed], { width: 76 }).join(' ')).toContain(
       '◦ idle 0s  ✗ turn failed',
     );
-    expect(drawn([MAIN, failed], { width: 20 }).join(' ')).toContain('✗');
+    expect(drawn([MAIN, failed], { width: 20, limit: 6 }).join(' ')).toContain(
+      '✗',
+    );
     expect(
       agentState({ ...failed, wait: { ...failed.wait, exited: true } }, NOW)
         ?.words,
@@ -1060,4 +1063,94 @@ describe('CHD-471 a row taller than the list is read by line, the list never pas
       }
     }
   });
+});
+
+describe('CHD-471 L1b tester: every wrapped line remains reachable', () => {
+  for (const width of [26, 39, 76, 116]) {
+    for (const limit of [4, 6]) {
+      test(`wide text and long runtime survive the ${width}-column ${limit}-line budget`, () => {
+        const name = '解析🚀 ' + 'abcdefghijk '.repeat(30);
+        const runtime =
+          'runtime-with-a-very-long-unbroken-identifier ' +
+          '追加の説明 '.repeat(10);
+        const rows = [
+          row(name, {
+            key: 10,
+            picked: true,
+            runtime,
+            wait: {
+              asking: { on: { kind: 'permission' }, since: NOW - 17000 },
+              unseen: { kind: 'replied', since: NOW },
+            },
+          }),
+        ];
+        const frame = { width, limit, now: NOW };
+        const complete = agentsLayout(rows, {
+          ...frame,
+          limit: 10000,
+          focused: true,
+        }).rows[0]!;
+        const compact = (text: string) => text.replace(/\s/g, '');
+
+        expect(
+          compact(
+            [complete.name, ...complete.names.map((line) => line.text)].join(
+              '',
+            ),
+          ),
+        ).toBe(compact(name));
+
+        const detail = [
+          complete.detail,
+          ...complete.below.flatMap((line) => line.map((run) => run.text)),
+        ].join('');
+
+        expect(compact(detail)).toContain(compact(runtime));
+        expect(
+          compact([complete.state?.text ?? '', detail].join('')),
+        ).toContain('●permission17s');
+
+        let view = enteredView(rows, 0, frame);
+        const visited = new Set<number>();
+
+        for (let step = 0; step <= complete.height; step += 1) {
+          const layout = agentsLayout(rows, { ...frame, focused: true, view });
+          const lines = drawn(rows, { width, limit, focused: true, view });
+
+          expect(lines.length).toBeLessThanOrEqual(limit);
+          expect(lines.every((line) => stringWidth(line) <= width)).toBe(true);
+
+          for (const line of layout.rows[0]!.lines) {
+            visited.add(line.at);
+          }
+
+          const next = scrolledView(rows, 1, { ...frame, view });
+
+          if (next === undefined) {
+            break;
+          }
+
+          expect(next.top).toBe((view?.top ?? 0) + 1);
+
+          view = next;
+        }
+
+        expect([...visited].sort((a, b) => a - b)).toEqual(
+          Array.from({ length: complete.height }, (_, at) => at),
+        );
+
+        for (let step = 0; step <= complete.height; step += 1) {
+          const previous = scrolledView(rows, -1, { ...frame, view });
+
+          if (previous === undefined) {
+            break;
+          }
+
+          view = previous;
+        }
+
+        expect(view?.top).toBe(0);
+      });
+    }
+  }
 });

@@ -19,6 +19,7 @@ import {
   HELD_AGAIN,
   HELD_MESSAGE,
   MAIN_MESSAGES,
+  LONG_TITLE,
 } from '../../fixtures/fake_agent/scenarios/agents.ts';
 import { TASK_REPORT } from '../../fixtures/fake_agent/scenarios/tasks.ts';
 import {
@@ -1810,3 +1811,146 @@ test("↓ past a last row's last line leaves the list at its end, as the last st
     expect(list().endsWith('    before the tag.')).toBeTruthy();
     expect(list()).not.toContain('Summarise the release');
   }));
+
+describe('CHD-471 L1b tester: tall row actions and summary boundary', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`reading a tall row reaches the summary then returns to its first line at ${columns} columns`, () =>
+      withAgents(async (window) => {
+        await window.resize({ columns, rows });
+        await ready(window);
+        await send(window, 'agenttitled');
+        await window.shows('Waiting on it.');
+        await until('main turn finished', async () => {
+          for (const file of await readdir(
+            join(window.dir, 'state', 'records'),
+          )) {
+            const past = await readPast(
+              join(window.dir, 'state', 'records', file),
+            );
+            const prompt = past.find(
+              (entry) =>
+                entry.type === 'prompt' && entry.prompt === 'agenttitled',
+            );
+
+            if (
+              prompt?.type === 'prompt' &&
+              past.some(
+                (entry) =>
+                  entry.type === 'result' && entry.turnId === prompt.turnId,
+              )
+            ) {
+              return true;
+            }
+          }
+
+          return false;
+        });
+
+        await send(window, 'monitors');
+        await window.shows('2 monitors running');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('❯ Summarise the release');
+
+        for (
+          let step = 0;
+          step < 40 && !window.frame().includes('❯ background');
+          step += 1
+        ) {
+          await window.press(DOWN);
+        }
+
+        await window.shows('❯ background');
+        await window.press(UP);
+        await window.shows('❯ Summarise the release');
+        await window.press(UP);
+        await window.shows('❯ main');
+        await window.press(UP);
+        await until(
+          'above main returns the keys to the prompt',
+          () => !window.frame().includes('❯ main'),
+        );
+        await window.press(DOWN);
+        await window.shows('❯ main');
+      }));
+
+    test(`Enter and x still address the tall child while its first line is out of sight at ${columns} columns`, () =>
+      withAgents(async (window) => {
+        await window.resize({ columns, rows });
+        await ready(window);
+        await send(window, 'agenttitled');
+        await window.shows('Waiting on it.');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('❯ Summarise the release');
+
+        for (let step = 0; step < 5; step += 1) {
+          await window.press(DOWN);
+        }
+
+        const budget = rows === 24 ? 4 : 6;
+
+        expect(
+          window.frame().split('\n').slice(-budget).join('\n'),
+        ).not.toContain('❯ Summarise');
+        await window.press('\r');
+        await send(window, '/echo tall-row-target');
+        await window.shows('tall-row-target');
+        await window.press(DOWN);
+
+        for (let step = 0; step < 5; step += 1) {
+          await window.press(DOWN);
+        }
+
+        await window.press('x');
+        await until(
+          'the long-named child is closed',
+          () =>
+            window.frame().includes('The person closed') ||
+            window.frame().includes('x again to stop'),
+        );
+
+        if (window.frame().includes('x again to stop')) {
+          await window.press('x');
+        }
+
+        await window.shows('The person closed');
+        expect(window.frame()).not.toContain('❯ Summarise the release');
+        await until(
+          'the echoed and closed session is the long-named child',
+          async () => {
+            const records = join(window.dir, 'state', 'records');
+            const pasts = await Promise.all(
+              (await readdir(records)).map((file) =>
+                readPast(join(records, file)),
+              ),
+            );
+            const child = pasts.find((past) =>
+              past.some(
+                (entry) =>
+                  entry.type === 'session' && entry.name === LONG_TITLE,
+              ),
+            );
+            const own = child?.find((entry) => entry.type === 'session');
+
+            return (
+              own?.type === 'session' &&
+              child!.some(
+                (entry) =>
+                  entry.type === 'prompt' &&
+                  entry.prompt === '/echo tall-row-target',
+              ) &&
+              pasts.some((past) =>
+                past.some(
+                  (entry) => entry.type === 'closed' && entry.agent === own.id,
+                ),
+              )
+            );
+          },
+        );
+      }));
+  }
+});

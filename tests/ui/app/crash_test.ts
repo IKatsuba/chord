@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import stringWidth from 'string-width';
 import { CRASH_HINT, crashRows } from '../../../src/ui/app/crash.ts';
 
 /** The error of the design's mocks (`docs/design/CHD-468.md`). */
@@ -118,4 +119,67 @@ test('a thrown value that is no Error is its String, with no frames (CHD-468)', 
   expect(
     crashRows('the session went away', 80, 24).map((row) => row.text),
   ).toStrictEqual(['', '  the session went away', '', `  ${CRASH_HINT}`]);
+});
+
+describe('CHD-468 tester: crash message and stack edges', () => {
+  test('a multiline named error keeps its message lines once before its frames', () => {
+    const error = new TypeError('first line\nsecond line');
+
+    error.stack = `${String(error)}\n    at worker (/work/code.ts:4:2)`;
+
+    expect(crashRows(error, 80, 24).map((row) => row.text)).toStrictEqual([
+      '',
+      '  TypeError: first line',
+      '  second line',
+      '      at worker (/work/code.ts:4:2)',
+      '',
+      `  ${CRASH_HINT}`,
+    ]);
+  });
+
+  test('wide and combining characters wrap while a long frame stays one cut row', () => {
+    const error = new Error('界e\u0301'.repeat(12));
+
+    error.stack = `${String(error)}\n    at worker (/work/${'segment'.repeat(12)}.ts:4:2)`;
+
+    const rows = crashRows(error, 12, 24);
+    const frames = rows.filter((row) => row.text.startsWith('      at '));
+
+    expect(frames).toHaveLength(1);
+    expect(frames[0]?.text).toEndWith('…');
+    expect(rows.filter((row) => row.role === 'error').length).toBeGreaterThan(
+      1,
+    );
+
+    for (const row of rows) {
+      expect(stringWidth(row.text)).toBeLessThanOrEqual(12);
+    }
+  });
+
+  test('an Error without a stack still keeps the message and hint', () => {
+    const error = new Error('no stack is available');
+
+    delete error.stack;
+
+    expect(crashRows(error, 80, 24).map((row) => row.text)).toStrictEqual([
+      '',
+      '  Error: no stack is available',
+      '',
+      `  ${CRASH_HINT}`,
+    ]);
+  });
+
+  test('the hint survives every small height for an error without frames', () => {
+    for (const height of [1, 2, 3, 4, 5, 6]) {
+      const rows = crashRows('a long message '.repeat(20), 30, height);
+
+      expect(rows.length).toBeLessThanOrEqual(height);
+      expect(rows.at(-1)?.text).toBe('  any key to quit · chord pri…');
+      expect(rows.at(-1)?.role).toBe('dim');
+
+      if (height > 1) {
+        expect(rows.at(-2)?.text).toEndWith('…');
+      }
+    }
+  });
 });

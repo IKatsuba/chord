@@ -166,6 +166,16 @@ function kindIn(kind: string, width: number): string[] {
   return lines;
 }
 
+/** The least a state's column holds: its widest word, with a `·` beside it. */
+function stateLeast(states: readonly string[]): number {
+  return Math.max(
+    0,
+    ...states.flatMap((state) =>
+      state.split(' ').map((word) => stringWidth(word) + 2),
+    ),
+  );
+}
+
 /**
  * The least a kind's column holds: its widest part with a `·` beside it,
  * after it or, where the line before is full, ahead of it, so a part never
@@ -229,9 +239,10 @@ function nameIn(name: string, width: number): string[] {
 /**
  * Every item's row in `width` cells: the columns padded to their widest, two
  * cells apart, and nothing gives way (CHD-473). Where they do not fit the
- * kind wraps in the room the others leave it, after a ` · `, and the row
- * grows a line; where even its widest part does not fit there, the state
- * and the owner go under the name, so nothing is cut.
+ * kind wraps in its column, after a ` · `, then the state in its own, and
+ * the row grows a line; where even the kind's widest part or the state's
+ * widest word does not fit, the state and the owner go under the name, so
+ * nothing is cut.
  */
 export function viewRows(
   items: readonly BackgroundItem[],
@@ -259,20 +270,35 @@ export function viewRows(
   });
   const kinds = items.map(kindText);
   const states = items.map((item) => stateText(item, now));
-  const stateWidth = widest(states.map(({ text }) => text));
-  const kindWidth = Math.min(
-    widest(kinds),
-    width -
-      (2 +
-        nameWidth +
-        GAP.length +
-        GAP.length +
-        stateWidth +
-        GAP.length +
-        ownerWidth),
+  const fullKind = widest(kinds);
+  const fullState = widest(states.map(({ text }) => text));
+  // What the kind and the state share, the name and owner columns kept.
+  const room = width - (2 + nameWidth + GAP.length * 3 + ownerWidth);
+  // The kind first: as narrow as it goes with no line of it starting with
+  // a `·`, or as the state leaves it; then the state, in what is left.
+  const neat = Array.from(
+    { length: Math.max(0, fullKind - kindLeast(kinds) + 1) },
+    (_, at) => kindLeast(kinds) + at,
+  ).find((each) =>
+    kinds.every((kind) =>
+      kindIn(kind, each).every((line, at) => at === 0 || !line.startsWith('·')),
+    ),
   );
+  const kindWidth =
+    fullKind + fullState <= room
+      ? fullKind
+      : Math.max(
+          Math.min(fullKind, room - fullState),
+          neat ?? kindLeast(kinds),
+        );
+  const stateWidth = Math.min(fullState, room - kindWidth);
 
-  if (kindWidth < kindLeast(kinds)) {
+  // Not even the kind's widest part, or the state's widest word, fits in
+  // its column: the state and owner go under the name.
+  if (
+    kindWidth < kindLeast(kinds) ||
+    stateWidth < stateLeast(states.map(({ text }) => text))
+  ) {
     return stackedRows(items, {
       names,
       kinds,
@@ -291,15 +317,23 @@ export function viewRows(
     const nameLines = nameIn(names[index]!, nameWidth);
     const kindLines = kindIn(kinds[index]!, kindWidth);
     const state = states[index]!;
+    const stateLines = kindIn(state.text, stateWidth);
 
     return {
       item,
       focused: item === focused,
       lines: Array.from(
-        { length: Math.max(nameLines.length, kindLines.length) },
+        {
+          length: Math.max(
+            nameLines.length,
+            kindLines.length,
+            stateLines.length,
+          ),
+        },
         (_, at): ViewCell[] => {
           const name = nameLines[at] ?? '';
           const kind = kindLines[at];
+          const said = stateLines[at];
 
           if (at === 0) {
             return [
@@ -309,7 +343,7 @@ export function viewRows(
               { text: pad(kind ?? '', kindWidth), role: 'kind' },
               { text: GAP, role: 'gap' },
               {
-                text: pad(state.text, stateWidth),
+                text: pad(said ?? '', stateWidth),
                 role: 'state',
                 group: state.group,
               },
@@ -318,14 +352,25 @@ export function viewRows(
             ];
           }
 
-          // Under the name two in, the kind's next line in its column.
-          return kind === undefined
+          // Under the name two in, the kind's and the state's next lines in
+          // their columns.
+          return kind === undefined && said === undefined
             ? [UNDER, { text: name, role: 'name' }]
             : [
                 UNDER,
                 { text: pad(name, nameWidth - 2), role: 'name' },
                 { text: GAP, role: 'gap' },
-                { text: kind, role: 'kind' },
+                { text: pad(kind ?? '', kindWidth), role: 'kind' },
+                ...(said === undefined
+                  ? []
+                  : [
+                      { text: GAP, role: 'gap' as const },
+                      {
+                        text: said,
+                        role: 'state' as const,
+                        group: state.group,
+                      },
+                    ]),
               ];
         },
       ),

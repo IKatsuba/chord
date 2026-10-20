@@ -167,7 +167,7 @@ test('a row is name, kind, state and owner in columns two cells apart, the ❯ o
   ]);
 });
 
-test("narrower, nothing gives way: a task's kind wraps in the room the other columns leave it, after a ` · `, and its row grows a line (CHD-473)", () => {
+test("narrower, nothing gives way: a task's kind wraps in its column after a ` · `, then a state in its own, and the row grows a line (CHD-473)", () => {
   const at = (width: number) =>
     text(viewRows(ITEMS, { width, focus: undefined, now: NOW }));
 
@@ -180,19 +180,29 @@ test("narrower, nothing gives way: a task's kind wraps in the room the other col
     '  Fix the printer    task · fake ·      working 32s                            coder',
     '                     Fake Large',
   ]);
-  // Less room than the kind's widest part: the state and owner go under
-  // the name, the kind whole beside it.
+  // Narrower, the state wraps in its column too, after a ` · ` and at its
+  // spaces; the columns hold.
   expect(at(76)).toStrictEqual([
+    '❯ CI run 4812        monitor        ✗ exit code 1 after 3m 12s ·      main',
+    '                                    3 events',
+    '  dev server errors  monitor        running 4m 2s · 1 event           main',
+    '  parser tests       monitor        running 2m 3s · 4 events          parser',
+    '  Fix the tokenizer  task · fake ·  ● permission 13s                  main',
+    '                     Fake Small',
+    '  Fix the printer    task · fake ·  working 32s                       coder',
+    '                     Fake Large',
+  ]);
+  expect(at(60).slice(0, 3)).toStrictEqual([
+    '❯ CI run 4812        monitor        ✗ exit code 1     main',
+    '                                    after 3m 12s ·',
+    '                                    3 events',
+  ]);
+  // Not even the state's widest word beside the kind's widest part: the
+  // state and owner go under the name.
+  expect(at(46).slice(0, 3)).toStrictEqual([
     '❯ CI run 4812        monitor',
-    '    ✗ exit code 1 after 3m 12s · 3 events  main',
-    '  dev server errors  monitor',
-    '    running 4m 2s · 1 event  main',
-    '  parser tests       monitor',
-    '    running 2m 3s · 4 events  parser',
-    '  Fix the tokenizer  task · fake · Fake Small',
-    '    ● permission 13s  main',
-    '  Fix the printer    task · fake · Fake Large',
-    '    working 32s  coder',
+    '    ✗ exit code 1 after 3m 12s · 3 events',
+    '    main',
   ]);
 });
 

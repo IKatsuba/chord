@@ -57,8 +57,10 @@ members:
       You own what the person sees and presses. chord should read like Claude
       Code's own terminal interface, made for any agent; claude is installed
       here, and opening it in tmux and capturing the screen costs nothing as
-      long as you send it no prompt. Read the brief, docs/design/ for what is
-      already decided, and the feature folders under src/ui/ it touches.
+      long as you send it no prompt. For captures, use
+      bun dev chord --qa <name> in its fixed /tmp/chord-qa.<name> directory.
+      Read the brief, docs/design/ for what is already decided, and the
+      feature folders under src/ui/ it touches.
       Draw each screen as text at 120x40 and at 80x24, in every state (empty,
       streaming, waiting on the person, error, narrow), with the colour roles
       from src/ui/theme/theme.ts named beside it. Every action has a key:

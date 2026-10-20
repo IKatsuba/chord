@@ -2,8 +2,8 @@
  * The one test module that draws chord's interface in a test terminal: every
  * window and component test renders, types, pastes, resizes, reads the frame
  * and unmounts through it, so a move to another renderer changes this module
- * and not every test. It draws on OpenTUI's `testRender` (the trial is in
- * docs/decisions.md, under "Moving to OpenTUI").
+ * and not every test. It draws on OpenTUI's test renderer, as `testRender`
+ * does (the trial is in docs/decisions.md, under "Moving to OpenTUI").
  */
 import { Readable, Writable } from 'node:stream';
 import { act, type ReactNode } from 'react';
@@ -15,7 +15,8 @@ import {
   type RGBA,
   TextAttributes,
 } from '@opentui/core';
-import { testRender } from '@opentui/react/test-utils';
+import { createTestRenderer } from '@opentui/core/testing';
+import { createRoot, type Root } from '@opentui/react';
 import chalk from 'chalk';
 import { Exits, Output, terminalOptions } from '../../src/ui/app/renderer.tsx';
 
@@ -90,38 +91,64 @@ export async function draw(
 
   const frames: string[] = [];
   const written: string[] = [];
-  // testRender marks the test an act() one, and what the first render set
-  // off (an effect's promise, a session's first answer) runs before the
-  // await below returns, so the mount and its aftermath are enclosed.
-  const setup = await act(() =>
-    testRender(
+  // testRender's own pieces, as it puts them together, but for the order:
+  // it renders before the terminal is set up, so a first frame still out
+  // under load made the setup fail with InvalidPhase (CHD-467). As
+  // createCliRenderer does for the window's own, the terminal is set up
+  // first: OpenTUI 0.6 suspends only a terminal it has set up, and ctrl+g's
+  // editor suspends it.
+  let root: Root | null = null;
+
+  actEnvironment(true);
+
+  const setup = await createTestRenderer({
+    width: columns,
+    height: rows,
+    // ctrl+c is a key, as chord's own renderer takes it, and the test's
+    // process signals are the test runner's.
+    exitOnCtrlC: false,
+    exitSignals: [],
+    // As chord's own renderer: a click gives no widget the keys.
+    autoFocus: false,
+    ...(logged === undefined
+      ? {}
+      : {
+          ...terminalOptions({ mouse: logged.mouse ?? true }),
+          ...loggedTerminal(logged.log, columns, rows),
+        }),
+    onDestroy() {
+      act(() => {
+        root?.unmount();
+
+        root = null;
+      });
+
+      actEnvironment(false);
+    },
+  });
+
+  await setup.renderer.setupTerminal();
+
+  const mounted = createRoot(setup.renderer);
+
+  root = mounted;
+
+  // What the first render set off (an effect's promise, a session's first
+  // answer) runs before the await below returns, so the mount and its
+  // aftermath are enclosed.
+  await act(() => {
+    mounted.render(
       <Exits exit={() => void unmount()}>
         <Output write={(bytes) => void written.push(bytes)}>{node}</Output>
       </Exits>,
-      // ctrl+c is a key, as chord's own renderer takes it, and the test's
-      // process signals are the test runner's.
-      {
-        width: columns,
-        height: rows,
-        exitOnCtrlC: false,
-        exitSignals: [],
-        // As chord's own renderer: a click gives no widget the keys.
-        autoFocus: false,
-        ...(logged === undefined
-          ? {}
-          : {
-              ...terminalOptions({ mouse: logged.mouse ?? true }),
-              ...loggedTerminal(logged.log, columns, rows),
-            }),
-      },
-    ),
-  );
+    );
+
+    return Promise.resolve();
+  });
 
   // The window updates on its own as the agent replies and its timers run,
   // outside any act(), and the tests' own waits do the waiting.
-  (
-    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
-  ).IS_REACT_ACT_ENVIRONMENT = false;
+  actEnvironment(false);
 
   // A destroyed renderer's buffers are freed, a suspended one's are not to
   // be read, and a frame on its way out is held by the native writer
@@ -150,9 +177,6 @@ export async function draw(
       ? Promise.resolve()
       : setup.waitForVisualIdle({ maxFrames: frames }).catch(() => {});
 
-  // As createCliRenderer does for the window's own: OpenTUI 0.6 suspends
-  // only a terminal it has set up, and ctrl+g's editor suspends it.
-  await setup.renderer.setupTerminal();
   await setup.renderOnce();
   await settled();
   // A text is fitted to its width in a second pass, which React schedules
@@ -184,6 +208,13 @@ export async function draw(
     },
     unmount,
   };
+}
+
+/** Whether React takes what runs now as a test's act() work, as `testRender` sets it. */
+function actEnvironment(on: boolean): void {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = on;
 }
 
 /** Whether `node` or a renderable under it is a text holding `text`. */

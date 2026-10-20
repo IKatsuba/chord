@@ -243,6 +243,86 @@ async function claudeAsksFirst(turn: Turn): Promise<boolean | undefined> {
   return true;
 }
 
+/**
+ * A command as Claude's adapter runs one (`bash`); its next step after it
+ * waits until `untilTold` messages were steered in.
+ */
+async function claudeBash(turn: Turn, untilTold = 0): Promise<acp.StopReason> {
+  const toolCallId = turn.callId('bash');
+  const terminalId = toolCallId;
+  const takes = clientTerminalOutput !== 'none';
+  const terminal = [{ type: 'terminal' as const, terminalId }];
+
+  await turn.send({
+    sessionUpdate: 'tool_call',
+    toolCallId,
+    title: '`git status --short`',
+    kind: 'execute',
+    status: 'pending',
+    rawInput: { command: 'git status --short' },
+    content: takes ? terminal : [],
+    ...(takes ? { _meta: { terminal_info: { terminal_id: terminalId } } } : {}),
+  });
+  await turn.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId,
+    status: 'in_progress',
+  });
+  // The command takes a moment, so its call is seen working with no output.
+  await pause(turn.signal, SHELL_STEP_MS);
+
+  if (!takes) {
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'completed',
+      content: [
+        {
+          type: 'content',
+          content: {
+            type: 'text',
+            text: `\`\`\`console\n${BASH_OUTPUT.trimEnd()}\n\`\`\``,
+          },
+        },
+      ],
+    });
+  } else {
+    const output = { terminal_id: terminalId, data: BASH_OUTPUT };
+
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      _meta:
+        clientTerminalOutput === 'delta'
+          ? { terminal_output_delta: output }
+          : { terminal_output: output },
+    });
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: 'completed',
+      content: terminal,
+      _meta: {
+        terminal_exit: {
+          terminal_id: terminalId,
+          exit_code: 0,
+          signal: null,
+        },
+      },
+    });
+  }
+
+  // The next step comes once the messages told during the call are in, as
+  // a model's next step comes only after the tool's result (CHD-467).
+  while (turn.told < untilTold) {
+    await pause(turn.signal);
+  }
+
+  await turn.say('Two files changed.');
+
+  return 'end_turn';
+}
+
 export const SHELL = {
   // A command as Codex's adapter runs one, to any client: the terminal named
   // up front, its output in pieces as it comes, and the exit, which fails,
@@ -278,77 +358,12 @@ export const SHELL = {
   // output, the terminal named up front and nothing of it until it is done,
   // then the whole output, as asked for, and the exit; to any other, the
   // output as a block of text when it is done.
-  async bash(turn) {
-    const toolCallId = turn.callId('bash');
-    const terminalId = toolCallId;
-    const takes = clientTerminalOutput !== 'none';
-    const terminal = [{ type: 'terminal' as const, terminalId }];
+  bash: (turn) => claudeBash(turn),
 
-    await turn.send({
-      sessionUpdate: 'tool_call',
-      toolCallId,
-      title: '`git status --short`',
-      kind: 'execute',
-      status: 'pending',
-      rawInput: { command: 'git status --short' },
-      content: takes ? terminal : [],
-      ...(takes
-        ? { _meta: { terminal_info: { terminal_id: terminalId } } }
-        : {}),
-    });
-    await turn.send({
-      sessionUpdate: 'tool_call_update',
-      toolCallId,
-      status: 'in_progress',
-    });
-    // The command takes a moment, so its call is seen working with no output.
-    await pause(turn.signal, SHELL_STEP_MS);
-
-    if (!takes) {
-      await turn.send({
-        sessionUpdate: 'tool_call_update',
-        toolCallId,
-        status: 'completed',
-        content: [
-          {
-            type: 'content',
-            content: {
-              type: 'text',
-              text: `\`\`\`console\n${BASH_OUTPUT.trimEnd()}\n\`\`\``,
-            },
-          },
-        ],
-      });
-    } else {
-      const output = { terminal_id: terminalId, data: BASH_OUTPUT };
-
-      await turn.send({
-        sessionUpdate: 'tool_call_update',
-        toolCallId,
-        _meta:
-          clientTerminalOutput === 'delta'
-            ? { terminal_output_delta: output }
-            : { terminal_output: output },
-      });
-      await turn.send({
-        sessionUpdate: 'tool_call_update',
-        toolCallId,
-        status: 'completed',
-        content: terminal,
-        _meta: {
-          terminal_exit: {
-            terminal_id: terminalId,
-            exit_code: 0,
-            signal: null,
-          },
-        },
-      });
-    }
-
-    await turn.say('Two files changed.');
-
-    return 'end_turn';
-  },
+  // The same command, its next step after it waiting until two messages were
+  // steered in, so both told during the call land in the turn whatever the
+  // load (CHD-467).
+  bashtwo: (turn) => claudeBash(turn, 2),
 
   // A turn Claude's adapter ends with a command still running and a call
   // that never ran: cancelled, each ends `failed` with the line the adapter

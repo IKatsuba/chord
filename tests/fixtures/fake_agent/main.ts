@@ -89,6 +89,8 @@
  * `clientCapabilities._meta`, the terminal named up front and nothing of the
  * output until the command is done, about half a second later, then all of
  * it and the exit; to any other, the output as a `console` code block.
+ * `bashtwo` does the same, its next step after the command waiting until
+ * two messages were steered in.
  * `bashcut` leaves a command running and a call that never ran for about
  * 10 s: a cancel ends both `failed` with the lines Claude's adapter gives,
  * the command's terminal with no exit code; left alone, the turn ends and
@@ -327,6 +329,7 @@ const SCENARIOS = [
   'shell',
   'shellcut',
   'bash',
+  'bashtwo',
   'bashcut',
   'bashask',
   'claudebetween',

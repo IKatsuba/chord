@@ -29,6 +29,9 @@ import {
 import { initialAppState, reduceApp } from '../../src/ui/app/state.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { Turn } from '../fixtures/fake_agent/turn.ts';
+import { SHELL } from '../fixtures/fake_agent/scenarios/shell.ts';
+import { PERMISSIONS } from '../fixtures/fake_agent/scenarios/permissions.ts';
 import { cutNote } from '../../src/session/cut_off.ts';
 import {
   CUT_MESSAGE,
@@ -1103,7 +1106,11 @@ test("on an agent that does not steer, a message told during a turn waits for th
 
 test('a message told while the turn waits on a permission is held, marked so, and goes into the turn once the person answers', () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
-    conversation.send('permission');
+    // Its next step after the write waits for the message, as the model's
+    // comes only after the tool's result: chord sends it once the person
+    // answers, which under load could otherwise meet the turn's end
+    // (CHD-467).
+    conversation.send('permissionsteer');
     await until(() =>
       events.some((event) => event.type === 'permission_requested'),
     );
@@ -1341,7 +1348,11 @@ test("on Claude's adapter, every message held behind an open call waits in the q
 
 test("on Claude's adapter, two messages held behind an open call go into the turn in the order they were told", () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
-    conversation.send('bash');
+    // Its next step after the command waits for both, as the model's comes
+    // only after the tool's result: chord sends the second once the first is
+    // answered, which under load could otherwise meet the turn's end
+    // (CHD-467).
+    conversation.send('bashtwo');
     await callOpen(events);
     conversation.tell(MAIN, 'Run the tests.');
     conversation.tell(MAIN, 'Then the docs.');
@@ -4343,5 +4354,249 @@ describe('CHD-426 U2 tester: cancellation at real cycle markers', () => {
         (session) => (source = session),
       );
     });
+  }
+});
+
+describe('CHD-467 tester: causal fake gates and cancellation', () => {
+  class ObservedTurn extends Turn {
+    readonly counts: number[] = [];
+    readonly waiting: boolean[] = [];
+
+    override get told(): number {
+      const count = super.told;
+
+      this.counts.push(count);
+
+      return count;
+    }
+
+    override get steered(): boolean {
+      const waiting = super.steered;
+
+      this.waiting.push(waiting);
+
+      return waiting;
+    }
+  }
+
+  function fixture() {
+    const updates: SessionUpdate[] = [];
+    const stop = new AbortController();
+    const client = {
+      notify: (_method: string, params: { update: SessionUpdate }) => {
+        updates.push(params.update);
+
+        return Promise.resolve();
+      },
+      request: () =>
+        Promise.resolve({
+          outcome: { outcome: 'selected', optionId: 'allow' },
+        }),
+    } as unknown as ConstructorParameters<typeof Turn>[0];
+    const turn = new ObservedTurn(client, crypto.randomUUID(), stop.signal);
+    const text = () =>
+      updates
+        .flatMap((update) =>
+          update.sessionUpdate === 'agent_message_chunk' &&
+          update.content.type === 'text'
+            ? [update.content.text]
+            : [],
+        )
+        .join('');
+
+    return { turn, stop, updates, text };
+  }
+
+  test('bashtwo rechecks zero and one arrivals without ending, then ends on the second', async () => {
+    const f = fixture();
+    let ended = false;
+    const running = SHELL.bashtwo(f.turn).then((reason) => {
+      ended = true;
+
+      return reason;
+    });
+
+    running.catch(() => {});
+
+    try {
+      await until(
+        () => f.turn.counts.filter((count) => count === 0).length >= 2,
+      );
+      expect(ended).toBe(false);
+      expect(f.text()).not.toContain('Two files changed.');
+      f.turn.steer('<message from="main">First.</message>');
+      await until(
+        () => f.turn.counts.filter((count) => count === 1).length >= 2,
+      );
+      expect(ended).toBe(false);
+      expect(f.text()).not.toContain('Two files changed.');
+      f.turn.steer('<message from="main">Second.</message>');
+      expect(await running).toBe('end_turn');
+      expect(f.text()).toContain('Two files changed.');
+      expect(f.text().split('Read the message from main.')).toHaveLength(3);
+    } finally {
+      f.stop.abort();
+      await running.catch(() => {});
+    }
+  });
+
+  test('permissionsteer rechecks no arrival after allow and only then reads the first message', async () => {
+    const f = fixture();
+    const running = PERMISSIONS.permissionsteer(f.turn);
+
+    running.catch(() => {});
+
+    try {
+      await until(
+        () => f.turn.waiting.filter((waiting) => !waiting).length >= 2,
+      );
+      expect(f.text()).not.toContain('Permission: allow.');
+      f.turn.steer('<message from="main">First.</message>');
+      expect(await running).toBe('end_turn');
+      expect(f.text()).toContain('Read the message from main.');
+      expect(f.text()).toContain('Permission: allow.');
+    } finally {
+      f.stop.abort();
+      await running.catch(() => {});
+    }
+  });
+
+  for (const count of [0, 1]) {
+    test(`aborting bashtwo while it has ${count} messages stops its waiter without final output`, async () => {
+      const f = fixture();
+      const running = SHELL.bashtwo(f.turn);
+
+      running.catch(() => {});
+
+      try {
+        await until(() => f.turn.counts.includes(0));
+
+        if (count === 1) {
+          f.turn.steer('First.');
+        }
+
+        await until(
+          () => f.turn.counts.filter((seen) => seen === count).length >= 2,
+        );
+        f.stop.abort(new Error('fixture cancelled'));
+        await expect(running).rejects.toThrow('fixture cancelled');
+        expect(f.text()).not.toContain('Two files changed.');
+      } finally {
+        f.stop.abort();
+        await running.catch(() => {});
+      }
+    });
+  }
+
+  test('aborting an allowed permissionsteer before its message stops the waiter', async () => {
+    const f = fixture();
+    const running = PERMISSIONS.permissionsteer(f.turn);
+
+    running.catch(() => {});
+
+    try {
+      await until(
+        () => f.turn.waiting.filter((waiting) => !waiting).length >= 2,
+      );
+      f.stop.abort(new Error('fixture cancelled'));
+      await expect(running).rejects.toThrow('fixture cancelled');
+      expect(f.text()).not.toContain('Permission: allow.');
+    } finally {
+      f.stop.abort();
+      await running.catch(() => {});
+    }
+  });
+
+  test('ordinary bash needs no arrival and keeps its existing final reply', async () => {
+    const f = fixture();
+
+    try {
+      expect(await SHELL.bash(f.turn)).toBe('end_turn');
+      expect(f.text()).toBe('Two files changed.');
+    } finally {
+      f.stop.abort();
+    }
+  });
+
+  for (const kind of [
+    'bashtwo-zero',
+    'bashtwo-one',
+    'permissionsteer',
+  ] as const) {
+    for (const action of ['interrupt', 'close'] as const) {
+      test(`${action} releases the real fake agent waiting at ${kind}`, async () => {
+        let owner: Session | undefined;
+
+        await onFake(
+          ['--steering', 'claude'],
+          async (conversation, events) => {
+            conversation.send(
+              kind.startsWith('bashtwo') ? 'bashtwo' : 'permissionsteer',
+            );
+
+            if (kind === 'permissionsteer') {
+              await until(() =>
+                events.some((event) => event.type === 'permission_requested'),
+              );
+
+              const asked = events.find(
+                (event) => event.type === 'permission_requested',
+              );
+
+              assert(asked?.type === 'permission_requested');
+              conversation.choose(asked.permission.id, 'allow');
+            }
+
+            await until(() => steerOrder(events).includes('call ended'));
+
+            if (kind === 'bashtwo-one') {
+              conversation.tell(MAIN, 'Only one.');
+              await until(() =>
+                events.some(
+                  (event) =>
+                    event.type === 'prompt' && event.into !== undefined,
+                ),
+              );
+            }
+
+            expect(events.some((event) => event.type === 'result')).toBe(false);
+            assert(owner);
+
+            const pids = [...owner.agentPids];
+
+            expect(pids.length).toBeGreaterThan(0);
+
+            if (action === 'interrupt') {
+              conversation.interrupt();
+              await until(() =>
+                events.some(
+                  (event) =>
+                    event.type === 'result' &&
+                    event.result.status === 'cancelled',
+                ),
+              );
+            }
+
+            await conversation.close();
+            await owner.exited;
+            expect(owner.agentPids.size).toBe(0);
+            expect(saidIn(events)).not.toContain(
+              kind === 'permissionsteer'
+                ? 'Permission: allow.'
+                : 'Two files changed.',
+            );
+
+            for (const pid of pids) {
+              expect(() => process.kill(pid, 0)).toThrow();
+            }
+          },
+          (session) => {
+            owner = session;
+
+            return session;
+          },
+        );
+      });
+    }
   }
 });

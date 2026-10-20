@@ -5,7 +5,7 @@
  * `process.platform` and `process.arch` alone.
  */
 export interface Target {
-  bun: string;
+  bun: Bun.Build.CompileTarget;
   os: 'darwin' | 'linux';
   cpu: 'arm64' | 'x64';
 }

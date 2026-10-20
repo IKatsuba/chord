@@ -6937,3 +6937,34 @@ whose close ran late failed with `NativeSession graceful close timed out`.
   plain path is now as the logged one already was: remote, with no
   environment of the person running the tests. chord's own window keeps
   OpenTUI's 1 s.
+
+## 2026-10-20 — CHD-468: OpenTUI's `jsxDEV` in the binary, on React's production runtime (owner, Q75)
+
+In the compiled binary, chord's root ErrorBoundary, OpenTUI's own, threw
+while painting its fallback: `jsxDEV is not a function`, so a crash screen
+crashed.
+
+- **Why.** `@opentui/react` 0.6.6, the latest on npm, ships prebuilt JS
+  that imports `jsxDEV` from `react/jsx-dev-runtime`: its ErrorBoundary's
+  fallback (`chunk-cc2dg8kx.js`) and the Slot and plugin code in
+  `index.js`. chord's compile defines `process.env.NODE_ENV` as
+  `"production"` (CHD-344), and React 19.3's production
+  `jsx-dev-runtime` exports `jsxDEV` as undefined, by design. From
+  source, with no define, React's development build answers and it works.
+- **Tried.** A bundle of a component that throws, built as the binary is,
+  ran the fallback into `jsxDEV is not a function`; the same bundle with
+  OpenTUI's import resolved to a shim paints the error's stack.
+- **Options.** (1) Resolve OpenTUI's `react/jsx-dev-runtime` at compile
+  time to a shim built on `react/jsx-runtime`. (2) `bun patch` OpenTUI's
+  published files, redone on every bump. (3) A root boundary of chord's
+  own, which leaves OpenTUI's other `jsxDEV` calls broken. (4) Drop the
+  define, which brings CHD-344's memory growth back. (5) Report upstream
+  and wait, with the crash screen broken meanwhile.
+- **Choice: (1)** (owner, Q75). `scripts/dev/compile.ts` builds through
+  `Bun.build`, as the command line takes no plugin, and its plugin
+  resolves `react/jsx-dev-runtime` imported from `@opentui/` to
+  `scripts/dev/jsx_dev_runtime.ts`, whose `jsxDEV` calls `jsx` or `jsxs`
+  without the source and owner only the development build reads. chord's
+  own imports and a run from source are unchanged. No upstream issue was
+  filed. `buildOptions` is the one set of build options, which a test of
+  the production build shares.

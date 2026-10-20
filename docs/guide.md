@@ -407,6 +407,34 @@ choose one, and `off` turns it off. A turn you interrupt with Esc is not
 announced. With several sessions open, the notification names the tab:
 `fake (2) needs your permission: Write notes.txt`.
 
+chord also reports the whole window's status through the
+[Program Status Protocol](https://www.superlogical.com/rex/docs/build/program-status)
+(OSC 7501), always on, independently of `preferredNotifChannel`. One root
+record with `app=chord` covers every agent in every tab, including children.
+The first state present wins: `blocked`, `error`, `working`, `done`, `idle`.
+A permission, form or link makes it `blocked`, with kind `permission`,
+`question` or `auth`; an exit, failed start or failed turn makes it `error`.
+A running turn is `working`; a monitor or task between turns does not count.
+A turn ending is `done`, except one cancelled with Esc or started by a
+monitor's event.
+
+Completed turns, failed turns and failed starts stay reported until you
+visit their agent, press a key while it is shown, or start its next turn.
+An exited agent stays `error` until it restarts or its tab closes.
+Only `blocked`, `done` and `error` carry a message, with the notification's
+wording, such as
+`fake needs your permission: Write notes.txt`,
+`fake is waiting for your input` or `fake's turn failed`.
+chord clears the status on quit, a signal or a crash, and while your editor
+has the terminal, then reports it again on return.
+
+Reports do not wait for a terminal capability reply and have no tmux
+wrapping: inside tmux they do not reach the outer terminal. A terminal
+without support shows nothing. Support includes
+[iTerm2 3.7.5+](https://iterm2.com/downloads.html),
+[cmux](https://cmux.com/docs/changelog) and Rex; kitty's support is in
+0.50, not yet released. The Ghostty app does not yet show it.
+
 `theme` takes Claude Code's ids: `auto` (the default), `dark`, `light`,
 `dark-daltonized`, `light-daltonized`, `dark-ansi` and `light-ansi`. It is
 about your terminal and your eyes rather than a project, so it is read only

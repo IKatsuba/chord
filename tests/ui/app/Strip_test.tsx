@@ -47,7 +47,7 @@ describe('CHD-471 tester: rendered strip state and mark', () => {
         expect(frame).not.toMatch(/5 fake [✻✓]/);
         expect(frame.match(/✻✓/g)).toHaveLength(7);
         expect(
-          Math.max(...frame.split('\n').map(stringWidth)),
+          Math.max(...frame.split('\n').map((line) => stringWidth(line))),
         ).toBeLessThanOrEqual(columns);
         expect(app.frame()).toContain('\x1b[38;2;78;186;101m✓');
       } finally {

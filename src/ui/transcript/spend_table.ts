@@ -336,6 +336,12 @@ function pad(text: string, cells: number, start = false): string {
   return start ? fill + text : text + fill;
 }
 
+/**
+ * The least a note's cell keeps beside the figures; narrower, the note goes
+ * under its row (CHD-473).
+ */
+const NOTE_LEAST = 20;
+
 /** The header's name, which the name column is never narrower than. */
 const NAME_LEAST = 'This window'.length;
 
@@ -343,7 +349,8 @@ const NAME_LEAST = 'This window'.length;
  * The table's lines for the window's spend in `width` cells: the cost and
  * token columns as wide as their widest figure, on a row's first line; the
  * name column at most a third of the table, a longer name wrapping in it
- * under its first letter; the note the rest, wrapping between its parts.
+ * under its first letter; the note the rest, wrapping between its parts,
+ * or under the row where that leaves it fewer than `NOTE_LEAST` cells.
  * A row is as tall as its tallest cell, and nothing is cut (CHD-473).
  */
 export function spendTable(
@@ -371,6 +378,7 @@ export function spendTable(
     Math.max(1, width - figures),
   );
   const noteWidth = width - nameWidth - figures - 2;
+  const beside = noteWidth >= NOTE_LEAST;
   const line = (name: string, cost: string, tokens: string) =>
     `${pad(name, nameWidth)}  ${pad(cost, costWidth, true)}  ${pad(
       tokens,
@@ -387,6 +395,27 @@ export function spendTable(
         nameWidth - stringWidth(indent(row)),
       ).map((each) => indent(row) + each);
       const note = oneLine(row.notes.join('; '));
+
+      // Too narrow beside the figures, the note goes under the row, from
+      // under its name, and wraps there.
+      if (!beside) {
+        const under = indent(row);
+
+        return [
+          ...names.map((name, at) => ({
+            text: (at === 0
+              ? line(name, row.cost, row.tokens)
+              : name
+            ).trimEnd(),
+          })),
+          ...(note === ''
+            ? []
+            : noteLines(note, width - stringWidth(under)).map((said) => ({
+                text: under + said,
+              }))),
+        ];
+      }
+
       const notes = note === '' ? [] : noteLines(note, noteWidth);
 
       return Array.from(

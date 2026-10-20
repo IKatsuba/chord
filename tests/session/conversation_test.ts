@@ -1103,7 +1103,11 @@ test("on an agent that does not steer, a message told during a turn waits for th
 
 test('a message told while the turn waits on a permission is held, marked so, and goes into the turn once the person answers', () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
-    conversation.send('permission');
+    // Its next step after the write waits for the message, as the model's
+    // comes only after the tool's result: chord sends it once the person
+    // answers, which under load could otherwise meet the turn's end
+    // (CHD-467).
+    conversation.send('permissionsteer');
     await until(() =>
       events.some((event) => event.type === 'permission_requested'),
     );

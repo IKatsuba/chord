@@ -269,7 +269,7 @@ test('the group header runs, then finishes, or says what went wrong', () => {
   });
 });
 
-test('a row drops its counts before its title is cut, and keeps its brackets', () => {
+test('a row that does not fit wraps after a ` · `, inside its title at its spaces where it must, and drops nothing (CHD-473)', () => {
   const timed = agent({
     ...DRAW,
     state: 'completed',
@@ -277,22 +277,56 @@ test('a row drops its counts before its title is cut, and keeps its brackets', (
     endedAt: 28_000,
     entries: [tool('c', 'Read a.ts'), tool('d', 'Read b.ts')],
   });
-  const title = { name: 'Agent', arg: DRAW.title! };
+  const lines = (width: number) =>
+    groupRow(timed, width).map((runs) => runs.map(({ text }) => text).join(''));
 
-  expect(groupRow(timed, 120)).toStrictEqual({
-    headline: title,
-    counts: ' · 2 tool uses · 28s',
-  });
-  // `Agent(…)` is 66 cells; the counts need 20 more.
-  expect(groupRow(timed, 80)).toStrictEqual({ headline: title });
-  expect(groupRow(timed, 66)).toStrictEqual({ headline: title });
-  expect(groupRow(timed, 30)).toStrictEqual({
-    headline: { name: 'Agent', arg: 'Find where tool calls…' },
-  });
-  expect(groupRow(agent({ id: 'a' }), 20)).toStrictEqual({
-    headline: { name: 'Agent' },
-    counts: ' · 0 tool uses',
-  });
+  // The name bold, the title plain, what follows dim.
+  expect(groupRow(timed, 120)).toStrictEqual([
+    [
+      { text: 'Agent', style: 'bold' },
+      { text: `(${DRAW.title!})`, style: 'plain' },
+      { text: ' · 2 tool uses · 28s', style: 'dim', counts: true },
+    ],
+  ]);
+  // `Agent(…)` is 66 cells.
+  // `Agent(…)` fills 66 cells: the `·` starts the next line.
+  expect(lines(66)).toStrictEqual([
+    `Agent(${DRAW.title!})`,
+    '· 2 tool uses · 28s',
+  ]);
+  expect(lines(70)).toStrictEqual([
+    `Agent(${DRAW.title!}) ·`,
+    '2 tool uses · 28s',
+  ]);
+  expect(lines(30)).toStrictEqual([
+    'Agent(Find where tool calls',
+    'are drawn on screen and how',
+    'they fold) · 2 tool uses · 28s',
+  ]);
+  // Where even the `·` does not fit after a part, it starts the next line.
+  expect(lines(12)).toStrictEqual([
+    'Agent(Find',
+    'where tool',
+    'calls are',
+    'drawn on',
+    'screen and',
+    'how they',
+    'fold) ·',
+    '2 tool uses',
+    '· 28s',
+  ]);
+
+  for (const width of [12, 30, 66, 80, 120]) {
+    for (const line of lines(width)) {
+      expect(line.length, line).toBeLessThanOrEqual(width);
+    }
+  }
+
+  expect(
+    groupRow(agent({ id: 'a' }), 20).map((runs) =>
+      runs.map(({ text }) => text).join(''),
+    ),
+  ).toStrictEqual(['Agent · 0 tool uses']);
 });
 
 test("a child's permission names the way down to it, whole, however long", () => {
@@ -441,29 +475,19 @@ test("an ended task's block says its tokens and money between its tool uses and 
   ).toBe('Done (2 tool uses · 1.2M tokens · 13s)');
 });
 
-test("an ended task's group row gives its tokens way first, then its money, then the rest of its counts (CHD-373)", () => {
-  const counts = (width: number) => groupRow(SPENT_TASK, width).counts;
+test("an ended task's group row keeps its tokens, its money and its counts at every width, wrapping where they do not fit (CHD-373, CHD-473)", () => {
+  const said = (width: number) =>
+    groupRow(SPENT_TASK, width)
+      .map((runs) => runs.map(({ text }) => text).join(''))
+      .join(' ');
 
-  expect(counts(200)).toBe(' · 2 tool uses · 2.0k tokens · $0.0125 · 13s');
+  expect(said(200)).toContain(' · 2 tool uses · 2.0k tokens · $0.0125 · 13s');
 
-  // Narrower and narrower: the tokens go first, then the money, then the
-  // rest of the counts.
-  const seen: (string | undefined)[] = [];
-
-  for (let width = 200; width > 0; width--) {
-    const now = counts(width);
-
-    if (now !== seen.at(-1)) {
-      seen.push(now);
+  for (let width = 200; width > 10; width--) {
+    for (const part of ['2 tool uses', '2.0k tokens', '$0.0125', '13s']) {
+      expect(said(width), `${width}`).toContain(part);
     }
   }
-
-  expect(seen).toStrictEqual([
-    ' · 2 tool uses · 2.0k tokens · $0.0125 · 13s',
-    ' · 2 tool uses · $0.0125 · 13s',
-    ' · 2 tool uses · 13s',
-    undefined,
-  ]);
 });
 
 describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {

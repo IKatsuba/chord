@@ -182,7 +182,7 @@ test('a message never folds on a blank line; the blank goes into the count', () 
   });
 });
 
-test('a task block says its runtime and model after the title; a row of a group drops the model first', () => {
+test('a task block says its runtime and model after the title; a row of a group keeps them, wrapping after a ` · ` (CHD-473)', () => {
   const subagent = TASK;
 
   expect(agentHeadline(subagent)).toStrictEqual({
@@ -190,10 +190,12 @@ test('a task block says its runtime and model after the title; a row of a group 
     arg: 'Fix the tokenizer',
     note: ' · codex · gpt-5.3-codex',
   });
-  expect(groupRow(subagent, 46)).toStrictEqual({
-    headline: { name: 'Agent', arg: 'Fix the tokenizer', note: ' · codex' },
-    counts: ' · 0 tool uses',
-  });
+  expect(
+    groupRow(subagent, 46).map((runs) => runs.map(({ text }) => text).join('')),
+  ).toStrictEqual([
+    'Agent(Fix the tokenizer) · codex ·',
+    'gpt-5.3-codex · 0 tool uses',
+  ]);
   expect(
     askerRow([subagent])
       .map((piece) => piece.text)

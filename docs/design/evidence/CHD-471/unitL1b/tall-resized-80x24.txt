@@ -1,0 +1,24 @@
+ Summarise the release notes for 0.56.... · Fake Small · opened by main 13s ago
+
+ ← from @main
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+╭─ Summarise the release notes for 0.5... the owner to settle before the tag. ─╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back    Fake Small · medium · 1% used
+    main                       fake  ◦ idle 13s
+  ❯ Summarise the release      fake  ◦ idle 12s
+    notes for 0.56.0 from the
+  ↓ commits since 0.55.2,

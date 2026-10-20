@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from chord.
+
+ › /cost
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 10s
+
+      This window          Cost  Tokens
+      1 fake            $0.0250   4,000
+        main            $0.0250   4,000
+        parser     not reported       —
+                   agent
+      Total             $0.0250   4,000
+                   parser not reported
+
+╭────────────────────────────────────────────────╮
+│ ›                                              │
+╰────────────────────────────────────────────────╯
+  ✗ parser's turn failed · ctrl+x a      1% used
+    main    fake  ◦ idle 5s
+    parser  fake  ◦ idle 5s  ✗ turn failed

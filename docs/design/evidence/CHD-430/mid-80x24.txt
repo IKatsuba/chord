@@ -1,0 +1,24 @@
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 in this tab                                                   │
+│                                                                              │
+│ ↑   every token, string                                                      │
+│     and comment once,                                                        │
+│     keeping the line and                                                     │
+│     column of each one so                                                    │
+│     the parser can point                                                     │
+│ ↓   at the exact place a                                                     │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running         Fake Large with a 1M context window · 1% used
+    background  2 tasks running

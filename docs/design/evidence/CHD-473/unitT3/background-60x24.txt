@@ -1,0 +1,24 @@
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+╭──────────────────────────────────────────────────────────╮
+│ Background · 3 in this tab                               │
+│                                                          │
+│ ❯ dev server errors  monitor  running 11s ·         main │
+│                               1 event                    │
+│   CI run 4812        monitor  running 10s ·         main │
+│                               no events                  │
+│   Watch the build    task ·   working 5s            main │
+│                      fake                                │
+│                                                          │
+│ Enter to go to its call · x to stop · Esc to close       │
+╰──────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────╮
+│ ›                                                        │
+╰──────────────────────────────────────────────────────────╯
+  1 agent still running    Fake Large with a 1M… · 1% used
+    background  2 monitors and 1 task running

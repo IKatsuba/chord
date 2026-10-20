@@ -1,0 +1,24 @@
+   ⎿  Total cost:   $0.0250
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 34s
+
+      This window                  Cost  Tokens
+      1 fake                    $0.2625  42,000
+        main                    $0.1250  20,000
+        before /clear           $0.0125   2,000
+        Fix the tokenizer       $0.0125   2,000  task agent, ended
+        parser                  $0.0375   6,000  agent
+        bugfix                  $0.0750  12,000  team run of 3
+        docs               not reported       —  agent, closed
+      Total                     $0.2625  42,000  docs not reported
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)        Fake Small · medium · 2% used
+    main       fake
+    parser     fake
+    bugfix     team · fake  ✓ replied 34s ago
+    … +2 more

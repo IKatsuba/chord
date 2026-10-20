@@ -1,0 +1,40 @@
+   are read rather than in a second walk, the numbers parsed with their radix and separators checked as they come,
+   every error message reworded to say what was expected and what was found instead, with the positions kept for the
+   error messages the parser prints, and the old two-pass reader removed together) · fake
+   ⎿  Initializing…
+
+ ⏺ The tokenizer is being rewritten.
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 in this tab                                                                                           │
+│                                                                                                                      │
+│ ❯ Rewrite the tokenizer     task · fake  working 10s  main                                                           │
+│     as a single pass over                                                                                            │
+│     the source that reads                                                                                            │
+│     every token, string                                                                                              │
+│     and comment once,                                                                                                │
+│     keeping the line and                                                                                             │
+│     column of each one so                                                                                            │
+│     the parser can point                                                                                             │
+│     at the exact place a                                                                                             │
+│     mistake starts, with                                                                                             │
+│     the old lookahead                                                                                                │
+│     buffer replaced by a                                                                                             │
+│     small ring of the last                                                                                           │
+│ ↓   three tokens, the                                                                                                │
+│                                                                                                                      │
+│ Enter to go to its call · x to stop · Esc to close                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running                         Fake Large with a 1M context window · medium effort · 1% context used
+    background  2 tasks running

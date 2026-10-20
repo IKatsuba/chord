@@ -1,0 +1,24 @@
+ ← from @main
+
+ ››› Waiting for permission… (16s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ docs 2 asks                                                                  │
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs 2 ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back    Fake Large with a 1M context…
+    docs      fake · Fake Large with a 1M context window  ● permission 23s
+    parser 2  fake · Fake Small
+  ❯ docs 2    fake · Fake Large with a 1M context window  ● permission 15s
+    … +2 more

@@ -1,5 +1,9 @@
 import { expect, test } from 'bun:test';
-import { uncovered } from '../../../scripts/dev/covered.ts';
+import { execFileSync } from 'node:child_process';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { trackedFiles, uncovered } from '../../../scripts/dev/covered.ts';
 
 const root = '/work/chord';
 
@@ -35,4 +39,30 @@ test('eslint.config.ts is left out by name until the owner settles its types (CH
   expect(
     uncovered(['eslint.config.ts', 'lint/style.ts'], [], root),
   ).toStrictEqual(['lint/style.ts']);
+});
+
+test('a tracked name git would quote, with a quote or a non-ASCII letter, is read as it is and found missing (CHD-474)', async () => {
+  const repo = await mkdtemp(join(tmpdir(), 'chord-covered-'));
+
+  try {
+    const names = ['a"b.ts', 'café.tsx', 'plain.ts'];
+    const git = (...args: string[]) =>
+      execFileSync('git', args, { cwd: repo, stdio: 'pipe' });
+
+    git('init', '-q');
+
+    for (const name of names) {
+      await writeFile(join(repo, name), 'export {};\n');
+    }
+
+    git('add', '.');
+
+    // git ls-files without -z would give "a\"b.ts" and "caf\303\251.tsx".
+    expect(trackedFiles(repo).toSorted()).toStrictEqual(names.toSorted());
+    expect(
+      uncovered(trackedFiles(repo), [join(repo, 'plain.ts')], repo).toSorted(),
+    ).toStrictEqual(['a"b.ts', 'café.tsx']);
+  } finally {
+    await rm(repo, { recursive: true, force: true });
+  }
 });

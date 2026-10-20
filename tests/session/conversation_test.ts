@@ -2398,7 +2398,7 @@ describe('CHD-417 tester: held steer lifecycle', () => {
             event.update.toolCallId === id,
         );
 
-      conversation.send('overlap');
+      conversation.send('overlaptwo');
       await until(() => has('overlap-a'));
       conversation.tell(MAIN, 'First.');
       await until(() => has('overlap-b'));

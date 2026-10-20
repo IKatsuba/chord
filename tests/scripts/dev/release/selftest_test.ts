@@ -52,12 +52,45 @@ await selftest({ ...release(), root: ${JSON.stringify(at.root)} }, 'chord');`,
     },
   );
   const ended = new Promise<NodeJS.Signals | null>((resolve) =>
-    child.on('exit', (_code, signal) => resolve(signal)),
+    child.on('close', (_code, signal) => resolve(signal)),
   );
+  let stderr = '';
 
-  for (let tries = 0; !existsSync(join(at.place, 'started')); tries++) {
-    expect(tries).toBeLessThan(200);
-    await sleep(50);
+  child.stderr.on('data', (bytes: Buffer) => {
+    stderr += bytes.toString();
+  });
+
+  // Under a loaded suite the child's start took up to 11 s, against 1 s
+  // alone, and always came (CHD-467): a deadline that leaves room for it,
+  // and a child gone before its window fails at once.
+  const deadline = performance.now() + 30_000;
+
+  try {
+    while (!existsSync(join(at.place, 'started'))) {
+      if (child.exitCode !== null || child.signalCode !== null) {
+        await ended;
+
+        throw new Error(
+          `self-test exited before its window started: code ${child.exitCode}, signal ${child.signalCode}; stderr:\n${stderr}`,
+        );
+      }
+
+      if (performance.now() >= deadline) {
+        throw new Error(
+          `self-test window did not start within 30 s; stderr:\n${stderr}`,
+        );
+      }
+
+      await sleep(50);
+    }
+  } catch (error) {
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGKILL');
+    }
+
+    await ended;
+
+    throw error;
   }
 
   child.kill('SIGTERM');

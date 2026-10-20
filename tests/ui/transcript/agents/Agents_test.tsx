@@ -445,7 +445,10 @@ describe('tester: subagentstates keys and terminal sizes', () => {
       test(`Esc cancels the ${phase} at ${columns} columns`, () =>
         withWindow(
           async (window) => {
-            await send(window, 'subagentstates');
+            await send(
+              window,
+              phase === 'lone child' ? 'subagentstates' : 'subagentstatesstay',
+            );
 
             if (phase === 'lone child') {
               await window.shows('+2 more tool uses');

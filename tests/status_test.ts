@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { ConversationEvent } from '../src/session/conversation.ts';
 import {
   hear,
@@ -6,6 +6,7 @@ import {
   noTabs,
   openChild,
   openTab,
+  pick,
   show,
   type Tabs,
 } from '../src/session/tabs.ts';
@@ -38,6 +39,95 @@ function heard(
 }
 
 const up: ConversationEvent = { type: 'connected', sessionId: 's' };
+
+describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
+  test('a late completed result after cancel stays idle', () => {
+    const cancelled = heard(opened('fake'), 1, [
+      up,
+      prompt('late'),
+      { type: 'cancel', turnId: 'late', at: 1000 },
+      ended('late'),
+    ]);
+
+    expect(programStatus(cancelled)).toStrictEqual({
+      state: 'idle',
+      app: 'chord',
+    });
+  });
+
+  test('keys on the parent leave a completed child done until it is picked', () => {
+    const child = openChild(
+      heard(opened('fake'), 1, [up]),
+      1,
+      { id: 'child', name: 'tester', runtime: 'fake', openedAt: 0 },
+      'tester',
+    )!;
+    const done = heard(child.tabs, child.key, [up, prompt('c'), ended('c')]);
+
+    expect(programStatus(keyed(done))).toStrictEqual({
+      state: 'done',
+      app: 'chord',
+      message: 'tester is waiting for your input',
+    });
+    expect(programStatus(pick(done, child.key))).toStrictEqual({
+      state: 'idle',
+      app: 'chord',
+    });
+  });
+
+  test('a failed front turn clears on a key, leaving another tab working', () => {
+    const running = heard(opened('first', 'second'), 1, [up, prompt('a')]);
+    const failure = heard(running, 2, [up, prompt('b'), failed('b')]);
+
+    expect(programStatus(failure).state).toBe('error');
+    expect(programStatus(keyed(failure))).toStrictEqual({
+      state: 'working',
+      app: 'chord',
+    });
+  });
+
+  test('equal-age requests choose the leftmost tab and expose the next after settlement', () => {
+    const first = heard(opened('first', 'second'), 1, [
+      up,
+      prompt('a'),
+      permission('a', 'pa'),
+    ]);
+    const both = heard(first, 2, [up, prompt('b'), link('b', 'eb')]);
+
+    expect(programStatus(both)).toStrictEqual({
+      state: 'blocked',
+      app: 'chord',
+      kind: 'permission',
+      message: 'first (1) needs your permission: Write notes.txt',
+    });
+
+    const answered = heard(both, 1, [
+      {
+        type: 'permission_settled',
+        turnId: 'a',
+        id: 'pa',
+        answer: { type: 'withdrawn' },
+      },
+    ]);
+
+    expect(programStatus(answered)).toStrictEqual({
+      state: 'blocked',
+      app: 'chord',
+      kind: 'auth',
+      message: 'second (2) asks for input: Sign in',
+    });
+  });
+
+  test('four-byte text fits whole and every C0, DEL and C1 control becomes a space', () => {
+    const controls = Array.from({ length: 160 }, (_, code) =>
+      code < 32 || code >= 127 ? String.fromCharCode(code) : '',
+    ).join('');
+
+    expect(messageLine(controls)).toBe(' '.repeat(65));
+    expect(messageLine(`${'a'.repeat(2044)}😀x`)).toBe(`${'a'.repeat(2044)}😀`);
+    expect(messageLine(`${'a'.repeat(2045)}😀x`)).toBe('a'.repeat(2045));
+  });
+});
 
 function prompt(turnId: string): ConversationEvent {
   return { type: 'prompt', turnId, text: 'hi', at: 0 };

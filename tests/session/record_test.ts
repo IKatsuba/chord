@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { turnCost } from '../../src/session/prices.ts';
@@ -1361,5 +1361,142 @@ describe('CHD-373 S3c: a task running as its parent is let go', () => {
         await child?.close();
         await conversation.close();
       }
+    }));
+});
+
+describe('CHD-467 tester: answer and cost settlement in either wire order', () => {
+  function completed(
+    events: readonly ConversationEvent[],
+    amounts: readonly number[],
+  ) {
+    const prompts = events.flatMap((event, index) =>
+      event.type === 'prompt' &&
+      event.into === undefined &&
+      !event.turnId.startsWith('history-')
+        ? [{ event, index }]
+        : [],
+    );
+
+    expect(prompts).toHaveLength(amounts.length);
+
+    for (const [at, { event, index }] of prompts.entries()) {
+      const end = prompts[at + 1]?.index ?? events.length;
+      const between = events.slice(index + 1, end);
+
+      expect(
+        between.some(
+          (next) =>
+            next.type === 'result' &&
+            next.turnId === event.turnId &&
+            next.result.status === 'completed',
+        ),
+      ).toBe(true);
+      expect(
+        between.some(
+          (next) =>
+            next.type === 'update' &&
+            next.update.sessionUpdate === 'usage_update' &&
+            Math.abs((next.update.cost?.amount ?? -1) - amounts[at]!) < 1e-9,
+        ),
+      ).toBe(true);
+    }
+  }
+
+  test('each successive prompt waits for both prior arrivals and keeps a distinct final cost', () =>
+    withDir(async (dir) => {
+      const events: ConversationEvent[] = [];
+
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(undefined, '--late-cost'),
+        prompts: ['text', 'text', 'text', 'text'],
+        agent: 'claude',
+        lateCost: true,
+        heard: (event) => events.push(event),
+      });
+      completed(events, [0.0125, 0.025, 0.0375, 0.05]);
+
+      const entries = await readPast((await theRecord(dir)).path);
+      const ids = new Set(
+        entries.flatMap((entry) =>
+          entry.type === 'usage' ? [entry.turnId] : [],
+        ),
+      );
+
+      expect(ids.size).toBe(4);
+      expect(costs(entries)).toEqual(
+        Array.from({ length: 4 }, () => turn(0.0125)),
+      );
+    }));
+
+  test('concurrent recordings cannot satisfy another session answer or cost wait', () =>
+    withDir(async (dir) => {
+      await Promise.all(
+        [2, 3].map(async (count) => {
+          const cwd = join(dir, `session-${count}`);
+          const events: ConversationEvent[] = [];
+
+          await mkdir(cwd);
+          await recordSession({
+            stateDir: join(cwd, 'state'),
+            cwd,
+            command: fakeAgentCommand(undefined, '--late-cost'),
+            prompts: Array.from({ length: count }, () => 'text'),
+            agent: 'claude',
+            lateCost: true,
+            heard: (event) => events.push(event),
+          });
+          completed(
+            events,
+            Array.from({ length: count }, (_, index) => (index + 1) * 0.0125),
+          );
+          expect(costs(await readPast((await theRecord(cwd)).path))).toEqual(
+            Array.from({ length: count }, () => turn(0.0125)),
+          );
+        }),
+      );
+    }));
+
+  test('resuming a recorded session keeps the prior baseline while waiting for each new answer and cost', () =>
+    withDir(async (dir) => {
+      const stateDir = join(dir, 'state');
+      const id = await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(undefined, '--late-cost'),
+        prompts: ['text', 'text'],
+        agent: 'kilo',
+        lateCost: true,
+      });
+      const record = await theRecord(dir);
+      const before = await readPast(record.path);
+      const events: ConversationEvent[] = [];
+
+      await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(
+          undefined,
+          '--resume-only',
+          '--late-cost',
+          '--cost-from',
+          '0.025',
+        ),
+        prompts: ['text', 'text'],
+        agent: 'kilo',
+        lateCost: true,
+        resume: { sessionId: id, cwd: dir, record: record.path },
+        heard: (event) => events.push(event),
+      });
+      completed(events, [0.0375, 0.05]);
+
+      const after = await readPast(record.path);
+
+      expect(after.slice(0, before.length)).toEqual(before);
+      expect(costs(after)).toEqual(
+        Array.from({ length: 4 }, () => turn(0.0125)),
+      );
+      expect(after.filter((entry) => entry.type === 'opened')).toHaveLength(2);
     }));
 });

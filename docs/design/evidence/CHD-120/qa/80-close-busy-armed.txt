@@ -1,4 +1,4 @@
- chord   1 fake    2 fake                            …/T/chord-qa.ofox6ids/work
+ chord   1 fake    2 fake                            /tmp/chord-qa.XXXX/work   
 
 
 

@@ -104,3 +104,25 @@ describe('CHD-468 tester: production JSX shim element semantics', () => {
     }
   }
 });
+
+describe('CHD-468 tester: host native selection across libc and architectures', () => {
+  for (const [platform, arch, libc, expected] of [
+    ['linux', 'x64', 'musl', '@opentui/core-linux-x64-musl'],
+    ['linux', 'arm64', undefined, '@opentui/core-linux-arm64'],
+    ['linux', 'x64', 'glibc', '@opentui/core-linux-x64'],
+    ['linux', 'arm64', 'MUSL', '@opentui/core-linux-arm64'],
+    ['darwin', 'x64', 'musl', '@opentui/core-darwin-x64'],
+    ['win32', 'arm64', 'musl', '@opentui/core-win32-arm64'],
+    ['win32', 'x64', 'musl', '@opentui/core-win32-x64'],
+  ] as const) {
+    test(`${platform}-${arch} with libc=${String(libc)} keeps only its loaded native`, () => {
+      const loaded = loadedNative(platform, arch, libc);
+      const external = otherNatives(loaded);
+
+      expect(loaded).toBe(expected);
+      expect(external).not.toContain(expected);
+      expect(external).toHaveLength(7);
+      expect(new Set(external).size).toBe(7);
+    });
+  }
+});

@@ -103,6 +103,7 @@ test('lint and fmt run ESLint and Prettier over the tree', () => {
 describe('check', () => {
   const STATIC = [
     [bun, 'run', 'tsc'],
+    [bun, 'scripts/dev/covered.ts'],
     [bun, 'run', 'eslint', '.'],
     [bun, 'run', 'prettier', '--check', '.'],
     [bun, 'test', 'lint/'],
@@ -140,7 +141,7 @@ describe('check', () => {
   });
 
   test("a failing suite is the check's status", () => {
-    const { run } = faked([0, 0, 0, 0, 1]);
+    const { run } = faked([0, 0, 0, 0, 0, 1]);
 
     expect(check({ static: false }, run)).toBe(1);
   });

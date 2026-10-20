@@ -104,6 +104,11 @@ leave that stage out. See `docs/guide.md` for failure and signal cleanup.
   modules with tests. Components only draw state and dispatch. `tests/`
   mirrors `src/`: a module's tests are at the mirrored path
   (`tests/settings_test.ts` for `src/settings.ts`).
+  If a test's path differs from another only by case, add it to
+  `tsconfig.json`'s `files`: tsc can skip it on a case-blind file system.
+  `bun dev check --static` runs `scripts/dev/covered.ts`, which fails and
+  names tracked TS/TSX files left unchecked; `eslint.config.ts` is exempt
+  pending Q64.
 - **Tests never reach a real model or a real agent.** Drive the UI through
   `tests/ui/harness.tsx`, on OpenTUI's `testRender`; drive the session layer
   with a fake ACP agent in `tests/fixtures/` speaking the protocol over stdio. A live agent is for a

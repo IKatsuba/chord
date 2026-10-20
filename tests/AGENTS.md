@@ -5,4 +5,6 @@
 - Bun's `expect` narrows no type; use `node:assert`'s `assert` where a later line needs it.
 - Start chord or the fake agent under `process.execPath`, the Bun running the test.
 - Helpers sit beside the tests that share them.
+- Add a new test to `tsconfig.json`'s `files` when its path differs from
+  another file only by case, so tsc checks both on a case-blind file system.
 - Never reach a real model or a real agent.

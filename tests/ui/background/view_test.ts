@@ -750,3 +750,36 @@ describe('CHD-373 S2 tester: zero and absent money in background states', () => 
     });
   }
 });
+
+test("a task's runtime or model with CR, LF or tabs reads as spaces in every layout, no line holding a line break and no word lost (CHD-473)", () => {
+  const odd = task(
+    't9',
+    'Fix the tokenizer',
+    { group: 'running' },
+    { runtime: 'fake\tlocal', model: 'Fake\r\nSmall\nmodel' },
+  );
+
+  for (const width of [116, 60, 40, 24]) {
+    const drawn = text(
+      viewRows([ITEMS[0]!, odd], { width, focus: undefined, now: NOW }),
+    );
+
+    expect(
+      drawn.some((line) => /[\r\n\t]/.test(line)),
+      `${width}`,
+    ).toBe(false);
+    expect(drawn.join(' ').replace(/\s+/g, ' '), `${width}`).toContain(
+      'fake local',
+    );
+
+    for (const word of ['Fake', 'Small', 'model']) {
+      expect(drawn.join(' '), `${width}`).toContain(word);
+    }
+  }
+
+  expect(
+    text(viewRows([odd], { width: 116, focus: undefined, now: NOW }))[0],
+  ).toBe(
+    '❯ Fix the tokenizer  task · fake local · Fake Small model  working 32s  main',
+  );
+});

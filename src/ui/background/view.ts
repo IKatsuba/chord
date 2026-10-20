@@ -132,10 +132,19 @@ export function stateText(
   }
 }
 
-/** An item's kind as its row says it: a task's with its runtime and model. */
+/** `text` on one line: every run of whitespace one space, as a title is shown. */
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * An item's kind as its row says it: a task's with its runtime and model,
+ * each on one line, as the row is laid out by the lines it makes itself.
+ */
 function kindText(item: BackgroundItem): string {
   return [item.kind, item.runtime, item.model]
     .filter((part) => part !== undefined)
+    .map(oneLine)
     .join(' · ');
 }
 
@@ -269,7 +278,13 @@ export function viewRows(
     role: 'mark',
   });
   const kinds = items.map(kindText);
-  const states = items.map((item) => stateText(item, now));
+  // A state's words on one line too: an agent's end word is its own.
+  const states = items.map((item) => {
+    const state = stateText(item, now);
+
+    return { ...state, text: oneLine(state.text) };
+  });
+
   const fullKind = widest(kinds);
   const fullState = widest(states.map(({ text }) => text));
   // What the kind and the state share, the name and owner columns kept.

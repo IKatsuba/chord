@@ -158,12 +158,32 @@ await selftest({ ...release(), root: ${JSON.stringify(at.root)} }, 'chord');`,
         },
       );
       const ended = new Promise<NodeJS.Signals | null>((resolve) =>
-        child.on('exit', (_code, received) => resolve(received)),
+        child.on('close', (_code, received) => resolve(received)),
       );
+      let stderr = '';
+
+      child.stderr.on('data', (bytes: Buffer) => {
+        stderr += bytes.toString();
+      });
 
       try {
-        for (let tries = 0; !existsSync(join(at.place, 'started')); tries++) {
-          expect(tries).toBeLessThan(100);
+        const deadline = performance.now() + 30_000;
+
+        while (!existsSync(join(at.place, 'started'))) {
+          if (child.exitCode !== null || child.signalCode !== null) {
+            await ended;
+
+            throw new Error(
+              `self-test exited before its window started: code ${child.exitCode}, signal ${child.signalCode}; stderr:\n${stderr}`,
+            );
+          }
+
+          if (performance.now() >= deadline) {
+            throw new Error(
+              `self-test window did not start within 30 s; stderr:\n${stderr}`,
+            );
+          }
+
           await sleep(50);
         }
 

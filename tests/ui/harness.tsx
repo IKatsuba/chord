@@ -10,6 +10,7 @@ import { act, type ReactNode } from 'react';
 import {
   type BaseRenderable,
   type CapturedSpan,
+  NativeSession,
   RendererControlState,
   TextBufferRenderable,
   type RGBA,
@@ -66,6 +67,8 @@ export interface Drawn {
 /** The test terminal's size where a test gives none, as Ink's test one was wide. */
 const COLUMNS = 100;
 const ROWS = 24;
+/** How long a graceful close may take, about 7× the slowest seen to finish. */
+const CLOSE_TIMEOUT_MS = 10_000;
 
 /**
  * Draws `node` in a terminal of `size`, the test terminal's own otherwise.
@@ -98,6 +101,13 @@ export async function draw(
   // first: OpenTUI 0.6 suspends only a terminal it has set up, and ctrl+g's
   // editor suspends it.
   let root: Root | null = null;
+  const terminal =
+    logged === undefined
+      ? quietTerminal(columns, rows)
+      : {
+          ...terminalOptions({ mouse: logged.mouse ?? true }),
+          ...loggedTerminal(logged.log, columns, rows),
+        };
 
   actEnvironment(true);
 
@@ -110,12 +120,15 @@ export async function draw(
     exitSignals: [],
     // As chord's own renderer: a click gives no widget the keys.
     autoFocus: false,
-    ...(logged === undefined
-      ? {}
-      : {
-          ...terminalOptions({ mouse: logged.mouse ?? true }),
-          ...loggedTerminal(logged.log, columns, rows),
-        }),
+    ...terminal,
+    // OpenTUI's graceful close gives up after 1 s, and under load a close
+    // took up to 1.5 s and still finished (p99.9 1.1 s, max 1.5 s of 6,909
+    // timed for CHD-467), so a slow close failed the test it ended. The
+    // session that takes a longer one needs its output on a stream, so the
+    // plain terminal's goes to one that keeps nothing.
+    nativeSession: new NativeSession(terminal.stdout, {
+      closeTimeoutMs: CLOSE_TIMEOUT_MS,
+    }),
     onDestroy() {
       act(() => {
         root?.unmount();
@@ -252,6 +265,29 @@ function loggedTerminal(log: string[], columns: number, rows: number) {
     stdin: stdin as unknown as NodeJS.ReadStream,
     stdout: stdout as unknown as NodeJS.WriteStream,
     screenMode: 'alternate-screen',
+    bufferedOutput: 'stdout',
+  } as const;
+}
+
+/**
+ * The streams of a terminal that is only drawn in, as OpenTUI's test
+ * renderer makes its own (which it does not export): what it is told is
+ * dropped, never reaching the test's own stdout.
+ */
+function quietTerminal(columns: number, rows: number) {
+  const stdin = new Readable({ read() {} });
+  const stdout = Object.assign(
+    new Writable({
+      write(_chunk, _encoding, done) {
+        done();
+      },
+    }),
+    { isTTY: true, columns, rows, getColorDepth: () => 24 },
+  );
+
+  return {
+    stdin: stdin as unknown as NodeJS.ReadStream,
+    stdout: stdout as unknown as NodeJS.WriteStream,
     bufferedOutput: 'stdout',
   } as const;
 }

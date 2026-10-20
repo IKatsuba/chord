@@ -158,6 +158,42 @@ test('a failing editor leaves the draft and says so in the status line', () =>
     },
   ));
 
+// The textarea's column counts cells, chord's cursor the string: after text
+// whose cells and length differ, the cursor still lands at its end, and `\`
+// before Enter still breaks the line (CHD-480).
+test("the cursor lands at the end of the editor's text, and after a control character typing goes there", () =>
+  withWindow(
+    async (window) => {
+      await window.press(CTRL_G);
+      await window.shows('› verbatim a^Lb中c');
+      await window.type('!');
+      await window.shows('› verbatim a^Lb中c!');
+      await window.press('\r');
+      await window.shows('"a\\u000cb中c!"');
+    },
+    { editor: () => Promise.resolve({ text: 'verbatim a\u000cb中c' }) },
+  ));
+
+test('a recalled prompt with a control character, a tab and a wide character is edited at its end', () =>
+  withWindow(async (window) => {
+    await window.paste('verbatim a\u000cb\t中c');
+    await window.press('\r');
+    await window.shows('"a\\u000cb\\u0009中c"');
+    await window.press(UP);
+    await window.type('!');
+    await window.press('\r');
+    await window.shows('"a\\u000cb\\u0009中c!"');
+  }));
+
+test('\\ before Enter breaks the line after a control character', () =>
+  withWindow(async (window) => {
+    await window.paste('verbatim a\u000cb\\');
+    await window.press('\r');
+    await window.type('next');
+    await window.press('\r');
+    await window.shows('"a\\u000cb\\u000anext"');
+  }));
+
 // OpenTUI 0.6.6's box holds a control character, drawn as Vim does, and
 // chord sends it as written (CHD-480).
 test("a control character in the editor's text is held, drawn as ^L, and sent as written", () =>

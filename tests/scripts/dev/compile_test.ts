@@ -6,7 +6,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Fragment as ReactFragment, isValidElement } from 'react';
-import { buildOptions } from '../../../scripts/dev/compile.ts';
+import {
+  buildOptions,
+  loadedNative,
+  otherNatives,
+} from '../../../scripts/dev/compile.ts';
 import { Fragment, jsxDEV } from '../../../scripts/dev/jsx_dev_runtime.ts';
 
 const FIXTURE = fileURLToPath(
@@ -39,6 +43,42 @@ test("built as the binary is, OpenTUI's ErrorBoundary paints the error rather th
     await rm(out, { recursive: true });
   }
 }, 60_000);
+
+test('a build for this machine leaves out every OpenTUI native but the one its runtime loads, on any platform (CHD-468)', () => {
+  const all = [
+    '@opentui/core-darwin-x64',
+    '@opentui/core-darwin-arm64',
+    '@opentui/core-linux-x64',
+    '@opentui/core-linux-arm64',
+    '@opentui/core-win32-x64',
+    '@opentui/core-win32-arm64',
+    '@opentui/core-linux-x64-musl',
+    '@opentui/core-linux-arm64-musl',
+  ];
+  const without = (name: string) => all.filter((each) => each !== name);
+
+  // Linux loads the glibc build unless OPENTUI_LIBC says musl, so a host
+  // install with only one of the two still builds.
+  expect(loadedNative('linux', 'x64', undefined)).toBe(
+    '@opentui/core-linux-x64',
+  );
+  expect(loadedNative('linux', 'x64', '')).toBe('@opentui/core-linux-x64');
+  expect(loadedNative('linux', 'arm64', 'musl')).toBe(
+    '@opentui/core-linux-arm64-musl',
+  );
+  expect(loadedNative('darwin', 'arm64', 'musl')).toBe(
+    '@opentui/core-darwin-arm64',
+  );
+  expect(otherNatives('@opentui/core-linux-x64').toSorted()).toStrictEqual(
+    without('@opentui/core-linux-x64').toSorted(),
+  );
+  expect(
+    otherNatives('@opentui/core-linux-arm64-musl').toSorted(),
+  ).toStrictEqual(without('@opentui/core-linux-arm64-musl').toSorted());
+  expect(otherNatives('@opentui/core-win32-x64').toSorted()).toStrictEqual(
+    without('@opentui/core-win32-x64').toSorted(),
+  );
+});
 
 describe('CHD-468 tester: production JSX shim element semantics', () => {
   test('Fragment is the React runtime fragment', () => {

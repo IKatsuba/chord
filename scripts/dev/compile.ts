@@ -40,22 +40,42 @@ const jsxDevRuntime: BunPlugin = {
 };
 
 /**
- * OpenTUI's native packages for every platform but this machine's. A
- * compile for a target keeps only that target's import, as its platform
- * is fixed; a bundle for this machine keeps them all, and an install holds
- * only its own platform's, as CI's does (CHD-468).
+ * The native package OpenTUI loads on `platform` and `arch`, as its own
+ * resolveNativeLibraryPath picks one: on Linux the musl build only when
+ * `libc` (OPENTUI_LIBC) says musl.
  */
-function otherNatives(): string[] {
+export function loadedNative(
+  platform: string,
+  arch: string,
+  libc: string | undefined,
+): string {
+  const musl = platform === 'linux' && libc === 'musl' ? '-musl' : '';
+
+  return `@opentui/core-${platform}-${arch}${musl}`;
+}
+
+/**
+ * OpenTUI's native packages but `loaded`, this machine's by default. A
+ * compile for a target keeps only that target's import, as its platform is
+ * fixed; a bundle for this machine keeps them all, and an install may hold
+ * only the one it runs on, as CI's does (CHD-468).
+ */
+export function otherNatives(
+  loaded = loadedNative(
+    process.platform,
+    process.arch,
+    process.env.OPENTUI_LIBC,
+  ),
+): string[] {
   const opentui = JSON.parse(
     readFileSync(
       join(root, 'node_modules', '@opentui', 'core', 'package.json'),
       'utf8',
     ),
   ) as { optionalDependencies?: Record<string, string> };
-  const own = `@opentui/core-${process.platform}-${process.arch}`;
 
   return Object.keys(opentui.optionalDependencies ?? {}).filter(
-    (name) => name !== own && name !== `${own}-musl`,
+    (name) => name !== loaded,
   );
 }
 

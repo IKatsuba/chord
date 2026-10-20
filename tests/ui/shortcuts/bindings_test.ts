@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -840,6 +840,47 @@ test('the newline line names the newline keys, then the backslash before the key
   expect(
     lines({ enter: null }).some((line) => line.includes('\\ +')),
   ).toBeFalse();
+});
+
+describe('CHD-468 tester: merged newline entry follows available actions', () => {
+  const noNewlines = {
+    'shift+enter': null,
+    'alt+enter': null,
+    'ctrl+j': null,
+    'ctrl+enter': null,
+  };
+
+  function newlineEntries(bindings: Record<string, string | null>) {
+    const { keymap, problems } = read({ context: 'Chat', bindings });
+
+    expect(problems).toStrictEqual([]);
+
+    const lines = shortcuts(keymap).map(shortcutLine);
+
+    expect(lines.at(-1)).toBe('any key to quit the crash screen');
+
+    return lines.filter((line) => line.endsWith('for a newline'));
+  }
+
+  test('rebinding both actions names each once in newline-then-submit order', () => {
+    expect(
+      newlineEntries({
+        ...noNewlines,
+        enter: 'chat:newline',
+        'ctrl+s': 'chat:submit',
+      }),
+    ).toStrictEqual(['enter or \\ + ctrl + s for a newline']);
+  });
+
+  test('with no direct newline, the backslash-submit route stands alone', () => {
+    expect(newlineEntries(noNewlines)).toStrictEqual([
+      '\\ + enter for a newline',
+    ]);
+  });
+
+  test('with both routes unbound, no newline entry or dangling separator remains', () => {
+    expect(newlineEntries({ ...noNewlines, enter: null })).toStrictEqual([]);
+  });
 });
 
 /** `state` with `held` pressed and the next key waited for. */

@@ -585,6 +585,60 @@ test('a row that was last when drawn keeps its column once a sibling comes after
     { rows: 40, columns: 120 },
   ));
 
+test("a row's props for being last or not are dropped, not reset by hand, and the row follows (Q41, OpenTUI 0.6.6)", async () => {
+  const agents: Subagent[] = (
+    [
+      ['First', 'completed'],
+      ['Second', 'failed'],
+      ['Third', 'cancelled'],
+    ] as const
+  ).map(([title, state]) => ({
+    id: title,
+    title,
+    state,
+    entries: [],
+    plan: [],
+  }));
+  let resize = (_count: number) => {};
+
+  function ChangingGroup() {
+    const [count, setCount] = useState(2);
+
+    resize = setCount;
+
+    return (
+      <Agents
+        agents={agents.slice(0, count)}
+        turn={{ status: 'idle' }}
+        agent='fake'
+        open={false}
+        width={60}
+      />
+    );
+  }
+
+  const drawn = await draw(<ChangingGroup />, { columns: 64, rows: 12 });
+  const frame = () => stripAnsi(drawn.frame());
+  const shows = (text: string) => until(text, () => frame().includes(text));
+
+  try {
+    await shows('└─ Agent(Second)');
+    expect(frame()).toContain('\n     ⎿  Failed');
+    resize(3);
+    await shows('├─ Agent(Second)');
+    // The padding of 1 the row had as the last is gone under its border.
+    expect(frame()).toContain('│  ⎿  Failed');
+    expect(frame()).not.toContain('│   ⎿');
+    resize(2);
+    await shows('└─ Agent(Second)');
+    // The border is gone, and the padding back.
+    expect(frame()).toContain('\n     ⎿  Failed');
+    expect(frame()).not.toContain('│  ⎿  Failed');
+  } finally {
+    await drawn.unmount();
+  }
+});
+
 describe('Q41 tester: a mounted last row gains a sibling', () => {
   for (const columns of [80, 120]) {
     for (const open of [false, true]) {

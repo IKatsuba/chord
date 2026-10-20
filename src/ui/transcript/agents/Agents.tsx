@@ -356,13 +356,11 @@ function AgentGroup({
             ))}
             <box
               marginLeft={2}
-              // Named on both sides: a row that stops being last keeps no
-              // padding of 1 under its border, as a prop dropped is not reset
-              // (OpenTUI 0.6.0, Q41).
+              // A row that stops being last loses its padding of 1: OpenTUI
+              // 0.6.6 resets a prop dropped to its default (Q41).
               {...(last
                 ? { paddingLeft: 1 }
                 : {
-                    paddingLeft: 0,
                     border: ['left' as const],
                     borderStyle: 'single' as const,
                     borderColor: DIM_BORDER,

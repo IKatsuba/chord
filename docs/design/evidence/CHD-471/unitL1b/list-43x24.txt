@@ -1,0 +1,24 @@
+
+ ⏺ bugfix has the job. Its lead will
+   report here; you can look in with ↓.
+
+ ← from @bugfix · fake
+   ⎿  On it. tester is writing a failing
+      test
+      in tests/parse/tokenize_test.ts;
+      coder waits for it and will edit
+      src/parse/tokenize.ts only. I will
+      report when the test fails
+      for the bug's own reason.
+
+ ⏺ Received the message from bugfix ·
+   fake.
+
+╭─────────────────────────────────────────╮
+│ ›                                       │
+╰─────────────────────────────────────────╯
+  ● 2 agents wait · ctrl+x a      1% used
+    main       fake  ◦ idle 9s
+    parser     fake  ◦ idle 15s        ✓
+    docs       fake  ● permission 19s  ←
+    … +1 more

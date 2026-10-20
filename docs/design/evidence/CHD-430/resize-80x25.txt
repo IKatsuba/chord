@@ -1,0 +1,12 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 in this tab                                                   │
+│                                                                              │
+│ ❯ Rewrite the tokenizer     task · fake  working 22s  main                   │
+│     as a single pass over                                                    │
+│     the source that reads                                                    │
+│     every token, string                                                      │
+│     and comment once,                                                        │
+│ ↓   keeping the line and                                                     │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯

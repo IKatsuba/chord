@@ -1,0 +1,40 @@
+   ⎿  Total cost:   $0.0375
+      Tokens in:    3,000
+      Tokens out:   600
+      Cache read:   2,400
+      Session time: 17s
+
+      This window                                    Cost  Tokens
+      1 fake                                      $0.0375   6,000
+        main                                      $0.0375   6,000
+          Rewrite the tokenizer as a single             —       —  task agent, running: counted when it ends
+          pass over the source that reads
+          every token, string and comment
+          once, keeping the line and column
+          of each one so the parser can
+          point at the exact place a
+          mistake starts, with the old
+          lookahead buffer replaced by a
+          small ring of the last three
+          tokens, the escapes inside
+          strings decoded where they are
+          read rather than in a second
+          walk, the numbers parsed with
+          their radix and separators
+          checked as they come, every error
+          message reworded to say what was
+          expected and what was found
+          instead, with the positions kept
+          for the error messages the parser
+          prints, and the old two-pass
+          reader removed together
+        parser                               not reported       —  agent
+      Total                                       $0.0375   6,000  parser not reported; 1 running
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ✗ parser's turn failed · ctrl+x a to go · 1 agent still running        Fake Large with a 1M context window · 1% used
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 6s
+    parser  fake · Fake Small · medium                           ◦ idle 12s  ✗ turn failed
+    background  1 task running

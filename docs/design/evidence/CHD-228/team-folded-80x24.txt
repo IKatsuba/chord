@@ -1,0 +1,24 @@
+ → to @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both
+      in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● 2 agents wait · ctrl+x a     Fake Large with a 1M context window · 1% used
+    main       fake
+    bugfix     team · fake · 3 agents  ● tester: permission 17s
+    parser     fake                    ✓ replied 9s ago
+    docs       fake                    ● permission 9s

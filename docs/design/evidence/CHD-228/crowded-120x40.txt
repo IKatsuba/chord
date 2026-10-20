@@ -1,0 +1,40 @@
+ docs 2 · fake · Fake Large with a 1M context window · opened by main 18s ago
+
+ ← from @main
+   ⎿  permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (18s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ docs 2 asks                                                                                                          │
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs 2 ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts  Fake Large with a 1M context window · medium effort
+    main      fake · Fake Large with a 1M context window · medium
+    parser    fake · Fake Small · medium
+    docs      fake · Fake Large with a 1M context window · medium  ● permission 25s
+    parser 2  fake · Fake Small · medium
+    docs 2    fake · Fake Large with a 1M context window · medium  ● permission 17s

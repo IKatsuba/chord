@@ -1,0 +1,24 @@
+
+ ››› Waiting for permission… (15s)
+ ← from @coder · fake: Reading src/parse/tokenize...ll me when your test fails.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ tester · bugfix asks                                                         │
+│ `deno task test tests/parse`                                                 │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ accept edits on (shift+tab to cycle)           Fake Small · medium effort
+    docs       fake         ● permission 25s
+    bugfix     team · fake  ◦ idle 14s
+  ❯ ├─ tester  fake         ● permission 14s
+    … +3 more

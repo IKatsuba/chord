@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › subagent
+
+ ⏺ I will send two agents, one for each side.
+
+ ⏺ 2 agents ended · 1 failed (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 5 tool uses · 2s
+   │  ⎿  Done
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) ·
+      2 tool uses · 0s
+      ⎿  Failed
+
+ ⏺ Now the tests, in the background.
+
+ ⏺ Agent(Run the whole test suite)
+   ⎿  Done (1 tool use · 2s)
+
+ ⏺ It is running; I will say when it ends.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

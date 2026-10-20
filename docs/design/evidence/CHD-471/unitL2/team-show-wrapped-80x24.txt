@@ -1,0 +1,24 @@
+ chord   1 fake    2 fake  /tmp/chord-qa.XXXX
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 16s on "Issue 214: a string
+      at the end of a line loses its closing quote. readString in
+      src/parse/tokenize.ts stops at the newline before it consumes the
+      quote. Add a test that fails for that reason, fix it, and have the diff
+      reviewed. Report to me when it is done."
+
+      lead    fake · fake-large  default      ◦ idle 15s        ✓ new reply
+              ← from @tester · fake
+      tester  fake · fake-small  acceptEdits  ● permission 14s  ← new message
+              Bash(deno task test tests/parse)
+      coder   fake · fake-large  plan         ◦ idle 14s        ✓ new reply
+              ← from @tester · fake
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake         ◦ idle 17s
+    bugfix     team · fake  ◦ idle 16s        ✓ new reply
+    ├─ tester  fake         ● permission 16s  ← new message
+    └─ coder   fake         ◦ idle 15s        ✓ new reply

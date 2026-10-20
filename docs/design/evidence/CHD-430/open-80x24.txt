@@ -1,0 +1,24 @@
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 in this tab                                                   │
+│                                                                              │
+│ ❯ Rewrite the tokenizer     task · fake  working 11s  main                   │
+│     as a single pass over                                                    │
+│     the source that reads                                                    │
+│     every token, string                                                      │
+│     and comment once,                                                        │
+│ ↓   keeping the line and                                                     │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running         Fake Large with a 1M context window · 1% used
+    background  2 tasks running

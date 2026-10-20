@@ -1,0 +1,24 @@
+ ▀▄     chord v0.55.2
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.XXXX
+ ▀▀     ? for shortcuts · /help
+
+ › agenttitled
+
+ ⏺ Open(Summarise the release notes for 0.56.0 from the commits since 0.55.2,
+   grouped by area, with a line for each user-facing change and a note for each
+   breaking one, then draft the announcement for the forum and the changelog
+   entry, and list the open questions for the owner to settle before the tag.)
+   · fake · fake-small
+   ⎿  text
+
+ ⏺ Waiting on it.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main                       fake  ◦ idle 4s
+    Summarise the release      fake  ◦ idle 4s  ✓ new reply
+    notes for 0.56.0 from the
+  ↓ commits since 0.55.2,

@@ -43,10 +43,10 @@ test('a tracked TypeScript file missing from tsc’s list is named, by its exact
   ).toStrictEqual([]);
 });
 
-test('eslint.config.ts is left out by name until the owner settles its types (CHD-474 Q64)', () => {
+test('eslint.config.ts is found missing like any other tracked file (CHD-475)', () => {
   expect(
     uncovered(['eslint.config.ts', 'lint/style.ts'], [], root),
-  ).toStrictEqual(['lint/style.ts']);
+  ).toStrictEqual(['eslint.config.ts', 'lint/style.ts']);
 });
 
 test('a tracked name git would quote, with a quote or a non-ASCII letter, is read as it is and found missing (CHD-474)', async () => {

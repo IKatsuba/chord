@@ -18,15 +18,7 @@ import { fileURLToPath } from 'node:url';
 const root = realpathSync(fileURLToPath(new URL('../..', import.meta.url)));
 
 /**
- * Tracked files tsc is not asked to check. eslint.config.ts: checking it
- * finds two errors where eslint-plugin-react-hooks's and typescript-eslint's
- * types disagree with ESLint 10's `Plugin`; how to settle them is the
- * owner's, CHD-474's Q64 on the board.
- */
-export const EXEMPT: readonly string[] = ['eslint.config.ts'];
-
-/**
- * The tracked `.ts` and `.tsx` files, from the root, but `EXEMPT`'s, that
+ * The tracked `.ts` and `.tsx` files, from the root, that
  * tsc's list leaves out: `listed` is its absolute paths, a file in node_modules or Bun's types
  * among them; `tracked` git's paths. Compared by exact name, as a file
  * system that ignores case would not.
@@ -40,10 +32,7 @@ export function uncovered(
     listed.map((file) => relative(from, file).split(sep).join('/')),
   );
 
-  return tracked.filter(
-    (file) =>
-      /\.tsx?$/.test(file) && !checked.has(file) && !EXEMPT.includes(file),
-  );
+  return tracked.filter((file) => /\.tsx?$/.test(file) && !checked.has(file));
 }
 
 /**

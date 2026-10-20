@@ -2,6 +2,7 @@ import eslintComments from '@eslint-community/eslint-plugin-eslint-comments';
 import js from '@eslint/js';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
+import type { ESLint } from 'eslint';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import style from './lint/style.ts';
@@ -16,13 +17,17 @@ export default defineConfig(
     linterOptions: { reportUnusedDisableDirectives: 'error' },
     // react-hooks gives deno lint's react-rules-of-hooks alone: its
     // recommended set adds exhaustive-deps and the React Compiler's rules,
-    // which the tree was never held to. eslint-plugin-react gives the rest of
-    // deno lint's jsx and react tags, rule for rule.
+    // which the tree was never held to, so only its rules are taken: its
+    // configs are typed in a way ESLint 10's Plugin does not accept.
+    // eslint-plugin-react gives the rest of deno lint's jsx and react tags,
+    // rule for rule.
     plugins: {
       'eslint-comments': eslintComments,
       react,
-      'react-hooks': reactHooks,
-      style,
+      'react-hooks': { rules: reactHooks.rules },
+      // typescript-eslint 8 types a rule's nodes more narrowly than ESLint
+      // 10's RuleModule does (docs/decisions.md, "The style plugin's cast").
+      style: style as unknown as ESLint.Plugin,
     },
     settings: { react: { version: 'detect' } },
     rules: {

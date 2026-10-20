@@ -1,0 +1,24 @@
+[38;2;255;255;255m
+[38;2;255;107;128m  Error: codex not started: agents.codex.command in .chord/settings.json:[38;2;255;255;255m
+[38;2;255;107;128m  expected a string, got a number[38;2;255;255;255m
+[2m[39m      at <anonymous> (/$bunfs/root/chord:216513:24)[0m[38;2;255;255;255m
+[2m[39m      at start (/$bunfs/root/chord:214669:31)[0m[38;2;255;255;255m
+[2m[39m      at open (/$bunfs/root/chord:216014:23)[0m[38;2;255;255;255m
+[2m[39m      at <anonymous> (/$bunfs/root/chord:217132:20)[0m[38;2;255;255;255m
+[2m[39m      at commitHookEffectListMount (/$bunfs/root/chord:4702:34)[0m[38;2;255;255;255m
+[2m[39m      at commitPassiveMountOnFiber (/$bunfs/root/chord:5591:52)[0m[38;2;255;255;255m
+[2m[39m      at recursivelyTraversePassiveMountEffects (/$bunfs/root/chord:5582:36)[0m[38;2;255;255;255m
+[2m[39m      at commitPassiveMountOnFiber (/$bunfs/root/chord:5590:49)[0m[38;2;255;255;255m
+[2m[39m      at recursivelyTraversePassiveMountEffects (/$bunfs/root/chord:5582:36)[0m[38;2;255;255;255m
+[2m[39m      at commitPassiveMountOnFiber (/$bunfs/root/chord:5632:49)[0m[38;2;255;255;255m
+
+[2m[39m  any key to quit · chord prints the error to stderr as it exits[0m[38;2;255;255;255m
+
+
+
+
+
+
+
+
+

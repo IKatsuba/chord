@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -819,28 +819,68 @@ test('the scroll line names the wheel after the page keys, and alone with none',
   ).toBeTruthy();
 });
 
-test('the backslash newline names the key that sends', () => {
+test('the newline line names the newline keys, then the backslash before the key that sends', () => {
   const lines = (...bindings: Record<string, string | null>[]) =>
     shortcuts(
       read(...bindings.map((map) => ({ context: 'Chat', bindings: map })))
         .keymap,
     ).map(shortcutLine);
 
-  expect(lines().includes('\\ + enter for a newline')).toBeTruthy();
-  expect(
-    lines({ enter: null, 'ctrl+s': 'chat:submit' }).includes(
-      '\\ + ctrl + s for a newline',
-    ),
-  ).toBeTruthy();
+  // One line for both since the owner's Q80 (CHD-468).
+  expect(lines()).toContain('shift or \\ + enter for a newline');
+  expect(lines({ enter: null, 'ctrl+s': 'chat:submit' })).toContain(
+    'shift + enter or \\ + ctrl + s for a newline',
+  );
   // Two keys send; the line names the first, not both after one backslash.
+  expect(lines({ 'ctrl+s': 'chat:submit' })).toContain(
+    'shift + enter or \\ + enter for a newline',
+  );
+  // Nothing sends, so the backslash reads as no newline.
+  expect(lines({ enter: null })).toContain('shift + enter for a newline');
   expect(
-    lines({ 'ctrl+s': 'chat:submit' }).includes('\\ + enter for a newline'),
-  ).toBeTruthy();
-  expect(
-    !lines({ enter: null }).some(
-      (line) => line.includes('for a newline') && line.startsWith('\\'),
-    ),
-  ).toBeTruthy();
+    lines({ enter: null }).some((line) => line.includes('\\ +')),
+  ).toBeFalse();
+});
+
+describe('CHD-468 tester: merged newline entry follows available actions', () => {
+  const noNewlines = {
+    'shift+enter': null,
+    'alt+enter': null,
+    'ctrl+j': null,
+    'ctrl+enter': null,
+  };
+
+  function newlineEntries(bindings: Record<string, string | null>) {
+    const { keymap, problems } = read({ context: 'Chat', bindings });
+
+    expect(problems).toStrictEqual([]);
+
+    const lines = shortcuts(keymap).map(shortcutLine);
+
+    expect(lines.at(-1)).toBe('any key to quit the crash screen');
+
+    return lines.filter((line) => line.endsWith('for a newline'));
+  }
+
+  test('rebinding both actions names each once in newline-then-submit order', () => {
+    expect(
+      newlineEntries({
+        ...noNewlines,
+        enter: 'chat:newline',
+        'ctrl+s': 'chat:submit',
+      }),
+    ).toStrictEqual(['enter or \\ + ctrl + s for a newline']);
+  });
+
+  test('with no direct newline, the backslash-submit route stands alone', () => {
+    expect(newlineEntries(noNewlines)).toStrictEqual([
+      '\\ + enter for a newline',
+    ]);
+  });
+
+  test('with both routes unbound, no newline entry or dangling separator remains', () => {
+    expect(newlineEntries({ ...noNewlines, enter: null })).toStrictEqual([]);
+  });
 });
 
 /** `state` with `held` pressed and the next key waited for. */

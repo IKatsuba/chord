@@ -131,6 +131,11 @@ opened that way and quit again is saved over its own record, as it is then.
 A tab whose session record has gone is left out, and the status line says
 which; a window id goes on its own, never among session ids.
 
+If chord fails while drawing the window, a crash screen shows the error
+and as much of its stack as fits. Any key gives the terminal back, prints
+the full error and stack to stderr, and exits with code 1. A modifier
+alone, a paste or the mouse leaves the screen open.
+
 A resumed session shows its earlier prompts, replies and tool calls, an
 edit with its diff, and the next prompt goes on in the same session. chord
 keeps a record of every session a prompt was sent in, in its state directory
@@ -501,8 +506,10 @@ keys inside lists, forms and vim mode. An unknown context, action or key,
 and a key that would mean two actions at once, such as a key the
 transcript scrolls on bound in `Chat`, is left out and named as a
 warning in the transcript and on stderr, and the status line counts them; the
-rest of the file still applies. The `?` panel and the hints name the keys as
-bound, and `\ + enter for a newline` names the key that sends.
+rest of the file still applies. The `?` panel and hints name the bound keys.
+The panel combines the newline keys as `shift or \ + enter`; after a
+backslash, use the key bound to send. It also lists `any key` to quit the
+crash screen; that key cannot be rebound.
 
 The keys work on a Russian layout too, the defaults and the file's alike: a
 press that does nothing as typed is read as the US key in the same place,

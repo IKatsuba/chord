@@ -18,6 +18,8 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { sameStatus } from '../../status.ts';
+import { quietCaught } from './caught.ts';
+import { CrashBoundary } from './Crash.tsx';
 
 const Exit = createContext<() => void>(() => {});
 
@@ -338,21 +340,29 @@ export function dieBySignal(
   return off;
 }
 
-function giveBackOnEveryExit(): void {
-  const crash = async (error: unknown) => {
-    await leave(taken);
-    process.stderr.write(
-      `${error instanceof Error ? (error.stack ?? String(error)) : String(error)}\n`,
-    );
-    process.exit(1);
-  };
+/**
+ * Gives the terminal back, writes `error` with its stack to stderr after it,
+ * and exits 1: an uncaught exception's way out, and chord's crash screen's
+ * once a key is pressed on it (CHD-468).
+ */
+export async function crash(error: unknown): Promise<void> {
+  await leave(taken);
+  process.stderr.write(
+    `${error instanceof Error ? (error.stack ?? String(error)) : String(error)}\n`,
+  );
+  process.exit(1);
+}
 
+function giveBackOnEveryExit(): void {
   dieBySignal((signal) => process.kill(process.pid, signal));
 
   // Ahead of OpenTUI's own, which would log and go on running.
   process.prependListener('uncaughtException', crash);
   process.prependListener('unhandledRejection', crash);
 }
+
+/** Whether `console.error` drops React's log of the crash screen's error yet. */
+let quieted = false;
 
 /** A tree drawn on the terminal. */
 export interface Instance {
@@ -369,6 +379,13 @@ export interface Instance {
  * node handed to `rerender` takes the place of the last within it.
  */
 export function render(node: ReactNode, { renderer }: Terminal): Instance {
+  // Before the root, which hands React `console.error` as it is then: React's
+  // log of the error the crash boundary caught would write over its screen.
+  if (!quieted) {
+    quieted = true;
+    console.error = quietCaught(console.error.bind(console));
+  }
+
   const root = createRoot(renderer);
   const { promise, resolve, reject } = Promise.withResolvers<void>();
   const listeners = new Set<() => void>();
@@ -397,7 +414,9 @@ export function render(node: ReactNode, { renderer }: Terminal): Instance {
 
   root.render(
     <Exits exit={exit}>
-      <Current />
+      <CrashBoundary quit={(error) => void crash(error)}>
+        <Current />
+      </CrashBoundary>
     </Exits>,
   );
 

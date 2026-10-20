@@ -6,8 +6,10 @@
  *   bun dev compile --install   this machine's target, into ~/.local/bin/chord
  */
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import type { BuildConfig, BunPlugin } from 'bun';
 import manifest from '../../package.json' with { type: 'json' };
 import { TARGETS } from '../targets.ts';
 
@@ -19,7 +21,94 @@ export interface CompileOptions {
 
 const root = new URL('../..', import.meta.url).pathname;
 
-export function compile(args: CompileOptions): void {
+/**
+ * OpenTUI's `react/jsx-dev-runtime` imports resolved to
+ * `./jsx_dev_runtime.ts`. Its published JS builds elements with `jsxDEV`,
+ * its ErrorBoundary's fallback among them, and with NODE_ENV production
+ * React 19's `jsx-dev-runtime` exports `jsxDEV` as undefined, so the crash
+ * screen itself threw in the binary (CHD-468, the owner's Q75).
+ */
+const jsxDevRuntime: BunPlugin = {
+  name: 'opentui-jsx-dev-runtime',
+  setup(build) {
+    build.onResolve({ filter: /^react\/jsx-dev-runtime$/ }, ({ importer }) =>
+      importer.includes('/node_modules/@opentui/')
+        ? { path: join(root, 'scripts', 'dev', 'jsx_dev_runtime.ts') }
+        : undefined,
+    );
+  },
+};
+
+/**
+ * The native package OpenTUI loads on `platform` and `arch`, as its own
+ * resolveNativeLibraryPath picks one: on Linux the musl build only when
+ * `libc` (OPENTUI_LIBC) says musl.
+ */
+export function loadedNative(
+  platform: string,
+  arch: string,
+  libc: string | undefined,
+): string {
+  const musl = platform === 'linux' && libc === 'musl' ? '-musl' : '';
+
+  return `@opentui/core-${platform}-${arch}${musl}`;
+}
+
+/**
+ * OpenTUI's native packages but `loaded`, this machine's by default. A
+ * compile for a target keeps only that target's import, as its platform is
+ * fixed; a bundle for this machine keeps them all, and an install may hold
+ * only the one it runs on, as CI's does (CHD-468).
+ */
+export function otherNatives(
+  loaded = loadedNative(
+    process.platform,
+    process.arch,
+    process.env.OPENTUI_LIBC,
+  ),
+): string[] {
+  const opentui = JSON.parse(
+    readFileSync(
+      join(root, 'node_modules', '@opentui', 'core', 'package.json'),
+      'utf8',
+    ),
+  ) as { optionalDependencies?: Record<string, string> };
+
+  return Object.keys(opentui.optionalDependencies ?? {}).filter(
+    (name) => name !== loaded,
+  );
+}
+
+/**
+ * The build of `entry` as chord's binary is built, but for where it goes:
+ * `compile`'s, and a test's of the production build (CHD-468), which runs
+ * the bundle on this machine (`host`) and leaves the other platforms'
+ * native packages out.
+ */
+export function buildOptions(
+  entry: string,
+  { host = false }: { host?: boolean } = {},
+): BuildConfig & { target: 'bun' } {
+  return {
+    entrypoints: [entry],
+    target: 'bun',
+    // @opentui/react imports react-devtools-core, its peer, only when
+    // DEV=true. Bundled in, a binary run with DEV=true connects to a devtools
+    // server that is not there and never exits after quit; external and split
+    // into a chunk, the import stays behind OpenTUI's own lazy import, fails,
+    // and OpenTUI warns and carries on (CHD-309).
+    external: ['react-devtools-core', ...(host ? otherNatives() : [])],
+    splitting: true,
+    // Nothing sets NODE_ENV, so React would load its development build, which
+    // keeps a performance.measure for every render and a stack on every fiber,
+    // never cleared (CHD-344). Defined rather than --production, which also
+    // minifies and leaves heap snapshots and stack traces without names.
+    define: { 'process.env.NODE_ENV': '"production"' },
+    plugins: [jsxDevRuntime],
+  };
+}
+
+export async function compile(args: CompileOptions): Promise<void> {
   // Every build flag below was tried on this range, and nothing older was.
   if (!Bun.semver.satisfies(Bun.version, manifest.engines.bun)) {
     console.error(
@@ -49,29 +138,20 @@ export function compile(args: CompileOptions): void {
       ? join(homedir(), '.local', 'bin', 'chord')
       : join(root, 'dist', target.bun, 'chord');
 
-    run([
-      'build',
-      '--compile',
-      // @opentui/react imports react-devtools-core, its peer, only when
-      // DEV=true. Bundled in, a binary run with DEV=true connects to a devtools
-      // server that is not there and never exits after quit; external and split
-      // into a chunk, the import stays behind OpenTUI's own lazy import, fails,
-      // and OpenTUI warns and carries on (CHD-309).
-      '--external',
-      'react-devtools-core',
-      '--splitting',
-      // Nothing sets NODE_ENV, so React would load its development build, which
-      // keeps a performance.measure for every render and a stack on every fiber,
-      // never cleared (CHD-344). Defined rather than --production, which also
-      // minifies and leaves heap snapshots and stack traces without names.
-      '--define',
-      'process.env.NODE_ENV:"production"',
-      '--target',
-      target.bun,
-      '--outfile',
-      output,
-      join(root, 'src', 'main.tsx'),
-    ]);
+    // The JS API, as the command line takes no plugin.
+    const built = await Bun.build({
+      ...buildOptions(join(root, 'src', 'main.tsx')),
+      compile: { target: target.bun, outfile: output },
+    });
+
+    if (!built.success) {
+      for (const log of built.logs) {
+        console.error(log);
+      }
+
+      process.exit(1);
+    }
+
     console.log(output);
   }
 }

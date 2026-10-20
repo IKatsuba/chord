@@ -58,7 +58,7 @@ Arguments after `chord`, `test` and `lint` pass on as written. An empty
 argument needs `--` (`bun dev test -- -t ''`); the tool's own help does too
 (`bun dev chord -- --help`).
 
-The binary is built by `bun build --compile`, Bun 1.4.2 or newer. Build,
+The binary is built by Bun's compile API, Bun 1.4.2 or newer. Build,
 release and maintenance commands share `bun dev <command>` (Cliffy):
 
 ```sh
@@ -86,8 +86,8 @@ leave that stage out. See `docs/guide.md` for failure and signal cleanup.
 - **Bun runs chord.** `bun dev check` runs `tsc`, ESLint, Prettier and
   `bun dev test`. Tests use `test`, `describe`, `expect` and the fake timers of
   `bun:test`. Code outside `src/platform/` calls `node:` built-ins; that
-  folder holds Bun's runtime calls. The binary is `bun build --compile`'s,
-  with OpenTUI's native library for its target embedded. Dependencies go in
+  folder holds Bun's runtime calls. The binary embeds OpenTUI's native
+  library for its target through Bun's compile API. Dependencies go in
   `package.json`; jsr packages come from `npm.jsr.io` under their own names
   (`bunfig.toml`, `.npmrc`). No `node_modules` checked in.
 - **Versions are pinned for things that move.** A pre-1.0 package is

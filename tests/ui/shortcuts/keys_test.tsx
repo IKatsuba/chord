@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import ru from 'convert-layout/ru.js';
 import * as harness from '../harness.tsx';
 import { type ReactNode, useState } from 'react';
@@ -40,6 +40,8 @@ import {
   reduceApp,
 } from '../../../src/ui/app/state.ts';
 import { usePress } from '../../../src/ui/app/input.ts';
+import { CrashBoundary } from '../../../src/ui/app/Crash.tsx';
+import { until } from '../app/render.tsx';
 import type { KeyCommand, KeyPress } from '../../../src/ui/shortcuts/state.ts';
 import {
   NORMAL_KEYS,
@@ -1909,7 +1911,8 @@ describe('CHD-386 tester: movement panel entries', () => {
     expect(lines).toContain('tab to complete a command');
     expect(lines).toContain('tab enter to add a file');
     expect(lines).toContain('esc to close a picker or shortcuts');
-    expect(lines.at(-1)).toStrictEqual('? for shortcuts');
+    expect(lines.at(-2)).toStrictEqual('? for shortcuts');
+    expect(lines.at(-1)).toStrictEqual('any key to quit the crash screen');
   });
 
   test('the shared navigation line follows rebound keys once and disappears when unbound', () => {
@@ -2019,4 +2022,48 @@ describe('CHD-424 tester: shared background keys', () => {
       'z to close an agent, stop background',
     );
   });
+});
+
+test("every key quits the crash screen, as the panel's any key line says (CHD-468)", async () => {
+  expect(
+    SHORTCUTS.some(
+      (shortcut) =>
+        shortcut.key === 'any key' &&
+        shortcut.does === 'to quit the crash screen',
+    ),
+  ).toBeTruthy();
+
+  let quits = 0;
+
+  function Throws(): never {
+    throw new Error('broken');
+  }
+
+  // React writes the caught error to stderr itself, as it does in chord.
+  const logged = spyOn(console, 'error').mockImplementation(() => {});
+
+  const crash = await harness.draw(
+    <CrashBoundary quit={() => quits++}>
+      <Throws />
+    </CrashBoundary>,
+  );
+
+  logged.mockRestore();
+
+  try {
+    for (const { name, sequence } of RAW_PRESSES) {
+      const before = quits;
+
+      await crash.write(sequence);
+      // A lone Esc is held a moment before OpenTUI calls it one.
+      await until(
+        `${name} to quit the crash screen`,
+        () => quits > before,
+        1000,
+      );
+      expect(quits, `${name} quit the crash screen twice`).toBe(before + 1);
+    }
+  } finally {
+    await crash.unmount();
+  }
 });

@@ -6968,3 +6968,34 @@ crashed.
   own imports and a run from source are unchanged. No upstream issue was
   filed. `buildOptions` is the one set of build options, which a test of
   the production build shares.
+
+## 2026-10-21 — CHD-468: React's log of the crash screen's error is dropped by chord's `console.error` (owner, Q79, Q81, Q82)
+
+chord's crash screen (Q78) is a boundary of its own, on
+`react-error-boundary`. When it catches, React logs the error through its
+caught-error callback, and `@opentui/react`'s `createRoot` hands React
+`console.error`, by value, for it (`createContainer` in its chunk). chord
+runs OpenTUI's console `disabled`, so the log went to stderr, which is the
+window, and drew over the screen.
+
+- **Tried, through public API, in the compiled binary with stderr on the
+  terminal.** (Q79) `renderer.resize` at the current size in an effect
+  after the commit, which repaints what OpenTUI drew: the log's text stayed
+  in every cell OpenTUI had not drawn, and a 300 ms delay changed nothing.
+  (Q81) `consoleMode = 'console-overlay'` from a layout effect, which runs
+  before React logs: the overlay swaps in a new `global.console`, while
+  React still holds the original `console.error`, so the log still came
+  out.
+- **Options left** (Q82). (1) A `console.error` of chord's, set before the
+  root so React is handed it, that drops only React's one log of the error
+  the boundary caught. (2) The overlay from the start, which would keep
+  every library's console output from stderr. (3) Accept the log and ask
+  OpenTUI upstream.
+- **Choice: (1)** (owner, Q82). `render` sets `console.error` once to
+  `quietCaught` (`src/ui/app/caught.ts`), wrapping the original. The
+  boundary's fallback marks the error as it renders, ahead of the commit in
+  which React logs, and the call whose first argument is that error, as
+  React's `onCaughtError(error, info)` is, is dropped once; every other
+  call, a later one of the same error among them, goes on unchanged. On a
+  key the crash path writes the stack to stderr after the terminal is
+  given back, as for an uncaught exception.

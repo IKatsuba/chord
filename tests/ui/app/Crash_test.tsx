@@ -1,6 +1,7 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 import stripAnsi from 'strip-ansi';
 import { CRASH_HINT } from '../../../src/ui/app/crash.ts';
+import { quietCaught } from '../../../src/ui/app/caught.ts';
 import { CrashBoundary } from '../../../src/ui/app/Crash.tsx';
 import { draw } from '../harness.tsx';
 import { until } from './render.tsx';
@@ -156,4 +157,28 @@ describe('CHD-468 tester: crash-screen keys and resize recovery', () => {
       await drawn.unmount();
     }
   });
+});
+
+test("with chord's console.error in place before the root, React's log of the caught error never comes out (CHD-468)", async () => {
+  const original = console.error;
+  const reached: unknown[][] = [];
+
+  console.error = quietCaught((...data) => reached.push(data));
+
+  try {
+    const drawn = await draw(
+      <CrashBoundary quit={() => {}}>
+        <Throws />
+      </CrashBoundary>,
+    );
+
+    try {
+      expect(stripAnsi(drawn.frame())).toContain(CRASH_HINT);
+      expect(reached.some((data) => data[0] === broke)).toBeFalse();
+    } finally {
+      await drawn.unmount();
+    }
+  } finally {
+    console.error = original;
+  }
 });

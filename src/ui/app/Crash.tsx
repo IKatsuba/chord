@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { CUT, DIM, fg } from '../theme/text.ts';
 import { paletteOf } from '../theme/theme.ts';
+import { caughtByBoundary } from './caught.ts';
 import { COLOUR, drawnColours } from './context.ts';
 import { crashRows } from './crash.ts';
 import { usePress } from './input.ts';
@@ -25,7 +26,13 @@ export function CrashBoundary({
 }) {
   return (
     <ErrorBoundary
-      fallbackRender={({ error }) => <CrashScreen error={error} quit={quit} />}
+      fallbackRender={({ error }) => {
+        // In the render that draws the screen, ahead of the commit in which
+        // React logs what was caught, so the log is known as this one's.
+        caughtByBoundary(error);
+
+        return <CrashScreen error={error} quit={quit} />;
+      }}
     >
       {children}
     </ErrorBoundary>

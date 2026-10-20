@@ -18,6 +18,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { sameStatus } from '../../status.ts';
+import { quietCaught } from './caught.ts';
 import { CrashBoundary } from './Crash.tsx';
 
 const Exit = createContext<() => void>(() => {});
@@ -360,6 +361,9 @@ function giveBackOnEveryExit(): void {
   process.prependListener('unhandledRejection', crash);
 }
 
+/** Whether `console.error` drops React's log of the crash screen's error yet. */
+let quieted = false;
+
 /** A tree drawn on the terminal. */
 export interface Instance {
   rerender(node: ReactNode): void;
@@ -375,6 +379,13 @@ export interface Instance {
  * node handed to `rerender` takes the place of the last within it.
  */
 export function render(node: ReactNode, { renderer }: Terminal): Instance {
+  // Before the root, which hands React `console.error` as it is then: React's
+  // log of the error the crash boundary caught would write over its screen.
+  if (!quieted) {
+    quieted = true;
+    console.error = quietCaught(console.error.bind(console));
+  }
+
   const root = createRoot(renderer);
   const { promise, resolve, reject } = Promise.withResolvers<void>();
   const listeners = new Set<() => void>();

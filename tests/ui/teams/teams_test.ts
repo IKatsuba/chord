@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import type { TeamAgentShown } from '../../../src/session/transcript/types.ts';
 import type { Team } from '../../../src/teams.ts';
 import {
   headlineText,
@@ -8,6 +9,7 @@ import {
   pickedDraft,
   ranNote,
   runningHeader,
+  type RunningLine,
   runningTable,
   runningWords,
   stoppedLine,
@@ -262,7 +264,7 @@ test("the picker's hint offers Enter on a team it can run, and says how a broken
   expect(teamsHint(undefined, 116)).toStrictEqual([]);
 });
 
-test("/team show's running form gives each agent its file's mode, its state and latest headline, cut to the width", () => {
+test("/team show's running form gives each agent its file's mode, its state and latest headline, wrapped to the width (CHD-471)", () => {
   const run = {
     name: 'bugfix',
     since: 0,
@@ -296,9 +298,10 @@ test("/team show's running form gives each agent its file's mode, its state and 
 
   expect(
     runningHeader('bugfix', '.chord/teams/bugfix.md', run, 70),
-  ).toStrictEqual(
-    'bugfix · .chord/teams/bugfix.md · working 6m on "strings at the end…"',
-  );
+  ).toStrictEqual([
+    'bugfix · .chord/teams/bugfix.md · working 6m on "strings at the end of',
+    'a line lose their closing quote; see issue"',
+  ]);
 
   const lines = runningTable(BUGFIX, run.agents, 200);
 
@@ -313,11 +316,32 @@ test("/team show's running form gives each agent its file's mode, its state and 
     '● permission 12s',
   );
 
-  const cut = runningTable(BUGFIX, run.agents, 70);
+  expect(lines.map(({ under }) => under)).toStrictEqual([[], [], [], []]);
 
-  expect(cut[1]!.text).toStrictEqual(
-    'tester    claude · sonnet        acceptEdits  ● permission 12s  Bash(…',
+  // At 70 the headline would keep fewer than 20 cells beside the state, so
+  // it goes under the row, from the runtime's column.
+  const narrow = runningTable(BUGFIX, run.agents, 70);
+
+  expect(narrow.flatMap(({ text, under }) => [text, ...under])).toStrictEqual([
+    'lead      claude · opus          default      ✻ working 8s',
+    '          → to @coder',
+    'tester    claude · sonnet        acceptEdits  ● permission 12s',
+    '          Bash(deno task test tests/parse)',
+    'coder     codex · gpt-5.3-codex  auto         idle',
+    'reviewer  claude · opus          plan         not opened',
+  ]);
+
+  // With 20 cells or more beside the row it wraps there.
+  const latest = 'Bash(deno task test tests/parse --filter strings)';
+  const wrapped = runningTable(BUGFIX, [{ ...run.agents[1]!, latest }], 80);
+
+  expect(wrapped[0]!.text).toStrictEqual(
+    'tester  claude · sonnet  acceptEdits  ● permission 12s  Bash(deno task test',
   );
+  expect(wrapped[0]!.under).toStrictEqual([
+    '                                                        tests/parse --filter',
+    '                                                        strings)',
+  ]);
 });
 
 test("/team show's running form reads the lead's runtime from the lead, though a member is named lead", () => {
@@ -350,7 +374,7 @@ test("/team show's running form reads the lead's runtime from the lead, though a
   ]);
 });
 
-test("/team show's running form has the file's efforts as a column, which gives way to the headline", () => {
+test("/team show's running form gives an agent's effort as the last part of its runtime and model, never dropped (CHD-471)", () => {
   const team: Team = {
     ...BUGFIX,
     lead: { ...BUGFIX.lead, effort: 'high' },
@@ -361,7 +385,8 @@ test("/team show's running form has the file's efforts as a column, which gives 
       name: 'lead',
       lead: true as const,
       open: true,
-      state: { glyph: '✓', words: 'replied 6s ago', tone: 'dim' as const },
+      state: { glyph: '◦', words: 'idle 6s', tone: 'dim' as const },
+      mark: { glyph: '✓', words: 'new reply', tone: 'success' as const },
       latest: '← from @tester · claude',
     },
     {
@@ -376,24 +401,230 @@ test("/team show's running form has the file's efforts as a column, which gives 
     },
     { name: 'coder', open: false },
   ];
-  const wide = runningTable(team, agents, 114);
+  const drawn = (width: number) =>
+    runningTable(team, agents, width).flatMap(({ text, under }) => [
+      text,
+      ...under,
+    ]);
 
-  expect(wide.map(({ text }) => text)).toStrictEqual([
-    'lead    claude · opus          high  default      ✓ replied 6s ago  ← from @tester · claude',
-    'tester  claude · sonnet        low   acceptEdits  ● permission 5s   Bash(deno task test tests/parse)',
-    'coder   codex · gpt-5.3-codex  —     auto         not opened',
+  expect(drawn(114)).toStrictEqual([
+    'lead    claude · opus · high   default      ◦ idle 6s        ✓ new reply  ← from @tester · claude',
+    'tester  claude · sonnet · low  acceptEdits  ● permission 5s               Bash(deno task test tests/parse)',
+    'coder   codex · gpt-5.3-codex  auto         not opened',
   ]);
-  expect(wide[1]!.text.slice(...wide[1]!.state)).toStrictEqual(
-    '● permission 5s',
+  // Narrower, the headline goes under the row; the effort stays.
+  expect(drawn(74)).toStrictEqual([
+    'lead    claude · opus · high   default      ◦ idle 6s        ✓ new reply',
+    '        ← from @tester · claude',
+    'tester  claude · sonnet · low  acceptEdits  ● permission 5s',
+    '        Bash(deno task test tests/parse)',
+    'coder   codex · gpt-5.3-codex  auto         not opened',
+  ]);
+});
+
+test("/team show's running form says what of an agent is not yet seen beside its state, the marks in one column (CHD-471)", () => {
+  const idle = { glyph: '◦', words: 'idle 3m', tone: 'dim' as const };
+  const lines = runningTable(
+    BUGFIX,
+    [
+      {
+        name: 'lead',
+        lead: true,
+        open: true,
+        state: { glyph: '✻', words: 'working 8s', tone: 'dim' },
+      },
+      {
+        name: 'tester',
+        open: true,
+        state: idle,
+        mark: { glyph: '✓', words: 'new reply', tone: 'success' },
+      },
+      { name: 'coder', open: true, state: idle },
+      { name: 'reviewer', open: false },
+    ],
+    200,
   );
 
-  // At 80 the headline would keep fewer than 12 cells beside the effort.
-  const narrow = runningTable(team, agents, 74);
+  expect(lines.map(({ text }) => text)).toStrictEqual([
+    'lead      claude · opus          default      ✻ working 8s',
+    'tester    claude · sonnet        acceptEdits  ◦ idle 3m     ✓ new reply',
+    'coder     codex · gpt-5.3-codex  auto         ◦ idle 3m',
+    'reviewer  claude · opus          plan         not opened',
+  ]);
+  expect(lines[1]!.text.slice(...lines[1]!.state)).toStrictEqual('◦ idle 3m');
+  expect(lines[1]!.text.slice(...lines[1]!.mark!)).toStrictEqual('✓ new reply');
+  expect(lines[2]!.mark).toBe(undefined);
+});
 
-  expect(narrow.map(({ text }) => text)).toStrictEqual(
-    runningTable(BUGFIX, agents, 74).map(({ text }) => text),
+describe("/team show's running form wraps its own columns where they are wider than the width, and hides nothing (CHD-471)", () => {
+  const team: Team = {
+    ...BUGFIX,
+    lead: { agent: 'fake', model: 'fake-large', mode: 'default' },
+    members: [
+      {
+        ...BUGFIX.members[0]!,
+        agent: 'fake',
+        model: 'claude-opus-5-5-20261001-preview-long',
+      },
+      {
+        ...BUGFIX.members[1]!,
+        name: 'a-member-with-a-name-far-longer-than-a-third',
+        agent: 'fake',
+        model: 'fake-large',
+        mode: 'plan',
+      },
+    ],
+  };
+  const agents: TeamAgentShown[] = [
+    {
+      name: 'lead',
+      lead: true,
+      open: true,
+      state: { glyph: '◦', words: 'idle 9s', tone: 'dim' },
+      mark: { glyph: '✓', words: 'new reply', tone: 'success' },
+      latest: '← from @tester · fake',
+    },
+    {
+      name: 'tester',
+      open: true,
+      state: { glyph: '●', words: 'permission 8s', tone: 'warning' },
+      mark: { glyph: '←', words: 'new message', tone: 'dim' },
+      latest: 'Bash(deno task test tests/parse)',
+    },
+  ];
+  const drawn = (lines: readonly RunningLine[]) =>
+    lines.flatMap(({ text, under }) => [text, ...under]);
+  const states = (lines: readonly RunningLine[]) =>
+    lines.map((line) => {
+      const on = [line.text, ...line.under][line.stateLine]!;
+
+      return [
+        on.slice(...line.state),
+        line.mark === undefined ? undefined : on.slice(...line.mark),
+      ];
+    });
+
+  test('at 72 the model id wraps after its runtime in a third of the width, and the state and mark go whole under the row', () => {
+    const lines = runningTable(team, agents, 72);
+
+    expect(drawn(lines)).toStrictEqual([
+      'lead    fake · fake-large         default',
+      '        ◦ idle 9s        ✓ new reply',
+      '        ← from @tester · fake',
+      'tester  fake ·                    acceptEdits',
+      '        claude-opus-5-5-20261001',
+      '        -preview-long',
+      '        ● permission 8s  ← new message',
+      '        Bash(deno task test tests/parse)',
+    ]);
+    expect(states(lines)).toStrictEqual([
+      ['◦ idle 9s', '✓ new reply'],
+      ['● permission 8s', '← new message'],
+    ]);
+  });
+
+  test('at 112 the row has room for its own columns', () => {
+    const lines = runningTable(team, agents, 112);
+
+    expect(drawn(lines)).toStrictEqual([
+      'lead    fake · fake-large                             default      ◦ idle 9s        ✓ new reply',
+      '        ← from @tester · fake',
+      'tester  fake · claude-opus-5-5-20261001-preview-long  acceptEdits  ● permission 8s  ← new message',
+      '        Bash(deno task test tests/parse)',
+    ]);
+    expect(states(lines)).toStrictEqual([
+      ['◦ idle 9s', '✓ new reply'],
+      ['● permission 8s', '← new message'],
+    ]);
+  });
+
+  test('a model id of wide characters leaves the state and mark their own spans, beside the row and under it', () => {
+    const wide: Team = {
+      ...team,
+      members: [{ ...team.members[0]!, model: 'モデル-ラージ-🚀' }],
+    };
+
+    for (const width of [112, 72, 40]) {
+      expect(states(runningTable(wide, agents, width))).toStrictEqual([
+        ['◦ idle 9s', '✓ new reply'],
+        ['● permission 8s', '← new message'],
+      ]);
+    }
+  });
+
+  test('a long name wraps in its column once the runtime has, and the model id stays whole where it fits the column', () => {
+    const all = [
+      ...agents,
+      { name: 'a-member-with-a-name-far-longer-than-a-third', open: false },
+    ];
+
+    expect(drawn(runningTable(team, all, 72)).slice(-3)).toStrictEqual([
+      'a-member-with-a-name-far  fake · fake-large         plan',
+      '-longer-than-a-third',
+      '                          not opened',
+    ]);
+
+    const wide = runningTable(team, all, 112);
+
+    expect(drawn(wide).slice(3, 6)).toStrictEqual([
+      'tester                                 fake ·                                 acceptEdits',
+      '                                       claude-opus-5-5-20261001-preview-long',
+      '                                       ● permission 8s  ← new message',
+    ]);
+    expect(states(wide).at(-1)).toStrictEqual(['not opened', undefined]);
+  });
+});
+
+test("/team show's running form on a screen too narrow for the name, runtime and mode puts the mode on the state's line, which wraps between its parts (CHD-471)", () => {
+  const team: Team = {
+    ...BUGFIX,
+    lead: { agent: 'fake', model: 'fake-large', mode: 'acceptEdits' },
+    members: [{ ...BUGFIX.members[0]!, agent: 'fake', model: 'fake-small' }],
+  };
+  const lines = runningTable(
+    team,
+    [
+      {
+        name: 'lead',
+        lead: true,
+        open: true,
+        state: { glyph: '◦', words: 'idle 9s', tone: 'dim' },
+      },
+      {
+        name: 'tester',
+        open: true,
+        state: { glyph: '●', words: 'permission 8s', tone: 'warning' },
+        mark: { glyph: '←', words: 'new message', tone: 'dim' },
+        latest: 'Bash(deno task test)',
+      },
+    ],
+    30,
   );
-  expect(narrow[1]!.text.slice(...narrow[1]!.state)).toStrictEqual(
-    '● permission 5s',
-  );
+
+  expect(lines.flatMap(({ text, under }) => [text, ...under])).toStrictEqual([
+    'lead    fake ·',
+    '        fake-large',
+    '        acceptEdits  ◦ idle 9s',
+    'tester  fake ·',
+    '        fake-small',
+    '        acceptEdits',
+    '        ● permission 8s',
+    '        ← new message',
+    '        Bash(deno task test)',
+  ]);
+  expect(
+    lines.map((line) => {
+      const all = [line.text, ...line.under];
+
+      return [
+        all[line.stateLine]!.slice(...line.state),
+        line.mark === undefined
+          ? undefined
+          : all[line.markLine]!.slice(...line.mark),
+      ];
+    }),
+  ).toStrictEqual([
+    ['◦ idle 9s', undefined],
+    ['● permission 8s', '← new message'],
+  ]);
 });

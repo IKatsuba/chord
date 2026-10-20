@@ -19,6 +19,7 @@ import {
   HELD_AGAIN,
   HELD_MESSAGE,
   MAIN_MESSAGES,
+  LONG_TITLE,
 } from '../../fixtures/fake_agent/scenarios/agents.ts';
 import { TASK_REPORT } from '../../fixtures/fake_agent/scenarios/tasks.ts';
 import {
@@ -279,10 +280,10 @@ test("a child's turn that fails tells the parent, and the child stays open", () 
     );
     await window.shows('Received the message from chord.');
     expect(window.frame()).toContain('    parser  fake');
-    // Behind, its row says its turn failed and since when, not that it is
-    // gone, and so does the status line.
+    // Behind, its row reads open and idle, the failed turn its mark beside
+    // that (CHD-471), not that it is gone, and so does the status line.
     expect(window.frame()).toMatch(
-      / {4}parser {2}fake.* {2}✗ turn failed \d+s ago$/m,
+      / {4}parser {2}fake.* {2}◦ idle \d+s +✗ turn failed$/m,
     );
     await window.shows("✗ parser's turn failed · ctrl+x a to go");
     // Once looked at, the failed turn clears, and parser reads open and idle.
@@ -312,22 +313,22 @@ test("a child's exit in a tab behind is named for the child, in that tab", () =>
     expect(!window.frame().includes('2 fake exited')).toBeTruthy();
   }));
 
-test("a child's reply to a message reads its age from the reply, not from the message (CHD-364)", () =>
+test("a child's message not yet seen, then its reply, are marks beside its state, whose idle time counts from its reply (CHD-364, CHD-471)", () =>
   withAgents(
     async (window) => {
       await ready(window);
       await send(window, 'agents');
-      await window.shows('← message from @main');
+      await window.shows('← new message');
       await until(
         'parser replied',
-        () => /parser .*✓ replied/.test(window.frame()),
+        () => /parser .*✓ new reply/.test(window.frame()),
         30_000,
       );
 
-      const age = /parser .*✓ replied (\d+)s ago/.exec(window.frame());
+      const idle = /parser .*◦ idle (\d+)s +✓ new reply/.exec(window.frame());
 
-      // The message came seconds before; the reply has only just come.
-      expect(Number(age?.[1])).toBeLessThanOrEqual(2);
+      // The message came seconds before; it stopped as its reply came.
+      expect(Number(idle?.[1])).toBeLessThanOrEqual(2);
     },
     '--steering',
     'codex',
@@ -705,7 +706,7 @@ describe('CHD-423 tester: two held messages on screen', () => {
           async (window) => {
             await ready(window);
             await send(window, 'agentcallgated');
-            await window.shows('← message from @main');
+            await window.shows('← new message');
             expect(window.frame()).not.toContain('after the running calls');
             await window.press(DOWN);
             await window.press(DOWN);
@@ -755,7 +756,7 @@ describe('CHD-423 tester: two held messages on screen', () => {
           async (window) => {
             await ready(window);
             await send(window, 'agentcallgated');
-            await window.shows('← message from @main');
+            await window.shows('← new message');
             await window.press(DOWN);
             await window.press(DOWN);
             await window.shows(
@@ -810,7 +811,7 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
     [80, 24],
     [120, 40],
   ] as const) {
-    test(`failure ages, mixed notices and picker owners stay correct at ${columns}x${rows}; seeing each child clears only its news`, () =>
+    test(`idle time beside a failure mark, mixed notices and picker owners stay correct at ${columns}x${rows}; seeing each child clears only its news`, () =>
       withAgents(async (window) => {
         await window.resize({ columns, rows });
         await ready(window);
@@ -822,19 +823,23 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
             .frame()
             .split('\n')
             .find((line) => /^ {4}parser {2}fake/.test(line));
-        const age = () =>
-          Number(/turn failed (\d+)s ago/.exec(failedRow() ?? '')?.[1]);
+        const age = () => Number(/◦ idle (\d+)s/.exec(failedRow() ?? '')?.[1]);
         const first = age();
 
         expect(Number.isFinite(first)).toBe(true);
-        await until('failed-turn age advances', () => age() > first);
-        expect(failedRow()).toMatch(/✗ turn failed \d+s ago/);
+        await until(
+          'idle time advances beside the timeless failure mark',
+          () => age() > first,
+        );
+        expect(failedRow()).toMatch(/◦ idle \d+s +✗ turn failed$/);
         await anotherTab(window);
         await send(window, 'agentexit');
         await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a');
         await anotherTab(window);
         await leader(window, 'w');
-        await window.shows('✗ parser: turn failed');
+        await until('the picker marks the failed tab', () =>
+          /1\. fake · 1 agent +◦ idle \d+s +✗ turn failed/.test(window.frame()),
+        );
         await window.shows('✗ parser: exited');
         expect(window.frame()).not.toContain('sessions ended');
         await window.press(ESC);
@@ -858,17 +863,19 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
   }
 });
 
-describe('CHD-364 tester: narrow reply age', () => {
-  test('the first reply at 80x24 starts fresh and then ages from the reply', () =>
+describe('CHD-364 tester: narrow idle time beside reply mark', () => {
+  test('idle at 80x24 counts from the last reply beside its timeless mark', () =>
     withAgents(
       async (window) => {
         await window.resize({ columns: 80, rows: 24 });
         await ready(window);
         await send(window, 'agents');
-        await window.shows('← message from @main');
+        await window.shows('← new message');
 
         const age = () =>
-          Number(/parser .*✓ replied (\d+)s ago/.exec(window.frame())?.[1]);
+          Number(
+            /parser .*◦ idle (\d+)s +✓ new reply/.exec(window.frame())?.[1],
+          );
 
         await until(
           'the narrow parser reply',
@@ -879,7 +886,10 @@ describe('CHD-364 tester: narrow reply age', () => {
         const first = age();
 
         expect(first).toBeLessThanOrEqual(2);
-        await until('reply age advances', () => age() > first);
+        await until(
+          'idle age advances beside the reply mark',
+          () => age() > first,
+        );
         expect(age()).toBeLessThan(10);
       },
       '--steering',
@@ -1621,5 +1631,326 @@ describe('CHD-405 N2 tester: standalone child spend is independent', () => {
         await server.close();
       }
     });
+  }
+});
+
+describe('CHD-471 L2 tester: child messages in the strip and picker', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a working child's unread message is displayed and opening only that child clears it at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'agentcallgated');
+            await window.shows('← new message');
+
+            const previousSession = window.session();
+
+            await leader(window, 'c');
+            await until(
+              'the second fake session connected',
+              () => window.session() !== previousSession,
+            );
+            await window.shows('2 fake');
+
+            const header = () => window.frame().split('\n')[0] ?? '';
+
+            await until(
+              'parent result recorded before clearing its own reply',
+              async () => {
+                const records = join(window.dir, 'state', 'records');
+
+                for (const file of await readdir(records)) {
+                  const past = await readPast(join(records, file));
+                  const prompt = past.find(
+                    (entry) =>
+                      entry.type === 'prompt' &&
+                      entry.prompt === 'agentcallgated',
+                  );
+
+                  if (
+                    prompt?.type === 'prompt' &&
+                    past.some(
+                      (entry) =>
+                        entry.type === 'result' &&
+                        entry.turnId === prompt.turnId,
+                    )
+                  ) {
+                    return true;
+                  }
+                }
+
+                return false;
+              },
+            );
+
+            await leader(window, '1');
+            await window.shows('› agentcallgated');
+            await leader(window, '2');
+
+            await until(
+              'working and message glyphs in the background tab',
+              () => /1 fake ✻←/.test(header()),
+            );
+            await leader(window, 'w');
+            await until(
+              'picker keeps the child working beside its message mark',
+              () =>
+                /1\. fake · 1 agent +✻ working \d+s +← new message/.test(
+                  window.frame(),
+                ),
+            );
+            expect(window.frame()).not.toContain('← message from @main');
+            await window.press(ESC);
+            await leader(window, '1');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.shows(
+              `← from @main · after the running calls: ${HELD_AGAIN}`,
+            );
+            await leader(window, '2');
+            await until(
+              'opening the child clears its mark but leaves its working state',
+              () => /1 fake ✻/.test(header()) && !header().includes('✻←'),
+            );
+            expect(await readdir(join(window.dir, GATE))).not.toContain(
+              GATE_RELEASE,
+            );
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});
+
+test("a child's row taller than the list at 80x24 is read by line with ↑ ↓, and a resize, away and back or in height alone, reads it from its first line again (CHD-471)", () =>
+  withAgents(async (window) => {
+    const list = (lines: number) =>
+      window.frame().split('\n').slice(-lines).join('\n');
+    const FIRST = '  ❯ Summarise the release      fake';
+
+    await window.resize({ columns: 80, rows: 24 });
+    await ready(window);
+    await send(window, 'agenttitled');
+    // The prompt keeps the keys: the last row fills the list, ↓ beside it.
+    await window.shows('  ↓ commits since 0.55.2,');
+    await window.press(DOWN);
+    await window.press(DOWN);
+    await window.shows(FIRST);
+
+    for (let press = 0; press < 4; press += 1) {
+      await window.press(DOWN);
+    }
+
+    await until('read four lines on', () =>
+      list(4).startsWith('  ↑ grouped by area, with a'),
+    );
+    expect(list(4)).toContain('  ↓ each breaking one, then');
+    expect(list(4)).not.toContain('❯');
+
+    // To 82 and back with no key: from its first line again.
+    await window.resize({ columns: 82, rows: 24 });
+    await window.resize({ columns: 80, rows: 24 });
+    await until('its first line again', () => list(4).includes(FIRST));
+
+    for (let press = 0; press < 4; press += 1) {
+      await window.press(DOWN);
+    }
+
+    await until('read on again', () =>
+      list(4).startsWith('  ↑ grouped by area, with a'),
+    );
+
+    // The same width, another height.
+    await window.resize({ columns: 80, rows: 30 });
+    await until('its first line after a taller window', () =>
+      list(5).includes(FIRST),
+    );
+  }));
+
+test("↓ past a last row's last line leaves the list at its end, as the last stays the last, and goes round nothing (CHD-471)", () =>
+  withAgents(async (window) => {
+    const list = () => window.frame().split('\n').slice(-4).join('\n');
+
+    await window.resize({ columns: 80, rows: 24 });
+    await ready(window);
+    await send(window, 'agenttitled');
+    await window.shows('  ↓ commits since 0.55.2,');
+    await window.press(DOWN);
+    await window.press(DOWN);
+    await window.shows('  ❯ Summarise the release      fake');
+
+    // Thirteen lines in a four-line list: nine presses read it to its end,
+    // and the ones after stay there.
+    for (let press = 0; press < 12; press += 1) {
+      await window.press(DOWN);
+    }
+
+    await until('at its end', () => list().endsWith('    before the tag.'));
+    expect(list()).toMatch(/^ {2}↑ /);
+    expect(list()).not.toContain('❯');
+    expect(list()).not.toContain('↓');
+
+    await window.press(DOWN);
+    await window.press(DOWN);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(list().endsWith('    before the tag.')).toBeTruthy();
+    expect(list()).not.toContain('Summarise the release');
+  }));
+
+describe('CHD-471 L1b tester: tall row actions and summary boundary', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`reading a tall row reaches the summary then returns to its first line at ${columns} columns`, () =>
+      withAgents(async (window) => {
+        await window.resize({ columns, rows });
+        await ready(window);
+        await send(window, 'agenttitled');
+        await window.shows('Waiting on it.');
+        await until('main turn finished', async () => {
+          for (const file of await readdir(
+            join(window.dir, 'state', 'records'),
+          )) {
+            const past = await readPast(
+              join(window.dir, 'state', 'records', file),
+            );
+            const prompt = past.find(
+              (entry) =>
+                entry.type === 'prompt' && entry.prompt === 'agenttitled',
+            );
+
+            if (
+              prompt?.type === 'prompt' &&
+              past.some(
+                (entry) =>
+                  entry.type === 'result' && entry.turnId === prompt.turnId,
+              )
+            ) {
+              return true;
+            }
+          }
+
+          return false;
+        });
+
+        await send(window, 'monitors');
+        await window.shows('2 monitors running');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('❯ Summarise the release');
+
+        for (
+          let step = 0;
+          step < 40 && !window.frame().includes('❯ background');
+          step += 1
+        ) {
+          await window.press(DOWN);
+        }
+
+        await window.shows('❯ background');
+        await window.press(UP);
+        await window.shows('❯ Summarise the release');
+        await window.press(UP);
+        await window.shows('❯ main');
+        await window.press(UP);
+        await until(
+          'above main returns the keys to the prompt',
+          () => !window.frame().includes('❯ main'),
+        );
+        await window.press(DOWN);
+        await window.shows('❯ main');
+      }));
+
+    test(`Enter and x still address the tall child while its first line is out of sight at ${columns} columns`, () =>
+      withAgents(async (window) => {
+        await window.resize({ columns, rows });
+        await ready(window);
+        await send(window, 'agenttitled');
+        await window.shows('Waiting on it.');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('❯ Summarise the release');
+
+        for (let step = 0; step < 5; step += 1) {
+          await window.press(DOWN);
+        }
+
+        const budget = rows === 24 ? 4 : 6;
+
+        expect(
+          window.frame().split('\n').slice(-budget).join('\n'),
+        ).not.toContain('❯ Summarise');
+        await window.press('\r');
+        await send(window, '/echo tall-row-target');
+        await window.shows('tall-row-target');
+        await window.press(DOWN);
+
+        for (let step = 0; step < 5; step += 1) {
+          await window.press(DOWN);
+        }
+
+        await window.press('x');
+        await until(
+          'the long-named child is closed',
+          () =>
+            window.frame().includes('The person closed') ||
+            window.frame().includes('x again to stop'),
+        );
+
+        if (window.frame().includes('x again to stop')) {
+          await window.press('x');
+        }
+
+        await window.shows('The person closed');
+        expect(window.frame()).not.toContain('❯ Summarise the release');
+        await until(
+          'the echoed and closed session is the long-named child',
+          async () => {
+            const records = join(window.dir, 'state', 'records');
+            const pasts = await Promise.all(
+              (await readdir(records)).map((file) =>
+                readPast(join(records, file)),
+              ),
+            );
+            const child = pasts.find((past) =>
+              past.some(
+                (entry) =>
+                  entry.type === 'session' && entry.name === LONG_TITLE,
+              ),
+            );
+            const own = child?.find((entry) => entry.type === 'session');
+
+            return (
+              own?.type === 'session' &&
+              child!.some(
+                (entry) =>
+                  entry.type === 'prompt' &&
+                  entry.prompt === '/echo tall-row-target',
+              ) &&
+              pasts.some((past) =>
+                past.some(
+                  (entry) => entry.type === 'closed' && entry.agent === own.id,
+                ),
+              )
+            );
+          },
+        );
+      }));
   }
 });

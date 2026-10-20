@@ -60,6 +60,7 @@ import {
   type DialogsState,
   reduceDialogs,
 } from '../dialogs/state.ts';
+import type { AgentsView } from '../agents/agents.ts';
 import { askedPermission } from '../dialogs/permission.ts';
 import {
   configPickerShown,
@@ -218,6 +219,12 @@ export interface WindowState
    */
   readonly summaryFocus?: true;
   /**
+   * Where the list's lines start while its picked row, taller than the
+   * list, is read by line (CHD-471); none puts that row's first line in
+   * sight the least move from the list's top.
+   */
+  readonly agentsView?: AgentsView;
+  /**
    * `x` was pressed once on the busy child with this key; a second press
    * while it holds stops and closes it.
    */
@@ -269,6 +276,10 @@ export type AppAction =
   | { readonly type: 'agents_focused'; readonly focused: boolean }
   /** The `❯` went on to the summary line, or off it. */
   | { readonly type: 'summary_focused'; readonly focused: boolean }
+  /** The list's window moved on a tall row, or let go of it. */
+  | { readonly type: 'agents_scrolled'; readonly view: AgentsView | undefined }
+  /** The window resized: a tall row is read from its first line again. */
+  | { readonly type: 'agents_resized' }
   /** `x` on the busy child `key` asks for a second press. */
   | { readonly type: 'agent_close_armed'; readonly key: number }
   | { readonly type: 'agent_close_disarmed' }
@@ -556,6 +567,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         summaryFocus: __________,
         teamsPicker: ___________,
         backgroundView: ____________,
+        agentsView: _____________,
         ...rest
       } = state;
 
@@ -746,6 +758,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         agentsFocus: _,
         agentCloseArmed: __,
         summaryFocus: ___,
+        agentsView: ____,
         ...rest
       } = state;
 
@@ -758,6 +771,19 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       const { summaryFocus: _, ...rest } = state;
 
       return action.focused ? { ...rest, summaryFocus: true } : rest;
+    }
+    case 'agents_scrolled': {
+      const { agentsView: _, ...rest } = state;
+
+      return action.view === undefined
+        ? rest
+        : { ...rest, agentsView: action.view };
+    }
+    case 'agents_resized': {
+      // The pick and the list's keys stay; only where its lines start goes.
+      const { agentsView: _, ...rest } = state;
+
+      return rest;
     }
     case 'agent_close_armed': {
       const { sessionsNote: _, ...rest } = state;

@@ -5,10 +5,17 @@
  * in plain words going to main.
  */
 import { describe, expect, test } from 'bun:test';
+import chalk from 'chalk';
 import { readFile } from 'node:fs/promises';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { fileURLToPath } from 'node:url';
 import { type ChordServer, serveChord } from '../../../src/server/server.ts';
+import type { TeamShown } from '../../../src/session/transcript/types.ts';
+import type { Team } from '../../../src/teams.ts';
+import { Colours } from '../../../src/ui/app/context.ts';
+import { TeamEntry } from '../../../src/ui/teams/Teams.tsx';
+import { paletteOf } from '../../../src/ui/theme/theme.ts';
+import { draw } from '../harness.tsx';
 import { LEAD_REPORT } from '../../fixtures/fake_agent/scenarios/teams.ts';
 import {
   CTRL_O,
@@ -389,5 +396,164 @@ describe('CHD-407 R2 tester: opt-in proposal team', () => {
         await server.close();
       }
     });
+  }
+});
+
+test('/team show of a running team at 80 columns cuts nothing: the job wraps, and each headline goes under its row (CHD-471)', () =>
+  withTeams(async (window) => {
+    await ran(window);
+    await window.resize({ columns: 80, rows: 60 });
+    await send(window, '/team show bugfix');
+    await window.shows('the end of a line lose their closing quote"');
+    await window.shows('tester  fake · fake-small  acceptEdits  ● permission');
+    await window.shows('        Bash(deno task test tests/parse)');
+    expect(window.frame()).not.toMatch(/working \d+s on ".*…/);
+
+    // A blank line between the header and the table, however short the frame.
+    const lines = window.frame().split('\n');
+    const end = lines.findIndex((line) =>
+      line.includes('the end of a line lose their closing quote"'),
+    );
+
+    expect(lines[end + 1]!.trim()).toBe('');
+    expect(lines[end + 2]).toMatch(/^ +lead {4}fake/);
+  }));
+
+test("/team show of a running team narrower than its own columns puts each agent's state and mark whole under its row (CHD-471)", () =>
+  withTeams(async (window) => {
+    await ran(window);
+    await window.resize({ columns: 60, rows: 60 });
+    await send(window, '/team show bugfix');
+    await window.shows('      tester  fake · fake-small  acceptEdits\n');
+    await window.shows('              ● permission');
+    await window.shows('              Bash(deno task test tests/parse)');
+  }));
+
+test("/team show paints an agent's state and mark in their colours past a model id of wide characters (CHD-471)", async () => {
+  const level = chalk.level;
+
+  chalk.level = 3;
+
+  try {
+    const team: Team = {
+      description: 'Fixes a bug.',
+      body: '',
+      lead: { agent: 'fake', model: 'モデル-ラージ-🚀', mode: 'default' },
+      members: [],
+    };
+    const shown: TeamShown = {
+      kind: 'show',
+      name: 'bugfix',
+      file: '.chord/teams/bugfix.md',
+      team,
+      running: {
+        name: 'bugfix',
+        since: 0,
+        at: 8000,
+        job: 'fix it',
+        agents: [
+          {
+            name: 'lead',
+            lead: true,
+            open: true,
+            state: { glyph: '●', words: 'permission 8s', tone: 'warning' },
+            mark: { glyph: '✓', words: 'new reply', tone: 'success' },
+          },
+        ],
+      },
+    };
+
+    // Beside the row at 100, under it at 50, the mode with it at 26.
+    for (const columns of [100, 50, 26]) {
+      const drawn = await draw(
+        <Colours.Provider value={paletteOf('dark', true)}>
+          <TeamEntry
+            turnId='t'
+            command='team show bugfix'
+            shown={shown}
+            expanded={false}
+            width={columns}
+          />
+        </Colours.Provider>,
+        { columns, rows: 20 },
+      );
+      const frame = drawn.frame();
+
+      await drawn.unmount();
+      // #ffc107 and #4eba65, the dark palette's warning and success.
+      expect(frame).toContain('\x1b[38;2;255;193;7m● permission 8s\x1b[');
+      expect(frame).toContain('\x1b[38;2;78;186;101m✓ new reply\x1b[');
+    }
+  } finally {
+    chalk.level = level;
+  }
+});
+
+describe('CHD-471 L2 tester: inspecting a run preserves unread marks', () => {
+  for (const columns of [80, 120]) {
+    test(`repeated /team show keeps the member's mark until that member is opened at ${columns} columns`, () =>
+      withTeams(async (window) => {
+        await ran(window);
+        await window.resize({ columns, rows: 60 });
+
+        const coder = () =>
+          window
+            .frame()
+            .slice(window.frame().lastIndexOf('› /team show bugfix'))
+            .split('\n')
+            .findLast((line) => /coder +fake · fake-large +plan/.test(line)) ??
+          '';
+
+        await until('coder has replied in a run snapshot', async () => {
+          await send(window, '/team show bugfix');
+
+          return /◦ idle \d+s +✓ new reply/.test(coder());
+        });
+
+        const firstAge = Number(/◦ idle (\d+)s/.exec(coder())?.[1]);
+        const liveWaitAge = () =>
+          Number(
+            /permission (\d+)s/.exec(
+              window
+                .frame()
+                .split('\n')
+                .findLast((line) => line.includes('permission ')) ?? '',
+            )?.[1],
+          );
+        const firstWaitAge = liveWaitAge();
+
+        expect(Number.isFinite(firstAge)).toBe(true);
+        expect(Number.isFinite(firstWaitAge)).toBe(true);
+        // The live list ticks, while an old /team show snapshot cannot age.
+        await until(
+          'live wait advances beyond the first snapshot',
+          () => liveWaitAge() >= firstWaitAge + 2,
+        );
+        await send(window, '/team show bugfix');
+        await until(
+          'a newer snapshot retains the same unread reply',
+          () =>
+            Number(/◦ idle (\d+)s/.exec(coder())?.[1]) > firstAge &&
+            /✓ new reply/.test(coder()),
+        );
+        expect(window.frame()).toContain('✓ new reply');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('╭─ coder · bugfix');
+        // /team writes its report in main's transcript, so return there to read it.
+        await window.press(UP);
+        await window.press(UP);
+        await window.press(UP);
+        await window.shows('❯ main');
+        await window.press('\x1b');
+        await send(window, '/team show bugfix');
+        await until(
+          'opening coder cleared only its mark in the next snapshot',
+          () => /◦ idle \d+s/.test(coder()) && !coder().includes('✓ new reply'),
+        );
+        expect(window.frame()).toContain('● permission');
+      }));
   }
 });

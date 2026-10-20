@@ -94,6 +94,7 @@ import {
   position,
   runName,
   shownKey,
+  shownWait,
   type Tab,
   tabOf,
   type TabWait,
@@ -126,10 +127,15 @@ import {
 } from './closing.ts';
 import {
   type AgentRow,
+  agentMark,
+  agentsHeight,
+  agentsLayout,
   agentState,
+  enteredView,
   listRows,
   type ListTarget,
   moveListFocus,
+  scrolledView,
 } from '../agents/agents.ts';
 import {
   type BackgroundAgent,
@@ -145,7 +151,7 @@ import {
   NO_STOP_HINT,
   stopRefused,
 } from '../background/view.ts';
-import { stripLayout, tabGlyph } from './strip.ts';
+import { stripLayout, tabGlyphs } from './strip.ts';
 import {
   headlineText,
   type ListedTeam,
@@ -1713,16 +1719,59 @@ export function useSessions(
   const front = (): Tab<Conversation> | undefined => frontTab(sessions.tabs);
 
   /**
-   * Moves the pick in the list under the prompt `by` rows, the transcript
-   * and the box following; above `main` the focus goes back to the box.
+   * Moves the pick in the list under the prompt `by` rows, as it is drawn
+   * in `limit` lines at `width`, the transcript and the box following;
+   * above `main` the focus goes back to the box. On a picked row taller
+   * than the list it moves a line of it first, and a row so tall picked
+   * comes into sight the least move from where the list was (CHD-471).
    */
-  const moveAgent = (by: number, limit: number) => {
-    focusOn(
-      moveListFocus(listed(limit), by, {
-        summary: background().length > 0,
-        onSummary: state.summaryFocus === true,
-      }),
-    );
+  const moveAgent = (by: number, limit: number, width: number) => {
+    const rows = listed(limit, width);
+    const now = Date.now();
+    const frame = { limit, width, now };
+    const view = state.agentsView;
+    const scrolled =
+      state.summaryFocus === true
+        ? undefined
+        : scrolledView(rows, by, { ...frame, view });
+
+    if (scrolled !== undefined) {
+      dispatch({ type: 'agents_scrolled', view: scrolled });
+
+      return;
+    }
+
+    const { top } = agentsLayout(rows, { ...frame, focused: true, view });
+    const target = moveListFocus(rows, by, {
+      summary: background().length > 0,
+      onSummary: state.summaryFocus === true,
+    });
+
+    // The last stays the last: where ↓ leaves the pick on the row it was
+    // on, the window stays where that row was read to (CHD-471).
+    const stays =
+      target?.kind === 'agent' &&
+      state.summaryFocus !== true &&
+      target.key === rows.find((row) => row.picked)?.key;
+
+    if (!stays) {
+      dispatch({
+        type: 'agents_scrolled',
+        view:
+          target?.kind === 'agent'
+            ? enteredView(
+                rows.map((row) => ({
+                  ...row,
+                  picked: row.key === target.key,
+                })),
+                top,
+                frame,
+              )
+            : undefined,
+      });
+    }
+
+    focusOn(target);
   };
 
   /**
@@ -2084,17 +2133,16 @@ export function useSessions(
         return { ...who, open: false };
       }
 
-      const state = agentState(
-        {
-          key: child.key,
-          name: child.name,
-          runtime: child.runtime,
-          wait: child.wait,
-          picked: false,
-          failed: all.sessions[child.key]?.connection.status === 'failed',
-        },
-        now,
-      );
+      const row = {
+        key: child.key,
+        name: child.name,
+        runtime: child.runtime,
+        wait: child.wait,
+        picked: false,
+        failed: all.sessions[child.key]?.connection.status === 'failed',
+      };
+      const state = agentState(row, now);
+      const mark = agentMark(row);
       const latest = stateOf(child.key)?.transcript.entries.findLast(
         (entry) => entry.kind === 'tool' || entry.kind === 'message',
       );
@@ -2102,7 +2150,8 @@ export function useSessions(
       return {
         ...who,
         open: true,
-        ...(state === undefined ? {} : { state }),
+        state,
+        ...(mark === undefined ? {} : { mark }),
         ...(latest?.kind === 'tool'
           ? {
               latest: headlineText(
@@ -2267,10 +2316,14 @@ export function useSessions(
   };
 
   /**
-   * The list under the prompt as it is drawn in `limit` rows: the front
-   * tab's agents while it has a child, a team folded where they do not fit.
+   * The list under the prompt as it is drawn in `limit` lines at `width`:
+   * the front tab's agents while it has a child, a team folded where their
+   * lines do not fit, so a resize may fold or unfold one.
    */
-  const listed = (limit: number): AgentRow[] => listRows(agentRows(), limit);
+  const listed = (limit: number, width: number): AgentRow[] =>
+    listRows(agentRows(), limit, (rows) =>
+      agentsHeight(rows, { width, now: Date.now() }),
+    );
 
   /**
    * The front tab's background: every monitor and task of its `main` and
@@ -2613,7 +2666,7 @@ export function useSessions(
 
       return {
         agent: tab.agent,
-        wait: mergedWait(tab),
+        wait: shownWait(tab),
         front: tab.key === sessions.tabs.front,
         prompt:
           first?.kind === 'user'
@@ -3112,7 +3165,7 @@ export function useSessions(
         number: index + 1,
         agent: tab.agent,
         front: tab.key === tabs.front,
-        glyph: tabGlyph(mergedWait(tab)),
+        glyphs: tabGlyphs(shownWait(tab)),
       })),
       homePath(frontPlace().cwd, home),
       // Inside the header's padding.

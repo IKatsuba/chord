@@ -9,7 +9,8 @@ import {
   stripLayout,
   type StripTab,
   type StripView,
-  tabGlyph,
+  glyphsOf,
+  tabGlyphs,
 } from '../../../src/ui/app/strip.ts';
 
 const MOCKS = new URL(
@@ -34,8 +35,10 @@ function row(view: StripView, columns: number): string {
     'chord' +
     view.pieces
       .map((piece) =>
-        piece.kind === 'tab' && piece.glyph
-          ? `${piece.text} ${GLYPHS[piece.glyph]}`
+        piece.kind === 'tab' && glyphsOf(piece.glyphs).length > 0
+          ? `${piece.text} ${glyphsOf(piece.glyphs)
+              .map((glyph) => GLYPHS[glyph])
+              .join('')}`
           : piece.text,
       )
       .join('');
@@ -46,16 +49,16 @@ function row(view: StripView, columns: number): string {
 
 const TWO: StripTab[] = [
   { number: 1, agent: 'fake', front: true },
-  { number: 2, agent: 'claude', front: false, glyph: 'working' },
+  { number: 2, agent: 'claude', front: false, glyphs: { state: 'working' } },
 ];
 
 const SIX: StripTab[] = [
   { number: 1, agent: 'fake', front: true },
-  { number: 2, agent: 'claude', front: false, glyph: 'asking' },
-  { number: 3, agent: 'fake', front: false, glyph: 'replied' },
-  { number: 4, agent: 'codex', front: false, glyph: 'working' },
+  { number: 2, agent: 'claude', front: false, glyphs: { state: 'asking' } },
+  { number: 3, agent: 'fake', front: false, glyphs: { mark: 'replied' } },
+  { number: 4, agent: 'codex', front: false, glyphs: { state: 'working' } },
   { number: 5, agent: 'fake', front: false },
-  { number: 6, agent: 'claude', front: false, glyph: 'working' },
+  { number: 6, agent: 'claude', front: false, glyphs: { state: 'working' } },
 ];
 
 /**
@@ -120,7 +123,7 @@ test('nine short tabs fit 80 columns with the directory', () => {
     number: index + 1,
     agent: 'claude',
     front: index === 4,
-    glyph: index === 4 ? undefined : 'asking',
+    glyphs: index === 4 ? undefined : { state: 'asking' },
   }));
   const view = stripLayout(nine, '~/src/app', 78);
 
@@ -129,29 +132,65 @@ test('nine short tabs fit 80 columns with the directory', () => {
   expect(view.directory).toStrictEqual('~/src/app');
 });
 
-test('a tab shows its most urgent state', () => {
+test('a tab shows its state, none while idle, then what of it is not yet seen (CHD-471)', () => {
   const asking = {
     on: { kind: 'permission', title: 'Write notes.txt' },
     since: 1,
   } as const;
 
-  expect(tabGlyph(idle)).toStrictEqual(undefined);
-  expect(tabGlyph({ watch: emptyWatch, working: 1 })).toStrictEqual('working');
+  expect(tabGlyphs(idle)).toStrictEqual({});
+  expect(tabGlyphs({ watch: emptyWatch, working: 1 })).toStrictEqual({
+    state: 'working',
+  });
+  // Working with a reply not yet seen: both.
   expect(
-    tabGlyph({
+    tabGlyphs({
       watch: emptyWatch,
       working: 1,
       unseen: { kind: 'replied', since: 2 },
     }),
-  ).toStrictEqual('replied');
+  ).toStrictEqual({ state: 'working', mark: 'replied' });
+  // A failed turn is a mark, the tab idle; an exit is its state.
   expect(
-    tabGlyph({ watch: emptyWatch, unseen: { kind: 'failed', since: 2 } }),
-  ).toStrictEqual('failed');
+    tabGlyphs({ watch: emptyWatch, unseen: { kind: 'failed', since: 2 } }),
+  ).toStrictEqual({ mark: 'failed' });
   expect(
-    tabGlyph({
+    tabGlyphs({
+      watch: emptyWatch,
+      exited: true,
+      unseen: { kind: 'failed', since: 2, failure: 'exited' },
+    }),
+  ).toStrictEqual({ state: 'failed' });
+  expect(
+    tabGlyphs({
+      watch: emptyWatch,
+      unseen: { kind: 'message', from: '@main', since: 2 },
+    }),
+  ).toStrictEqual({ mark: 'message' });
+  expect(
+    tabGlyphs({
       watch: emptyWatch,
       asking,
       unseen: { kind: 'failed', since: 2 },
     }),
-  ).toStrictEqual('asking');
+  ).toStrictEqual({ state: 'asking', mark: 'failed' });
+
+  // Drawn after the tab, state first: `2 codex ✻✓`.
+  const view = stripLayout(
+    [
+      { number: 1, agent: 'fake', front: true },
+      {
+        number: 2,
+        agent: 'codex',
+        front: false,
+        glyphs: { state: 'working', mark: 'replied' },
+      },
+      { number: 3, agent: 'fake', front: false, glyphs: { mark: 'replied' } },
+    ],
+    '~/src/app',
+    78,
+  );
+
+  assert(view);
+  expect(row(view, 80)).toContain('2 codex ✻✓    3 fake ✓');
 });

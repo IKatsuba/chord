@@ -1,5 +1,5 @@
 import { TextAttributes } from '@opentui/core';
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useColours } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, fg, TEXT } from '../theme/text.ts';
@@ -7,9 +7,11 @@ import { agentColour, type Palette } from '../theme/theme.ts';
 import {
   type AgentRow,
   agentsLayout,
+  type AgentsView,
   type AgentTone,
   childLine,
   listTimed,
+  type Toned,
 } from './agents.ts';
 
 const clockListeners = new Set<(now: number) => void>();
@@ -73,12 +75,15 @@ export function AgentsList({
   limit,
   width,
   focused,
+  view,
 }: {
   rows: readonly AgentRow[];
   limit: number;
   /** Cells inside the list's padding. */
   width: number;
   focused: boolean;
+  /** Where the lines start on a picked row taller than the list. */
+  view?: AgentsView | undefined;
 }) {
   const colours = useColours();
   // The times on the rows go on counting, as the working line's does.
@@ -88,36 +93,87 @@ export function AgentsList({
     return null;
   }
 
-  const layout = agentsLayout(rows, { limit, width, focused, now });
+  const layout = agentsLayout(rows, { limit, width, focused, now, view });
 
   return (
     <box paddingX={2} flexShrink={0}>
       {layout.rows.map((laid) => {
         const { row } = laid;
         const colour = agentColour(colours, row.colour);
+        const toned = ({ text, tone }: Toned, key: string) => (
+          <span
+            key={key}
+            {...fg(toneColour(tone, colours))}
+            attributes={tone === 'dim' ? DIM : 0}
+          >
+            {text}
+          </span>
+        );
+        const name = (text: string) => (
+          <span
+            {...fg(colour)}
+            attributes={row.picked ? TextAttributes.BOLD : 0}
+          >
+            <Ansi text={text} />
+          </span>
+        );
+
+        // The `❯` in its colour; a `↑` or `↓` for lines out of sight, dim.
+        const gutter = (text: string) =>
+          text === laid.mark ? (
+            <span {...fg(colours.permission)}>{text}</span>
+          ) : (
+            <span attributes={DIM}>{text}</span>
+          );
 
         return (
-          <text key={row.key} {...CUT}>
-            <span {...fg(colours.permission)}>{laid.mark}</span>
-            {laid.branch && <span attributes={DIM}>{laid.branch}</span>}
-            <span
-              {...fg(colour)}
-              attributes={row.picked ? TextAttributes.BOLD : 0}
-            >
-              <Ansi text={laid.name} />
-            </span>
-            <span attributes={DIM}>
-              <Ansi text={`  ${laid.detail}`} />
-            </span>
-            {laid.state && (
-              <span
-                {...fg(toneColour(laid.state.tone, colours))}
-                attributes={laid.state.tone === 'dim' ? DIM : 0}
-              >
-                {`  ${laid.state.text}`}
-              </span>
-            )}
-          </text>
+          <Fragment key={row.key}>
+            {laid.lines.map(({ at, gutter: beside }) => {
+              if (at === 0) {
+                return (
+                  <text key={at} {...CUT}>
+                    {gutter(beside)}
+                    {laid.branch && <span attributes={DIM}>{laid.branch}</span>}
+                    {name(laid.name)}
+                    <span attributes={DIM}>
+                      <Ansi text={`  ${laid.detail}`} />
+                    </span>
+                    {laid.state &&
+                      toned(
+                        { ...laid.state, text: `  ${laid.state.text}` },
+                        'state',
+                      )}
+                    {laid.unseen &&
+                      toned(
+                        { ...laid.unseen, text: `  ${laid.unseen.text}` },
+                        'unseen',
+                      )}
+                  </text>
+                );
+              }
+
+              // Under the name its next line, or as many spaces, then what
+              // went under the detail.
+              const under = laid.names[at - 1];
+              const below = laid.below[at - 1] ?? [];
+
+              return (
+                <text key={at} {...CUT}>
+                  {gutter(beside)}
+                  {under === undefined ? (
+                    ' '.repeat(laid.nameWidth)
+                  ) : (
+                    <>
+                      <span attributes={DIM}>{under.tree}</span>
+                      {name(under.text)}
+                    </>
+                  )}
+                  {below.length > 0 && '  '}
+                  {below.map((run, index) => toned(run, String(index)))}
+                </text>
+              );
+            })}
+          </Fragment>
         );
       })}
       {layout.more > 0 && (

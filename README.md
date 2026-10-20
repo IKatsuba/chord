@@ -68,8 +68,8 @@ ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
 ### Many agents in one window
 
 Up to nine sessions as tabs, each with its own agent, transcript and draft.
-A tab in the background marks what it waits for, and `ctrl+x a` takes you
-there.
+A tab shows whether its agents are working or waiting, with a separate
+mark for unseen news. `ctrl+x a` takes you to what waits.
 
 <img src="docs/images/tabs.png" alt="Two tabs, claude waiting on a permission behind, codex in front" width="900">
 

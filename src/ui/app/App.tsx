@@ -525,7 +525,7 @@ export function App({
   // The list under the prompt: those agents, then the background's
   // summary line, its last stop.
   const agentsLimit = agentsRowLimit(rows);
-  const listRows = sessions.listed(agentsLimit);
+  const listRows = sessions.listed(agentsLimit, columns - 4);
   const backgroundItems = sessions.background();
   const listShown = listRows.length > 0 || backgroundItems.length > 0;
   // With no agents drawn the summary line is the list's one stop.
@@ -554,6 +554,8 @@ export function App({
   // again from the `❯`, a tall row from its first line (CHD-430).
   useEffect(() => {
     dispatch({ type: 'background_resized' });
+    // And the agents list's tall row from its first line (CHD-471).
+    dispatch({ type: 'agents_resized' });
   }, [columns, rows]);
 
   // A list gone while it had the keys hands them back to the box; a summary
@@ -717,7 +719,7 @@ export function App({
       case 'attend_session':
         return sessions.attend();
       case 'move_agent':
-        return sessions.moveAgent(step.by, agentsLimit);
+        return sessions.moveAgent(step.by, agentsLimit, columns - 4);
       case 'close_agent':
         return sessions.closePicked();
       case 'move_background':
@@ -1314,6 +1316,7 @@ export function App({
                 limit={agentsLimit}
                 width={columns - 4}
                 focused={listFocus && !summaryFocused}
+                view={state.agentsView}
               />
               <SummaryLine
                 items={backgroundItems}

@@ -5,34 +5,61 @@
  * second row or a hidden tab.
  */
 import stringWidth from 'string-width';
-import type { TabWait } from '../../session/tabs.ts';
+import { failureOf, type TabWait } from '../../session/tabs.ts';
 import { cutPath } from '../pickers/mcp.ts';
 
-/** What a tab behind says of its session, most urgent first. */
-export type TabGlyph = 'asking' | 'failed' | 'replied' | 'working';
+/** What a tab behind says of its session: its state, then what is not yet seen. */
+export type TabGlyph = 'asking' | 'failed' | 'replied' | 'working' | 'message';
 
-/** How each state is marked; `✻` stands still, as a spinner here would not. */
+/** How each is marked; `✻` stands still, as a spinner here would not. */
 export const GLYPHS: Record<TabGlyph, string> = {
   asking: '●',
   failed: '✗',
   replied: '✓',
   working: '✻',
+  message: '←',
 };
 
 /**
- * The glyph a tab's wait earns: a permission or form first, as it blocks the
- * turn, then a failure, a reply not yet seen, and a turn running.
+ * A tab's glyphs (CHD-471): its state, asking, gone or working, none while
+ * it is idle, as the strip is for what calls the person; then what of it is
+ * not yet seen, a failed turn, a reply or a message.
  */
-export function tabGlyph(wait: TabWait): TabGlyph | undefined {
-  return wait.asking
+export interface TabGlyphs {
+  readonly state?: 'asking' | 'failed' | 'working';
+  readonly mark?: 'failed' | 'replied' | 'message';
+}
+
+/** The glyphs a tab's wait earns, as the agents list words its state and mark. */
+export function tabGlyphs(wait: TabWait): TabGlyphs {
+  const failure = wait.exited ? 'exited' : failureOf(wait);
+  const state = wait.asking
     ? 'asking'
-    : wait.unseen?.kind === 'failed'
+    : failure === 'exited' || failure === 'start'
       ? 'failed'
-      : wait.unseen
-        ? 'replied'
-        : wait.working === undefined
-          ? undefined
-          : 'working';
+      : wait.working === undefined
+        ? undefined
+        : 'working';
+  const mark =
+    wait.unseen === undefined
+      ? undefined
+      : wait.unseen.kind === 'failed'
+        ? failure === 'turn'
+          ? 'failed'
+          : undefined
+        : wait.unseen.kind;
+
+  return {
+    ...(state === undefined ? {} : { state }),
+    ...(mark === undefined ? {} : { mark }),
+  };
+}
+
+/** The glyphs drawn, in order, state first. */
+export function glyphsOf(glyphs: TabGlyphs | undefined): TabGlyph[] {
+  return [glyphs?.state, glyphs?.mark].filter(
+    (glyph): glyph is TabGlyph => glyph !== undefined,
+  );
 }
 
 /** One tab as the strip is asked to draw it. */
@@ -41,7 +68,7 @@ export interface StripTab {
   readonly number: number;
   readonly agent: string;
   readonly front: boolean;
-  readonly glyph?: TabGlyph | undefined;
+  readonly glyphs?: TabGlyphs | undefined;
 }
 
 /** A run of the strip's text, drawn as one. */
@@ -49,11 +76,11 @@ export type StripPiece =
   | { readonly kind: 'gap'; readonly text: string }
   /** The tab in front, padded by a space each side, inverse and bold. */
   | { readonly kind: 'front'; readonly text: string }
-  /** A tab behind, dim, and its glyph after it in the glyph's colour. */
+  /** A tab behind, dim, and its glyphs after it, each in its colour. */
   | {
       readonly kind: 'tab';
       readonly text: string;
-      readonly glyph?: TabGlyph | undefined;
+      readonly glyphs?: TabGlyphs | undefined;
     };
 
 export interface StripView {
@@ -99,7 +126,7 @@ function piecesOf(tabs: readonly StripTab[], short: boolean): StripPiece[] {
       {
         kind: 'tab',
         text: short ? `${tab.number}` : `${tab.number} ${tab.agent}`,
-        glyph: tab.glyph,
+        glyphs: tab.glyphs,
       },
     ];
   });
@@ -110,7 +137,12 @@ function piecesWidth(pieces: readonly StripPiece[]): number {
     (sum, piece) =>
       sum +
       stringWidth(piece.text) +
-      (piece.kind === 'tab' && piece.glyph ? 2 : 0),
+      (piece.kind === 'tab'
+        ? // A space, then each glyph.
+          ((count) => (count === 0 ? 0 : 1 + count))(
+            glyphsOf(piece.glyphs).length,
+          )
+        : 0),
     stringWidth(CHORD),
   );
 }

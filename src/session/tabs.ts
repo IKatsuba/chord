@@ -61,6 +61,11 @@ export interface TabWait {
     | undefined;
   /** When the turn running now began, while one runs. */
   readonly working?: number | undefined;
+  /**
+   * When its agent last stopped working: its turn's or own cycle's end,
+   * else when it came up, which an idle agent's time counts from (CHD-471).
+   */
+  readonly stopped?: number | undefined;
   /** Its agent has exited. */
   readonly exited?: true;
 }
@@ -306,12 +311,41 @@ export function mergedWait<C>(tab: Tab<C>): TabWait {
     wait.working === undefined ? [] : [wait.working],
   );
 
+  const stopped = waits.flatMap((wait) =>
+    wait.stopped === undefined ? [] : [wait.stopped],
+  );
+
   return {
     watch: tab.wait.watch,
     asking: earliest(waits.map((wait) => wait.asking)),
     unseen: unseen('failed') ?? unseen('replied'),
     working: working.length === 0 ? undefined : Math.min(...working),
+    // Idle since the last of its agents stopped (CHD-471).
+    ...(stopped.length === 0 ? {} : { stopped: Math.max(...stopped) }),
+    // Its own agent gone is the tab's.
+    ...(tab.wait.exited ? { exited: true as const } : {}),
   };
+}
+
+/**
+ * The tab's waits as the sessions picker and the tab strip draw them: as
+ * `mergedWait` has them, and with nothing else unseen, the earliest message
+ * its session or any child has not seen (CHD-471). Only what is drawn: the
+ * notices, the hint and `ctrl+x a` read `mergedWait`, where a message
+ * between its agents is no wait of the tab's.
+ */
+export function shownWait<C>(tab: Tab<C>): TabWait {
+  const merged = mergedWait(tab);
+  const message =
+    merged.unseen === undefined
+      ? earliest(
+          waitsOf(tab).map((wait) =>
+            wait.unseen?.kind === 'message' ? wait.unseen : undefined,
+          ),
+        )
+      : undefined;
+
+  return message === undefined ? merged : { ...merged, unseen: message };
 }
 
 /**
@@ -939,12 +973,19 @@ function waitAfter(
       : event.type === 'result' || event.type === 'connect_failed'
         ? undefined
         : before.working;
+  const stopped =
+    before.working !== undefined && working === undefined
+      ? now
+      : event.type === 'connected' && before.stopped === undefined
+        ? now
+        : before.stopped;
 
   return {
     watch,
     asking,
     unseen,
     working,
+    ...(stopped === undefined ? {} : { stopped }),
     ...(event.type === 'disconnected' || before.exited
       ? { exited: true as const }
       : {}),

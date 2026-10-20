@@ -18,6 +18,7 @@ import {
   sessionChoices,
   tabChoices,
   type TabRow,
+  tabMark,
   tabState,
   valueChoices,
   valueToAsk,
@@ -354,7 +355,7 @@ const idleTab: TabRow = {
   prompt: undefined,
 };
 
-test('a session in the sessions picker says where it stands, and since when', () => {
+test('a session in the sessions picker says where it stands, as the agents list does, and beside it what is not yet seen (CHD-471)', () => {
   const now = 1_000_000;
   const at = (seconds: number) => now - seconds * 1000;
   const wait = (more: Partial<TabRow['wait']>) => ({
@@ -365,58 +366,57 @@ test('a session in the sessions picker says where it stands, and since when', ()
   const input = { kind: 'input', message: 'Name the project' } as const;
 
   expect(tabState({ ...idleTab, front: true }, now)).toStrictEqual('here');
-  expect(tabState(idleTab, now)).toStrictEqual('idle');
-  expect(tabState(wait({ working: at(12) }), now)).toStrictEqual('working 12s');
+  expect(tabState(wait({ stopped: at(190) }), now)).toStrictEqual('◦ idle 3m');
+  expect(tabState(wait({ working: at(12) }), now)).toStrictEqual(
+    '✻ working 12s',
+  );
   expect(
     tabState(wait({ asking: { on: permission, since: at(41) } }), now),
   ).toStrictEqual('● permission 41s');
   expect(
     tabState(wait({ asking: { on: input, since: at(41) } }), now),
   ).toStrictEqual('● input 41s');
+
+  // A reply and a failed turn are marks; the session reads idle.
+  const replied = wait({
+    stopped: at(4),
+    unseen: { kind: 'replied', since: at(125) },
+  });
+
+  expect(tabState(replied, now)).toStrictEqual('◦ idle 4s');
+  expect(tabMark(replied)).toStrictEqual('✓ new reply');
+
+  const failed = wait({
+    stopped: at(65),
+    unseen: { kind: 'failed', since: at(65), failure: 'turn' },
+  });
+
+  expect(tabState({ ...failed, waiter: 'parser' }, now)).toStrictEqual(
+    '◦ idle 1m',
+  );
+  expect(tabMark(failed)).toStrictEqual('✗ turn failed');
   expect(
-    tabState(wait({ unseen: { kind: 'replied', since: at(125) } }), now),
-  ).toStrictEqual('✓ replied 2m ago');
-  // From the reply, not from the message it answered (CHD-364).
-  expect(
-    tabState(
-      wait({ unseen: { kind: 'replied', since: at(125), repliedAt: at(4) } }),
-      now,
-    ),
-  ).toStrictEqual('✓ replied 4s ago');
-  expect(
-    tabState(wait({ unseen: { kind: 'failed', since: at(65) } }), now),
-  ).toStrictEqual('✗ turn failed 1m');
-  // A child's failure names the child, as a folded lead does.
-  expect(
-    tabState(
-      {
-        ...wait({
-          unseen: { kind: 'failed', since: at(65), failure: 'turn' },
-        }),
-        waiter: 'parser',
-      },
-      now,
-    ),
-  ).toStrictEqual('✗ parser: turn failed 1m');
-  expect(
-    tabState(
-      {
-        ...wait({
-          unseen: { kind: 'failed', since: at(5), failure: 'exited' },
-          exited: true,
-        }),
-        waiter: 'parser',
-      },
-      now,
-    ),
-  ).toStrictEqual('✗ parser: exited');
+    tabMark(wait({ unseen: { kind: 'message', from: '@main', since: now } })),
+  ).toStrictEqual('← new message');
+
+  // Gone is a state, a child's named, and no mark.
+  const exited = {
+    ...wait({
+      unseen: { kind: 'failed', since: at(5), failure: 'exited' },
+      exited: true,
+    }),
+    waiter: 'parser',
+  };
+
+  expect(tabState(exited, now)).toStrictEqual('✗ parser: exited');
+  expect(tabMark(exited)).toStrictEqual(undefined);
   expect(
     tabState(
       wait({ unseen: { kind: 'failed', since: at(5), failure: 'start' } }),
       now,
     ),
   ).toStrictEqual('✗ failed to start');
-  // In front it is here, whatever it waits on.
+  // In front it is here, whatever it waits on, and nothing is unseen.
   expect(
     tabState(
       {
@@ -426,9 +426,10 @@ test('a session in the sessions picker says where it stands, and since when', ()
       now,
     ),
   ).toStrictEqual('here');
+  expect(tabMark({ ...replied, front: true })).toStrictEqual(undefined);
 });
 
-test("the sessions picker's rows line up its columns, by tab number", () => {
+test("the sessions picker's rows line up its columns, the marks among them, by tab number", () => {
   const now = 1_000_000;
   const choices = tabChoices(
     [
@@ -436,10 +437,14 @@ test("the sessions picker's rows line up its columns, by tab number", () => {
       {
         ...idleTab,
         agent: 'claude',
-        wait: { ...idleTab.wait, unseen: { kind: 'replied', since: now } },
+        wait: {
+          ...idleTab.wait,
+          stopped: now - 3_000,
+          unseen: { kind: 'replied', since: now },
+        },
         prompt: 'add a notes file',
       },
-      idleTab,
+      { ...idleTab, wait: { ...idleTab.wait, working: now - 41_000 } },
     ],
     now,
     2,
@@ -448,16 +453,16 @@ test("the sessions picker's rows line up its columns, by tab number", () => {
   expect(choices).toStrictEqual([
     {
       key: '1',
-      label: 'fake    here              fix the failing test',
+      label: 'fake    here                        fix the failing test',
       value: '1',
     },
     {
       key: '2',
-      label: 'claude  ✓ replied 0s ago  add a notes file',
+      label: 'claude  ◦ idle 3s      ✓ new reply  add a notes file',
       value: '2',
       current: true,
     },
-    { key: '3', label: 'fake    idle', value: '3' },
+    { key: '3', label: 'fake    ✻ working 41s', value: '3' },
   ]);
   expect(initialChoice(choices)).toStrictEqual(1);
 });
@@ -568,13 +573,14 @@ test("a numbered list's keys move round, pick, and leave shift+arrows alone", ()
 });
 
 describe('CHD-264 tester: picker failure identity', () => {
-  test('a child failure uses its own failure time and owner while the front tab still reads here', () => {
+  test('a failed turn is idle with its own stop time and an unnamed mark while the front tab reads here', () => {
     const now = 1_000_000;
     const child: TabRow = {
       ...idleTab,
       waiter: 'parser',
       wait: {
         ...idle,
+        stopped: now - 12_000,
         unseen: {
           kind: 'failed',
           failure: 'turn',
@@ -584,37 +590,38 @@ describe('CHD-264 tester: picker failure identity', () => {
       },
     };
 
-    expect(tabState(child, now)).toBe('✗ parser: turn failed 12s');
+    expect(tabState(child, now)).toBe('◦ idle 12s');
+    expect(tabMark(child)).toBe('✗ turn failed');
     expect(
       tabState({ ...child, wait: { ...child.wait, exited: true } }, now),
     ).toBe('✗ parser: exited');
     expect(tabState({ ...child, front: true }, now)).toBe('here');
-    expect(tabState({ ...idleTab, wait: child.wait }, now)).toBe(
-      '✗ turn failed 12s',
-    );
+    expect(tabState({ ...idleTab, wait: child.wait }, now)).toBe('◦ idle 12s');
   });
 });
 
-describe('CHD-364 tester: legacy and newest reply age', () => {
-  test('old waits fall back to news time; a later reply uses its own time, including epoch zero', () => {
-    const state = (since: number, repliedAt?: number) =>
-      tabState(
-        {
-          ...idleTab,
-          wait: {
-            ...idle,
-            unseen: {
-              kind: 'replied',
-              since,
-              ...(repliedAt === undefined ? {} : { repliedAt }),
-            },
+describe('CHD-364 tester: legacy and newest replies are timeless marks', () => {
+  test('old and new reply timestamps including epoch zero leave state and mark independent', () => {
+    for (const [since, repliedAt] of [
+      [1000, undefined],
+      [1000, 64000],
+      [-100000, 0],
+    ]) {
+      const tab: TabRow = {
+        ...idleTab,
+        wait: {
+          ...idle,
+          unseen: {
+            kind: 'replied',
+            since: since!,
+            ...(repliedAt === undefined ? {} : { repliedAt }),
           },
         },
-        65_000,
-      );
+      };
 
-    expect(state(1000)).toBe('✓ replied 1m ago');
-    expect(state(1000, 64_000)).toBe('✓ replied 1s ago');
-    expect(state(-100_000, 0)).toBe('✓ replied 1m ago');
+      expect(tabState(tab, 65000)).toBe('◦ idle 0s');
+      expect(tabMark(tab)).toBe('✓ new reply');
+      expect(tabMark({ ...tab, front: true })).toBeUndefined();
+    }
   });
 });

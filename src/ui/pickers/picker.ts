@@ -15,15 +15,11 @@ import {
   windowDirectory,
   windowSummary,
 } from '../../session/windows.ts';
-import {
-  failedSince,
-  failureOf,
-  repliedSince,
-  type TabWait,
-} from '../../session/tabs.ts';
+import { failureOf, type TabWait } from '../../session/tabs.ts';
 import { homePath } from '../../settings.ts';
 import { visibleRange } from '../prompt/commands.ts';
-import { GLYPHS } from '../app/strip.ts';
+import { GLYPHS, tabGlyphs } from '../app/strip.ts';
+import { IDLE_GLYPH } from '../agents/agents.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { cutPath } from './mcp.ts';
 import type { KeyPress } from '../shortcuts/state.ts';
@@ -208,11 +204,11 @@ function briefly(ms: number): string {
 }
 
 /**
- * Where a session stands, as the sessions picker words it: `here` for the one
- * in front, then what its tab's glyph says, in the same order, with how long:
- * `● permission 41s`, `● input 41s`, `✗ parser: turn failed 1m`,
- * `✗ exited`, `✗ failed to start`, `✓ replied 2m ago`, `working 12s`, and
- * `idle` for the rest.
+ * Where a session stands, as the sessions picker words it, as the agents
+ * list does (CHD-471): `here` for the one in front, else always one state,
+ * `● permission 41s`, `● input 41s`, `✗ exited`, `✗ failed to start`,
+ * `✻ working 12s`, or `◦ idle 3m` since its agents last stopped; what is
+ * not yet seen is `tabMark`'s, beside it.
  */
 export function tabState(tab: TabRow, now: number): string {
   const { wait } = tab;
@@ -229,27 +225,35 @@ export function tabState(tab: TabRow, now: number): string {
     )}`;
   }
 
-  const failure = failureOf(wait);
+  const failure = wait.exited ? 'exited' : failureOf(wait);
 
-  if (failure !== undefined && wait.unseen !== undefined) {
+  if (failure === 'exited' || failure === 'start') {
     return `${GLYPHS.failed} ${tab.waiter === undefined ? '' : `${tab.waiter}: `}${
-      failure === 'exited'
-        ? 'exited'
-        : failure === 'start'
-          ? 'failed to start'
-          : `turn failed ${briefly(now - (failedSince(wait) ?? now))}`
+      failure === 'exited' ? 'exited' : 'failed to start'
     }`;
   }
 
-  if (wait.unseen) {
-    return `${GLYPHS.replied} replied ${briefly(
-      now - (repliedSince(wait) ?? wait.unseen.since),
-    )} ago`;
-  }
-
   return wait.working === undefined
-    ? 'idle'
-    : `working ${briefly(now - wait.working)}`;
+    ? `${IDLE_GLYPH} idle ${briefly(now - (wait.stopped ?? now))}`
+    : `${GLYPHS.working} working ${briefly(now - wait.working)}`;
+}
+
+/**
+ * What of a session behind is not yet seen, as the agents list marks it:
+ * `✗ turn failed`, `✓ new reply`, `← new message`; none for the one in
+ * front, or when all of it is seen.
+ */
+export function tabMark(tab: TabRow): string | undefined {
+  const { wait } = tab;
+  const kind = tabGlyphs(wait).mark;
+
+  return tab.front || kind === undefined
+    ? undefined
+    : kind === 'failed'
+      ? `${GLYPHS.failed} turn failed`
+      : kind === 'replied'
+        ? `${GLYPHS.replied} new reply`
+        : `${GLYPHS.message} new message`;
 }
 
 /**
@@ -263,6 +267,8 @@ export function tabChoices(
   start: number | undefined,
 ): PickerChoice[] {
   const states = tabs.map((tab) => tabState(tab, now));
+  const marks = tabs.map((tab) => tabMark(tab) ?? '');
+  const markWidth = Math.max(0, ...marks.map((text) => stringWidth(text)));
   // `claude · 2 agents` for a session with long-lived agents of its own.
   const agents = tabs.map(({ agent, agents = 0 }) =>
     agents === 0
@@ -279,6 +285,7 @@ export function tabChoices(
     label: [
       pad(agents[index]!, agentWidth),
       pad(states[index]!, stateWidth),
+      ...(markWidth === 0 ? [] : [pad(marks[index]!, markWidth)]),
       tab.prompt ?? '',
     ]
       .join('  ')

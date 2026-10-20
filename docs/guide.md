@@ -87,10 +87,11 @@ and mode from the settings files; `/new ` and part of a name lists the agents
 chord can start, those only your settings name among them, an agent whose own
 CLI is not on your `PATH` marked so, and Tab or Enter picks one. An agent chord cannot start is refused in
 the transcript, and a tenth session on the status line. With two or more open the
-window's top row has a tab for each, the one in front in inverse; a tab behind marks a
-turn running (`✻`), a reply not yet seen (`✓`), a failure (`✗`) or a
-permission or form waiting (`●`). ctrl+x n and ctrl+x p go to the next and
-the previous tab, ctrl+x 1 to 9 to a tab by its number, each with its own
+window's top row has a tab for each, the one in front in inverse. Each shows
+its state glyph (`✻` working, `●` waiting, `✗` gone), then its unseen mark
+(`✗` turn failed, `✓` new reply, `←` new message); idle has no state glyph.
+A child's unseen message marks its tab too. ctrl+x n and ctrl+x p go to
+the next and previous tab, ctrl+x 1 to 9 to a tab by its number, each with its own
 transcript, draft and prompt as it was left. After ctrl+x the status line
 names the keys that can follow, and Esc lets it go. A session behind that
 asks for permission or a form, or ends its turn, never comes to the front by
@@ -101,8 +102,8 @@ news even when the agent was idle. A failure names its agent, such as
 `✗ parser's turn failed · ctrl+x a to go`, and its tab when behind,
 `✗ parser exited in 2 fake`. Several failures count each state separately:
 `✗ 1 exited · 1 turn failed · ctrl+x a to go`. Seen failures leave the
-status line. ctrl+x w lists open tabs with the same failure words, naming
-the child or member when it is theirs: `✗ parser: turn failed 1m`.
+status line. ctrl+x w lists open tabs with the agents list's words for state
+and unseen marks, naming the child or member when it is theirs.
 An asking task is named as its box names it:
 `● Agent(Fix the tokenizer) · fake needs your permission · ctrl+x a to go`,
 or `● main's task needs your permission · ctrl+x a` where it will not fit.
@@ -548,16 +549,17 @@ first turn, a message from `main`. It gets no tab: while a session has one,
 a list of its agents sits under the status line, `main` and each child in
 the order it opened, each child in a colour of its own, with its runtime,
 model, the effort it is on (`open_agent` takes one as `spawn_task` does)
-and state (`✻ working 41s`, `● permission 12s`, `← message from
-@main`, `✓ replied 2m ago`). Reply age counts from the latest reply,
-asking from the request, working from the turn's start and turn failed
-from the failure. These clocks also apply to folded teams and ctrl+x w;
-ctrl+x a still follows the oldest unseen news.
-A failed turn reads `✗ turn failed 12s ago`
-until you look at the child; it stays open for prompts and messages.
-`✗ failed to start` means the agent never came up, and `✗ exited` means
-its process is gone. Those rows keep their state until closed; an exit
-outranks a failed turn. ↓ on an empty prompt that is not walking
+and state: `● permission 17s`, `✻ working 41s`, `◦ idle 3m`,
+`✗ exited` or `✗ failed to start`. Asking counts from the request, working
+from the turn's start, idle from when it stopped. Unseen news is a separate
+column: `✗ turn failed`, `✓ new reply` or `← new message`, cleared when
+you open the agent. A failed turn leaves the agent open and idle;
+`✗ failed to start` means it never came up, `✗ exited` that its process
+is gone. Folded teams and ctrl+x w use the same words and clocks.
+As room narrows, effort, model and the mark's words give way in that order;
+its glyph stays. Names and state words wrap without cutting, their lines
+counted toward the list's limit. ↑ ↓ scroll a row taller than the list by
+line before moving on. ↓ on an empty prompt that is not walking
 history moves into the list, where ↑ ↓ or j k pick; Enter or Esc goes back
 to the box with the pick kept. The picked agent's chat fills the window,
 the box takes its colour and its name on the top border, and the status line
@@ -615,9 +617,8 @@ member messages its lead and the team's other open members by name,
 directly. In the list the lead's row reads `team · claude · Opus` and its
 open members are nested under it (`├─ tester`); when the list does not fit
 its rows, each team folds to its lead's row, `team · claude · 4 agents` and
-its most urgent state with the member's name (`● tester: permission 12s`),
-and the team you are in unfolds. A failure names the member with the same
-words as its own row, such as `✗ tester: turn failed 12s ago`. A member
+its most urgent state with the member's name (`● tester: permission 12s`)
+and the first unseen mark beside it. The team you are in unfolds. A member
 picked has its box read `tester · bugfix`; its permissions are yours to
 answer, as a child's are, the
 notification says `tester (bugfix) needs your permission`, and with two
@@ -650,8 +651,9 @@ puts `/team run bugfix ` in the box for you to type the job. `/team new
 <words>` asks the agent for a team through `propose_team`; to change one,
 ask the agent in plain words, and it proposes the change against the saved
 team through the same tool. `/team show bugfix`
-reports the team under the command, and while it runs each agent's state
-and latest call or message. `/team run bugfix <job>` hands it your words as
+reports the team under the command, and while it runs each agent's state,
+unseen mark and latest call or message. Its cells wrap without cutting.
+`/team run bugfix <job>` hands it your words as
 they are, drawn as `run_team`'s `Team(bugfix)` row, with no turn of the
 agent's; the agent hears of it with your next prompt. `/team stop bugfix`
 closes that run and its members at once, and chord tells the agent. A

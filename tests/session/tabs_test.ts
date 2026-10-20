@@ -33,6 +33,7 @@ import {
   runName,
   show,
   shownKey,
+  shownWait,
   tabName,
   tabOf,
   type Tabs,
@@ -1583,4 +1584,119 @@ test("an agent's own cycle behind works as a turn does until its end (CHD-426)",
   expect(
     tabOf(heard(working, 1, [ended('c1')]), 1)?.wait.working,
   ).toStrictEqual(undefined);
+});
+
+test("an agent's wait keeps when it last stopped working: when it came up, then each turn's end, a running turn keeping the last (CHD-471)", () => {
+  const tabs = opened('fake');
+  const stopped = (events: readonly ConversationEvent[]) =>
+    heard(tabs, 1, events, 1000).tabs[0]!.wait.stopped;
+
+  expect(tabs.tabs[0]!.wait.stopped).toBe(undefined);
+  // Came up at 1000.
+  expect(stopped([up])).toBe(1000);
+  // Its turn began at 2000 and ended at 3000.
+  expect(stopped([up, prompt('t1'), ended('t1')])).toBe(3000);
+  // While the next runs, it still last stopped at 3000.
+  expect(stopped([up, prompt('t1'), ended('t1'), prompt('t2')])).toBe(3000);
+  expect(stopped([up, prompt('t1'), failed('t1')])).toBe(3000);
+});
+
+describe('CHD-471 tester: stop time and seen marks', () => {
+  test('showing an agent clears only its unseen mark while its next turn keeps working', () => {
+    let tabs = heard(
+      opened('a', 'b'),
+      1,
+      [up, prompt('first'), ended('first')],
+      1000,
+    );
+    const stopped = tabOf(tabs, 1)!.wait.stopped;
+
+    expect(tabOf(tabs, 1)!.wait.unseen?.kind).toBe('replied');
+
+    tabs = heard(tabs, 1, [prompt('second')], 9000);
+
+    expect(tabOf(tabs, 1)!.wait.unseen?.kind).toBe('replied');
+
+    const working = tabOf(tabs, 1)!.wait.working;
+
+    expect(working).toBeDefined();
+
+    tabs = show(tabs, 1);
+
+    expect(tabOf(tabs, 1)!.wait.unseen).toBeUndefined();
+    expect(tabOf(tabs, 1)!.wait.working).toBe(working);
+    expect(tabOf(tabs, 1)!.wait.stopped).toBe(stopped);
+  });
+
+  test('reconnect preserves an existing stop, and a cycle end establishes a new one', () => {
+    let tabs = heard(opened('a', 'b'), 1, [up], 1000);
+
+    tabs = heard(tabs, 1, [up], 4000);
+
+    expect(tabOf(tabs, 1)!.wait.stopped).toBe(1000);
+
+    tabs = heard(
+      tabs,
+      1,
+      [{ type: 'cycle_started', turnId: 'cycle', at: 5000 }],
+      5000,
+    );
+
+    expect(tabOf(tabs, 1)!.wait.stopped).toBe(1000);
+
+    tabs = heard(tabs, 1, [ended('cycle')], 8000);
+
+    expect(tabOf(tabs, 1)!.wait.stopped).toBe(8000);
+  });
+});
+
+test("a tab's merged wait last stopped when the last of its agents did, and exited when its lead has (CHD-471)", () => {
+  let tabs = withChildren(opened('claude'), 1, 'parser', 'docs');
+
+  tabs = heard(tabs, 1, [up], 1000);
+  tabs = heard(tabs, 2, [up, prompt('p'), ended('p')], 4000);
+  tabs = heard(tabs, 3, [up], 2000);
+
+  // The child's turn ended at 6000, after the lead and the other child came up.
+  expect(mergedWait(tabOf(tabs, 1)!).stopped).toStrictEqual(6000);
+  expect(mergedWait(tabOf(tabs, 1)!).exited).toStrictEqual(undefined);
+
+  tabs = heard(tabs, 1, [{ type: 'disconnected', turnId: '' }], 9000);
+
+  expect(mergedWait(tabOf(tabs, 1)!).exited).toStrictEqual(true);
+});
+
+test("the picker and the strip draw a message only a child has not seen, which the tab's waits leave out (CHD-471)", () => {
+  const message = (turnId: string): ConversationEvent => ({
+    type: 'prompt',
+    turnId,
+    text: 'hi',
+    at: 0,
+    from: { name: 'main', reachable: true },
+  });
+  let tabs = withChildren(opened('claude'), 1, 'parser', 'docs');
+
+  tabs = heard(tabs, 1, [up]);
+  tabs = heard(tabs, 3, [up, message('m')], 4000);
+
+  // The tab's waits, its notices and ctrl+x a, leave it out; what is drawn has it.
+  expect(mergedWait(tabOf(tabs, 1)!).unseen).toStrictEqual(undefined);
+  expect(attentionOrder(tabs)).toStrictEqual([]);
+  expect(shownWait(tabOf(tabs, 1)!).unseen?.kind).toStrictEqual('message');
+  expect(shownWait(tabOf(tabs, 1)!).unseen?.from).toStrictEqual('@main');
+
+  // A failure or a reply goes before it, as the tab's waits have them.
+  tabs = heard(tabs, 2, [up, prompt('p'), failed('p')], 6000);
+
+  expect(shownWait(tabOf(tabs, 1)!).unseen?.kind).toStrictEqual('failed');
+  expect(shownWait(tabOf(tabs, 1)!)).toStrictEqual(mergedWait(tabOf(tabs, 1)!));
+
+  // Seen, the message is gone from what is drawn.
+  tabs = heard(withChildren(opened('claude'), 1, 'parser'), 2, [
+    up,
+    message('m'),
+  ]);
+
+  expect(shownWait(tabOf(tabs, 1)!).unseen?.kind).toStrictEqual('message');
+  expect(shownWait(tabOf(pick(tabs, 2), 1)!).unseen).toStrictEqual(undefined);
 });

@@ -29,6 +29,8 @@ test("built as the binary is, OpenTUI's ErrorBoundary paints the error rather th
 
     expect(run.stderr).not.toContain('jsxDEV');
     expect(run.stdout).toContain('Error: the boundary caught this');
+    // chord's own crash screen, drawn the same way.
+    expect(run.stdout).toContain('any key to quit');
     expect(run.status).toBe(0);
   } finally {
     await rm(out, { recursive: true });

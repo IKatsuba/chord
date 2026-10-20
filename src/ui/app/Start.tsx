@@ -6,7 +6,7 @@ import { bound, type Keymap, keystrokeOf } from '../shortcuts/bindings.ts';
 import { ResumePicker } from '../pickers/Pickers.tsx';
 import { menuRowLimit } from '../prompt/commands.ts';
 import type { Palette } from '../theme/theme.ts';
-import { Colours, Keys } from './context.ts';
+import { Colours, drawnColours, Keys } from './context.ts';
 import { BOLD, DIM, TEXT } from '../theme/text.ts';
 import { usePress } from './input.ts';
 import { useApp } from './renderer.tsx';
@@ -43,6 +43,9 @@ export function Start({
 }) {
   const { exit } = useApp();
   const { width: columns, height: rows } = useTerminalDimensions();
+
+  drawnColours.current = colours;
+
   const [everywhere, setEverywhere] = useState(false);
   const [picked, setPicked] = useState(false);
   const pick = (chosen: ResumeEntry | undefined) => {

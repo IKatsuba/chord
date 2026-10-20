@@ -20,6 +20,12 @@ export const COLOUR = highlighting();
  */
 export const Colours = createContext<Palette>(paletteOf('dark', COLOUR));
 
+/**
+ * The palette the window drew in last, which the crash screen takes, as it
+ * draws outside every `Colours` (CHD-468).
+ */
+export const drawnColours: { current?: Palette } = {};
+
 export function useColours(): Palette {
   return useContext(Colours);
 }

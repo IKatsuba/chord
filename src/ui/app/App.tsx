@@ -124,6 +124,7 @@ import {
   ChordServerName,
   COLOUR,
   Colours,
+  drawnColours,
   Keys,
 } from './context.ts';
 import { ElicitationForm } from '../dialogs/Form.tsx';
@@ -525,6 +526,9 @@ export function App({
     resolveTheme(shownTheme(state), background),
     COLOUR,
   );
+
+  drawnColours.current = colours;
+
   // The front session's agents under the prompt, and the child the prompt
   // goes to, if one is picked.
   const agentRows = sessions.agentRows();

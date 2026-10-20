@@ -22,6 +22,7 @@
   "include": ["src/", "tests/", "scripts/", "lint/", "eslint.config.ts"],
   "files": [
     "tests/ui/agents/Agents_test.tsx",
+    "tests/ui/app/Crash_test.tsx",
     "tests/ui/app/Selection_test.tsx",
     "tests/ui/app/Strip_test.tsx",
     "tests/ui/app/Tasks_test.tsx",

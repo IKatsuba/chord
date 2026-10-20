@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import ru from 'convert-layout/ru.js';
 import * as harness from '../harness.tsx';
 import { type ReactNode, useState } from 'react';
@@ -40,6 +40,8 @@ import {
   reduceApp,
 } from '../../../src/ui/app/state.ts';
 import { usePress } from '../../../src/ui/app/input.ts';
+import { CrashBoundary } from '../../../src/ui/app/Crash.tsx';
+import { until } from '../app/render.tsx';
 import type { KeyCommand, KeyPress } from '../../../src/ui/shortcuts/state.ts';
 import {
   NORMAL_KEYS,
@@ -2019,4 +2021,40 @@ describe('CHD-424 tester: shared background keys', () => {
       'z to close an agent, stop background',
     );
   });
+});
+
+test('every key quits the crash screen, as its hint says (CHD-468)', async () => {
+  let quits = 0;
+
+  function Throws(): never {
+    throw new Error('broken');
+  }
+
+  // React writes the caught error to stderr itself, as it does in chord.
+  const logged = spyOn(console, 'error').mockImplementation(() => {});
+
+  const crash = await harness.draw(
+    <CrashBoundary quit={() => quits++}>
+      <Throws />
+    </CrashBoundary>,
+  );
+
+  logged.mockRestore();
+
+  try {
+    for (const { name, sequence } of RAW_PRESSES) {
+      const before = quits;
+
+      await crash.write(sequence);
+      // A lone Esc is held a moment before OpenTUI calls it one.
+      await until(
+        `${name} to quit the crash screen`,
+        () => quits > before,
+        1000,
+      );
+      expect(quits, `${name} quit the crash screen twice`).toBe(before + 1);
+    }
+  } finally {
+    await crash.unmount();
+  }
 });

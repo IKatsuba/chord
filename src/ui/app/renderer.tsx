@@ -18,6 +18,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { sameStatus } from '../../status.ts';
+import { CrashBoundary } from './Crash.tsx';
 
 const Exit = createContext<() => void>(() => {});
 
@@ -338,15 +339,20 @@ export function dieBySignal(
   return off;
 }
 
-function giveBackOnEveryExit(): void {
-  const crash = async (error: unknown) => {
-    await leave(taken);
-    process.stderr.write(
-      `${error instanceof Error ? (error.stack ?? String(error)) : String(error)}\n`,
-    );
-    process.exit(1);
-  };
+/**
+ * Gives the terminal back, writes `error` with its stack to stderr after it,
+ * and exits 1: an uncaught exception's way out, and chord's crash screen's
+ * once a key is pressed on it (CHD-468).
+ */
+export async function crash(error: unknown): Promise<void> {
+  await leave(taken);
+  process.stderr.write(
+    `${error instanceof Error ? (error.stack ?? String(error)) : String(error)}\n`,
+  );
+  process.exit(1);
+}
 
+function giveBackOnEveryExit(): void {
   dieBySignal((signal) => process.kill(process.pid, signal));
 
   // Ahead of OpenTUI's own, which would log and go on running.
@@ -397,7 +403,9 @@ export function render(node: ReactNode, { renderer }: Terminal): Instance {
 
   root.render(
     <Exits exit={exit}>
-      <Current />
+      <CrashBoundary quit={(error) => void crash(error)}>
+        <Current />
+      </CrashBoundary>
     </Exits>,
   );
 

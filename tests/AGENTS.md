@@ -3,6 +3,9 @@
 - UI tests draw through `ui/harness.tsx`, on OpenTUI's test renderer.
   Set the terminal up before the first render; use stdout buffering with a
   10 s NativeSession close timeout.
+  The production-build boundary fixture uses OpenTUI's test renderer directly
+  with `scripts/dev/compile.ts`'s build options, exercised by
+  `scripts/dev/compile_test.ts`.
 - Window tests go through `ui/app/render.tsx`'s `withWindow`, which proves every process started is gone.
 - Bun's `expect` narrows no type; use `node:assert`'s `assert` where a later line needs it.
 - Start chord or the fake agent under `process.execPath`, the Bun running the test.

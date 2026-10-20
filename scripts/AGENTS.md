@@ -15,6 +15,9 @@
   Rerun with no version, or the same one, to release package.json's version.
 - Release stages live in `dev/release/`. Select them with `--skip`, `--only`,
   `--from` and `--to`; preflight always runs. `--package` selects a publish.
+- `dev/compile.ts` uses `Bun.build` with a plugin resolving OpenTUI's
+  `react/jsx-dev-runtime` imports to `dev/jsx_dev_runtime.ts` on React's
+  production runtime. Its `buildOptions` also builds the boundary test.
 - `targets.ts` is the one list of release platforms.
 - `bun dev memory` is too slow for `bun dev check` (`docs/memory.md`).
 - Scripts run on Bun; no `npx`. The release runs npm on node through

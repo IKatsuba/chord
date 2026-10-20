@@ -307,6 +307,7 @@ describe('tester: migrated command boundaries', () => {
       selftest: unexpected,
       release: unexpected,
       chord: unexpected,
+      qa: unexpected,
       test: unexpected,
       check: unexpected,
       fmt: unexpected,

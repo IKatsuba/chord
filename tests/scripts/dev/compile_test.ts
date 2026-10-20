@@ -17,7 +17,10 @@ test("built as the binary is, OpenTUI's ErrorBoundary paints the error rather th
   const out = await mkdtemp(join(tmpdir(), 'chord-boundary-'));
 
   try {
-    const built = await Bun.build({ ...buildOptions(FIXTURE), outdir: out });
+    const built = await Bun.build({
+      ...buildOptions(FIXTURE, { host: true }),
+      outdir: out,
+    });
 
     expect(built.success).toBe(true);
 

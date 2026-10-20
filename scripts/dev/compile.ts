@@ -6,6 +6,7 @@
  *   bun dev compile --install   this machine's target, into ~/.local/bin/chord
  */
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { BuildConfig, BunPlugin } from 'bun';
@@ -39,10 +40,35 @@ const jsxDevRuntime: BunPlugin = {
 };
 
 /**
- * The build of `entry` as chord's binary is built, but for where it goes:
- * `compile`'s, and a test's of the production build (CHD-468).
+ * OpenTUI's native packages for every platform but this machine's. A
+ * compile for a target keeps only that target's import, as its platform
+ * is fixed; a bundle for this machine keeps them all, and an install holds
+ * only its own platform's, as CI's does (CHD-468).
  */
-export function buildOptions(entry: string): BuildConfig & { target: 'bun' } {
+function otherNatives(): string[] {
+  const opentui = JSON.parse(
+    readFileSync(
+      join(root, 'node_modules', '@opentui', 'core', 'package.json'),
+      'utf8',
+    ),
+  ) as { optionalDependencies?: Record<string, string> };
+  const own = `@opentui/core-${process.platform}-${process.arch}`;
+
+  return Object.keys(opentui.optionalDependencies ?? {}).filter(
+    (name) => name !== own && name !== `${own}-musl`,
+  );
+}
+
+/**
+ * The build of `entry` as chord's binary is built, but for where it goes:
+ * `compile`'s, and a test's of the production build (CHD-468), which runs
+ * the bundle on this machine (`host`) and leaves the other platforms'
+ * native packages out.
+ */
+export function buildOptions(
+  entry: string,
+  { host = false }: { host?: boolean } = {},
+): BuildConfig & { target: 'bun' } {
   return {
     entrypoints: [entry],
     target: 'bun',
@@ -51,7 +77,7 @@ export function buildOptions(entry: string): BuildConfig & { target: 'bun' } {
     // server that is not there and never exits after quit; external and split
     // into a chunk, the import stays behind OpenTUI's own lazy import, fails,
     // and OpenTUI warns and carries on (CHD-309).
-    external: ['react-devtools-core'],
+    external: ['react-devtools-core', ...(host ? otherNatives() : [])],
     splitting: true,
     // Nothing sets NODE_ENV, so React would load its development build, which
     // keeps a performance.measure for every render and a stack on every fiber,

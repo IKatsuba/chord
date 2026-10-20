@@ -11,7 +11,11 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { trackedFiles, uncovered } from '../../../scripts/dev/covered.ts';
+import {
+  failure,
+  trackedFiles,
+  uncovered,
+} from '../../../scripts/dev/covered.ts';
 
 const root = '/work/chord';
 
@@ -73,6 +77,55 @@ test('a tracked name git would quote, with a quote or a non-ASCII letter, is rea
   } finally {
     await rm(repo, { recursive: true, force: true });
   }
+});
+
+test("a list of the tracked files longer than spawnSync's default 1 MiB is read whole (CHD-467)", async () => {
+  const repo = await mkdtemp(join(tmpdir(), 'chord-covered-'));
+
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: repo, stdio: 'pipe' });
+
+    // 16,000 index entries of ~200 bytes, about 3 MiB of names, each on
+    // git's empty blob, with no file written.
+    const names = Array.from(
+      { length: 16_000 },
+      (_, index) =>
+        `docs/${'n'.repeat(190)}${String(index).padStart(5, '0')}.md`,
+    );
+    const empty = execFileSync('git', ['hash-object', '-w', '--stdin'], {
+      cwd: repo,
+      input: '',
+    })
+      .toString()
+      .trim();
+
+    execFileSync('git', ['update-index', '--index-info'], {
+      cwd: repo,
+      input: names.map((name) => `100644 ${empty}\t${name}\n`).join(''),
+    });
+
+    expect(trackedFiles(repo)).toStrictEqual(names);
+  } finally {
+    await rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('a command killed, or failing to start, is named with how it ended (CHD-467)', () => {
+  const argv = ['git', 'ls-files', '-z'];
+
+  expect(failure(argv, { status: null, signal: 'SIGTERM' })).toBe(
+    'covered: git ls-files -z was killed by SIGTERM',
+  );
+  expect(
+    failure(argv, {
+      status: null,
+      signal: 'SIGTERM',
+      error: new Error('spawnSync git ENOBUFS'),
+    }),
+  ).toBe('covered: git ls-files -z spawnSync git ENOBUFS');
+  expect(failure(argv, { status: 128, signal: null })).toBe(
+    'covered: git ls-files -z exited with status 128',
+  );
 });
 
 describe('CHD-474 tester: actual guard process boundaries', () => {

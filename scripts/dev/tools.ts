@@ -91,22 +91,35 @@ export function fmt(run: Run = spawn): number {
 
 /**
  * The static checks in order, then the suite unless `only` static; after
- * tsc, that it checked every tracked TypeScript file (`covered.ts`).
+ * tsc, that it checked every tracked TypeScript file (`covered.ts`). The
+ * step that fails is named through `say`, as one that ends without a word
+ * of its own would otherwise leave nothing to read (CHD-467).
  */
-export function check(only: { static?: boolean }, run: Run = spawn): number {
-  const steps = [
-    () => run([process.execPath, 'run', 'tsc']),
-    () => run([process.execPath, 'scripts/dev/covered.ts']),
-    () => lint([], run),
-    () => run([process.execPath, 'run', 'prettier', '--check', '.']),
-    () => run([process.execPath, 'test', 'lint/']),
-    ...(only.static === true ? [] : [() => test([], run)]),
+export function check(
+  only: { static?: boolean },
+  run: Run = spawn,
+  say: (line: string) => void = (line) => void process.stderr.write(line),
+): number {
+  const steps: [string, () => number][] = [
+    ['tsc', () => run([process.execPath, 'run', 'tsc'])],
+    ['covered', () => run([process.execPath, 'scripts/dev/covered.ts'])],
+    ['eslint', () => lint([], run)],
+    [
+      'prettier',
+      () => run([process.execPath, 'run', 'prettier', '--check', '.']),
+    ],
+    ["lint/'s tests", () => run([process.execPath, 'test', 'lint/'])],
+    ...(only.static === true
+      ? []
+      : [['the tests', () => test([], run)] as [string, () => number]]),
   ];
 
-  for (const step of steps) {
+  for (const [name, step] of steps) {
     const status = step();
 
     if (status !== 0) {
+      say(`check: ${name} failed with status ${status}\n`);
+
       return status;
     }
   }

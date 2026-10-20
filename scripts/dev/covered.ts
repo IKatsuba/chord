@@ -36,8 +36,16 @@ export function uncovered(
 }
 
 /**
+ * What `output` reads at most from a command. git's list of the tracked
+ * files passed spawnSync's default of 1 MiB, which kills the child with no
+ * word said, and the check failed in silence on CI (CHD-467).
+ */
+export const MAX_OUTPUT = 256 * 1024 * 1024;
+
+/**
  * `argv`'s output from `cwd`, split at `separator`; a failure ends the
- * script with the command's status.
+ * script with the command's status, or 1, having named the command and
+ * what it said.
  */
 function output(
   argv: readonly string[],
@@ -45,14 +53,39 @@ function output(
   separator: string,
 ): string[] {
   const [command = '', ...args] = argv;
-  const child = spawnSync(command, args, { cwd, encoding: 'utf8' });
+  const child = spawnSync(command, args, {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: MAX_OUTPUT,
+  });
 
   if (child.status !== 0) {
-    process.stderr.write(child.stderr);
+    process.stderr.write(
+      `${failure(argv, child)}\n${child.signal === null ? (child.stdout ?? '') : ''}${child.stderr ?? ''}`,
+    );
     process.exit(child.status ?? 1);
   }
 
   return child.stdout.split(separator).filter((each) => each !== '');
+}
+
+/** How `argv` ended, when not with status 0: its error, signal or status. */
+export function failure(
+  argv: readonly string[],
+  child: {
+    readonly status: number | null;
+    readonly signal: NodeJS.Signals | null;
+    readonly error?: Error | undefined;
+  },
+): string {
+  const how =
+    child.error === undefined
+      ? child.signal === null
+        ? `exited with status ${child.status}`
+        : `was killed by ${child.signal}`
+      : child.error.message;
+
+  return `covered: ${argv.join(' ')} ${how}`;
 }
 
 /**

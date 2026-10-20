@@ -455,13 +455,22 @@ function wordWidth(word: Word): number {
   return word.reduce((all, run) => all + stringWidth(run.text), 0);
 }
 
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/** `text` on one line: every run of whitespace one space, as a title is shown. */
+function oneLine(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
 /** `word` in lines of at most `width` cells, a character never split. */
 function broken(word: Word, width: number): RowRun[][] {
   const lines: RowRun[][] = [[]];
   let used = 0;
 
   for (const run of word) {
-    for (const char of run.text) {
+    // By grapheme, as the terminal draws them: a family emoji or a letter
+    // with its accents is one character, never split, its width its own.
+    for (const { segment: char } of GRAPHEMES.segment(run.text)) {
       const cells = stringWidth(char);
 
       if (used + cells > width && used > 0) {
@@ -495,8 +504,16 @@ function broken(word: Word, width: number): RowRun[][] {
  * wider; its lines after the first start under the title's first letter.
  */
 export function groupRow(subagent: Subagent, width: number): RowRun[][] {
-  const { name, arg, tag, note } = agentHeadline(subagent);
-  const said = countsOf(subagent);
+  const headline = agentHeadline(subagent);
+  // Shown on lines of their own making: a title's or a model's line breaks
+  // and tabs are spaces here, as a prompt's are in a row.
+  const { name, tag } = headline;
+  const arg = headline.arg === undefined ? undefined : oneLine(headline.arg);
+  const note =
+    headline.note === undefined
+      ? undefined
+      : ` · ${oneLine(headline.note.replace(/^ · /, ''))}`;
+  const said = oneLine(countsOf(subagent));
   // What follows the title, each part whole where it fits: its task's
   // runtime and model, then chord's counts.
   const noted = note === undefined ? [] : note.replace(/^ · /, '').split(' · ');
@@ -531,9 +548,9 @@ export function groupRow(subagent: Subagent, width: number): RowRun[][] {
       wordWidth(word) <= room
         ? [[...word]]
         : word.length === 1
-          ? wrapAnsi(word[0]!.text, room, { hard: true, trim: true })
+          ? wrapAnsi(word[0]!.text, room, { trim: true })
               .split('\n')
-              .map((text) => [{ ...word[0]!, text }])
+              .flatMap((text) => broken([{ ...word[0]!, text }], room))
           : broken(word, room);
 
     lines.push(...pieces.slice(0, -1));

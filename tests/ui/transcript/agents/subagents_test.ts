@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import stringWidth from 'string-width';
 import type {
   Entry,
   PermissionWait,
@@ -575,5 +576,70 @@ describe('CHD-373 S2 tester: spend boundaries and group priorities', () => {
 
       expect(text, `width ${width}`).not.toContain('…');
     }
+  });
+});
+
+describe('CHD-473 a group row breaks only between whole graphemes, its title and task on lines of their own making', () => {
+  const graphemes = (text: string) =>
+    [
+      ...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(
+        text,
+      ),
+    ].map(({ segment }) => segment);
+  const family = '👨‍👩‍👧‍👦';
+  const accented = 'é';
+
+  for (const [label, word] of [
+    ['a ZWJ family', family.repeat(6)],
+    ['combining accents', accented.repeat(12)],
+  ] as const) {
+    test(`a first word of ${label} wider than the line breaks between whole graphemes, its width kept`, () => {
+      const rows = groupRow(agent({ id: 'g', title: word }), 8);
+      const texts = rows.map((runs) => runs.map(({ text }) => text).join(''));
+
+      for (const text of texts) {
+        expect(stringWidth(text), text).toBeLessThanOrEqual(8);
+      }
+
+      // Every grapheme whole, and all of them, in order.
+      expect(texts.flatMap(graphemes)).toStrictEqual(graphemes(texts.join('')));
+      // Nothing lost or added but the spaces the line breaks stand for.
+      expect(texts.join('').replaceAll(' ', '')).toBe(
+        `Agent(${word})·0tooluses`,
+      );
+      // The name bold, the title plain, the counts dim and chord's.
+      expect(rows[0]![0]).toStrictEqual({ text: 'Agent', style: 'bold' });
+      expect(rows.flat().filter((run) => run.counts === true)).not.toHaveLength(
+        0,
+      );
+      expect(
+        rows
+          .flat()
+          .filter((run) => run.text.includes(word.slice(0, 2)))
+          .every((run) => run.style === 'plain' && run.counts === undefined),
+      ).toBe(true);
+    });
+  }
+
+  test("a title's or a task's CR, LF and tabs read as spaces, no run holding a line break", () => {
+    const rows = groupRow(
+      agent({
+        id: 't',
+        title: 'Read\nfiles\r\nand\tthe tests',
+        task: {
+          name: 'Read files',
+          runtime: 'fake',
+          model: 'fake\nlarge',
+        },
+      }),
+      200,
+    );
+
+    expect(
+      rows.map((runs) => runs.map(({ text }) => text).join('')),
+    ).toStrictEqual([
+      'Agent(Read files and the tests) · fake · fake large · 0 tool uses',
+    ]);
+    expect(rows.flat().some((run) => /[\r\n\t]/.test(run.text))).toBe(false);
   });
 });

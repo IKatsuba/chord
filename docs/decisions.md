@@ -6850,7 +6850,10 @@ on 0.6.6 with no change to `src/`.
   in two cells, `<85>` in four, and gives it back as written. A paste
   keeps them too: 0.6.0's `handlePaste` dropped them
   (`unsupportedPasteCharacters` in its `Textarea.ts`), 0.6.6's strips
-  only escape sequences, a lone ESC among them. chord passes a paste on
+  only escape sequences, a lone ESC among them. Its `stripAnsiSequences`
+  takes a C1 CSI, 0x9b, as a sequence's start, so a paste loses it and the
+  byte after it (`c` 0x9b `d` reaches the box as `c`); chord takes that as
+  it is. A DEL is kept. chord passes a paste on
   unchanged, so on 0.6.0 a pasted `\f` was gone before it reached the
   box, and on 0.6.6 it is sent.
 - **CHD-323's refusal is gone** (owner, CHD-480, option 1). ctrl+g's

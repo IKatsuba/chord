@@ -167,33 +167,33 @@ test("a control character in the editor's text is held, drawn as ^L, and sent as
       await window.press(CTRL_G);
       await window.shows('› verbatim from^Leditor');
       await window.press('\r');
-      await window.shows('"from\\feditor"');
+      await window.shows('"from\\u000ceditor"');
     },
     { editor: () => Promise.resolve({ text: 'verbatim from\u000ceditor' }) },
   ));
 
 test('a pasted control character is held, and ↑ and ctrl+r bring the prompt back as written', () =>
   withWindow(async (window) => {
-    await window.paste('verbatim pasted\u000cform');
-    await window.shows('› verbatim pasted^Lform');
+    await window.paste('verbatim pasted\u000cform\u007ffeed');
+    await window.shows('› verbatim pasted^Lform^?feed');
     await window.press('\r');
-    await window.shows('"pasted\\fform"');
+    await window.shows('"pasted\\u000cform\\u007ffeed"');
     await window.press(UP);
-    await window.shows('› verbatim pasted^Lform');
+    await window.shows('› verbatim pasted^Lform^?feed');
     await window.press('\r');
     await until(
       'the recalled prompt to be answered too',
-      () => window.frame().split('"pasted\\fform"').length === 3,
+      () => window.frame().split('"pasted\\u000cform\\u007ffeed"').length === 3,
     );
     await window.press(CTRL_R);
     await window.type('pasted');
     await window.shows('search prompts: pasted');
     await window.press('\r');
-    await window.shows('› verbatim pasted^Lform');
+    await window.shows('› verbatim pasted^Lform^?feed');
     await window.press('\r');
     await until(
       'the found prompt to be answered too',
-      () => window.frame().split('"pasted\\fform"').length === 4,
+      () => window.frame().split('"pasted\\u000cform\\u007ffeed"').length === 4,
     );
   }));
 

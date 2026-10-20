@@ -545,6 +545,21 @@ const CUT_NOTE =
   /^<message from="chord">\n(Your \S+ (?:to @\S+ )?(?:call )?was cut off before it reached chord[\s\S]*?)\n<\/message>\n\n/;
 
 /**
+ * `text` as a JSON string with every C0, DEL and C1 character as `\uXXXX`:
+ * `JSON.stringify` leaves DEL and C1 raw, which the transcript gives no cells.
+ */
+function quoted(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  const escaped = text.replace(/["\\\u0000-\u001f\u007f-\u009f]/g, (found) =>
+    found === '"' || found === '\\'
+      ? `\\${found}`
+      : `\\u${found.charCodeAt(0).toString(16).padStart(4, '0')}`,
+  );
+
+  return `"${escaped}"`;
+}
+
+/**
  * A prompt that starts with one of `FAKE_COMMANDS`: `greet` answers with a
  * fixed line, `echo` with what follows it; or with `verbatim`.
  */
@@ -563,12 +578,12 @@ async function playCommand(
     return await PLAY.propose(turn);
   }
 
-  // `verbatim <text>` says the text back as a JSON string, so a control
-  // character chord sent shows on screen as its escape.
+  // `verbatim <text>` says the text back quoted, so a control character
+  // chord sent shows on screen as its escape.
   const verbatim = /^verbatim (.*)$/s.exec(text);
 
   if (verbatim) {
-    await turn.say(JSON.stringify(verbatim[1]));
+    await turn.say(quoted(verbatim[1]!));
 
     return 'end_turn';
   }

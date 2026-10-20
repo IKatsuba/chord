@@ -662,7 +662,7 @@ test('x on an agent that took its own stop back says so on the hint line, and st
 
 describe('CHD-2 tester: stopping and refusal rendering', () => {
   for (const columns of [80, 120]) {
-    test(`stopping and rolled-back waiting rows retain focus with a first-line refusal at ${columns} columns`, async () => {
+    test(`stopping and rolled-back waiting rows retain focus with a whole multiline refusal at ${columns} columns`, async () => {
       const item: BackgroundItem = {
         kind: 'agent',
         id: 'a',
@@ -708,7 +708,10 @@ describe('CHD-2 tester: stopping and refusal rendering', () => {
         expect(refused.frame()).toContain('● waiting');
         expect(refused.frame()).toContain('❯ Run the tests');
         expect(refused.frame()).toContain('could not stop: Broken pipe');
-        expect(refused.frame()).not.toContain('transport detail');
+        expect(refused.frame()).toContain('transport detail');
+        expect(refused.frame()).toMatch(
+          /could not stop: Broken pipe[^\n]*\n[^\n]*transport detail/,
+        );
         expect(refused.frame()).not.toContain('■ stopping');
         expect(refused.frame()).not.toContain('x to stop');
       } finally {

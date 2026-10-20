@@ -361,7 +361,10 @@ describe('CHD-2 tester: pending stops and deferred refusals in the window', () =
               new Error('Broken pipe\nprivate transport detail'),
             );
             await window.shows('could not stop: Broken pipe');
-            expect(window.frame()).not.toContain('private transport detail');
+            expect(window.frame()).toContain('private transport detail');
+            expect(window.frame()).toMatch(
+              /could not stop: Broken pipe[^\n]*\n[^\n]*private transport detail/,
+            );
             expect(window.frame()).not.toContain('■ stopping');
             await window.press('x');
             await window.shows('■ stopping');

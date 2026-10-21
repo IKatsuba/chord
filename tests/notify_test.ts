@@ -489,3 +489,43 @@ describe("the terminal's user variable names the session to resume (CHD-492)", (
     expect(bytes.indexOf('\x07')).toStrictEqual(bytes.length - 1);
   });
 });
+
+describe('CHD-492 U1 tester: opaque ids stay whole in the user variable', () => {
+  test('empty ids and each base64 padding shape are exact, including flag-shaped ids', () => {
+    for (const [id, encoded] of [
+      ['', ''],
+      ['a', 'YQ=='],
+      ['ab', 'YWI='],
+      ['abc', 'YWJj'],
+      ['-r', 'LXI='],
+      ['--x', 'LS14'],
+      ['é', 'w6k='],
+      ['語', '6Kqe'],
+    ] as const) {
+      expect(sessionVarBytes(id, { tmux: false })).toBe(
+        `\x1b]1337;SetUserVar=chord_session=${encoded}\x07`,
+      );
+    }
+  });
+
+  test('long multibyte ids and all protocol controls are encoded without title-field truncation or extra framing', () => {
+    const controls = Array.from({ length: 160 }, (_, at) =>
+      String.fromCharCode(at),
+    ).join('');
+    const id = '語é👩‍💻'.repeat(500) + controls;
+    const sequence = sessionVarBytes(id, { tmux: false });
+    const encoded = sequence.slice(
+      '\x1b]1337;SetUserVar=chord_session='.length,
+      -1,
+    );
+
+    expect(encoded).toMatch(/^[A-Za-z0-9+/]+={0,2}$/);
+    expect(Buffer.from(encoded, 'base64').toString('utf8')).toBe(id);
+    expect(Buffer.from(encoded, 'base64').length).toBe(Buffer.byteLength(id));
+    expect(sequence.split('\x1b')).toHaveLength(2);
+    expect(sequence.split('\x07')).toHaveLength(2);
+    expect(sessionVarBytes(id, { tmux: true })).toBe(
+      `\x1bPtmux;\x1b${sequence}\x1b\\`,
+    );
+  });
+});

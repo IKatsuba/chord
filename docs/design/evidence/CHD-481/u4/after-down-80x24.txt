@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › monitortimeout
+
+ ⏺ Monitor(heartbeat)
+   ⎿  $ sleep 1; echo "heartbeat 1: check the ship run"; sleep 600
+      m1 · times out after 5s
+
+ ⏺ The heartbeat stops itself in five seconds.
+
+ ← from heartbeat · monitor
+   ⎿  heartbeat 1: check the ship run
+
+ ⏺ Received the message from heartbeat · monitor.
+
+ ← from heartbeat · monitor · timed out
+   ⎿  Timed out after 5s (timeout_ms 5000); chord stopped it.
+
+ ⏺ Received the message from heartbeat · monitor · timed out.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

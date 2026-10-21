@@ -1,0 +1,40 @@
+ foreign · codex · Fake Large with a 1M context window · opened by main 51s ago
+
+ ← from @main
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › form
+
+ ⏺ codex asked: Set up the deploy target
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ foreign ────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     fake · Fake Large with a 1M context window · medium   ◦ idle 1m
+    foreign  codex · Fake Large with a 1M context window · medium  ◦ idle 0s

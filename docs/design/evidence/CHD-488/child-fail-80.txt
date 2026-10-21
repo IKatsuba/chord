@@ -1,0 +1,24 @@
+ broken · codex · opened by main 4s ago
+
+ ⏺ codex did not start: The agent exited.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ broken ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake · Fake Large with a 1M context window  ◦ idle 3s
+    broken  codex                                       ✗ failed to start

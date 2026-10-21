@@ -10,6 +10,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { notFound } from '../not_found.ts';
 import { parseRecord, promptLine, recordsDir } from './record.ts';
 import { MAX_TABS } from './tabs.ts';
+import type { Entry } from './transcript/types.ts';
 
 /** An earlier session to open again, and what chord knows of it. */
 export interface Resume {
@@ -210,11 +211,42 @@ export function earlierSessions(
     .map((record) => ({
       resume: resumeOf(record),
       lastUsedAt: new Date(record.lastUsedAt).toISOString(),
-      prompt:
-        record.name === undefined
-          ? record.prompt
-          : `${record.name} · ${record.prompt}`,
+      prompt: sessionLabel(record),
     }));
+}
+
+/**
+ * What a session is called where chord names it: its first prompt, on one
+ * line, after the name of an agent another started, as what it was asked
+ * says little of which one it is.
+ */
+export function sessionLabel({
+  prompt,
+  name,
+}: {
+  readonly prompt: string;
+  readonly name?: string | undefined;
+}): string {
+  return name === undefined ? prompt : `${name} · ${prompt}`;
+}
+
+/**
+ * What `/resume` will call the open session whose transcript holds
+ * `entries`: its first prompt, typed or a message it was sent, as its record
+ * keeps it; none before the first (CHD-491).
+ */
+export function openSessionLabel(
+  entries: readonly Entry[],
+): string | undefined {
+  const first = entries.find(
+    (entry) => entry.kind === 'user' || entry.kind === 'message',
+  );
+  const prompt =
+    first?.kind === 'user' || first?.kind === 'message'
+      ? promptLine(first.text)
+      : '';
+
+  return prompt === '' ? undefined : sessionLabel({ prompt });
 }
 
 /** Those of `sessions` that work in `cwd`, in the order they came. */

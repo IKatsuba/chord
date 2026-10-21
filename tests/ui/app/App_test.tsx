@@ -2760,9 +2760,11 @@ test("the terminal hears chord work, then done with the notification's words, th
         'done to be reported',
         () => lastStatus(log)?.state === 'done',
       );
+      // Named by its first prompt from then on (CHD-491).
       expect(lastStatus(log)).toStrictEqual({
         state: 'done',
         app: 'chord',
+        title: 'slow',
         msg: 'fake is waiting for your input',
       });
 
@@ -2775,11 +2777,67 @@ test("the terminal hears chord work, then done with the notification's words, th
       );
       // Each change once: a draw that changes nothing reports nothing.
       expect(statusReports(log).slice(sent)).toStrictEqual([
-        { state: 'idle', app: 'chord' },
+        { state: 'idle', app: 'chord', title: 'slow' },
       ]);
     },
     { log },
   );
+});
+
+test("the record's title is the main session's first prompt, a child picked and prompted leaving it so (CHD-491)", async () => {
+  const log: string[] = [];
+  const server = serveChord();
+  const admit = server.admit.bind(server);
+  let main: Parameters<typeof admit>[0] | undefined;
+
+  server.admit = (caller) => {
+    if (caller.role === 'person') {
+      main = caller;
+    }
+
+    return admit(caller);
+  };
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        expect(lastStatus(log)?.title).toStrictEqual(undefined);
+        await send(window, 'text');
+        await window.shows('came in chunks.');
+        await until('the title', () => lastStatus(log)?.title === 'text');
+
+        if (main === undefined) {
+          throw new Error('main was not admitted');
+        }
+
+        await main.window.open(main.key, {
+          agent: 'fake',
+          name: 'helper',
+          prompt: 'steps',
+        });
+        await window.shows('helper');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('╭─ helper ─');
+        await send(window, 'slow');
+        await until(
+          'working to be reported',
+          () => lastStatus(log)?.state === 'working',
+        );
+        expect(
+          statusReports(log).every(
+            (report) => report.title === undefined || report.title === 'text',
+          ),
+        ).toBeTruthy();
+        expect(lastStatus(log)?.title).toStrictEqual('text');
+      },
+      { log, server },
+    );
+  } finally {
+    await server.close();
+  }
 });
 
 test('a permission is reported blocked with its kind and words, and the answer goes back to work (CHD-382)', () => {
@@ -2794,6 +2852,7 @@ test('a permission is reported blocked with its kind and words, and the answer g
         state: 'blocked',
         kind: 'permission',
         app: 'chord',
+        title: 'permission',
         msg: 'fake needs your permission: Write notes.txt',
       });
       await window.press('1');

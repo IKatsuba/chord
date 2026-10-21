@@ -187,7 +187,12 @@ const DRAIN_MS = 1000;
  * files or terminals, so agents use their own tools for those.
  * `terminal_output_delta` asks for what those tools' commands write as
  * `_meta` on the tool call, which chord draws itself: Claude's adapter sends
- * it only to a client that says so, and a block of text otherwise.
+ * it only to a client that says so, and a block of text otherwise. droid and
+ * pi send `terminal_output` as a delta, the new part alone under the name
+ * chord reads as the whole output; droid, asked for the delta, sends the
+ * whole output as text instead, and asked for `terminal_output` would show
+ * only its last chunk (docs/agent-capabilities.md dr12, pi10). chord keeps
+ * one reading for every agent on purpose (CHD-456).
  */
 const CLIENT_CAPABILITIES: acp.ClientCapabilities = {
   elicitation: Object.fromEntries(ELICITATION_MODES.map((mode) => [mode, {}])),

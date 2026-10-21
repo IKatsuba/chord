@@ -550,7 +550,9 @@ Set `agents.openclaw.mcpServers` to `true` to use the transport filter
 instead. The rest are held back, chord's own among them, and each
 session says at its start, in a warning line, which ones were not passed
 to its agent and why; a task agent's line is in its parent's turn, named
-as the task. `/mcp` lists the servers: each one's name, its transport, its
+as the task. While the agent starts, `/mcp` shows only
+`<agent> is starting: chord has not passed it MCP servers yet.`
+Once the session exists, it lists each server's name, its transport, its
 command or URL, or `not passed` for one held back, with why under the
 list, and the file that defined it; Esc closes it. It does not show `env`
 or `headers`. Whether the agent then connected to the ones it was passed,
@@ -616,7 +618,9 @@ history moves into the list, where ↑ ↓ or j k pick; Enter or Esc goes back
 to the box with the pick kept. The picked agent's chat fills the window,
 the box takes its colour and its name on the top border, and the status line
 its model, effort and context: what you type goes to it as your own prompt.
-`/cost`, `/context` and `/status` name the picked agent's runtime.
+The chat, status line, model and config pickers, image-paste refusals and
+command reports name the picked agent's runtime, including while it starts,
+stops or fails to start.
 `send_message` from the parent reaches a
 child, and from a child its parent alone, each a turn of the recipient's,
 as many as they trade; `list_sessions` gives each session's children. A

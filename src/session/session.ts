@@ -734,11 +734,12 @@ export async function openSession(
 
 /**
  * What chord adds to the request that opens a session, new or again: for
- * Claude's adapter, its prompt suggestions off, which it asks the model for
- * every turn but shows only to JetBrains AIR, so chord would pay for each one
- * and never show it (CHD-439); nothing for any other agent. The adapter reads
- * its options on new, load and resume alike, and the same value each time
- * lets it reuse a session it still has live.
+ * Claude's adapter, its prompt suggestions off. The adapter turns them on by
+ * default and shows them only to JetBrains AIR, so chord would pay for
+ * suggestions it never shows (CHD-439); `false` goes on to its SDK, whose
+ * contract is that the agent then predicts none. Nothing for any other
+ * agent. The adapter reads its options on new, load and resume alike, and
+ * the same value each time lets it reuse a session it still has live.
  */
 function openingMeta(connection: Agent): { _meta?: Record<string, unknown> } {
   return connection.init.agentInfo?.name === CLAUDE_ADAPTER

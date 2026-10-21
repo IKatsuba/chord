@@ -6,9 +6,9 @@
  ⏺ /tmp/chord-qa-home.des441/chord/settings.json: "mcpServers.broken.url":
    missing; the server is ignored
 
- ⏺ 2 MCP servers were not passed to fake, which takes them over stdio only:
-   docs (http), tracker (sse). /mcp lists them.
-
+ ⏺ 3 MCP servers were not passed to fake, which takes them over stdio only:
+   chord (http, chord's own), docs (http), tracker (sse). Without chord's own,
+   fake cannot start other agents or use chord's tools. /mcp lists them.
 
 
 

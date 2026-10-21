@@ -734,6 +734,8 @@ restarting them.
 Monitors, `spawn_task` tasks and subagents that offer an individual stop
 share the `background` summary under the agents list. These subagents,
 including Claude's, have kind `agent`; background Bash is not listed.
+The summary names whose subagents they are: `main's 2 agents running` or
+`main's 2 agents and tester's agent running`.
 The summary counts the front tab's items, including its children's and
 team members', by state: asking, failed, untracked, running, done and
 stopped. It wraps without cutting text. From an empty prompt, ↓ past the
@@ -748,16 +750,17 @@ a dim `↑` in the gutter stands in when that line is out of sight. Resizing
 or reopening starts it from its first line again.
 
 An agent row reads `running`, `● permission` or `● input`; `● waiting`
-means it needs action but no request reaches you. Its end reads `✓ done`, `✗ failed`,
-`■ stopped`, `■ ended` or `✗ disconnected`. `? untracked` has its own
-summary group: the agent lost sight of the subagent, which may still work.
+means it needs action but no request reaches you. Ended agents and monitors
+leave at once. `? untracked` stays, even past the next prompt: the agent
+lost sight of the subagent, which may still work. Its summary reads
+`? main's agent untracked`.
 `x` stops the focused item alone, without confirmation; an agent reads
 `■ stopping` until its agent reports the end. A stop that cannot be sent
 says `could not stop: …` in place of the hint; one no longer offered says
 `this agent offers no stop`. The hint and error wrap under the rows; the
 whole error stays, with its line breaks kept. At the half-screen cap, rows
 give way first, then pgup/pgdn scroll an error taller than its remaining
-room. An ended or stopping item ignores `x`.
+room. An ended task or stopping item ignores `x`.
 Esc in the transcript leaves individually stoppable subagents running.
 
 Enter picks the owner and scrolls to the item's call or subagent block;
@@ -765,9 +768,15 @@ a folded block stays folded, and a missing call leaves the view open.
 Esc returns to the summary, then to the prompt. A new request that takes
 the keys hides the frame until answered, then it returns as it was. Opened
 over a held request, the frame takes that box's place; ctrl+x a closes it
-and gives the request the keys. Ended and untracked items
-stay until your next prompt to any agent in that tab; running items stay.
-Messages clear nothing. Closing an owner removes its items.
+and gives the request the keys. When a row leaves, `❯` moves to its
+replacement or the row above; the last row leaving closes the view.
+An agent ending after the turn that announced it leaves a line in its
+owner's transcript: `✓ Run tests · agent · done in 4s`,
+`✗ Run tests · agent · failed after 22s: tsc exited 2` or
+`■ Run tests · agent · stopped with x after 43s`. A resumed transcript
+says `stopped after`; a monitor's end message is its line. Ended tasks stay
+until your next prompt to any agent in that tab. Messages clear nothing.
+Closing an owner removes its items.
 
 A session resumed after its agents ran draws them as they were: each task
 agent's block, its work behind ctrl+o (read from the task's own record,

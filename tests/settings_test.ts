@@ -1049,6 +1049,16 @@ test("an agent's mcpServers setting is read from the last file that sets it, tru
   expect(startupOf('openclaw', { agent: 'fake' }, []).mcpServers).toBe(
     undefined,
   );
+  // The window's own agent too, whose other values are the invocation's.
+  expect(
+    startupOf('openclaw', { agent: 'openclaw', agentCommand: 'oc acp' }, [
+      layer('/u.json', { mcpServers: false }),
+    ]),
+  ).toStrictEqual({
+    agent: 'openclaw',
+    agentCommand: 'oc acp',
+    mcpServers: false,
+  });
   // Only a boolean: anything else is a problem and is left out.
   expect(
     parseSettings(

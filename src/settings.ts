@@ -636,16 +636,22 @@ export function resumedStartup(
  * What a session of `agent` starts with in a window `invoked` started: the
  * window's own startup for its agent, flags and all; any other agent's
  * command, model, effort and mode from the files alone, as the flags were given for
- * the agent the command line named and their ids are that agent's.
+ * the agent the command line named and their ids are that agent's. Whether
+ * it takes MCP servers no flag says, so the files say it for every agent,
+ * the window's own too (CHD-441).
  */
 export function startupOf(
   agent: string,
   invoked: Startup,
   layers: readonly SettingsLayer[],
 ): Startup {
-  return agent === invoked.agent
-    ? invoked
-    : resolveStartup({ agent }, layers, agent);
+  if (agent !== invoked.agent) {
+    return resolveStartup({ agent }, layers, agent);
+  }
+
+  const { mcpServers } = resolveStartup({ agent }, layers, agent);
+
+  return mcpServers === undefined ? invoked : { ...invoked, mcpServers };
 }
 
 /**

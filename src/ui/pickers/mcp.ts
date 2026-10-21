@@ -8,7 +8,7 @@ import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import type { McpServer } from '@agentclientprotocol/sdk';
 import { type DefinedServer, type Ignored, transportOf } from '../../mcp.ts';
-import type { HeldBack } from '../../session/servers.ts';
+import { type HeldBack, takenWords } from '../../session/servers.ts';
 import { toolNames } from '../../server/tools.ts';
 
 /** chord's own server, as `/mcp` lists it ahead of the user's. */
@@ -335,17 +335,11 @@ export function heldNote(heldBack: readonly HeldBack[]): string | undefined {
     return undefined;
   }
 
-  const whys = new Set(held.map((each) => each.why));
-  const left = [...new Set(held.map((each) => each.transport.toUpperCase()))];
-  const why =
-    whys.size === 1 && whys.has('stdio only')
-      ? 'takes MCP servers over stdio only'
-      : `does not take MCP servers over ${left.join(' or ')}`;
-  const names = new Intl.ListFormat('en', { type: 'conjunction' }).format(
+  const names = new Intl.ListFormat('en-GB', { type: 'conjunction' }).format(
     held.map((each) => each.server),
   );
 
   return `${names} ${held.length === 1 ? 'was' : 'were'} not passed: ${
     first.agent
-  } ${why}.`;
+  } takes MCP servers over ${takenWords(first.takes)} only.`;
 }

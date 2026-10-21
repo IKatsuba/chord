@@ -16,7 +16,7 @@ import {
   type Session,
   type Turn,
 } from '../../src/session/session.ts';
-import type { HeldBack, HeldWhy } from '../../src/session/servers.ts';
+import type { HeldBack } from '../../src/session/servers.ts';
 import { readRecords, type Resume } from '../../src/session/sessions.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../src/session/transcript/types.ts';
@@ -1214,13 +1214,13 @@ async function serversGiven(
 const held = (
   server: string,
   transport: string,
-  why: HeldWhy,
+  takes: readonly string[],
   own = false,
 ): HeldBack => ({
   server,
   agent: 'fake',
   transport,
-  why,
+  takes,
   ...(own ? { own: true as const } : {}),
 });
 
@@ -1236,15 +1236,15 @@ describe('an agent is given only the MCP servers whose transport it advertises (
       'http alone',
       ['--mcp-transports', 'http'],
       [DOCS, SEARCH, CHORD_SERVER],
-      [held('logs', 'sse', 'no sse')],
+      [held('logs', 'sse', ['stdio', 'http'])],
     ],
     [
       'sse alone',
       ['--mcp-transports', 'sse'],
       [DOCS, LOGS],
       [
-        held('search', 'http', 'no http'),
-        held('chord', 'http', 'no http', true),
+        held('search', 'http', ['stdio', 'sse']),
+        held('chord', 'http', ['stdio', 'sse'], true),
       ],
     ],
     [
@@ -1252,9 +1252,9 @@ describe('an agent is given only the MCP servers whose transport it advertises (
       ['--mcp-transports', 'none'],
       [DOCS],
       [
-        held('search', 'http', 'stdio only'),
-        held('logs', 'sse', 'stdio only'),
-        held('chord', 'http', 'stdio only', true),
+        held('search', 'http', ['stdio']),
+        held('logs', 'sse', ['stdio']),
+        held('chord', 'http', ['stdio'], true),
       ],
     ],
     [
@@ -1262,8 +1262,8 @@ describe('an agent is given only the MCP servers whose transport it advertises (
       ['--no-http'],
       [DOCS, LOGS],
       [
-        held('search', 'http', 'no http'),
-        held('chord', 'http', 'no http', true),
+        held('search', 'http', ['stdio', 'sse']),
+        held('chord', 'http', ['stdio', 'sse'], true),
       ],
     ],
   ];
@@ -1291,8 +1291,8 @@ describe('an agent is given only the MCP servers whose transport it advertises (
 
       expect(loaded.given).toStrictEqual([DOCS, LOGS]);
       expect(loaded.session.heldBack).toStrictEqual([
-        held('search', 'http', 'no http'),
-        held('chord', 'http', 'no http', true),
+        held('search', 'http', ['stdio', 'sse']),
+        held('chord', 'http', ['stdio', 'sse'], true),
       ]);
 
       const stateDir = join(dir, 'state');
@@ -1315,7 +1315,7 @@ describe('an agent is given only the MCP servers whose transport it advertises (
 
       expect(resumed.given).toStrictEqual([DOCS, SEARCH, CHORD_SERVER]);
       expect(resumed.session.heldBack).toStrictEqual([
-        held('logs', 'sse', 'no sse'),
+        held('logs', 'sse', ['stdio', 'http']),
       ]);
     } finally {
       await rm(dir, { recursive: true });

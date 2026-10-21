@@ -472,7 +472,7 @@ test('/mcp lists a server its agent was not given as not passed, and says why un
   );
 
   expect(heldNote(noSse.heldBack)).toBe(
-    'tracker was not passed: fake does not take MCP servers over SSE.',
+    'tracker was not passed: fake takes MCP servers over stdio and HTTP only.',
   );
 
   // chord's own alone has its own line, not this one.

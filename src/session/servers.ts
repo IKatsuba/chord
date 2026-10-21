@@ -7,11 +7,8 @@
 import type { McpCapabilities, McpServer } from '@agentclientprotocol/sdk';
 import { transportOf } from '../mcp.ts';
 
-/**
- * Why a server was held back, from what the agent advertised: stdio alone,
- * or the one transport the server needs left out.
- */
-export type HeldWhy = 'stdio only' | 'no http' | 'no sse' | 'no acp';
+/** The transports past stdio an agent may advertise, in the order said. */
+const ADVERTISED = ['http', 'sse', 'acp'] as const;
 
 /** A server an agent was not given, and why: its transport is not taken. */
 export interface HeldBack {
@@ -21,7 +18,11 @@ export interface HeldBack {
   readonly agent: string;
   /** `http`, `sse`, or another transport ACP names. */
   readonly transport: string;
-  readonly why: HeldWhy;
+  /**
+   * Why: the transports the agent takes, stdio first, then `http`, `sse`
+   * and `acp` as its `initialize` advertised them, this one not among them.
+   */
+  readonly takes: readonly string[];
   /** chord's own server, whose tools go with it. */
   readonly own?: true;
 }
@@ -32,33 +33,6 @@ export interface ServersFor {
   readonly heldBack: HeldBack[];
   /** chord's own as it went, under the name it took; none when held back. */
   readonly chord?: McpServer;
-}
-
-/**
- * Why an agent advertising `capabilities` does not take `transport`; none
- * when it does.
- */
-function refusal(
-  capabilities: McpCapabilities | undefined,
-  transport: string,
-): HeldWhy | undefined {
-  switch (transport) {
-    case 'stdio':
-      return undefined;
-    case 'http':
-    case 'sse':
-      if (capabilities?.[transport] === true) {
-        return undefined;
-      }
-
-      return capabilities?.http === true || capabilities?.sse === true
-        ? `no ${transport}`
-        : 'stdio only';
-    case 'acp':
-      return capabilities?.acp === true ? undefined : 'no acp';
-    default:
-      return 'stdio only';
-  }
 }
 
 /**
@@ -74,13 +48,16 @@ export function serversFor(
   userServers: readonly McpServer[],
   chord?: McpServer,
 ): ServersFor {
+  const takes = [
+    'stdio',
+    ...ADVERTISED.filter((transport) => capabilities?.[transport] === true),
+  ];
   const servers: McpServer[] = [];
   const heldBack: HeldBack[] = [];
   const sort = (server: McpServer, own = false): boolean => {
     const transport = transportOf(server);
-    const why = refusal(capabilities, transport);
 
-    if (why === undefined) {
+    if (takes.includes(transport)) {
       servers.push(server);
 
       return true;
@@ -90,7 +67,7 @@ export function serversFor(
       server: server.name,
       agent,
       transport,
-      why,
+      takes,
       ...(own ? { own: true as const } : {}),
     });
 
@@ -120,10 +97,22 @@ export function serversFor(
 }
 
 /**
+ * The transports an agent takes, as prose says them: `stdio and HTTP`,
+ * `stdio, SSE and ACP`.
+ */
+export function takenWords(takes: readonly string[]): string {
+  return new Intl.ListFormat('en-GB', { type: 'conjunction' }).format(
+    takes.map((transport) =>
+      transport === 'stdio' ? transport : transport.toUpperCase(),
+    ),
+  );
+}
+
+/**
  * What the person is told at a session's start of the servers its agent was
- * not given (`docs/design/CHD-441.md`): how many, to which agent, why, every
- * one by name, chord's own first, and what losing chord's own costs; none
- * when every server went.
+ * not given (`docs/design/CHD-441.md`): how many, to which agent, the
+ * transports it takes, every one by name, chord's own first, and what
+ * losing chord's own costs; none when every server went.
  */
 export function heldBackLine(
   heldBack: readonly HeldBack[],
@@ -134,20 +123,14 @@ export function heldBackLine(
     return undefined;
   }
 
-  const { agent } = first;
+  const { agent, takes } = first;
   const held = [
     ...heldBack.filter((each) => each.own),
     ...heldBack.filter((each) => !each.own),
   ];
-  const whys = new Set(held.map((each) => each.why));
-  const stdioOnly = whys.size === 1 && whys.has('stdio only');
-  // One transport left out is reason enough, and the names go bare; stdio
-  // alone, or reasons that differ, name each server's transport.
-  const bare = whys.size === 1 && !stdioOnly;
-  const left = [...new Set(held.map((each) => each.transport.toUpperCase()))];
-  const reason = stdioOnly
-    ? 'takes them over stdio only'
-    : `does not take them over ${left.join(' or ')}`;
+  // An agent that lacks one transport holds back only servers of that one,
+  // so the names go bare; lacking more, each says its own.
+  const bare = ADVERTISED.length - (takes.length - 1) === 1;
   const names = held
     .map((each) => {
       const notes = [
@@ -168,7 +151,7 @@ export function heldBackLine(
 
   return (
     `${count} MCP ${count === 1 ? 'server was' : 'servers were'} not passed ` +
-    `to ${agent}, which ${reason}: ${names}.${own} /mcp lists ` +
-    `${count === 1 ? 'it' : 'them'}.`
+    `to ${agent}, which takes them over ${takenWords(takes)} only: ` +
+    `${names}.${own} /mcp lists ${count === 1 ? 'it' : 'them'}.`
   );
 }

@@ -6,29 +6,32 @@
   every request answered, sessions listed, loaded and resumed, and a turn's
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
-  (`text`, `thought`, `todos`, `mcp`, `markdown`, `slow`, `long`,
+  (`text`, `texttillsteered`, `thought`, `todos`, `mcp`, `markdown`,
+  `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `longresults`,
-  `overlap`, `overlapfail`,
+  `overlap`, `overlaptwo`, `overlapfail`,
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
   `bigask`, `bigasktwice`, `overlapask`, `mainbetween`, `leftask`,
   `mainbetweentwice`, `bigaskleft`),
-  `plans.ts` (`plan`, `planshrink`, `proposal`), `forms.ts` (`form`, `link`,
-  `leftform`),
-  `shell.ts` (`shell`, `shellcut`, `bash`, `bashtwo`, `bashcut`, `bashask`),
+  `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`),
+  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`),
+  `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
+  `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
-  `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`, `subagentcall`,
+  `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`,
+  `subagentstatesstay`, `subagentcall`,
   `claudesubagents`, `claudebackground`, `claudemessage`, `claudewaiting`,
   `claudenostop`, `claudeslowstop`, `claudebetween`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
   `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`,
-  `taskask`, `taskaskstays`),
+  `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`),
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
@@ -36,24 +39,34 @@
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
   `sessions.ts` each session's directory, MCP servers, model, mode and
-  effort with the config options that offer them.
-  A prompt that is exactly a scenario name (`text`, `thought`, `tools`, `steps`, `stepslater`, `calls`,
+  effort with the config options that offer them. `Turn.over` settles when
+  `Turn.end()` marks the play returned, before its answer goes out; cycles
+  wait on it. `turn.ts`'s `steeredIn` waits up to 10 s for a message count;
+  `scenarios/agents.ts`'s `gateOpened` waits up to 10 s for a gate file.
+  The gated scenarios below use `<cwd>/.fake-gate/release`.
+  A prompt that is exactly a scenario name (`text`, `texttillsteered`,
+  `thought`, `tools`, `steps`, `stepslater`, `calls`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
-  `longcommand`, `overlap`, `overlapfail`, `overlapask`, `subagentcall`,
+  `longcommand`, `overlap`, `overlaptwo`, `overlapfail`, `overlapask`,
+  `subagentcall`,
   `cutcalls`, `cutcallsback`, `tasklong`, `taskcost`, `agentcost`,
   `tasktallname`, `tasktwo`,
-  `taskwait`, `taskask`, `taskaskstays`,
+  `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
-  `callchildtwo`, `agenttitled`, `plan`, `proposal`,
+  `callchildtwo`, `agenttitled`, `agentsheldgated`, `plan`, `planshrinkgated`,
+  `proposal`,
   `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`, `tasktillsteered`,
   `teamtask`,
-  `shell`, `shellcut`, `bash`, `bashtwo`, `bashcut`, `bashask`, `compact`,
+  `shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`, `bashask`,
+  `compact`,
   `codexcompact`,
   `compactfail`, `status`,
-  `cancels`, `error`, `slow`, `long`, `costwait`, `costwaitlate`, `todos`, `exitplan`, `claudeexitplan`, `lock`,
-  `mcp`, `form`, `link`, `leftform`, `bigaskleft`,
+  `cancels`, `error`, `slow`, `long`, `longheld`, `costwait`, `costwaitlate`,
+  `todos`, `exitplan`, `claudeexitplan`, `lock`,
+  `mcp`, `form`, `link`, `leftform`, `leftformgated`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
-  `subagent`, `subagentupdate`, `subagentstates`, `claudesubagents`,
+  `subagent`, `subagentupdate`, `subagentstates`, `subagentstatesstay`,
+  `claudesubagents`,
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
   `claudeslowstop`, `chordtools`, `codexchordcalls`, `codexmodels`,
   `claudecycle`, `claudecyclebare`, `claudecycleask`, `codebuddycycle`)
@@ -62,8 +75,10 @@
   `longresults` plays an MCP result, command output, an edit and terminal
   output with long lines, to check wrapping;
   `overlap` opens two calls in turn, then ends the first while the second
-  still runs; `overlapfail` fails the first instead; `overlapask` asks for
-  a write's permission while another call stays open; `subagentcall` runs
+  still runs; `overlaptwo` holds the last step for two steered messages,
+  up to 10 s, so both reach the running turn; `overlapfail` fails the first
+  instead; `overlapask` asks for a write's permission while another call
+  stays open; `subagentcall` runs
   one subagent's call with no call of the parent's open;
   `headlines` plays a heredoc, a long one-line command, an MCP call and a
   300-line heredoc; `heredoc` and `longcommand` play the Bash calls from
@@ -88,7 +103,8 @@
   open, then reports the answer once it comes;
   `bigaskleft` leaves `bigask`'s tall write open to check held scrolling;
   `leftform` leaves a form with a field of each kind open to check folding;
-  both report the answer once it comes;
+  both report the answer once it comes; `leftformgated` holds the turn
+  until the gate opens, so the test sees the form before the turn ends;
   `twins` asks a permission with two `allow_once` options and says the id
   picked; `mcpask`
   asks for an MCP call as claude-agent-acp does, by the tool's name with the
@@ -121,6 +137,8 @@
   does the same, holding the parent's turn until cancelled; `taskchild`
   makes two calls, asks permission to edit,
   messages its parent through `send_message`, runs the tests and reports;
+  `taskchildhold` holds after its message until cancelled, at most 10 s,
+  so Esc meets it running; `taskstayshold` runs it with the parent held;
   `tasklong` starts one `taskwait` task, `tasktallname` the same under a
   name of about 600 characters, taller than the background frame at 80x24
   (CHD-430), `taskcost` one on `costwait`, which says a cost and works on
@@ -137,7 +155,7 @@
   running call; `agentcalltwice` sends two messages during that call, to
   check their queue order. `callchild` runs one call for about three
   seconds, then reports that the tests pass; `callchildtwo` does the same,
-  but its next step after the call waits until two messages were steered in;
+  but its next step after the call waits up to 10 s for two steered messages;
   `agentcallgated` sends two messages to `parser` on `callchildgated` only
   after its call opens (`<cwd>/.fake-gate/open`); the call stays open until
   the test writes `<cwd>/.fake-gate/release`;
@@ -150,7 +168,9 @@
   Claude and Codex do; both child scenarios send those paragraphs back;
   `agentchild` runs the tests twice, messaging its parent after each;
   `agentsheld` opens `docs` alone and messages it while it waits on its
-  permission; `agentclose` closes `parser` and then messages it, which chord refuses;
+  permission; `agentsheldgated` holds the message until the test opens the
+  gate after seeing docs asking; `agentclose` closes `parser` and then
+  messages it, which chord refuses;
   `agenttask`, `agentexit` and `agentfail` open `parser` on `task`, on
   `crash`, whose agent writes its last words to stderr and exits mid-turn,
   and on `error`; `agentcost` opens it on `costwait`, to close it busy
@@ -184,9 +204,15 @@
   first prompt is its parent's message; and `--no-http` or `CHORD_FAKE_NO_HTTP=1` leaves HTTP out of its
   `mcpCapabilities`, so chord gives it no server of its own; `long` streams 200
   numbered lines about 100 ms apart, to scroll back through by hand;
+  `longheld` holds at line 20 until the gate opens, sends line 21 alone,
+  then holds up to 10 s for cancel, to check scrolling with the bottom held;
+  `texttillsteered` holds `text`'s turn for a steer, up to 10 s, so a
+  message sent during the reply reaches the running turn;
   `costwait` reports a cost, then works on until it is cancelled, and
   `costwaitlate` also says a cost of 0.02 just after its cancelled answer; `plan`
   moves its three steps along about 2 s apart, to see the list mid-turn;
+  `planshrinkgated` holds its first step until the gate opens, so a test can
+  select a surviving step before the first is dropped;
   `proposal` sends Codex's proposed plan by id about 2 s a step: markdown
   rewritten then grown, a file plan, then the markdown one removed;
   `shell` runs a command as Codex's adapter does, to any client: its
@@ -197,8 +223,8 @@
   Claude's does: to a client that asks for terminal output in `_meta`, the
   terminal up front and the whole output, then the exit, once it is done
   about half a second later, and to any other a `console` code block;
-  `bashtwo` the same, its next step after the command waiting until two
-  messages were steered in;
+  `bashtwo` the same, its next step waiting up to 10 s for two steered
+  messages; `bashone` waits for one, so the held message reaches the turn;
   `bashcut` leaves a command running and a call unstarted for about 10 s;
   Esc ends both failed with Claude's messages and no terminal exit code.
   Left alone, the turn ends and the command fails for a missing result;
@@ -231,7 +257,8 @@
   `subagent` does not: the parent's own plan beside a lone subagent with a
   plan of its own and five calls, held about 2 s, then a pair spawned back
   to back that the parent waits on with a call of its own, as Codex's
-  adapter does, both finishing;
+  adapter does, both finishing; `subagentstatesstay` holds the pair at work
+  until cancelled, at most 10 s, so Esc meets both running;
   `claudesubagents` sends four in Claude 0.93's ACP form, `subagent_update`,
   with cancel capabilities and whole tasks as `session_message`: one asks
   permission (`requires_action`) and ends idle `end_turn`, one `error`,
@@ -321,9 +348,11 @@
   while a turn plays opens with `Started alongside a turn still playing.`.
   `--adapter claude` (`CHORD_FAKE_ADAPTER=claude`) names it in `initialize`
   as Claude's adapter without steering as it, which chord runs cycles of the
-  agent's own for (CHD-426). `claudecycle` ends its turn, then, a second and
-  a half on, says a few words as Claude Code does when a background task
-  ends and ends that cycle with a `usage_update` whose `_claude/origin` is
+  agent's own for (CHD-426). `claudecycle`, `claudecyclebare` and
+  `claudecycleask` start their quiet timer after the turn's `end_turn`.
+  `claudecycle` says a few words a second and a half later, as Claude Code
+  does when a background task ends, and ends that cycle with a
+  `usage_update` whose `_claude/origin` is
   `task-notification`; `claudecyclebare` sends no end marker, to check Esc
   and a prompt taking over; `claudecycleask` asks permission to write in
   the cycle, reports the answer, then ends it; `codebuddycycle` runs

@@ -1,5 +1,5 @@
 
- ››› Waiting for permission… (9s)
+ ››› Waiting for permission… (17s)
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ mcp__files__write_file                                                       │
@@ -20,5 +20,5 @@
 │ ›                                                                            │
 ╰──────────────────────────────────────────────────────────────────────────────╯
   ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
-    main       fake                    ● permission 9s
-    bugfix     team · fake · 3 agents  ● tester: permission 31s  ✓ new reply
+    main       fake                    ● permission 16s
+    bugfix     team · fake · 3 agents  ● tester: permission 38s  ✓ new reply

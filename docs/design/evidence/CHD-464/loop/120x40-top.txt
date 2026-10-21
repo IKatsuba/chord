@@ -1,5 +1,5 @@
 
- ››› Waiting for permission… (21s)
+ ››› Waiting for permission… (3s)
 
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ mcp__files__write_file                                                                                               │
@@ -20,6 +20,8 @@
 │   - Change 6: the prompt keeps its draft                                                                             │
 │   - Change 7: a turn can be resumed                                                                                  │
 │   - Change 8: headlines wrap                                                                                         │
+│   - Change 9: the box scrolls                                                                                        │
+│   - Change 10: tests run in parallel                                                                                 │
 │ ── ↓ 22 lines below · pagedown to scroll ─────────────────────────────────────────────────────────────────────────── │
 │                                                                                                                      │
 │ Do you want to proceed?                                                                                              │
@@ -34,7 +36,5 @@
 │ ›                                                                                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
   ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
-    main       fake · Fake Large with a 1M context window · medium  ● permission 21s
-    bugfix     team · fake · 3 agents                               ● tester: permission 43s  ✓ new reply
-
-
+    main       fake · Fake Large with a 1M context window · medium  ● permission 2s
+    bugfix     team · fake · 3 agents                               ● tester: permission 24s  ✓ new reply

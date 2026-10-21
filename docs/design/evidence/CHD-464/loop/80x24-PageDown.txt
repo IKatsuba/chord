@@ -1,12 +1,12 @@
 
- ››› Waiting for permission… (3s)
+ ››› Waiting for permission… (16s)
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ mcp__files__write_file                                                       │
-│   path: docs/release.md                                                      │
-│   content: # Release 0.56.0                                                  │
-│                                                                              │
-│ ── ↓ 39 lines below · pagedown to scroll ─────────────────────────────────── │
+│ ── ↑ 3 lines above · pageup to scroll ────────────────────────────────────── │
+│   This release changes how chord draws long requests: the permission box now │
+│   caps its height, keeps its options on screen and lets the person scroll    │
+│ ── ↓ 37 lines below · pagedown to scroll ─────────────────────────────────── │
 │                                                                              │
 │ Do you want to proceed?                                                      │
 │ ❯ 1. Yes                                                                     │
@@ -20,5 +20,5 @@
 │ ›                                                                            │
 ╰──────────────────────────────────────────────────────────────────────────────╯
   ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
-    main       fake                    ● permission 2s
-    bugfix     team · fake · 3 agents  ● tester: permission 24s  ✓ new reply
+    main       fake                    ● permission 15s
+    bugfix     team · fake · 3 agents  ● tester: permission 37s  ✓ new reply

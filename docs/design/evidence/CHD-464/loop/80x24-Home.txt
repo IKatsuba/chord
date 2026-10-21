@@ -1,8 +1,12 @@
 
- ››› Waiting for permission… (19s)
+ ››› Waiting for permission… (16s)
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│ mcp__files__write_file                                      ↓ 42 lines below │
+│ mcp__files__write_file                                                       │
+│   path: docs/release.md                                                      │
+│   content: # Release 0.56.0                                                  │
+│                                                                              │
+│ ── ↓ 39 lines below · pagedown to scroll ─────────────────────────────────── │
 │                                                                              │
 │ Do you want to proceed?                                                      │
 │ ❯ 1. Yes                                                                     │
@@ -16,5 +20,5 @@
 │ ›                                                                            │
 ╰──────────────────────────────────────────────────────────────────────────────╯
   ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
-    main       fake                    ● permission 19s
-    bugfix     team · fake · 3 agents  ● tester: permission 41s  ✓ new reply
+    main       fake                    ● permission 15s
+    bugfix     team · fake · 3 agents  ● tester: permission 37s  ✓ new reply

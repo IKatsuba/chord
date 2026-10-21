@@ -213,8 +213,13 @@ export type KeyCommand =
    */
   | 'background_page_up'
   | 'background_page_down'
-  /** Enter in the background view: to the call that started the item. */
+  /**
+   * Enter in the background view: a monitor's detail from its row, else to
+   * the call that started the item (CHD-481).
+   */
   | 'go_to_call'
+  /** Esc or ← in a monitor's detail: back to the rows (CHD-481). */
+  | 'background_back'
   /** x in the background view: the focused item stops at once. */
   | 'stop_background'
   /** Esc in the background view: back to the summary line. */

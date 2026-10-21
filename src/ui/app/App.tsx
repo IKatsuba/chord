@@ -93,6 +93,7 @@ import { SummaryLine } from '../background/Background.tsx';
 import {
   BackgroundView,
   backgroundRowLimit,
+  hintMode,
   useBackgroundHint,
 } from '../background/BackgroundView.tsx';
 import { focusAfter, hintLines } from '../background/view.ts';
@@ -574,7 +575,10 @@ export function App({
   const backgroundItems = sessions.background();
   // What the background frame says under its rows, whose lines its rows
   // give way to (CHD-473).
-  const backgroundHint = useBackgroundHint(state.backgroundView?.hint);
+  const backgroundHint = useBackgroundHint(
+    state.backgroundView?.hint,
+    hintMode(backgroundItems, state.backgroundView),
+  );
   const listShown = listRows.length > 0 || backgroundItems.length > 0;
   // With no agents drawn the summary line is the list's one stop.
   const summaryFocused =
@@ -1244,6 +1248,7 @@ export function App({
                 <BackgroundView
                   items={backgroundItems}
                   focus={state.backgroundView.focus}
+                  detail={state.backgroundView.detail}
                   at={state.backgroundView}
                   hint={state.backgroundView.hint}
                   columns={columns}

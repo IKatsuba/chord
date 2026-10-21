@@ -291,7 +291,7 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     await window.shows('❯ background');
     await window.press('\r');
     await window.shows('│ Background · 2 in this tab');
-    await window.shows('Enter to go to its call · x to stop · Esc to close');
+    await window.shows('Enter for details · x to stop · Esc to close');
     // A picker's frame above the prompt: the transcript, the prompt box,
     // the status line and the summary line stay, the summary's ❯ gone as
     // the keys are the frame's (CHD-462).

@@ -621,6 +621,8 @@ function commandSteps(
       return [{ type: 'go_to_call' }];
     case 'close_background':
       return [dispatch({ type: 'background_closed' })];
+    case 'background_back':
+      return [dispatch({ type: 'background_detail_closed' })];
     case 'list_sessions':
       return [dispatch({ type: 'sessions_picker_opened' })];
     case 'close_sessions_picker':

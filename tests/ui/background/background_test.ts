@@ -159,6 +159,28 @@ describe('the items', () => {
     expect(items).toStrictEqual([0, 0, 0, 0, 0, 0]);
   });
 
+  test('an ended monitor whose detail is open stays until it is left, the others leaving as they would (CHD-481, Q126)', () => {
+    const agents = [
+      agent(1, {
+        endedMonitors: [
+          ended(
+            running('m1', 'kept', 0),
+            { kind: 'timed_out', timeoutMs: 1000 },
+            5,
+          ),
+          ended(running('m2', 'gone', 0), { kind: 'stopped' }, 5),
+        ],
+      }),
+    ];
+
+    expect(
+      brief(backgroundItems(agents, -Infinity, { key: 1, id: 'm1' })),
+    ).toStrictEqual(['monitor kept 1 failed']);
+    expect(
+      brief(backgroundItems(agents, -Infinity, { key: 2, id: 'm1' })),
+    ).toStrictEqual([]);
+  });
+
   test('a task reported is done, a failed or gone one failed, a cancelled one stopped', () => {
     const states = (
       ['completed', 'failed', 'disconnected', 'cancelled'] as const

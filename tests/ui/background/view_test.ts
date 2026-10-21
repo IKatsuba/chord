@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
+  detailLines,
   focusAfter,
   hintLines,
   laidAt,
@@ -1140,5 +1141,76 @@ describe('CHD-481 U1 tester: monitor ids survive wrapping and shared local ids',
     expect(text([rows[1]!]).join('\n')).toContain('parser');
     expect(text([rows[0]!]).some((line) => line.startsWith('❯'))).toBe(false);
     expect(text([rows[1]!]).some((line) => line.startsWith('❯'))).toBe(true);
+  });
+});
+
+describe("a monitor's detail lines (CHD-481)", () => {
+  const text = (item: BackgroundItem, width = 76) =>
+    detailLines(item, { width, now: NOW }).map((line) =>
+      line
+        .map(({ text }) => text)
+        .join('')
+        .trimEnd(),
+    );
+  const ERRORS = monitor(
+    'm2',
+    'dev server errors',
+    { group: 'running' },
+    {
+      command: 'npm run dev 2>&1 | grep --line-buffered ERROR',
+      timeoutMs: 3_600_000,
+      events: 2,
+      lastEvent: {
+        lines: ['ERROR [router] POST /login 500', '    at validate'],
+        at: NOW - 12_000,
+      },
+    },
+  );
+
+  test('a running one: its name, its facts, its command, its last batch with how long ago', () => {
+    expect(text(ERRORS)).toStrictEqual([
+      'dev server errors',
+      'running 4m 2s · 2 events · started 4m ago · timeout 1h · main',
+      '$ npm run dev 2>&1 | grep --line-buffered ERROR',
+      '← ERROR [router] POST /login 500',
+      '      at validate · 12s ago',
+    ]);
+  });
+
+  test('narrow, the facts wrap after a ·, the command and batch two cells in', () => {
+    expect(text(ERRORS, 30)).toStrictEqual([
+      'dev server errors',
+      'running 4m 2s · 2 events ·',
+      'started 4m ago · timeout 1h ·',
+      'main',
+      '$ npm run dev 2>&1 | grep',
+      '  --line-buffered ERROR',
+      '← ERROR [router] POST /login',
+      '  500',
+      '      at validate · 12s ago',
+    ]);
+  });
+
+  test('with no batch yet it says so; ended, its end sentence comes last', () => {
+    expect(
+      text(
+        monitor(
+          'm1',
+          'CI run 4812',
+          {
+            group: 'failed',
+            endedAt: NOW - 30_000,
+            end: { kind: 'exit', code: 1 },
+          },
+          { command: 'sleep 600', events: 0 },
+        ),
+      ),
+    ).toStrictEqual([
+      'CI run 4812',
+      '✗ exit code 1 after 3m 32s · no events · started 4m ago · main',
+      '$ sleep 600',
+      '← no events yet',
+      'Exited with code 1 after 3m 32s.',
+    ]);
   });
 });

@@ -270,3 +270,46 @@ test('another size clears where the frame was scrolled to, keeping the ❯ on it
       .backgroundView,
   ).toStrictEqual({ focus });
 });
+
+describe("a monitor's detail (CHD-481)", () => {
+  const m1 = { key: 1, id: 'm1' };
+  const m2 = { key: 1, id: 'm2' };
+  const open = reduceApp(
+    { ...busy, agentsFocus: true },
+    { type: 'background_opened', over: [] },
+  );
+  const detail = reduceApp(open, {
+    type: 'background_detail_opened',
+    focus: m1,
+  });
+  const left = { ...plain, leftArrow: true };
+  const enter = { ...plain, return: true };
+
+  test('opened, the ❯ and the detail are on its item; ↑ ↓ take the detail with the ❯; closed, the ❯ stays', () => {
+    expect(detail.backgroundView).toMatchObject({ focus: m1, detail: m1 });
+
+    const moved = reduceApp(detail, { type: 'background_focused', focus: m2 });
+
+    expect(moved.backgroundView).toMatchObject({ focus: m2, detail: m2 });
+
+    const back = reduceApp(moved, { type: 'background_detail_closed' });
+
+    expect(back.backgroundView?.focus).toStrictEqual(m2);
+    expect(back.backgroundView?.detail).toBe(undefined);
+    // On the rows, ↑ ↓ open nothing.
+    expect(
+      reduceApp(back, { type: 'background_focused', focus: m1 }).backgroundView
+        ?.detail,
+    ).toBe(undefined);
+  });
+
+  test('in it, ← and esc go back, enter goes to the call, x stops; on the rows ← does nothing and esc closes', () => {
+    expect(keyCommand('', left, detail, '')).toBe('background_back');
+    expect(keyCommand('', escape, detail, '')).toBe('background_back');
+    expect(keyCommand('', enter, detail, '')).toBe('go_to_call');
+    expect(keyCommand('x', plain, detail, '')).toBe('stop_background');
+    expect(keyCommand('j', plain, detail, '')).toBe('background_down');
+    expect(keyCommand('', left, open, '')).toBe(undefined);
+    expect(keyCommand('', escape, open, '')).toBe('close_background');
+  });
+});

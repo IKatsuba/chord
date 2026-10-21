@@ -8,7 +8,7 @@ import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
-import { endWord, timeoutWords } from '../../session/monitors.ts';
+import { endSentence, endWord, timeoutWords } from '../../session/monitors.ts';
 import { spentParts } from '../transcript/agents/subagents.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
 
@@ -263,7 +263,16 @@ function kindLeast(kinds: readonly string[]): number {
 /** A run of a row's line, by what it is, which its colour follows. */
 export interface ViewCell {
   readonly text: string;
-  readonly role: 'mark' | 'edge' | 'name' | 'kind' | 'state' | 'owner' | 'gap';
+  readonly role:
+    | 'mark'
+    | 'edge'
+    | 'name'
+    | 'kind'
+    | 'state'
+    | 'owner'
+    | 'gap'
+    /** A detail's command or event, in the text's colour (CHD-481). */
+    | 'text';
   /** A state's group, for its colour. */
   readonly group?: BackgroundGroup;
 }
@@ -756,4 +765,141 @@ export function edgeMarked(shown: ViewWindow): ViewLine[] {
   }
 
   return lines;
+}
+
+/**
+ * How long ago, as the agents list says it, to the minute once past one:
+ * `16m`, `3h 46m`, `41s` (CHD-481).
+ */
+function agoWords(ms: number): string {
+  const words = formatElapsed(Math.max(0, ms)).split(' ');
+
+  return (
+    words.length > 1 ? words.filter((word) => !word.endsWith('s')) : words
+  ).join(' ');
+}
+
+/**
+ * `parts` joined by ` · ` in lines of at most `width` cells, each part
+ * whole, a line broken after a `·`, as a state's line wraps.
+ */
+function dotted(parts: readonly ViewCell[], width: number): ViewCell[][] {
+  const lines: ViewCell[][] = [[]];
+  let used = 0;
+
+  for (const [at, part] of parts.entries()) {
+    const line = lines.at(-1)!;
+    const gap: ViewCell = { text: ' · ', role: 'kind' };
+    const need = stringWidth(part.text) + (at === 0 ? 0 : 3);
+
+    if (at > 0 && used + need > width && line.length > 0) {
+      line.push({ text: ' ·', role: 'kind' });
+      lines.push([part]);
+
+      used = stringWidth(part.text);
+    } else {
+      line.push(...(at === 0 ? [part] : [gap, part]));
+
+      used += need;
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * `text` wrapped after `first`, a two-cell lead such as `$ `, its later
+ * lines two in under it; with no lead, at the whole width.
+ */
+function wrappedIn(
+  first: string,
+  text: string,
+  width: number,
+  role: ViewCell['role'],
+): ViewCell[][] {
+  const indent = first === '' ? '' : '  ';
+
+  // Its own leading spaces kept: an event's indent is part of what it said.
+  return wrapAnsi(text, Math.max(1, width - stringWidth(indent)), {
+    hard: true,
+    trim: false,
+  })
+    .split('\n')
+    .map((line, at) => [{ text: `${at === 0 ? first : indent}${line}`, role }]);
+}
+
+/**
+ * The lines of `item`'s detail in the background frame, in its place of the
+ * rows (docs/design/CHD-481.md): a monitor's description whole, its state
+ * with its events, start, timeout and owner, its command, its last batch
+ * with how long ago it came, and, ended, chord's sentence for its end; a
+ * task's or agent's, its list row alone.
+ */
+export function detailLines(
+  item: BackgroundItem,
+  { width, now }: { readonly width: number; readonly now: number },
+): ViewCell[][] {
+  if (item.kind !== 'monitor') {
+    return viewRows([item], { width, focus: undefined, now })
+      .flatMap((row) => row.lines)
+      .map((line) => line.filter((cell) => cell.role !== 'mark'));
+  }
+
+  const { events: _, ...bare } = item;
+  const state = stateText(bare, now);
+  const name = wrapAnsi(stripAnsi(item.name), Math.max(1, width), {
+    hard: true,
+  })
+    .split('\n')
+    .map((line): ViewCell[] => [{ text: line, role: 'name' }]);
+  const facts = dotted(
+    [
+      // The row's state in its colour, its events after it dim.
+      { text: oneLine(state.text), role: 'state', group: state.group },
+      { text: eventsWords(item.events ?? 0), role: 'kind' },
+      { text: `started ${agoWords(now - item.startedAt)} ago`, role: 'kind' },
+      ...(item.timeoutMs === undefined
+        ? []
+        : [
+            {
+              text: `timeout ${timeoutWords(item.timeoutMs)}`,
+              role: 'kind' as const,
+            },
+          ]),
+      { text: ownerText(item), role: 'owner' },
+    ],
+    width,
+  );
+  const command =
+    item.command === undefined
+      ? []
+      : wrappedIn('$ ', stripAnsi(item.command), width, 'text');
+  const last = item.lastEvent;
+  const event =
+    last === undefined || last.lines.length === 0
+      ? wrappedIn('← ', 'no events yet', width, 'text')
+      : last.lines.flatMap((line, at) =>
+          wrappedIn(
+            at === 0 ? '← ' : '  ',
+            `${stripAnsi(line)}${
+              at === last.lines.length - 1
+                ? ` · ${agoWords(now - last.at)} ago`
+                : ''
+            }`,
+            width,
+            'text',
+          ),
+        );
+  const { status } = item;
+  const end =
+    'end' in status && status.end !== undefined
+      ? wrappedIn(
+          '',
+          endSentence(status.end, status.endedAt - item.startedAt),
+          width,
+          'kind',
+        )
+      : [];
+
+  return [...name, ...facts, ...command, ...event, ...end];
 }

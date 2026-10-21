@@ -22,23 +22,28 @@ import {
   withWindow,
 } from '../app/render.tsx';
 
-/** Runs `body` in a window with chord's server, the fake its one runtime. */
-async function withBackground(body: (window: Window) => Promise<void>) {
+/**
+ * Runs `body` in a window with chord's server, the fake its one runtime,
+ * 120×40 unless `size` says otherwise.
+ */
+async function withBackground(
+  body: (window: Window) => Promise<void>,
+  size = { rows: 40, columns: 120 },
+) {
   const server = serveChord();
 
   try {
     await withWindow(body, {
       server,
       runtimes: ['fake'],
-      rows: 40,
-      columns: 120,
+      ...size,
     });
   } finally {
     await server.close();
   }
 }
 
-test("enter on a row closes the view and scrolls the transcript back so the item's call is its top line, the keys in the box", () =>
+test("enter in a monitor's detail closes the view and scrolls the transcript back so its call is the top line, the keys in the box", () =>
   withBackground(async (window) => {
     await ready(window);
     await send(window, 'monitors');
@@ -56,6 +61,10 @@ test("enter on a row closes the view and scrolls the transcript back so the item
     await window.shows(' Background · 2 in this tab');
     await window.press('j');
     await window.shows('❯ CI run 4812');
+    // Enter on a monitor's row opens its detail; enter in it, the call
+    // (CHD-481).
+    await window.press('\r');
+    await window.shows('Background · m2, 2 of 2');
     await window.press('\r');
     await until('the call on top', () =>
       window.frame().split('\n')[0]!.includes('⏺ Monitor(CI run 4812)'),
@@ -614,4 +623,86 @@ describe('CHD-473 T4 tester: error paging through the window', () => {
       }
     });
   }
+});
+
+describe("a monitor's detail in the window (CHD-481)", () => {
+  const LEFT = '\x1b[D';
+  const PAGE_DOWN = '\x1b[6~';
+
+  /** Opens the view over the fake's two monitors, the first's error in. */
+  async function opened(window: Window) {
+    await ready(window);
+    await send(window, 'monitors');
+    await window.shows(
+      'Received the message from dev server errors · monitor.',
+    );
+    await window.press(DOWN);
+    await window.press('\r');
+    await window.shows('Background · 2 in this tab');
+  }
+
+  test('enter opens it in place of the rows; ↓ ↑ step to the others, ← and esc go back to the rows, the ❯ on its item', () =>
+    withBackground(async (window) => {
+      await opened(window);
+      await window.shows('Enter for details · x to stop · Esc to close');
+      await window.press('\r');
+      await window.shows('Background · m1, 1 of 2');
+      await window.shows('$ sleep 1; echo "ERROR [router]');
+      await window.shows('← ERROR [router] POST /login 500');
+      await window.shows(
+        'Enter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back',
+      );
+      expect(window.frame()).not.toContain('❯ dev server errors');
+
+      await window.press(DOWN);
+      await window.shows('Background · m2, 2 of 2');
+      await window.shows('← no events yet');
+      await window.press(LEFT);
+      await window.shows('❯ CI run 4812');
+      await window.shows('Background · 2 in this tab');
+
+      // ← on the rows does nothing; esc there closes the view.
+      await window.press(LEFT);
+      await window.press(UP);
+      await window.shows('❯ dev server errors');
+      await window.press('\r');
+      await window.shows('Background · m1, 1 of 2');
+      await window.press(ESC);
+      await window.shows('Background · 2 in this tab');
+      await window.press(ESC);
+      await until(
+        'the view closed',
+        () => !window.frame().includes('in this tab'),
+      );
+    }));
+
+  test('x stops it and it stays, ended, with nothing left to stop, until it is left; then it is gone', () =>
+    withBackground(async (window) => {
+      await opened(window);
+      await window.press('\r');
+      await window.shows('Background · m1, 1 of 2');
+      await window.press('x');
+      await window.shows('Background · m1, 1 of 2 · ended');
+      await window.shows('■ stopped after');
+      await window.shows(
+        'Enter to go to its call · ↑ ↓ for the others · Esc ← to go back',
+      );
+      await window.press(ESC);
+      await window.shows('Background · 1 in this tab');
+      await window.shows('❯ CI run 4812');
+      expect(window.frame()).not.toContain('dev server errors   ');
+    }));
+
+  test('taller than its room at 80×24, it scrolls by a page', () =>
+    withBackground(
+      async (window) => {
+        await opened(window);
+        await window.press('\r');
+        await window.shows('Background · m1, 1 of 2');
+        await window.shows('lines below · pagedown to scroll');
+        await window.press(PAGE_DOWN);
+        await window.shows('lines above · pageup to scroll');
+      },
+      { rows: 24, columns: 80 },
+    ));
 });

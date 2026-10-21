@@ -1891,6 +1891,21 @@ export function useSessions(
    */
   const goToCall = () => {
     const item = focusedItem(background(), state.backgroundView?.focus);
+
+    // On a monitor's row, enter opens its detail; in it, to its call
+    // (CHD-481).
+    if (
+      item?.kind === 'monitor' &&
+      state.backgroundView?.detail === undefined
+    ) {
+      dispatch({
+        type: 'background_detail_opened',
+        focus: { key: item.key, id: item.id },
+      });
+
+      return;
+    }
+
     const entries = item && all.sessions[item.key]?.transcript.entries;
     const place = entries && callPlace(entries, item);
 
@@ -2374,6 +2389,9 @@ export function useSessions(
         ),
       ],
       all.window.backgroundCleared[tab.key],
+      // The item whose detail is open stays, ended or not, until the person
+      // leaves it (Q126).
+      state.backgroundView?.detail,
     );
   };
 

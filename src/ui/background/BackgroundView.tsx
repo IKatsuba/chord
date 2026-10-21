@@ -21,7 +21,9 @@ import { agentColour, type Palette } from '../theme/theme.ts';
 import type { ScrollStep } from '../transcript/scroll.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
 import {
+  detailLines,
   edgeMarked,
+  focusedItem,
   hintLines,
   type ItemRef,
   laidAt,
@@ -69,15 +71,71 @@ export function backgroundRowLimit(windowRows: number, hintHeight = 1): number {
 }
 
 /**
- * What the frame says under its rows: `hint`, an agent's stop error, in
- * place of its keys, or the keys.
+ * Which keys the frame's hint names: on a row, enter to the call, or on a
+ * monitor's row to its details; in a detail, its own (CHD-481).
  */
-export function useBackgroundHint(hint: string | undefined): string {
+export type HintMode = 'call' | 'details' | 'detail' | 'ended';
+
+/** Whether `item` has ended, as an open detail keeps one until it is left. */
+function ended(item: BackgroundItem | undefined): boolean {
+  const group = item?.status.group;
+
+  return group === 'done' || group === 'failed' || group === 'stopped';
+}
+
+/** The hint's mode for the view `view` over `items`. */
+export function hintMode(
+  items: readonly BackgroundItem[],
+  view:
+    | {
+        readonly focus?: ItemRef | undefined;
+        readonly detail?: ItemRef | undefined;
+      }
+    | undefined,
+): HintMode {
+  const { detail } = view ?? {};
+
+  if (detail !== undefined) {
+    // Its monitor ended: nothing is left to stop (Q126).
+    return ended(
+      items.find((item) => item.key === detail.key && item.id === detail.id),
+    )
+      ? 'ended'
+      : 'detail';
+  }
+
+  return focusedItem(items, view?.focus)?.kind === 'monitor'
+    ? 'details'
+    : 'call';
+}
+
+/**
+ * What the frame says under its rows: `hint`, an agent's stop error, in
+ * place of its keys, or the keys `mode` names.
+ */
+export function useBackgroundHint(
+  hint: string | undefined,
+  mode: HintMode = 'call',
+): string {
   const stop = useHintKey('agents:close');
   const close = useCloseHint();
+  const back = useCloseHint('← to go back');
+  const stopping = stop && `${stop} to stop`;
 
   return (
-    hint ?? hintOf('Enter to go to its call', stop && `${stop} to stop`, close)
+    hint ??
+    (mode === 'detail' || mode === 'ended'
+      ? hintOf(
+          'Enter to go to its call',
+          '↑ ↓ for the others',
+          mode === 'detail' ? stopping : undefined,
+          back,
+        )
+      : hintOf(
+          mode === 'details' ? 'Enter for details' : 'Enter to go to its call',
+          stopping,
+          close,
+        ))
   );
 }
 
@@ -89,6 +147,7 @@ export function useBackgroundHint(hint: string | undefined): string {
 export function BackgroundView({
   items,
   focus,
+  detail,
   at,
   hint,
   columns,
@@ -97,6 +156,8 @@ export function BackgroundView({
 }: {
   items: readonly BackgroundItem[];
   focus: ItemRef | undefined;
+  /** The item whose detail is drawn in place of the rows (CHD-481). */
+  detail?: ItemRef | undefined;
   /** Where in a focused row taller than the frame it is (CHD-430). */
   at?: ViewAt | undefined;
   /** Said in place of the keys, of the focused item's stop. */
@@ -111,16 +172,55 @@ export function BackgroundView({
   const colours = useColours();
   // Times count a second at a time while the view is drawn.
   const now = useAgentsClock(true);
-  const laid = viewRows(items, { width: columns - 4, focus, now });
+  const width = columns - 4;
+  const shownAt =
+    detail === undefined
+      ? -1
+      : items.findIndex(
+          (item) => item.key === detail.key && item.id === detail.id,
+        );
+  const detailed = shownAt === -1 ? undefined : items[shownAt];
   // The hint, or an error in its place, whole on as many lines as it takes.
-  const said = hintLines(useBackgroundHint(hint), columns - 4);
-  const height = backgroundRowLimit(rows, said.length);
-  const lines = edgeMarked(
-    viewWindow(laid, height, at, laidAt(columns - 4, height)),
+  const said = hintLines(
+    useBackgroundHint(hint, hintMode(items, { focus, detail })),
+    width,
   );
+  const height = backgroundRowLimit(rows, said.length);
+  const lines =
+    detailed === undefined
+      ? edgeMarked(
+          viewWindow(
+            viewRows(items, { width, focus, now }),
+            height,
+            at,
+            laidAt(width, height),
+          ),
+        )
+      : [];
+  // A detail taller than the frame's room scrolls in it by a page, as an
+  // error does (CHD-481, CHD-473).
+  const detailRows = detailed && detailLines(detailed, { width, now });
+  const [detailTop, setDetailTop] = useState(0);
+  const detailRoom = Math.max(1, height);
+  const detailShown =
+    detailRows === undefined
+      ? undefined
+      : requestView(detailRows.length, detailRoom, detailTop);
+  const detailHidden =
+    detailRows === undefined || detailShown === undefined
+      ? undefined
+      : hiddenRows(detailRows.length, detailShown.top, detailShown.shown);
   // An error taller than what the rows leave it scrolls in that room, as a
   // request does in its box (CHD-246, CHD-462 f929ae37).
-  const room = Math.max(1, frameRoom(rows) - lines.length);
+  const room = Math.max(
+    1,
+    frameRoom(rows) -
+      (detailShown === undefined
+        ? lines.length
+        : detailShown.shown +
+          (detailShown.above ? 1 : 0) +
+          (detailShown.below ? 1 : 0)),
+  );
   const [top, setTop] = useState(0);
   const shown = requestView(said.length, room, top);
   const hidden = hiddenRows(said.length, shown.top, shown.shown);
@@ -128,14 +228,23 @@ export function BackgroundView({
   const pageDown = useHintKey('scroll:pageDown');
   const scroll = useCallback(
     (step: ScrollStep) =>
-      setTop((at) => requestStep(step, said.length, room, at)),
-    [said.length, room],
+      detailRows === undefined
+        ? setTop((at) => requestStep(step, said.length, room, at))
+        : setDetailTop((at) =>
+            requestStep(step, detailRows.length, detailRoom, at),
+          ),
+    [said.length, room, detailRows, detailRoom],
   );
 
   // Another error, or none, starts from its first line.
   useEffect(() => {
     setTop(0);
   }, [hint]);
+
+  // Another item's detail, or none, starts from its first line.
+  useEffect(() => {
+    setDetailTop(0);
+  }, [detail?.key, detail?.id]);
 
   useEffect(() => {
     if (scroller === undefined) {
@@ -157,6 +266,8 @@ export function BackgroundView({
         return { attributes: DIM };
       case 'name':
         return { attributes: focused ? TextAttributes.BOLD : 0 };
+      case 'text':
+        return { attributes: 0 };
       case 'state': {
         const colour = groupColour(piece.group, colours);
 
@@ -183,9 +294,43 @@ export function BackgroundView({
         <span {...fg(colours.permission)} attributes={TextAttributes.BOLD}>
           Background
         </span>
-        <span attributes={DIM}>{` · ${items.length} in this tab`}</span>
+        <span attributes={DIM}>
+          {detailed === undefined
+            ? ` · ${items.length} in this tab`
+            : ` · ${detailed.kind === 'monitor' ? `${detailed.id}, ` : ''}${
+                shownAt + 1
+              } of ${items.length}${ended(detailed) ? ' · ended' : ''}`}
+        </span>
       </text>
-      <box marginTop={1} flexShrink={0}>
+      {detailed !== undefined &&
+        detailRows !== undefined &&
+        detailShown !== undefined &&
+        detailHidden !== undefined && (
+          <box marginTop={1} flexShrink={0}>
+            {detailShown.above && (
+              <text {...TEXT} attributes={DIM}>
+                {requestRule('↑', detailHidden.above, pageUp, width)}
+              </text>
+            )}
+            {detailRows
+              .slice(detailShown.top, detailShown.top + detailShown.shown)
+              .map((cells, index) => (
+                <text key={index} {...TEXT}>
+                  {cells.map((piece, at) => (
+                    <span key={at} {...cell(piece, detailed, true)}>
+                      {piece.text}
+                    </span>
+                  ))}
+                </text>
+              ))}
+            {detailShown.below && (
+              <text {...TEXT} attributes={DIM}>
+                {requestRule('↓', detailHidden.below, pageDown, width)}
+              </text>
+            )}
+          </box>
+        )}
+      <box marginTop={1} flexShrink={0} visible={detailed === undefined}>
         {lines.map(({ row, cells }, index) => (
           <text key={index} {...TEXT}>
             {cells.map((piece, at) => (

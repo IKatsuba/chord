@@ -145,13 +145,16 @@ export interface BackgroundAgent {
 /**
  * The tab's items, oldest first, each keeping its place as it changes: the
  * running, asking and untracked ones, and those ended after `clearedAt`,
- * the person's last prompt in the tab, of a kind that stays once ended. Two that started in the same millisecond keep the order of
- * their agents, then of each agent's monitors by id and tasks as its
+ * the person's last prompt in the tab, of a kind that stays once ended; and
+ * `keep`, whose detail is open, ended or not, until the person leaves it
+ * (CHD-481, Q126). Two that started in the same millisecond keep the order
+ * of their agents, then of each agent's monitors by id and tasks as its
  * transcript has them, which no change of state moves.
  */
 export function backgroundItems(
   agents: readonly BackgroundAgent[],
   clearedAt = -Infinity,
+  keep?: { readonly key: number; readonly id: string },
 ): BackgroundItem[] {
   return agents
     .flatMap((agent, at) => [
@@ -161,12 +164,13 @@ export function backgroundItems(
     ])
     .filter(
       (item) =>
-        !leavesList(item) &&
-        // Untracked has not ended, so no prompt clears it (Q110).
-        (item.status.group === 'running' ||
-          item.status.group === 'asking' ||
-          item.status.group === 'untracked' ||
-          item.status.endedAt > clearedAt),
+        (keep !== undefined && item.key === keep.key && item.id === keep.id) ||
+        (!leavesList(item) &&
+          // Untracked has not ended, so no prompt clears it (Q110).
+          (item.status.group === 'running' ||
+            item.status.group === 'asking' ||
+            item.status.group === 'untracked' ||
+            item.status.endedAt > clearedAt)),
     )
     .sort((a, b) => a.startedAt - b.startedAt);
 }

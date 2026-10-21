@@ -672,6 +672,49 @@ test('a queued prompt keeps its images, and they come back with it', () => {
   ]);
 });
 
+test('that the agent has not started yet goes once it has started, or failed to (CHD-490)', () => {
+  const refused = after({
+    type: 'paste_failed',
+    message: 'fake has not started yet',
+    untilStarted: true,
+  });
+
+  expect(refused.pasteFailed).toStrictEqual('fake has not started yet');
+
+  for (const started of [
+    reduceApp(refused, { type: 'connected', sessionId: 'session-1' }),
+    reduceApp(refused, { type: 'connect_failed', message: 'gone' }),
+  ]) {
+    expect(started.pasteFailed).toStrictEqual(undefined);
+    expect(started.pasteFailedUntilStarted).toStrictEqual(undefined);
+  }
+
+  // Any other failure said before the start stays until a key.
+  const other = reduceApp(refused, {
+    type: 'paste_failed',
+    message: 'No image in the clipboard',
+  });
+
+  expect(other.pasteFailedUntilStarted).toStrictEqual(undefined);
+  expect(
+    reduceApp(other, { type: 'connected', sessionId: 'session-1' }).pasteFailed,
+  ).toStrictEqual('No image in the clipboard');
+
+  // Said only once the agent has started, it is not so any longer.
+  for (const started of [
+    ready,
+    after({ type: 'connect_failed', message: 'gone' }),
+  ]) {
+    expect(
+      reduceApp(started, {
+        type: 'paste_failed',
+        message: 'fake has not started yet',
+        untilStarted: true,
+      }).pasteFailed,
+    ).toStrictEqual(undefined);
+  }
+});
+
 test('a paste that found nothing says so until the draft is touched', () => {
   const failed = reduceApp(ready, {
     type: 'paste_failed',

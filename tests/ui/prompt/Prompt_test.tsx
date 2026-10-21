@@ -5,11 +5,14 @@ import stripAnsi from 'strip-ansi';
 import stringWidth from 'string-width';
 import { FileList, Queue } from '../../../src/ui/prompt/Prompt.tsx';
 import { draw } from '../harness.tsx';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { serveChord } from '../../../src/server/server.ts';
+import { openSession } from '../../../src/session/session.ts';
 import type { ClipboardReader } from '../../../src/images.ts';
 import type { EditorMode } from '../../../src/settings.ts';
-import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { fakeAgentCommand, gatedCommand } from '../../fixtures/fake.ts';
 import { PIXEL_BYTES, PIXEL_PNG } from '../../fixtures/images.ts';
 import {
   asked,
@@ -2190,5 +2193,363 @@ describe('CHD-398 tester: held match lifecycle', () => {
         await drawn.unmount();
       }
     });
+  }
+});
+
+describe('ctrl+v while an agent starts says so only until it has started, or failed to (CHD-490)', () => {
+  const NO_IMAGE: ClipboardReader = () =>
+    Promise.resolve({ failed: 'No image in the clipboard' });
+
+  /**
+   * A window of `size` whose second agent, codex, is a tab opened by `/new`
+   * or a child of main, picked; its agent runs `codex` once `body` has
+   * written the gate it is given.
+   */
+  async function onCodex(
+    size: { readonly columns: number; readonly rows: number },
+    as: 'tab' | 'child',
+    codex: readonly string[],
+    body: (window: Window, open: () => Promise<void>) => Promise<void>,
+    clipboard: ClipboardReader = NO_IMAGE,
+  ): Promise<void> {
+    const gates = await mkdtemp(join(tmpdir(), 'chord-gate-'));
+    const gate = join(gates, 'open');
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+    const command = fakeAgentCommand();
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+
+          if (as === 'tab') {
+            await window.type('/new codex');
+            await window.press('\r');
+          } else {
+            if (main === undefined) {
+              throw new Error('main was not admitted');
+            }
+
+            await main.window.open(main.key, {
+              agent: 'codex',
+              name: 'foreign',
+              prompt: 'text',
+            });
+            await window.shows('foreign');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('╭─ foreign ─');
+          }
+
+          await window.shows('Starting codex…');
+          await body(window, () => writeFile(gate, ''));
+        },
+        {
+          ...size,
+          server,
+          clipboard,
+          runtimes: ['fake', 'codex'],
+          agentCommand: command,
+          startupOf: (agent) => ({
+            agentCommand:
+              agent === 'codex' ? gatedCommand(gate, codex) : command,
+          }),
+        },
+      );
+    } finally {
+      await server.close();
+      await rm(gates, { recursive: true, force: true });
+    }
+  }
+
+  for (const size of [
+    { columns: 120, rows: 40 },
+    { columns: 80, rows: 24 },
+  ]) {
+    const at = `${size.columns}x${size.rows}`;
+
+    for (const as of ['tab', 'child'] as const) {
+      test(`at ${at}, a ${as}'s notice goes once its agent has started`, () =>
+        onCodex(size, as, fakeAgentCommand(), async (window, open) => {
+          await window.press(CTRL_V);
+          await window.shows('codex has not started yet');
+          await open();
+          await until(
+            'the start',
+            () => !window.frame().includes('Starting codex…'),
+          );
+          await until(
+            'the notice to go',
+            () => !window.frame().includes('codex has not started yet'),
+          );
+        }));
+
+      test(`at ${at}, a ${as}'s notice goes once its agent has failed to start`, () =>
+        onCodex(size, as, ['sh', '-c', 'exit 1'], async (window, open) => {
+          await window.press(CTRL_V);
+          await window.shows('codex has not started yet');
+          await open();
+          await window.shows('codex did not start');
+          expect(window.frame()).not.toContain('codex has not started yet');
+        }));
+
+      for (const [outcome, codex, after] of [
+        ['started', fakeAgentCommand(), 'the start'],
+        ['failed to start', ['sh', '-c', 'exit 1'], 'the failure'],
+      ] as const) {
+        test(`at ${at}, an empty paste in a ${as} read while its agent ${outcome} says nothing of the start`, async () => {
+          // The clipboard answers only once the agent has started, or not.
+          const held =
+            Promise.withResolvers<Awaited<ReturnType<ClipboardReader>>>();
+
+          await onCodex(
+            size,
+            as,
+            codex,
+            async (window, open) => {
+              await window.paste('');
+              await open();
+              await until(
+                after,
+                () => !window.frame().includes('Starting codex…'),
+              );
+              held.resolve({
+                image: {
+                  mediaType: 'image/png',
+                  data: PIXEL_PNG,
+                  bytes: PIXEL_BYTES.length,
+                },
+              });
+              await new Promise((resolve) => setTimeout(resolve, 300));
+              expect(window.frame()).not.toContain('codex has not started yet');
+
+              if (outcome === 'started') {
+                await until(
+                  'the image',
+                  () => promptRow(window)?.includes('[Image #1]') ?? false,
+                );
+              }
+            },
+            () => held.promise,
+          );
+        });
+      }
+
+      test(`at ${at}, a ${as}'s empty clipboard once started is said until a key`, () =>
+        onCodex(size, as, fakeAgentCommand(), async (window, open) => {
+          await open();
+          await until(
+            'the start',
+            () => !window.frame().includes('Starting codex…'),
+          );
+          await window.press(CTRL_V);
+          await window.shows('No image in the clipboard');
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          expect(window.frame()).toContain('No image in the clipboard');
+          await window.type('x');
+          await until(
+            'the notice to go',
+            () => !window.frame().includes('No image in the clipboard'),
+          );
+        }));
+    }
+  }
+});
+
+describe('CHD-490 tester: delayed startup clipboard stays with its conversation', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const child of [false, true]) {
+      for (const fails of [false, true]) {
+        test(`a ${child ? 'child' : 'tab'} that ${fails ? 'fails' : 'starts'} preserves another session's notice at ${columns}×${rows}`, async () => {
+          const gates = await mkdtemp(join(tmpdir(), 'chord-paste-session-'));
+          const gate = join(gates, 'open');
+          const server = serveChord();
+          const admit = server.admit.bind(server);
+          let main: Parameters<typeof admit>[0] | undefined;
+          const command = fakeAgentCommand();
+          const held =
+            Promise.withResolvers<Awaited<ReturnType<ClipboardReader>>>();
+          let reads = 0;
+          let finished = false;
+          let childReplied = false;
+          const notice = 'The parent clipboard has no image';
+
+          server.admit = (caller) => {
+            if (caller.role === 'person') {
+              main = caller;
+            }
+
+            return admit(caller);
+          };
+
+          try {
+            await withWindow(
+              async (window) => {
+                await ready(window);
+
+                if (child) {
+                  if (main === undefined) {
+                    throw new Error('main was not admitted');
+                  }
+
+                  await main.window.open(main.key, {
+                    agent: 'codex',
+                    name: 'foreign',
+                    prompt: 'text',
+                  });
+                  await window.shows('foreign');
+                  await window.press(DOWN);
+                  await window.press(DOWN);
+                  await window.press('\r');
+                } else {
+                  await send(window, '/new codex');
+                }
+
+                await window.shows('Starting codex…');
+                await window.paste('');
+                await until(
+                  'the original clipboard read waits',
+                  () => reads === 1,
+                );
+
+                if (child) {
+                  await window.press(DOWN);
+                  await window.press(UP);
+                  await window.press('\r');
+                  await until(
+                    'the parent is shown',
+                    () => !window.frame().includes('╭─ foreign ─'),
+                  );
+                } else {
+                  await leader(window, '1');
+                }
+
+                await window.press(CTRL_V);
+                await window.shows(notice);
+                await writeFile(gate, '');
+                await until('the background startup settles', () => finished);
+
+                if (child && !fails) {
+                  await until(
+                    'the child replies to its initial prompt',
+                    () => childReplied,
+                  );
+                }
+
+                held.resolve({
+                  image: {
+                    mediaType: 'image/png',
+                    data: PIXEL_PNG,
+                    bytes: PIXEL_BYTES.length,
+                  },
+                });
+                await window.shows(notice);
+                expect(promptRow(window)).not.toContain('[Image #1]');
+                expect(window.frame()).not.toContain(
+                  'codex has not started yet',
+                );
+
+                if (child) {
+                  await window.press(DOWN);
+                  await window.press(DOWN);
+                  await window.press('\r');
+                  await window.shows('╭─ foreign ─');
+                } else {
+                  await leader(window, '2');
+                }
+
+                if (fails) {
+                  await window.shows('codex did not start:');
+                  expect(promptRow(window)).not.toContain('[Image #1]');
+                } else {
+                  await until(
+                    'the image stays in its original conversation',
+                    () => promptRow(window)?.includes('[Image #1]') ?? false,
+                  );
+                  await window.press('\r');
+                  await window.shows(RECEIVED);
+                }
+
+                expect(window.frame()).not.toContain(
+                  'codex has not started yet',
+                );
+                await window.type('x');
+                await until(
+                  'editing clears the ordinary notice',
+                  () => !window.frame().includes(notice),
+                );
+              },
+              {
+                server,
+                columns,
+                rows,
+                runtimes: ['fake', 'codex'],
+                agentCommand: command,
+                startupOf: (agent) => ({
+                  agentCommand:
+                    agent === 'codex'
+                      ? gatedCommand(
+                          gate,
+                          fails ? ['sh', '-c', 'exit 1'] : command,
+                        )
+                      : command,
+                }),
+                clipboard: () => {
+                  reads += 1;
+
+                  return reads === 1
+                    ? held.promise
+                    : Promise.resolve({ failed: notice });
+                },
+                openWith: (options) => {
+                  const opening = openSession(options);
+
+                  if (options.agent !== 'codex') {
+                    return opening;
+                  }
+
+                  return opening.then(
+                    (session) => {
+                      session.subscribe((update) => {
+                        if (update.sessionUpdate === 'agent_message_chunk') {
+                          childReplied = true;
+                        }
+                      });
+
+                      finished = true;
+
+                      return session;
+                    },
+                    (error: unknown) => {
+                      finished = true;
+
+                      throw error;
+                    },
+                  );
+                },
+              },
+            );
+          } finally {
+            held.resolve({ failed: 'test finished' });
+            await rm(gates, { recursive: true, force: true });
+            await server.close();
+          }
+        });
+      }
+    }
   }
 });

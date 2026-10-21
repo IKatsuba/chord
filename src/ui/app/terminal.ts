@@ -222,12 +222,18 @@ export function useImages({
 
   imageIds.current = Math.max(imageIds.current, state.imageCount);
 
-  /** Why an image cannot go into the draft now, if it cannot. */
-  const imageRefusal = () =>
-    state.takesImages === false
-      ? `${agent} does not take images`
-      : state.takesImages === undefined
-        ? `${agent} has not started yet`
+  /** Why an image cannot go into the draft of `of`, if it cannot. */
+  const imageRefusal = (
+    of: Pick<AppState, 'takesImages'> = state,
+  ): AppAction | undefined =>
+    of.takesImages === false
+      ? { type: 'paste_failed', message: `${agent} does not take images` }
+      : of.takesImages === undefined
+        ? {
+            type: 'paste_failed',
+            message: `${agent} has not started yet`,
+            untilStarted: true,
+          }
         : undefined;
 
   /**
@@ -242,7 +248,7 @@ export function useImages({
     const refused = imageRefusal();
 
     if (refused !== undefined && !quiet) {
-      return dispatch({ type: 'paste_failed', message: refused });
+      return dispatch(refused);
     }
 
     const read = await clipboard();
@@ -253,14 +259,18 @@ export function useImages({
         : inSession({ type: 'paste_failed', message: read.failed });
     }
 
-    if (refused !== undefined) {
-      return inSession({ type: 'paste_failed', message: refused });
-    }
-
     const now = stateOf(key);
 
     if (now === undefined) {
       return;
+    }
+
+    // Read again: the agent may have started, or failed to, while the
+    // clipboard was read (CHD-490).
+    const refusedNow = imageRefusal(now);
+
+    if (refusedNow !== undefined) {
+      return inSession(refusedNow);
     }
 
     const id = ++imageIds.current;

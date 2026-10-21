@@ -460,11 +460,16 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'bash_mode':
     case 'context_sent':
     case 'editor_failed':
-    case 'paste_failed':
     case 'images_sent':
     case 'vim_toggled':
     case 'vim_changed':
       return reducePrompt(state, action) as AppState;
+    case 'paste_failed':
+      // Started, or failed to, before it came: not so any longer (CHD-490).
+      return action.untilStarted === true &&
+        state.connection.status !== 'starting'
+        ? state
+        : (reducePrompt(state, action) as AppState);
     case 'model_picker_opened':
     case 'model_picker_closed':
     case 'resume_asked':
@@ -535,7 +540,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'connected':
       return state.connection.status === 'starting'
         ? {
-            ...state,
+            ...withoutStartNotice(state),
             connection: { status: 'ready' },
             sessionId: action.sessionId,
             ...(action.at === undefined ? {} : { since: action.at }),
@@ -549,7 +554,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'connect_failed':
       return state.connection.status === 'starting'
         ? {
-            ...state,
+            // The failure's own line says why it did not start (Q109).
+            ...withoutStartNotice(state),
             connection: { status: 'failed', message: action.message },
           }
         : state;
@@ -1336,8 +1342,23 @@ function withoutFailure(state: AppState): AppState {
     pasteFailed: __,
     keysFailed: ___,
     sessionsNote: ____,
+    pasteFailedUntilStarted: _____,
     ...rest
   } = state;
+
+  return rest;
+}
+
+/**
+ * The agent has started, or failed to: a notice that it has not started yet
+ * goes, and any other stays until a key (CHD-490).
+ */
+function withoutStartNotice(state: AppState): AppState {
+  if (state.pasteFailedUntilStarted !== true) {
+    return state;
+  }
+
+  const { pasteFailed: _, pasteFailedUntilStarted: __, ...rest } = state;
 
   return rest;
 }

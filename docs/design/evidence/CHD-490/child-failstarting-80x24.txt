@@ -1,0 +1,24 @@
+ broken · codex · opened by main 3s ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ broken ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  codex has not started yet
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 20s
+    foreign  codex · Fake Large with a 1M context window · medium  ◦ idle 6s
+    broken   codex                                                 ◦ idle 0s

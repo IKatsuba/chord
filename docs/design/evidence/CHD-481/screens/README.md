@@ -18,6 +18,6 @@ match the case (`46m`, `1h`).
 | `1-today-120x40.ansi`, `1-today-80x24.ansi` | Today (origin/main b4aed593): the background view, two rows that read the same. |
 | `2-ids-120x40.ansi`, `2-ids-80x24.ansi` | U1, built (chd-481 at 59308bc0): the same list with the id in the kind, `monitor · m1`, `monitor · m2`. |
 | `3-detail-mock-120x40.ansi`, `3-detail-mock-80x24.ansi` | **Mock**, U3: `enter` on `m2` opens its detail in place of the rows: description, state, start, timeout, owner, command, last batch. |
-| `4-1-stays-on-end-mock-120x40.ansi`, `-80x24.ansi` | **Mock**, Q126 option 1: `m1` times out while its detail is open; the detail stays on the end (`✗ timed out after 1h`, chord's sentence) until the person leaves it; the end's message is in the transcript above. |
+| `4-1-stays-on-end-mock-120x40.ansi`, `-80x24.ansi` | **Mock**, Q126 option 1: `m1` times out while its detail is open; the detail stays on the end (`■ timed out after 1h`, dim: a stop in its own words, CHD-482 Q85; chord's sentence) until the person leaves it; the end's message is in the transcript above. |
 | `4-2-back-to-list-mock-120x40.ansi`, `-80x24.ansi` | **Mock**, Q126 option 2: the same end sends the frame back to the list, `m1` gone, the `❯` on `m2`; the end is read in the transcript line above. |
 | `4-3-next-detail-mock-120x40.ansi`, `-80x24.ansi` | **Mock**, Q126 option 3: the same end steps to the next item's detail, `m2`'s, in its place. |

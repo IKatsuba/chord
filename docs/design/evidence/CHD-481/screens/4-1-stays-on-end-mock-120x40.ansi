@@ -25,7 +25,7 @@
 [38;2;177;185;249m│[0m [1m[38;2;177;185;249mBackground[0m[2m · m1, 1 of 2 · ended[0m                                                                                      [38;2;177;185;249m│[0m
 [38;2;177;185;249m│[0m [0m                                                                                                                     [38;2;177;185;249m│[0m
 [38;2;177;185;249m│[0m [1m30-min heartbeat while the owner is away[0m                                                                             [38;2;177;185;249m│[0m
-[38;2;177;185;249m│[0m [38;2;255;107;128m✗ timed out after 1h[0m[2m · 1 event · started 1h ago · timeout 1h · main[0m                                                  [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [2m■ timed out after 1h[0m[2m · 1 event · started 1h ago · timeout 1h · main[0m                                                  [38;2;177;185;249m│[0m
 [38;2;177;185;249m│[0m [2m$ for i in 1 2; do sleep 1; echo "heartbeat $i: check the ship run for a stall"; sleep 1800; done[0m                    [38;2;177;185;249m│[0m
 [38;2;177;185;249m│[0m [2m← heartbeat 1: check the ship run for a stall · 59m ago[0m                                                              [38;2;177;185;249m│[0m
 [38;2;177;185;249m│[0m [2mTimed out after 1h (timeout_ms 3600000); chord stopped it.[0m                                                           [38;2;177;185;249m│[0m

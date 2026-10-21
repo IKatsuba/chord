@@ -4948,6 +4948,8 @@ test("recorded settles only once the first prompt's line is flushed, and at once
     flushing.resolve();
     await until(() => settled);
   } finally {
+    // A failure above leaves the write held, which the close would wait on.
+    flushing.resolve();
     await conversation.close();
   }
 

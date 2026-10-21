@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { draw } from '../harness.tsx';
+import { AgentExitError } from '../../../src/acp/process.ts';
 import { openSession, type Session } from '../../../src/session/session.ts';
 import {
   readRecords,
@@ -3099,6 +3100,47 @@ describe('an agent that never answers its start is stopped with its window (CHD-
 
     expect(await tagged(tag)).toStrictEqual([]);
   });
+
+  for (const [what, failure] of [
+    ['its agent did not exit', () => new AgentExitError([4242])],
+    [
+      'its agent did not start, and did not exit',
+      () =>
+        new AggregateError(
+          [new Error('given up'), new AgentExitError([4242])],
+          'The agent did not start, and did not exit.',
+        ),
+    ],
+  ] as const) {
+    test(`a window fails when a start given up says ${what}`, async () => {
+      const command = fakeAgentCommand();
+      // codex's start never comes, and gives up saying its agent stayed.
+      const openWith: typeof openSession = (options) =>
+        options.agent === 'codex'
+          ? new Promise((_resolve, reject) =>
+              options.signal?.addEventListener('abort', () =>
+                reject(failure()),
+              ),
+            )
+          : openSession(options);
+
+      await expect(
+        withWindow(
+          async (window) => {
+            await ready(window);
+            await window.type('/new codex');
+            await window.press('\r');
+            await window.shows('Starting codex…');
+          },
+          {
+            runtimes: ['fake', 'codex'],
+            openWith,
+            startupOf: () => ({ agentCommand: command }),
+          },
+        ),
+      ).rejects.toThrow('an agent still starting did not stop with its window');
+    });
+  }
 
   test('a child still starting is gone once its window has closed', async () => {
     const tag = `chord-wedged-${crypto.randomUUID()}`;

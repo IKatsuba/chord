@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { expect } from 'bun:test';
 import { join } from 'node:path';
+import { AgentExitError } from '../../../src/acp/process.ts';
 import type { ListedAgent } from '../../../src/agents.ts';
 import type { EditorEnd } from '../../../src/editor.ts';
 import type { ClipboardReader, ImageFileReader } from '../../../src/images.ts';
@@ -92,6 +93,14 @@ export interface Window {
  */
 const STARTING_STOPPED_MS = 10_000;
 
+/** Whether an open's rejection says its agent did not exit when stopped. */
+function stopFailed(error: unknown): boolean {
+  return (
+    error instanceof AgentExitError ||
+    (error instanceof AggregateError && error.errors.some(stopFailed))
+  );
+}
+
 /**
  * chord's window on the fake agent, drawn through `../harness.tsx`; whatever
  * `body` does, the window is unmounted, the agent stopped, and every process
@@ -124,6 +133,7 @@ export async function withWindow(
     shell,
     heldClose,
     heldOpen,
+    openWith = openSession,
     onQuit,
     startupOf,
     splash,
@@ -171,6 +181,8 @@ export async function withWindow(
      * midway; it is given the screen to look at meanwhile.
      */
     heldOpen?: (frame: () => string) => Promise<void>;
+    /** Opens each session in openSession's place, to make one misbehave. */
+    openWith?: typeof openSession;
     onQuit?: (tabs: readonly ResumableTab[]) => void;
     /** How each agent `/new` names starts, as `main.tsx` works it out. */
     startupOf?: (agent: string) => SessionStart | undefined;
@@ -209,8 +221,8 @@ export async function withWindow(
   // Every one opened, a task agent's among them, each closed at the end.
   const opened: Session[] = [];
   const pids: number[] = [];
-  // The opens still waiting on their agent: the window's close gives each up
-  // and stops its agent, but does not wait for it, so the test does, or a
+  // The opens that did not open: the window's close gives one still starting
+  // up and stops its agent, but does not wait for it, so the test does, or a
   // file that ends first leaves the agent running (CHD-489).
   const starting = new Set<Promise<Session>>();
   const keys =
@@ -251,16 +263,15 @@ export async function withWindow(
       {...(mouse ? { copy } : {})}
       {...(copyOnSelect === undefined ? {} : { copyOnSelect })}
       open={async (options) => {
-        const opening = openSession(options);
+        const opening = openWith(options);
 
+        // Kept once it fails too, as how it failed says whether its agent
+        // stopped; one that opens is checked with the others opened.
         starting.add(opening);
 
-        try {
-          session = await opening;
-        } finally {
-          starting.delete(opening);
-        }
+        session = await opening;
 
+        starting.delete(opening);
         opened.push(session);
 
         if (heldClose) {
@@ -313,6 +324,10 @@ export async function withWindow(
     mounted: app.mounted,
   };
 
+  // An agent still starting that did not stop, thrown once the rest is
+  // cleaned up, so the window's own close and its directory still go.
+  let stuck: Error | undefined;
+
   try {
     await until('the session', () => session !== undefined);
     // The window takes it later: until then Enter keeps the draft, and a
@@ -323,15 +338,35 @@ export async function withWindow(
     await app.unmount();
 
     if (starting.size > 0) {
-      const settled = Promise.allSettled([...starting]).then(() => true);
-      const bound = new Promise<false>((resolve) =>
-        setTimeout(() => resolve(false), STARTING_STOPPED_MS),
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const bound = new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), STARTING_STOPPED_MS);
+      });
+
+      const outcomes = await Promise.race([
+        Promise.allSettled([...starting]),
+        bound,
+      ]);
+
+      clearTimeout(timer);
+
+      // A start given up rejects as it is told to; one whose agent would not
+      // exit rejects as well, and that agent may still be running.
+      const failed = outcomes?.find(
+        (outcome) =>
+          outcome.status === 'rejected' && stopFailed(outcome.reason),
       );
 
-      expect(
-        await Promise.race([settled, bound]),
-        'an agent still starting was not stopped with its window',
-      ).toBeTruthy();
+      if (outcomes === undefined) {
+        stuck = new Error(
+          'an agent still starting was not stopped with its window',
+        );
+      } else if (failed?.status === 'rejected') {
+        stuck = new Error(
+          'an agent still starting did not stop with its window',
+          { cause: failed.reason },
+        );
+      }
     }
 
     for (const each of opened) {
@@ -343,6 +378,10 @@ export async function withWindow(
     }
 
     await rm(dir, { recursive: true });
+  }
+
+  if (stuck !== undefined) {
+    throw stuck;
   }
 }
 

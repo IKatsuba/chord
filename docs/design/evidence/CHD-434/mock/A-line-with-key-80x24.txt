@@ -3,15 +3,15 @@
  ▄▀▀▀   /tmp/chord-qa.dimcode
  ▀▀     ? for shortcuts · /help
 
- ⏺ dimcode may start other agent CLIs it finds on your PATH, such as claude,
-   codex and cursor, as subagents of its own. It starts them with their
-   approvals bypassed, on your own accounts, and nothing they do reaches
-   chord's permission box. To turn it off, set <KEY> in dimcode's own config,
-   or set dimcode's permission option to <VALUE> in /config, which gates its
-   agent tool. ctrl+x n not to say it again.
-
-
-
+ ⏺ With its permission option at full-access, dimcode may start other agent
+   CLIs it finds on your PATH, such as claude, codex and cursor, as subagents
+   of its own, with their approvals bypassed and on your own accounts. At
+   workspace-write it asks you first, and once you allow it, the same holds.
+   Nothing those agents do reaches chord's permission box. To turn a CLI off,
+   set externalAgents.<type>.enabled to false in ~/.dimcode/v2/config.json
+   (claude-code, codex, cursor, …), or use /external-agents in dimcode's own
+   TUI. Or keep the permission option at read-only in /config, where dimcode
+   refuses its agent tool. ctrl+x n not to say it again.
 
 
 
@@ -21,4 +21,4 @@
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ ›                                                                            │
 ╰──────────────────────────────────────────────────────────────────────────────╯
-  ? for shortcuts                        dimcode · claude-sonnet-4-5 · read-only
+  ? for shortcuts                                    dimcode · claude-sonnet-4-5

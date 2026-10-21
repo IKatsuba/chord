@@ -6,7 +6,7 @@
   every request answered, sessions listed, loaded and resumed, and a turn's
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
-  (`text`, `texttillsteered`, `thought`, `todos`, `mcp`, `markdown`,
+  (`text`, `texttillsteered`, `thought`, `todos`, `mcp`, `opened`, `markdown`,
   `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `longresults`,
@@ -63,7 +63,7 @@
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `longheld`, `costwait`, `costwaitlate`,
   `todos`, `exitplan`, `claudeexitplan`, `lock`,
-  `mcp`, `form`, `link`, `leftform`, `leftformgated`, `bigaskleft`,
+  `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `subagentstatesstay`,
   `claudesubagents`,
@@ -118,6 +118,8 @@
   `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) acknowledges each such cancel
   with `Cancel heard with no turn.`, so tests can wait for its arrival;
   `mcp` answers with the MCP servers its session was opened with, as JSON;
+  `opened` with the request that last opened its session and that
+  request's `_meta`, as JSON, to show what chord adds there (CHD-439);
   `chordtools` connects to chord's own, through the MCP SDK's client, calls
   `list_agents` and `list_sessions` and answers with what came back, as
   JSON; `chordcalls` makes the same calls as tool calls, titled as Claude's

@@ -17,6 +17,7 @@ import {
   type Session,
   type Turn,
 } from '../../src/session/session.ts';
+import { readRecords, type Resume } from '../../src/session/sessions.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import { FAKE_COMMANDS } from '../fixtures/commands.ts';
@@ -24,6 +25,7 @@ import { EDIT_NEW, EDIT_OLD } from '../fixtures/edits.ts';
 import { COMPACT_ERROR, COMPACT_SUMMARY } from '../fixtures/compactions.ts';
 import { BASH_OUTPUT, SHELL_OUTPUT } from '../fixtures/terminals.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { recordSession } from '../fixtures/records.ts';
 import { CRASH_WORDS } from '../fixtures/fake_agent/scenarios/agents.ts';
 import { mentionsIn } from '../../src/ui/prompt/mentions.ts';
 import { run, said } from '../fixtures/recorder.ts';
@@ -1197,6 +1199,107 @@ test("chord's server takes the first free name when the user's has chord's", () 
     user('chord-2'),
     { ...CHORD_SERVER, name: 'chord-3' },
   ]);
+});
+
+/** Claude's adapter's prompt suggestions off, as chord opens its sessions. */
+const NO_SUGGESTIONS = {
+  claudeCode: { options: { promptSuggestions: false } },
+};
+
+/**
+ * The request that opened a session in `dir`, and its `_meta`, as the fake
+ * agent says them; opened again from `resume` when there is one.
+ */
+async function openedBy(
+  dir: string,
+  flags: readonly string[],
+  resume?: Resume,
+): Promise<unknown> {
+  const session = await openSession({
+    agent: 'fake',
+    cwd: dir,
+    agentCommand: fakeAgentCommand(undefined, ...flags),
+    ...(resume === undefined ? {} : { resume }),
+  });
+
+  try {
+    const reply = said((await run(session, 'opened')).updates).join('');
+
+    return JSON.parse(reply.replace(/^```json\n|\n```$/g, ''));
+  } finally {
+    await session.close();
+  }
+}
+
+describe("Claude's prompt suggestions are off in every session chord opens (CHD-439)", () => {
+  const inDir = async (body: (dir: string) => Promise<void>) => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-opened-'));
+
+    try {
+      await body(dir);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  };
+
+  test('a new Claude session asks for none, and a Codex or other one is sent no _meta', () =>
+    inDir(async (dir) => {
+      expect(await openedBy(dir, ['--adapter', 'claude'])).toStrictEqual({
+        method: 'session/new',
+        meta: NO_SUGGESTIONS,
+      });
+      expect(await openedBy(dir, ['--steering', 'codex'])).toStrictEqual({
+        method: 'session/new',
+      });
+      expect(await openedBy(dir, [])).toStrictEqual({
+        method: 'session/new',
+      });
+    }));
+
+  test('a Claude session loaded again asks for none, and a Codex one is sent no _meta', () =>
+    inDir(async (dir) => {
+      const resume = { sessionId: crypto.randomUUID(), cwd: dir };
+
+      expect(
+        await openedBy(dir, ['--adapter', 'claude'], resume),
+      ).toStrictEqual({ method: 'session/load', meta: NO_SUGGESTIONS });
+      expect(
+        await openedBy(dir, ['--steering', 'codex'], resume),
+      ).toStrictEqual({ method: 'session/load' });
+    }));
+
+  test('a Claude session resumed from its record asks for none, and a Codex one is sent no _meta', () =>
+    inDir(async (dir) => {
+      const stateDir = join(dir, 'state');
+
+      for (const flags of [
+        ['--adapter', 'claude'],
+        ['--steering', 'codex'],
+      ]) {
+        await rm(stateDir, { recursive: true, force: true });
+
+        const sessionId = await recordSession({
+          stateDir,
+          cwd: dir,
+          command: fakeAgentCommand(undefined, ...flags),
+          prompts: ['text'],
+        });
+        const [record] = await readRecords(stateDir);
+
+        assert(record !== undefined);
+        expect(
+          await openedBy(dir, [...flags, '--resume-only'], {
+            sessionId,
+            cwd: dir,
+            record: record.path,
+          }),
+        ).toStrictEqual(
+          flags[0] === '--adapter'
+            ? { method: 'session/resume', meta: NO_SUGGESTIONS }
+            : { method: 'session/resume' },
+        );
+      }
+    }));
 });
 
 describe('CHD-246 tester: large MCP permission fixture', () => {

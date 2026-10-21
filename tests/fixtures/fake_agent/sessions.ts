@@ -14,6 +14,15 @@ export const cwds = new Map<string, string>();
 /** The MCP servers each session was opened with, as they arrived. */
 export const mcpServers = new Map<string, acp.McpServer[]>();
 
+/**
+ * How each session was last opened: the request, and its `_meta` as it
+ * arrived, none when it had none.
+ */
+export const openedWith = new Map<
+  string,
+  { readonly method: string; readonly meta?: unknown }
+>();
+
 /** Claude Code's first three modes, in its order. */
 export const AVAILABLE_MODES: acp.SessionMode[] = [
   { id: 'default', name: 'Default' },

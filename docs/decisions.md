@@ -2098,7 +2098,9 @@ sessions, prompts, the requests the agent sends, and a bounded close.
   output as `_meta` and subagents as sessions of their own; see below). The answer is kept whole (`agent.init`); `session/load`,
   `session/resume` and `session/list` are refused without asking when its
   capabilities do not offer them. `session/set_model`, not yet stable in v1, is
-  sent by name, as Claude's adapter still answers it.
+  sent by name, as cursor's and dimcode's adapters answer it where they offer
+  models without a `model` config option; Claude's adapter has no handler for
+  it (claude-agent-acp 0.93.0) and takes a model through that option.
 - **The process is chord's to stop.** The agent starts in a process group of
   its own (`detached`, as `shell.ts` does), since npx starts the adapter as a
   child and the adapter its tools. `close()` ends stdin, waits, sends SIGTERM to

@@ -1,0 +1,24 @@
+
+ ››› Waiting for permission… (9s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ mcp__files__write_file                                                       │
+│ ── ↑ 39 lines above · pageup to scroll ───────────────────────────────────── │
+│   - Change 30: tests run in parallel                                         │
+│                                                                              │
+│   mode: overwrite                                                            │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Yes                                                                     │
+│   2. Yes, and don't ask again for files - write_file commands                │
+│   3. No, and tell Claude what to do differently                              │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake                    ● permission 9s
+    bugfix     team · fake · 3 agents  ● tester: permission 31s  ✓ new reply

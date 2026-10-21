@@ -1,0 +1,24 @@
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake         ● permission 2s
+    bugfix     team · fake  ◦ idle 57s        ✓ new reply
+    ├─ tester  fake         ● permission 56s  ← new message
+    └─ coder   fake         ◦ idle 56s        ✓ new reply

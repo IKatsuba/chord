@@ -460,11 +460,16 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'bash_mode':
     case 'context_sent':
     case 'editor_failed':
-    case 'paste_failed':
     case 'images_sent':
     case 'vim_toggled':
     case 'vim_changed':
       return reducePrompt(state, action) as AppState;
+    case 'paste_failed':
+      // Started, or failed to, before it came: not so any longer (CHD-490).
+      return action.untilStarted === true &&
+        state.connection.status !== 'starting'
+        ? state
+        : (reducePrompt(state, action) as AppState);
     case 'model_picker_opened':
     case 'model_picker_closed':
     case 'resume_asked':

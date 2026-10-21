@@ -699,6 +699,20 @@ test('that the agent has not started yet goes once it has started, or failed to 
   expect(
     reduceApp(other, { type: 'connected', sessionId: 'session-1' }).pasteFailed,
   ).toStrictEqual('No image in the clipboard');
+
+  // Said only once the agent has started, it is not so any longer.
+  for (const started of [
+    ready,
+    after({ type: 'connect_failed', message: 'gone' }),
+  ]) {
+    expect(
+      reduceApp(started, {
+        type: 'paste_failed',
+        message: 'fake has not started yet',
+        untilStarted: true,
+      }).pasteFailed,
+    ).toStrictEqual(undefined);
+  }
 });
 
 test('a paste that found nothing says so until the draft is touched', () => {

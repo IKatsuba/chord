@@ -2209,6 +2209,7 @@ describe('ctrl+v while an agent starts says so only until it has started, or fai
     as: 'tab' | 'child',
     codex: readonly string[],
     body: (window: Window, open: () => Promise<void>) => Promise<void>,
+    clipboard: ClipboardReader = NO_IMAGE,
   ): Promise<void> {
     const gates = await mkdtemp(join(tmpdir(), 'chord-gate-'));
     const gate = join(gates, 'open');
@@ -2256,7 +2257,7 @@ describe('ctrl+v while an agent starts says so only until it has started, or fai
         {
           ...size,
           server,
-          clipboard: NO_IMAGE,
+          clipboard,
           runtimes: ['fake', 'codex'],
           agentCommand: command,
           startupOf: (agent) => ({
@@ -2301,6 +2302,48 @@ describe('ctrl+v while an agent starts says so only until it has started, or fai
           await window.shows('codex did not start');
           expect(window.frame()).not.toContain('codex has not started yet');
         }));
+
+      for (const [outcome, codex, after] of [
+        ['started', fakeAgentCommand(), 'the start'],
+        ['failed to start', ['sh', '-c', 'exit 1'], 'the failure'],
+      ] as const) {
+        test(`at ${at}, an empty paste in a ${as} read while its agent ${outcome} says nothing of the start`, async () => {
+          // The clipboard answers only once the agent has started, or not.
+          const held =
+            Promise.withResolvers<Awaited<ReturnType<ClipboardReader>>>();
+
+          await onCodex(
+            size,
+            as,
+            codex,
+            async (window, open) => {
+              await window.paste('');
+              await open();
+              await until(
+                after,
+                () => !window.frame().includes('Starting codex…'),
+              );
+              held.resolve({
+                image: {
+                  mediaType: 'image/png',
+                  data: PIXEL_PNG,
+                  bytes: PIXEL_BYTES.length,
+                },
+              });
+              await new Promise((resolve) => setTimeout(resolve, 300));
+              expect(window.frame()).not.toContain('codex has not started yet');
+
+              if (outcome === 'started') {
+                await until(
+                  'the image',
+                  () => promptRow(window)?.includes('[Image #1]') ?? false,
+                );
+              }
+            },
+            () => held.promise,
+          );
+        });
+      }
 
       test(`at ${at}, a ${as}'s empty clipboard once started is said until a key`, () =>
         onCodex(size, as, fakeAgentCommand(), async (window, open) => {

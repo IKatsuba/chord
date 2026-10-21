@@ -18,6 +18,7 @@ import {
 } from '../../fixtures/fake_agent/scenarios/teams.ts';
 import {
   DOWN,
+  END,
   ESC,
   UP,
   leader,
@@ -420,6 +421,65 @@ describe('a task of main asking beside a member (CHD-431)', () => {
           runtimes: ['fake'],
           rows: 24,
           columns: 80,
+          teams: { bugfix: BUGFIX },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("at 120x40 under the folded list, a tall request's room holds still and its end view shows its last row (CHD-464)", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await bothAsk(window);
+          await leader(window, 'a');
+          await window.shows('Esc to reject');
+          await window.press('1');
+          await send(window, 'bigask');
+          await window.shows('lines below · pagedown to scroll');
+          await window.press(END);
+          await window.shows('lines above · pageup to scroll');
+
+          // The request, from its title to the question under it.
+          const request = () => {
+            const lines = window.frame().split('\n');
+            const from = lines.findIndex((line) =>
+              line.includes('mcp__files__write_file'),
+            );
+            const to = lines.findIndex((line) =>
+              line.includes('Do you want to proceed?'),
+            );
+
+            return lines.slice(from, to + 1).map((line) => line.trimEnd());
+          };
+
+          // The list folding and the box giving way traded rows on every
+          // frame, so the room, and with it the view, never held.
+          const seen = new Set<string>();
+
+          for (let frame = 0; frame < 10; frame++) {
+            seen.add(request().join('\n'));
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+
+          const shown = request();
+
+          expect(seen.size, [...seen].join('\n\n')).toStrictEqual(1);
+          expect(shown.join('\n')).not.toContain('lines below');
+          expect(shown.at(-3), shown.join('\n')).toMatch(
+            /^│ {3}mode: overwrite +│$/,
+          );
+          expect(shown.at(-2)).toMatch(/^│ +│$/);
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 40,
+          columns: 120,
           teams: { bugfix: BUGFIX },
         },
       );

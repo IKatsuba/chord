@@ -558,8 +558,15 @@ export function App({
   const agentsFull = agentsAt(fullLimit);
   const agentsFloor = agentsAt(1);
   // A request's body gives a short window rows only once the list has
-  // folded all it can, or has none to fold.
-  const listFolded = agentsFull <= agentsFloor || agentsRoom <= agentsFloor;
+  // folded all it can, or has none to fold. Folded, the list keeps to its
+  // floor until the transcript has rows again: were the fold read off the
+  // list's room alone, the box giving way would hand the list rows back,
+  // unfold it and stop the box giving way, and the two would trade two
+  // rows on every frame (CHD-464).
+  const [folded, setFolded] = useState(false);
+  const canFold = agentsFull > agentsFloor;
+  const listFolded = !canFold || folded;
+  const transcriptArea = useRef<BoxRenderable | null>(null);
   const backgroundItems = sessions.background();
   // What the background frame says under its rows, whose lines its rows
   // give way to (CHD-473).
@@ -1003,7 +1010,22 @@ export function App({
               {/* Its basis is nothing, so when the rows under it run out it
         has none to keep, and a permission request taller than what is left
         gives way only after the transcript is gone (CHD-246). */}
-              <Clip flexGrow={1} flexShrink={1} flexBasis={0} paddingX={1}>
+              <Clip
+                ref={transcriptArea}
+                flexGrow={1}
+                flexShrink={1}
+                flexBasis={0}
+                paddingX={1}
+                // Rows the transcript has are rows the folded list may have.
+                renderAfter={() => {
+                  if (
+                    folded &&
+                    (transcriptArea.current?.getLayout().height ?? 0) > 0
+                  ) {
+                    setFolded(false);
+                  }
+                }}
+              >
                 {/* Following, the transcript hangs from the top while it fits,
           the header on the window's first row, or under the tab strip, and
           once it overflows it sits on the bottom and new rows push the old
@@ -1377,16 +1399,21 @@ export function App({
               )}
               <box
                 ref={agentsBox}
-                flexBasis={agentsFull}
+                flexBasis={canFold && folded ? agentsFloor : agentsFull}
                 minHeight={agentsFloor}
-                flexShrink={1}
+                flexShrink={canFold && folded ? 0 : 1}
                 overflow='hidden'
-                onSizeChange={() =>
-                  setAgentsRoom(
+                onSizeChange={() => {
+                  const height =
                     agentsBox.current?.getLayout().height ??
-                      Number.POSITIVE_INFINITY,
-                  )
-                }
+                    Number.POSITIVE_INFINITY;
+
+                  setAgentsRoom(height);
+
+                  if (canFold && height <= agentsFloor) {
+                    setFolded(true);
+                  }
+                }}
               >
                 <AgentsList
                   rows={listRows}

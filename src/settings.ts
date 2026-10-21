@@ -35,6 +35,12 @@ const AgentSettings = z
     effort: z.string().min(1),
     /** The mode each session starts in, as `--permission-mode`. */
     permissionMode: z.string().min(1),
+    /**
+     * `false` gives each session no MCP servers at all, chord's own among
+     * them, for an agent that refuses any (CHD-441); `true` gives them where
+     * chord's own table sets `false` for the agent.
+     */
+    mcpServers: z.boolean(),
   })
   .partial();
 
@@ -503,6 +509,8 @@ export interface Startup {
   readonly model?: Sourced;
   readonly effort?: Sourced;
   readonly permissionMode?: Sourced;
+  /** What the files set the agent's `mcpServers` to, where one does. */
+  readonly mcpServers?: boolean;
 }
 
 /** The flag's value, else the last file's that set the agent's `key`. */
@@ -580,6 +588,9 @@ export function resolveStartup(
     ...(model === undefined ? {} : { model }),
     ...(effort === undefined ? {} : { effort }),
     ...(permissionMode === undefined ? {} : { permissionMode }),
+    ...(settings.agents?.[agent]?.mcpServers === undefined
+      ? {}
+      : { mcpServers: settings.agents[agent].mcpServers }),
   };
 }
 
@@ -603,7 +614,7 @@ export function resumedStartup(
   flags: Flags,
   layers: readonly SettingsLayer[],
 ): Startup {
-  const { model, effort, permissionMode } = resolveStartup(
+  const { model, effort, permissionMode, mcpServers } = resolveStartup(
     { ...flags, agent: found.agent },
     layers,
     found.agent,
@@ -617,6 +628,7 @@ export function resumedStartup(
     ...(model === undefined ? {} : { model }),
     ...(effort === undefined ? {} : { effort }),
     ...(permissionMode === undefined ? {} : { permissionMode }),
+    ...(mcpServers === undefined ? {} : { mcpServers }),
   };
 }
 
@@ -624,16 +636,22 @@ export function resumedStartup(
  * What a session of `agent` starts with in a window `invoked` started: the
  * window's own startup for its agent, flags and all; any other agent's
  * command, model, effort and mode from the files alone, as the flags were given for
- * the agent the command line named and their ids are that agent's.
+ * the agent the command line named and their ids are that agent's. Whether
+ * it takes MCP servers no flag says, so the files say it for every agent,
+ * the window's own too (CHD-441).
  */
 export function startupOf(
   agent: string,
   invoked: Startup,
   layers: readonly SettingsLayer[],
 ): Startup {
-  return agent === invoked.agent
-    ? invoked
-    : resolveStartup({ agent }, layers, agent);
+  if (agent !== invoked.agent) {
+    return resolveStartup({ agent }, layers, agent);
+  }
+
+  const { mcpServers } = resolveStartup({ agent }, layers, agent);
+
+  return mcpServers === undefined ? invoked : { ...invoked, mcpServers };
 }
 
 /**

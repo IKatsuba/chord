@@ -1,0 +1,24 @@
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord passed these to fake when the session started. ACP does not say        │
+│ whether fake connected to them.                                              │
+│                                                                              │
+│ Name        Transport  Command or URL    Defined in                          │
+│ chord       http       not passed        chord itself                        │
+│ filesystem  stdio      npx -y            …/chord/settings.json               │
+│                        @modelcontextpro                                      │
+│                        tocol/                                                │
+│                        server-filesyste                                      │
+│                        m .                                                   │
+│ … +2 more                                                                    │
+│                                                                              │
+│ chord's server was not passed: fake does not take MCP servers over HTTP, so  │
+│ it cannot start other agents.                                                │
+│                                                                              │
+│ 1 server in /tmp/chord-qa-home.des441/chord/settings.json was ignored; chord │
+│ said why when it started.                                                    │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

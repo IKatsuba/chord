@@ -1,0 +1,24 @@
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord's MCP servers for fake. ACP does not say whether fake connected to the │
+│ ones it was passed.                                                          │
+│                                                                              │
+│ Name        Transport  Command or URL    Defined in                          │
+│ chord       http       http://           chord itself                        │
+│                        127.0.0.1:57657/                                      │
+│                        mcp                                                   │
+│ … +3 more                                                                    │
+│                                                                              │
+│ chord's server gives fake list_agents, list_sessions, list_teams,            │
+│ spawn_task, open_agent, run_team, propose_team, send_message, close_agent,   │
+│ monitor, stop_monitor and list_monitors.                                     │
+│                                                                              │
+│ tracker was not passed: fake takes MCP servers over stdio and HTTP only.     │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯

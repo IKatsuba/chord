@@ -4,7 +4,11 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { RequestError, type SessionUpdate } from '@agentclientprotocol/sdk';
+import {
+  type McpServer,
+  RequestError,
+  type SessionUpdate,
+} from '@agentclientprotocol/sdk';
 import { cycleMark } from '../../src/session/cycles.ts';
 import type { AgentOption } from '../../src/session/config.ts';
 import {
@@ -57,6 +61,7 @@ function heldSession() {
   ];
   const session = {
     id: 'held',
+    heldBack: [],
     permissions: { subscribe: () => () => {} },
     elicitations: { subscribe: () => () => {} },
     subscribe: () => () => {},
@@ -999,6 +1004,39 @@ test("a message set aside starts no turn and goes ahead of the person's next pro
  * A conversation on the fake agent started with `flags`, once it is up,
  * handed to `body`, then closed.
  */
+test('a session whose agent was not given a server says so as a warning before it is up (CHD-441)', () =>
+  onFake(
+    ['--mcp-transports', 'none'],
+    (_, events) => {
+      const warned = events.filter((event) => event.type === 'warned');
+      const connected = events.findIndex((event) => event.type === 'connected');
+
+      expect(warned.map((event) => event.message)).toStrictEqual([
+        '1 MCP server was not passed to fake, which takes them over stdio ' +
+          'only: search (http). /mcp lists it.',
+      ]);
+      expect(events.indexOf(warned[0]!)).toBeLessThan(connected);
+
+      return Promise.resolve();
+    },
+    undefined,
+    [
+      {
+        type: 'http',
+        name: 'search',
+        url: 'https://search.example/mcp',
+        headers: [],
+      },
+    ],
+  ));
+
+test('a session whose agent was given every server says nothing of them (CHD-441)', () =>
+  onFake([], (_, events) => {
+    expect(events.some((event) => event.type === 'warned')).toBe(false);
+
+    return Promise.resolve();
+  }));
+
 async function onFake(
   flags: string[],
   body: (
@@ -1006,6 +1044,7 @@ async function onFake(
     events: ConversationEvent[],
   ) => Promise<void>,
   watch: (session: Session) => Session = (session) => session,
+  mcpServers: readonly McpServer[] = [],
 ) {
   const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
   const events: ConversationEvent[] = [];
@@ -1016,6 +1055,7 @@ async function onFake(
           agent: 'fake',
           cwd: dir,
           agentCommand: fakeAgentCommand(undefined, ...flags),
+          mcpServers,
         }),
       ),
     (event) => events.push(event),

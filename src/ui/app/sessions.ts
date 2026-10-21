@@ -191,6 +191,11 @@ export interface SessionStart {
    */
   readonly refused?: string | undefined;
   readonly starting?: Starting | undefined;
+  /**
+   * `false` where the agent takes no MCP servers at all, as its setting or
+   * chord's own table says (CHD-441).
+   */
+  readonly mcpServers?: false | undefined;
 }
 
 /**
@@ -355,7 +360,12 @@ export function useSessions(
     key: number,
   ) => {
     const { cwd, mcpServers, startupOf } = placeOf(key);
-    const { agentCommand, starting, refused } = startupOf(agent) ?? {};
+    const {
+      agentCommand,
+      starting,
+      refused,
+      mcpServers: takes,
+    } = startupOf(agent) ?? {};
 
     return new Conversation(
       (signal) => {
@@ -377,6 +387,7 @@ export function useSessions(
             ? {}
             : { mcpServers: mcpServers.map(({ server }) => server) }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
+          ...(takes === false ? { noMcpServers: true } : {}),
         };
 
         resuming.current.delete(key);
@@ -513,6 +524,7 @@ export function useSessions(
             ? {}
             : { mcpServers: mcpServers.map(({ server }) => server) }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
+          ...(startup.mcpServers === false ? { noMcpServers: true } : {}),
         };
         const revoke = () => admitted && server?.revoke(admitted.token);
 

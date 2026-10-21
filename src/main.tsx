@@ -22,6 +22,7 @@ import {
   agentTable,
   DEFAULT_AGENT,
   findAgent,
+  takesMcpServers,
   listAgents,
   listedAgents,
   missingCommand,
@@ -229,6 +230,9 @@ const cli = chordCommand().action(async (options, named) => {
         format: options.outputFormat ?? 'text',
         ...(agentCommand === undefined ? {} : { agentCommand }),
         mcpServers: mcp.servers.map(({ server }) => server),
+        ...(takesMcpServers(agent, invoked.mcpServers)
+          ? {}
+          : { noMcpServers: true }),
         ...(invoked.effort === undefined
           ? {}
           : {
@@ -492,6 +496,9 @@ const cli = chordCommand().action(async (options, named) => {
           ? undefined
           : {
               agentCommand: found.agentCommand,
+              ...(takesMcpServers(name, found.mcpServers)
+                ? {}
+                : { mcpServers: false as const }),
               starting: {
                 model: starting(found.model),
                 effort: starting(found.effort),

@@ -1215,7 +1215,8 @@ export function App({
                 <McpPanel
                   servers={here.mcpServers}
                   ignored={here.mcpIgnored}
-                  agent={frontAgent}
+                  heldBack={conversation()?.session?.heldBack ?? []}
+                  agent={child?.runtime ?? frontAgent}
                   windowRows={rows}
                   {...(server === undefined
                     ? {}
@@ -1223,6 +1224,9 @@ export function App({
                         chord: chordRow(
                           conversation()?.session?.chordServer,
                           child !== undefined,
+                          conversation()?.session?.heldBack.some(
+                            (each) => each.own && each.takes.length === 0,
+                          ) === true,
                         ),
                       })}
                 />

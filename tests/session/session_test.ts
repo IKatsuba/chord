@@ -12,11 +12,11 @@ import type { PendingPermission } from '../../src/session/permissions.ts';
 import { plainText } from '../../src/session/terminal_text.ts';
 import {
   agentEnv,
-  besideUsers,
   openSession,
   type Session,
   type Turn,
 } from '../../src/session/session.ts';
+import type { HeldBack } from '../../src/session/servers.ts';
 import { readRecords, type Resume } from '../../src/session/sessions.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../src/session/transcript/types.ts';
@@ -1151,54 +1151,176 @@ const CHORD_SERVER = {
   headers: [{ name: 'Authorization', value: 'Bearer token' }],
 };
 
-/** The MCP servers the fake agent says its session was opened with. */
-async function serversGiven(...flags: string[]): Promise<unknown> {
-  const dir = await mkdtemp(join(tmpdir(), 'chord-session-'));
+/** The user's servers in the MCP tests: one of each transport chord reads. */
+const DOCS = { name: 'docs', command: 'docs-server', args: [], env: [] };
+const SEARCH = {
+  type: 'http' as const,
+  name: 'search',
+  url: 'https://search.example/mcp',
+  headers: [],
+};
+const LOGS = {
+  type: 'sse' as const,
+  name: 'logs',
+  url: 'https://logs.example/sse',
+  headers: [],
+};
+
+/**
+ * The MCP servers the fake agent says its session was opened with, and what
+ * the session says it held back; opened again from `resume` when given.
+ */
+async function serversGiven(
+  flags: readonly string[],
+  resume?: Resume,
+): Promise<{
+  given: unknown;
+  session: Pick<Session, 'heldBack'> & {
+    chordServer?: unknown;
+  };
+}> {
+  const dir = resume?.cwd ?? (await mkdtemp(join(tmpdir(), 'chord-session-')));
   const session = await openSession({
     agent: 'fake',
     cwd: dir,
     agentCommand: fakeAgentCommand(undefined, ...flags),
-    mcpServers: [{ name: 'docs', command: 'docs-server', args: [], env: [] }],
+    mcpServers: [DOCS, SEARCH, LOGS],
     chordServer: CHORD_SERVER,
+    ...(resume === undefined ? {} : { resume }),
   });
 
   try {
     const reply = said((await run(session, 'mcp')).updates).join('');
 
-    return JSON.parse(reply.replace(/^```json\n|\n```$/g, ''));
+    return {
+      given: JSON.parse(reply.replace(/^```json\n|\n```$/g, '')),
+      session: {
+        heldBack: session.heldBack,
+        ...(session.chordServer === undefined
+          ? {}
+          : { chordServer: session.chordServer }),
+      },
+    };
   } finally {
     await session.close();
-    await rm(dir, { recursive: true });
+
+    if (resume === undefined) {
+      await rm(dir, { recursive: true });
+    }
   }
 }
 
-test("chord's server goes after the user's to an agent that takes HTTP", async () => {
-  expect(await serversGiven()).toStrictEqual([
-    { name: 'docs', command: 'docs-server', args: [], env: [] },
-    CHORD_SERVER,
-  ]);
+/** A held-back entry as the session lists it for the fake. */
+const held = (
+  server: string,
+  transport: string,
+  takes: readonly string[],
+  own = false,
+): HeldBack => ({
+  server,
+  agent: 'fake',
+  transport,
+  takes,
+  ...(own ? { own: true as const } : {}),
 });
 
-test("an agent that does not take HTTP gets the user's servers alone", async () => {
-  expect(await serversGiven('--no-http')).toStrictEqual([
-    { name: 'docs', command: 'docs-server', args: [], env: [] },
-  ]);
-});
+describe('an agent is given only the MCP servers whose transport it advertises (CHD-441)', () => {
+  const combinations: [string, readonly string[], unknown[], HeldBack[]][] = [
+    [
+      'http and sse',
+      ['--mcp-transports', 'http,sse'],
+      [DOCS, SEARCH, LOGS, CHORD_SERVER],
+      [],
+    ],
+    [
+      'http alone',
+      ['--mcp-transports', 'http'],
+      [DOCS, SEARCH, CHORD_SERVER],
+      [held('logs', 'sse', ['stdio', 'http'])],
+    ],
+    [
+      'sse alone',
+      ['--mcp-transports', 'sse'],
+      [DOCS, LOGS],
+      [
+        held('search', 'http', ['stdio', 'sse']),
+        held('chord', 'http', ['stdio', 'sse'], true),
+      ],
+    ],
+    [
+      'stdio alone',
+      ['--mcp-transports', 'none'],
+      [DOCS],
+      [
+        held('search', 'http', ['stdio']),
+        held('logs', 'sse', ['stdio']),
+        held('chord', 'http', ['stdio'], true),
+      ],
+    ],
+    [
+      'sse with --no-http',
+      ['--no-http'],
+      [DOCS, LOGS],
+      [
+        held('search', 'http', ['stdio', 'sse']),
+        held('chord', 'http', ['stdio', 'sse'], true),
+      ],
+    ],
+  ];
 
-test("chord's server takes the first free name when the user's has chord's", () => {
-  const user = (name: string) => ({ ...CHORD_SERVER, name, url: 'u' });
+  for (const [label, flags, given, heldBack] of combinations) {
+    test(`a new session on an agent advertising ${label}`, async () => {
+      const { given: got, session } = await serversGiven(flags);
 
-  expect(besideUsers([user('docs')], CHORD_SERVER)).toStrictEqual([
-    user('docs'),
-    CHORD_SERVER,
-  ]);
-  expect(
-    besideUsers([user('chord'), user('chord-2')], CHORD_SERVER),
-  ).toStrictEqual([
-    user('chord'),
-    user('chord-2'),
-    { ...CHORD_SERVER, name: 'chord-3' },
-  ]);
+      expect(got).toStrictEqual(given);
+      expect(session.heldBack).toStrictEqual(heldBack);
+      expect(session.chordServer).toStrictEqual(
+        given.includes(CHORD_SERVER) ? CHORD_SERVER : undefined,
+      );
+    });
+  }
+
+  test('a session loaded or resumed again is given the same, and holds back the same', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-session-'));
+
+    try {
+      const loaded = await serversGiven(['--mcp-transports', 'sse'], {
+        sessionId: crypto.randomUUID(),
+        cwd: dir,
+      });
+
+      expect(loaded.given).toStrictEqual([DOCS, LOGS]);
+      expect(loaded.session.heldBack).toStrictEqual([
+        held('search', 'http', ['stdio', 'sse']),
+        held('chord', 'http', ['stdio', 'sse'], true),
+      ]);
+
+      const stateDir = join(dir, 'state');
+      const flags = ['--mcp-transports', 'http'];
+      const sessionId = await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(undefined, ...flags),
+        prompts: ['text'],
+      });
+      const [record] = await readRecords(stateDir);
+
+      assert(record !== undefined);
+
+      const resumed = await serversGiven([...flags, '--resume-only'], {
+        sessionId,
+        cwd: dir,
+        record: record.path,
+      });
+
+      expect(resumed.given).toStrictEqual([DOCS, SEARCH, CHORD_SERVER]);
+      expect(resumed.session.heldBack).toStrictEqual([
+        held('logs', 'sse', ['stdio', 'http']),
+      ]);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
 });
 
 /** Claude's adapter's prompt suggestions off, as chord opens its sessions. */
@@ -1649,4 +1771,92 @@ describe('CHD-407 R1 tester: screenshot model selection', () => {
       undefined,
       '--tokens-only',
     ));
+});
+
+describe('CHD-441 tester: takes-none survives every session opening path', () => {
+  for (const method of ['new', 'load', 'recorded resume'] as const) {
+    test(`${method}: none suppresses all transports and own server, and false restores them`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-no-mcp-'));
+
+      try {
+        const stateDir = join(dir, 'state');
+        const sessionId = await recordSession({
+          stateDir,
+          cwd: dir,
+          command: fakeAgentCommand(),
+          prompts: ['text'],
+        });
+        const [record] = await readRecords(stateDir);
+
+        assert(record);
+
+        for (const noMcpServers of [true, false]) {
+          const session = await openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              ...(method === 'recorded resume' ? ['--resume-only'] : []),
+            ),
+            noMcpServers,
+            mcpServers: [DOCS, SEARCH, LOGS],
+            chordServer: CHORD_SERVER,
+            ...(method === 'new'
+              ? {}
+              : {
+                  resume: {
+                    sessionId,
+                    cwd: dir,
+                    ...(method === 'recorded resume'
+                      ? { record: record.path }
+                      : {}),
+                  },
+                }),
+          });
+
+          try {
+            const reply = said((await run(session, 'mcp')).updates).join('');
+            const given: unknown = JSON.parse(
+              reply.replace(/^```json\n|\n```$/g, ''),
+            );
+
+            const opening = said((await run(session, 'opened')).updates).join(
+              '',
+            );
+
+            expect(
+              JSON.parse(opening.replace(/^```json\n|\n```$/g, '')),
+            ).toStrictEqual({
+              method:
+                method === 'new'
+                  ? 'session/new'
+                  : method === 'load'
+                    ? 'session/load'
+                    : 'session/resume',
+            });
+            expect(given).toStrictEqual(
+              noMcpServers ? [] : [DOCS, SEARCH, LOGS, CHORD_SERVER],
+            );
+            expect(session.chordServer).toStrictEqual(
+              noMcpServers ? undefined : CHORD_SERVER,
+            );
+            expect(session.heldBack).toStrictEqual(
+              noMcpServers
+                ? [
+                    held('docs', 'stdio', []),
+                    held('search', 'http', []),
+                    held('logs', 'sse', []),
+                    held('chord', 'http', [], true),
+                  ]
+                : [],
+            );
+          } finally {
+            await session.close();
+          }
+        }
+      } finally {
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
 });

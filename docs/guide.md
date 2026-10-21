@@ -396,12 +396,13 @@ both.
 | `agents.<name>.model`          | the model each of its sessions starts on             | `-m, --model`       |
 | `agents.<name>.effort`         | the effort each of its sessions starts on            | `--effort`          |
 | `agents.<name>.permissionMode` | the mode each of its sessions starts in              | `--permission-mode` |
+| `agents.<name>.mcpServers`    | `false` passes no MCP servers; `true` overrides openclaw's default of none |                     |
 | `preferredNotifChannel`        | how the terminal is told chord waits on you          |                     |
 | `theme`                        | chord's colours, as `/theme` chooses them; user's file only | `/theme`     |
 | `editorMode`                   | `vim` for vim mode in the prompt, as `/vim` leaves it; user's file only | `/vim` |
 | `mouse`                        | `false` leaves the mouse to the terminal; user's file only |                     |
 | `copyOnSelect`                 | `false` leaves a drag's selection for ctrl+c to copy (on by default); user's file only |                     |
-| `mcpServers`                   | MCP servers handed to the agent, as `.mcp.json` writes them |             |
+| `mcpServers`                   | MCP servers configured for the agent, as `.mcp.json` writes them |             |
 
 When a turn ends, a permission is asked or the agent asks you to fill in a form
 or open a link, chord tells the terminal, so a window in the background can say
@@ -542,10 +543,18 @@ whole. Each is written the way `.mcp.json` writes it:
 
 A server started as a command has `command`, and may have `args` and `env`;
 one reached over the network has `type` (`http` or `sse`), `url`, and may
-have `headers`. `/mcp` lists the servers chord passed: each one's name, its
-transport, its command or URL, and the file that defined it; Esc closes it.
-It does not show `env` or `headers`. Whether the agent then connected to
-them, ACP does not say, and neither does `/mcp`. chord only reads these
+have `headers`. Unless `agents.<name>.mcpServers` is `false`, an agent
+gets stdio servers, and HTTP, SSE or ACP only when it advertises them. `false` sends none, chord's own included;
+openclaw defaults to it because its bridge refuses per-session servers.
+Set `agents.openclaw.mcpServers` to `true` to use the transport filter
+instead. The rest are held back, chord's own among them, and each
+session says at its start, in a warning line, which ones were not passed
+to its agent and why; a task agent's line is in its parent's turn, named
+as the task. `/mcp` lists the servers: each one's name, its transport, its
+command or URL, or `not passed` for one held back, with why under the
+list, and the file that defined it; Esc closes it. It does not show `env`
+or `headers`. Whether the agent then connected to the ones it was passed,
+ACP does not say, and neither does `/mcp`. chord only reads these
 files; it never writes `.mcp.json` or the agent's own configuration. A
 server that is wrong is named with its file and left out, and the others
 still count; a `.mcp.json` that is not a JSON object is named and ignored.
@@ -553,9 +562,9 @@ still count; a `.mcp.json` that is not a JSON object is named and ignored.
 `-p` passes the same servers.
 
 Beside them, every session the window opens gets an MCP server of chord's
-own, named `chord` (or `chord-2`, … where one of the user's already is), where
-its agent takes MCP over HTTP: chord serves it on
-the loopback while the window is open, and each session reaches it with a
+own, named `chord` (or `chord-2`, … where a passed user server has that name),
+when its agent takes MCP over HTTP and is not set to take none. chord serves
+it on the loopback while the window is open, and each session reaches it with a
 token of its own, so nothing else on the machine can call it. Its tools let
 an agent see what it could start: `list_agents` names every agent chord can
 start and the models and modes of those already read, or, given an agent's
@@ -782,8 +791,8 @@ shows the row without resending the note.
 A name after an arrow takes `@` where `send_message` reaches
 it, `main` and a long-lived child; a task, named by its title, and chord's
 own `← from chord` stay bare. `/mcp` lists chord's server first,
-and says what it gives the agent, or that the agent does not take HTTP and
-got none. `-p` gets no such server.
+and says what it gives the agent, or why it was not passed: the agent does
+not take HTTP or is set to take no MCP servers. `-p` gets no such server.
 
 Models, efforts and modes are set per agent because their ids are the
 agent's own: `/model`, `/config` and shift+tab show what an agent offers, and
@@ -799,9 +808,9 @@ member, and a session resumed alone in a directory that refuses it.
 The warning names the cause and says `<agent> will not start`; stderr
 reads `chord: <agent> not started: …`. chord never falls back to its own
 command. Other settings problems appear on stderr and in yellow at the
-transcript's top. `-p` takes `agent`, `command`, `effort` and `permissionMode`
-from the files, and says a refused effort or mode on stderr; `--model` is for
-the window. `--agent-command`, `--model`, `--effort` and `--permission-mode`
+transcript's top. `-p` takes `agent`, `command`, `effort`, `permissionMode`
+and the agent's `mcpServers` setting from the files, and says a refused
+effort or mode on stderr; `--model` is for the window. `--agent-command`, `--model`, `--effort` and `--permission-mode`
 speak for the agent the command line names: a session `/new` opens of another agent starts on that
 agent's settings alone.
 

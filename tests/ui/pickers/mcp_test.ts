@@ -15,13 +15,18 @@ import { openSession, type Session } from '../../../src/session/session.ts';
 import { sessionById } from '../../../src/session/sessions.ts';
 import { loadSettings, parseSettings } from '../../../src/settings.ts';
 import {
+  chordLine,
+  chordRow,
   cutPath,
+  heldNote,
   ignoredNote,
   mcpFit,
   mcpRows,
   targetOf,
+  withHeldBack,
   wrapTarget,
 } from '../../../src/ui/pickers/mcp.ts';
+import { serversFor } from '../../../src/session/servers.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { run, said } from '../../fixtures/recorder.ts';
 
@@ -423,3 +428,100 @@ test('the agent receives exactly the servers chord lists, new and loaded', () =>
       await loaded.close();
     }
   }));
+
+test('/mcp lists a server its agent was not given as not passed, and says why under the list (CHD-441)', () => {
+  const docs: McpServer = {
+    name: 'docs',
+    command: 'docs-server',
+    args: [],
+    env: [],
+  };
+  const search: McpServer = {
+    type: 'http',
+    name: 'search',
+    url: 'https://search.example/mcp',
+    headers: [],
+  };
+  const tracker: McpServer = {
+    type: 'sse',
+    name: 'tracker',
+    url: 'https://tracker.example/sse',
+    headers: [],
+  };
+  const chord: McpServer = {
+    ...search,
+    name: 'chord',
+    url: 'http://127.0.0.1:9/mcp',
+  };
+  const defined = [docs, search, tracker].map((server) => ({
+    server,
+    from: '~/.config/chord/settings.json',
+  }));
+  const stdio = serversFor('fake', undefined, [docs, search, tracker], chord);
+
+  expect(
+    withHeldBack(defined, stdio.heldBack).map((each) => targetOf(each)),
+  ).toStrictEqual(['docs-server', 'not passed', 'not passed']);
+  expect(heldNote(stdio.heldBack)).toBe(
+    'search and tracker were not passed: fake takes MCP servers over stdio only.',
+  );
+
+  const noSse = serversFor(
+    'fake',
+    { http: true },
+    [docs, search, tracker],
+    chord,
+  );
+
+  expect(heldNote(noSse.heldBack)).toBe(
+    'tracker was not passed: fake takes MCP servers over stdio and HTTP only.',
+  );
+
+  // chord's own alone has its own line, not this one.
+  expect(
+    heldNote(serversFor('fake', {}, [docs], chord).heldBack),
+  ).toBeUndefined();
+});
+
+test('/mcp says an agent set to take no MCP servers got none, and where the setting is (CHD-441)', () => {
+  const docs: McpServer = {
+    name: 'docs',
+    command: 'docs-server',
+    args: [],
+    env: [],
+  };
+  const tracker: McpServer = {
+    type: 'sse',
+    name: 'tracker',
+    url: 'https://tracker.example/sse',
+    headers: [],
+  };
+  const chord: McpServer = {
+    type: 'http',
+    name: 'chord',
+    url: 'http://127.0.0.1:9/mcp',
+    headers: [],
+  };
+  const { heldBack } = serversFor(
+    'openclaw',
+    { http: true, sse: true },
+    [docs, tracker],
+    chord,
+    true,
+  );
+  const defined = [docs, tracker].map((server) => ({
+    server,
+    from: '~/.config/chord/settings.json',
+  }));
+
+  expect(
+    withHeldBack(defined, heldBack).map((each) => targetOf(each)),
+  ).toStrictEqual(['not passed', 'not passed']);
+  expect(heldNote(heldBack)).toBe(
+    'docs and tracker were not passed: openclaw takes no MCP servers. ' +
+      'agents.openclaw.mcpServers in your settings changes that.',
+  );
+  expect(chordLine(chordRow(undefined, false, true), 'openclaw')).toBe(
+    "chord's server was not passed: openclaw takes no MCP servers, so it cannot start other agents.",
+  );
+});

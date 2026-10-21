@@ -853,3 +853,45 @@ describe('CHD-1 tester: headless question diagnostics', () => {
     expect(link.stderr).toBe('');
   });
 });
+
+describe('CHD-441 tester: the CLI forwards the MCP setting through headless and oneshot', () => {
+  test('false sends no servers and true restores configured stdio and HTTP servers', async () => {
+    const servers = {
+      files: { command: 'unused-mcp-server', args: ['--example'] },
+      docs: { type: 'http', url: 'https://docs.example/mcp' },
+    };
+
+    for (const mcpServers of [false, true]) {
+      const result = await chord(['-p', 'mcp'], '', {
+        agents: { fake: { mcpServers } },
+        mcpServers: servers,
+      });
+
+      expect(result.code).toBe(0);
+      expect(result.stderr).toBe('');
+
+      const given: unknown = JSON.parse(
+        result.stdout.trim().replace(/^```json\n|\n```$/g, ''),
+      );
+
+      expect(given).toStrictEqual(
+        mcpServers
+          ? [
+              {
+                name: 'files',
+                command: 'unused-mcp-server',
+                args: ['--example'],
+                env: [],
+              },
+              {
+                type: 'http',
+                name: 'docs',
+                url: 'https://docs.example/mcp',
+                headers: [],
+              },
+            ]
+          : [],
+      );
+    }
+  });
+});

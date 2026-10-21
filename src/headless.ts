@@ -252,6 +252,8 @@ export interface HeadlessOptions {
   agentCommand?: string | string[];
   /** MCP servers for the agent, from the settings files and `.mcp.json`. */
   mcpServers?: readonly McpServer[];
+  /** The agent takes no MCP servers at all (CHD-441). */
+  noMcpServers?: boolean;
   /** `--effort`, or the settings files', and where it was set. */
   effort?: StartingValue;
   /** `--permission-mode`, or the settings files', and where it was set. */
@@ -282,6 +284,7 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
       ...(options.mcpServers === undefined
         ? {}
         : { mcpServers: options.mcpServers }),
+      ...(options.noMcpServers === true ? { noMcpServers: true } : {}),
       onUpdate: async (update) => {
         const added = reply.take(update);
 

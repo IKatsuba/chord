@@ -29,6 +29,7 @@ import { ENRICHERS } from './enrichers.ts';
 import { type AgentModels, isModelState, modelConfigId } from './models.ts';
 import { type AgentModes, modeConfigId } from './modes.ts';
 import { PermissionBridge } from './permissions.ts';
+import { type HeldBack, serversFor } from './servers.ts';
 import { dirname } from 'node:path';
 import {
   pastBySession,
@@ -70,13 +71,20 @@ export interface OpenSessionOptions {
    */
   resume?: Resume;
   /**
-   * MCP servers for the agent, sent with `session/new` and `session/load`;
-   * none by default.
+   * MCP servers for the agent, sent with `session/new`, `session/load` and
+   * `session/resume`, those whose transport it does not advertise held back
+   * (`serversFor`); none by default.
    */
   mcpServers?: readonly McpServer[];
   /**
-   * chord's own MCP server, sent after `mcpServers` only to an agent whose
-   * `mcpCapabilities` take HTTP; an agent that would refuse it never sees it.
+   * The agent takes no MCP servers at all, as its `agents.<name>.mcpServers`
+   * setting or chord's own table says: every one is held back, chord's own
+   * too, and the session says so (CHD-441).
+   */
+  noMcpServers?: boolean;
+  /**
+   * chord's own MCP server, sent after `mcpServers` under the same rule; an
+   * agent that would refuse it never sees it.
    */
   chordServer?: McpServer;
   /**
@@ -98,26 +106,6 @@ export function agentEnv(
   return 'CLAUDE_CODE_ENABLE_TODO_TOOLS' in parent
     ? {}
     : { CLAUDE_CODE_ENABLE_TODO_TOOLS: '1' };
-}
-
-/**
- * The user's servers, then chord's. Two servers of one name leave the agent
- * to pick one, and either pick loses a server, so where the user's own takes
- * chord's name, chord's goes as the first free `chord-2`, `chord-3`, … and
- * both stay reachable.
- */
-export function besideUsers(
-  userServers: readonly McpServer[],
-  chord: McpServer,
-): McpServer[] {
-  const taken = new Set(userServers.map((server) => server.name));
-  let name = chord.name;
-
-  for (let n = 2; taken.has(name); n++) {
-    name = `${chord.name}-${n}`;
-  }
-
-  return [...userServers, { ...chord, name }];
 }
 
 /** An image a prompt sends after its text, base64. */
@@ -258,6 +246,11 @@ export interface Session {
    * by; none when it was not passed, as to an agent that does not take HTTP.
    */
   readonly chordServer?: McpServer;
+  /**
+   * The MCP servers the agent was not given, chord's own among them, as its
+   * `initialize` does not advertise their transport; none when all went.
+   */
+  readonly heldBack: readonly HeldBack[];
   /** Cancels the turn that is running, if any, and its subagents' work. */
   cancel(): Promise<void>;
   /**
@@ -412,11 +405,17 @@ export async function openSession(
   live.add(connection.pid);
   void connection.exited.then(() => live.delete(connection.pid));
 
-  const mcpServers =
-    options.chordServer !== undefined &&
-    connection.init.agentCapabilities?.mcpCapabilities?.http === true
-      ? besideUsers(userServers, options.chordServer)
-      : [...userServers];
+  const {
+    servers: mcpServers,
+    heldBack,
+    chord: chordPassed,
+  } = serversFor(
+    agent,
+    connection.init.agentCapabilities?.mcpCapabilities,
+    userServers,
+    options.chordServer,
+    options.noMcpServers === true,
+  );
 
   const shutdown = async () => {
     permissions.close();
@@ -519,16 +518,12 @@ export async function openSession(
 
   let closing: Promise<void> | undefined;
 
-  const passed =
-    options.chordServer === undefined ? undefined : mcpServers.at(-1);
-
   return {
     agent,
     cwd,
     id,
-    ...(passed === undefined || mcpServers.length === userServers.length
-      ? {}
-      : { chordServer: passed }),
+    ...(chordPassed === undefined ? {} : { chordServer: chordPassed }),
+    heldBack,
     ...(resume?.record === undefined ? {} : { record: resume.record }),
     ...(resume === undefined
       ? {}

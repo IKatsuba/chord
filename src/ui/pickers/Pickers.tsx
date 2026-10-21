@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
 import type { AgentOption } from '../../session/config.ts';
 import type { AgentModels } from '../../session/models.ts';
+import type { HeldBack } from '../../session/servers.ts';
 import type { ResumeEntry } from '../../session/windows.ts';
 import { capital } from '../shortcuts/state.ts';
 import {
@@ -51,10 +52,12 @@ import {
 import {
   chordLine,
   type ChordRow,
+  heldNote,
   ignoredNote,
   mcpFit,
   mcpRowLimit,
   mcpRows,
+  withHeldBack,
 } from './mcp.ts';
 import {
   choiceKey,
@@ -545,13 +548,16 @@ export function ThemePicker({
  * say, so the panel says that rather than show a state it cannot know.
  */
 export function McpPanel({
-  servers: users,
+  servers: defined,
   ignored = [],
+  heldBack = [],
   agent,
   windowRows,
   chord,
 }: {
   servers: readonly DefinedServer[];
+  /** The servers its agent was not given, each listed `not passed` (CHD-441). */
+  heldBack?: readonly HeldBack[];
   /** chord's own server, listed first; none where the window has none. */
   chord?: ChordRow;
   /** What the files lost, said under the list so a missing server is found. */
@@ -562,7 +568,9 @@ export function McpPanel({
 }) {
   const { permission } = useColours();
   const { width: columns } = useTerminalDimensions();
+  const users = withHeldBack(defined, heldBack);
   const servers = chord === undefined ? users : [chord.server, ...users];
+  const held = heldNote(heldBack);
   // The frame's border and padding take two columns each side.
   const { headings, rows } = mcpRows(servers, columns - 4);
   const { shown, more } = mcpFit(rows, mcpRowLimit(windowRows));
@@ -583,7 +591,7 @@ export function McpPanel({
       ) : (
         <>
           <text {...TEXT} attributes={DIM}>
-            {`chord passed these to ${agent} when the session started. ACP does not say whether ${agent} connected to them.`}
+            {`chord's MCP servers for ${agent}. ACP does not say whether ${agent} connected to the ones it was passed.`}
           </text>
           <box marginTop={1} flexDirection='column'>
             <text {...CUT} attributes={DIM}>
@@ -604,6 +612,13 @@ export function McpPanel({
         <box marginTop={1}>
           <text {...TEXT} attributes={DIM}>
             {chordLine(chord, agent)}
+          </text>
+        </box>
+      )}
+      {held !== undefined && (
+        <box marginTop={1}>
+          <text {...TEXT} attributes={DIM}>
+            {held}
           </text>
         </box>
       )}

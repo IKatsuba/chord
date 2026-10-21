@@ -26,6 +26,8 @@ export interface OneshotOptions {
   agentCommand?: string | string[];
   /** MCP servers for the agent, as the window's sessions get them. */
   mcpServers?: readonly McpServer[];
+  /** The agent takes no MCP servers at all, as in the window (CHD-441). */
+  noMcpServers?: boolean;
   /** Each of the agent's updates as it arrives, until the turn is answered. */
   onUpdate(update: SessionUpdate): void | Promise<void>;
   /**
@@ -88,6 +90,7 @@ export async function runOneshot(
     ...(options.mcpServers === undefined
       ? {}
       : { mcpServers: options.mcpServers }),
+    ...(options.noMcpServers === true ? { noMcpServers: true } : {}),
   });
 
   let cost: Cost | undefined;

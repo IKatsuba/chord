@@ -33,6 +33,8 @@ export interface KnownAgent {
   readonly runner: 'npx' | 'uvx' | 'cli';
   /** Where the agent says to install it, when it says. */
   readonly install: string | undefined;
+  /** `false` where chord's own table gives the agent no MCP servers. */
+  readonly mcpServers?: false;
 }
 
 /** How an agent's process is started. */
@@ -75,6 +77,7 @@ function fromCli(agent: CliAgent): KnownAgent {
     start: { command: agent.argv, env: {} },
     runner: 'cli',
     install: agent.install,
+    ...(agent.mcpServers === undefined ? {} : { mcpServers: agent.mcpServers }),
   };
 }
 
@@ -91,6 +94,15 @@ const AGENTS: readonly KnownAgent[] = [
     ({ name }) => !REGISTERED.some((agent) => agent.name === name),
   ).map(fromCli),
 ];
+
+/**
+ * Whether a session of `agent` is given MCP servers: as its
+ * `agents.<name>.mcpServers` setting says, `set`, else as chord's own table
+ * says, else yes (CHD-441).
+ */
+export function takesMcpServers(agent: string, set?: boolean): boolean {
+  return set ?? findAgent(agent)?.mcpServers ?? true;
+}
 
 /** Every agent chord can start by name: the registry's, then the table's. */
 export function listAgents(): readonly KnownAgent[] {

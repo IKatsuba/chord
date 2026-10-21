@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
@@ -6,9 +7,11 @@ import { ConfigPicker } from '../../../src/ui/pickers/Pickers.tsx';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseServers } from '../../../src/mcp.ts';
+import { serveChord } from '../../../src/server/server.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { recordSession } from '../../fixtures/records.ts';
+import { readPast } from '../../../src/session/record.ts';
 import { writeWindow } from '../../../src/session/windows.ts';
 import {
   readRecords,
@@ -645,6 +648,108 @@ test('/mcp says what the files defined that chord did not pass', () =>
     },
   ));
 
+test('an agent set to take no MCP servers is given none, says so at its start, and /mcp names the setting (CHD-441)', async () => {
+  const server = serveChord();
+  const command = fakeAgentCommand();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await window.shows('which takes none: chord');
+
+        expect(window.frame()).toContain(
+          "3 MCP servers were not passed to fake, which takes none: chord (chord's own), filesystem, docs.",
+        );
+        await ready(window);
+        // What the agent holds: no server at all.
+        await send(window, 'mcp');
+        await window.shows('│ []');
+        await window.type('/mcp');
+        await window.press('\r');
+        await window.shows("chord's MCP servers for fake.");
+        expect(window.frame()).toContain(
+          "chord's server was not passed: fake takes no MCP servers, so it cannot start other agents.",
+        );
+        // The paragraph wraps in the panel; its words, in order.
+        expect(window.frame().replace(/\s*│\s*\n│\s*/g, ' ')).toContain(
+          'filesystem and docs were not passed: fake takes no MCP servers. agents.fake.mcpServers in your settings changes that.',
+        );
+      },
+      {
+        server,
+        mcpServers: SERVERS,
+        rows: 60,
+        agentCommand: command,
+        startupOf: () => ({ agentCommand: command, mcpServers: false }),
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
+test("/mcp on a picked child on another runtime names that child's agent and what it held back (CHD-441)", async () => {
+  const server = serveChord();
+  const admit = server.admit.bind(server);
+  let main: Parameters<typeof admit>[0] | undefined;
+  const command = fakeAgentCommand();
+
+  server.admit = (caller) => {
+    if (caller.role === 'person') {
+      main = caller;
+    }
+
+    return admit(caller);
+  };
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        assert(main);
+        await main.window.open(main.key, {
+          agent: 'codex',
+          name: 'foreign',
+          prompt: 'text',
+        });
+        await window.shows('foreign');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('╭─ foreign ─');
+        await window.type('/mcp');
+        await window.press('\r');
+        await window.shows("chord's MCP servers for codex.");
+
+        const frame = window.frame();
+
+        expect(frame).toContain(
+          "chord's server was not passed: codex does not take MCP servers over HTTP",
+        );
+        expect(frame).toContain(
+          'docs was not passed: codex takes MCP servers over stdio only.',
+        );
+        expect(frame).not.toContain('for fake');
+      },
+      {
+        server,
+        mcpServers: SERVERS,
+        rows: 60,
+        runtimes: ['fake', 'codex'],
+        agentCommand: command,
+        startupOf: (agent) => ({
+          agentCommand:
+            agent === 'codex'
+              ? fakeAgentCommand(undefined, '--mcp-transports', 'none')
+              : command,
+        }),
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
 test('/mcp with every server ignored says so, not that none are defined', () =>
   withWindow(
     async (window) => {
@@ -879,5 +984,224 @@ test("a setting's name keeps the agent's colours in its heading and explanation"
     expect(stripAnsi(shown)).not.toMatch(/\[\d*m/);
   } finally {
     chalk.level = level;
+  }
+});
+
+describe('CHD-441 tester: a mixed-runtime MCP panel keeps its identity and keys', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`an ACP-capable child is named correctly and Esc restores its prompt at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      const command = fakeAgentCommand();
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+            await main.window.open(main.key, {
+              agent: 'codex',
+              name: 'foreign-acp',
+              prompt: 'text',
+            });
+            await window.shows('foreign-acp');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('╭─ foreign-acp ─');
+            await window.shows('Hello, world. This reply came in chunks.');
+            await send(window, '/mcp');
+            await window.shows("chord's MCP servers for codex.");
+
+            const frame = window.frame();
+
+            expect(frame).toContain('stdio and ACP only.');
+            expect(frame).not.toContain('stdio only.');
+            expect(frame).not.toContain('for fake.');
+            expect(frame).not.toContain('Bearer secret');
+            await window.press(ESC);
+            await until(
+              'Esc closes the child’s MCP panel',
+              () => !window.frame().includes("chord's MCP servers for codex."),
+            );
+            expect(window.frame()).toContain('╭─ foreign-acp ─');
+            await send(window, '/echo mcp-panel-returned');
+            await window.shows('mcp-panel-returned');
+            await until('the next command belongs to the child', async () => {
+              const records = await readRecords(join(window.dir, 'state'));
+              const child = records.find(
+                (record) => record.name === 'foreign-acp',
+              );
+
+              return (
+                child !== undefined &&
+                (await readPast(child.path)).some(
+                  (entry) =>
+                    entry.type === 'prompt' &&
+                    entry.prompt === '/echo mcp-panel-returned',
+                )
+              );
+            });
+          },
+          {
+            server,
+            mcpServers: SERVERS,
+            columns,
+            rows,
+            runtimes: ['fake', 'codex'],
+            agentCommand: command,
+            startupOf: (agent) => ({
+              agentCommand:
+                agent === 'codex'
+                  ? fakeAgentCommand(undefined, '--mcp-transports', 'acp')
+                  : command,
+            }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});
+
+describe('CHD-441 tester: takes-none reaches child and task sessions', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a mixed-runtime child and task receive no MCP servers at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      const command = fakeAgentCommand();
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+
+            const recordedServers = async (name: string) => {
+              const records = await readRecords(join(window.dir, 'state'));
+              const record = records.find((entry) => entry.name === name);
+
+              if (!record) {
+                return undefined;
+              }
+
+              const past = await readPast(record.path);
+
+              if (!past.some((entry) => entry.type === 'result')) {
+                return undefined;
+              }
+
+              const text = past
+                .flatMap((entry) =>
+                  entry.type === 'update' &&
+                  entry.update.sessionUpdate === 'agent_message_chunk' &&
+                  entry.update.content.type === 'text'
+                    ? [entry.update.content.text]
+                    : [],
+                )
+                .join('');
+
+              return JSON.parse(
+                text.replace(/^```json\n|\n```$/g, ''),
+              ) as unknown;
+            };
+
+            const opened = await main.window.open(main.key, {
+              agent: 'openclaw',
+              name: 'none-child',
+              prompt: 'mcp',
+            });
+
+            expect(opened).not.toHaveProperty('error');
+            await until(
+              'child records the servers actually received',
+              async () =>
+                Bun.deepEquals(await recordedServers('none-child'), []),
+            );
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('╭─ none-child ─');
+            await send(window, '/mcp');
+            await window.shows("chord's MCP servers for openclaw.");
+            await window.shows('takes no MCP servers');
+            expect(window.frame().replaceAll('│', '')).toMatch(
+              /agents\.\s*openclaw\.mcpServers/,
+            );
+            expect(window.frame()).not.toContain('Bearer secret');
+            await window.press(ESC);
+            await until(
+              'Esc closes the MCP panel',
+              () =>
+                !window.frame().includes("chord's MCP servers for openclaw."),
+            );
+            main.window.close(main, 'none-child');
+            await until(
+              'parent has the prompt again',
+              () => !window.frame().includes('╭─ none-child ─'),
+            );
+
+            const spawned = await main.window.spawn(main, {
+              agent: 'openclaw',
+              name: 'none-task',
+              prompt: 'mcp',
+            });
+
+            expect(spawned).not.toHaveProperty('error');
+            await until(
+              'task records the servers actually received',
+              async () =>
+                Bun.deepEquals(await recordedServers('none-task'), []),
+            );
+            await until('task relays its own warning to the parent', () =>
+              window
+                .frame()
+                .replace(/\s+/g, ' ')
+                .includes(
+                  'none-task: 3 MCP servers were not passed to openclaw, which takes none',
+                ),
+            );
+          },
+          {
+            server,
+            mcpServers: SERVERS,
+            columns,
+            rows,
+            runtimes: ['fake', 'openclaw'],
+            agentCommand: command,
+            startupOf: (agent) => ({
+              agentCommand: command,
+              ...(agent === 'openclaw' ? { mcpServers: false as const } : {}),
+            }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
   }
 });

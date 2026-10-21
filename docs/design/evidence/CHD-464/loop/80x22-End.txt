@@ -1,0 +1,22 @@
+
+ ››› Waiting for permission… (21s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ mcp__files__write_file                                                       │
+│ ── ↑ 41 lines above · pageup to scroll ───────────────────────────────────── │
+│   mode: overwrite                                                            │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Yes                                                                     │
+│   2. Yes, and don't ask again for files - write_file commands                │
+│   3. No, and tell Claude what to do differently                              │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main       fake                    ● permission 20s
+    bugfix     team · fake · 3 agents  ● tester: permission 42s  ✓ new reply

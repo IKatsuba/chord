@@ -79,6 +79,7 @@ function AgentPermission({
   onChoose,
   scroller,
   onOverflow,
+  givesWay = true,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -86,6 +87,12 @@ function AgentPermission({
    */
   hidden?: boolean;
   wait: PermissionWait;
+  /**
+   * Whether its request may give rows to a short window yet: not while the
+   * agents list under the prompt has rows of its own left to fold, which go
+   * first (CHD-464).
+   */
+  givesWay?: boolean;
   /** The way down to the subagent that asks; empty when the agent does. */
   asker?: readonly Subagent[];
   /**
@@ -120,6 +127,20 @@ function AgentPermission({
     between,
     picked: child,
   });
+  const top = useRef<BoxRenderable | null>(null);
+  const bottom = useRef<BoxRenderable | null>(null);
+  const [pinned, setPinned] = useState(0);
+  // The rows that never give way, as they are laid out, the asker's and the
+  // answers' wrapped as they are: without them as its floor, a window short
+  // of rows shrank the box past them when its request had none left to give,
+  // and the hint was drawn over the bottom border (CHD-464).
+  const measure = () =>
+    setPinned(
+      BORDER_ROWS +
+        TITLE_ROWS +
+        (top.current?.getLayout().height ?? 0) +
+        (bottom.current?.getLayout().height ?? 0),
+    );
 
   return (
     // It gives way only in its request's rows, every other row pinned.
@@ -128,9 +149,12 @@ function AgentPermission({
       visible={!hidden}
       paddingX={1}
       marginTop={1}
-      flexShrink={1}
+      flexShrink={givesWay ? 1 : 0}
+      minHeight={pinned}
     >
-      <AskerRow asker={parts} between={between} />
+      <box ref={top} flexShrink={0} onSizeChange={measure}>
+        <AskerRow asker={parts} between={between} />
+      </box>
       <Request
         wait={wait}
         width={Math.max(width, 1)}
@@ -138,21 +162,29 @@ function AgentPermission({
         {...(scroller === undefined ? {} : { scroller })}
         {...(onOverflow === undefined ? {} : { onOverflow })}
       />
-      <box marginTop={1} flexShrink={0}>
-        <text {...TEXT}>Do you want to proceed?</text>
+      <box ref={bottom} flexShrink={0} onSizeChange={measure}>
+        <box marginTop={1} flexShrink={0}>
+          <text {...TEXT}>Do you want to proceed?</text>
+        </box>
+        <box flexShrink={0}>
+          <ChoiceList
+            choices={choicesFor(wait)}
+            active={active && !held}
+            marked={!held}
+            onSelect={onChoose}
+          />
+        </box>
+        {held ? <AttendHint /> : <PermissionHint />}
       </box>
-      <box flexShrink={0}>
-        <ChoiceList
-          choices={choicesFor(wait)}
-          active={active && !held}
-          marked={!held}
-          onSelect={onChoose}
-        />
-      </box>
-      {held ? <AttendHint /> : <PermissionHint />}
     </box>
   );
 }
+
+/** The box's top and bottom border. */
+const BORDER_ROWS = 2;
+
+/** The request's pinned first row, which never scrolls away. */
+const TITLE_ROWS = 1;
 
 /**
  * The title's first row, pinned, and the request under it, in at most half
@@ -161,7 +193,7 @@ function AgentPermission({
  * way first. Taller than that, it scrolls in OpenTUI's scrollbox, by the
  * wheel over it and by the scroll keys the window hands it, a dim rule
  * saying how much is out of view above and below, in rows the request has;
- * a room of one row says it at the pinned row's end instead.
+ * a room of one row, or of none, says it at the pinned row's end instead.
  */
 function Request({
   wait,
@@ -187,19 +219,19 @@ function Request({
   const [room, setRoom] = useState(Number.POSITIVE_INFINITY);
   const [top, setTop] = useState(0);
   const whole = requestRows(wait, width);
-  // A room of one row says what is hidden beside the pinned row, whose
-  // title then wraps to the cells the count leaves: as many as its widest
-  // count leaves, so the rows stay put while the count changes as it
-  // scrolls.
+  // A room of one row, or of none where a short window has taken them all,
+  // says what is hidden beside the pinned row (CHD-464), whose title then
+  // wraps to the cells the count leaves: as many as its widest count
+  // leaves, so the rows stay put while the count changes as it scrolls.
   const { pinned, rows } =
-    room === 1 && whole.rows.length > 1
+    room <= 1 && whole.rows.length > room
       ? requestRows(wait, width, width - countRoom(whole.rows.length) - 1)
       : whole;
   const total = rows.length;
   const overflows = total > room;
   const shown = requestView(total, room, top);
   const hidden = hiddenRows(total, shown.top, shown.shown);
-  const count = room === 1 && overflows ? requestCount(hidden) : undefined;
+  const count = room <= 1 && overflows ? requestCount(hidden) : undefined;
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
   const upKey = held ? undefined : pageUp;

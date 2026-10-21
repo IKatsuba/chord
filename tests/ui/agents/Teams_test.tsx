@@ -18,6 +18,7 @@ import {
 } from '../../fixtures/fake_agent/scenarios/teams.ts';
 import {
   DOWN,
+  END,
   ESC,
   UP,
   leader,
@@ -345,6 +346,147 @@ describe('a task of main asking beside a member (CHD-431)', () => {
       await window.shows(task);
       expect(shown()).toStrictEqual('main');
     }));
+
+  test("at 80x24 tester's box keeps its hint inside its border, the agents list folding to fit and the summary line whole (CHD-464)", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await bothAsk(window);
+          await toTester(window);
+
+          const lines = window.frame().split('\n');
+          const hint = lines.findIndex((line) =>
+            /^│ Esc to reject +│$/.test(line.trimEnd()),
+          );
+
+          expect(hint, window.frame()).toBeGreaterThan(0);
+          expect(lines[hint + 1]?.trimEnd()).toMatch(/^╰─+╯$/);
+          expect(window.frame()).toMatch(/… \+\d+ more/);
+          expect(window.frame()).toContain('background  ● 1 task asking');
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 24,
+          columns: 80,
+          teams: { bugfix: BUGFIX },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("at 80x24 a tall request's ↓ rule sits under its last shown row, the hint inside the border (CHD-464)", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await bothAsk(window);
+          await leader(window, 'a');
+          await window.shows('Esc to reject');
+          await window.press('1');
+          await send(window, 'bigask');
+          await window.shows('mcp__files__write_file');
+          await window.shows('lines below · pagedown to scroll');
+
+          const lines = window.frame().split('\n');
+          const rule = lines.findIndex((line) =>
+            /^│ ── ↓ \d+ lines below · pagedown to scroll ─+ │$/.test(
+              line.trimEnd(),
+            ),
+          );
+          const hint = lines.findIndex((line) =>
+            /^│ Esc to reject +│$/.test(line.trimEnd()),
+          );
+
+          // Drawn over the request's last row, the rule left its own row
+          // blank: two blank rows before the question instead of one.
+          expect(rule, window.frame()).toBeGreaterThan(0);
+          expect(lines[rule - 1]?.trimEnd(), window.frame()).toMatch(
+            /^│ (mcp__files__write_file| {2}.*) +│$/,
+          );
+          expect(lines[rule + 1]?.trimEnd(), window.frame()).toMatch(/^│ +│$/);
+          expect(lines[rule + 2]?.trimEnd(), window.frame()).toMatch(
+            /^│ Do you want to proceed\? +│$/,
+          );
+          expect(hint, window.frame()).toBeGreaterThan(rule);
+          expect(lines[hint + 1]?.trimEnd()).toMatch(/^╰─+╯$/);
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 24,
+          columns: 80,
+          teams: { bugfix: BUGFIX },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("at 120x40 under the folded list, a tall request's room holds still and its end view shows its last row (CHD-464)", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await bothAsk(window);
+          await leader(window, 'a');
+          await window.shows('Esc to reject');
+          await window.press('1');
+          await send(window, 'bigask');
+          await window.shows('lines below · pagedown to scroll');
+          await window.press(END);
+          await window.shows('lines above · pageup to scroll');
+
+          // The request, from its title to the question under it.
+          const request = () => {
+            const lines = window.frame().split('\n');
+            const from = lines.findIndex((line) =>
+              line.includes('mcp__files__write_file'),
+            );
+            const to = lines.findIndex((line) =>
+              line.includes('Do you want to proceed?'),
+            );
+
+            return lines.slice(from, to + 1).map((line) => line.trimEnd());
+          };
+
+          // The list folding and the box giving way traded rows on every
+          // frame, so the room, and with it the view, never held.
+          const seen = new Set<string>();
+
+          for (let frame = 0; frame < 10; frame++) {
+            seen.add(request().join('\n'));
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+
+          const shown = request();
+
+          expect(seen.size, [...seen].join('\n\n')).toStrictEqual(1);
+          expect(shown.join('\n')).not.toContain('lines below');
+          expect(shown.at(-3), shown.join('\n')).toMatch(
+            /^│ {3}mode: overwrite +│$/,
+          );
+          expect(shown.at(-2)).toMatch(/^│ +│$/);
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 40,
+          columns: 120,
+          teams: { bugfix: BUGFIX },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });
 
 describe('a task of main asking beside a member, at 80 columns (CHD-431)', () => {
@@ -728,4 +870,190 @@ describe('CHD-373 S4: a team member that starts a task agent', () => {
       await server.close();
     }
   });
+});
+
+describe('CHD-464 tester: folded list recovery and permission keys', () => {
+  test('resizing keeps the hint and summary, and rejecting restores all team rows', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'teamtask');
+          await window.shows('The team and the task are both at work.');
+          await until('tester asks', () =>
+            /├─ tester .*● permission/.test(window.frame()),
+          );
+
+          for (let presses = 0; presses < 8; presses++) {
+            if (/❯ ├─ tester/.test(window.frame())) {
+              break;
+            }
+
+            await window.press(DOWN);
+          }
+
+          await window.press('\r');
+          await window.shows('╭─ tester · bugfix ─');
+
+          for (const size of [
+            { columns: 80, rows: 24 },
+            { columns: 120, rows: 40 },
+            { columns: 80, rows: 24 },
+          ]) {
+            await window.resize(size);
+            await until('hint and border on separate rows', () =>
+              /│ Esc to reject +│ *\n╰─+╯/.test(window.frame()),
+            );
+            await window.shows('background  ● 1 task asking');
+
+            if (size.rows === 24) {
+              await until('the list folds', () =>
+                /… \+\d+ more/.test(window.frame()),
+              );
+            } else {
+              await window.shows('└─ coder');
+              expect(window.frame()).not.toMatch(/… \+\d+ more/);
+            }
+          }
+
+          await window.press(ESC);
+          await window.shows('Not run; I will ask bugfix how to go on.');
+          await window.shows('└─ coder');
+          expect(window.frame()).not.toContain('Esc to reject');
+          expect(window.frame()).not.toMatch(/… \+\d+ more/);
+          expect(window.frame()).toContain('background  ● 1 task asking');
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          teams: { bugfix: BUGFIX },
+          columns: 120,
+          rows: 40,
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe('CHD-464 tester: request scrolling and list recovery', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`paging loses no content and shrinking keeps the answers at ${columns}×${rows}`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'teamtask');
+            await window.shows('The team and the task are both at work.');
+            await until('the team member asks', () =>
+              /├─ tester .*● permission/.test(window.frame()),
+            );
+            await leader(window, 'a');
+            await window.shows('Esc to reject');
+            await window.press('1');
+            // The task's report adds fixed rows; wait for it before paging.
+            await window.shows('background  ✓ 1 task done');
+            await send(window, 'bigask');
+            await window.shows('lines below · pagedown to scroll');
+
+            const seen = new Set<number>();
+
+            for (let page = 0; page < 60; page++) {
+              const frame = window.frame();
+
+              for (const match of frame.matchAll(/Change (\d+):/g)) {
+                seen.add(Number(match[1]));
+              }
+
+              expect(frame).toContain('3. No, and tell Claude');
+              expect(frame).toMatch(/│ Esc to reject +│ *\n╰─+╯/);
+
+              if (frame.includes('mode: overwrite')) {
+                break;
+              }
+
+              await window.press('\x1b[6~');
+              await until(
+                'the request page changes',
+                () => window.frame() !== frame,
+              );
+            }
+
+            for (let change = 1; change <= 30; change++) {
+              expect(seen.has(change), `Change ${change} was skipped`).toBe(
+                true,
+              );
+            }
+
+            await window.press('\x1b[F');
+            await until(
+              'the request reaches its last row',
+              () =>
+                window.frame().includes('mode: overwrite') &&
+                !window.frame().includes('lines below'),
+            ).catch((error: Error) => {
+              throw new Error(
+                `${error.message}; the screen:\n${window.frame()}`,
+              );
+            });
+
+            for (const height of [22, 20, rows]) {
+              await window.resize({
+                columns: height === rows ? columns : 80,
+                rows: height,
+              });
+              await window.press('\x1b[H');
+              await window.shows('lines below');
+              expect(window.frame()).toContain('3. No, and tell Claude');
+              expect(window.frame()).toMatch(/│ Esc to reject +│ *\n╰─+╯/);
+
+              if (height === rows) {
+                await window.shows('path: docs/release.md');
+                await window.press('\x1b[F');
+                await until(
+                  'the recovered request reaches its end',
+                  () =>
+                    window.frame().includes('mode: overwrite') &&
+                    !window.frame().includes('lines below'),
+                );
+              }
+            }
+
+            await window.press(ESC);
+            await until(
+              'the tall request closes',
+              () => !window.frame().includes('Esc to reject'),
+            );
+            await window.shows('└─ coder');
+            expect(window.frame()).not.toMatch(/… \+\d+ more/);
+            await send(window, 'permission');
+            await window.shows('Write notes.txt');
+            expect(window.frame()).not.toContain('lines below');
+            expect(window.frame()).not.toContain('lines above');
+            expect(window.frame()).toMatch(/│ Esc to reject +│ *\n╰─+╯/);
+            await window.press(ESC);
+            await window.shows('└─ coder');
+            expect(window.frame()).not.toMatch(/… \+\d+ more/);
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            teams: { bugfix: BUGFIX },
+            columns,
+            rows,
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
 });

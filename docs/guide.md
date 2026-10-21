@@ -282,10 +282,12 @@ or panel still closes on the first Esc.
 
 Permission requests appear over the prompt box: 1–9 picks an answer,
 ↑/↓ moves the highlight, Enter picks it, and Esc rejects. A long request
-scrolls under its pinned title; long lines wrap, and the answers stay on
-screen. The request takes the room left, at most half the window's rows;
-the transcript gives way first. With three answers and no asker row, it
-gets 6 rows at 80×24 and 20 at 120×40.
+scrolls under its pinned title; long lines wrap, and the choices and key
+hint stay whole inside the box. The request takes the room left, at most
+half the window's rows. The transcript gives way first, then the agents
+list folds into `… +N more`, and only then does the request body shrink.
+With three answers and no asker row, it gets 6 rows at 80×24 and 20 at
+120×40.
 A member's asker row reads `tester · bugfix asks`, the name bold in its
 colour and the team dim; between turns, `tester · bugfix asks · between
 turns`. A child's stays `docs asks`.
@@ -324,7 +326,7 @@ a page, shift+↑/↓ by a row, home/end to either end. The wheel over the box
 scrolls it too.
 Dim rules count wrapped lines out of view: `↑ N lines above` and
 `↓ N lines below · pgdn to scroll`, with your bound key in the hint.
-When only one request row fits, the count sits beside the title. You can
+When one request row or none fits, the count sits beside the title. You can
 allow at any time, without scrolling to the end. Resizing may move the
 view; the counts still say what is hidden, and every row remains reachable.
 
@@ -612,8 +614,10 @@ you open the agent. A failed turn leaves the agent open and idle;
 is gone. Folded teams and ctrl+x w use the same words and clocks.
 As room narrows, effort, model and the mark's words give way in that order;
 its glyph stays. Names and state words wrap without cutting, their lines
-counted toward the list's limit. ↑ ↓ scroll a row taller than the list by
-line before moving on. ↓ on an empty prompt that is not walking
+counted toward the list's limit. In a short window, the list folds down to
+one agent row and `… +N more`, staying there until the transcript has rows
+again. The background summary stays whole. ↑ ↓ scroll a row taller than
+the list by line before moving on. ↓ on an empty prompt that is not walking
 history moves into the list, where ↑ ↓ or j k pick; Enter or Esc goes back
 to the box with the pick kept. The picked agent's chat fills the window,
 the box takes its colour and its name on the top border, and the status line

@@ -397,6 +397,7 @@ const SCENARIOS = [
   'codexchordcalls',
   'codexmodels',
   'leftform',
+  'leftformgated',
   'bigaskleft',
   'claudecycle',
   'claudecyclebare',

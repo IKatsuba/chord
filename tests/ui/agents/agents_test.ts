@@ -6,6 +6,7 @@ import {
   type AgentRow,
   agentsHeight,
   agentsHint,
+  agentsLines,
   agentsLayout,
   agentsRowLimit,
   type AgentsView,
@@ -1153,4 +1154,23 @@ describe('CHD-471 L1b tester: every wrapped line remains reachable', () => {
       });
     }
   }
+});
+
+describe('CHD-464 tester: list space at its floor', () => {
+  test('an absent or single agent needs no folded row, while several keep one agent and more', () => {
+    const options = { limit: 1, width: 76, focused: false, now: NOW };
+    const rows = ['main', 'tester', 'coder'].map((name, key) =>
+      row(name, { key, model: undefined }),
+    );
+
+    expect(agentsLines([], options)).toBe(0);
+    expect(agentsLines(rows.slice(0, 1), options)).toBe(1);
+    expect(agentsLines(rows, options)).toBe(2);
+    expect(drawn(rows, { limit: 1, width: 76 })).toStrictEqual([
+      '  main    codex  ◦ idle 0s',
+      '  … +2 more',
+    ]);
+    expect(agentsLines(rows, { ...options, limit: 4 })).toBe(3);
+    expect(agentsLines(rows, options)).toBe(2);
+  });
 });

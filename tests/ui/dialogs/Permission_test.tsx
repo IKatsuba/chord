@@ -1672,3 +1672,98 @@ describe('CHD-462 B1 tester: hidden permission scroll state', () => {
     });
   }
 });
+
+describe('CHD-464 tester: a zero-row body recovers its space', () => {
+  for (const columns of [80, 120]) {
+    test(`the count clears after growing and comes back after shrinking at ${columns} columns`, async () => {
+      const drawn = await draw(
+        <box flexDirection='column' flexGrow={1}>
+          <box flexGrow={1} flexBasis={0} />
+          <PermissionPrompt
+            wait={{
+              id: 'p',
+              title: [
+                'write',
+                ...Array.from({ length: 6 }, (_, n) => `row ${n}`),
+              ].join('\n'),
+              options: [
+                { optionId: 'a', name: 'Allow', kind: 'allow_once' },
+                { optionId: 'r', name: 'Deny', kind: 'reject_once' },
+              ],
+            }}
+            width={columns - 4}
+            active
+            onChoose={() => {}}
+          />
+        </box>,
+        { columns, rows: 10 },
+      );
+
+      try {
+        const frame = () => stripAnsi(drawn.frame());
+
+        await until('all six body rows counted', () =>
+          frame().includes('↓ 6 lines below'),
+        );
+        await drawn.resize({ rows: 40 });
+        await until(
+          'body has its rows back',
+          () => frame().includes('row 5') && !frame().includes('lines below'),
+        );
+        expect(frame()).toMatch(/│ Esc to reject +│ *\n╰─+╯/);
+        await drawn.resize({ rows: 10 });
+        await until('count returns at zero rows', () =>
+          frame().includes('↓ 6 lines below'),
+        );
+        expect(frame()).not.toContain('row 0');
+        expect(frame()).toMatch(/│ Esc to reject +│ *\n╰─+╯/);
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});
+
+describe('CHD-464 tester: request body waits for permission to give way', () => {
+  test('only an enabled givesWay lets the body lose its rows', async () => {
+    for (const givesWay of [false, true]) {
+      const drawn = await draw(
+        <box height={10} flexDirection='column'>
+          <PermissionPrompt
+            wait={{
+              id: 'p',
+              title: 'write\nfirst body row\nlast body row',
+              options: [
+                { optionId: 'a', name: 'Allow', kind: 'allow_once' },
+                { optionId: 'r', name: 'Deny', kind: 'reject_once' },
+              ],
+            }}
+            width={76}
+            active
+            givesWay={givesWay}
+            onChoose={() => {}}
+          />
+        </box>,
+        { columns: 80, rows: 24 },
+      );
+
+      try {
+        const frame = () => stripAnsi(drawn.frame());
+
+        if (givesWay) {
+          await until('both body rows are counted out of view', () =>
+            frame().includes('↓ 2 lines below'),
+          );
+          expect(frame()).not.toContain('last body row');
+        } else {
+          await until('body retains its rows', () =>
+            frame().includes('last body row'),
+          );
+          expect(frame()).not.toContain('lines below');
+        }
+      } finally {
+        await drawn.unmount();
+      }
+    }
+  });
+});

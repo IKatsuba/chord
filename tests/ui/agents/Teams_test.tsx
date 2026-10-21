@@ -761,3 +761,70 @@ describe('CHD-373 S4: a team member that starts a task agent', () => {
     }
   });
 });
+
+describe('CHD-464 tester: folded list recovery and permission keys', () => {
+  test('resizing keeps the hint and summary, and rejecting restores all team rows', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'teamtask');
+          await window.shows('The team and the task are both at work.');
+          await until('tester asks', () =>
+            /├─ tester .*● permission/.test(window.frame()),
+          );
+
+          for (let presses = 0; presses < 8; presses++) {
+            if (/❯ ├─ tester/.test(window.frame())) {
+              break;
+            }
+
+            await window.press(DOWN);
+          }
+
+          await window.press('\r');
+          await window.shows('╭─ tester · bugfix ─');
+
+          for (const size of [
+            { columns: 80, rows: 24 },
+            { columns: 120, rows: 40 },
+            { columns: 80, rows: 24 },
+          ]) {
+            await window.resize(size);
+            await until('hint and border on separate rows', () =>
+              /│ Esc to reject +│ *\n╰─+╯/.test(window.frame()),
+            );
+            await window.shows('background  ● 1 task asking');
+
+            if (size.rows === 24) {
+              await until('the list folds', () =>
+                /… \+\d+ more/.test(window.frame()),
+              );
+            } else {
+              await window.shows('└─ coder');
+              expect(window.frame()).not.toMatch(/… \+\d+ more/);
+            }
+          }
+
+          await window.press(ESC);
+          await window.shows('Not run; I will ask bugfix how to go on.');
+          await window.shows('└─ coder');
+          expect(window.frame()).not.toContain('Esc to reject');
+          expect(window.frame()).not.toMatch(/… \+\d+ more/);
+          expect(window.frame()).toContain('background  ● 1 task asking');
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          teams: { bugfix: BUGFIX },
+          columns: 120,
+          rows: 40,
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});

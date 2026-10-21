@@ -379,7 +379,7 @@ describe('a task of main asking beside a member (CHD-431)', () => {
     }
   });
 
-  test("at 80x24 a tall request's rule keeps a row of its own under the request, the hint inside the border (CHD-464, Q102)", async () => {
+  test("at 80x24 a tall request's ↓ rule sits under its last shown row, the hint inside the border (CHD-464)", async () => {
     const server = serveChord();
 
     try {

@@ -11,6 +11,12 @@ export const ARGS = process.argv.slice(2);
 
 export const RESUME_ONLY = ARGS.includes('--resume-only');
 
+/**
+ * It offers no `session/load`, so chord resumes a session it has no record
+ * of too, and nothing is replayed (CHD-492).
+ */
+export const NO_LOAD = ARGS.includes('--no-load');
+
 export const NO_USAGE =
   ARGS.includes('--no-usage') || process.env.CHORD_FAKE_NO_USAGE === '1';
 

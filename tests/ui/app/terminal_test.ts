@@ -1,12 +1,18 @@
 import { afterEach, describe, expect, jest, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { serveChord } from '../../../src/server/server.ts';
 import { readRecords } from '../../../src/session/sessions.ts';
+import { createElement } from 'react';
+import { draw } from '../harness.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
+  CTRL_D,
+  CTRL_G,
+  DOWN,
   quitAll,
   ready,
   send,
@@ -14,7 +20,7 @@ import {
   type Window,
   withWindow,
 } from './render.tsx';
-import { startMatch } from '../../../src/ui/app/terminal.ts';
+import { startMatch, useSessionVar } from '../../../src/ui/app/terminal.ts';
 import type { WindowedAction } from '../../../src/ui/app/state.ts';
 import { SLOW_MATCH_MS } from '../../../src/ui/prompt/state.ts';
 
@@ -251,6 +257,209 @@ describe("the terminal is told the main session's id to resume (CHD-492)", () =>
     } finally {
       await rm(stateDir, { recursive: true, force: true });
       await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('a quit keeps it while the agent is still closing, and after', () => {
+    const { promise: heldClose, resolve: release } =
+      Promise.withResolvers<void>();
+
+    let id: string | undefined;
+
+    return withWindow(
+      async (window) => {
+        try {
+          await ready(window);
+
+          id = window.session()?.id;
+
+          assert(id !== undefined);
+          await send(window, 'text');
+          await until('the id', () => last(window) === id);
+          await window.press(CTRL_D);
+          await window.shows('Stopping fake…');
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          expect(told(window)).toStrictEqual(['', id]);
+        } finally {
+          release();
+        }
+
+        await until(
+          'the agent to stop',
+          () => window.session()?.agentPids.size === 0,
+        );
+        expect(told(window)).toStrictEqual(['', id]);
+      },
+      { heldClose },
+    );
+  });
+
+  test("a child picked and prompted leaves it the main session's; the editor leaves it too", async () => {
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+
+          const id = window.session()?.id;
+
+          assert(id !== undefined);
+          await send(window, 'text');
+          await until('the id', () => last(window) === id);
+          assert(main !== undefined);
+          await main.window.open(main.key, {
+            agent: 'fake',
+            name: 'helper',
+            prompt: 'text',
+          });
+          await window.shows('helper');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('╭─ helper ─');
+          await window.shows('? for shortcuts');
+          await send(window, 'text');
+          await until(
+            "the child's reply",
+            () => window.frame().split('came in chunks.').length >= 3,
+          );
+          await window.press(CTRL_G);
+          await window.shows('from the editor');
+          expect(told(window)).toStrictEqual(['', id]);
+        },
+        {
+          server,
+          editor: (draft) =>
+            Promise.resolve({ text: `${draft}from the editor` }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a record that cannot be written holds nothing back: the id goes once the write has failed', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-state-'));
+    // A file where the state directory should be: no record can go in it.
+    const stateDir = join(dir, 'state');
+
+    await writeFile(stateDir, '');
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+
+          const id = window.session()?.id;
+
+          await send(window, 'text');
+          await window.shows("Could not keep this session's record");
+          await until('the id', () => last(window) === id);
+        },
+        { stateDir },
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('a session opened again with no record and nothing replayed says its id once it is open', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-cwd-'));
+    const id = crypto.randomUUID();
+    // An agent that resumes, and cannot load, so nothing is replayed.
+    const start = {
+      agentCommand: fakeAgentCommand(undefined, '--resume-only', '--no-load'),
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          await until('the id', () => last(window) === id);
+        },
+        {
+          resumes: [
+            {
+              agent: 'fake',
+              resume: { sessionId: id, cwd },
+              place: {
+                cwd,
+                startupOf: () => start,
+                mcpServers: [],
+                mcpIgnored: [],
+              },
+            },
+          ],
+        },
+      );
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('the hook says an id only once its prompt is recorded, a later value overtaking a write still held, and none again for an equal one', async () => {
+    let tell: ReturnType<typeof useSessionVar> = () => {};
+
+    const Probe = () => {
+      tell = useSessionVar(false);
+
+      return createElement('text', null, 'x');
+    };
+
+    const drawn = await draw(createElement(Probe));
+    const sent = () =>
+      drawn
+        .written()
+        .join('')
+        .split(VAR)
+        .slice(1)
+        .map((value) =>
+          Buffer.from(
+            value.slice(0, value.indexOf('\x07')),
+            'base64',
+          ).toString(),
+        );
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+
+    try {
+      const flushing = Promise.withResolvers<void>();
+
+      tell(undefined, Promise.resolve());
+      await settle();
+      expect(sent()).toStrictEqual(['']);
+
+      // Held: its line is not in the record yet.
+      tell('a', flushing.promise);
+      await settle();
+      expect(sent()).toStrictEqual(['']);
+      flushing.resolve();
+      await settle();
+      expect(sent()).toStrictEqual(['', 'a']);
+
+      tell('a', Promise.resolve());
+      await settle();
+      expect(sent()).toStrictEqual(['', 'a']);
+
+      // A write still held is overtaken by none, and says nothing after.
+      const late = Promise.withResolvers<void>();
+
+      tell('b', late.promise);
+      tell(undefined, Promise.resolve());
+      late.resolve();
+      await settle();
+      expect(sent()).toStrictEqual(['', 'a', '']);
+    } finally {
+      await drawn.unmount();
     }
   });
 });

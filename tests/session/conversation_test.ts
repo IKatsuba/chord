@@ -22,6 +22,7 @@ import type { AgentOption } from '../../src/session/config.ts';
 import {
   Conversation,
   type ConversationEvent,
+  type Recording,
   type Starting,
 } from '../../src/session/conversation.ts';
 import type { PendingElicitation } from '../../src/session/elicitations.ts';
@@ -4904,5 +4905,77 @@ describe('CHD-491 U2 tester: title ownership, reset and recorded state', () => {
         await rm(dir, { recursive: true });
       }
     });
+  }
+});
+
+test("recorded settles only once the first prompt's line is flushed, and at once for a session opened again (CHD-492)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  // A record whose writes hang until the test lets them land.
+  const flushing = Promise.withResolvers<void>();
+  const recording: Recording = {
+    opened: () => {},
+    sent: () => {},
+    heard: () => {},
+    flushed: () => flushing.promise,
+  };
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(
+    () =>
+      openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(),
+      }),
+    (event) => events.push(event),
+    Date.now,
+    {},
+    recording,
+  );
+  let settled = false;
+
+  void conversation.recorded().then(() => {
+    settled = true;
+  });
+
+  try {
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connected'));
+    conversation.send('text');
+    await until(() => events.some((event) => event.type === 'result'));
+    await went();
+    // Sent and answered, but its line not yet kept.
+    expect(settled).toStrictEqual(false);
+    flushing.resolve();
+    await until(() => settled);
+  } finally {
+    await conversation.close();
+  }
+
+  // Opened again with no record and nothing replayed, it is resumable now.
+  const resumed = new Conversation(
+    () =>
+      openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(undefined, '--resume-only', '--no-load'),
+        resume: { sessionId: crypto.randomUUID(), cwd: dir },
+      }),
+    () => {},
+    Date.now,
+    {},
+    recording,
+  );
+  let again = false;
+
+  void resumed.recorded().then(() => {
+    again = true;
+  });
+
+  try {
+    resumed.start();
+    await until(() => again);
+  } finally {
+    await resumed.close();
+    await rm(dir, { recursive: true });
   }
 });

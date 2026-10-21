@@ -21,7 +21,9 @@
  * that same short past. `CHORD_FAKE_REFUSE_LOAD=1` makes every load fail, as
  * an agent that lost the session would. Started with `--resume-only`, it also
  * offers `session/resume`, as Claude's adapter does, which chord takes when its
- * record holds the past: it takes the same ids and replays nothing.
+ * record holds the past: it takes the same ids and replays nothing. With
+ * `--no-load` as well it offers no `session/load`, so chord resumes even a
+ * session it has no record of.
  *
  * Every turn that ends on its own reports what it used, as Claude's adapter
  * does: a `usage_update` with the context filled so far, the model's window
@@ -256,6 +258,7 @@ import {
   NO_USAGE,
   REFUSE_CONFIG,
   RESUME_ONLY,
+  NO_LOAD,
   SILENT_SET_MODE,
   STEER_LATE,
   STEERING,
@@ -948,7 +951,7 @@ const connection = acp
       : {
           protocolVersion: acp.PROTOCOL_VERSION,
           agentCapabilities: {
-            loadSession: true,
+            loadSession: !NO_LOAD,
             mcpCapabilities: MCP_TRANSPORTS,
             promptCapabilities: { image: !NO_IMAGES },
             sessionCapabilities: {

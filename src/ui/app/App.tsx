@@ -883,15 +883,22 @@ export function App({
 
   useEffect(() => reportStatus(status()));
 
-  // The terminal hears which session `--resume` would open (CHD-492).
+  // The terminal hears which session `--resume` would open (CHD-492):
+  // one opened again once it is up, else one a prompt went to. With no main
+  // session, as a quit takes the tabs away while the agents stop, it keeps
+  // what it was told.
   useEffect(() => {
     const { tabs, front } = sessions.sessions.tabs;
     const main = tabs.find((tab) => tab.key === front);
     const state = main && sessions.stateOf(main.key);
 
+    if (main === undefined || state === undefined) {
+      return;
+    }
+
     sessionVar(
-      state && resumableSession(state),
-      main?.conversation.recorded() ?? Promise.resolve(),
+      state.resumed === undefined ? resumableSession(state) : state.sessionId,
+      main.conversation.recorded(),
     );
   });
 

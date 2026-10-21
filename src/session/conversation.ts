@@ -350,8 +350,8 @@ export class Conversation {
   #firstPrompt: string | undefined;
   /**
    * Settles once the session's first prompt is in its record, flushed, so
-   * `--resume` can open it; settled from the start for one whose past holds
-   * a prompt already (CHD-492).
+   * `--resume` can open it; settled from the start for a session opened
+   * again, which it opens already (CHD-492).
    */
   #recorded = Promise.withResolvers<void>();
   /**
@@ -653,7 +653,8 @@ export class Conversation {
             (entry) => entry.type === 'prompt',
           )?.prompt;
 
-          if (this.#firstPrompt !== undefined) {
+          // A session opened again is one --resume opens, its record or not.
+          if (session.resumed !== undefined) {
             this.#recorded.resolve();
           }
 

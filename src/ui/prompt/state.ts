@@ -113,6 +113,11 @@ export interface PromptWindow {
    */
   readonly pasteFailed?: string;
   /**
+   * `pasteFailed` says the agent has not started yet, which stops being
+   * true once it has started, or failed to (CHD-490).
+   */
+  readonly pasteFailedUntilStarted?: true;
+  /**
    * `/vim`: the prompt box edits as vim does, in insert or normal mode;
    * absent while it is off.
    */
@@ -208,7 +213,12 @@ export type PromptAction =
    */
   | { readonly type: 'images_added'; readonly images: readonly PastedImage[] }
   /** ctrl+v found no image to take, or the agent takes none. */
-  | { readonly type: 'paste_failed'; readonly message: string }
+  | {
+      readonly type: 'paste_failed';
+      readonly message: string;
+      /** It says the agent has not started yet. */
+      readonly untilStarted?: true;
+    }
   /**
    * A prompt took the draft's images; the box starts again without them,
    * but for those `keeping`, a draft typed while the prompt waited, holds.
@@ -256,8 +266,15 @@ export function reducePrompt(
         imageCount: Math.max(state.imageCount, ...ids),
       };
     }
-    case 'paste_failed':
-      return { ...state, pasteFailed: action.message };
+    case 'paste_failed': {
+      const { pasteFailedUntilStarted: _, ...rest } = state;
+
+      return {
+        ...rest,
+        pasteFailed: action.message,
+        ...(action.untilStarted ? { pasteFailedUntilStarted: true } : {}),
+      };
+    }
     case 'images_sent': {
       const kept = imagesIn(action.keeping ?? '', state.images);
 

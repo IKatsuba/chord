@@ -223,11 +223,15 @@ export function useImages({
   imageIds.current = Math.max(imageIds.current, state.imageCount);
 
   /** Why an image cannot go into the draft now, if it cannot. */
-  const imageRefusal = () =>
+  const imageRefusal = (): AppAction | undefined =>
     state.takesImages === false
-      ? `${agent} does not take images`
+      ? { type: 'paste_failed', message: `${agent} does not take images` }
       : state.takesImages === undefined
-        ? `${agent} has not started yet`
+        ? {
+            type: 'paste_failed',
+            message: `${agent} has not started yet`,
+            untilStarted: true,
+          }
         : undefined;
 
   /**
@@ -242,7 +246,7 @@ export function useImages({
     const refused = imageRefusal();
 
     if (refused !== undefined && !quiet) {
-      return dispatch({ type: 'paste_failed', message: refused });
+      return dispatch(refused);
     }
 
     const read = await clipboard();
@@ -254,7 +258,7 @@ export function useImages({
     }
 
     if (refused !== undefined) {
-      return inSession({ type: 'paste_failed', message: refused });
+      return inSession(refused);
     }
 
     const now = stateOf(key);

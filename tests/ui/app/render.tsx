@@ -498,7 +498,7 @@ export async function inputAsked(
 
 /**
  * The program status reports in what the terminal was told, in order, each
- * as its fields with `msg` decoded; OpenTUI's probe left out.
+ * as its fields with `msg` and `title` decoded; OpenTUI's probe left out.
  */
 export function statusReports(
   log: readonly string[],
@@ -517,7 +517,9 @@ export function statusReports(
 
           return [
             name,
-            name === 'msg' ? Buffer.from(value, 'base64').toString() : value,
+            name === 'msg' || name === 'title'
+              ? Buffer.from(value, 'base64').toString()
+              : value,
           ];
         }),
       ),

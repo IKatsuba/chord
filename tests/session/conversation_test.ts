@@ -9,7 +9,15 @@ import {
   RequestError,
   type SessionUpdate,
 } from '@agentclientprotocol/sdk';
+import { shellContext, withContext } from '../../src/session/context.ts';
 import { cycleMark } from '../../src/session/cycles.ts';
+import { FileRecording } from '../../src/session/record.ts';
+import {
+  openSessionLabel,
+  readRecords,
+  type Resume,
+  sessionLabel,
+} from '../../src/session/sessions.ts';
 import type { AgentOption } from '../../src/session/config.ts';
 import {
   Conversation,
@@ -4641,5 +4649,260 @@ describe('CHD-467 tester: causal fake gates and cancellation', () => {
         );
       });
     }
+  }
+});
+
+test("a session's first prompt is kept whole, shell output ahead of it too, and named as /resume names it, live and resumed (CHD-491)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const stateDir = join(dir, 'state');
+  // A first prompt that is only a command's output, as bash mode sends it.
+  const shellOnly = withContext(
+    shellContext([
+      { command: 'ls', stdout: 'a\n', stderr: '', running: false, code: 0 },
+    ]),
+    '',
+  );
+  const opened = async (resume?: Resume) => {
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(stateDir, () => {});
+
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(),
+          ...(resume === undefined ? {} : { resume }),
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connected'));
+
+    return { conversation, events, recording };
+  };
+
+  try {
+    const live = await opened();
+
+    expect(live.conversation.firstPrompt).toStrictEqual(undefined);
+    live.conversation.send('', shellOnly);
+    await until(() => live.events.some((event) => event.type === 'result'));
+    expect(openSessionLabel(live.conversation.firstPrompt)).toStrictEqual(
+      '!ls',
+    );
+    live.conversation.send('text');
+    await until(
+      () => live.events.filter((event) => event.type === 'result').length === 2,
+    );
+    // A later prompt leaves the name as it was.
+    expect(openSessionLabel(live.conversation.firstPrompt)).toStrictEqual(
+      '!ls',
+    );
+    await live.conversation.close();
+    await live.recording.flushed();
+
+    const [record] = await readRecords(stateDir);
+
+    assert(record);
+    expect(sessionLabel(record)).toStrictEqual('!ls');
+
+    const resumed = await opened({
+      sessionId: record.sessionId,
+      cwd: dir,
+      record: record.path,
+    });
+
+    try {
+      expect(openSessionLabel(resumed.conversation.firstPrompt)).toStrictEqual(
+        '!ls',
+      );
+    } finally {
+      await resumed.conversation.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test("the agent's own title for its session is kept as it comes and changes, none while it gives none, and comes back on resume (CHD-491)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const stateDir = join(dir, 'state');
+  const opened = async (resume?: Resume) => {
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(stateDir, () => {});
+
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(),
+          ...(resume === undefined ? {} : { resume }),
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connected'));
+
+    return { conversation, events, recording };
+  };
+
+  const results = (events: readonly ConversationEvent[]) =>
+    events.filter((event) => event.type === 'result').length;
+
+  try {
+    const live = await opened();
+
+    live.conversation.send('text');
+    await until(() => results(live.events) === 1);
+    expect(live.conversation.title).toStrictEqual(undefined);
+
+    // Named, then named again: the last name holds.
+    live.conversation.send('retitled');
+    await until(() => results(live.events) === 2);
+    expect(live.conversation.title).toStrictEqual('Fix the parser');
+
+    live.conversation.send('titled');
+    await until(() => results(live.events) === 3);
+    expect(live.conversation.title).toStrictEqual('Fix the tokenizer');
+    await live.conversation.close();
+    await live.recording.flushed();
+
+    const [record] = await readRecords(stateDir);
+
+    assert(record);
+
+    const resumed = await opened({
+      sessionId: record.sessionId,
+      cwd: dir,
+      record: record.path,
+    });
+
+    try {
+      expect(resumed.conversation.title).toStrictEqual('Fix the tokenizer');
+    } finally {
+      await resumed.conversation.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+describe('CHD-491 U2 tester: title ownership, reset and recorded state', () => {
+  for (const cleared of [false, true]) {
+    test(`resume preserves the ${cleared ? 'null-cleared fallback' : 'last usable own title'} despite nested and blank updates`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-title-'));
+      const stateDir = join(dir, 'state');
+      let publish: Parameters<Session['subscribe']>[0] | undefined;
+      const opened = async (resume?: Resume) => {
+        const events: ConversationEvent[] = [];
+        const recording = new FileRecording(stateDir, () => {});
+
+        const conversation = new Conversation(
+          async () => {
+            const session = await openSession({
+              agent: 'fake',
+              cwd: dir,
+              agentCommand: fakeAgentCommand(undefined, '--resume-only'),
+              ...(resume === undefined ? {} : { resume }),
+            });
+            const subscribe = session.subscribe.bind(session);
+
+            session.subscribe = (listener) => {
+              publish = listener;
+
+              return subscribe(listener);
+            };
+
+            return session;
+          },
+          (event) => events.push(event),
+          Date.now,
+          {},
+          recording,
+        );
+
+        try {
+          conversation.start();
+          await until(() => events.some((event) => event.type === 'connected'));
+
+          return { conversation, events, recording };
+        } catch (error) {
+          await conversation.close();
+          await recording.flushed();
+
+          throw error;
+        }
+      };
+
+      let live: Awaited<ReturnType<typeof opened>> | undefined;
+      let resumed: Awaited<ReturnType<typeof opened>> | undefined;
+
+      try {
+        live = await opened();
+
+        live.conversation.send('First fallback');
+        await until(() =>
+          live!.events.some((event) => event.type === 'result'),
+        );
+        assert(publish);
+        publish({ sessionUpdate: 'session_info_update', title: 'Own title' });
+        publish({ sessionUpdate: 'session_info_update' });
+        publish({ sessionUpdate: 'session_info_update', title: '' });
+        publish({ sessionUpdate: 'session_info_update', title: ' \t\n ' });
+        publish(
+          { sessionUpdate: 'session_info_update', title: 'Nested title' },
+          'outer',
+        );
+        expect(live.conversation.title).toBe('Own title');
+
+        if (cleared) {
+          publish({ sessionUpdate: 'session_info_update', title: null });
+        }
+
+        expect(live.conversation.title).toBe(cleared ? undefined : 'Own title');
+        await live.conversation.close();
+        await live.recording.flushed();
+
+        const [record] = await readRecords(stateDir);
+
+        assert(record);
+
+        resumed = await opened({
+          sessionId: record.sessionId,
+          cwd: dir,
+          record: record.path,
+        });
+
+        expect(resumed.conversation.title).toBe(
+          cleared ? undefined : 'Own title',
+        );
+        expect(openSessionLabel(resumed.conversation.firstPrompt)).toBe(
+          'First fallback',
+        );
+        resumed.conversation.send('Another prompt');
+        await until(() =>
+          resumed!.events.some((event) => event.type === 'result'),
+        );
+        expect(resumed.conversation.title).toBe(
+          cleared ? undefined : 'Own title',
+        );
+      } finally {
+        await resumed?.conversation.close();
+        await resumed?.recording.flushed();
+        await live?.conversation.close();
+        await live?.recording.flushed();
+        await rm(dir, { recursive: true });
+      }
+    });
   }
 });

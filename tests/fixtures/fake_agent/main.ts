@@ -235,7 +235,9 @@
  * first prompt is its parent's message. With
  * `--no-http` or `CHORD_FAKE_NO_HTTP=1` its `mcpCapabilities` leave HTTP out,
  * and `--mcp-transports <list>` (`CHORD_FAKE_MCP_TRANSPORTS`) advertises just
- * the transports it names past stdio, `none` for stdio alone.
+ * the transports it names past stdio, `none` for stdio alone. `titled` names
+ * its session in a `session_info_update`, and `retitled` names it twice
+ * (CHD-491).
  */
 import process from 'node:process';
 import { Readable, Writable } from 'node:stream';
@@ -362,6 +364,8 @@ const SCENARIOS = [
   'status',
   'error',
   'slow',
+  'titled',
+  'retitled',
   'costwait',
   'costwaitlate',
   'long',

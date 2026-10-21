@@ -32,6 +32,12 @@ const APP = 'chord';
 /** The most a message may take, in UTF-8 bytes, as the protocol bounds it. */
 export const MESSAGE_BYTES = 2048;
 
+/**
+ * The most a title may take, in UTF-8 bytes: 256 once base64-encoded, as it
+ * goes on the wire; OpenTUI refuses a longer one (CHD-491).
+ */
+export const TITLE_BYTES = 192;
+
 interface AgentStatus {
   readonly state: AgentState;
   readonly kind?: ProgramStatusKind;
@@ -105,37 +111,46 @@ function failureMessage(failure: Failure, agent: string): string {
 }
 
 /**
- * `text` as one line the protocol takes: every control character a space,
- * as a notification's text is, and cut to `MESSAGE_BYTES` on a character's
- * edge, so `setProgramStatus` never refuses it.
+ * `text` as one line the protocol takes in a field of `limit` UTF-8 bytes:
+ * every control character a space, as a notification's text is, and cut on
+ * a character's edge, a joined emoji or an accent kept whole, so
+ * `setProgramStatus` never refuses it.
  */
-export function messageLine(text: string): string {
+export function statusLine(text: string, limit: number): string {
   // eslint-disable-next-line no-control-regex
   const flat = text.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ');
   const encoder = new TextEncoder();
   let bytes = 0;
   let cut = '';
 
-  for (const character of flat) {
-    bytes += encoder.encode(character).length;
+  for (const { segment } of new Intl.Segmenter().segment(flat)) {
+    bytes += encoder.encode(segment).length;
 
-    if (bytes > MESSAGE_BYTES) {
+    if (bytes > limit) {
       break;
     }
 
-    cut += character;
+    cut += segment;
   }
 
   return cut;
+}
+
+/** `text` as the record's message takes it. */
+export function messageLine(text: string): string {
+  return statusLine(text, MESSAGE_BYTES);
 }
 
 /**
  * The root record for every agent of every tab: the first state in `ORDER`
  * any of them is in, and of those in it, the one the attention order would
  * name first, waiting longest, then further left. Only blocked, done and
- * error say why, as a notification would (Q71).
+ * error say why, as a notification would (Q71). `title` names the main
+ * session, as the person knows it; none while it has no name (CHD-491).
  */
-export function programStatus<C>(tabs: Tabs<C>): ProgramStatus {
+export function programStatus<C>(tabs: Tabs<C>, title?: string): ProgramStatus {
+  const cut = title === undefined ? '' : statusLine(title, TITLE_BYTES);
+  const named = cut.trim() === '' ? {} : { title: cut };
   const all = tabs.tabs
     .flatMap((tab) => [tab, ...tab.children])
     .map(({ key, wait }) => agentStatus(wait, key));
@@ -146,7 +161,7 @@ export function programStatus<C>(tabs: Tabs<C>): ProgramStatus {
     .sort((a, b) => a.since - b.since || a.key - b.key)[0];
 
   if (first === undefined || state === 'idle' || state === 'working') {
-    return { state, app: APP };
+    return { state, app: APP, ...named };
   }
 
   const name = notifiedName(tabs, first.key) ?? '';
@@ -161,10 +176,11 @@ export function programStatus<C>(tabs: Tabs<C>): ProgramStatus {
     ? {
         state,
         app: APP,
+        ...named,
         ...(first.kind === undefined ? {} : { kind: first.kind }),
         message: messageLine(message),
       }
-    : { state, app: APP, message: messageLine(message) };
+    : { state, app: APP, ...named, message: messageLine(message) };
 }
 
 /** Every field a report may carry. */

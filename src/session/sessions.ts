@@ -210,11 +210,35 @@ export function earlierSessions(
     .map((record) => ({
       resume: resumeOf(record),
       lastUsedAt: new Date(record.lastUsedAt).toISOString(),
-      prompt:
-        record.name === undefined
-          ? record.prompt
-          : `${record.name} · ${record.prompt}`,
+      prompt: sessionLabel(record),
     }));
+}
+
+/**
+ * What a session is called where chord names it: its first prompt, on one
+ * line, after the name of an agent another started, as what it was asked
+ * says little of which one it is.
+ */
+export function sessionLabel({
+  prompt,
+  name,
+}: {
+  readonly prompt: string;
+  readonly name?: string | undefined;
+}): string {
+  return name === undefined ? prompt : `${name} · ${prompt}`;
+}
+
+/**
+ * What `/resume` will call an open session whose first prompt, as its record
+ * keeps it, is `firstPrompt`; none before one (CHD-491).
+ */
+export function openSessionLabel(
+  firstPrompt: string | undefined,
+): string | undefined {
+  const prompt = firstPrompt === undefined ? '' : promptLine(firstPrompt);
+
+  return prompt === '' ? undefined : sessionLabel({ prompt });
 }
 
 /** Those of `sessions` that work in `cwd`, in the order they came. */

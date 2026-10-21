@@ -17,6 +17,7 @@ import type { Notifications } from '../../notify.ts';
 import type { OpenSession, Starting } from '../../session/conversation.ts';
 import { openSession } from '../../session/session.ts';
 import {
+  openSessionLabel,
   readRecords as readSessionRecords,
   type ResumableTab,
   type Resume,
@@ -865,12 +866,24 @@ export function App({
   // key, which has the agent shown looked at whether or not it draws.
   const reportStatus = useProgramStatus();
 
-  useEffect(() => reportStatus(programStatus(sessions.sessions.tabs)));
+  // The record names the main session: by the agent's own title for it
+  // once it gave one, else as /resume will (the owner's Q119, CHD-491).
+  const status = () => {
+    const { tabs, front } = sessions.sessions.tabs;
+    const main = tabs.find((tab) => tab.key === front)?.conversation;
+
+    return programStatus(
+      sessions.sessions.tabs,
+      main?.title ?? openSessionLabel(main?.firstPrompt),
+    );
+  };
+
+  useEffect(() => reportStatus(status()));
 
   // A key of chord's that would also type is kept from the textarea.
   usePress((input, key) => {
     sessions.sessions.keyed();
-    reportStatus(programStatus(sessions.sessions.tabs));
+    reportStatus(status());
 
     const steps = keySteps(input, key, context());
 

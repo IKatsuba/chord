@@ -36,6 +36,7 @@ import type {
   SteerOutcome,
   Turn,
 } from './session.ts';
+import { historyEntries } from './record.ts';
 import { heldBackLine } from './servers.ts';
 import {
   type TaskAgent,
@@ -342,6 +343,16 @@ export class Conversation {
   readonly #now: () => number;
   readonly #starting: Starting;
   readonly #recording: Recording | undefined;
+  /**
+   * The session's first prompt whole, the shell output sent ahead of it
+   * too, as its record keeps it: its past's, else the first sent here.
+   */
+  #firstPrompt: string | undefined;
+  /**
+   * The agent's own title for the session, the last a `session_info_update`
+   * gave it, its past's too; none while it has given none (CHD-491).
+   */
+  #title: string | undefined;
   /** What the refusal of the starting effort said, for the tool's answer. */
   #effortRefused: string | undefined;
   #opening: Promise<Session | undefined> | undefined;
@@ -532,13 +543,23 @@ export class Conversation {
     // The record hears each event before the window does, as the window
     // may quit on one.
     this.#show = emit;
-    this.#emit =
+
+    const told =
       recording === undefined
         ? emit
-        : (event) => {
+        : (event: ConversationEvent) => {
             recording.heard(event);
             emit(event);
           };
+
+    // The agent's title for its session, kept as it comes (CHD-491).
+    this.#emit = (event) => {
+      if (event.type === 'update' && event.subagentId === undefined) {
+        this.#titled(event.update);
+      }
+
+      told(event);
+    };
 
     this.#now = now;
     this.#starting = starting;
@@ -546,6 +567,33 @@ export class Conversation {
   }
 
   /** The session the agent has opened; none while it still starts. */
+  /**
+   * The session's first prompt as its record keeps it, the shell output
+   * sent ahead of it too; none before one (CHD-491).
+   */
+  get firstPrompt(): string | undefined {
+    return this.#firstPrompt;
+  }
+
+  /** The agent's own title for the session; none while it has given none. */
+  get title(): string | undefined {
+    return this.#title;
+  }
+
+  /** `update`'s title, if it is the session's `session_info_update`. */
+  #titled(update: SessionUpdate): void {
+    if (update.sessionUpdate !== 'session_info_update') {
+      return;
+    }
+
+    // A title left out is kept; `null` takes it back.
+    if (update.title === null) {
+      this.#title = undefined;
+    } else if (typeof update.title === 'string' && update.title.trim() !== '') {
+      this.#title = update.title;
+    }
+  }
+
   get session(): Session | undefined {
     return this.#session;
   }
@@ -577,6 +625,15 @@ export class Conversation {
         // `clear` let this one go while it started; it closes it.
         if (this.#opening === opening) {
           this.#session = session;
+          this.#firstPrompt ??= historyEntries(session.history()).find(
+            (entry) => entry.type === 'prompt',
+          )?.prompt;
+
+          for (const action of session.history()) {
+            if (action.type === 'update' && action.subagentId === undefined) {
+              this.#titled(action.update);
+            }
+          }
 
           void this.#setUp(session).catch((error: unknown) => {
             if (this.#current(session)) {
@@ -680,6 +737,8 @@ export class Conversation {
 
     this.#opening = undefined;
     this.#session = undefined;
+    this.#firstPrompt = undefined;
+    this.#title = undefined;
     this.#turn = undefined;
     this.#lastTurnId = 'session';
     this.#selfTurnId = undefined;
@@ -1166,6 +1225,9 @@ export class Conversation {
       ...(next.from === undefined ? {} : { from: next.from }),
       into,
     });
+
+    this.#firstPrompt ??= next.prompt;
+
     this.#recording?.sent(next.turnId, next.prompt, 0, [], at, next.from, into);
     // The turn may have answered while the steer was out, the queue held.
     void this.#advance(session);
@@ -2946,6 +3008,9 @@ export class Conversation {
 
       if (links !== undefined && this.#session === session) {
         this.#costs?.began(turnId);
+
+        this.#firstPrompt ??= prompt;
+
         this.#recording?.sent(
           turnId,
           prompt,

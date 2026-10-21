@@ -421,6 +421,12 @@ chord also reports the whole window's status through the
 [Program Status Protocol](https://www.superlogical.com/rex/docs/build/program-status)
 (OSC 7501), always on, independently of `preferredNotifChannel`. One root
 record with `app=chord` covers every agent in every tab, including children.
+Its `title` names the front tab's main session, even with a child picked:
+the agent's own session title, updated when it renames the session and
+restored on resume. Until the agent gives a title, it uses the first prompt
+on one line (`!ls` for that shell command), as `/resume` still shows it.
+With neither, the title is absent; `/clear` resets it.
+The title takes at most 192 UTF-8 bytes (256 in base64 on the wire).
 The first state present wins: `blocked`, `error`, `working`, `done`, `idle`.
 A permission, form or link makes it `blocked`, with kind `permission`,
 `question` or `auth`; an exit, failed start or failed turn makes it `error`.
@@ -434,7 +440,9 @@ An exited agent stays `error` until it restarts or its tab closes.
 Only `blocked`, `done` and `error` carry a message, with the notification's
 wording, such as
 `fake needs your permission: Write notes.txt`,
-`fake is waiting for your input` or `fake's turn failed`.
+`fake is waiting for your input` or `fake's turn failed`. Messages take at
+most 2048 UTF-8 bytes. Both fields cut between graphemes, keeping joined
+emoji and accented characters whole.
 chord clears the status on quit, a signal or a crash, and while your editor
 has the terminal, then reports it again on return.
 

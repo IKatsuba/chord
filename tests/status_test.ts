@@ -10,11 +10,15 @@ import {
   show,
   type Tabs,
 } from '../src/session/tabs.ts';
+import { openSessionLabel } from '../src/session/sessions.ts';
+import { shellContext, withContext } from '../src/session/context.ts';
+import { wrapMessage } from '../src/session/tasks.ts';
 import {
   MESSAGE_BYTES,
   messageLine,
   programStatus,
   sameStatus,
+  TITLE_BYTES,
 } from '../src/status.ts';
 
 /** Tabs for `agents`, opened in order, the last in front. */
@@ -415,4 +419,84 @@ test('two reports are the same only when every field is', () => {
   expect(sameStatus({ state: 'clear' }, { state: 'clear' })).toStrictEqual(
     true,
   );
+});
+
+describe("the record's title names the main session (CHD-491)", () => {
+  const working = heard(opened('fake'), 1, [up, prompt('t1')]);
+
+  test('it goes with every state while the session has a name, and is left out while it has none', () => {
+    expect(programStatus(noTabs(), 'Fix the tokenizer')).toStrictEqual({
+      state: 'idle',
+      app: 'chord',
+      title: 'Fix the tokenizer',
+    });
+    expect(programStatus(working, 'Fix the tokenizer')).toStrictEqual({
+      state: 'working',
+      app: 'chord',
+      title: 'Fix the tokenizer',
+    });
+    expect(
+      programStatus(heard(working, 1, [ended('t1')]), 'Fix the tokenizer'),
+    ).toMatchObject({ state: 'done', title: 'Fix the tokenizer' });
+
+    for (const none of [undefined, '', '  ', '\n']) {
+      expect(programStatus(working, none)).toStrictEqual({
+        state: 'working',
+        app: 'chord',
+      });
+    }
+  });
+
+  test('it is one line, cut to 192 UTF-8 bytes, 256 once base64-encoded, on a character’s edge', () => {
+    const bytes = (text: string) => new TextEncoder().encode(text).length;
+    const title = (text: string) => {
+      const status = programStatus(noTabs(), text);
+
+      return 'title' in status ? (status.title ?? '') : '';
+    };
+
+    expect(TITLE_BYTES).toStrictEqual(192);
+    expect(title('Fix\nthe\ttokenizer')).toStrictEqual('Fix the tokenizer');
+    expect(title('a'.repeat(193))).toStrictEqual('a'.repeat(192));
+    // Two bytes each: 96 fit, the 97th would cross the bound.
+    expect(title('é'.repeat(97))).toStrictEqual('é'.repeat(96));
+
+    // A joined emoji, 11 bytes, stays whole or goes whole.
+    const coder = '👩‍💻';
+
+    expect(title(`${'a'.repeat(181)}${coder}`)).toStrictEqual(
+      `${'a'.repeat(181)}${coder}`,
+    );
+    expect(title(`${'a'.repeat(182)}${coder}`)).toStrictEqual('a'.repeat(182));
+    // An accent on its letter: the pair stays whole.
+    expect(title(`${'a'.repeat(190)}é`)).toStrictEqual('a'.repeat(190));
+
+    for (const text of ['a'.repeat(400), 'é'.repeat(400), coder.repeat(40)]) {
+      expect(bytes(title(text))).toBeLessThanOrEqual(192);
+      expect(
+        Buffer.from(title(text)).toString('base64').length,
+      ).toBeLessThanOrEqual(256);
+    }
+  });
+
+  test("it is the session's first prompt as /resume names it: typed, a message, or only a command's output; none before the first", () => {
+    expect(openSessionLabel(undefined)).toStrictEqual(undefined);
+    expect(openSessionLabel('')).toStrictEqual(undefined);
+    expect(openSessionLabel('  Fix the\n tokenizer  ')).toStrictEqual(
+      'Fix the tokenizer',
+    );
+    expect(
+      openSessionLabel(wrapMessage({ name: 'main' }, 'Review the diff')),
+    ).toStrictEqual('Review the diff');
+    expect(
+      openSessionLabel(
+        withContext(
+          shellContext([
+            { command: 'ls', stdout: 'a', stderr: '', running: false, code: 0 },
+          ]),
+          '',
+        ),
+      ),
+    ).toStrictEqual('!ls');
+  });
 });

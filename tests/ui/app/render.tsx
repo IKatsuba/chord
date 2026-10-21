@@ -87,6 +87,12 @@ export interface Window {
 }
 
 /**
+ * How long a session still starting when its window closes has to give up:
+ * its agent's stop, closed stdin then SIGTERM then SIGKILL, takes 6 s at most.
+ */
+const STARTING_STOPPED_MS = 10_000;
+
+/**
  * chord's window on the fake agent, drawn through `../harness.tsx`; whatever
  * `body` does, the window is unmounted, the agent stopped, and every process
  * it started proved gone.
@@ -203,6 +209,10 @@ export async function withWindow(
   // Every one opened, a task agent's among them, each closed at the end.
   const opened: Session[] = [];
   const pids: number[] = [];
+  // The opens still waiting on their agent: the window's close gives each up
+  // and stops its agent, but does not wait for it, so the test does, or a
+  // file that ends first leaves the agent running (CHD-489).
+  const starting = new Set<Promise<Session>>();
   const keys =
     keybindings === undefined ? undefined : readKeybindings(keybindings);
   const app = await draw(
@@ -241,7 +251,15 @@ export async function withWindow(
       {...(mouse ? { copy } : {})}
       {...(copyOnSelect === undefined ? {} : { copyOnSelect })}
       open={async (options) => {
-        session = await openSession(options);
+        const opening = openSession(options);
+
+        starting.add(opening);
+
+        try {
+          session = await opening;
+        } finally {
+          starting.delete(opening);
+        }
 
         opened.push(session);
 
@@ -303,6 +321,18 @@ export async function withWindow(
     await body(window);
   } finally {
     await app.unmount();
+
+    if (starting.size > 0) {
+      const settled = Promise.allSettled([...starting]).then(() => true);
+      const bound = new Promise<false>((resolve) =>
+        setTimeout(() => resolve(false), STARTING_STOPPED_MS),
+      );
+
+      expect(
+        await Promise.race([settled, bound]),
+        'an agent still starting was not stopped with its window',
+      ).toBeTruthy();
+    }
 
     for (const each of opened) {
       await each.close();

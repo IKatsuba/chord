@@ -1,4 +1,5 @@
 import { describe, expect, spyOn, test } from 'bun:test';
+import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -3056,4 +3057,97 @@ describe('CHD-488 tester: agent identity follows the selected conversation', () 
       }
     });
   }
+});
+
+describe('an agent that never answers its start is stopped with its window (CHD-489)', () => {
+  /** The pids of every process whose command line holds `tag`. */
+  function tagged(tag: string): Promise<number[]> {
+    // pgrep exits 1 when nothing matches, which is an answer too.
+    return new Promise((resolve) => {
+      execFile('pgrep', ['-f', tag], (_error, stdout) =>
+        resolve(stdout.split('\n').filter(Boolean).map(Number)),
+      );
+    });
+  }
+
+  /** The wedged fake under `tag`: it never answers `initialize`. */
+  const wedged = (tag: string) =>
+    fakeAgentCommand(undefined, '--hang', 'start', tag);
+
+  test("a tab's agent still starting is gone once its window has closed", async () => {
+    const tag = `chord-wedged-${crypto.randomUUID()}`;
+    const command = fakeAgentCommand();
+
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('/new codex');
+        await window.press('\r');
+        await until(
+          'the wedged agent',
+          async () => (await tagged(tag)).length > 0,
+        );
+        await window.shows('Starting codex…');
+      },
+      {
+        runtimes: ['fake', 'codex'],
+        startupOf: (agent) => ({
+          agentCommand: agent === 'codex' ? wedged(tag) : command,
+        }),
+      },
+    );
+
+    expect(await tagged(tag)).toStrictEqual([]);
+  });
+
+  test('a child still starting is gone once its window has closed', async () => {
+    const tag = `chord-wedged-${crypto.randomUUID()}`;
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+    const command = fakeAgentCommand();
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+
+          if (main === undefined) {
+            throw new Error('main was not admitted');
+          }
+
+          await main.window.open(main.key, {
+            agent: 'codex',
+            name: 'foreign',
+            prompt: 'text',
+          });
+          await window.shows('foreign');
+          await until(
+            'the wedged agent',
+            async () => (await tagged(tag)).length > 0,
+          );
+        },
+        {
+          server,
+          runtimes: ['fake', 'codex'],
+          agentCommand: command,
+          startupOf: (agent) => ({
+            agentCommand: agent === 'codex' ? wedged(tag) : command,
+          }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+
+    expect(await tagged(tag)).toStrictEqual([]);
+  });
 });

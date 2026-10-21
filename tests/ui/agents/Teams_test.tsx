@@ -377,6 +377,56 @@ describe('a task of main asking beside a member (CHD-431)', () => {
       await server.close();
     }
   });
+
+  test("at 80x24 a tall request's rule keeps a row of its own under the request, the hint inside the border (CHD-464, Q102)", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await bothAsk(window);
+          await leader(window, 'a');
+          await window.shows('Esc to reject');
+          await window.press('1');
+          await send(window, 'bigask');
+          await window.shows('mcp__files__write_file');
+          await window.shows('lines below · pagedown to scroll');
+
+          const lines = window.frame().split('\n');
+          const rule = lines.findIndex((line) =>
+            /^│ ── ↓ \d+ lines below · pagedown to scroll ─+ │$/.test(
+              line.trimEnd(),
+            ),
+          );
+          const hint = lines.findIndex((line) =>
+            /^│ Esc to reject +│$/.test(line.trimEnd()),
+          );
+
+          // Drawn over the request's last row, the rule left its own row
+          // blank: two blank rows before the question instead of one.
+          expect(rule, window.frame()).toBeGreaterThan(0);
+          expect(lines[rule - 1]?.trimEnd(), window.frame()).toMatch(
+            /^│ (mcp__files__write_file| {2}.*) +│$/,
+          );
+          expect(lines[rule + 1]?.trimEnd(), window.frame()).toMatch(/^│ +│$/);
+          expect(lines[rule + 2]?.trimEnd(), window.frame()).toMatch(
+            /^│ Do you want to proceed\? +│$/,
+          );
+          expect(hint, window.frame()).toBeGreaterThan(rule);
+          expect(lines[hint + 1]?.trimEnd()).toMatch(/^╰─+╯$/);
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 24,
+          columns: 80,
+          teams: { bugfix: BUGFIX },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });
 
 describe('a task of main asking beside a member, at 80 columns (CHD-431)', () => {

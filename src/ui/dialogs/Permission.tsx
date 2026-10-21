@@ -317,48 +317,57 @@ function Request({
         ref={area}
         onSizeChange={() => setRoom(area.current?.getLayout().height ?? total)}
       >
-        {shown.above && (
-          <Rule text={requestRule('↑', hidden.above, upKey, width)} />
-        )}
-        <scrollbox
-          ref={view}
-          // With no row to show, laid out to nothing, the view would be
-          // drawn a row tall over what follows it.
-          visible={shown.shown > 0}
-          flexGrow={1}
-          flexShrink={1}
-          minHeight={0}
-          focusable={false}
-          scrollAcceleration={WHEEL}
-          verticalScrollbarOptions={{ visible: false }}
-          // Over a request that scrolls, the wheel is its own, not the view's.
-          onMouseScroll={(event: MouseEvent) => {
-            if (overflows) {
-              event.stopPropagation();
-            }
-          }}
-        >
-          {rows.map((row, index) => (
-            <box
-              key={index}
-              flexShrink={0}
-              paddingLeft={row.kind === 'input' ? INPUT_INDENT : 0}
-            >
-              <text
-                {...CUT}
-                {...(row.kind === 'title'
-                  ? { ...fg(colours.permission), attributes: BOLD }
-                  : row.kind === 'location'
-                    ? { attributes: DIM }
-                    : {})}
+        {/* While rows are below, the request's rows are the room less the
+            rule's, which has a row of its own under them, laid out apart
+            from the shrinking view: inside it, a rule could be drawn over
+            the view's last row with its own row left blank (CHD-464, the
+            owner's Q102). */}
+        <box flexGrow={1} flexShrink={1} minHeight={0} overflow='hidden'>
+          {shown.above && (
+            <Rule text={requestRule('↑', hidden.above, upKey, width)} />
+          )}
+          <scrollbox
+            ref={view}
+            // With no row to show, laid out to nothing, the view would be
+            // drawn a row tall over what follows it.
+            visible={shown.shown > 0}
+            flexGrow={1}
+            flexShrink={1}
+            minHeight={0}
+            focusable={false}
+            scrollAcceleration={WHEEL}
+            verticalScrollbarOptions={{ visible: false }}
+            // Over a request that scrolls, the wheel is its own, not the view's.
+            onMouseScroll={(event: MouseEvent) => {
+              if (overflows) {
+                event.stopPropagation();
+              }
+            }}
+          >
+            {rows.map((row, index) => (
+              <box
+                key={index}
+                flexShrink={0}
+                paddingLeft={row.kind === 'input' ? INPUT_INDENT : 0}
               >
-                <Ansi text={row.text === '' ? ' ' : row.text} />
-              </text>
-            </box>
-          ))}
-        </scrollbox>
+                <text
+                  {...CUT}
+                  {...(row.kind === 'title'
+                    ? { ...fg(colours.permission), attributes: BOLD }
+                    : row.kind === 'location'
+                      ? { attributes: DIM }
+                      : {})}
+                >
+                  <Ansi text={row.text === '' ? ' ' : row.text} />
+                </text>
+              </box>
+            ))}
+          </scrollbox>
+        </box>
         {shown.below && (
-          <Rule text={requestRule('↓', hidden.below, downKey, width)} />
+          <box height={1} flexShrink={0}>
+            <Rule text={requestRule('↓', hidden.below, downKey, width)} />
+          </box>
         )}
       </box>
     </>

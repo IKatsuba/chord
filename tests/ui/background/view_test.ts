@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
+  focusAfter,
   hintLines,
   laidAt,
   moveView,
@@ -997,4 +998,28 @@ test("an error's own line breaks stay lines in the frame, each wrapped at its sp
     'process',
     'at transport.write (stdio.ts:211)',
   ]);
+});
+
+describe('the ❯ once its row leaves (CHD-479)', () => {
+  const RUN = { group: 'running' } as const;
+  const [a, b, c] = ['a', 'b', 'c'].map((id) => monitor(id, id, RUN)) as [
+    BackgroundItem,
+    BackgroundItem,
+    BackgroundItem,
+  ];
+  const ref = (item: BackgroundItem) => ({ key: item.key, id: item.id });
+
+  test('goes to the row that took its place, or the one above when it was the last', () => {
+    expect(focusAfter([a, b, c], [a, c], ref(b))).toStrictEqual(ref(c));
+    expect(focusAfter([a, b, c], [a, b], ref(c))).toStrictEqual(ref(b));
+    expect(focusAfter([a, b, c], [b, c], ref(a))).toStrictEqual(ref(b));
+    // Rows above it that left with it are not counted.
+    expect(focusAfter([a, b, c], [c], ref(b))).toStrictEqual(ref(c));
+  });
+
+  test('stays where it is while its row is listed, and names none with no row left', () => {
+    expect(focusAfter([a, b, c], [b, c], ref(b))).toStrictEqual(undefined);
+    expect(focusAfter([a, b], [], ref(a))).toStrictEqual(undefined);
+    expect(focusAfter([a, b], [b], undefined)).toStrictEqual(undefined);
+  });
 });

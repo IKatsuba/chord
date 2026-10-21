@@ -1,0 +1,24 @@
+
+ ⏺ The tests run on; I will say when they end.
+
+ › claudebackground
+
+ ⏺ The tests run in the background while I look.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(tester (general-purpose)) · 1 tool use
+   │  ⎿  Bash(bun test)
+   └─ Agent(explorer (Explore)) · 1 tool use
+      ⎿  Search(cancelled in src/session)
+
+ ››› Working… (0s · esc to interrupt)
+
+╭─ coder · bugfix ─────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a · ⏸ plan mode on   Fake… · 1% used
+    main       fake         ✻ working 1s
+    bugfix     team · fake  ◦ idle 40s
+    ├─ tester  fake         ● permission 39s
+    └─ coder   fake         ✻ working 0s
+    background  main's 2 agents and coder's 2 agents running

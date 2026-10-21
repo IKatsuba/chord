@@ -28,6 +28,7 @@ import { TeamEntry } from '../teams/Teams.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, DIM_BORDER, fg, FILL, ROWS, TEXT } from '../theme/text.ts';
 import { compactionLine, inSpinner } from './compaction.ts';
+import { endedLine } from './ended.ts';
 import { markdown, QUOTE_INSET } from './markdown.ts';
 import {
   inArrow,
@@ -139,6 +140,8 @@ export const TranscriptEntry = memo(function TranscriptEntry({
       return <Outcome text='Interrupted by user' failed />;
     case 'stopped':
       return <Outcome text={`Stopped: ${entry.reason}`} />;
+    case 'item_ended':
+      return <ItemEnded entry={entry} width={width} />;
     case 'self_started':
       return (
         <SelfStarted from={entry.from} alone={entry.alone} width={width} />
@@ -260,6 +263,50 @@ function SelfStarted({
       </Gutter>
       <text {...CUT} attributes={DIM}>
         {text}
+      </text>
+    </box>
+  );
+}
+
+/**
+ * A background item that ended after its turn: its marker where `⏺` stands,
+ * the marker and its end in the state's colour, its name in the text's, the
+ * kind dim (docs/design/CHD-479.md).
+ */
+function ItemEnded({
+  entry,
+  width,
+}: {
+  entry: Extract<Entry, { kind: 'item_ended' }>;
+  width: number;
+}) {
+  const colours = useColours();
+  const line = endedLine(entry, width - 2);
+  const colour =
+    line.tone === 'success'
+      ? colours.success
+      : line.tone === 'error'
+        ? colours.error
+        : undefined;
+  const tone = line.tone === 'dim' ? { attributes: DIM } : fg(colour);
+
+  return (
+    <box flexDirection='row' marginTop={1} flexShrink={0}>
+      <Gutter
+        dimColor={line.tone === 'dim'}
+        {...(colour === undefined ? {} : { color: colour })}
+      >
+        {line.marker}
+      </Gutter>
+      <text {...CUT}>
+        <span>
+          <Ansi text={line.name} />
+        </span>
+        <span attributes={DIM}>{line.kind}</span>
+        <span {...tone}>{line.end}</span>
+        {line.reason !== undefined && (
+          <span {...tone}>{`: ${line.reason}`}</span>
+        )}
       </text>
     </box>
   );

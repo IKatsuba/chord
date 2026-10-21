@@ -1,0 +1,40 @@
+ ▄▀▀▀   /tmp/chord-qa.des479
+ ▀▀     ? for shortcuts · /help
+
+ › claudebackground
+
+ ⏺ The tests run in the background while I look.
+
+ ⏺ 2 agents finished (ctrl+o to expand)
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 4s
+   │  ⎿  Done
+   └─ Agent(explorer (Explore)) · 1 tool use · 2s
+      ⎿  Done
+
+ ⏺ The tests run on; I will say when they end.
+
+ › claudeslowstop
+
+ ⏺ The tests run in the background while I look.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(tester (general-purpose)) · 1 tool use
+   │  ⎿  Bash(bun test)
+   └─ Agent(explorer (Explore)) · 1 tool use · 2s
+      ⎿  Done
+
+ ⏺ The tests run on; I will say when they end.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 in this tab                                                                                           │
+│                                                                                                                      │
+│ ❯ Run the test suite  agent  ■ stopping 2s  main                                                                     │
+│                                                                                                                      │
+│ Enter to go to its call · x to stop · Esc to close                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running                          Fake Large with a 1M context window · medium effort · 1% context used
+    background  main's agent running

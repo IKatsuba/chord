@@ -15,8 +15,10 @@ import {
 import {
   type BackgroundAgent,
   type BackgroundItem,
+  type ItemStatus,
   backgroundItems,
   callPlace,
+  leavesList,
   summaryGroups,
   summaryLines,
   type SummaryPiece,
@@ -116,14 +118,14 @@ describe('the items', () => {
       }),
     ]);
 
+    // The ended monitor has left (CHD-479); the ended task stays (CHD-482).
     expect(brief(items)).toStrictEqual([
-      'monitor CI run 1 failed',
       'task Fix the tokenizer 1 running',
       'monitor parser tests 2 running',
       'monitor dev server 1 running',
       'task Fix the printer 1 done',
     ]);
-    expect(items[1]).toStrictEqual({
+    expect(items[0]).toStrictEqual({
       kind: 'task',
       id: 'task-1',
       key: 1,
@@ -134,12 +136,12 @@ describe('the items', () => {
       model: 'Fake Small',
       callId: 'call-task-1',
     });
-    expect(items[2]?.owner).toStrictEqual({ name: 'parser', colour: 0 });
+    expect(items[1]?.owner).toStrictEqual({ name: 'parser', colour: 0 });
   });
 
-  test('a monitor that exits 0 is done, a stop stopped, any other end failed', () => {
+  test('a monitor leaves the list however it ended: exit 0, another exit, a signal, a timeout, a flood or a stop (CHD-479)', () => {
     const monitor = running('m1', 'x', 0);
-    const groups = (
+    const items = (
       [
         { kind: 'exit', code: 0 },
         { kind: 'exit', code: 2 },
@@ -150,27 +152,11 @@ describe('the items', () => {
       ] as const
     ).map(
       (end) =>
-        backgroundItems([
-          agent(1, { endedMonitors: [ended(monitor, end, 5)] }),
-        ])[0]?.status,
+        backgroundItems([agent(1, { endedMonitors: [ended(monitor, end, 5)] })])
+          .length,
     );
 
-    expect(groups).toStrictEqual([
-      { group: 'done', endedAt: 5, end: { kind: 'exit', code: 0 } },
-      { group: 'failed', endedAt: 5, end: { kind: 'exit', code: 2 } },
-      {
-        group: 'failed',
-        endedAt: 5,
-        end: { kind: 'signal', signal: 'SIGKILL' },
-      },
-      {
-        group: 'failed',
-        endedAt: 5,
-        end: { kind: 'timed_out', timeoutMs: 1000 },
-      },
-      { group: 'failed', endedAt: 5, end: { kind: 'flooded', by: 'lines' } },
-      { group: 'stopped', endedAt: 5, end: { kind: 'stopped' } },
-    ]);
+    expect(items).toStrictEqual([0, 0, 0, 0, 0, 0]);
   });
 
   test('a task reported is done, a failed or gone one failed, a cancelled one stopped', () => {
@@ -296,7 +282,8 @@ describe('the items', () => {
     );
 
     expect(before).toStrictEqual(['one', 'two', 'a', 'b', 'three']);
-    // m2 and the other agent's ended first, then m1.
+    // m2 and the other agent's ended first, then m1, and left (CHD-479);
+    // the tasks keep their places, the ended one too.
     expect(
       order(
         {
@@ -316,7 +303,7 @@ describe('the items', () => {
           ],
         },
       ),
-    ).toStrictEqual(before);
+    ).toStrictEqual(['a', 'b']);
   });
 
   test("the person's prompt clears what ended before it; what runs or asks stays", () => {
@@ -324,22 +311,29 @@ describe('the items', () => {
       [
         agent(1, {
           monitors: [running('m2', 'still', 10)],
-          endedMonitors: [
-            ended(running('m1', 'before', 0), { kind: 'stopped' }, 50),
-            ended(running('m3', 'after', 20), { kind: 'exit', code: 0 }, 150),
-          ],
-          transcript: withEntries([task('task-1', 'asking', 5)], {
-            asking: [
-              {
-                id: 'e',
-                mode: 'url',
-                url: 'u',
-                message: 'm',
-                subagentId: 'task-1',
-                at: 6,
-              },
+          // A task, as an ended monitor leaves at once (CHD-479).
+          transcript: withEntries(
+            [
+              task('task-0', 'before', 0, { state: 'completed', endedAt: 50 }),
+              task('task-1', 'asking', 5),
+              task('task-3', 'after', 20, {
+                state: 'completed',
+                endedAt: 150,
+              }),
             ],
-          }),
+            {
+              asking: [
+                {
+                  id: 'e',
+                  mode: 'url',
+                  url: 'u',
+                  message: 'm',
+                  subagentId: 'task-1',
+                  at: 6,
+                },
+              ],
+            },
+          ),
         }),
       ],
       100,
@@ -348,7 +342,7 @@ describe('the items', () => {
     expect(brief(items)).toStrictEqual([
       'task asking 1 asking',
       'monitor still 1 running',
-      'monitor after 1 done',
+      'task after 1 done',
     ]);
   });
 });
@@ -459,7 +453,11 @@ describe('CHD-424 tester: background item edges', () => {
   test('same-millisecond monitor ids stay in numeric order across stopping and ending', () => {
     const items = backgroundItems([
       agent(1, {
-        monitors: [running('m10', 'ten', 10)],
+        monitors: [
+          running('m10', 'ten', 10),
+          running('m11', 'eleven', 10),
+          running('m1', 'one', 10),
+        ],
         endedMonitors: [
           ended(running('m9', 'nine', 10), { kind: 'stopped' }, 20),
           ended(running('m2', 'two', 10), { kind: 'exit', code: 1 }, 30),
@@ -467,7 +465,7 @@ describe('CHD-424 tester: background item edges', () => {
       }),
     ]);
 
-    expect(items.map(({ id }) => id)).toStrictEqual(['m2', 'm9', 'm10']);
+    expect(items.map(({ id }) => id)).toStrictEqual(['m1', 'm10', 'm11']);
   });
 
   test('a prompt clears every ended task state at its cutoff, but keeps later ends and running tasks', () => {
@@ -766,28 +764,18 @@ describe('agent items', () => {
         }),
       ])[0]?.status,
     ).toStrictEqual({ group: 'asking', on: 'input', since: 22 });
-    expect(status({ state: 'completed', endedAt: 30 })).toStrictEqual({
-      group: 'done',
-      endedAt: 30,
-    });
-    expect(status({ state: 'failed', endedAt: 30 })).toStrictEqual({
-      group: 'failed',
-      endedAt: 30,
-    });
-    expect(status({ state: 'disconnected', endedAt: 30 })).toStrictEqual({
-      group: 'failed',
-      endedAt: 30,
-      word: 'disconnected',
-    });
-    expect(status({ state: 'cancelled', endedAt: 30 })).toStrictEqual({
-      group: 'stopped',
-      endedAt: 30,
-    });
-    expect(status({ state: 'ended', endedAt: 30 })).toStrictEqual({
-      group: 'stopped',
-      endedAt: 30,
-      word: 'ended',
-    });
+
+    // Ended, however, it has left the list (CHD-479).
+    for (const state of [
+      'completed',
+      'failed',
+      'disconnected',
+      'cancelled',
+      'ended',
+    ] as const) {
+      expect(status({ state, endedAt: 30 }), state).toStrictEqual(undefined);
+    }
+
     expect(status({ state: 'untracked', endedAt: 30 })).toStrictEqual({
       group: 'untracked',
       endedAt: 30,
@@ -805,14 +793,35 @@ describe('agent items', () => {
         item('agent', { group: 'running', stopping: true }),
       ]).map(({ text }) => text),
     ).toStrictEqual([
-      '● 1 agent asking',
+      "● main's agent asking",
       '✗ 1 monitor failed',
-      '? 1 agent untracked',
-      '1 monitor and 2 agents running',
+      "? main's agent untracked",
+      "1 monitor and main's 2 agents running",
     ]);
   });
 
-  test('the next prompt clears an ended or untracked agent, and one that comes back is listed again', () => {
+  test("an agent phrase names each parent in the possessive, in the agents list's order (CHD-479)", () => {
+    const of = (parent: string, parentAt: number): BackgroundItem => ({
+      ...item('agent', RUNNING),
+      parent,
+      parentAt,
+    });
+
+    expect(
+      summaryGroups([
+        of('tester', 2),
+        item('task', RUNNING),
+        of('main', 0),
+        of('tester', 2),
+        of('parser', 1),
+        of('main', 0),
+      ]).map(({ text }) => text),
+    ).toStrictEqual([
+      "1 task and main's 2 agents and parser's agent and tester's 2 agents running",
+    ]);
+  });
+
+  test('the next prompt leaves an untracked agent listed, as it has not ended; an ended one has left already (CHD-479, Q110)', () => {
     const at = (more: Partial<Subagent>) =>
       brief(
         backgroundItems(
@@ -821,8 +830,10 @@ describe('agent items', () => {
         ),
       );
 
-    expect(at({ state: 'untracked', endedAt: 30 })).toStrictEqual([]);
-    expect(at({ state: 'completed', endedAt: 30 })).toStrictEqual([]);
+    expect(at({ state: 'untracked', endedAt: 30 })).toStrictEqual([
+      'agent Find a 1 untracked',
+    ]);
+    expect(at({ state: 'completed', endedAt: 50 })).toStrictEqual([]);
     expect(at({ state: 'running' })).toStrictEqual(['agent Find a 1 running']);
     expect(at({ state: 'untracked', endedAt: 50 })).toStrictEqual([
       'agent Find a 1 untracked',
@@ -858,17 +869,13 @@ describe('agent items from the fake', () => {
     }
   }
 
-  test("Claude's four subagents are agent items, each as it ended", async () => {
+  test("Claude's four subagents are agent items while they run, and only the untracked one stays once they end", async () => {
     const items = await itemsAfter('claudesubagents');
 
     expect(
       items.map(({ kind, name, status }) => [kind, name, status.group]),
-    ).toStrictEqual([
-      ['agent', 'Find the session layer', 'done'],
-      ['agent', 'Review the transcript reducer', 'failed'],
-      ['agent', 'Run the tests', 'stopped'],
-      ['agent', 'Watch the build', 'untracked'],
-    ]);
+      // Done, failed and stopped, they have left (CHD-479).
+    ).toStrictEqual([['agent', 'Watch the build', 'untracked']]);
   });
 
   test("Claude's background agent stays running past the parent's cancel", async () => {
@@ -877,10 +884,8 @@ describe('agent items from the fake', () => {
     });
 
     expect(items.map(({ name, status }) => [name, status.group])).toStrictEqual(
-      [
-        ['Run the test suite', 'running'],
-        ['Find the cancel path', 'stopped'],
-      ],
+      // The one the cancel stopped has left (CHD-479).
+      [['Run the test suite', 'running']],
     );
   });
 });
@@ -914,10 +919,68 @@ test('a stopped agent reads stopping while it still asks, until its agent says i
   expect(asked({}, { waiting: { since: 20 } })).toStrictEqual(STOPPING);
   expect(asked(permission)).toStrictEqual(STOPPING);
   expect(asked({ asking: [form] })).toStrictEqual(STOPPING);
-  // Its agent's end wins over the key.
-  expect(asked({}, { state: 'completed', endedAt: 30 })).toStrictEqual({
-    group: 'done',
-    endedAt: 30,
+  // Its agent's end wins over the key: it has left (CHD-479).
+  expect(asked({}, { state: 'completed', endedAt: 30 })).toStrictEqual(
+    undefined,
+  );
+});
+
+describe('an agent item names its parent, and which items leave as they end (CHD-479)', () => {
+  test("an agent item's parent is the listed agent that announced it, a subagent's own too", () => {
+    const items = backgroundItems([
+      agent(1, {
+        transcript: withEntries([
+          claude('a', 10, { entries: [claude('g', 11)] }),
+        ]),
+      }),
+      agent(2, {
+        owner: { name: 'tester', colour: 3 },
+        transcript: withEntries([
+          claude('b', 12),
+          task('t', 'Fix the tokenizer', 13),
+        ]),
+      }),
+    ]);
+
+    expect(
+      items.map(({ kind, id, parent }) => ({ kind, id, parent })),
+    ).toStrictEqual([
+      { kind: 'agent', id: 'a', parent: 'main' },
+      { kind: 'agent', id: 'g', parent: 'main' },
+      { kind: 'agent', id: 'b', parent: 'tester' },
+      { kind: 'task', id: 't', parent: undefined },
+    ]);
+  });
+
+  test('an agent or a monitor leaves once done, failed or stopped; running, asking and untracked stay; a task stays as before', () => {
+    const at = (group: ItemStatus['group']): ItemStatus =>
+      group === 'running'
+        ? { group }
+        : group === 'asking'
+          ? { group, on: 'waiting', since: 1 }
+          : { group, endedAt: 2 };
+    const groups: readonly ItemStatus['group'][] = [
+      'running',
+      'asking',
+      'untracked',
+      'done',
+      'failed',
+      'stopped',
+    ];
+
+    expect(
+      groups.filter((group) =>
+        leavesList({ kind: 'agent', status: at(group) }),
+      ),
+    ).toStrictEqual(['done', 'failed', 'stopped']);
+    expect(
+      groups.filter((group) =>
+        leavesList({ kind: 'monitor', status: at(group) }),
+      ),
+    ).toStrictEqual(['done', 'failed', 'stopped']);
+    expect(
+      groups.filter((group) => leavesList({ kind: 'task', status: at(group) })),
+    ).toStrictEqual([]);
   });
 });
 
@@ -957,7 +1020,7 @@ describe('the block an agent item goes to', () => {
 });
 
 describe('CHD-2 tester: agent item ownership and terminal precedence', () => {
-  test('nested item order and owner remain stable when an untracked item clears and recovers', () => {
+  test('nested item order and owner remain stable when an untracked item persists and recovers', () => {
     const owner = { name: 'parser', colour: 2 };
     const listed = (state: Subagent['state']) =>
       backgroundItems(
@@ -977,6 +1040,7 @@ describe('CHD-2 tester: agent item ownership and terminal precedence', () => {
 
     expect(listed('untracked').map(({ key, id }) => [key, id])).toStrictEqual([
       [2, 'outer'],
+      [2, 'same'],
       [1, 'same'],
     ]);
 
@@ -1025,9 +1089,12 @@ describe('CHD-2 tester: agent item ownership and terminal precedence', () => {
         agent(1, { transcript, stopping: new Set(['a']) }),
       ]);
 
-      expect(item?.status.group).toBe(group);
-      expect(item?.status).toMatchObject({ endedAt: 40 });
-      expect(summaryGroups(item ? [item] : [])[0]?.group).toBe(group);
+      if (group === 'untracked') {
+        expect(item?.status).toMatchObject({ group, endedAt: 40 });
+        expect(summaryGroups(item ? [item] : [])[0]?.group).toBe(group);
+      } else {
+        expect(item).toBeUndefined();
+      }
     }
   });
 
@@ -1089,7 +1156,7 @@ describe('CHD-2 tester: waiting fixture cancellation', () => {
         backgroundItems([agent(1, { transcript })]).map(
           ({ status }) => status.group,
         ),
-      ).toStrictEqual(['stopped']);
+      ).toStrictEqual([]);
       expect(requests).toBe(0);
 
       const next = await play(session, 'claudewaiting');
@@ -1103,12 +1170,158 @@ describe('CHD-2 tester: waiting fixture cancellation', () => {
         backgroundItems([agent(1, { transcript: finished })]).map(
           ({ status }) => status.group,
         ),
-      ).toStrictEqual(['done']);
+      ).toStrictEqual([]);
       expect(requests).toBe(0);
     } finally {
       unsubscribe();
       await session.close();
       await rm(dir, { recursive: true });
+    }
+  });
+});
+
+describe('CHD-479 tester: parent identity survives nested and reused adapter ids', () => {
+  test('the same adapter ids in different sessions retain distinct parents', () => {
+    const items = backgroundItems([
+      agent(17, {
+        owner: { name: 'tester', colour: 1 },
+        transcript: withEntries([
+          claude('shared', 10, {
+            entries: [claude('nested', 11, { entries: [claude('leaf', 12)] })],
+          }),
+        ]),
+      }),
+      agent(23, {
+        owner: { name: 'coder', colour: 2 },
+        transcript: withEntries([
+          claude('shared', 10, { entries: [claude('nested', 11)] }),
+        ]),
+      }),
+    ]);
+
+    expect(
+      items
+        .filter(({ key }) => key === 17)
+        .map(({ id, parent }) => ({ id, parent })),
+    ).toStrictEqual([
+      { id: 'shared', parent: 'tester' },
+      { id: 'nested', parent: 'tester' },
+      { id: 'leaf', parent: 'tester' },
+    ]);
+    expect(
+      items
+        .filter(({ key }) => key === 23)
+        .map(({ id, parent }) => ({ id, parent })),
+    ).toStrictEqual([
+      { id: 'shared', parent: 'coder' },
+      { id: 'nested', parent: 'coder' },
+    ]);
+    expect(new Set(items.map(({ key, id }) => `${key}:${id}`)).size).toBe(5);
+  });
+
+  test('an ancestor without cancel is not substituted for the listed parent', () => {
+    const transcript = withEntries([
+      claude(
+        'container',
+        10,
+        {
+          entries: [claude('inner', 11, { entries: [claude('leaf', 12)] })],
+        },
+        ['offeredCancel', 'cancellable'],
+      ),
+    ]);
+
+    for (const owner of [undefined, { name: 'reviewer', colour: 3 }]) {
+      const items = backgroundItems([
+        agent(1, { transcript, ...(owner === undefined ? {} : { owner }) }),
+      ]);
+
+      expect(items.map(({ id, parent }) => ({ id, parent }))).toStrictEqual([
+        { id: 'inner', parent: owner?.name ?? 'main' },
+        { id: 'leaf', parent: owner?.name ?? 'main' },
+      ]);
+    }
+  });
+
+  test('a still-untracked agent and its recovered stopping state keep the parent', () => {
+    const make = (state: 'untracked' | 'running') =>
+      backgroundItems([
+        agent(31, {
+          owner: { name: 'parser', colour: 0 },
+          stopping: new Set(['same']),
+          transcript: withEntries([claude('same', 10, { state })]),
+        }),
+      ]);
+    const lost = make('untracked');
+    const recovered = make('running');
+
+    expect(lost[0]?.status.group).toBe('untracked');
+    expect(recovered[0]?.status).toStrictEqual({
+      group: 'running',
+      stopping: true,
+    });
+
+    for (const item of [...lost, ...recovered]) {
+      expect(item.parent).toBe('parser');
+      expect(item.key).toBe(31);
+      expect(item.id).toBe('same');
+      expect(leavesList(item)).toBe(false);
+    }
+  });
+});
+
+describe('CHD-479 tester: parent order follows the list through live state changes', () => {
+  test('interleaved start times cannot reorder parents, and a removed parent returns in its list position', () => {
+    const list = (state: Subagent['state']) =>
+      backgroundItems(
+        [
+          agent(1, { transcript: withEntries([claude('main', 40)]) }),
+          agent(2, {
+            owner: { name: 'parser', colour: 1 },
+            transcript: withEntries([claude('parser', 30, { state })]),
+          }),
+          agent(3, {
+            owner: { name: 'tester', colour: 2 },
+            transcript: withEntries([
+              claude('tester-1', 10),
+              claude('tester-2', 20),
+            ]),
+          }),
+        ],
+        100,
+      );
+
+    expect(list('running').map(({ parent }) => parent)).toStrictEqual([
+      'tester',
+      'tester',
+      'parser',
+      'main',
+    ]);
+    expect(
+      summaryGroups(list('completed')).map(({ text }) => text),
+    ).toStrictEqual(["main's agent and tester's 2 agents running"]);
+    expect(
+      summaryGroups(list('untracked')).map(({ text }) => text),
+    ).toStrictEqual([
+      "? parser's agent untracked",
+      "main's agent and tester's 2 agents running",
+    ]);
+
+    const groups = summaryGroups(list('running'));
+    const expected =
+      "main's agent and parser's agent and tester's 2 agents running";
+
+    expect(groups.map(({ text }) => text)).toStrictEqual([expected]);
+
+    for (const width of [74, 114]) {
+      expect(
+        summaryLines(groups, width)
+          .flat()
+          .map(({ text }) => text)
+          .join('')
+          .replace(/\s+/g, ' ')
+          .trim(),
+      ).toBe(`background ${expected}`);
     }
   });
 });

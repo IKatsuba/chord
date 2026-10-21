@@ -561,3 +561,303 @@ test("a task's spend that a record or an agent bent is read part by part, what d
   expect(spentFrom('lots')).toBe(undefined);
   expect(spentFrom(null)).toBe(undefined);
 });
+
+describe("an agent item's end, once its turn has ended (CHD-479)", () => {
+  /** Claude's subagent `id`, open to a cancel, announced at 2. */
+  const announced = (id: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at: 2,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      title: `${id} (Explore)`,
+      description: `Find ${id}`,
+      state: { state: 'running' },
+      capabilities: { cancel: {} },
+    },
+  });
+  const told = (
+    id: string,
+    state: Record<string, unknown>,
+    at: number,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      state,
+    } as unknown as SessionUpdate,
+  });
+  const ENDED: TranscriptAction = {
+    type: 'result',
+    turnId: TURN,
+    result: { status: 'completed', stopReason: 'end_turn' },
+  };
+  const ends = (transcript: Transcript) =>
+    transcript.entries.filter((entry) => entry.kind === 'item_ended');
+
+  test('one that ends after its turn says so once, with its name, end and times', () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          announced('a'),
+          ENDED,
+          told('a', { state: 'completed' }, 6002),
+        ]),
+      ),
+    ).toStrictEqual([
+      {
+        kind: 'item_ended',
+        turnId: TURN,
+        item: 'agent',
+        name: 'Find a',
+        end: 'done',
+        startedAt: 2,
+        endedAt: 6002,
+      },
+    ]);
+  });
+
+  test('one that ends while its turn runs is said by its own block, not by a line', () => {
+    expect(
+      ends(
+        fold([PROMPT, announced('a'), told('a', { state: 'completed' }, 9)]),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  test('a subagent that is no item, offering no cancel of its own, gets none', () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          spawned('a', 'Find'),
+          ENDED,
+          told('a', { state: 'completed' }, 9),
+        ]),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  test("a failure carries its agent's reason, a stop the person's x, a gone agent its disconnect", () => {
+    const failed = fold([
+      PROMPT,
+      announced('a'),
+      announced('b'),
+      announced('c'),
+      ENDED,
+      told(
+        'a',
+        {
+          state: 'idle',
+          stopReason: 'error',
+          error: { message: 'tsc exited 2' },
+        },
+        9,
+      ),
+      {
+        type: 'subagent_stopping',
+        turnId: TURN,
+        subagentId: 'b',
+        stopping: true,
+      },
+      told('b', { state: 'cancelled' }, 10),
+      { type: 'disconnected', turnId: TURN, at: 11 },
+    ]);
+
+    expect(
+      ends(failed).map((entry) =>
+        entry.kind === 'item_ended'
+          ? [entry.name, entry.end, entry.byPerson, entry.error]
+          : [],
+      ),
+    ).toStrictEqual([
+      ['Find a', 'failed', undefined, 'tsc exited 2'],
+      ['Find b', 'stopped', true, undefined],
+      ['Find c', 'disconnected', undefined, undefined],
+    ]);
+  });
+
+  test("a subagent's own agent item, its end told in its parent's work, is said once at the top after the root turn, and not while it runs", () => {
+    /** `action` as it comes in `a`'s own work. */
+    const inA = (action: TranscriptAction): TranscriptAction => {
+      assert(action.type === 'update');
+
+      return { ...action, subagentId: 'a' };
+    };
+
+    const inner = [
+      PROMPT,
+      announced('a'),
+      inA(announced('g')),
+    ] satisfies TranscriptAction[];
+    const everyLine = (entries: readonly Entry[]): Entry[] =>
+      entries.flatMap((entry) =>
+        entry.kind === 'item_ended'
+          ? [entry]
+          : entry.kind === 'subagent'
+            ? everyLine(entry.subagent.entries)
+            : [],
+      );
+
+    const during = fold([...inner, inA(told('g', { state: 'completed' }, 9))]);
+
+    expect(everyLine(during.entries)).toStrictEqual([]);
+
+    const after = fold([
+      ...inner,
+      ENDED,
+      inA(told('g', { state: 'completed' }, 9)),
+    ]);
+
+    expect(everyLine(after.entries)).toHaveLength(1);
+    expect(after.entries.at(-1)).toMatchObject({
+      kind: 'item_ended',
+      turnId: TURN,
+      name: 'Find g',
+      end: 'done',
+    });
+  });
+
+  test('an ended one told again says nothing more', () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          announced('a'),
+          ENDED,
+          told('a', { state: 'completed' }, 9),
+          told('a', { state: 'completed' }, 10),
+        ]),
+      ),
+    ).toHaveLength(1);
+  });
+});
+
+describe('CHD-479 tester: late item transitions keep the announcing root turn', () => {
+  const update = (
+    id: string,
+    state: string,
+    at: number,
+    parent?: string,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at,
+    ...(parent === undefined ? {} : { subagentId: parent }),
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      description: `Find ${id}`,
+      state: { state },
+      capabilities: { cancel: {} },
+    } as SessionUpdate,
+  });
+  const result = (status: 'completed' | 'cancelled'): TranscriptAction => ({
+    type: 'result',
+    turnId: TURN,
+    result:
+      status === 'completed'
+        ? { status, stopReason: 'end_turn' }
+        : { status, stopReason: 'cancelled' },
+  });
+  const lines = (transcript: Transcript) =>
+    transcript.entries.filter((entry) => entry.kind === 'item_ended');
+
+  test('an old root ends during another live turn without ending or duplicating that turn', () => {
+    const transcript = fold([
+      PROMPT,
+      update('old', 'running', 2),
+      result('completed'),
+      { type: 'prompt', turnId: 'next', text: 'next turn', at: 10 },
+      update('old', 'completed', 12),
+      update('old', 'failed', 13),
+    ]);
+
+    expect(lines(transcript)).toHaveLength(1);
+    expect(lines(transcript)[0]).toMatchObject({
+      turnId: TURN,
+      name: 'Find old',
+      end: 'done',
+    });
+    expect(transcript.turn).toMatchObject({
+      turnId: 'next',
+      status: 'working',
+    });
+  });
+
+  test('a nested unknown survives its root cancel, then disconnects once at the top', () => {
+    const transcript = fold([
+      PROMPT,
+      update('outer', 'running', 2),
+      update('inner', 'unknown', 3, 'outer'),
+      result('cancelled'),
+      { type: 'disconnected', turnId: TURN, at: 20 },
+      { type: 'disconnected', turnId: TURN, at: 21 },
+    ]);
+
+    expect(lines(transcript).map(({ name, end }) => [name, end])).toStrictEqual(
+      [
+        ['Find outer', 'disconnected'],
+        ['Find inner', 'disconnected'],
+      ],
+    );
+    expect(
+      only(transcript, 'outer').entries.some(
+        (entry) => entry.kind === 'item_ended',
+      ),
+    ).toBe(false);
+  });
+
+  test('a late nested completion after a cancelled root is emitted once; a live-root end never reappears later', () => {
+    const prefix = [
+      PROMPT,
+      update('outer', 'running', 2),
+      update('inner', 'running', 3, 'outer'),
+    ];
+    const late = fold([
+      ...prefix,
+      result('cancelled'),
+      update('inner', 'completed', 10, 'outer'),
+      update('inner', 'completed', 11, 'outer'),
+    ]);
+    const during = fold([
+      ...prefix,
+      update('inner', 'completed', 4, 'outer'),
+      result('completed'),
+      update('inner', 'completed', 10, 'outer'),
+    ]);
+
+    expect(lines(late)).toHaveLength(1);
+    expect(lines(late)[0]).toMatchObject({
+      name: 'Find inner',
+      turnId: TURN,
+      end: 'done',
+    });
+    expect(lines(during)).toStrictEqual([]);
+  });
+
+  test('independent owners reusing the same ACP id cannot satisfy or duplicate each other', () => {
+    const a = fold([
+      PROMPT,
+      update('shared', 'running', 2),
+      result('completed'),
+    ]);
+    const b = fold([
+      PROMPT,
+      update('shared', 'running', 2),
+      result('completed'),
+    ]);
+    const endedA = fold([update('shared', 'completed', 8)], a);
+    const endedB = fold([update('shared', 'cancelled', 9)], b);
+
+    expect(lines(a)).toStrictEqual([]);
+    expect(lines(b)).toStrictEqual([]);
+    expect(lines(endedA)[0]).toMatchObject({ end: 'done' });
+    expect(lines(endedB)[0]).toMatchObject({ end: 'stopped' });
+  });
+});

@@ -217,24 +217,24 @@ describe('CHD-424 tester: rebound background stop', () => {
           await window.press('x');
           expect(window.frame()).not.toContain('■ stopped after');
           await window.press('z');
-          await window.shows('■ stopped after');
-          await window.press('j');
           await window.shows('❯ parser tests');
           await window.press('\x1b[1;2A');
           expect(window.frame()).toContain('❯ parser tests');
           await window.press('z');
           await until(
-            'both monitors stopped',
-            () => (window.frame().match(/■ stopped after/g) ?? []).length === 2,
+            'last monitor closes view',
+            () => !window.frame().includes('Background ·'),
           );
-          await window.press(ESC);
-          await window.shows('❯ background  ■ 2 monitors stopped');
-          await window.press(UP);
+          expect(window.frame()).not.toContain('background  ');
+          await window.press(DOWN);
+          await window.press(DOWN);
           await window.shows('❯ parser ');
           await window.press('z');
-          await window.press('z');
-          await window.shows('background  ■ 1 monitor stopped');
-          expect(window.frame()).not.toContain('❯ parser ');
+          await until(
+            'child closed',
+            () => !window.frame().includes('❯ parser '),
+          );
+          expect(window.frame()).not.toContain('background  ');
         },
         {
           server,
@@ -260,11 +260,11 @@ describe('CHD-424 tester: rebound background stop', () => {
   });
 });
 
-test('a Claude agent that takes a while to stop reads stopping until it says it stopped, and a second x changes nothing', () =>
+test('a Claude agent that takes a while to stop reads stopping until it says it stopped, then leaves, and a second x changes nothing', () =>
   withWindow(
     async (window) => {
       await send(window, 'claudeslowstop');
-      await window.shows('background  2 agents running');
+      await window.shows("background  main's 2 agents running");
       await window.press(DOWN);
       await window.press('\r');
       await window.shows('❯ Run the test suite');
@@ -273,7 +273,12 @@ test('a Claude agent that takes a while to stop reads stopping until it says it 
       await window.press('x');
       expect(window.frame()).toContain('■ stopping');
       expect(window.frame()).not.toContain('could not stop');
-      await window.shows('■ stopped after');
+      // Once it says it stopped, its row leaves (CHD-479).
+      await until(
+        'its row gone',
+        () => !window.frame().includes('Run the test suite  agent'),
+      );
+      expect(window.frame()).not.toContain('■ stopped after');
     },
     { rows: 24, columns: 80 },
   ));
@@ -287,7 +292,7 @@ describe('CHD-2 tester: pending stops and deferred refusals in the window', () =
       withWindow(
         async (window) => {
           await send(window, 'claudebackground');
-          await window.shows('background  2 agents running');
+          await window.shows("background  main's 2 agents running");
           await window.press(DOWN);
           await window.press('\r');
           await window.shows('❯ Run the test suite');
@@ -310,12 +315,15 @@ describe('CHD-2 tester: pending stops and deferred refusals in the window', () =
           expect(ids[0]).not.toBe(window.session()?.id);
           expect(window.frame()).toContain('■ stopping');
           await window.press(ESC);
-          await window.shows('background  2 agents running');
+          await window.shows("background  main's 2 agents running");
           await window.press('\r');
           await window.shows('■ stopping');
           await writeFile(join(window.dir, '.fake-gate', 'stop-release'), '');
-          await window.shows('■ stopped after');
-          await window.shows('✓ done in');
+          await until(
+            'stopped agent row leaves',
+            () => !window.frame().includes('❯ Run the test suite'),
+          );
+          expect(window.frame()).not.toContain('■ stopped after');
           expect(
             (await readFile(log, 'utf8')).trim().split('\n'),
           ).toStrictEqual(ids);
@@ -331,7 +339,7 @@ describe('CHD-2 tester: pending stops and deferred refusals in the window', () =
       withWindow(
         async (window) => {
           await send(window, 'claudebackground');
-          await window.shows('background  2 agents running');
+          await window.shows("background  main's 2 agents running");
 
           const session = window.session();
 
@@ -410,19 +418,21 @@ describe('CHD-2 tester: pending stops and deferred refusals in the window', () =
     withWindow(
       async (window) => {
         await send(window, 'claudebackground');
-        await window.shows('background  2 agents running');
+        await window.shows("background  main's 2 agents running");
         await window.press(DOWN);
         await window.press('\r');
         await window.shows('❯ Run the test suite');
         await window.press('x');
         await window.shows('■ stopping');
-        await window.shows('✓ done in');
         await until(
-          'both children done despite the held stop',
-          () => (window.frame().match(/✓ done in/g) ?? []).length === 2,
+          'natural completion removes last row and summary',
+          () =>
+            !window.frame().includes('Background ·') &&
+            !window.frame().includes('background  '),
         );
         expect(window.frame()).not.toContain('■ stopping');
-        await window.press('x');
+        await window.type('back in prompt');
+        expect(promptRow(window)).toContain('back in prompt');
         expect(
           (await readFile(join(window.dir, '.fake-gate', 'stops'), 'utf8'))
             .trim()
@@ -459,7 +469,7 @@ describe('CHD-473 T4 tester: error paging through the window', () => {
           async (window) => {
             await ready(window);
             await send(window, 'claudebackground');
-            await window.shows('background  2 agents running');
+            await window.shows("background  main's 2 agents running");
 
             const session = window.session();
 

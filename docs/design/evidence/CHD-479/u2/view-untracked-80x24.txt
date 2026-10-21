@@ -1,0 +1,24 @@
+   ├─ Agent(explorer (Explore)) · 3 tool uses · 10s
+   │  ⎿  Done
+   ├─ Agent(reviewer (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Failed
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(watcher) · 1 tool use · 0s
+      ⎿  Untracked
+
+ ⏺ Each agent has ended.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 in this tab                                                   │
+│                                                                              │
+│ ❯ Watch the build  agent  ? untracked 0s  main                               │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  ? main's agent untracked

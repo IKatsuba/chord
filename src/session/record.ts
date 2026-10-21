@@ -134,6 +134,17 @@ export type RecordEntry =
   /** The person interrupted a turn, which ends its subagents then. */
   | { readonly type: 'cancel'; readonly turnId: string; readonly at: number }
   /**
+   * The person stopped subagent `subagentId` alone with `x`, or, `stopping`
+   * false, that stop could not be sent, so a resumed transcript says who
+   * ended it as the live one did (CHD-479, the owner's Q118). A record
+   * written before these has none, and says only how it ended.
+   */
+  | {
+      readonly type: 'stopping';
+      readonly subagentId: string;
+      readonly stopping: boolean;
+    }
+  /**
    * chord cancelled a turn the agent started on its own with a message
    * steered after chord's turn had ended; the message went as the next turn.
    */
@@ -622,6 +633,15 @@ export function recordActions(
         });
 
         break;
+      case 'stopping':
+        actions.push({
+          type: 'subagent_stopping',
+          turnId: 'stop',
+          subagentId: entry.subagentId,
+          stopping: entry.stopping,
+        });
+
+        break;
       case 'self_started':
         actions.push({
           type: 'self_started',
@@ -840,10 +860,10 @@ function updateEntry(
 
 /**
  * The record's line for an event the conversation reported, if it keeps one:
- * updates, interrupts, a turn the agent started on its own and chord
- * cancelled, the agent's going, results and usage as they came,
- * and the model, mode and config values once they move. `state` is the line
- * last written of those.
+ * updates, interrupts, the person's stop of a subagent, a turn the agent
+ * started on its own and chord cancelled, the agent's going, results and
+ * usage as they came, and the model, mode and config values once they move.
+ * `state` is the line last written of those.
  */
 export function entryOf(
   event: ConversationEvent,
@@ -861,6 +881,12 @@ export function entryOf(
     }
     case 'cancel':
       return { type: 'cancel', turnId: event.turnId, at: event.at };
+    case 'subagent_stopping':
+      return {
+        type: 'stopping',
+        subagentId: event.subagentId,
+        stopping: event.stopping,
+      };
     case 'self_started':
       return { type: 'self_started', turnId: event.turnId, from: event.from };
     case 'served':

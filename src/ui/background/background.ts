@@ -7,6 +7,10 @@
  */
 import stringWidth from 'string-width';
 import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
+import {
+  agentItemName,
+  isAgentItem,
+} from '../../session/transcript/subagents.ts';
 import type {
   Entry,
   MonitorEnd,
@@ -108,6 +112,13 @@ export interface BackgroundItem {
   readonly callId?: string;
   /** An agent's own stop: its agent still offers one. */
   readonly stoppable?: boolean;
+  /**
+   * An agent item's: the listed agent whose transcript announced it, by the
+   * name the agents list gives it, `main` or a child's (CHD-479).
+   */
+  readonly parent?: string;
+  /** Its parent's place in the agents list, which orders the parents. */
+  readonly parentAt?: number;
 }
 
 /** One agent of the tab, as its items are read from its session. */
@@ -125,8 +136,8 @@ export interface BackgroundAgent {
 
 /**
  * The tab's items, oldest first, each keeping its place as it changes: the
- * running ones, and those ended after `clearedAt`, the person's last prompt
- * in the tab. Two that started in the same millisecond keep the order of
+ * running, asking and untracked ones, and those ended after `clearedAt`,
+ * the person's last prompt in the tab, of a kind that stays once ended. Two that started in the same millisecond keep the order of
  * their agents, then of each agent's monitors by id and tasks as its
  * transcript has them, which no change of state moves.
  */
@@ -135,16 +146,19 @@ export function backgroundItems(
   clearedAt = -Infinity,
 ): BackgroundItem[] {
   return agents
-    .flatMap((agent) => [
+    .flatMap((agent, at) => [
       ...monitorItems(agent),
       ...taskItems(agent),
-      ...agentItems(agent),
+      ...agentItems(agent, at),
     ])
     .filter(
-      ({ status }) =>
-        status.group === 'running' ||
-        status.group === 'asking' ||
-        status.endedAt > clearedAt,
+      (item) =>
+        !leavesList(item) &&
+        // Untracked has not ended, so no prompt clears it (Q110).
+        (item.status.group === 'running' ||
+          item.status.group === 'asking' ||
+          item.status.group === 'untracked' ||
+          item.status.endedAt > clearedAt),
     )
     .sort((a, b) => a.startedAt - b.startedAt);
 }
@@ -290,20 +304,34 @@ function taskAsking(
 }
 
 /**
- * Whether a subagent is an `agent` item: one announced with
- * `capabilities.cancel`, which can be stopped alone. The rule is open with
- * the owner (Q40), so it is here alone.
+ * The groups each kind's items leave the list in, at once, as they end (the
+ * owner's Q83 and Q86, docs/design/CHD-479.md): an `agent` once done,
+ * failed or stopped, and a monitor, whose end its agent's transcript says
+ * already (CHD-266). `untracked`, which a later state takes back, is not
+ * ended and stays (Q110).
  */
-export function isAgentItem(subagent: Subagent): boolean {
-  return subagent.task === undefined && subagent.offeredCancel === true;
+const LEAVES: Record<BackgroundKind, ReadonlySet<ItemStatus['group']>> = {
+  monitor: new Set(['done', 'failed', 'stopped']),
+  task: new Set(),
+  agent: new Set(['done', 'failed', 'stopped']),
+};
+
+/** Whether `item` has ended in a way that takes it off the list. */
+export function leavesList(
+  item: Pick<BackgroundItem, 'kind' | 'status'>,
+): boolean {
+  return LEAVES[item.kind].has(item.status.group);
 }
+
+/** The name the agents list gives the tab's own agent. */
+const MAIN_NAME = 'main';
 
 /**
  * The subagents of an agent's that are items, a subagent's own included,
  * started since its session came up. One that lost its cancel since stays an
  * item, with no stop.
  */
-function agentItems(agent: BackgroundAgent): BackgroundItem[] {
+function agentItems(agent: BackgroundAgent, at: number): BackgroundItem[] {
   const { since, transcript } = agent;
 
   if (since === undefined) {
@@ -323,7 +351,7 @@ function agentItems(agent: BackgroundAgent): BackgroundItem[] {
         id: subagent.id,
         key: agent.key,
         ...(agent.owner === undefined ? {} : { owner: agent.owner }),
-        name: subagent.description ?? subagent.title ?? 'agent',
+        name: agentItemName(subagent),
         startedAt,
         status: agentStatus(
           subagent,
@@ -332,6 +360,8 @@ function agentItems(agent: BackgroundAgent): BackgroundItem[] {
           agent.stopping?.has(subagent.id) === true,
         ),
         stoppable: subagent.cancellable === true,
+        parent: agent.owner?.name ?? MAIN_NAME,
+        parentAt: at,
       },
     ];
   });
@@ -432,13 +462,17 @@ export function summaryGroups(
 ): SummaryGroup[] {
   return GROUPS.flatMap((group) => {
     const counted = KINDS.flatMap((kind) => {
-      const count = items.filter(
+      const of = items.filter(
         (item) => item.kind === kind && item.status.group === group,
-      ).length;
+      );
 
-      return count === 0
-        ? []
-        : [`${count} ${KIND_WORDS[kind][count === 1 ? 0 : 1]}`];
+      if (of.length === 0) {
+        return [];
+      }
+
+      return kind === 'agent'
+        ? agentPhrases(of)
+        : [`${of.length} ${KIND_WORDS[kind][of.length === 1 ? 0 : 1]}`];
     });
 
     const glyph = GROUP_GLYPHS[group];
@@ -454,6 +488,28 @@ export function summaryGroups(
           },
         ];
   });
+}
+
+/**
+ * A group's agent items by their parent, in the agents list's order (`main`
+ * first, then the rows under it): `main's agent`, `main's 2 agents`
+ * (docs/design/CHD-479.md).
+ */
+function agentPhrases(agents: readonly BackgroundItem[]): string[] {
+  const parents = new Map<string, { at: number; count: number }>();
+
+  for (const { parent = MAIN_NAME, parentAt = 0 } of agents) {
+    parents.set(parent, {
+      at: parentAt,
+      count: (parents.get(parent)?.count ?? 0) + 1,
+    });
+  }
+
+  return [...parents]
+    .sort(([, a], [, b]) => a.at - b.at)
+    .map(([parent, { count }]) =>
+      count === 1 ? `${parent}'s agent` : `${parent}'s ${count} agents`,
+    );
 }
 
 /** The word the summary line opens with. */

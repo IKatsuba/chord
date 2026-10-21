@@ -7001,3 +7001,43 @@ window, and drew over the screen.
   call, a later one of the same error among them, goes on unchanged. On a
   key the crash path writes the stack to stderr after the terminal is
   given back, as for an uncaught exception.
+
+## 2026-10-21 — CHD-492: chord tells the terminal the session id to resume, in a user variable (owner, Q124)
+
+Chorded (CHRD-412) wants to reopen chord after its pane ends, however it
+ended. The owner's direction: chord tells the terminal the main session's
+agent session id, and Chorded later runs the existing `chord --resume
+<sessionId>`; no launcher-given id, no mapping file, no lock. The design is
+`docs/design/CHD-492.md`; the drafts of the first of three superseded
+designs are in `docs/design/evidence/CHD-492/drafts/`.
+
+- **The carrier, tried first in OSC 7501.** The Program Status spec
+  (revision 0.4) has no key for it but lets unknown `[a-z]+` keys extend
+  it; OpenTUI 0.6.6's `setProgramStatus` encodes only its seven fields and
+  drops others; the record `id` is a path (a UUID is over its 32-byte
+  segment), `title` and `msg` are for a person, and a report of chord's own
+  beside OpenTUI's would erase it. Options put to the owner (Q124): ask
+  OpenTUI for extension keys, ask the spec for a key, write every report
+  ourselves, another channel. **Choice: another channel** (owner).
+- **The sequence.** iTerm2's `ESC ] 1337 ; SetUserVar=chord_session=<base64>
+  BEL`, which WezTerm also takes; empty value for nothing to resume.
+  OpenTUI has no call for it or for bytes of chord's own, so it goes through
+  `useStdout` between frames, as OSC 9 and 777 do, and inside tmux through
+  `throughTmux`'s DCS passthrough, which needs `allow-passthrough`. Sent in
+  every terminal: one that does not know OSC 1337 ignores it, as it does
+  OSC 9, 777 and 7501.
+- **When.** Empty at a new session's start; the id once the first prompt is
+  sent and flushed to the session record (a failed append does not hold it
+  back, as `--resume` still reaches the agent); a resumed or `/resume`-picked
+  session's id once open; empty on `/clear` until the new first prompt;
+  until CHD-493, the front tab's. **Not cleared on exit**, signal or crash:
+  reopening after the pane ends is the point. Children are not reported.
+- **What Chorded does.** Keeps the last decoded value per pane and, when the
+  pane ends, reopens with its own start command plus `--resume
+  <sessionId>`, the same agent, as `--resume` refuses an id recorded for
+  another; empty or none, starts chord again.
+- **Consequences.** A session whose record is gone resumes as today: the id
+  goes to the agent, which reopens it from its replay or chord draws `it
+  cannot resume session <id>: …`. Several chords in one tmux share the
+  outer terminal's variable, the last write winning. Nothing on screen
+  changes; no key is added; no dependency.

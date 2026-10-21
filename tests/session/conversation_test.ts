@@ -4834,10 +4834,12 @@ describe('CHD-491 U2 tester: title ownership, reset and recorded state', () => {
         try {
           conversation.start();
           await until(() => events.some((event) => event.type === 'connected'));
+
           return { conversation, events, recording };
         } catch (error) {
           await conversation.close();
           await recording.flushed();
+
           throw error;
         }
       };

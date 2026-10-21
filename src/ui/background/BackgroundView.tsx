@@ -226,14 +226,24 @@ export function BackgroundView({
   const hidden = hiddenRows(said.length, shown.top, shown.shown);
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
+  const detailBelow = detailShown?.below ?? false;
   const scroll = useCallback(
-    (step: ScrollStep) =>
-      detailRows === undefined
-        ? setTop((at) => requestStep(step, said.length, room, at))
-        : setDetailTop((at) =>
-            requestStep(step, detailRows.length, detailRoom, at),
-          ),
-    [said.length, room, detailRows, detailRoom],
+    (step: ScrollStep) => {
+      const forward =
+        step === 'page_down' || step === 'line_down' || step === 'bottom';
+
+      // A detail and an error under it page as they read: on through the
+      // detail to its last line, then the error; back through the error
+      // to its first, then the detail (CHD-481, CHD-473).
+      if (detailRows !== undefined && (forward ? detailBelow : !shown.above)) {
+        setDetailTop((at) =>
+          requestStep(step, detailRows.length, detailRoom, at),
+        );
+      } else {
+        setTop((at) => requestStep(step, said.length, room, at));
+      }
+    },
+    [said.length, room, detailRows, detailRoom, detailBelow, shown.above],
   );
 
   // Another error, or none, starts from its first line.

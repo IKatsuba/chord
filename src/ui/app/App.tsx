@@ -551,6 +551,9 @@ export function App({
     colour: agentColour(colours, child.colour),
     ...(child.leadName === undefined ? {} : { team: child.leadName }),
   };
+  // The agent of the session shown, a picked child's runtime rather than
+  // the tab's: what draws or acts on that session names it (CHD-488).
+  const shownAgent = child?.runtime ?? frontAgent;
   const agentColours = useMemo(
     () =>
       Object.fromEntries(
@@ -636,7 +639,7 @@ export function App({
     clipboard,
     readImage,
     home,
-    agent: frontAgent,
+    agent: shownAgent,
     state,
     dispatch,
     sessions: { ...sessions, front: all.front },
@@ -658,7 +661,7 @@ export function App({
     {
       // The reports speak of the session shown: a picked child's runtime,
       // not the tab's (CHD-405).
-      agent: child?.runtime ?? frontAgent,
+      agent: shownAgent,
       cwd: here.cwd,
       saveTheme,
       saveEditorMode,
@@ -1034,7 +1037,7 @@ export function App({
                     )}
                     {first === 0 && state.connection.status === 'failed' && (
                       <Failure
-                        text={`${frontAgent} did not start: ${state.connection.message}`}
+                        text={`${shownAgent} did not start: ${state.connection.message}`}
                       />
                     )}
                     {state.transcript.entries.slice(first).map((entry, at) => {
@@ -1050,7 +1053,7 @@ export function App({
                             <TranscriptEntry
                               entry={entry}
                               turn={state.transcript.turn}
-                              agent={frontAgent}
+                              agent={shownAgent}
                               expanded={state.expanded}
                               width={columns - TRANSCRIPT_INSET}
                             />
@@ -1059,7 +1062,7 @@ export function App({
                               <Agents
                                 agents={group}
                                 turn={state.transcript.turn}
-                                agent={frontAgent}
+                                agent={shownAgent}
                                 open={state.expanded}
                                 width={columns - TRANSCRIPT_INSET}
                               />
@@ -1139,7 +1142,7 @@ export function App({
                 <ModelPicker
                   models={state.models}
                   rows={menuRows}
-                  agent={frontAgent}
+                  agent={shownAgent}
                   active={listening}
                   onPick={sessions.pickModel}
                 />
@@ -1150,7 +1153,7 @@ export function App({
                   option={configOption(state)}
                   from={state.configPicker?.from}
                   rows={menuRows}
-                  agent={frontAgent}
+                  agent={shownAgent}
                   active={listening}
                   onOpen={(id) =>
                     dispatch({ type: 'config_option_opened', id })
@@ -1216,7 +1219,7 @@ export function App({
                   servers={here.mcpServers}
                   ignored={here.mcpIgnored}
                   heldBack={conversation()?.session?.heldBack ?? []}
-                  agent={child?.runtime ?? frontAgent}
+                  agent={shownAgent}
                   windowRows={rows}
                   starting={
                     conversation()?.session === undefined &&
@@ -1315,7 +1318,7 @@ export function App({
                   {state.pendingKeys === undefined ? (
                     <StatusLine
                       state={state}
-                      agent={frontAgent}
+                      agent={shownAgent}
                       // The shown session's, main's or the picked child's, read
                       // where the list's row reads it.
                       effort={

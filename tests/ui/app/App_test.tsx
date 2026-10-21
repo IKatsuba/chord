@@ -2847,6 +2847,11 @@ test("the record's title is the main session's first prompt, a child picked and 
         await window.press(DOWN);
         await window.press('\r');
         await window.shows('╭─ helper ─');
+        // Its first prompt answered and the box taking keys, or a prompt
+        // typed under load waits in the box unsent.
+        await window.shows('150 steps read.');
+        // The status line's hint, above the agents list.
+        await window.shows('? for shortcuts');
         await send(window, 'slow');
         await until(
           'working to be reported',

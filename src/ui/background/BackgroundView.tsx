@@ -232,8 +232,19 @@ export function BackgroundView({
   const errorAbove = hidden.above > 0;
   const scroll = useCallback(
     (step: ScrollStep) => {
-      const forward =
-        step === 'page_down' || step === 'line_down' || step === 'bottom';
+      // Home and End take a detail and an error under it to the top of the
+      // one and the bottom of the other at once; a view's top past its end
+      // is drawn at its end (CHD-481).
+      if (detailRows !== undefined && (step === 'top' || step === 'bottom')) {
+        const end = step === 'bottom';
+
+        setDetailTop(end ? detailRows.length : 0);
+        setTop(end ? said.length : 0);
+
+        return;
+      }
+
+      const forward = step === 'page_down' || step === 'line_down';
 
       // A detail and an error under it page as they read: on through the
       // detail to its last line, then the error; back through the error

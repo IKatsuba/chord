@@ -9,6 +9,7 @@ import {
   laidAt,
   moveView,
   type ViewAt,
+  type ViewCell,
   stateText,
   stopRefused,
   type ViewRow,
@@ -1285,49 +1286,78 @@ describe('↑ ↓ in a detail (CHD-481)', () => {
   });
 });
 
-test("no detail line is wider than its width, every part's role kept, at any width (CHD-481)", () => {
-  const item = monitor(
-    'm2',
-    'dev server errors',
-    { group: 'running' },
-    {
-      command: 'npm run dev 2>&1 | grep --line-buffered ERROR',
-      timeoutMs: 3_600_000,
-      events: 2,
-      owner: { name: 'a-child-with-a-very-long-name-indeed', colour: 2 },
-      lastEvent: { lines: ['ERROR one', '    at two'], at: NOW - 12_000 },
-    },
-  );
+describe("no detail line is wider than its width, every part's role kept, at any width (CHD-481)", () => {
+  const withOwner = (name: string) =>
+    monitor(
+      'm2',
+      'dev server errors',
+      { group: 'running' },
+      {
+        command: 'npm run dev 2>&1 | grep --line-buffered ERROR',
+        timeoutMs: 3_600_000,
+        events: 2,
+        owner: { name, colour: 2 },
+        lastEvent: { lines: ['ERROR one', '    at two'], at: NOW - 12_000 },
+      },
+    );
+  const item = withOwner('a-child-with-a-very-long-name-indeed');
+  const text = (line: readonly ViewCell[]) =>
+    line.map(({ text }) => text).join('');
 
-  // Below three cells, a `$ ` or `← ` and one cell of text cannot fit.
-  for (let width = 3; width <= 80; width++) {
-    const lines = detailLines(item, { width, now: NOW });
-    const said = lines.map((line) => line.map(({ text }) => text).join(''));
+  // An owner whose name wrap-ansi writes in another form (a decomposed é it
+  // composes), or of characters wider than one code unit, keeps its colour.
+  for (const name of [
+    'a-child-with-a-very-long-name-indeed',
+    'rene\u0301e-the-reviewer-of-everything',
+    '👩‍💻-coder-👨‍👩‍👧-family-of-agents',
+  ]) {
+    test(`owned by ${name}`, () => {
+      // Below three cells, a `$ ` or `← ` and one cell of text cannot fit.
+      for (let width = 3; width <= 80; width++) {
+        const lines = detailLines(withOwner(name), { width, now: NOW });
+        const said = lines.map(text);
 
-    expect({
-      width,
-      wide: said.filter((line) => stringWidth(line) > width),
-    }).toStrictEqual({ width, wide: [] });
+        expect({
+          width,
+          wide: said.filter((line) => stringWidth(line) > width),
+        }).toStrictEqual({ width, wide: [] });
 
-    const of = (role: string) =>
-      lines
-        .flat()
-        .filter((cell) => cell.role === role)
-        .map(({ text }) => text)
-        .join('')
-        .replace(/\s/g, '');
+        const of = (role: string) =>
+          lines
+            .flat()
+            .filter((cell) => cell.role === role)
+            .map(({ text }) => text)
+            .join('')
+            .replace(/\s/g, '');
 
-    expect(of('state')).toBe('running4m2s');
-    expect(of('owner')).toBe('a-child-with-a-very-long-name-indeed');
+        expect(of('state')).toBe('running4m2s');
+        expect(of('owner').normalize('NFC')).toBe(name.normalize('NFC'));
+        // Each gap between the five parts is one `·`, wherever it broke.
+        expect(of('kind')).toBe('·2events·started4mago·timeout1h·');
+      }
+    });
   }
 
-  expect(
-    detailLines(item, { width: 24, now: NOW })
-      .slice(1, 4)
-      .map((line) => line.map(({ text }) => text).join('')),
-  ).toStrictEqual([
-    'running 4m 2s · 2 events',
-    '· started 4m ago ·',
-    'timeout 1h ·',
-  ]);
+  test('a part wider than its line wraps within itself, in its own role', () => {
+    expect(
+      detailLines(item, { width: 16, now: NOW })
+        .slice(1)
+        .filter((line) => line.some((cell) => cell.role === 'owner'))
+        .map((line) => line.map(({ text, role }) => `${role}:${text}`)),
+    ).toStrictEqual([
+      ['owner:a-child-with-a-v'],
+      ['owner:ery-long-name-in'],
+      ['owner:deed'],
+    ]);
+  });
+
+  test('at 24 cells the facts break between parts', () => {
+    expect(
+      detailLines(item, { width: 24, now: NOW }).slice(1, 4).map(text),
+    ).toStrictEqual([
+      'running 4m 2s · 2 events',
+      '· started 4m ago ·',
+      'timeout 1h ·',
+    ]);
+  });
 });

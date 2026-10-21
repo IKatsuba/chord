@@ -823,48 +823,48 @@ function agoWords(ms: number): string {
 }
 
 /**
- * `parts` joined by ` · ` in lines of at most `width` cells, broken as a
- * kind is (`kindIn`), each run keeping its part's role and the `·`s dim.
+ * `parts` joined by ` · ` in lines of at most `width` cells, as a kind
+ * breaks (`kindIn`): a line broken only between parts, the `·` ending it,
+ * or starting the next where even it does not fit; a part wider than a line
+ * wraps at its spaces. Each part is wrapped alone and placed whole, as the
+ * team list places its parts, so every run keeps its part's role.
  */
 function dotted(parts: readonly ViewCell[], width: number): ViewCell[][] {
-  // Every character of the joined line with the cell it came from; the
-  // wrapped lines hold the same characters less the spaces broken at.
-  const source: { readonly char: string; readonly of: ViewCell }[] = [];
-  const gap: ViewCell = { text: ' · ', role: 'kind' };
+  const room = Math.max(1, width);
+  const lines: ViewCell[][] = [];
+  const cells = (line: readonly ViewCell[]) =>
+    stringWidth(line.map(({ text }) => text).join(''));
+  const pieces = (part: ViewCell, within: number) =>
+    wrapped(part.text, within).map((text) => ({ ...part, text }));
 
-  for (const [at, part] of parts.entries()) {
-    for (const piece of at === 0 ? [part] : [gap, part]) {
-      for (const char of piece.text) {
-        source.push({ char, of: piece });
-      }
+  for (const part of parts) {
+    const last = lines.at(-1);
+
+    if (last === undefined) {
+      lines.push(...pieces(part, room).map((piece) => [piece]));
+
+      continue;
+    }
+
+    const [head, ...rest] = pieces(part, room);
+
+    if (cells(last) + 3 + stringWidth(head!.text) <= room) {
+      last.push({ text: ' · ', role: 'kind' }, head!);
+      lines.push(...rest.map((piece) => [piece]));
+    } else if (cells(last) + 2 <= room) {
+      last.push({ text: ' ·', role: 'kind' });
+      lines.push(...pieces(part, room).map((piece) => [piece]));
+    } else {
+      const [first, ...after] = pieces(part, Math.max(1, room - 2));
+
+      lines.push(
+        [{ text: '· ', role: 'kind' }, first!],
+        ...after.map((piece) => [piece]),
+      );
     }
   }
 
-  let next = 0;
-
-  return kindIn(
-    source.map(({ char }) => char).join(''),
-    Math.max(1, width),
-  ).map((line) => {
-    const cells: ViewCell[] = [];
-
-    for (const char of line) {
-      while (next < source.length && source[next]!.char !== char) {
-        next++;
-      }
-
-      const { of } = source[next++] ?? { of: gap };
-      const last = cells.at(-1);
-
-      if (last !== undefined && last.role === of.role) {
-        cells[cells.length - 1] = { ...last, text: last.text + char };
-      } else {
-        cells.push({ ...of, text: char });
-      }
-    }
-
-    return cells;
-  });
+  return lines;
 }
 
 /**

@@ -3,8 +3,8 @@
  ▄▀▀▀   /tmp/chord-qa.des441http80
  ▀▀     ? for shortcuts · /help
 
- ⏺ 1 MCP server was not passed to fake, which does not take them over SSE:
-   tracker. /mcp lists it.
+ ⏺ 1 MCP server was not passed to fake, which takes them over stdio and HTTP
+   only: tracker (sse). /mcp lists it.
 
 
 

@@ -2960,3 +2960,100 @@ describe("a picked child on another runtime is named by its own agent, not the t
       { clipboard: () => Promise.resolve({ failed: 'not read' }) },
     ));
 });
+
+describe('CHD-488 tester: agent identity follows the selected conversation', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`returning to the parent restores its identity at ${columns}×${rows}`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      const command = fakeAgentCommand();
+      const gates = await mkdtemp(join(tmpdir(), 'chord-identity-'));
+      const gate = join(gates, 'open');
+      let clipboardReads = 0;
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+
+            if (main === undefined) {
+              throw new Error('main was not admitted');
+            }
+
+            await main.window.open(main.key, {
+              agent: 'codex',
+              name: 'delayed-child',
+              prompt: 'text',
+            });
+            await window.shows('delayed-child');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('Starting codex…');
+            await window.press('\x16');
+            await window.shows('codex has not started yet');
+            expect(clipboardReads).toBe(0);
+            expect(window.frame()).not.toContain('fake has not started yet');
+            await window.press(DOWN);
+            await window.press(UP);
+            await window.press('\r');
+            await until(
+              'the parent is shown again',
+              () => !window.frame().includes('╭─ delayed-child ─'),
+            );
+            await send(window, '/model');
+            await window.shows("Switch fake's model");
+            expect(window.frame()).not.toContain("Switch codex's model");
+            await window.press(ESC);
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('Starting codex…');
+            await writeFile(gate, '');
+            await window.shows('came in chunks.');
+            await window.press('\x16');
+            await window.shows('codex does not take images');
+            expect(window.frame()).not.toContain('fake does not take images');
+            expect(clipboardReads).toBe(0);
+          },
+          {
+            server,
+            columns,
+            rows,
+            runtimes: ['fake', 'codex'],
+            agentCommand: command,
+            startupOf: (agent) => ({
+              agentCommand:
+                agent === 'codex'
+                  ? gatedCommand(
+                      gate,
+                      fakeAgentCommand(undefined, '--no-images'),
+                    )
+                  : command,
+            }),
+            clipboard: () => {
+              clipboardReads += 1;
+
+              return Promise.resolve({ failed: 'unexpected clipboard read' });
+            },
+          },
+        );
+      } finally {
+        await rm(gates, { recursive: true, force: true });
+        await server.close();
+      }
+    });
+  }
+});

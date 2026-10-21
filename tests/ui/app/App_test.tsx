@@ -65,6 +65,7 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
           kind: 'permission',
           app: 'chord',
           msg: 'fake (2) needs your permission: Write notes.txt',
+          title: 'slow',
         });
         await window.press(ESC);
         await window.shows('Interrupted by user');
@@ -97,7 +98,7 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
             () => statusReports(log).at(-1)?.state === 'idle',
           );
           expect(statusReports(log).slice(from)).toStrictEqual([
-            { state: 'idle', app: 'chord' },
+            { state: 'idle', app: 'chord', title: 'slow' },
           ]);
         },
         { columns, rows: columns === 80 ? 24 : 40, log },
@@ -119,6 +120,7 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
             state: 'error',
             app: 'chord',
             msg: "fake's turn failed",
+            title: 'error',
           });
           await window.type('x');
           await until(
@@ -3437,6 +3439,178 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
 
     for (const pid of pids) {
       expect(await isAlive(pid)).toBe(false);
+    }
+  });
+});
+
+describe('CHD-491 tester: the main session title on the actual OSC wire', () => {
+  /** Encoded title fields, from the bytes OpenTUI actually wrote. */
+  const wireTitles = (log: readonly string[]) => {
+    // eslint-disable-next-line no-control-regex
+    const records = /\x1b\]7501;[^\x07\x1b]*?title=([^:\x07\x1b]*)/g;
+
+    return [...log.join('').matchAll(records)].map((match) => match[1]!);
+  };
+
+  for (const columns of [80, 120]) {
+    const rows = columns === 80 ? 24 : 40;
+
+    test(`unnamed, first prompt, clear, resume and fresh name at ${columns} columns`, async () => {
+      const log: string[] = [];
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await until(
+            'initial idle record',
+            () => lastStatus(log)?.state === 'idle',
+          );
+          expect(lastStatus(log)?.title).toBeUndefined();
+          expect(wireTitles(log)).toStrictEqual([]);
+          await send(window, 'First main session');
+          await window.shows('came in chunks.');
+          await until(
+            'first prompt title',
+            () => lastStatus(log)?.title === 'First main session',
+          );
+          await send(window, 'A later prompt');
+          await window.shows('came in chunks.');
+          expect(lastStatus(log)?.title).toBe('First main session');
+          await send(window, '/clear');
+          await until(
+            'clear omits old title',
+            () => lastStatus(log)?.title === undefined,
+          );
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows('Resume a session');
+          await window.shows('First main session');
+          await window.press('\r');
+          await until(
+            'resumed title restored',
+            () => lastStatus(log)?.title === 'First main session',
+          );
+          expect(wireTitles(log)).toContain(
+            Buffer.from('First main session').toString('base64'),
+          );
+          await send(window, '/clear');
+          await until(
+            'resumed title cleared',
+            () => lastStatus(log)?.title === undefined,
+          );
+          await ready(window);
+          await send(window, 'Replacement main session');
+          await until(
+            'replacement title',
+            () => lastStatus(log)?.title === 'Replacement main session',
+          );
+        },
+        { log, columns, rows },
+      );
+    });
+
+    for (const [label, prompt, expected] of [
+      ['two-byte exact', 'é'.repeat(96), 'é'.repeat(96)],
+      ['two-byte overflow', 'é'.repeat(97), 'é'.repeat(96)],
+      ['three-byte exact', '語'.repeat(64), '語'.repeat(64)],
+      ['three-byte overflow', '語'.repeat(65), '語'.repeat(64)],
+      ['joined emoji exact', 'a'.repeat(181) + '👩‍💻', 'a'.repeat(181) + '👩‍💻'],
+      ['joined emoji crosses', 'a'.repeat(182) + '👩‍💻', 'a'.repeat(182)],
+      ['combining exact', 'é'.repeat(64), 'é'.repeat(64)],
+      ['combining crosses', 'a'.repeat(190) + 'é', 'a'.repeat(190)],
+    ] as const) {
+      test(`${label} fits both byte bounds on the wire at ${columns} columns`, async () => {
+        const log: string[] = [];
+
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await window.paste(prompt);
+            await until(
+              'pasted name in prompt',
+              () => promptRow(window)?.includes(prompt.slice(0, 20)) ?? false,
+            );
+            await window.press('\r');
+            await until(
+              'bounded title emitted',
+              () => lastStatus(log)?.title === expected,
+            );
+
+            const titles = wireTitles(log);
+            const encoded = Buffer.from(expected).toString('base64');
+
+            expect(titles.length).toBeGreaterThan(0);
+            expect(titles.every((title) => title === encoded)).toBe(true);
+
+            for (const title of titles) {
+              const decoded = Buffer.from(title, 'base64');
+
+              expect(title.length).toBeLessThanOrEqual(256);
+              expect(decoded.length).toBeLessThanOrEqual(192);
+              expect(decoded.toString('utf8')).toBe(expected);
+              expect(decoded.toString('utf8')).not.toContain('\ufffd');
+            }
+          },
+          { log, columns, rows },
+        );
+      });
+    }
+  }
+
+  test('a picked child cannot name an unnamed main session', async () => {
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+    const log: string[] = [];
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+
+          if (main === undefined) {
+            throw new Error('main was not admitted');
+          }
+
+          await main.window.open(main.key, {
+            agent: 'fake',
+            name: 'helper',
+            prompt: 'text',
+          });
+          await window.shows('helper');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('╭─ helper ─');
+          await send(window, 'slow');
+          await until(
+            'child working',
+            () => lastStatus(log)?.state === 'working',
+          );
+          expect(lastStatus(log)?.title).toBeUndefined();
+          expect(wireTitles(log)).toStrictEqual([]);
+          await window.press(ESC);
+          await window.press(DOWN);
+          await window.press(UP);
+          await window.press('\r');
+          await send(window, 'Main owns the title');
+          await until(
+            'main gets its title',
+            () => lastStatus(log)?.title === 'Main owns the title',
+          );
+        },
+        { log, server, columns: 80, rows: 24 },
+      );
+    } finally {
+      await server.close();
     }
   });
 });

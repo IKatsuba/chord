@@ -2382,6 +2382,8 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
         await window.shows('Esc to reject');
         await window.press('1');
         await window.shows('Received the message from Fix the tokenizer');
+        // The early progress message precedes the task's report and usage.
+        await window.shows('← from Fix the tokenizer · fake · report');
         await window.press(DOWN);
         await window.shows('❯ parser');
         await window.press('x');

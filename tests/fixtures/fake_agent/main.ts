@@ -198,7 +198,8 @@
  *
  * It takes stdio, HTTP and SSE MCP servers, and keeps the ones each session
  * was given in `session/new`, `session/load` or `session/resume`; the `mcp`
- * scenario answers with them as JSON, exactly as they arrived. It connects
+ * scenario answers with them as JSON, exactly as they arrived, and `opened`
+ * with the request that last opened the session and its `_meta`. It connects
  * only to chord's own, the last HTTP server named `chord` or `chord-<n>`, and
  * only in the
  * `chordtools` scenario, which calls `list_agents` and `list_sessions` there
@@ -293,6 +294,7 @@ import {
   mcpServers,
   models,
   modes,
+  openedWith,
   steers,
   strayCancels,
   costs,
@@ -367,6 +369,7 @@ const SCENARIOS = [
   'claudeexitplan',
   'lock',
   'mcp',
+  'opened',
   'form',
   'link',
   'askclaude',
@@ -924,6 +927,11 @@ interface SteerRequest {
   };
 }
 
+/** How a session was opened, as `opened` says it: `meta` only when sent. */
+function opened(method: string, meta: unknown) {
+  return meta === undefined || meta === null ? { method } : { method, meta };
+}
+
 const connection = acp
   .agent({ name: 'chord-fake-agent' })
   .onRequest('initialize', ({ params }) => {
@@ -962,6 +970,7 @@ const connection = acp
 
     modes.set(sessionId, 'default');
     mcpServers.set(sessionId, params.mcpServers);
+    openedWith.set(sessionId, opened('session/new', params._meta));
     cwds.set(sessionId, params.cwd);
     created.push({ sessionId, cwd: params.cwd });
     // The client hears of the commands only once the session is already up.
@@ -989,6 +998,7 @@ const connection = acp
 
     modes.set(sessionId, 'default');
     mcpServers.set(sessionId, params.mcpServers);
+    openedWith.set(sessionId, opened('session/load', params._meta));
     cwds.set(sessionId, params.cwd);
     loadMarks.set(sessionId, crypto.randomUUID().slice(0, 8));
 
@@ -1018,6 +1028,7 @@ const connection = acp
 
     modes.set(sessionId, 'default');
     mcpServers.set(sessionId, params.mcpServers ?? []);
+    openedWith.set(sessionId, opened('session/resume', params._meta));
     cwds.set(sessionId, params.cwd);
     loadMarks.set(sessionId, crypto.randomUUID().slice(0, 8));
     advertiseCommands(client, sessionId);

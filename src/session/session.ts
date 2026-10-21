@@ -429,7 +429,10 @@ export async function openSession(
 
   try {
     if (resume === undefined) {
-      const created = await connection.newSession({ cwd, mcpServers }, signal);
+      const created = await connection.newSession(
+        { cwd, mcpServers, ...openingMeta(connection) },
+        signal,
+      );
 
       sessionId = created.sessionId;
       tree = sessionTree(sessionId);
@@ -730,6 +733,21 @@ export async function openSession(
 }
 
 /**
+ * What chord adds to the request that opens a session, new or again: for
+ * Claude's adapter, its prompt suggestions off. The adapter turns them on by
+ * default and shows them only to JetBrains AIR, so chord would pay for
+ * suggestions it never shows (CHD-439); `false` goes on to its SDK, whose
+ * contract is that the agent then predicts none. Nothing for any other
+ * agent. The adapter reads its options on new, load and resume alike, and
+ * the same value each time lets it reuse a session it still has live.
+ */
+function openingMeta(connection: Agent): { _meta?: Record<string, unknown> } {
+  return connection.init.agentInfo?.name === CLAUDE_ADAPTER
+    ? { _meta: { claudeCode: { options: { promptSuggestions: false } } } }
+    : {};
+}
+
+/**
  * Opens an earlier session again. `session/resume` replays nothing, so it is
  * taken when chord's record holds the past to draw (`recorded`), or when the
  * agent cannot load; else `session/load`, whose replay is the past only when
@@ -745,7 +763,7 @@ async function reopen(
 ): Promise<{ answer: SessionAnswer; replays: boolean }> {
   const offers = connection.init.agentCapabilities ?? {};
   const resumes = Boolean(offers.sessionCapabilities?.resume);
-  const request = { sessionId, cwd, mcpServers };
+  const request = { sessionId, cwd, mcpServers, ...openingMeta(connection) };
 
   if (resumes && (recorded || !offers.loadSession)) {
     return {

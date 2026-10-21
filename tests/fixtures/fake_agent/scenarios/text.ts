@@ -10,7 +10,7 @@ import {
   MARKDOWN_OPEN_NESTED_FENCE,
 } from '../../markdown.ts';
 import { STEP_MS } from '../options.ts';
-import { mcpServers, steeredInto } from '../sessions.ts';
+import { mcpServers, openedWith, steeredInto } from '../sessions.ts';
 import { lifetime, pause, type Play } from '../turn.ts';
 import { GATE_RELEASE, gateOpened } from './agents.ts';
 
@@ -94,6 +94,18 @@ export const TEXT = {
     await turn.say(
       `\`\`\`json\n${JSON.stringify(
         mcpServers.get(turn.sessionId) ?? [],
+        null,
+        2,
+      )}\n\`\`\``,
+    );
+
+    return 'end_turn';
+  },
+
+  async opened(turn) {
+    await turn.say(
+      `\`\`\`json\n${JSON.stringify(
+        openedWith.get(turn.sessionId) ?? null,
         null,
         2,
       )}\n\`\`\``,

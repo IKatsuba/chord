@@ -1,0 +1,24 @@
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                  │
+│ chord's MCP servers for fake. ACP does not say whether fake connected to the │
+│ ones it was passed.                                                          │
+│                                                                              │
+│ Name        Transport  Command or URL  Defined in                            │
+│ chord       http       not passed      chord itself                          │
+│ filesystem  stdio      not passed      …/chord/settings.json                 │
+│ docs        http       not passed      …/chord/settings.json                 │
+│ tracker     sse        not passed      …/chord/settings.json                 │
+│                                                                              │
+│ chord's server was not passed: fake takes no MCP servers, so it cannot start │
+│ other agents.                                                                │
+│                                                                              │
+│ filesystem, docs and tracker were not passed: fake takes no MCP servers.     │
+│ agents.fake.mcpServers in your settings changes that.                        │
+│                                                                              │
+│ Esc to close                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯

@@ -6,7 +6,11 @@
  * between its groups and never cut (CHD-424).
  */
 import stringWidth from 'string-width';
-import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
+import type {
+  EndedMonitor,
+  MonitorEvent,
+  RunningMonitor,
+} from '../../session/monitors.ts';
 import {
   agentItemName,
   isAgentItem,
@@ -103,6 +107,10 @@ export interface BackgroundItem {
   readonly status: ItemStatus;
   /** A monitor's batches handed on so far. */
   readonly events?: number;
+  /** A monitor's command, its timeout and its last batch (CHD-481). */
+  readonly command?: string;
+  readonly timeoutMs?: number;
+  readonly lastEvent?: MonitorEvent;
   /** A task's runtime and model, as the agents list names an agent's. */
   readonly runtime?: string;
   readonly model?: string;
@@ -172,6 +180,11 @@ function monitorItems(agent: BackgroundAgent): BackgroundItem[] {
     name: monitor.description,
     startedAt: monitor.startedAt,
     events: monitor.events,
+    command: monitor.command,
+    timeoutMs: monitor.timeoutMs,
+    ...(monitor.lastEvent === undefined
+      ? {}
+      : { lastEvent: monitor.lastEvent }),
   });
 
   // In id order, which is start order, so two started in the same

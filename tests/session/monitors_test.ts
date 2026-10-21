@@ -1188,3 +1188,35 @@ test("the window hears each monitor's end once, in the order they ended, a stop'
     );
     expect(ended()).toStrictEqual([]);
   }));
+
+test("a monitor keeps its last batch's lines and when it went, the lines its end carried too; none before the first (CHD-481)", async () => {
+  using time = fakeTime();
+  const { line, exit, monitor } = started();
+
+  expect(monitor.running.lastEvent).toStrictEqual(undefined);
+  line('first');
+  line('second');
+  await time.tick(200);
+  await time.settle();
+  expect(monitor.running.lastEvent).toStrictEqual({
+    lines: ['first', 'second'],
+    at: 200,
+  });
+  expect(monitor.running.events).toStrictEqual(1);
+
+  await time.tick(1000);
+  line('third');
+  await time.tick(200);
+  await time.settle();
+  expect(monitor.running.lastEvent).toStrictEqual({
+    lines: ['third'],
+    at: 1400,
+  });
+
+  // Lines still unsent when it ends go with its end, and are the last.
+  line('last words');
+  exit(1);
+  await time.settle();
+  await monitor.ended;
+  expect(monitor.running.lastEvent?.lines).toStrictEqual(['last words']);
+});

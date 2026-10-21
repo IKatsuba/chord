@@ -1076,3 +1076,132 @@ describe('CHD-441 tester: a mixed-runtime MCP panel keeps its identity and keys'
     });
   }
 });
+
+describe('CHD-441 tester: takes-none reaches child and task sessions', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a mixed-runtime child and task receive no MCP servers at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      const command = fakeAgentCommand();
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+
+            const recordedServers = async (name: string) => {
+              const records = await readRecords(join(window.dir, 'state'));
+              const record = records.find((entry) => entry.name === name);
+
+              if (!record) {
+                return undefined;
+              }
+
+              const past = await readPast(record.path);
+
+              if (!past.some((entry) => entry.type === 'result')) {
+                return undefined;
+              }
+
+              const text = past
+                .flatMap((entry) =>
+                  entry.type === 'update' &&
+                  entry.update.sessionUpdate === 'agent_message_chunk' &&
+                  entry.update.content.type === 'text'
+                    ? [entry.update.content.text]
+                    : [],
+                )
+                .join('');
+
+              return JSON.parse(
+                text.replace(/^```json\n|\n```$/g, ''),
+              ) as unknown;
+            };
+
+            const opened = await main.window.open(main.key, {
+              agent: 'openclaw',
+              name: 'none-child',
+              prompt: 'mcp',
+            });
+
+            expect(opened).not.toHaveProperty('error');
+            await until(
+              'child records the servers actually received',
+              async () =>
+                Bun.deepEquals(await recordedServers('none-child'), []),
+            );
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('╭─ none-child ─');
+            await send(window, '/mcp');
+            await window.shows("chord's MCP servers for openclaw.");
+            await window.shows('takes no MCP servers');
+            expect(window.frame().replaceAll('│', '')).toMatch(
+              /agents\.\s*openclaw\.mcpServers/,
+            );
+            expect(window.frame()).not.toContain('Bearer secret');
+            await window.press(ESC);
+            await until(
+              'Esc closes the MCP panel',
+              () =>
+                !window.frame().includes("chord's MCP servers for openclaw."),
+            );
+            main.window.close(main, 'none-child');
+            await until(
+              'parent has the prompt again',
+              () => !window.frame().includes('╭─ none-child ─'),
+            );
+
+            const spawned = await main.window.spawn(main, {
+              agent: 'openclaw',
+              name: 'none-task',
+              prompt: 'mcp',
+            });
+
+            expect(spawned).not.toHaveProperty('error');
+            await until(
+              'task records the servers actually received',
+              async () =>
+                Bun.deepEquals(await recordedServers('none-task'), []),
+            );
+            await until('task relays its own warning to the parent', () =>
+              window
+                .frame()
+                .replace(/\s+/g, ' ')
+                .includes(
+                  'none-task: 3 MCP servers were not passed to openclaw, which takes none',
+                ),
+            );
+          },
+          {
+            server,
+            mcpServers: SERVERS,
+            columns,
+            rows,
+            runtimes: ['fake', 'openclaw'],
+            agentCommand: command,
+            startupOf: (agent) => ({
+              agentCommand: command,
+              ...(agent === 'openclaw' ? { mcpServers: false as const } : {}),
+            }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

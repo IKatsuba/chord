@@ -1772,3 +1772,91 @@ describe('CHD-407 R1 tester: screenshot model selection', () => {
       '--tokens-only',
     ));
 });
+
+describe('CHD-441 tester: takes-none survives every session opening path', () => {
+  for (const method of ['new', 'load', 'recorded resume'] as const) {
+    test(`${method}: none suppresses all transports and own server, and false restores them`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-no-mcp-'));
+
+      try {
+        const stateDir = join(dir, 'state');
+        const sessionId = await recordSession({
+          stateDir,
+          cwd: dir,
+          command: fakeAgentCommand(),
+          prompts: ['text'],
+        });
+        const [record] = await readRecords(stateDir);
+
+        assert(record);
+
+        for (const noMcpServers of [true, false]) {
+          const session = await openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              ...(method === 'recorded resume' ? ['--resume-only'] : []),
+            ),
+            noMcpServers,
+            mcpServers: [DOCS, SEARCH, LOGS],
+            chordServer: CHORD_SERVER,
+            ...(method === 'new'
+              ? {}
+              : {
+                  resume: {
+                    sessionId,
+                    cwd: dir,
+                    ...(method === 'recorded resume'
+                      ? { record: record.path }
+                      : {}),
+                  },
+                }),
+          });
+
+          try {
+            const reply = said((await run(session, 'mcp')).updates).join('');
+            const given: unknown = JSON.parse(
+              reply.replace(/^```json\n|\n```$/g, ''),
+            );
+
+            const opening = said((await run(session, 'opened')).updates).join(
+              '',
+            );
+
+            expect(
+              JSON.parse(opening.replace(/^```json\n|\n```$/g, '')),
+            ).toStrictEqual({
+              method:
+                method === 'new'
+                  ? 'session/new'
+                  : method === 'load'
+                    ? 'session/load'
+                    : 'session/resume',
+            });
+            expect(given).toStrictEqual(
+              noMcpServers ? [] : [DOCS, SEARCH, LOGS, CHORD_SERVER],
+            );
+            expect(session.chordServer).toStrictEqual(
+              noMcpServers ? undefined : CHORD_SERVER,
+            );
+            expect(session.heldBack).toStrictEqual(
+              noMcpServers
+                ? [
+                    held('docs', 'stdio', []),
+                    held('search', 'http', []),
+                    held('logs', 'sse', []),
+                    held('chord', 'http', [], true),
+                  ]
+                : [],
+            );
+          } finally {
+            await session.close();
+          }
+        }
+      } finally {
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+});

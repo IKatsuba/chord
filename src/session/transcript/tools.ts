@@ -169,6 +169,10 @@ function foldTerminals(
 
   const info = read(TERMINAL_META.info, 'terminal_info');
   const delta = read(TERMINAL_META.output, 'terminal_output_delta');
+  // Read as the whole output, as Claude's adapter means it. droid and pi
+  // send a delta under this name (docs/agent-capabilities.md dr12, pi10),
+  // which then replaces what was there; chord keeps one reading for every
+  // agent on purpose (CHD-456).
   const whole = read(TERMINAL_META.output, 'terminal_output');
   const exit = read(TERMINAL_META.exit, 'terminal_exit');
   let folded = terminals;

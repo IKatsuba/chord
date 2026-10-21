@@ -109,8 +109,6 @@ export async function draw(
           ...loggedTerminal(logged.log, columns, rows),
         };
 
-  actEnvironment(true);
-
   const setup = await createTestRenderer({
     width: columns,
     height: rows,
@@ -148,7 +146,10 @@ export async function draw(
 
   // What the first render set off (an effect's promise, a session's first
   // answer) runs before the await below returns, so the mount and its
-  // aftermath are enclosed.
+  // aftermath are enclosed. The flag is React's, for every tree: set only
+  // around this act(), as another window drawn beside this one goes on
+  // updating outside any (CHD-399).
+  actEnvironment(true);
   await act(() => {
     mounted.render(
       <Exits exit={() => void unmount()}>

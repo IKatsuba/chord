@@ -12,9 +12,18 @@ import {
 import { STEP_MS } from '../options.ts';
 import { mcpServers } from '../sessions.ts';
 import { lifetime, pause, type Play } from '../turn.ts';
+import { GATE_RELEASE, gateOpened } from './agents.ts';
 
 /** How many items the `long` scenario's list has. */
 const LONG_LINES = 200;
+
+/** `long`'s line `n`, the first without the newline before it. */
+function longLine(n: number): string {
+  return `${n === 1 ? '' : '\n'}${n}. Line ${n} of ${LONG_LINES}, streamed one at a time.`;
+}
+
+/** How long `longheld` holds its turn for a cancel. */
+const HELD_WITHIN_MS = 10_000;
 
 /**
  * Reports the session's cost so far, then works on until it is cancelled, as
@@ -149,12 +158,28 @@ export const TEXT = {
   async long(turn) {
     for (let n = 1; n <= LONG_LINES; n++) {
       await pause(turn.signal, STEP_MS * 19);
-      await turn.say(
-        `${
-          n === 1 ? '' : '\n'
-        }${n}. Line ${n} of ${LONG_LINES}, streamed one at a time.`,
-      );
+      await turn.say(longLine(n));
     }
+
+    return 'end_turn';
+  },
+
+  // `long`'s first 20 lines, then, once the test writes `GATE_RELEASE`,
+  // two more, then the turn held until it is cancelled: a test sees line 20
+  // last for as long as it needs, then exactly two below it (CHD-399).
+  async longheld(turn) {
+    for (let n = 1; n <= 20; n++) {
+      await pause(turn.signal, STEP_MS * 19);
+      await turn.say(longLine(n));
+    }
+
+    await gateOpened(turn, GATE_RELEASE);
+
+    for (let n = 21; n <= 22; n++) {
+      await turn.say(longLine(n));
+    }
+
+    await pause(turn.signal, HELD_WITHIN_MS);
 
     return 'end_turn';
   },

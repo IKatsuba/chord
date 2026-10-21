@@ -352,6 +352,7 @@ const SCENARIOS = [
   'costwait',
   'costwaitlate',
   'long',
+  'longheld',
   'todos',
   'exitplan',
   'claudeexitplan',

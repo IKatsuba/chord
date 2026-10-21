@@ -283,6 +283,95 @@ test("the subagent that asks keeps the agent's colours in its title", async () =
   }
 });
 
+test('a box short of rows gives way above it, its hint on a row of its own inside the border (CHD-464)', async () => {
+  // The transcript above, which can give all its rows, and a request with
+  // none of its own past the title to give: the window has fewer rows than
+  // both, as tester's box on `teamtask` at 80x24 had.
+  const drawn = await draw(
+    <box flexDirection='column' height={12}>
+      <box flexBasis={10} flexShrink={1} minHeight={0} overflow='hidden'>
+        {Array.from({ length: 10 }, (_, line) => (
+          <text key={line}>{`transcript ${line}`}</text>
+        ))}
+      </box>
+      <PermissionPrompt
+        wait={{
+          id: 'p',
+          title: '`deno task test tests/parse`',
+          options: [
+            { optionId: 'a', name: 'Allow', kind: 'allow_once' },
+            { optionId: 'b', name: 'Always allow', kind: 'allow_always' },
+            { optionId: 'r', name: 'Deny', kind: 'reject_once' },
+          ],
+        }}
+        asker={[
+          {
+            id: 's',
+            title: 'tester',
+            state: 'running',
+            entries: [],
+            plan: [],
+          },
+        ]}
+        width={76}
+        active
+        onChoose={() => {}}
+      />
+    </box>,
+    { columns: 80, rows: 12 },
+  );
+
+  try {
+    const lines = stripAnsi(drawn.frame())
+      .split('\n')
+      .map((line) => line.trimEnd())
+      .filter((line) => line !== '');
+
+    expect(lines.at(-1)).toMatch(/^╰─+╯$/);
+    expect(lines.at(-2)).toMatch(/^│ Esc to reject +│$/);
+  } finally {
+    await drawn.unmount();
+  }
+});
+
+test('a request left no rows by a short window says beside its title how many are below (CHD-464)', async () => {
+  const title = [
+    'write',
+    ...Array.from({ length: 40 }, (_, line) => `line ${line}`),
+  ].join('\n');
+  const drawn = await draw(
+    <box flexDirection='column' flexGrow={1}>
+      <box flexGrow={1} flexBasis={0} />
+      <PermissionPrompt
+        wait={{
+          id: 'p',
+          title,
+          options: [
+            { optionId: 'a', name: 'Allow', kind: 'allow_once' },
+            { optionId: 'r', name: 'Deny', kind: 'reject_once' },
+          ],
+        }}
+        width={76}
+        active
+        onChoose={() => {}}
+      />
+    </box>,
+    // The box's pinned rows and its margin, and not one row more.
+    { columns: 80, rows: 10 },
+  );
+
+  try {
+    const lines = stripAnsi(drawn.frame()).split('\n');
+    const at = lines.findIndex((line) => line.startsWith('│ write'));
+
+    expect(lines[at], drawn.frame()).toMatch(/^│ write +↓ 40 lines below │$/);
+    // The answers' blank row next: the request has no row of its own.
+    expect(lines[at + 1]?.trimEnd()).toMatch(/^│ +│$/);
+  } finally {
+    await drawn.unmount();
+  }
+});
+
 const PAGE_DOWN = '\x1b[6~';
 const HOME = '\x1b[H';
 const SHIFT_DOWN = '\x1b[1;2B';

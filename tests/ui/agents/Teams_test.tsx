@@ -345,6 +345,38 @@ describe('a task of main asking beside a member (CHD-431)', () => {
       await window.shows(task);
       expect(shown()).toStrictEqual('main');
     }));
+
+  test("at 80x24 tester's box keeps its hint inside its border, the agents list folding to fit and the summary line whole (CHD-464)", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await bothAsk(window);
+          await toTester(window);
+
+          const lines = window.frame().split('\n');
+          const hint = lines.findIndex((line) =>
+            /^│ Esc to reject +│$/.test(line.trimEnd()),
+          );
+
+          expect(hint, window.frame()).toBeGreaterThan(0);
+          expect(lines[hint + 1]?.trimEnd()).toMatch(/^╰─+╯$/);
+          expect(window.frame()).toMatch(/… \+\d+ more/);
+          expect(window.frame()).toContain('background  ● 1 task asking');
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          rows: 24,
+          columns: 80,
+          teams: { bugfix: BUGFIX },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });
 
 describe('a task of main asking beside a member, at 80 columns (CHD-431)', () => {

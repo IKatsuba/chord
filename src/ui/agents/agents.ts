@@ -1005,3 +1005,24 @@ export function leftOpenLine(agents: readonly LeftOpen[]): string {
 
   return `${names} ${left} · /resume lists ${listed}${back}`;
 }
+
+/**
+ * How many lines the list takes drawn in `limit` lines: the lines of its
+ * rows in sight and its `… +N more`. What the window gives it before a
+ * short window takes rows back, and the least it keeps (CHD-464).
+ */
+export function agentsLines(
+  rows: readonly AgentRow[],
+  options: Parameters<typeof agentsLayout>[1],
+): number {
+  if (rows.length === 0) {
+    return 0;
+  }
+
+  const layout = agentsLayout(rows, options);
+
+  return (
+    layout.rows.reduce((sum, row) => sum + row.lines.length, 0) +
+    (layout.more > 0 ? 1 : 0)
+  );
+}

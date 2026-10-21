@@ -1,3 +1,4 @@
+import type { BoxRenderable } from '@opentui/core';
 import { useTerminalDimensions } from '@opentui/react';
 import process from 'node:process';
 import manifest from '../../../package.json' with { type: 'json' };
@@ -79,7 +80,12 @@ import {
   resolveTheme,
   type ThemeSetting,
 } from '../theme/theme.ts';
-import { agentsHint, agentsRowLimit, summaryHint } from '../agents/agents.ts';
+import {
+  agentsHint,
+  agentsLines,
+  agentsRowLimit,
+  summaryHint,
+} from '../agents/agents.ts';
 import { AgentsList, ChildLine } from '../agents/Agents.tsx';
 import { SummaryLine } from '../background/Background.tsx';
 import {
@@ -534,8 +540,26 @@ export function App({
   const agentRows = sessions.agentRows();
   // The list under the prompt: those agents, then the background's
   // summary line, its last stop.
-  const agentsLimit = agentsRowLimit(rows);
+  // At most its limit, and fewer where a short window has no more rows once
+  // the transcript has given all of its own: the rows its box was laid out
+  // to, after everything that never gives way (CHD-464).
+  const [agentsRoom, setAgentsRoom] = useState(Number.POSITIVE_INFINITY);
+  const agentsBox = useRef<BoxRenderable | null>(null);
+  const fullLimit = agentsRowLimit(rows);
+  const agentsLimit = Math.max(1, Math.min(fullLimit, agentsRoom));
   const listRows = sessions.listed(agentsLimit, columns - 4);
+  const agentsAt = (limit: number) =>
+    agentsLines(sessions.listed(limit, columns - 4), {
+      limit,
+      width: columns - 4,
+      focused: false,
+      now: Date.now(),
+    });
+  const agentsFull = agentsAt(fullLimit);
+  const agentsFloor = agentsAt(1);
+  // A request's body gives a short window rows only once the list has
+  // folded all it can, or has none to fold.
+  const listFolded = agentsFull <= agentsFloor || agentsRoom <= agentsFloor;
   const backgroundItems = sessions.background();
   // What the background frame says under its rows, whose lines its rows
   // give way to (CHD-473).
@@ -1118,6 +1142,7 @@ export function App({
                     conversation()?.choose(asked.id, optionId)
                   }
                   scroller={requestScroller}
+                  givesWay={listFolded}
                   onOverflow={(overflows) =>
                     dispatch({
                       type: 'request_overflowed',
@@ -1350,13 +1375,27 @@ export function App({
                   )}
                 </box>
               )}
-              <AgentsList
-                rows={listRows}
-                limit={agentsLimit}
-                width={columns - 4}
-                focused={listFocus && !summaryFocused}
-                view={state.agentsView}
-              />
+              <box
+                ref={agentsBox}
+                flexBasis={agentsFull}
+                minHeight={agentsFloor}
+                flexShrink={1}
+                overflow='hidden'
+                onSizeChange={() =>
+                  setAgentsRoom(
+                    agentsBox.current?.getLayout().height ??
+                      Number.POSITIVE_INFINITY,
+                  )
+                }
+              >
+                <AgentsList
+                  rows={listRows}
+                  limit={agentsLimit}
+                  width={columns - 4}
+                  focused={listFocus && !summaryFocused}
+                  view={state.agentsView}
+                />
+              </box>
               <SummaryLine
                 items={backgroundItems}
                 width={columns - 4}

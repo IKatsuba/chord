@@ -15,8 +15,10 @@ import {
 import {
   type BackgroundAgent,
   type BackgroundItem,
+  type ItemStatus,
   backgroundItems,
   callPlace,
+  leavesList,
   summaryGroups,
   summaryLines,
   type SummaryPiece,
@@ -918,6 +920,63 @@ test('a stopped agent reads stopping while it still asks, until its agent says i
   expect(asked({}, { state: 'completed', endedAt: 30 })).toStrictEqual({
     group: 'done',
     endedAt: 30,
+  });
+});
+
+describe('an agent item names its parent, and which items leave as they end (CHD-479)', () => {
+  test("an agent item's parent is the listed agent that announced it, a subagent's own too", () => {
+    const items = backgroundItems([
+      agent(1, {
+        transcript: withEntries([
+          claude('a', 10, { entries: [claude('g', 11)] }),
+        ]),
+      }),
+      agent(2, {
+        owner: { name: 'tester', colour: 3 },
+        transcript: withEntries([
+          claude('b', 12),
+          task('t', 'Fix the tokenizer', 13),
+        ]),
+      }),
+    ]);
+
+    expect(
+      items.map(({ kind, id, parent }) => ({ kind, id, parent })),
+    ).toStrictEqual([
+      { kind: 'agent', id: 'a', parent: 'main' },
+      { kind: 'agent', id: 'g', parent: 'main' },
+      { kind: 'agent', id: 'b', parent: 'tester' },
+      { kind: 'task', id: 't', parent: undefined },
+    ]);
+  });
+
+  test('an agent leaves once done, failed or stopped; running, asking and untracked stay; other kinds stay as before', () => {
+    const at = (group: ItemStatus['group']): ItemStatus =>
+      group === 'running'
+        ? { group }
+        : group === 'asking'
+          ? { group, on: 'waiting', since: 1 }
+          : { group, endedAt: 2 };
+    const groups: readonly ItemStatus['group'][] = [
+      'running',
+      'asking',
+      'untracked',
+      'done',
+      'failed',
+      'stopped',
+    ];
+
+    expect(
+      groups.filter((group) =>
+        leavesList({ kind: 'agent', status: at(group) }),
+      ),
+    ).toStrictEqual(['done', 'failed', 'stopped']);
+
+    for (const kind of ['monitor', 'task'] as const) {
+      expect(
+        groups.filter((group) => leavesList({ kind, status: at(group) })),
+      ).toStrictEqual([]);
+    }
   });
 });
 

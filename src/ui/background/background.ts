@@ -108,6 +108,11 @@ export interface BackgroundItem {
   readonly callId?: string;
   /** An agent's own stop: its agent still offers one. */
   readonly stoppable?: boolean;
+  /**
+   * An agent item's: the listed agent whose transcript announced it, by the
+   * name the agents list gives it, `main` or a child's (CHD-479).
+   */
+  readonly parent?: string;
 }
 
 /** One agent of the tab, as its items are read from its session. */
@@ -299,6 +304,28 @@ export function isAgentItem(subagent: Subagent): boolean {
 }
 
 /**
+ * The groups each kind's items leave the list in, at once, as they end (the
+ * owner's Q83 and Q86, docs/design/CHD-479.md): an `agent` once done,
+ * failed or stopped. `untracked`, which a later state takes back, is not
+ * ended and stays (Q110).
+ */
+const LEAVES: Record<BackgroundKind, ReadonlySet<ItemStatus['group']>> = {
+  monitor: new Set(),
+  task: new Set(),
+  agent: new Set(['done', 'failed', 'stopped']),
+};
+
+/** Whether `item` has ended in a way that takes it off the list. */
+export function leavesList(
+  item: Pick<BackgroundItem, 'kind' | 'status'>,
+): boolean {
+  return LEAVES[item.kind].has(item.status.group);
+}
+
+/** The name the agents list gives the tab's own agent. */
+const MAIN_NAME = 'main';
+
+/**
  * The subagents of an agent's that are items, a subagent's own included,
  * started since its session came up. One that lost its cancel since stays an
  * item, with no stop.
@@ -332,6 +359,7 @@ function agentItems(agent: BackgroundAgent): BackgroundItem[] {
           agent.stopping?.has(subagent.id) === true,
         ),
         stoppable: subagent.cancellable === true,
+        parent: agent.owner?.name ?? MAIN_NAME,
       },
     ];
   });

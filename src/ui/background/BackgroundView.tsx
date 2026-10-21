@@ -202,10 +202,19 @@ export function BackgroundView({
   const detailRows = detailed && detailLines(detailed, { width, now });
   const [detailTop, setDetailTop] = useState(0);
   const detailRoom = Math.max(1, height);
+  // A stop's error taller than what a detail of one line leaves it: the
+  // detail gives way to its first line, which says whose it is, and does
+  // not page; the error takes the page keys alone (CHD-481 Q128, CHD-462).
+  const errorTall =
+    detailRows !== undefined &&
+    hint !== undefined &&
+    said.length > frameRoom(rows) - 1;
   const detailShown =
     detailRows === undefined
       ? undefined
-      : requestView(detailRows.length, detailRoom, detailTop);
+      : errorTall
+        ? { top: 0, shown: 1, above: false, below: false }
+        : requestView(detailRows.length, detailRoom, detailTop);
   const detailHidden =
     detailRows === undefined || detailShown === undefined
       ? undefined
@@ -226,38 +235,14 @@ export function BackgroundView({
   const hidden = hiddenRows(said.length, shown.top, shown.shown);
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
-  // Lines out of sight, not the rules that say so: a room of one line has
-  // no rule, yet more to page to.
-  const detailBelow = (detailHidden?.below ?? 0) > 0;
-  const errorAbove = hidden.above > 0;
   const scroll = useCallback(
-    (step: ScrollStep) => {
-      // Home and End take a detail and an error under it to the top of the
-      // one and the bottom of the other at once; a view's top past its end
-      // is drawn at its end (CHD-481).
-      if (detailRows !== undefined && (step === 'top' || step === 'bottom')) {
-        const end = step === 'bottom';
-
-        setDetailTop(end ? detailRows.length : 0);
-        setTop(end ? said.length : 0);
-
-        return;
-      }
-
-      const forward = step === 'page_down' || step === 'line_down';
-
-      // A detail and an error under it page as they read: on through the
-      // detail to its last line, then the error; back through the error
-      // to its first, then the detail (CHD-481, CHD-473).
-      if (detailRows !== undefined && (forward ? detailBelow : !errorAbove)) {
-        setDetailTop((at) =>
-          requestStep(step, detailRows.length, detailRoom, at),
-        );
-      } else {
-        setTop((at) => requestStep(step, said.length, room, at));
-      }
-    },
-    [said.length, room, detailRows, detailRoom, detailBelow, errorAbove],
+    (step: ScrollStep) =>
+      detailRows === undefined || errorTall
+        ? setTop((at) => requestStep(step, said.length, room, at))
+        : setDetailTop((at) =>
+            requestStep(step, detailRows.length, detailRoom, at),
+          ),
+    [said.length, room, detailRows, detailRoom, errorTall],
   );
 
   // Another error, or none, starts from its first line.

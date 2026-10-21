@@ -740,3 +740,114 @@ describe("a monitor's detail in the window (CHD-481)", () => {
       { rows: 24, columns: 80 },
     ));
 });
+
+describe('a long stop refusal under a detail (CHD-481, Q128)', () => {
+  const PAGE_DOWN = '\x1b[6~';
+  const HOME = '\x1b[H';
+  const body = (window: Window) =>
+    window
+      .frame()
+      .split('\n')
+      .filter((line) => line.startsWith('│'))
+      .join('\n');
+
+  test('without one, pgup pgdn home end page the detail', () =>
+    withBackground(
+      async (window) => {
+        await ready(window);
+        await send(window, 'monitors');
+        await window.shows(
+          'Received the message from dev server errors · monitor.',
+        );
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('Background · 2 in this tab');
+        await window.press('\r');
+        await window.shows('Background · m1, 1 of 2');
+        await window.press(PAGE_DOWN);
+        await until(
+          'the description paged away',
+          () => !body(window).includes('dev server errors'),
+        );
+        await window.press(HOME);
+        await until('home, its description', () =>
+          body(window).includes('dev server errors'),
+        );
+        await window.press(END);
+        await until('end, its last batch', () =>
+          body(window).includes('at validate'),
+        );
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('the detail gives way to its first line and the refusal alone takes pgup pgdn home end; another item clears it', () =>
+    withBackground(
+      async (window) => {
+        await ready(window);
+        await send(window, 'monitor');
+        await window.shows('I will hear from the dev server when it errs.');
+        await send(window, 'claudebackground');
+        await window.shows("main's 2 agents running");
+
+        const session = window.session();
+
+        assert(session !== undefined);
+
+        const stop = spyOn(session, 'stopSubagent').mockRejectedValue(
+          new Error(
+            [
+              'Broken pipe',
+              ...Array.from(
+                { length: 29 },
+                (_, at) => `refusal line ${at + 1}`,
+              ),
+              'REFUSAL TAIL',
+            ].join('\n'),
+          ),
+        );
+
+        try {
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('Background · 3 in this tab');
+          await window.press('\r');
+          await window.shows('Background · m1, 1 of 3');
+          await window.press(DOWN);
+          await window.shows('Background · 2 of 3');
+          await window.press('x');
+          await window.shows('could not stop: Broken pipe');
+          // The detail is its first line alone, the refusal the rest.
+          await window.shows('lines below · pagedown to scroll');
+
+          const shown = body(window).split('\n');
+
+          expect(shown[2]).toContain('Run the test suite');
+          expect(shown[3]).toMatch(/^│ *│$/);
+          expect(shown[4]).toContain('could not stop: Broken pipe');
+
+          await window.press(PAGE_DOWN);
+          await window.shows('lines above · pageup to scroll');
+          expect(body(window)).toContain('Run the test suite');
+          await window.press(END);
+          await window.shows('REFUSAL TAIL');
+          expect(body(window)).toContain('Run the test suite');
+          await window.press(HOME);
+          await window.shows('could not stop: Broken pipe');
+          expect(body(window)).not.toContain('lines above');
+
+          // Another item clears the refusal; the detail has its room back.
+          await window.press(UP);
+          await window.shows('Background · m1, 1 of 3');
+          await until(
+            'the refusal gone',
+            () => !window.frame().includes('could not stop'),
+          );
+          await window.shows('$ sleep 1');
+        } finally {
+          stop.mockRestore();
+        }
+      },
+      { columns: 80, rows: 24 },
+    ));
+});

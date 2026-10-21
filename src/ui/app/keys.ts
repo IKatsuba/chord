@@ -615,6 +615,10 @@ function commandSteps(
       return [{ type: 'scroll_background_hint', step: 'page_up' }];
     case 'background_page_down':
       return [{ type: 'scroll_background_hint', step: 'page_down' }];
+    case 'background_top':
+      return [{ type: 'scroll_background_hint', step: 'top' }];
+    case 'background_bottom':
+      return [{ type: 'scroll_background_hint', step: 'bottom' }];
     case 'stop_background':
       return [{ type: 'stop_background' }];
     case 'go_to_call':

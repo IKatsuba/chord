@@ -293,7 +293,15 @@ export const SHORTCUTS: readonly Shortcut[] = [
   {
     key: 'home end',
     does: 'for the top and the bottom',
-    commands: ['scroll_top', 'scroll_bottom', 'request_top', 'request_bottom'],
+    commands: [
+      'scroll_top',
+      'scroll_bottom',
+      'request_top',
+      'request_bottom',
+      // A detail and an error in the background frame (CHD-481).
+      'background_top',
+      'background_bottom',
+    ],
     presses: ['home', 'end', 'shift + home', 'shift + end'],
     actions: ['scroll:top', 'scroll:bottom'],
   },

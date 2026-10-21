@@ -214,6 +214,12 @@ export type KeyCommand =
   | 'background_page_up'
   | 'background_page_down'
   /**
+   * home and end in the background view: a detail and an error under it to
+   * their first lines, or their last (CHD-481).
+   */
+  | 'background_top'
+  | 'background_bottom'
+  /**
    * Enter in the background view: a monitor's detail from its row, else to
    * the call that started the item (CHD-481).
    */

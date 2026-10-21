@@ -1953,13 +1953,22 @@ function backgroundCommand(
   }
 
   // An error taller than its room, or a detail, scrolls by the transcript's
-  // page keys, which the view has no other use for (CHD-473, CHD-481).
+  // page keys and home and end, which the view has no other use for
+  // (CHD-473, CHD-481).
   if (on('scroll:pageUp')) {
     return 'background_page_up';
   }
 
   if (on('scroll:pageDown')) {
     return 'background_page_down';
+  }
+
+  if (on('scroll:top')) {
+    return 'background_top';
+  }
+
+  if (on('scroll:bottom')) {
+    return 'background_bottom';
   }
 
   // Out of a monitor's detail, esc and ← go back to the rows; ← on the rows

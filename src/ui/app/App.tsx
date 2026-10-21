@@ -868,12 +868,12 @@ export function App({
 
   // The record names the main session, as /resume will (CHD-491).
   const status = () => {
-    const front = sessions.sessions.tabs.front;
-    const main = front === undefined ? undefined : sessions.stateOf(front);
+    const { tabs, front } = sessions.sessions.tabs;
+    const main = tabs.find((tab) => tab.key === front)?.conversation;
 
     return programStatus(
       sessions.sessions.tabs,
-      main && openSessionLabel(main.transcript.entries),
+      openSessionLabel(main?.firstPrompt),
     );
   };
 

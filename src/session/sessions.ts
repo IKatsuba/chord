@@ -10,7 +10,6 @@ import { readdir, readFile } from 'node:fs/promises';
 import { notFound } from '../not_found.ts';
 import { parseRecord, promptLine, recordsDir } from './record.ts';
 import { MAX_TABS } from './tabs.ts';
-import type { Entry } from './transcript/types.ts';
 
 /** An earlier session to open again, and what chord knows of it. */
 export interface Resume {
@@ -231,20 +230,13 @@ export function sessionLabel({
 }
 
 /**
- * What `/resume` will call the open session whose transcript holds
- * `entries`: its first prompt, typed or a message it was sent, as its record
- * keeps it; none before the first (CHD-491).
+ * What `/resume` will call an open session whose first prompt, as its record
+ * keeps it, is `firstPrompt`; none before one (CHD-491).
  */
 export function openSessionLabel(
-  entries: readonly Entry[],
+  firstPrompt: string | undefined,
 ): string | undefined {
-  const first = entries.find(
-    (entry) => entry.kind === 'user' || entry.kind === 'message',
-  );
-  const prompt =
-    first?.kind === 'user' || first?.kind === 'message'
-      ? promptLine(first.text)
-      : '';
+  const prompt = firstPrompt === undefined ? '' : promptLine(firstPrompt);
 
   return prompt === '' ? undefined : sessionLabel({ prompt });
 }

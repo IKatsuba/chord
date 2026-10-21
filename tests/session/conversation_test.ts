@@ -9,7 +9,15 @@ import {
   RequestError,
   type SessionUpdate,
 } from '@agentclientprotocol/sdk';
+import { shellContext, withContext } from '../../src/session/context.ts';
 import { cycleMark } from '../../src/session/cycles.ts';
+import { FileRecording } from '../../src/session/record.ts';
+import {
+  openSessionLabel,
+  readRecords,
+  type Resume,
+  sessionLabel,
+} from '../../src/session/sessions.ts';
 import type { AgentOption } from '../../src/session/config.ts';
 import {
   Conversation,
@@ -4641,5 +4649,82 @@ describe('CHD-467 tester: causal fake gates and cancellation', () => {
         );
       });
     }
+  }
+});
+
+test("a session's first prompt is kept whole, shell output ahead of it too, and named as /resume names it, live and resumed (CHD-491)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const stateDir = join(dir, 'state');
+  // A first prompt that is only a command's output, as bash mode sends it.
+  const shellOnly = withContext(
+    shellContext([
+      { command: 'ls', stdout: 'a\n', stderr: '', running: false, code: 0 },
+    ]),
+    '',
+  );
+  const opened = async (resume?: Resume) => {
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(stateDir, () => {});
+
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(),
+          ...(resume === undefined ? {} : { resume }),
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connected'));
+
+    return { conversation, events, recording };
+  };
+
+  try {
+    const live = await opened();
+
+    expect(live.conversation.firstPrompt).toStrictEqual(undefined);
+    live.conversation.send('', shellOnly);
+    await until(() => live.events.some((event) => event.type === 'result'));
+    expect(openSessionLabel(live.conversation.firstPrompt)).toStrictEqual(
+      '!ls',
+    );
+    live.conversation.send('text');
+    await until(
+      () => live.events.filter((event) => event.type === 'result').length === 2,
+    );
+    // A later prompt leaves the name as it was.
+    expect(openSessionLabel(live.conversation.firstPrompt)).toStrictEqual(
+      '!ls',
+    );
+    await live.conversation.close();
+    await live.recording.flushed();
+
+    const [record] = await readRecords(stateDir);
+
+    assert(record);
+    expect(sessionLabel(record)).toStrictEqual('!ls');
+
+    const resumed = await opened({
+      sessionId: record.sessionId,
+      cwd: dir,
+      record: record.path,
+    });
+
+    try {
+      expect(openSessionLabel(resumed.conversation.firstPrompt)).toStrictEqual(
+        '!ls',
+      );
+    } finally {
+      await resumed.conversation.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true });
   }
 });

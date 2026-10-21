@@ -11,7 +11,8 @@ import {
   type Tabs,
 } from '../src/session/tabs.ts';
 import { openSessionLabel } from '../src/session/sessions.ts';
-import type { Entry } from '../src/session/transcript/types.ts';
+import { shellContext, withContext } from '../src/session/context.ts';
+import { wrapMessage } from '../src/session/tasks.ts';
 import {
   MESSAGE_BYTES,
   messageLine,
@@ -478,28 +479,24 @@ describe("the record's title names the main session (CHD-491)", () => {
     }
   });
 
-  test("it is the session's first prompt as /resume names it, typed or a message, none before the first", () => {
-    const entries = (...each: Entry[]) => each;
-
-    expect(openSessionLabel([])).toStrictEqual(undefined);
+  test("it is the session's first prompt as /resume names it: typed, a message, or only a command's output; none before the first", () => {
+    expect(openSessionLabel(undefined)).toStrictEqual(undefined);
+    expect(openSessionLabel('')).toStrictEqual(undefined);
+    expect(openSessionLabel('  Fix the\n tokenizer  ')).toStrictEqual(
+      'Fix the tokenizer',
+    );
+    expect(
+      openSessionLabel(wrapMessage({ name: 'main' }, 'Review the diff')),
+    ).toStrictEqual('Review the diff');
     expect(
       openSessionLabel(
-        entries(
-          { kind: 'assistant', turnId: 't0', text: 'Hello' } as Entry,
-          { kind: 'user', turnId: 't1', text: '  Fix the\n tokenizer  ' },
-          { kind: 'user', turnId: 't2', text: 'and the printer' },
+        withContext(
+          shellContext([
+            { command: 'ls', stdout: 'a', stderr: '', running: false, code: 0 },
+          ]),
+          '',
         ),
       ),
-    ).toStrictEqual('Fix the tokenizer');
-    expect(
-      openSessionLabel(
-        entries({
-          kind: 'message',
-          turnId: 't1',
-          from: { name: 'main' },
-          text: 'Review the diff',
-        } as Entry),
-      ),
-    ).toStrictEqual('Review the diff');
+    ).toStrictEqual('!ls');
   });
 });

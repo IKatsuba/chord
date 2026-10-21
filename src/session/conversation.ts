@@ -36,6 +36,7 @@ import type {
   SteerOutcome,
   Turn,
 } from './session.ts';
+import { historyEntries } from './record.ts';
 import { heldBackLine } from './servers.ts';
 import {
   type TaskAgent,
@@ -342,6 +343,11 @@ export class Conversation {
   readonly #now: () => number;
   readonly #starting: Starting;
   readonly #recording: Recording | undefined;
+  /**
+   * The session's first prompt whole, the shell output sent ahead of it
+   * too, as its record keeps it: its past's, else the first sent here.
+   */
+  #firstPrompt: string | undefined;
   /** What the refusal of the starting effort said, for the tool's answer. */
   #effortRefused: string | undefined;
   #opening: Promise<Session | undefined> | undefined;
@@ -546,6 +552,14 @@ export class Conversation {
   }
 
   /** The session the agent has opened; none while it still starts. */
+  /**
+   * The session's first prompt as its record keeps it, the shell output
+   * sent ahead of it too; none before one (CHD-491).
+   */
+  get firstPrompt(): string | undefined {
+    return this.#firstPrompt;
+  }
+
   get session(): Session | undefined {
     return this.#session;
   }
@@ -577,6 +591,9 @@ export class Conversation {
         // `clear` let this one go while it started; it closes it.
         if (this.#opening === opening) {
           this.#session = session;
+          this.#firstPrompt ??= historyEntries(session.history()).find(
+            (entry) => entry.type === 'prompt',
+          )?.prompt;
 
           void this.#setUp(session).catch((error: unknown) => {
             if (this.#current(session)) {
@@ -680,6 +697,7 @@ export class Conversation {
 
     this.#opening = undefined;
     this.#session = undefined;
+    this.#firstPrompt = undefined;
     this.#turn = undefined;
     this.#lastTurnId = 'session';
     this.#selfTurnId = undefined;
@@ -1166,6 +1184,9 @@ export class Conversation {
       ...(next.from === undefined ? {} : { from: next.from }),
       into,
     });
+
+    this.#firstPrompt ??= next.prompt;
+
     this.#recording?.sent(next.turnId, next.prompt, 0, [], at, next.from, into);
     // The turn may have answered while the steer was out, the queue held.
     void this.#advance(session);
@@ -2946,6 +2967,9 @@ export class Conversation {
 
       if (links !== undefined && this.#session === session) {
         this.#costs?.began(turnId);
+
+        this.#firstPrompt ??= prompt;
+
         this.#recording?.sent(
           turnId,
           prompt,

@@ -132,8 +132,8 @@ export interface BackgroundAgent {
 
 /**
  * The tab's items, oldest first, each keeping its place as it changes: the
- * running ones, and those ended after `clearedAt`, the person's last prompt
- * in the tab. Two that started in the same millisecond keep the order of
+ * running, asking and untracked ones, and those ended after `clearedAt`,
+ * the person's last prompt in the tab, of a kind that stays once ended. Two that started in the same millisecond keep the order of
  * their agents, then of each agent's monitors by id and tasks as its
  * transcript has them, which no change of state moves.
  */
@@ -150,8 +150,10 @@ export function backgroundItems(
     .filter(
       (item) =>
         !leavesList(item) &&
+        // Untracked has not ended, so no prompt clears it (Q110).
         (item.status.group === 'running' ||
           item.status.group === 'asking' ||
+          item.status.group === 'untracked' ||
           item.status.endedAt > clearedAt),
     )
     .sort((a, b) => a.startedAt - b.startedAt);

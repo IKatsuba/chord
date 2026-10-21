@@ -817,7 +817,7 @@ describe('agent items', () => {
     ]);
   });
 
-  test('the next prompt clears an untracked agent, and one that comes back is listed again; an ended one has left already', () => {
+  test('the next prompt leaves an untracked agent listed, as it has not ended; an ended one has left already (CHD-479, Q110)', () => {
     const at = (more: Partial<Subagent>) =>
       brief(
         backgroundItems(
@@ -826,8 +826,10 @@ describe('agent items', () => {
         ),
       );
 
-    expect(at({ state: 'untracked', endedAt: 30 })).toStrictEqual([]);
-    expect(at({ state: 'completed', endedAt: 30 })).toStrictEqual([]);
+    expect(at({ state: 'untracked', endedAt: 30 })).toStrictEqual([
+      'agent Find a 1 untracked',
+    ]);
+    expect(at({ state: 'completed', endedAt: 50 })).toStrictEqual([]);
     expect(at({ state: 'running' })).toStrictEqual(['agent Find a 1 running']);
     expect(at({ state: 'untracked', endedAt: 50 })).toStrictEqual([
       'agent Find a 1 untracked',

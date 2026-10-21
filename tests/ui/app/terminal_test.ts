@@ -463,3 +463,70 @@ describe("the terminal is told the main session's id to resume (CHD-492)", () =>
     }
   });
 });
+
+describe('CHD-492 U2 tester: cancelled turns and unprompted clears', () => {
+  const values = (window: Window) =>
+    window
+      .written()
+      .join('')
+      .split('\x1b]1337;SetUserVar=chord_session=')
+      .slice(1)
+      .map((value) =>
+        Buffer.from(value.slice(0, value.indexOf('\x07')), 'base64').toString(
+          'utf8',
+        ),
+      );
+
+  for (const columns of [80, 120]) {
+    test(`a cancelled first turn retains its id and two unprompted clears stay empty at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+
+          const original = window.session()?.id;
+
+          assert(original !== undefined);
+          expect(values(window)).toStrictEqual(['']);
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+          await until(
+            'cancelled turn id published',
+            () => values(window).at(-1) === original,
+          );
+          await window.press('\x1b');
+          await window.shows('Interrupted by user');
+          expect(values(window)).toStrictEqual(['', original]);
+
+          let previous = original;
+
+          for (let n = 0; n < 2; n++) {
+            await send(window, '/clear');
+            await until('a new unprompted session', () => {
+              const id = window.session()?.id;
+
+              return id !== undefined && id !== previous;
+            });
+
+            await ready(window);
+
+            previous = window.session()!.id;
+
+            await until(
+              'the clear published',
+              () => values(window).at(-1) === '',
+            );
+            expect(values(window)).toStrictEqual(['', original, '']);
+          }
+
+          await send(window, 'text');
+          await until(
+            'only the prompted new id published',
+            () => values(window).at(-1) === previous,
+          );
+          await window.shows('came in chunks.');
+          expect(values(window)).toStrictEqual(['', original, '', previous]);
+        },
+        { columns, rows: columns === 80 ? 24 : 40 },
+      ));
+  }
+});

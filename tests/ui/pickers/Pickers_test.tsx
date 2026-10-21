@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { parseServers } from '../../../src/mcp.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
-import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { fakeAgentCommand, gatedCommand } from '../../fixtures/fake.ts';
 import { recordSession } from '../../fixtures/records.ts';
 import { readPast } from '../../../src/session/record.ts';
 import { writeWindow } from '../../../src/session/windows.ts';
@@ -814,13 +814,10 @@ test('/mcp on a child still starting says it was passed nothing yet, then lists 
         startupOf: (agent) => ({
           agentCommand:
             agent === 'codex'
-              ? [
-                  'sh',
-                  '-c',
-                  'while [ ! -e "$0" ]; do sleep 0.05; done; exec "$@"',
+              ? gatedCommand(
                   gate,
-                  ...fakeAgentCommand(undefined, '--mcp-transports', 'none'),
-                ]
+                  fakeAgentCommand(undefined, '--mcp-transports', 'none'),
+                )
               : command,
         }),
       },

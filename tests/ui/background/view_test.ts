@@ -130,8 +130,8 @@ test('each state says its time, an end its words, as the design table has them',
     '✗ killed by SIGKILL after 3m · 1 event',
   );
   expect(
-    ended({ kind: 'timed_out', timeoutMs: 600_000 }, 'failed'),
-  ).toStrictEqual('✗ timed out after 3m · 1 event');
+    ended({ kind: 'timed_out', timeoutMs: 600_000 }, 'stopped'),
+  ).toStrictEqual('■ timed out after 3m · 1 event');
   expect(ended({ kind: 'flooded', by: 'lines' }, 'failed')).toStrictEqual(
     '✗ flooded after 3m · 1 event',
   );
@@ -1032,7 +1032,7 @@ describe('the ❯ once its row leaves (CHD-479)', () => {
 describe("a monitor row's kind names its id (CHD-481)", () => {
   const name = '30-min heartbeat while the owner is away';
   const ended = {
-    group: 'failed',
+    group: 'stopped',
     endedAt: NOW - 7_200_000,
     end: { kind: 'timed_out', timeoutMs: 3_600_000 },
   } as const;
@@ -1065,7 +1065,7 @@ describe("a monitor row's kind names its id (CHD-481)", () => {
       ['m22', 'm23', 'm24', 'm25'].map((id) => [
         id === 'm25'
           ? '❯ 30-min heartbeat while    monitor ·   running 46m 52s · 1 event       main'
-          : '  30-min heartbeat while    monitor ·   ✗ timed out after 1h · 1 event  main',
+          : '  30-min heartbeat while    monitor ·   ■ timed out after 1h · 1 event  main',
         `    the owner is away       ${id}`,
       ]),
     );

@@ -520,9 +520,7 @@ test("a monitor's end colours its arrow by how it ended", () => {
   expect(arrow({ kind: 'exit', code: 1 })).toStrictEqual('failed');
   expect(arrow({ kind: 'signal', signal: 'SIGKILL' })).toStrictEqual('failed');
   expect(arrow({ kind: 'flooded', by: 'lines' })).toStrictEqual('failed');
-  expect(arrow({ kind: 'timed_out', timeoutMs: 600_000 })).toStrictEqual(
-    'warning',
-  );
+  expect(arrow({ kind: 'timed_out', timeoutMs: 600_000 })).toStrictEqual('dim');
   expect(arrow({ kind: 'stopped' })).toStrictEqual('dim');
 });
 

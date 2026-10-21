@@ -175,7 +175,7 @@ describe('the items', () => {
 
     expect(
       brief(backgroundItems(agents, -Infinity, { key: 1, id: 'm1' })),
-    ).toStrictEqual(['monitor kept 1 failed']);
+    ).toStrictEqual(['monitor kept 1 stopped']);
     expect(
       brief(backgroundItems(agents, -Infinity, { key: 2, id: 'm1' })),
     ).toStrictEqual([]);

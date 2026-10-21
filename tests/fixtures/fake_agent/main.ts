@@ -466,6 +466,7 @@ const SCENARIOS = [
   'monitor',
   'monitors',
   'monitorexit',
+  'monitortimeout',
   'monitorflood',
   'monitorchild',
   'childmonitor',

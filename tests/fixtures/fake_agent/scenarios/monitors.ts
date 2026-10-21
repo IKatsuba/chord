@@ -3,7 +3,8 @@
  * whose lines come back later as messages. Each command is plain shell, so
  * nothing outside the fake agent runs: one that prints an error a second
  * after it starts and then waits, one that prints nothing, one that exits
- * non-zero, one that floods, and a child that starts one of its own.
+ * non-zero, one that reaches its timeout, one that floods, and a child that
+ * starts one of its own.
  */
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { Play, Turn } from '../turn.ts';
@@ -30,6 +31,13 @@ export const FAILING_ARGS = {
     'sleep 1; echo "✓ lint in 41s"; echo "X test (ubuntu-latest) in ' +
     '3m 12s"; echo "Run 4812 (ci.yml) failed: 1 of 3 jobs failed"; exit 1',
   description: 'CI run 4812',
+};
+
+/** A heartbeat a second in, then chord's timeout five seconds in. */
+export const TIMEOUT_ARGS = {
+  command: 'sleep 1; echo "heartbeat 1: check the ship run"; sleep 600',
+  description: 'heartbeat',
+  timeout_ms: 5000,
 };
 
 /** A log nobody filtered. */
@@ -89,6 +97,13 @@ export const MONITORS = {
     return withChord(turn, async (client) => {
       await callChord(turn, client, 'monitor', FAILING_ARGS);
       await turn.say('I will hear when the CI run ends.');
+    });
+  },
+  // Starts one that says one thing and then reaches its timeout.
+  monitortimeout(turn) {
+    return withChord(turn, async (client) => {
+      await callChord(turn, client, 'monitor', TIMEOUT_ARGS);
+      await turn.say('The heartbeat stops itself in five seconds.');
     });
   },
   // Starts one that prints far more than a monitor may.

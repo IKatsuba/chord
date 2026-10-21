@@ -710,6 +710,23 @@ describe("a monitor's detail in the window (CHD-481)", () => {
       );
     }));
 
+  test("a monitor that reaches its timeout reads as a stop in its own words, not a failure (CHD-482's Q85)", () =>
+    withBackground(async (window) => {
+      await ready(window);
+      await send(window, 'monitortimeout');
+      await window.shows('The heartbeat stops itself in five seconds.');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('Background · 1 in this tab');
+      await window.press('\r');
+      await window.shows('Background · m1, 1 of 1 · ended');
+      await window.shows('■ timed out after 5s · 1 event');
+      await window.shows(
+        'Timed out after 5s (timeout_ms 5000); chord stopped it.',
+      );
+      expect(window.frame()).not.toContain('✗');
+    }));
+
   test('taller than its room at 80×24, it scrolls by a page', () =>
     withBackground(
       async (window) => {

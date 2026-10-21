@@ -214,9 +214,12 @@ function monitorNumber(id: string): number {
   return Number(id.slice(1)) || 0;
 }
 
-/** A monitor's end as a group: exit 0 is done, a stop stopped, else failed. */
+/**
+ * A monitor's end as a group: exit 0 is done, a stop or its own timeout
+ * stopped (CHD-482's Q85), else failed.
+ */
 function monitorGroup(end: MonitorEnd): 'failed' | 'done' | 'stopped' {
-  return end.kind === 'stopped'
+  return end.kind === 'stopped' || end.kind === 'timed_out'
     ? 'stopped'
     : end.kind === 'exit' && end.code === 0
       ? 'done'

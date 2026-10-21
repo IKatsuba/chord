@@ -41,7 +41,7 @@ export function messageHeader(from: MessageFrom): {
  * How a message's arrow is drawn: as the text is, dim, or in the error
  * colour. The direction is the arrow's shape, so no tone carries it.
  */
-export type ArrowTone = 'plain' | 'dim' | 'failed' | 'warning';
+export type ArrowTone = 'plain' | 'dim' | 'failed';
 
 /**
  * `←`: a failed report's in the error colour, chord's own dim, and a
@@ -62,17 +62,16 @@ export function inArrow(from: MessageFrom): ArrowTone {
 }
 
 /**
- * A monitor's end: a clean exit plain, the person's stop dim, a timeout a
- * warning, and whatever else cut it short an error.
+ * A monitor's end: a clean exit plain, the person's stop and its own timeout
+ * dim, as stops (CHD-482's Q85), and whatever else cut it short an error.
  */
 function monitorArrow(end: MonitorEnd): ArrowTone {
   switch (end.kind) {
     case 'exit':
       return end.code === 0 ? 'plain' : 'failed';
     case 'stopped':
-      return 'dim';
     case 'timed_out':
-      return 'warning';
+      return 'dim';
     case 'signal':
     case 'flooded':
       return 'failed';

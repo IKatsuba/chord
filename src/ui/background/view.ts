@@ -175,8 +175,13 @@ export function stateText(
       const ran = after(status.endedAt - item.startedAt);
 
       if (status.group === 'stopped') {
+        // A monitor's timeout is a stop in its own words (CHD-482's Q85).
+        const word =
+          status.word ??
+          (status.end === undefined ? 'stopped' : endWord(status.end));
+
         return {
-          text: `■ ${status.word ?? 'stopped'} after ${ran}${events}${paid}`,
+          text: `■ ${word} after ${ran}${events}${paid}`,
           group: 'stopped',
         };
       }

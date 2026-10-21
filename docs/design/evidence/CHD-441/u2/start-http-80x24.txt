@@ -1,0 +1,24 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des441http80
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ 1 MCP server was not passed to fake, which does not take them over SSE:
+   tracker. /mcp lists it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

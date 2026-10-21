@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des441http120
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ 1 MCP server was not passed to fake, which does not take them over SSE: tracker. /mcp lists it.
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ MCP servers                                                                                                          │
+│ chord's MCP servers for fake. ACP does not say whether fake connected to the ones it was passed.                     │
+│                                                                                                                      │
+│ Name        Transport  Command or URL                                  Defined in                                    │
+│ chord       http       http://127.0.0.1:52295/mcp                      chord itself                                  │
+│ filesystem  stdio      npx -y @modelcontextprotocol/server-filesystem  /tmp/chord-qa-home.des441/chord/settings.json │
+│                        .                                                                                             │
+│ docs        http       https://mcp.example.com/mcp                     /tmp/chord-qa-home.des441/chord/settings.json │
+│ tracker     sse        not passed                                      /tmp/chord-qa-home.des441/chord/settings.json │
+│                                                                                                                      │
+│ chord's server gives fake list_agents, list_sessions, list_teams, spawn_task, open_agent, run_team, propose_team,    │
+│ send_message, close_agent, monitor, stop_monitor and list_monitors.                                                  │
+│                                                                                                                      │
+│ tracker was not passed: fake does not take MCP servers over SSE.                                                     │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

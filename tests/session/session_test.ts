@@ -1302,6 +1302,85 @@ describe("Claude's prompt suggestions are off in every session chord opens (CHD-
     }));
 });
 
+describe('CHD-439 tester: adapter identity across session openings', () => {
+  const inDir = async (body: (dir: string) => Promise<void>) => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-opening-meta-'));
+
+    try {
+      await body(dir);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  };
+
+  test('simultaneous Claude and other sessions keep their opening metadata separate', () =>
+    inDir(async (dir) => {
+      const resume = { sessionId: crypto.randomUUID(), cwd: dir };
+      const results = await Promise.allSettled([
+        openedBy(dir, ['--adapter', 'claude']),
+        openedBy(dir, ['--steering', 'codex']),
+        openedBy(dir, ['--adapter', 'claude'], resume),
+        openedBy(dir, [], resume),
+      ]);
+
+      expect(results).toStrictEqual([
+        {
+          status: 'fulfilled',
+          value: { method: 'session/new', meta: NO_SUGGESTIONS },
+        },
+        { status: 'fulfilled', value: { method: 'session/new' } },
+        {
+          status: 'fulfilled',
+          value: { method: 'session/load', meta: NO_SUGGESTIONS },
+        },
+        { status: 'fulfilled', value: { method: 'session/load' } },
+      ]);
+    }));
+
+  for (const { name, previous, next, expected } of [
+    {
+      name: 'recorded Claude history still gets the option through load when resume is unavailable',
+      previous: ['--adapter', 'claude'],
+      next: ['--adapter', 'claude'],
+      expected: { method: 'session/load', meta: NO_SUGGESTIONS },
+    },
+    {
+      name: 'a different current adapter gets no Claude options from recorded history',
+      previous: ['--adapter', 'claude'],
+      next: ['--steering', 'codex', '--resume-only'],
+      expected: { method: 'session/resume' },
+    },
+    {
+      name: 'a current Claude adapter gets the option when the recorded agent was different',
+      previous: [],
+      next: ['--adapter', 'claude', '--resume-only'],
+      expected: { method: 'session/resume', meta: NO_SUGGESTIONS },
+    },
+  ]) {
+    test(name, () =>
+      inDir(async (dir) => {
+        const stateDir = join(dir, 'state');
+        const sessionId = await recordSession({
+          stateDir,
+          cwd: dir,
+          command: fakeAgentCommand(undefined, ...previous),
+          prompts: ['text'],
+        });
+        const [record] = await readRecords(stateDir);
+
+        assert(record !== undefined);
+        expect(
+          await openedBy(dir, next, {
+            sessionId,
+            cwd: dir,
+            record: record.path,
+          }),
+        ).toStrictEqual(expected);
+      }),
+    );
+  }
+});
+
 describe('CHD-246 tester: large MCP permission fixture', () => {
   test.each(['allow', 'always', 'deny', 'cancel'])(
     'preserves the complete request when the answer is %s',

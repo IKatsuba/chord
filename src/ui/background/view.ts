@@ -818,14 +818,17 @@ function wrappedIn(
   role: ViewCell['role'],
 ): ViewCell[][] {
   const indent = first === '' ? '' : '  ';
+  // Its own leading spaces go before its first line, as an event's indent is
+  // part of what it said; the rest wraps trimmed, so no line starts on the
+  // space it broke at.
+  const own = /^\s*/.exec(text)![0];
+  const room = width - stringWidth(indent) - stringWidth(own);
 
-  // Its own leading spaces kept: an event's indent is part of what it said.
-  return wrapAnsi(text, Math.max(1, width - stringWidth(indent)), {
-    hard: true,
-    trim: false,
-  })
+  return wrapAnsi(text.slice(own.length), Math.max(1, room), { hard: true })
     .split('\n')
-    .map((line, at) => [{ text: `${at === 0 ? first : indent}${line}`, role }]);
+    .map((line, at) => [
+      { text: at === 0 ? `${first}${own}${line}` : `${indent}${line}`, role },
+    ]);
 }
 
 /**

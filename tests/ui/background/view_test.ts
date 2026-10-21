@@ -1191,6 +1191,28 @@ describe("a monitor's detail lines (CHD-481)", () => {
     ]);
   });
 
+  test("a word that ends at the width leaves the space it broke at off the next line, a batch line's own indent kept", () => {
+    expect(
+      text(
+        monitor(
+          'm2',
+          'x',
+          { group: 'running' },
+          {
+            command: 'abcdefghijklmn opq',
+            lastEvent: { lines: ['  abcdefghijkl mn'], at: NOW },
+          },
+        ),
+        16,
+      ).slice(-4),
+    ).toStrictEqual([
+      '$ abcdefghijklmn',
+      '  opq',
+      '←   abcdefghijkl',
+      '  mn · 0s ago',
+    ]);
+  });
+
   test('with no batch yet it says so; ended, its end sentence comes last', () => {
     expect(
       text(

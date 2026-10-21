@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { Buffer } from 'node:buffer';
 import {
   emptyWatch,
   type NotifChannel,
@@ -8,6 +9,7 @@ import {
   type TerminalEnv,
   terminalEnv,
   type Watch,
+  sessionVarBytes,
 } from '../src/notify.ts';
 import type { ConversationEvent } from '../src/session/conversation.ts';
 
@@ -446,4 +448,44 @@ test("an agent's own cycle rings at its end, as a turn does, and not as it start
     '\x1b]9;claude is waiting for your input\x07',
     '\x1b]9;claude is waiting for your input\x07',
   ]);
+});
+
+describe("the terminal's user variable names the session to resume (CHD-492)", () => {
+  const ID = '0199f1c2-7c1e-7d43-9a3b-5f0e2c1d4b6a';
+
+  test("an id goes as iTerm2's SetUserVar, base64 of its UTF-8, ended by BEL", () => {
+    expect(sessionVarBytes(ID, { tmux: false })).toStrictEqual(
+      '\x1b]1337;SetUserVar=chord_session=MDE5OWYxYzItN2MxZS03ZDQzLTlhM2ItNWYwZTJjMWQ0YjZh\x07',
+    );
+  });
+
+  test('none goes as the empty value: nothing to resume', () => {
+    expect(sessionVarBytes(undefined, { tmux: false })).toStrictEqual(
+      '\x1b]1337;SetUserVar=chord_session=\x07',
+    );
+  });
+
+  test("inside tmux it goes through tmux's passthrough, each ESC doubled", () => {
+    expect(sessionVarBytes(ID, { tmux: true })).toStrictEqual(
+      '\x1bPtmux;\x1b\x1b]1337;SetUserVar=chord_session=MDE5OWYxYzItN2MxZS03ZDQzLTlhM2ItNWYwZTJjMWQ0YjZh\x07\x1b\\',
+    );
+    expect(sessionVarBytes(undefined, { tmux: true })).toStrictEqual(
+      '\x1bPtmux;\x1b\x1b]1337;SetUserVar=chord_session=\x07\x1b\\',
+    );
+  });
+
+  test('an id with what a plain value could not hold goes through encoded, and decodes back whole', () => {
+    const odd = 'sess;=\x07\x1b]é 名 👩‍💻\n';
+    const bytes = sessionVarBytes(odd, { tmux: false });
+    const head = '\x1b]1337;SetUserVar=chord_session=';
+
+    expect(bytes.startsWith(head)).toBeTruthy();
+
+    const value = bytes.slice(head.length, -1);
+
+    expect(value).toMatch(/^[A-Za-z0-9+/]*=*$/);
+    expect(Buffer.from(value, 'base64').toString('utf8')).toStrictEqual(odd);
+    // One OSC, its only BEL its end.
+    expect(bytes.indexOf('\x07')).toStrictEqual(bytes.length - 1);
+  });
 });

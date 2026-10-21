@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
@@ -11,6 +11,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { recordSession } from '../../fixtures/records.ts';
+import { readPast } from '../../../src/session/record.ts';
 import { writeWindow } from '../../../src/session/windows.ts';
 import {
   readRecords,
@@ -943,5 +944,95 @@ test("a setting's name keeps the agent's colours in its heading and explanation"
     expect(stripAnsi(shown)).not.toMatch(/\[\d*m/);
   } finally {
     chalk.level = level;
+  }
+});
+
+describe('CHD-441 tester: a mixed-runtime MCP panel keeps its identity and keys', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`an ACP-capable child is named correctly and Esc restores its prompt at ${columns} columns`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      const command = fakeAgentCommand();
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+            await main.window.open(main.key, {
+              agent: 'codex',
+              name: 'foreign-acp',
+              prompt: 'text',
+            });
+            await window.shows('foreign-acp');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('╭─ foreign-acp ─');
+            await window.shows('Hello, world. This reply came in chunks.');
+            await send(window, '/mcp');
+            await window.shows("chord's MCP servers for codex.");
+
+            const frame = window.frame();
+
+            expect(frame).toContain('stdio and ACP only.');
+            expect(frame).not.toContain('stdio only.');
+            expect(frame).not.toContain('for fake.');
+            expect(frame).not.toContain('Bearer secret');
+            await window.press(ESC);
+            await until(
+              'Esc closes the child’s MCP panel',
+              () => !window.frame().includes("chord's MCP servers for codex."),
+            );
+            expect(window.frame()).toContain('╭─ foreign-acp ─');
+            await send(window, '/echo mcp-panel-returned');
+            await window.shows('mcp-panel-returned');
+            await until('the next command belongs to the child', async () => {
+              const records = await readRecords(join(window.dir, 'state'));
+              const child = records.find(
+                (record) => record.name === 'foreign-acp',
+              );
+
+              return (
+                child !== undefined &&
+                (await readPast(child.path)).some(
+                  (entry) =>
+                    entry.type === 'prompt' &&
+                    entry.prompt === '/echo mcp-panel-returned',
+                )
+              );
+            });
+          },
+          {
+            server,
+            mcpServers: SERVERS,
+            columns,
+            rows,
+            runtimes: ['fake', 'codex'],
+            agentCommand: command,
+            startupOf: (agent) => ({
+              agentCommand:
+                agent === 'codex'
+                  ? fakeAgentCommand(undefined, '--mcp-transports', 'acp')
+                  : command,
+            }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
   }
 });

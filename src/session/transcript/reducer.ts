@@ -25,7 +25,12 @@ import {
   shellReplayed,
   shellStarted,
 } from './shell.ts';
-import { childUpdate, mergeSubagent, subagentStopping } from './subagents.ts';
+import {
+  childUpdate,
+  itemEndLines,
+  mergeSubagent,
+  subagentStopping,
+} from './subagents.ts';
 import { mergeToolCall } from './tools.ts';
 import {
   cancelled,
@@ -82,6 +87,15 @@ function closed(
   return line.alone === alone ? line : { ...line, alone };
 }
 
+/** `next` with a line for each agent item it ended since `state`. */
+function withEndLines(state: Transcript, next: Transcript): Transcript {
+  const lines = itemEndLines(state.entries, next.entries, state.turn);
+
+  return lines.length === 0
+    ? next
+    : { ...next, entries: [...next.entries, ...lines] };
+}
+
 function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
   switch (action.type) {
     case 'prompt':
@@ -96,10 +110,19 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
       );
     case 'served':
       return served(state, action);
-    case 'update':
-      return action.subagentId === undefined
-        ? applyUpdate(state, action.turnId, action.update, action.at)
-        : childUpdate(state, action, applyUpdate);
+    case 'update': {
+      const next =
+        action.subagentId === undefined
+          ? applyUpdate(state, action.turnId, action.update, action.at)
+          : childUpdate(state, action, applyUpdate);
+
+      // Said here, at the top, with the turn that runs, whether the agent
+      // item ended is the session's own or one under another's work: a
+      // subagent's work folds with no turn of its own (CHD-479).
+      return action.update.sessionUpdate === 'subagent_update' && next !== state
+        ? withEndLines(state, next)
+        : next;
+    }
     case 'permission_requested':
       return permissionRequested(
         state,

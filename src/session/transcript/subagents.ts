@@ -198,18 +198,11 @@ export function mergeSubagent(
   at: number | undefined,
 ): Transcript {
   if (findSubagent(state.entries, update.sessionId)) {
-    const entries = changeSubagent(
-      state.entries,
-      update.sessionId,
-      (subagent) => patched(subagent, update, at),
-    );
-
     return {
       ...state,
-      entries: [
-        ...entries,
-        ...itemEndLines(state.entries, entries, state.turn),
-      ],
+      entries: changeSubagent(state.entries, update.sessionId, (subagent) =>
+        patched(subagent, update, at),
+      ),
     };
   }
 

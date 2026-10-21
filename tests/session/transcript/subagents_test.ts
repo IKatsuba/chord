@@ -682,6 +682,47 @@ describe("an agent item's end, once its turn has ended (CHD-479)", () => {
     ]);
   });
 
+  test("a subagent's own agent item, its end told in its parent's work, is said once at the top after the root turn, and not while it runs", () => {
+    /** `action` as it comes in `a`'s own work. */
+    const inA = (action: TranscriptAction): TranscriptAction => {
+      assert(action.type === 'update');
+
+      return { ...action, subagentId: 'a' };
+    };
+
+    const inner = [
+      PROMPT,
+      announced('a'),
+      inA(announced('g')),
+    ] satisfies TranscriptAction[];
+    const everyLine = (entries: readonly Entry[]): Entry[] =>
+      entries.flatMap((entry) =>
+        entry.kind === 'item_ended'
+          ? [entry]
+          : entry.kind === 'subagent'
+            ? everyLine(entry.subagent.entries)
+            : [],
+      );
+
+    const during = fold([...inner, inA(told('g', { state: 'completed' }, 9))]);
+
+    expect(everyLine(during.entries)).toStrictEqual([]);
+
+    const after = fold([
+      ...inner,
+      ENDED,
+      inA(told('g', { state: 'completed' }, 9)),
+    ]);
+
+    expect(everyLine(after.entries)).toHaveLength(1);
+    expect(after.entries.at(-1)).toMatchObject({
+      kind: 'item_ended',
+      turnId: TURN,
+      name: 'Find g',
+      end: 'done',
+    });
+  });
+
   test('an ended one told again says nothing more', () => {
     expect(
       ends(

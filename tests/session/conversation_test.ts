@@ -4796,3 +4796,111 @@ test("the agent's own title for its session is kept as it comes and changes, non
     await rm(dir, { recursive: true });
   }
 });
+
+describe('CHD-491 U2 tester: title ownership, reset and recorded state', () => {
+  for (const cleared of [false, true]) {
+    test(`resume preserves the ${cleared ? 'null-cleared fallback' : 'last usable own title'} despite nested and blank updates`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-title-'));
+      const stateDir = join(dir, 'state');
+      let publish: Parameters<Session['subscribe']>[0] | undefined;
+      const opened = async (resume?: Resume) => {
+        const events: ConversationEvent[] = [];
+        const recording = new FileRecording(stateDir, () => {});
+
+        const conversation = new Conversation(
+          async () => {
+            const session = await openSession({
+              agent: 'fake',
+              cwd: dir,
+              agentCommand: fakeAgentCommand(undefined, '--resume-only'),
+              ...(resume === undefined ? {} : { resume }),
+            });
+            const subscribe = session.subscribe.bind(session);
+
+            session.subscribe = (listener) => {
+              publish = listener;
+
+              return subscribe(listener);
+            };
+
+            return session;
+          },
+          (event) => events.push(event),
+          Date.now,
+          {},
+          recording,
+        );
+
+        try {
+          conversation.start();
+          await until(() => events.some((event) => event.type === 'connected'));
+          return { conversation, events, recording };
+        } catch (error) {
+          await conversation.close();
+          await recording.flushed();
+          throw error;
+        }
+      };
+
+      let live: Awaited<ReturnType<typeof opened>> | undefined;
+      let resumed: Awaited<ReturnType<typeof opened>> | undefined;
+
+      try {
+        live = await opened();
+
+        live.conversation.send('First fallback');
+        await until(() =>
+          live!.events.some((event) => event.type === 'result'),
+        );
+        assert(publish);
+        publish({ sessionUpdate: 'session_info_update', title: 'Own title' });
+        publish({ sessionUpdate: 'session_info_update' });
+        publish({ sessionUpdate: 'session_info_update', title: '' });
+        publish({ sessionUpdate: 'session_info_update', title: ' \t\n ' });
+        publish(
+          { sessionUpdate: 'session_info_update', title: 'Nested title' },
+          'outer',
+        );
+        expect(live.conversation.title).toBe('Own title');
+
+        if (cleared) {
+          publish({ sessionUpdate: 'session_info_update', title: null });
+        }
+
+        expect(live.conversation.title).toBe(cleared ? undefined : 'Own title');
+        await live.conversation.close();
+        await live.recording.flushed();
+
+        const [record] = await readRecords(stateDir);
+
+        assert(record);
+
+        resumed = await opened({
+          sessionId: record.sessionId,
+          cwd: dir,
+          record: record.path,
+        });
+
+        expect(resumed.conversation.title).toBe(
+          cleared ? undefined : 'Own title',
+        );
+        expect(openSessionLabel(resumed.conversation.firstPrompt)).toBe(
+          'First fallback',
+        );
+        resumed.conversation.send('Another prompt');
+        await until(() =>
+          resumed!.events.some((event) => event.type === 'result'),
+        );
+        expect(resumed.conversation.title).toBe(
+          cleared ? undefined : 'Own title',
+        );
+      } finally {
+        await resumed?.conversation.close();
+        await resumed?.recording.flushed();
+        await live?.conversation.close();
+        await live?.recording.flushed();
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+});

@@ -1,4 +1,5 @@
 import { describe, expect, spyOn, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -3635,6 +3636,188 @@ describe('CHD-491 tester: the main session title on the actual OSC wire', () => 
             'main gets its title',
             () => lastStatus(log)?.title === 'Main owns the title',
           );
+        },
+        { log, server, columns: 80, rows: 24 },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe('CHD-491 U2 tester: agent titles on the actual wire', () => {
+  for (const columns of [80, 120]) {
+    test(`own updates, byte-safe changes, null fallback, clear and resume at ${columns} columns`, async () => {
+      const log: string[] = [];
+      let publish: Parameters<Session['subscribe']>[0] | undefined;
+      const title = (value?: string | null, parent?: string) => {
+        assert(publish);
+        publish(
+          {
+            sessionUpdate: 'session_info_update',
+            ...(value === undefined ? {} : { title: value }),
+          },
+          parent,
+        );
+      };
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+
+          const oldPublish = publish;
+
+          title('Agent title before prompt');
+          await until(
+            'agent title with no prompt',
+            () => lastStatus(log)?.title === 'Agent title before prompt',
+          );
+          await send(window, 'Fallback main title');
+          await window.shows('came in chunks.');
+          title();
+          title('');
+          title(' \t\n ');
+          title('Nested title', 'nested');
+          expect(lastStatus(log)?.title).toBe('Agent title before prompt');
+
+          for (const [value, expected] of [
+            ['Line\nTitle\tValue', 'Line Title Value'],
+            ['語'.repeat(64), '語'.repeat(64)],
+            ['語'.repeat(65), '語'.repeat(64)],
+            ['a'.repeat(181) + '👩‍💻', 'a'.repeat(181) + '👩‍💻'],
+            ['a'.repeat(182) + '👩‍💻', 'a'.repeat(182)],
+            ['é'.repeat(64), 'é'.repeat(64)],
+          ] as const) {
+            title(value);
+            await until(
+              'updated bounded title',
+              () => lastStatus(log)?.title === expected,
+            );
+
+            // These are actual OSC fields, not only the decoded helper result.
+            const fields = [
+              ...log.join('').matchAll(
+                // eslint-disable-next-line no-control-regex
+                /\x1b\]7501;[^\x07\x1b]*?title=([^:\x07\x1b]*)/g,
+              ),
+            ].map((match) => match[1]!);
+
+            expect(fields).toContain(Buffer.from(expected).toString('base64'));
+            expect(
+              fields.every(
+                (field) =>
+                  field.length <= 256 &&
+                  Buffer.from(field, 'base64').length <= 192,
+              ),
+            ).toBe(true);
+          }
+
+          title(null);
+          await until(
+            'null returns first prompt',
+            () => lastStatus(log)?.title === 'Fallback main title',
+          );
+          title('Persisted own title');
+          await until(
+            'last own title',
+            () => lastStatus(log)?.title === 'Persisted own title',
+          );
+          await send(window, '/clear');
+          await until(
+            'clear drops both names',
+            () => lastStatus(log)?.title === undefined,
+          );
+          assert(oldPublish);
+          oldPublish({
+            sessionUpdate: 'session_info_update',
+            title: 'Retired title',
+          });
+          await ready(window);
+          expect(lastStatus(log)?.title).toBeUndefined();
+          await send(window, '/resume');
+          await window.shows('Resume a session');
+          await window.shows('Fallback main title');
+          await window.press('\r');
+          await until(
+            'last own title restored on resume',
+            () => lastStatus(log)?.title === 'Persisted own title',
+          );
+        },
+        {
+          log,
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          agentCommand: fakeAgentCommand(undefined, '--resume-only'),
+          openWith: async (options) => {
+            const session = await openSession(options);
+            const subscribe = session.subscribe.bind(session);
+
+            session.subscribe = (listener) => {
+              publish = listener;
+
+              return subscribe(listener);
+            };
+
+            return session;
+          },
+        },
+      );
+    });
+  }
+
+  test('a picked child agent title never replaces the main title or names an unnamed main', async () => {
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+    const log: string[] = [];
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          assert(main);
+          await main.window.open(main.key, {
+            agent: 'fake',
+            name: 'helper',
+            prompt: 'retitled',
+          });
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('╭─ helper ─');
+          await window.shows('Renamed.');
+          expect(lastStatus(log)?.title).toBeUndefined();
+          await window.press(DOWN);
+          await window.press(UP);
+          await window.press('\r');
+          await send(window, 'titled');
+          await until(
+            'main agent title',
+            () => lastStatus(log)?.title === 'Fix the tokenizer',
+          );
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('╭─ helper ─');
+          await send(window, 'retitled');
+          await until(
+            'child ends its turn',
+            () => lastStatus(log)?.state === 'done',
+          );
+          expect(lastStatus(log)?.title).toBe('Fix the tokenizer');
+          expect(
+            statusReports(log).some(
+              (report) => report.title === 'Fix the parser',
+            ),
+          ).toBe(false);
         },
         { log, server, columns: 80, rows: 24 },
       );

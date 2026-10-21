@@ -93,7 +93,7 @@ import {
   backgroundRowLimit,
   useBackgroundHint,
 } from '../background/BackgroundView.tsx';
-import { hintLines } from '../background/view.ts';
+import { focusAfter, hintLines } from '../background/view.ts';
 import { agentsHaveKeys, backgroundShown } from '../background/state.ts';
 import { startingVim } from '../prompt/vim.ts';
 import { useCommands } from './commands.ts';
@@ -619,6 +619,37 @@ export function App({
     listShown,
     backgroundItems.length,
   ]);
+
+  // A row that leaves the view as its item ends hands the `❯` to the row
+  // that took its place, and the last to leave closes the view, as esc
+  // does (CHD-479).
+  const shownBefore = useRef(backgroundItems);
+
+  useEffect(() => {
+    const before = shownBefore.current;
+
+    shownBefore.current = backgroundItems;
+
+    if (state.backgroundView === undefined) {
+      return;
+    }
+
+    if (backgroundItems.length === 0) {
+      dispatch({ type: 'background_closed' });
+
+      return;
+    }
+
+    const focus = focusAfter(
+      before,
+      backgroundItems,
+      state.backgroundView.focus,
+    );
+
+    if (focus !== undefined) {
+      dispatch({ type: 'background_focused', focus });
+    }
+  }, [backgroundItems, state.backgroundView]);
 
   const menu = commandMenu(state, draft);
   const finder = fileFinder(state, draft, cursor);

@@ -20,6 +20,7 @@ import {
   DOWN,
   ESC,
   leader,
+  promptRow,
   ready,
   send,
   until,
@@ -70,23 +71,18 @@ test('with no child open the summary line stands alone; ↓ reaches it, x does n
     await window.shows('back in the box');
   }));
 
-test("an ended monitor stays until the person's next prompt, which clears it", () =>
+test('an ended monitor leaves the summary line at once, its end said by the message to its agent (CHD-479)', () =>
   withBackground(async (window) => {
     await ready(window);
     await send(window, 'monitorexit');
     await window.shows('    background  1 monitor running');
-    // Its end reaches the agent as a message, which clears nothing.
     await window.shows('← from CI run 4812 · monitor · exit code 1');
-    await window.shows('    background  ✗ 1 monitor failed');
-    await window.shows('Received the message from CI run 4812');
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    expect(window.frame()).toContain('    background  ✗ 1 monitor failed');
-
-    await send(window, 'hello');
     await until(
       'the summary line gone',
       () => !window.frame().includes('background  '),
     );
+    await window.shows('Received the message from CI run 4812');
+    expect(window.frame()).not.toContain('monitor failed');
   }));
 
 test('the summary line is the stop after the agents: ↓ from the last agent, the agent picked staying picked; ↑ goes back to it', () =>
@@ -279,7 +275,7 @@ describe('CHD-424 tester: standing background edges', () => {
   }
 });
 
-test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a monitor in place, esc goes back to the summary line', () =>
+test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a monitor, whose row leaves, the ❯ going up; the last to leave closes the view', () =>
   withBackground(async (window) => {
     await ready(window);
     await send(window, 'monitors');
@@ -308,20 +304,32 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     // The last row stays the last.
     await window.press(DOWN);
     await window.press('x');
-    await window.shows('■ stopped after');
-    expect(window.frame()).toMatch(/❯ CI run 4812 .*■ stopped after \d+s/);
+    // It leaves at once, the ❯ on the row above, as it was the last
+    // (CHD-479).
+    await window.shows('│ Background · 1 in this tab');
+    await window.shows('❯ dev server errors');
+    expect(window.frame()).not.toContain('CI run 4812  monitor');
     await window.press('k');
     await window.shows('❯ dev server errors');
 
     await window.press(ESC);
-    await window.shows('❯ background  1 monitor running · ■ 1 monitor stopped');
+    await window.shows('❯ background  1 monitor running');
+    expect(window.frame()).not.toContain('monitor stopped');
     // The stop is told in the transcript as before.
     await window.shows('← from CI run 4812 · monitor · stopped');
     await window.press('\r');
-    await window.shows('│ Background · 2 in this tab');
-    await window.press(ESC);
-    await window.press(ESC);
-    await until('the ❯ gone', () => !window.frame().includes('❯ background'));
+    await window.shows('│ Background · 1 in this tab');
+    // The last row leaving closes the view, as esc does, and the summary
+    // line goes with it, the keys back in the prompt box.
+    await window.press('x');
+    await until(
+      'the view and the summary line gone',
+      () =>
+        !window.frame().includes('│ Background') &&
+        !window.frame().includes('background  '),
+    );
+    await window.type('y');
+    await until('the draft', () => promptRow(window)?.includes('› y') ?? false);
   }));
 
 test('x on a working task cancels its turn: its row turns to stopped, and it sends no report', () =>
@@ -539,32 +547,28 @@ for (const size of [
       await window.shows('Do you want to proceed?');
       await window.press('1');
       await window.shows('Each agent has ended.');
-      await window.shows('background  ✗ 1 agent failed · ? 1 agent untracked');
-      expect(window.frame()).toContain('✓ 1 agent done');
-      expect(window.frame()).toContain('■ 1 agent stopped');
+      // Done, failed and stopped, three have left; the untracked one
+      // stays, named by its parent (CHD-479).
+      await window.shows("background  ? main's agent untracked");
+      expect(window.frame()).not.toMatch(/agents? (done|failed|stopped)/);
       await window.press(DOWN);
       await window.press('\r');
-      await window.shows(' Background · 4 in this tab');
+      await window.shows(' Background · 1 in this tab');
 
       const frame = window.frame();
 
-      for (const words of [
-        'Find the session layer',
-        'agent',
-        '✓ done in',
-        '✗ failed after',
-        '■ stopped after',
-        '? untracked',
-      ]) {
+      for (const words of ['Watch the build', 'agent', '? untracked', 'main']) {
         expect(frame).toContain(words);
       }
 
-      await window.press('j');
-      await window.shows('❯ Review the transcript');
+      for (const words of ['✓ done in', '✗ failed after', '■ stopped after']) {
+        expect(frame).not.toContain(words);
+      }
+
       await window.press('\r');
       // At the transcript's end, it goes as high as scrolling allows.
-      await until("the view to close on the reviewer's own row", () =>
-        window.frame().includes('├─ Agent(reviewer (general-purpose))'),
+      await until("the view to close on the watcher's own row", () =>
+        window.frame().includes('Agent(watcher'),
       );
       expect(window.frame()).not.toContain('Background ·');
     }, size));
@@ -574,13 +578,17 @@ test('an agent its agent says waits, with no request on screen, is asking: ● w
   withWindow(
     async (window) => {
       await send(window, 'claudewaiting');
-      await window.shows('background  ● 1 agent asking');
+      await window.shows("background  ● main's agent asking");
       await window.press(DOWN);
       await window.press('\r');
       await window.shows('● waiting');
-      await window.shows('✓ done in');
-      await window.press(ESC);
-      await window.shows('background  ✓ 1 agent done');
+      // Its end takes its row and the line away (CHD-479).
+      await until(
+        'the view and the summary line gone',
+        () =>
+          !window.frame().includes('│ Background') &&
+          !window.frame().includes('background  '),
+      );
     },
     { rows: 24, columns: 80 },
   ));
@@ -625,21 +633,25 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
   }
 });
 
-test("x on a Claude agent stops it alone: its row ends stopped, its block Cancelled, and its parent's turn goes on", () =>
+test("x on a Claude agent stops it alone: its row leaves, its block Cancelled, and its parent's turn goes on", () =>
   withWindow(
     async (window) => {
       await send(window, 'claudebackground');
-      await window.shows('background  2 agents running');
+      await window.shows("background  main's 2 agents running");
       await window.press(DOWN);
       await window.press('\r');
       await window.shows('❯ Run the test suite');
       await window.press('x');
-      await window.shows('■ stopped after');
-      // The one the turn waits on runs on, and the turn ends on its own.
-      await window.shows('✓ done in');
-      await window.press(ESC);
-      await window.press(ESC);
+      // Stopped, it leaves, the ❯ on the row that took its place (CHD-479).
+      await window.shows('│ Background · 1 in this tab');
+      expect(window.frame()).not.toContain('Run the test suite  agent');
+      // The one the turn waits on runs on, and the turn ends on its own;
+      // the last row leaving closes the view.
       await window.shows('The tests run on; I will say when they end.');
+      await until(
+        'the view gone',
+        () => !window.frame().includes('│ Background'),
+      );
       expect(window.frame()).toContain('⎿  Cancelled');
       expect(window.frame()).not.toContain('Interrupted by user');
     },
@@ -650,7 +662,7 @@ test('x on an agent that took its own stop back says so on the hint line, and st
   withWindow(
     async (window) => {
       await send(window, 'claudenostop');
-      await window.shows('background  1 agent running');
+      await window.shows("background  main's agent running");
       await window.press(DOWN);
       await window.press('\r');
       await window.shows('❯ Run the test suite');

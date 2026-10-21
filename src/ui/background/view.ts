@@ -30,6 +30,41 @@ export function focusedItem(
   return (focus && items.find((item) => sameItem(item, focus))) ?? items[0];
 }
 
+/**
+ * Where the `❯` goes once `focus`'s row has left `before`, the rows now
+ * being `items`: to the row that took its place, or the one above when it
+ * was the last; none while its row is still listed, or with no row left
+ * (docs/design/CHD-479.md).
+ */
+export function focusAfter(
+  before: readonly BackgroundItem[],
+  items: readonly BackgroundItem[],
+  focus: ItemRef | undefined,
+): ItemRef | undefined {
+  if (
+    focus === undefined ||
+    items.length === 0 ||
+    items.some((item) => sameItem(item, focus))
+  ) {
+    return undefined;
+  }
+
+  const was = before.findIndex((item) => sameItem(item, focus));
+
+  if (was === -1) {
+    return undefined;
+  }
+
+  // The rows above it that are still listed, the first after them being
+  // the one that took its place.
+  const above = before
+    .slice(0, was)
+    .filter((item) => items.some((each) => sameItem(each, item))).length;
+  const next = items[Math.min(above, items.length - 1)]!;
+
+  return { key: next.key, id: next.id };
+}
+
 /** The hint line on an agent item whose agent offers no stop of its own. */
 export const NO_STOP_HINT = 'this agent offers no stop';
 

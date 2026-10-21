@@ -118,14 +118,14 @@ describe('the items', () => {
       }),
     ]);
 
+    // The ended monitor has left (CHD-479); the ended task stays (CHD-482).
     expect(brief(items)).toStrictEqual([
-      'monitor CI run 1 failed',
       'task Fix the tokenizer 1 running',
       'monitor parser tests 2 running',
       'monitor dev server 1 running',
       'task Fix the printer 1 done',
     ]);
-    expect(items[1]).toStrictEqual({
+    expect(items[0]).toStrictEqual({
       kind: 'task',
       id: 'task-1',
       key: 1,
@@ -136,12 +136,12 @@ describe('the items', () => {
       model: 'Fake Small',
       callId: 'call-task-1',
     });
-    expect(items[2]?.owner).toStrictEqual({ name: 'parser', colour: 0 });
+    expect(items[1]?.owner).toStrictEqual({ name: 'parser', colour: 0 });
   });
 
-  test('a monitor that exits 0 is done, a stop stopped, any other end failed', () => {
+  test('a monitor leaves the list however it ended: exit 0, another exit, a signal, a timeout, a flood or a stop (CHD-479)', () => {
     const monitor = running('m1', 'x', 0);
-    const groups = (
+    const items = (
       [
         { kind: 'exit', code: 0 },
         { kind: 'exit', code: 2 },
@@ -152,27 +152,11 @@ describe('the items', () => {
       ] as const
     ).map(
       (end) =>
-        backgroundItems([
-          agent(1, { endedMonitors: [ended(monitor, end, 5)] }),
-        ])[0]?.status,
+        backgroundItems([agent(1, { endedMonitors: [ended(monitor, end, 5)] })])
+          .length,
     );
 
-    expect(groups).toStrictEqual([
-      { group: 'done', endedAt: 5, end: { kind: 'exit', code: 0 } },
-      { group: 'failed', endedAt: 5, end: { kind: 'exit', code: 2 } },
-      {
-        group: 'failed',
-        endedAt: 5,
-        end: { kind: 'signal', signal: 'SIGKILL' },
-      },
-      {
-        group: 'failed',
-        endedAt: 5,
-        end: { kind: 'timed_out', timeoutMs: 1000 },
-      },
-      { group: 'failed', endedAt: 5, end: { kind: 'flooded', by: 'lines' } },
-      { group: 'stopped', endedAt: 5, end: { kind: 'stopped' } },
-    ]);
+    expect(items).toStrictEqual([0, 0, 0, 0, 0, 0]);
   });
 
   test('a task reported is done, a failed or gone one failed, a cancelled one stopped', () => {
@@ -298,7 +282,8 @@ describe('the items', () => {
     );
 
     expect(before).toStrictEqual(['one', 'two', 'a', 'b', 'three']);
-    // m2 and the other agent's ended first, then m1.
+    // m2 and the other agent's ended first, then m1, and left (CHD-479);
+    // the tasks keep their places, the ended one too.
     expect(
       order(
         {
@@ -318,7 +303,7 @@ describe('the items', () => {
           ],
         },
       ),
-    ).toStrictEqual(before);
+    ).toStrictEqual(['a', 'b']);
   });
 
   test("the person's prompt clears what ended before it; what runs or asks stays", () => {
@@ -326,22 +311,29 @@ describe('the items', () => {
       [
         agent(1, {
           monitors: [running('m2', 'still', 10)],
-          endedMonitors: [
-            ended(running('m1', 'before', 0), { kind: 'stopped' }, 50),
-            ended(running('m3', 'after', 20), { kind: 'exit', code: 0 }, 150),
-          ],
-          transcript: withEntries([task('task-1', 'asking', 5)], {
-            asking: [
-              {
-                id: 'e',
-                mode: 'url',
-                url: 'u',
-                message: 'm',
-                subagentId: 'task-1',
-                at: 6,
-              },
+          // A task, as an ended monitor leaves at once (CHD-479).
+          transcript: withEntries(
+            [
+              task('task-0', 'before', 0, { state: 'completed', endedAt: 50 }),
+              task('task-1', 'asking', 5),
+              task('task-3', 'after', 20, {
+                state: 'completed',
+                endedAt: 150,
+              }),
             ],
-          }),
+            {
+              asking: [
+                {
+                  id: 'e',
+                  mode: 'url',
+                  url: 'u',
+                  message: 'm',
+                  subagentId: 'task-1',
+                  at: 6,
+                },
+              ],
+            },
+          ),
         }),
       ],
       100,
@@ -350,7 +342,7 @@ describe('the items', () => {
     expect(brief(items)).toStrictEqual([
       'task asking 1 asking',
       'monitor still 1 running',
-      'monitor after 1 done',
+      'task after 1 done',
     ]);
   });
 });
@@ -768,28 +760,18 @@ describe('agent items', () => {
         }),
       ])[0]?.status,
     ).toStrictEqual({ group: 'asking', on: 'input', since: 22 });
-    expect(status({ state: 'completed', endedAt: 30 })).toStrictEqual({
-      group: 'done',
-      endedAt: 30,
-    });
-    expect(status({ state: 'failed', endedAt: 30 })).toStrictEqual({
-      group: 'failed',
-      endedAt: 30,
-    });
-    expect(status({ state: 'disconnected', endedAt: 30 })).toStrictEqual({
-      group: 'failed',
-      endedAt: 30,
-      word: 'disconnected',
-    });
-    expect(status({ state: 'cancelled', endedAt: 30 })).toStrictEqual({
-      group: 'stopped',
-      endedAt: 30,
-    });
-    expect(status({ state: 'ended', endedAt: 30 })).toStrictEqual({
-      group: 'stopped',
-      endedAt: 30,
-      word: 'ended',
-    });
+
+    // Ended, however, it has left the list (CHD-479).
+    for (const state of [
+      'completed',
+      'failed',
+      'disconnected',
+      'cancelled',
+      'ended',
+    ] as const) {
+      expect(status({ state, endedAt: 30 }), state).toStrictEqual(undefined);
+    }
+
     expect(status({ state: 'untracked', endedAt: 30 })).toStrictEqual({
       group: 'untracked',
       endedAt: 30,
@@ -807,14 +789,35 @@ describe('agent items', () => {
         item('agent', { group: 'running', stopping: true }),
       ]).map(({ text }) => text),
     ).toStrictEqual([
-      '● 1 agent asking',
+      "● main's agent asking",
       '✗ 1 monitor failed',
-      '? 1 agent untracked',
-      '1 monitor and 2 agents running',
+      "? main's agent untracked",
+      "1 monitor and main's 2 agents running",
     ]);
   });
 
-  test('the next prompt clears an ended or untracked agent, and one that comes back is listed again', () => {
+  test("an agent phrase names each parent in the possessive, in the agents list's order (CHD-479)", () => {
+    const of = (parent: string, parentAt: number): BackgroundItem => ({
+      ...item('agent', RUNNING),
+      parent,
+      parentAt,
+    });
+
+    expect(
+      summaryGroups([
+        of('tester', 2),
+        item('task', RUNNING),
+        of('main', 0),
+        of('tester', 2),
+        of('parser', 1),
+        of('main', 0),
+      ]).map(({ text }) => text),
+    ).toStrictEqual([
+      "1 task and main's 2 agents and parser's agent and tester's 2 agents running",
+    ]);
+  });
+
+  test('the next prompt clears an untracked agent, and one that comes back is listed again; an ended one has left already', () => {
     const at = (more: Partial<Subagent>) =>
       brief(
         backgroundItems(
@@ -860,17 +863,13 @@ describe('agent items from the fake', () => {
     }
   }
 
-  test("Claude's four subagents are agent items, each as it ended", async () => {
+  test("Claude's four subagents are agent items while they run, and only the untracked one stays once they end", async () => {
     const items = await itemsAfter('claudesubagents');
 
     expect(
       items.map(({ kind, name, status }) => [kind, name, status.group]),
-    ).toStrictEqual([
-      ['agent', 'Find the session layer', 'done'],
-      ['agent', 'Review the transcript reducer', 'failed'],
-      ['agent', 'Run the tests', 'stopped'],
-      ['agent', 'Watch the build', 'untracked'],
-    ]);
+      // Done, failed and stopped, they have left (CHD-479).
+    ).toStrictEqual([['agent', 'Watch the build', 'untracked']]);
   });
 
   test("Claude's background agent stays running past the parent's cancel", async () => {
@@ -879,10 +878,8 @@ describe('agent items from the fake', () => {
     });
 
     expect(items.map(({ name, status }) => [name, status.group])).toStrictEqual(
-      [
-        ['Run the test suite', 'running'],
-        ['Find the cancel path', 'stopped'],
-      ],
+      // The one the cancel stopped has left (CHD-479).
+      [['Run the test suite', 'running']],
     );
   });
 });
@@ -916,11 +913,10 @@ test('a stopped agent reads stopping while it still asks, until its agent says i
   expect(asked({}, { waiting: { since: 20 } })).toStrictEqual(STOPPING);
   expect(asked(permission)).toStrictEqual(STOPPING);
   expect(asked({ asking: [form] })).toStrictEqual(STOPPING);
-  // Its agent's end wins over the key.
-  expect(asked({}, { state: 'completed', endedAt: 30 })).toStrictEqual({
-    group: 'done',
-    endedAt: 30,
-  });
+  // Its agent's end wins over the key: it has left (CHD-479).
+  expect(asked({}, { state: 'completed', endedAt: 30 })).toStrictEqual(
+    undefined,
+  );
 });
 
 describe('an agent item names its parent, and which items leave as they end (CHD-479)', () => {
@@ -950,7 +946,7 @@ describe('an agent item names its parent, and which items leave as they end (CHD
     ]);
   });
 
-  test('an agent leaves once done, failed or stopped; running, asking and untracked stay; other kinds stay as before', () => {
+  test('an agent or a monitor leaves once done, failed or stopped; running, asking and untracked stay; a task stays as before', () => {
     const at = (group: ItemStatus['group']): ItemStatus =>
       group === 'running'
         ? { group }
@@ -971,12 +967,14 @@ describe('an agent item names its parent, and which items leave as they end (CHD
         leavesList({ kind: 'agent', status: at(group) }),
       ),
     ).toStrictEqual(['done', 'failed', 'stopped']);
-
-    for (const kind of ['monitor', 'task'] as const) {
-      expect(
-        groups.filter((group) => leavesList({ kind, status: at(group) })),
-      ).toStrictEqual([]);
-    }
+    expect(
+      groups.filter((group) =>
+        leavesList({ kind: 'monitor', status: at(group) }),
+      ),
+    ).toStrictEqual(['done', 'failed', 'stopped']);
+    expect(
+      groups.filter((group) => leavesList({ kind: 'task', status: at(group) })),
+    ).toStrictEqual([]);
   });
 });
 

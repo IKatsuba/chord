@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
+import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import { turnCost } from '../../src/session/prices.ts';
 import {
   Conversation,
@@ -1535,4 +1537,61 @@ describe('CHD-467 tester: answer and cost settlement in either wire order', () =
         Array.from({ length: 4 }, () => turn(0.0125)),
       );
     }));
+});
+
+describe('CHD-479 tester: replay keeps wire endings without inventing who stopped', () => {
+  test('a recorded late stop has one end line after replay, with no synthetic x attribution', () => {
+    const entries: RecordEntry[] = [
+      { type: 'prompt', turnId: 't1', prompt: 'work', images: 0, at: 1 },
+      {
+        type: 'update',
+        turnId: 't1',
+        at: 2,
+        update: {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'worker',
+          description: 'Check replay',
+          state: { state: 'running' },
+          capabilities: { cancel: {} },
+        },
+      },
+      {
+        type: 'result',
+        turnId: 't1',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+      {
+        type: 'update',
+        turnId: 't1',
+        at: 4002,
+        update: {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'worker',
+          state: { state: 'idle', stopReason: 'cancelled' },
+        },
+      },
+    ];
+    const actions = recordActions(entries);
+    const transcript = actions.reduce(
+      (state, action) =>
+        action.type === 'usage' ? state : reduceTranscript(state, action),
+      emptyTranscript,
+    );
+    const ends = transcript.entries.filter(
+      (entry) => entry.kind === 'item_ended',
+    );
+
+    expect(ends).toHaveLength(1);
+    expect(ends[0]).toMatchObject({
+      turnId: 'history-t1',
+      end: 'stopped',
+      name: 'Check replay',
+      startedAt: 2,
+      endedAt: 4002,
+    });
+    expect(ends[0]?.byPerson).toBeUndefined();
+    expect(actions.some((action) => action.type === 'subagent_stopping')).toBe(
+      false,
+    );
+  });
 });

@@ -737,3 +737,127 @@ describe("an agent item's end, once its turn has ended (CHD-479)", () => {
     ).toHaveLength(1);
   });
 });
+
+describe('CHD-479 tester: late item transitions keep the announcing root turn', () => {
+  const update = (
+    id: string,
+    state: string,
+    at: number,
+    parent?: string,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at,
+    ...(parent === undefined ? {} : { subagentId: parent }),
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      description: `Find ${id}`,
+      state: { state },
+      capabilities: { cancel: {} },
+    } as SessionUpdate,
+  });
+  const result = (status: 'completed' | 'cancelled'): TranscriptAction => ({
+    type: 'result',
+    turnId: TURN,
+    result:
+      status === 'completed'
+        ? { status, stopReason: 'end_turn' }
+        : { status, stopReason: 'cancelled' },
+  });
+  const lines = (transcript: Transcript) =>
+    transcript.entries.filter((entry) => entry.kind === 'item_ended');
+
+  test('an old root ends during another live turn without ending or duplicating that turn', () => {
+    const transcript = fold([
+      PROMPT,
+      update('old', 'running', 2),
+      result('completed'),
+      { type: 'prompt', turnId: 'next', text: 'next turn', at: 10 },
+      update('old', 'completed', 12),
+      update('old', 'failed', 13),
+    ]);
+
+    expect(lines(transcript)).toHaveLength(1);
+    expect(lines(transcript)[0]).toMatchObject({
+      turnId: TURN,
+      name: 'Find old',
+      end: 'done',
+    });
+    expect(transcript.turn).toMatchObject({
+      turnId: 'next',
+      status: 'working',
+    });
+  });
+
+  test('a nested unknown survives its root cancel, then disconnects once at the top', () => {
+    const transcript = fold([
+      PROMPT,
+      update('outer', 'running', 2),
+      update('inner', 'unknown', 3, 'outer'),
+      result('cancelled'),
+      { type: 'disconnected', turnId: TURN, at: 20 },
+      { type: 'disconnected', turnId: TURN, at: 21 },
+    ]);
+
+    expect(lines(transcript).map(({ name, end }) => [name, end])).toStrictEqual(
+      [
+        ['Find outer', 'disconnected'],
+        ['Find inner', 'disconnected'],
+      ],
+    );
+    expect(
+      only(transcript, 'outer').entries.some(
+        (entry) => entry.kind === 'item_ended',
+      ),
+    ).toBe(false);
+  });
+
+  test('a late nested completion after a cancelled root is emitted once; a live-root end never reappears later', () => {
+    const prefix = [
+      PROMPT,
+      update('outer', 'running', 2),
+      update('inner', 'running', 3, 'outer'),
+    ];
+    const late = fold([
+      ...prefix,
+      result('cancelled'),
+      update('inner', 'completed', 10, 'outer'),
+      update('inner', 'completed', 11, 'outer'),
+    ]);
+    const during = fold([
+      ...prefix,
+      update('inner', 'completed', 4, 'outer'),
+      result('completed'),
+      update('inner', 'completed', 10, 'outer'),
+    ]);
+
+    expect(lines(late)).toHaveLength(1);
+    expect(lines(late)[0]).toMatchObject({
+      name: 'Find inner',
+      turnId: TURN,
+      end: 'done',
+    });
+    expect(lines(during)).toStrictEqual([]);
+  });
+
+  test('independent owners reusing the same ACP id cannot satisfy or duplicate each other', () => {
+    const a = fold([
+      PROMPT,
+      update('shared', 'running', 2),
+      result('completed'),
+    ]);
+    const b = fold([
+      PROMPT,
+      update('shared', 'running', 2),
+      result('completed'),
+    ]);
+    const endedA = fold([update('shared', 'completed', 8)], a);
+    const endedB = fold([update('shared', 'cancelled', 9)], b);
+
+    expect(lines(a)).toStrictEqual([]);
+    expect(lines(b)).toStrictEqual([]);
+    expect(lines(endedA)[0]).toMatchObject({ end: 'done' });
+    expect(lines(endedB)[0]).toMatchObject({ end: 'stopped' });
+  });
+});

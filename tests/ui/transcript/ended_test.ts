@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import type { Entry } from '../../../src/session/transcript/types.ts';
 import { endedLine } from '../../../src/ui/transcript/ended.ts';
@@ -85,4 +85,58 @@ test("a reason's cut keeps whole characters: wide, combined and joined ones (CHD
       unit,
     ).toBeLessThanOrEqual(60);
   }
+});
+
+describe('CHD-479 tester: failure reason and stop edge cases', () => {
+  test('ANSI in a failure cannot leak another line or spend the reason width', () => {
+    for (const width of [40, 74, 114]) {
+      const line = endedLine(
+        ended({
+          name: 'Check',
+          end: 'failed',
+          error: '\x1b[31m日本語👩‍💻'.repeat(50) + '\x1b[0m\nNEVER SHOWN',
+        }),
+        width,
+      );
+      const words = `${line.name}${line.kind}${line.end}: ${line.reason}`;
+
+      expect(words).not.toContain('\x1b');
+      expect(words).not.toContain('NEVER SHOWN');
+      expect(stringWidth(words)).toBeLessThanOrEqual(width);
+      expect(line.reason?.endsWith('…')).toBe(true);
+    }
+  });
+
+  test('missing or reversed timestamps cannot invent a negative duration', () => {
+    expect(
+      endedLine(
+        {
+          kind: 'item_ended',
+          turnId: 't1',
+          item: 'agent',
+          name: 'Run the test suite',
+          end: 'stopped',
+        },
+        80,
+      ).end,
+    ).toBe('stopped');
+    expect(read({ startedAt: 20, endedAt: 10 })).toBe(
+      '✓ Run the test suite · agent · done in 0s',
+    );
+    expect(
+      read({ end: 'failed', error: '\x1b[31m  \x1b[0m\nnot first' }),
+    ).not.toContain(':');
+  });
+
+  test('a pending person stop does not relabel natural completion or failure', () => {
+    expect(read({ byPerson: true })).toBe(
+      '✓ Run the test suite · agent · done in 4s',
+    );
+    expect(read({ byPerson: true, end: 'failed' })).toBe(
+      '✗ Run the test suite · agent · failed after 4s',
+    );
+    expect(read({ byPerson: true, end: 'ended' })).toBe(
+      '■ Run the test suite · agent · stopped with x after 4s',
+    );
+  });
 });

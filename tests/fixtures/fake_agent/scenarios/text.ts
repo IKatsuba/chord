@@ -207,6 +207,28 @@ export const TEXT = {
     return 'end_turn';
   },
 
+  // `retitled`'s two names, one a prompt, so a test sees the first before
+  // the second comes.
+  async titledlook(turn) {
+    await turn.send({
+      sessionUpdate: 'session_info_update',
+      title: 'Look at the parser',
+    });
+    await turn.say('Looking.');
+
+    return 'end_turn';
+  },
+
+  async titledfix(turn) {
+    await turn.send({
+      sessionUpdate: 'session_info_update',
+      title: 'Fix the parser',
+    });
+    await turn.say('Renamed.');
+
+    return 'end_turn';
+  },
+
   async slow(turn) {
     await turn.say('Working');
 

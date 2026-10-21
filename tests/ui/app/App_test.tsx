@@ -2797,14 +2797,18 @@ test("the record's title is the agent's own title for the main session once it g
       await window.shows('came in chunks.');
       // None from the agent yet: the first prompt.
       await until('the title', () => lastStatus(log)?.title === 'text');
-      await send(window, 'retitled');
-      await window.shows('Renamed.');
+      // One name a prompt, so each is drawn and told before the next.
+      await send(window, 'titledlook');
+      await window.shows('Looking.');
       await until(
         "the agent's title",
-        () => lastStatus(log)?.title === 'Fix the parser',
+        () => lastStatus(log)?.title === 'Look at the parser',
       );
-      expect(statusReports(log).map((report) => report.title)).toContain(
-        'Look at the parser',
+      await send(window, 'titledfix');
+      await window.shows('Renamed.');
+      await until(
+        'its new title',
+        () => lastStatus(log)?.title === 'Fix the parser',
       );
     },
     { log },

@@ -239,7 +239,8 @@
  * and `--mcp-transports <list>` (`CHORD_FAKE_MCP_TRANSPORTS`) advertises just
  * the transports it names past stdio, `none` for stdio alone. `titled` names
  * its session in a `session_info_update`, and `retitled` names it twice
- * (CHD-491).
+ * (CHD-491); `titledlook` and `titledfix` give those two names one prompt
+ * each.
  */
 import process from 'node:process';
 import { Readable, Writable } from 'node:stream';
@@ -369,6 +370,8 @@ const SCENARIOS = [
   'slow',
   'titled',
   'retitled',
+  'titledlook',
+  'titledfix',
   'costwait',
   'costwaitlate',
   'long',

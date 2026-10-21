@@ -4,7 +4,8 @@ import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
 import { ConfigPicker } from '../../../src/ui/pickers/Pickers.tsx';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseServers } from '../../../src/mcp.ts';
 import { serveChord } from '../../../src/server/server.ts';
@@ -717,6 +718,9 @@ test("/mcp on a picked child on another runtime names that child's agent and wha
         await window.press(DOWN);
         await window.press('\r');
         await window.shows('╭─ foreign ─');
+        // The child's box is drawn before its session is there; what it was
+        // passed is known once its start line says what it held back.
+        await window.shows('not passed to codex');
         await window.type('/mcp');
         await window.press('\r');
         await window.shows("chord's MCP servers for codex.");
@@ -747,6 +751,83 @@ test("/mcp on a picked child on another runtime names that child's agent and wha
     );
   } finally {
     await server.close();
+  }
+});
+
+test('/mcp on a child still starting says it was passed nothing yet, then lists what it was passed (CHD-488)', async () => {
+  const server = serveChord();
+  const admit = server.admit.bind(server);
+  let main: Parameters<typeof admit>[0] | undefined;
+  const command = fakeAgentCommand();
+  // The child's agent starts only once the gate is there, so its session is
+  // missing for as long as the test needs.
+  const gates = await mkdtemp(join(tmpdir(), 'chord-gate-'));
+  const gate = join(gates, 'open');
+
+  server.admit = (caller) => {
+    if (caller.role === 'person') {
+      main = caller;
+    }
+
+    return admit(caller);
+  };
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        assert(main);
+        await main.window.open(main.key, {
+          agent: 'codex',
+          name: 'foreign',
+          prompt: 'text',
+        });
+        await window.shows('foreign');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('╭─ foreign ─');
+        await window.type('/mcp');
+        await window.press('\r');
+        await window.shows(
+          'codex is starting: chord has not passed it MCP servers yet.',
+        );
+
+        const frame = window.frame();
+
+        expect(frame).not.toContain('filesystem');
+        expect(frame).not.toContain('docs');
+        expect(frame).not.toContain("chord's server");
+        await writeFile(gate, '');
+        await window.shows(
+          'docs was not passed: codex takes MCP servers over stdio only.',
+        );
+        expect(window.frame()).toMatch(/filesystem\s+stdio\s+npx -y files/);
+        expect(window.frame()).not.toContain('codex is starting');
+      },
+      {
+        server,
+        mcpServers: SERVERS,
+        rows: 60,
+        runtimes: ['fake', 'codex'],
+        agentCommand: command,
+        startupOf: (agent) => ({
+          agentCommand:
+            agent === 'codex'
+              ? [
+                  'sh',
+                  '-c',
+                  'while [ ! -e "$0" ]; do sleep 0.05; done; exec "$@"',
+                  gate,
+                  ...fakeAgentCommand(undefined, '--mcp-transports', 'none'),
+                ]
+              : command,
+        }),
+      },
+    );
+  } finally {
+    await server.close();
+    await rm(gates, { recursive: true, force: true });
   }
 });
 

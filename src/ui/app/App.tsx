@@ -1218,6 +1218,10 @@ export function App({
                   heldBack={conversation()?.session?.heldBack ?? []}
                   agent={child?.runtime ?? frontAgent}
                   windowRows={rows}
+                  starting={
+                    conversation()?.session === undefined &&
+                    state.connection.status === 'starting'
+                  }
                   {...(server === undefined
                     ? {}
                     : {

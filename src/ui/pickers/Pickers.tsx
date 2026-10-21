@@ -57,6 +57,7 @@ import {
   mcpFit,
   mcpRowLimit,
   mcpRows,
+  startingLine,
   withHeldBack,
 } from './mcp.ts';
 import {
@@ -554,8 +555,14 @@ export function McpPanel({
   agent,
   windowRows,
   chord,
+  starting = false,
 }: {
   servers: readonly DefinedServer[];
+  /**
+   * Its agent's session not there yet: chord has passed it nothing, so
+   * neither a server passed nor one held back can be said (CHD-488).
+   */
+  starting?: boolean;
   /** The servers its agent was not given, each listed `not passed` (CHD-441). */
   heldBack?: readonly HeldBack[];
   /** chord's own server, listed first; none where the window has none. */
@@ -576,6 +583,26 @@ export function McpPanel({
   const { shown, more } = mcpFit(rows, mcpRowLimit(windowRows));
   const lost = ignoredNote(ignored);
   const closeHint = useCloseHint();
+
+  if (starting) {
+    return (
+      <box {...borderOf(permission)} paddingX={1} marginTop={1} flexShrink={0}>
+        <text {...TEXT} {...fg(permission)} attributes={BOLD}>
+          MCP servers
+        </text>
+        <text {...TEXT} attributes={DIM}>
+          {startingLine(agent)}
+        </text>
+        {closeHint !== undefined && (
+          <box marginTop={1}>
+            <text {...TEXT} attributes={DIM}>
+              {closeHint}
+            </text>
+          </box>
+        )}
+      </box>
+    );
+  }
 
   return (
     <box {...borderOf(permission)} paddingX={1} marginTop={1} flexShrink={0}>

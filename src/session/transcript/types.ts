@@ -917,7 +917,8 @@ export type TranscriptAction =
   | { readonly type: 'cancel'; readonly turnId: string; readonly at: number }
   /**
    * The person stopped subagent `subagentId` alone, or, `stopping` false,
-   * the stop could not be sent. Not recorded: a stop pending is live only.
+   * the stop could not be sent; recorded, so a resumed transcript says the
+   * person ended it (CHD-479).
    */
   | {
       readonly type: 'subagent_stopping';

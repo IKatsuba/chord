@@ -204,7 +204,10 @@
   prompt that is a wrapped message is answered with who it was from, or,
   when what it says is a scenario's name, plays that scenario, as a child's
   first prompt is its parent's message; and `--no-http` or `CHORD_FAKE_NO_HTTP=1` leaves HTTP out of its
-  `mcpCapabilities`, so chord gives it no server of its own; `long` streams 200
+  `mcpCapabilities`, so chord gives it no server of its own, and
+  `--mcp-transports <list>` (`CHORD_FAKE_MCP_TRANSPORTS`) advertises just the
+  transports past stdio it names, comma-separated from `http`, `sse` and
+  `acp`, or `none` for stdio alone (CHD-441); `long` streams 200
   numbered lines about 100 ms apart, to scroll back through by hand;
   `longheld` holds at line 20 until the gate opens, sends line 21 alone,
   then holds up to 10 s for cancel, to check scrolling with the bottom held;

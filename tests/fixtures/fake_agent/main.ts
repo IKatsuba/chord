@@ -233,7 +233,9 @@
  * prompt that is a message chord wrapped is answered with who sent it, or,
  * when what it says is a scenario's name, plays that scenario, as a child's
  * first prompt is its parent's message. With
- * `--no-http` or `CHORD_FAKE_NO_HTTP=1` its `mcpCapabilities` leave HTTP out.
+ * `--no-http` or `CHORD_FAKE_NO_HTTP=1` its `mcpCapabilities` leave HTTP out,
+ * and `--mcp-transports <list>` (`CHORD_FAKE_MCP_TRANSPORTS`) advertises just
+ * the transports it names past stdio, `none` for stdio alone.
  */
 import process from 'node:process';
 import { Readable, Writable } from 'node:stream';
@@ -246,7 +248,7 @@ import {
   ARGS,
   HANG,
   NO_CONFIG,
-  NO_HTTP,
+  MCP_TRANSPORTS,
   NO_IMAGES,
   NO_MODES,
   NO_USAGE,
@@ -943,7 +945,7 @@ const connection = acp
           protocolVersion: acp.PROTOCOL_VERSION,
           agentCapabilities: {
             loadSession: true,
-            mcpCapabilities: { http: !NO_HTTP, sse: true },
+            mcpCapabilities: MCP_TRANSPORTS,
             promptCapabilities: { image: !NO_IMAGES },
             sessionCapabilities: {
               list: {},

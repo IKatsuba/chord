@@ -3,6 +3,7 @@
  * at start. Here rather than in `main.ts` because the scenarios read them too,
  * and `main.ts` imports the scenarios.
  */
+import type { McpCapabilities } from '@agentclientprotocol/sdk';
 import process from 'node:process';
 
 /** The flags after the script, as the runtime was given them. */
@@ -21,6 +22,35 @@ export const NO_IMAGES =
 
 export const NO_HTTP =
   ARGS.includes('--no-http') || process.env.CHORD_FAKE_NO_HTTP === '1';
+
+/**
+ * The MCP transports past stdio the fake advertises in `mcpCapabilities`:
+ * `http` and `sse`, `http` left out with `--no-http`, or those the comma list
+ * `--mcp-transports http,sse,acp` (`CHORD_FAKE_MCP_TRANSPORTS`) names, `none`
+ * for stdio alone (CHD-441).
+ */
+export const MCP_TRANSPORTS: McpCapabilities = (() => {
+  const flag = ARGS.indexOf('--mcp-transports');
+  const chosen =
+    flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_MCP_TRANSPORTS;
+
+  if (chosen === undefined) {
+    return { http: !NO_HTTP, sse: true };
+  }
+
+  const known = ['http', 'sse', 'acp'] as const;
+  const named = chosen === 'none' ? [] : chosen.split(',');
+
+  for (const each of named) {
+    if (!(known as readonly string[]).includes(each)) {
+      throw new Error(`unknown MCP transport to advertise "${each}"`);
+    }
+  }
+
+  return Object.fromEntries(
+    known.map((transport) => [transport, named.includes(transport)]),
+  );
+})();
 
 export const NO_CONFIG =
   ARGS.includes('--no-config') || process.env.CHORD_FAKE_NO_CONFIG === '1';

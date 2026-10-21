@@ -1,0 +1,24 @@
+ ⏺ Received the message from dev server errors · monitor.
+
+ ← from CI run 4812 · monitor · stopped
+   ⎿  The person stopped it after 40s.
+
+ ⏺ Received the message from CI run 4812 · monitor · stopped.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · m2, 2 of 2 · ended                                              │
+│                                                                              │
+│ CI run 4812                                                                  │
+│ ■ stopped after 40s · no events · started 41s ago · timeout 10m · main       │
+│ $ sleep 600                                                                  │
+│ ← no events yet                                                              │
+│ The person stopped it after 40s.                                             │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · Esc ← to go back              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  1 monitor running · ■ 1 monitor stopped

@@ -1,0 +1,24 @@
+
+ ← from dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined
+      (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · m2, 2 of 2                                                      │
+│                                                                              │
+│ CI run 4812                                                                  │
+│ running 31s · no events · started 31s ago · timeout 10m · main               │
+│ $ sleep 600                                                                  │
+│ ← no events yet                                                              │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  2 monitors running

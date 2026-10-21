@@ -19,6 +19,7 @@ import type { LinkOpener } from '../../links.ts';
 import {
   notificationBytes,
   type Notifications,
+  sessionVarBytes,
   type Wait,
 } from '../../notify.ts';
 import type { Conversation } from '../../session/conversation.ts';
@@ -61,6 +62,59 @@ export function useNotify(
     if (bytes !== undefined) {
       write(bytes);
     }
+  };
+}
+
+/**
+ * Tells the terminal the main session's id to resume, in its user variable
+ * `chord_session`, as the id changes: empty while there is none, the id once
+ * `recorded` settles, as `--resume` can open it then; an equal value is not
+ * sent again, and nothing is sent as chord exits (docs/design/CHD-492.md).
+ */
+export function useSessionVar(
+  tmux: boolean,
+): (id: string | undefined, recorded: Promise<void>) => void {
+  const { write } = useStdout();
+  // What the terminal was last told, none before the first.
+  const told = useRef<string | undefined>(undefined);
+  // What it should be told: a later id or none overtakes a write pending.
+  const wanted = useRef<string | undefined>(undefined);
+  const pending = useRef<string | undefined>(undefined);
+
+  const tell = (value: string) => {
+    if (told.current !== value) {
+      told.current = value;
+
+      write(sessionVarBytes(value === '' ? undefined : value, { tmux }));
+    }
+  };
+
+  return (id, recorded) => {
+    const value = id ?? '';
+
+    wanted.current = value;
+
+    if (value === '') {
+      tell('');
+
+      return;
+    }
+
+    if (pending.current === value) {
+      return;
+    }
+
+    pending.current = value;
+
+    void recorded.then(() => {
+      if (pending.current === value) {
+        pending.current = undefined;
+      }
+
+      if (wanted.current === value) {
+        tell(value);
+      }
+    });
   };
 }
 

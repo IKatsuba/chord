@@ -1,4 +1,5 @@
 import { beep } from 'ansi-escapes';
+import { Buffer } from 'node:buffer';
 import type { ConversationEvent } from './session/conversation.ts';
 
 /**
@@ -307,6 +308,23 @@ export function waitMessage(wait: Wait, agent: string): string {
  */
 function throughTmux(sequence: string): string {
   return `\x1bPtmux;${sequence.replaceAll('\x1b', '\x1b\x1b')}\x1b\\`;
+}
+
+/**
+ * The bytes that set the terminal's user variable `chord_session` to `id`,
+ * the main session's id to resume, or to nothing to resume for none: iTerm2's
+ * `SetUserVar`, which WezTerm takes too, its value base64 as the protocol
+ * asks, so an id of any shape goes through (docs/design/CHD-492.md).
+ */
+export function sessionVarBytes(
+  id: string | undefined,
+  env: Pick<TerminalEnv, 'tmux'>,
+): string {
+  const value =
+    id === undefined ? '' : Buffer.from(id, 'utf8').toString('base64');
+  const sequence = `\x1b]1337;SetUserVar=chord_session=${value}\x07`;
+
+  return env.tmux ? throughTmux(sequence) : sequence;
 }
 
 /** The bytes that tell the terminal of `wait`, or none for `off`. */

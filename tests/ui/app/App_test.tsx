@@ -3620,22 +3620,36 @@ describe('CHD-491 tester: the main session title on the actual OSC wire', () => 
           await window.press(DOWN);
           await window.press('\r');
           await window.shows('╭─ helper ─');
+          // Opening draws the box before the initial turn hands it the keys.
+          await window.shows('came in chunks.');
+          await window.shows('? for shortcuts');
           await send(window, 'slow');
           await until(
             'child working',
             () => lastStatus(log)?.state === 'working',
           );
+          await window.shows('esc to interrupt');
           expect(lastStatus(log)?.title).toBeUndefined();
           expect(wireTitles(log)).toStrictEqual([]);
           await window.press(ESC);
+          await window.shows('Interrupted by user');
           await window.press(DOWN);
           await window.press(UP);
+          await window.shows('❯ main ');
           await window.press('\r');
+          await until(
+            'main prompt taking keys',
+            () =>
+              !window.frame().includes('╭─ helper ─') &&
+              window.frame().includes('? for shortcuts'),
+          );
           await send(window, 'Main owns the title');
           await until(
             'main gets its title',
             () => lastStatus(log)?.title === 'Main owns the title',
-          );
+          ).catch((error: Error) => {
+            throw new Error(`${error.message}; the screen:\n${window.frame()}`);
+          });
         },
         { log, server, columns: 80, rows: 24 },
       );

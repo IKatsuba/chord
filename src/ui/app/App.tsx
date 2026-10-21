@@ -58,6 +58,7 @@ import {
   pendingBindings,
   reduceApp,
   reduceWindowed,
+  resumableSession,
   windowed,
 } from './state.ts';
 import { askedInput, betweenAsked, heldBack } from '../dialogs/state.ts';
@@ -117,6 +118,7 @@ import {
   useMatch,
   useImages,
   useNotify,
+  useSessionVar,
   useSelection,
   useShell,
 } from './terminal.ts';
@@ -444,6 +446,7 @@ export function App({
   latestHistory.current = history;
 
   const notify = useNotify(notifications);
+  const sessionVar = useSessionVar(notifications?.env.tmux ?? false);
   const sessions = useSessions(
     {
       agent,
@@ -879,6 +882,25 @@ export function App({
   };
 
   useEffect(() => reportStatus(status()));
+
+  // The terminal hears which session `--resume` would open (CHD-492):
+  // one opened again once it is up, else one a prompt went to. With no main
+  // session, as a quit takes the tabs away while the agents stop, it keeps
+  // what it was told.
+  useEffect(() => {
+    const { tabs, front } = sessions.sessions.tabs;
+    const main = tabs.find((tab) => tab.key === front);
+    const state = main && sessions.stateOf(main.key);
+
+    if (main === undefined || state === undefined) {
+      return;
+    }
+
+    sessionVar(
+      state.resumed === undefined ? resumableSession(state) : state.sessionId,
+      main.conversation.recorded(),
+    );
+  });
 
   // A key of chord's that would also type is kept from the textarea.
   usePress((input, key) => {

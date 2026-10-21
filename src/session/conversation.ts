@@ -349,6 +349,12 @@ export class Conversation {
    */
   #firstPrompt: string | undefined;
   /**
+   * Settles once the session's first prompt is in its record, flushed, so
+   * `--resume` can open it; settled from the start for a session opened
+   * again, which it opens already (CHD-492).
+   */
+  #recorded = Promise.withResolvers<void>();
+  /**
    * The agent's own title for the session, the last a `session_info_update`
    * gave it, its past's too; none while it has given none (CHD-491).
    */
@@ -575,6 +581,24 @@ export class Conversation {
     return this.#firstPrompt;
   }
 
+  /**
+   * Settles once the session's first prompt is in its record, as `--resume`
+   * needs it; a failed append settles it too, as the agent can still reopen
+   * the session from its own replay (docs/design/CHD-492.md).
+   */
+  recorded(): Promise<void> {
+    return this.#recorded.promise;
+  }
+
+  /** The record's write of what was just sent settles `recorded`. */
+  #flushedFirst(): void {
+    const recorded = this.#recorded;
+
+    void (this.#recording?.flushed() ?? Promise.resolve()).then(() =>
+      recorded.resolve(),
+    );
+  }
+
   /** The agent's own title for the session; none while it has given none. */
   get title(): string | undefined {
     return this.#title;
@@ -628,6 +652,11 @@ export class Conversation {
           this.#firstPrompt ??= historyEntries(session.history()).find(
             (entry) => entry.type === 'prompt',
           )?.prompt;
+
+          // A session opened again is one --resume opens, its record or not.
+          if (session.resumed !== undefined) {
+            this.#recorded.resolve();
+          }
 
           for (const action of session.history()) {
             if (action.type === 'update' && action.subagentId === undefined) {
@@ -739,6 +768,8 @@ export class Conversation {
     this.#session = undefined;
     this.#firstPrompt = undefined;
     this.#title = undefined;
+    // The next session's first prompt is not in any record yet.
+    this.#recorded = Promise.withResolvers<void>();
     this.#turn = undefined;
     this.#lastTurnId = 'session';
     this.#selfTurnId = undefined;
@@ -1229,6 +1260,7 @@ export class Conversation {
     this.#firstPrompt ??= next.prompt;
 
     this.#recording?.sent(next.turnId, next.prompt, 0, [], at, next.from, into);
+    this.#flushedFirst();
     // The turn may have answered while the steer was out, the queue held.
     void this.#advance(session);
   }
@@ -3019,6 +3051,7 @@ export class Conversation {
           at,
           next.from,
         );
+        this.#flushedFirst();
       }
 
       result = await turn.result;

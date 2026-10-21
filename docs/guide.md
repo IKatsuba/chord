@@ -453,6 +453,22 @@ without support shows nothing. Support includes
 [cmux](https://cmux.com/docs/changelog) and Rex; kitty's support is in
 0.50, not yet released. The Ghostty app does not yet show it.
 
+chord sends the front tab's main session id to the terminal through OSC
+1337 `SetUserVar=chord_session=<base64 id>`. The value is empty at start
+and after `/clear`, until the first prompt is saved. A resumed or continued
+session sends its id once open, as does a `/resume` pick. The value stays
+when chord exits, including on a signal or crash. A launcher such as
+Chorded can keep it and reopen with `chord [agent] --resume=<sessionId>`,
+using the same agent. Use `=`: a separate id starting with `-` reads as
+options. An id spelling a chord option name (`-r`, `-c`, `-m`, …) is not
+taken even with `=`.
+
+iTerm2 and WezTerm keep this variable (`user.chord_session` in iTerm2);
+other terminals ignore it. Inside tmux it reaches the outer terminal only
+with `set -g allow-passthrough on`; several panes overwrite the same
+variable, with the last write kept. This report is independent of
+`preferredNotifChannel`.
+
 `theme` takes Claude Code's ids: `auto` (the default), `dark`, `light`,
 `dark-daltonized`, `light-daltonized`, `dark-ansi` and `light-ansi`. It is
 about your terminal and your eyes rather than a project, so it is read only

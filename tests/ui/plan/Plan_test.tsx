@@ -130,7 +130,7 @@ describe('tester: selected plan entry identity', () => {
     test(`a surviving entry keeps its selection when the preceding step is removed at ${columns} columns`, () =>
       withWindow(
         async (window) => {
-          await send(window, 'planshrink');
+          await send(window, 'planshrinkgated');
           await window.shows('☐ Write the change');
 
           const lines = stripAnsi(window.frame()).split('\n');
@@ -145,6 +145,8 @@ describe('tester: selected plan entry identity', () => {
           await window.press(left(end, y, 'up'));
           expect(window.selected()).toBe('Write the change');
 
+          await mkdir(join(window.dir, GATE), { recursive: true });
+          await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
           await window.shows('Dropped a step.');
           expect(window.selected()).toBe('Write the change');
         },

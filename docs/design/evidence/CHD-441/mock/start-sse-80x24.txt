@@ -6,8 +6,8 @@
  ⏺ /tmp/chord-qa-home.des441/chord/settings.json: "mcpServers.broken.url":
    missing; the server is ignored
 
- ⏺ 1 MCP server was not passed to fake, which does not take them over SSE:
-   tracker. /mcp lists it.
+ ⏺ 1 MCP server was not passed to fake, which takes them over stdio and HTTP
+   only: tracker (sse). /mcp lists it.
 
 
 

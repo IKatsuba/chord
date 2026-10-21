@@ -1,5 +1,5 @@
 /** The list under the prompt drawn on its own, its times counting. */
-import { describe, expect, spyOn, test } from 'bun:test';
+import { describe, expect, setSystemTime, spyOn, test } from 'bun:test';
 import { useEffect } from 'react';
 import { until } from '../app/render.tsx';
 import { draw } from '../harness.tsx';
@@ -251,6 +251,10 @@ test("a narrow list wraps a long name in its column and draws a state under its 
 
   chalk.level = 3;
 
+  // The test's clock: on the real one, a draw that took a second under load
+  // read 9s where 8s was meant (CHD-399).
+  setSystemTime(new Date('2026-10-21T12:00:00Z'));
+
   const agents: AgentRow[] = [
     row('main', 1, { picked: true }),
     row('a-child-with-a-long-name', 2, {
@@ -285,6 +289,8 @@ test("a narrow list wraps a long name in its column and draws a state under its 
     expect(frame).toContain('\x1b[38;2;255;193;7m● permission 8s');
   } finally {
     chalk.level = level;
+
+    setSystemTime();
 
     await drawn.unmount();
   }

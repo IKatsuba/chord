@@ -4,12 +4,13 @@ import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
 import { ConfigPicker } from '../../../src/ui/pickers/Pickers.tsx';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseServers } from '../../../src/mcp.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
-import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { fakeAgentCommand, gatedCommand } from '../../fixtures/fake.ts';
 import { recordSession } from '../../fixtures/records.ts';
 import { readPast } from '../../../src/session/record.ts';
 import { writeWindow } from '../../../src/session/windows.ts';
@@ -717,6 +718,9 @@ test("/mcp on a picked child on another runtime names that child's agent and wha
         await window.press(DOWN);
         await window.press('\r');
         await window.shows('╭─ foreign ─');
+        // The child's box is drawn before its session is there; what it was
+        // passed is known once its start line says what it held back.
+        await window.shows('not passed to codex');
         await window.type('/mcp');
         await window.press('\r');
         await window.shows("chord's MCP servers for codex.");
@@ -747,6 +751,80 @@ test("/mcp on a picked child on another runtime names that child's agent and wha
     );
   } finally {
     await server.close();
+  }
+});
+
+test('/mcp on a child still starting says it was passed nothing yet, then lists what it was passed (CHD-488)', async () => {
+  const server = serveChord();
+  const admit = server.admit.bind(server);
+  let main: Parameters<typeof admit>[0] | undefined;
+  const command = fakeAgentCommand();
+  // The child's agent starts only once the gate is there, so its session is
+  // missing for as long as the test needs.
+  const gates = await mkdtemp(join(tmpdir(), 'chord-gate-'));
+  const gate = join(gates, 'open');
+
+  server.admit = (caller) => {
+    if (caller.role === 'person') {
+      main = caller;
+    }
+
+    return admit(caller);
+  };
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        assert(main);
+        await main.window.open(main.key, {
+          agent: 'codex',
+          name: 'foreign',
+          prompt: 'text',
+        });
+        await window.shows('foreign');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('╭─ foreign ─');
+        await window.type('/mcp');
+        await window.press('\r');
+        await window.shows(
+          'codex is starting: chord has not passed it MCP servers yet.',
+        );
+
+        const frame = window.frame();
+
+        expect(frame).not.toContain('filesystem');
+        expect(frame).not.toContain('docs');
+        expect(frame).not.toContain("chord's server");
+        await writeFile(gate, '');
+        await window.shows(
+          'docs was not passed: codex takes MCP servers over stdio only.',
+        );
+        expect(window.frame()).toMatch(/filesystem\s+stdio\s+npx -y files/);
+        expect(window.frame()).not.toContain('codex is starting');
+      },
+      {
+        server,
+        mcpServers: SERVERS,
+        rows: 60,
+        runtimes: ['fake', 'codex'],
+        agentCommand: command,
+        startupOf: (agent) => ({
+          agentCommand:
+            agent === 'codex'
+              ? gatedCommand(
+                  gate,
+                  fakeAgentCommand(undefined, '--mcp-transports', 'none'),
+                )
+              : command,
+        }),
+      },
+    );
+  } finally {
+    await server.close();
+    await rm(gates, { recursive: true, force: true });
   }
 });
 
@@ -1200,6 +1278,95 @@ describe('CHD-441 tester: takes-none reaches child and task sessions', () => {
           },
         );
       } finally {
+        await server.close();
+      }
+    });
+  }
+});
+
+describe('CHD-488 tester: a starting child keeps the MCP panel keys', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`Esc closes and /mcp reopens before startup at ${columns}×${rows}`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      const command = fakeAgentCommand();
+      const gates = await mkdtemp(join(tmpdir(), 'chord-mcp-keys-'));
+      const gate = join(gates, 'open');
+      const starting =
+        'codex is starting: chord has not passed it MCP servers yet.';
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+            await main.window.open(main.key, {
+              agent: 'codex',
+              name: 'waiting-child',
+              prompt: 'text',
+            });
+            await window.shows('waiting-child');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('╭─ waiting-child ─');
+            await send(window, '/mcp');
+            await window.shows(starting);
+            expect(window.frame()).toContain('Esc to close');
+            expect(window.frame()).not.toContain('filesystem');
+            expect(window.frame()).not.toContain('docs was not passed:');
+            await window.press(ESC);
+            await until(
+              'the starting MCP panel closes',
+              () => !window.frame().includes(starting),
+            );
+            expect(window.frame()).toContain('╭─ waiting-child ─');
+            await send(window, '/mcp');
+            await window.shows(starting);
+            await writeFile(gate, '');
+            await window.shows(
+              'docs was not passed: codex takes MCP servers over stdio only.',
+            );
+            expect(window.frame()).not.toContain(starting);
+            expect(window.frame()).toMatch(/filesystem\s+stdio\s+npx -y files/);
+            await window.press(ESC);
+            await until(
+              'the ready MCP panel closes',
+              () => !window.frame().includes("chord's MCP servers for codex."),
+            );
+          },
+          {
+            server,
+            columns,
+            rows,
+            mcpServers: SERVERS,
+            runtimes: ['fake', 'codex'],
+            agentCommand: command,
+            startupOf: (agent) => ({
+              agentCommand:
+                agent === 'codex'
+                  ? gatedCommand(
+                      gate,
+                      fakeAgentCommand(undefined, '--mcp-transports', 'none'),
+                    )
+                  : command,
+            }),
+          },
+        );
+      } finally {
+        await rm(gates, { recursive: true, force: true });
         await server.close();
       }
     });

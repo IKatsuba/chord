@@ -1,0 +1,40 @@
+ foreign · codex · Fake Large with a 1M context window · opened by main 40s ago
+
+ ← from @main
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Select model                                                                                                         │
+│ Switch codex's model for this session.                                                                               │
+│                                                                                                                      │
+│ ❯ 1. Fake Large with a 1M context window ✔                                                                           │
+│   2. Fake Small                                                                                                      │
+│                                                                                                                      │
+│ Enter to switch · Esc to close                                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ foreign ────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     fake · Fake Large with a 1M context window · medium   ◦ idle 1m
+    foreign  codex · Fake Large with a 1M context window · medium  ◦ idle 20s

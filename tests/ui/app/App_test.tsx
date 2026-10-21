@@ -14,7 +14,7 @@ import { App } from '../../../src/ui/app/App.tsx';
 import * as ansi from '../../../src/ui/theme/Ansi.tsx';
 import { terminalOptions } from '../../../src/ui/app/renderer.tsx';
 import { editInEditor } from '../../../src/editor.ts';
-import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { fakeAgentCommand, gatedCommand } from '../../fixtures/fake.ts';
 import {
   asked,
   DOWN,
@@ -2832,4 +2832,228 @@ test("ctrl+g clears chord's status for the editor and reports it again once back
       },
     },
   );
+});
+
+describe("a picked child on another runtime is named by its own agent, not the tab's (CHD-488)", () => {
+  /**
+   * Opens `foreign`, a codex child of main on the fake tab, its agent
+   * started by `codex` and given `prompt`, and picks it.
+   */
+  async function onChild(
+    codex: readonly string[],
+    prompt: string,
+    body: (window: Window) => Promise<void>,
+    options: Parameters<typeof withWindow>[1] = {},
+  ): Promise<void> {
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+    const command = fakeAgentCommand();
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+
+          if (main === undefined) {
+            throw new Error('main was not admitted');
+          }
+
+          await main.window.open(main.key, {
+            agent: 'codex',
+            name: 'foreign',
+            prompt,
+          });
+          await window.shows('foreign');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('╭─ foreign ─');
+          await body(window);
+        },
+        {
+          ...options,
+          server,
+          runtimes: ['fake', 'codex'],
+          agentCommand: command,
+          startupOf: (agent) => ({
+            agentCommand: agent === 'codex' ? [...codex] : command,
+          }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  }
+
+  test('the status line says the child is starting by its own agent', async () => {
+    // The child's agent starts only once the gate is there.
+    const gates = await mkdtemp(join(tmpdir(), 'chord-gate-'));
+    const gate = join(gates, 'open');
+
+    try {
+      await onChild(
+        gatedCommand(gate, fakeAgentCommand()),
+        'text',
+        async (window) => {
+          await window.shows('Starting codex…');
+          expect(window.frame()).not.toContain('Starting fake…');
+          await writeFile(gate, '');
+        },
+      );
+    } finally {
+      await rm(gates, { recursive: true, force: true });
+    }
+  });
+
+  test('a child whose agent did not start says so by its own agent', () =>
+    onChild(['sh', '-c', 'exit 1'], 'text', async (window) => {
+      await window.shows('codex did not start:');
+      expect(window.frame()).not.toContain('fake did not start');
+    }));
+
+  test("a form's record names the child's agent as who asked", () =>
+    onChild(fakeAgentCommand(), 'text', async (window) => {
+      await window.shows('came in chunks.');
+      await send(window, 'form');
+      await inputAsked(window, 'foreign asks for input');
+      await window.press(ESC);
+      await window.shows('codex asked');
+      expect(window.frame()).not.toContain('fake asked');
+    }));
+
+  test("/model and /config name the child's agent", () =>
+    onChild(fakeAgentCommand(), 'text', async (window) => {
+      await window.type('/model');
+      await window.press('\r');
+      await until('the model picker', () =>
+        /codex offers no models|Switch codex's model/.test(window.frame()),
+      );
+      expect(window.frame()).not.toMatch(/fake offers|Switch fake's/);
+      await window.press(ESC);
+      await window.type('/config');
+      await window.press('\r');
+      await until('the settings picker', () =>
+        /codex has no settings|Change codex's settings/.test(window.frame()),
+      );
+      expect(window.frame()).not.toMatch(/fake has no settings|Change fake's/);
+    }));
+
+  test("ctrl+v's refusal names the child's agent", () =>
+    onChild(
+      fakeAgentCommand(undefined, '--no-images'),
+      'text',
+      async (window) => {
+        await window.shows('came in chunks.');
+        await window.press('\x16');
+        await window.shows('codex does not take images');
+        expect(window.frame()).not.toContain('fake does not take images');
+      },
+      { clipboard: () => Promise.resolve({ failed: 'not read' }) },
+    ));
+});
+
+describe('CHD-488 tester: agent identity follows the selected conversation', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`returning to the parent restores its identity at ${columns}×${rows}`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
+      const command = fakeAgentCommand();
+      const gates = await mkdtemp(join(tmpdir(), 'chord-identity-'));
+      const gate = join(gates, 'open');
+      let clipboardReads = 0;
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+
+            if (main === undefined) {
+              throw new Error('main was not admitted');
+            }
+
+            await main.window.open(main.key, {
+              agent: 'codex',
+              name: 'delayed-child',
+              prompt: 'text',
+            });
+            await window.shows('delayed-child');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('Starting codex…');
+            await window.press('\x16');
+            await window.shows('codex has not started yet');
+            expect(clipboardReads).toBe(0);
+            expect(window.frame()).not.toContain('fake has not started yet');
+            await window.press(DOWN);
+            await window.press(UP);
+            await window.press('\r');
+            await until(
+              'the parent is shown again',
+              () => !window.frame().includes('╭─ delayed-child ─'),
+            );
+            await send(window, '/model');
+            await window.shows("Switch fake's model");
+            expect(window.frame()).not.toContain("Switch codex's model");
+            await window.press(ESC);
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('Starting codex…');
+            await writeFile(gate, '');
+            await window.shows('came in chunks.');
+            await window.press('\x16');
+            await window.shows('codex does not take images');
+            expect(window.frame()).not.toContain('fake does not take images');
+            expect(clipboardReads).toBe(0);
+          },
+          {
+            server,
+            columns,
+            rows,
+            runtimes: ['fake', 'codex'],
+            agentCommand: command,
+            startupOf: (agent) => ({
+              agentCommand:
+                agent === 'codex'
+                  ? gatedCommand(
+                      gate,
+                      fakeAgentCommand(undefined, '--no-images'),
+                    )
+                  : command,
+            }),
+            clipboard: () => {
+              clipboardReads += 1;
+
+              return Promise.resolve({ failed: 'unexpected clipboard read' });
+            },
+          },
+        );
+      } finally {
+        await rm(gates, { recursive: true, force: true });
+        await server.close();
+      }
+    });
+  }
 });

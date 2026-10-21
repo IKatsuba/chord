@@ -50,6 +50,11 @@ export function chordRow(
   };
 }
 
+/** What `/mcp` says while its agent's session is still being opened. */
+export function startingLine(agent: string): string {
+  return `${agent} is starting: chord has not passed it MCP servers yet.`;
+}
+
 /** The line under the table: what chord's server gives, or why it was not passed. */
 export function chordLine(row: ChordRow, agent: string): string {
   const list = (tools: readonly string[]) =>

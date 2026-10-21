@@ -1,0 +1,16 @@
+│                                                                                                                      │
+│ Name        Transport  Command or URL  Defined in                                                                    │
+│ chord       http       not passed      chord itself                                                                  │
+│ filesystem  stdio      npx -y files    .mcp.json                                                                     │
+│ docs        http       not passed      .mcp.json                                                                     │
+│                                                                                                                      │
+│ chord's server was not passed: codex does not take MCP servers over HTTP, so it cannot start other agents.           │
+│                                                                                                                      │
+│ docs was not passed: codex takes MCP servers over stdio only.                                                        │
+│                                                                                                                      │
+│ Esc to close                                                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

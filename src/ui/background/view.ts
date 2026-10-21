@@ -176,11 +176,18 @@ function oneLine(text: string): string {
 }
 
 /**
- * An item's kind as its row says it: a task's with its runtime and model,
- * each on one line, as the row is laid out by the lines it makes itself.
+ * An item's kind as its row says it: a monitor's with its id, which tells
+ * monitors of one description apart and names it as its messages do
+ * (CHD-481); a task's with its runtime and model; each on one line, as the
+ * row is laid out by the lines it makes itself.
  */
 function kindText(item: BackgroundItem): string {
-  return [item.kind, item.runtime, item.model]
+  return [
+    item.kind,
+    item.kind === 'monitor' ? item.id : undefined,
+    item.runtime,
+    item.model,
+  ]
     .filter((part) => part !== undefined)
     .map(oneLine)
     .join(' · ');

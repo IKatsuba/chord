@@ -301,7 +301,7 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     expect(window.frame()).toContain('    background  2 monitors running');
     expect(window.frame()).not.toContain('❯ background');
     expect(window.frame()).toMatch(
-      /❯ dev server errors {2}monitor {2}running \d+s · 1 event +main/,
+      /❯ dev server errors {2}monitor · m1 {2}running \d+s · 1 event +main/,
     );
 
     await window.press('j');
@@ -1105,7 +1105,7 @@ test("an error taller than the frame's room scrolls in it by a page, the rows gi
       '╭────────────────────────────────────────────╮',
       '│ Background · 3 in this tab                 │',
       '│                                            │',
-      '│ ❯ CI run 4812        monitor               │',
+      '│ ❯ CI run 4812        monitor · m0          │',
       '│                                            │',
       '│ could not stop: Broken pipe                │',
       '│ while writing session/cancel to the agent  │',

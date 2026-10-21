@@ -161,9 +161,9 @@ test('a row is name, kind, state and owner in columns two cells apart, the ❯ o
       viewRows(ITEMS, { width: 116, focus: { key: 1, id: 't1' }, now: NOW }),
     ),
   ).toStrictEqual([
-    '  CI run 4812        monitor                   ✗ exit code 1 after 3m 12s · 3 events  main',
-    '  dev server errors  monitor                   running 4m 2s · 1 event                main',
-    '  parser tests       monitor                   running 2m 3s · 4 events               parser',
+    '  CI run 4812        monitor · m1              ✗ exit code 1 after 3m 12s · 3 events  main',
+    '  dev server errors  monitor · m2              running 4m 2s · 1 event                main',
+    '  parser tests       monitor · m1              running 2m 3s · 4 events               parser',
     '❯ Fix the tokenizer  task · fake · Fake Small  ● permission 13s                       main',
     '  Fix the printer    task · fake · Fake Large  working 32s                            coder',
   ]);
@@ -174,9 +174,9 @@ test("narrower, nothing gives way: a task's kind wraps in its column after a ` �
     text(viewRows(ITEMS, { width, focus: undefined, now: NOW }));
 
   expect(at(85)).toStrictEqual([
-    '❯ CI run 4812        monitor            ✗ exit code 1 after 3m 12s · 3 events  main',
-    '  dev server errors  monitor            running 4m 2s · 1 event                main',
-    '  parser tests       monitor            running 2m 3s · 4 events               parser',
+    '❯ CI run 4812        monitor · m1       ✗ exit code 1 after 3m 12s · 3 events  main',
+    '  dev server errors  monitor · m2       running 4m 2s · 1 event                main',
+    '  parser tests       monitor · m1       running 2m 3s · 4 events               parser',
     '  Fix the tokenizer  task · fake ·      ● permission 13s                       main',
     '                     Fake Small',
     '  Fix the printer    task · fake ·      working 32s                            coder',
@@ -185,24 +185,24 @@ test("narrower, nothing gives way: a task's kind wraps in its column after a ` �
   // Narrower, the state wraps in its column too, after a ` · ` and at its
   // spaces; the columns hold.
   expect(at(76)).toStrictEqual([
-    '❯ CI run 4812        monitor        ✗ exit code 1 after 3m 12s ·      main',
+    '❯ CI run 4812        monitor · m1   ✗ exit code 1 after 3m 12s ·      main',
     '                                    3 events',
-    '  dev server errors  monitor        running 4m 2s · 1 event           main',
-    '  parser tests       monitor        running 2m 3s · 4 events          parser',
+    '  dev server errors  monitor · m2   running 4m 2s · 1 event           main',
+    '  parser tests       monitor · m1   running 2m 3s · 4 events          parser',
     '  Fix the tokenizer  task · fake ·  ● permission 13s                  main',
     '                     Fake Small',
     '  Fix the printer    task · fake ·  working 32s                       coder',
     '                     Fake Large',
   ]);
   expect(at(60).slice(0, 3)).toStrictEqual([
-    '❯ CI run 4812        monitor        ✗ exit code 1     main',
+    '❯ CI run 4812        monitor · m1   ✗ exit code 1     main',
     '                                    after 3m 12s ·',
     '                                    3 events',
   ]);
   // Not even the state's widest word beside the kind's widest part: the
   // state and owner go under the name.
   expect(at(46).slice(0, 3)).toStrictEqual([
-    '❯ CI run 4812        monitor',
+    '❯ CI run 4812        monitor · m1',
     '    ✗ exit code 1 after 3m 12s · 3 events',
     '    main',
   ]);
@@ -213,7 +213,7 @@ test('narrower still, each item takes two lines or more: its name and kind, then
     text(viewRows(ITEMS.slice(2, 4), { width, focus: undefined, now: NOW }));
 
   expect(at(46)).toStrictEqual([
-    '❯ parser tests       monitor',
+    '❯ parser tests       monitor · m1',
     '    running 2m 3s · 4 events  parser',
     '  Fix the tokenizer  task · fake · Fake Small',
     '    ● permission 13s  main',
@@ -222,7 +222,7 @@ test('narrower still, each item takes two lines or more: its name and kind, then
   // whole.
   expect(at(40)).toStrictEqual([
     '❯ parser tests',
-    '    monitor',
+    '    monitor · m1',
     '    running 2m 3s · 4 events  parser',
     '  Fix the tokenizer',
     '    task · fake · Fake Small',
@@ -235,7 +235,7 @@ test('narrower still, each item takes two lines or more: its name and kind, then
 
   expect(narrow).toStrictEqual([
     '❯ parser tests',
-    '    monitor',
+    '    monitor · m1',
     '    running 2m 3s · 4',
     '    events',
     '    parser',
@@ -258,9 +258,9 @@ test('a name past 24 cells wraps two cells short of its column, the rest two cel
       viewRows([long, ITEMS[1]!], { width: 116, focus: undefined, now: NOW }),
     ),
   ).toStrictEqual([
-    '❯ Run the parser suite      monitor  running 4m 2s · 1 event  main',
+    '❯ Run the parser suite      monitor · m9  running 4m 2s · 1 event  main',
     '    in watch mode',
-    '  dev server errors         monitor  running 4m 2s · 1 event  main',
+    '  dev server errors         monitor · m2  running 4m 2s · 1 event  main',
   ]);
 });
 
@@ -570,7 +570,8 @@ test("the gutter says what is out of sight, as the pickers' edges do: ↑ on the
     edgeMarked(
       viewWindow(
         viewRows(many, {
-          width: 76,
+          // Wide enough that each row, its id in its kind, takes one line.
+          width: 116,
           focus: { key: 1, id: `m${focus}` },
           now: NOW,
         }),
@@ -593,7 +594,9 @@ test("the gutter says what is out of sight, as the pickers' edges do: ↑ on the
     '❯ ',
   ]);
   // Every line keeps its width.
-  expect(marked(6)[0]!.slice(2)).toBe(marked(1)[1]!.slice(2).replace('2', '3'));
+  expect(marked(6)[0]!.slice(2)).toBe(
+    marked(1)[1]!.slice(2).replace('2', '3').replace('m2', 'm3'),
+  );
 });
 
 describe('a row taller than the frame scrolls by line inside it (CHD-430)', () => {
@@ -1021,5 +1024,73 @@ describe('the ❯ once its row leaves (CHD-479)', () => {
     expect(focusAfter([a, b, c], [b, c], ref(b))).toStrictEqual(undefined);
     expect(focusAfter([a, b], [], ref(a))).toStrictEqual(undefined);
     expect(focusAfter([a, b], [b], undefined)).toStrictEqual(undefined);
+  });
+});
+
+describe("a monitor row's kind names its id (CHD-481)", () => {
+  const name = '30-min heartbeat while the owner is away';
+  const ended = {
+    group: 'failed',
+    endedAt: NOW - 7_200_000,
+    end: { kind: 'timed_out', timeoutMs: 3_600_000 },
+  } as const;
+  const items = [
+    ...['m22', 'm23', 'm24'].map((id) =>
+      monitor(id, name, ended, { startedAt: NOW - 10_800_000 }),
+    ),
+    monitor('m25', name, { group: 'running' }, { startedAt: NOW - 2_812_000 }),
+  ];
+  const text = (width: number) =>
+    viewRows(items, { width, focus: { key: 1, id: 'm25' }, now: NOW }).map(
+      (row) =>
+        row.lines.map((line) =>
+          line
+            .map(({ text }) => text)
+            .join('')
+            .trimEnd(),
+        ),
+    );
+
+  test('at 120 columns it fits on the first line beside the name', () => {
+    expect(text(116).at(-1)).toStrictEqual([
+      '❯ 30-min heartbeat while    monitor · m25  running 46m 52s · 1 event       main',
+      '    the owner is away',
+    ]);
+  });
+
+  test('at 80 columns it wraps after the ·, onto the line the name takes already', () => {
+    expect(text(76)).toStrictEqual(
+      ['m22', 'm23', 'm24', 'm25'].map((id) => [
+        id === 'm25'
+          ? '❯ 30-min heartbeat while    monitor ·   running 46m 52s · 1 event       main'
+          : '  30-min heartbeat while    monitor ·   ✗ timed out after 1h · 1 event  main',
+        `    the owner is away       ${id}`,
+      ]),
+    );
+  });
+
+  test("a task's and an agent's kinds stay as they were", () => {
+    const rows = viewRows(
+      [
+        task('t1', 'Fix the tokenizer', { group: 'running' }),
+        {
+          kind: 'agent',
+          id: 'a1',
+          key: 1,
+          name: 'Find a',
+          startedAt: NOW - 1000,
+          status: { group: 'running' },
+        },
+      ],
+      { width: 116, focus: undefined, now: NOW },
+    );
+    const kinds = rows.map((row) =>
+      row.lines[0]!.filter(({ role }) => role === 'kind')
+        .map(({ text }) => text.trim())
+        .join(''),
+    );
+
+    expect(kinds[1]).toStrictEqual('agent');
+    expect(kinds[0]).not.toContain('t1');
   });
 });

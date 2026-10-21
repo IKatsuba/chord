@@ -203,12 +203,14 @@ ctrl+v puts the image on the clipboard into the prompt as `[Image #1]`, at
 the cursor, and Enter sends it after the text. So does the terminal's own
 paste (cmd+V) where the terminal sends an empty paste for a clipboard that
 holds only an image, as Ghostty does; one with nothing on the clipboard
-changes nothing. A path to a PNG, JPEG, GIF
-or WebP file pasted or typed into the prompt (`/…`, `~/…`, `file://…`, as a
-terminal writes a dropped file) is taken the same way. Backspace after
+changes nothing. A path to a PNG, JPEG, GIF or WebP file pasted or typed
+into the prompt (`/…`, `~/…`, `file://…`, as a terminal writes a dropped
+file) is taken the same way. Backspace after
 the placeholder, or delete before it, takes it whole, and the image stays
-behind. An agent that says it takes no
-images gets none, and the status line says so.
+behind. An agent that takes no images gets none, and the status line says
+so. While the agent starts, ctrl+v says `X has not started yet`. That notice
+goes when the agent starts; if it fails, `X did not start: …` replaces it.
+Other paste failures after startup stay until the next key.
 
 `/config` lists the agent's own settings for the session other than its
 model and mode, such as Claude's effort, each with its value; Enter on one

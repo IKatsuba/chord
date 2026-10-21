@@ -13,6 +13,7 @@ import {
   listedAgents,
   missingCommand,
   startLine,
+  takesMcpServers,
 } from '../src/agents.ts';
 import { CLI_AGENTS } from '../src/clis.ts';
 import { REGISTRY_AGENTS } from '../src/registry.ts';
@@ -427,4 +428,13 @@ test('on a terminal, chord agents wraps a long start inside its column', () => {
   );
   // Piped, one line each, for grep and awk.
   expect(agentTable(listed).split('\n').length).toStrictEqual(2);
+});
+
+test("openclaw takes no MCP servers by chord's own table, and a setting says otherwise either way (CHD-441)", () => {
+  expect(takesMcpServers('openclaw')).toBe(false);
+  expect(takesMcpServers('openclaw', true)).toBe(true);
+  expect(takesMcpServers('codex')).toBe(true);
+  expect(takesMcpServers('codex', false)).toBe(false);
+  // An agent chord does not know takes them, as before.
+  expect(takesMcpServers('somebody-else')).toBe(true);
 });

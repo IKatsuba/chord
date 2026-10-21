@@ -1224,6 +1224,9 @@ export function App({
                         chord: chordRow(
                           conversation()?.session?.chordServer,
                           child !== undefined,
+                          conversation()?.session?.heldBack.some(
+                            (each) => each.own && each.takes.length === 0,
+                          ) === true,
                         ),
                       })}
                 />

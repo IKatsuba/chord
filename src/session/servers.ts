@@ -20,7 +20,8 @@ export interface HeldBack {
   readonly transport: string;
   /**
    * Why: the transports the agent takes, stdio first, then `http`, `sse`
-   * and `acp` as its `initialize` advertised them, this one not among them.
+   * and `acp` as its `initialize` advertised them, this one not among them;
+   * none for an agent set to take no MCP servers at all.
    */
   readonly takes: readonly string[];
   /** chord's own server, whose tools go with it. */
@@ -40,18 +41,22 @@ export interface ServersFor {
  * transports `capabilities` advertises. Two servers of one name leave the
  * agent to pick one, and either pick loses a server, so where a user's
  * server it is given takes chord's name, chord's goes as the first free
- * `chord-2`, `chord-3`, … and both stay reachable.
+ * `chord-2`, `chord-3`, … and both stay reachable. An agent set to take
+ * `none` is given no server, whatever it advertises (CHD-441).
  */
 export function serversFor(
   agent: string,
   capabilities: McpCapabilities | undefined,
   userServers: readonly McpServer[],
   chord?: McpServer,
+  none = false,
 ): ServersFor {
-  const takes = [
-    'stdio',
-    ...ADVERTISED.filter((transport) => capabilities?.[transport] === true),
-  ];
+  const takes = none
+    ? []
+    : [
+        'stdio',
+        ...ADVERTISED.filter((transport) => capabilities?.[transport] === true),
+      ];
   const servers: McpServer[] = [];
   const heldBack: HeldBack[] = [];
   const sort = (server: McpServer, own = false): boolean => {
@@ -129,8 +134,10 @@ export function heldBackLine(
     ...heldBack.filter((each) => !each.own),
   ];
   // An agent that lacks one transport holds back only servers of that one,
-  // so the names go bare; lacking more, each says its own.
-  const bare = ADVERTISED.length - (takes.length - 1) === 1;
+  // so the names go bare, as for one that takes none; lacking more, each
+  // says its own.
+  const bare =
+    takes.length === 0 || ADVERTISED.length - (takes.length - 1) === 1;
   const names = held
     .map((each) => {
       const notes = [
@@ -151,7 +158,11 @@ export function heldBackLine(
 
   return (
     `${count} MCP ${count === 1 ? 'server was' : 'servers were'} not passed ` +
-    `to ${agent}, which takes them over ${takenWords(takes)} only: ` +
+    `to ${agent}, which ${
+      takes.length === 0
+        ? 'takes none'
+        : `takes them over ${takenWords(takes)} only`
+    }: ` +
     `${names}.${own} /mcp lists ${count === 1 ? 'it' : 'them'}.`
   );
 }

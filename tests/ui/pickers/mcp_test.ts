@@ -15,6 +15,8 @@ import { openSession, type Session } from '../../../src/session/session.ts';
 import { sessionById } from '../../../src/session/sessions.ts';
 import { loadSettings, parseSettings } from '../../../src/settings.ts';
 import {
+  chordLine,
+  chordRow,
   cutPath,
   heldNote,
   ignoredNote,
@@ -479,4 +481,47 @@ test('/mcp lists a server its agent was not given as not passed, and says why un
   expect(
     heldNote(serversFor('fake', {}, [docs], chord).heldBack),
   ).toBeUndefined();
+});
+
+test('/mcp says an agent set to take no MCP servers got none, and where the setting is (CHD-441)', () => {
+  const docs: McpServer = {
+    name: 'docs',
+    command: 'docs-server',
+    args: [],
+    env: [],
+  };
+  const tracker: McpServer = {
+    type: 'sse',
+    name: 'tracker',
+    url: 'https://tracker.example/sse',
+    headers: [],
+  };
+  const chord: McpServer = {
+    type: 'http',
+    name: 'chord',
+    url: 'http://127.0.0.1:9/mcp',
+    headers: [],
+  };
+  const { heldBack } = serversFor(
+    'openclaw',
+    { http: true, sse: true },
+    [docs, tracker],
+    chord,
+    true,
+  );
+  const defined = [docs, tracker].map((server) => ({
+    server,
+    from: '~/.config/chord/settings.json',
+  }));
+
+  expect(
+    withHeldBack(defined, heldBack).map((each) => targetOf(each)),
+  ).toStrictEqual(['not passed', 'not passed']);
+  expect(heldNote(heldBack)).toBe(
+    'docs and tracker were not passed: openclaw takes no MCP servers. ' +
+      'agents.openclaw.mcpServers in your settings changes that.',
+  );
+  expect(chordLine(chordRow(undefined, false, true), 'openclaw')).toBe(
+    "chord's server was not passed: openclaw takes no MCP servers, so it cannot start other agents.",
+  );
 });

@@ -285,3 +285,48 @@ describe('CHD-441 tester: immutable transport filtering across agents', () => {
     expect(given.chord?.name).toBe('chord-2');
   });
 });
+
+describe('an agent set to take no MCP servers is given none, whatever it advertises (CHD-441)', () => {
+  const openclaw = (capabilities: McpCapabilities | undefined) =>
+    serversFor('openclaw', capabilities, [STDIO, HTTP, SSE], CHORD, true);
+
+  test('every server is held back, chord’s own too, before the transport filter', () => {
+    for (const capabilities of [
+      undefined,
+      { http: true },
+      { http: true, sse: true, acp: true },
+    ]) {
+      const given = openclaw(capabilities);
+
+      expect(given.servers).toStrictEqual([]);
+      expect(given.chord).toBeUndefined();
+      expect(
+        given.heldBack.map(({ server, transport, takes, own }) => [
+          server,
+          transport,
+          takes,
+          own ?? false,
+        ]),
+      ).toStrictEqual([
+        ['docs', 'stdio', [], false],
+        ['search', 'http', [], false],
+        ['logs', 'sse', [], false],
+        ['chord', 'http', [], true],
+      ]);
+    }
+  });
+
+  test("the start line says it takes none, the names bare, chord's own first", () => {
+    expect(heldBackLine(openclaw({ http: true }).heldBack)).toBe(
+      '4 MCP servers were not passed to openclaw, which takes none: chord ' +
+        "(chord's own), docs, search, logs. Without chord's own, openclaw " +
+        "cannot start other agents or use chord's tools. /mcp lists them.",
+    );
+  });
+
+  test('without the setting the transport filter alone decides, as before', () => {
+    expect(
+      serversFor('openclaw', { http: true }, [STDIO, HTTP, SSE], CHORD).servers,
+    ).toStrictEqual([STDIO, HTTP, CHORD]);
+  });
+});

@@ -77,6 +77,12 @@ export interface OpenSessionOptions {
    */
   mcpServers?: readonly McpServer[];
   /**
+   * The agent takes no MCP servers at all, as its `agents.<name>.mcpServers`
+   * setting or chord's own table says: every one is held back, chord's own
+   * too, and the session says so (CHD-441).
+   */
+  noMcpServers?: boolean;
+  /**
    * chord's own MCP server, sent after `mcpServers` under the same rule; an
    * agent that would refuse it never sees it.
    */
@@ -408,6 +414,7 @@ export async function openSession(
     connection.init.agentCapabilities?.mcpCapabilities,
     userServers,
     options.chordServer,
+    options.noMcpServers === true,
   );
 
   const shutdown = async () => {

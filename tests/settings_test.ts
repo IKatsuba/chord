@@ -1027,3 +1027,33 @@ describe('CHD-466 U2 tester: last command-bearing layer', () => {
     });
   }
 });
+
+test("an agent's mcpServers setting is read from the last file that sets it, true or false (CHD-441)", () => {
+  const layer = (file: string, openclaw: Record<string, unknown>) => ({
+    file,
+    settings: parseSettings(file, JSON.stringify({ agents: { openclaw } }))
+      .settings,
+  });
+
+  expect(
+    startupOf('openclaw', { agent: 'fake' }, [
+      layer('/u.json', { mcpServers: true }),
+    ]).mcpServers,
+  ).toBe(true);
+  expect(
+    startupOf('openclaw', { agent: 'fake' }, [
+      layer('/u.json', { mcpServers: true }),
+      layer('/p.json', { mcpServers: false }),
+    ]).mcpServers,
+  ).toBe(false);
+  expect(startupOf('openclaw', { agent: 'fake' }, []).mcpServers).toBe(
+    undefined,
+  );
+  // Only a boolean: anything else is a problem and is left out.
+  expect(
+    parseSettings(
+      '/u.json',
+      JSON.stringify({ agents: { x: { mcpServers: 'no' } } }),
+    ).problems,
+  ).not.toStrictEqual([]);
+});

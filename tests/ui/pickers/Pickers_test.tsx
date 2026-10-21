@@ -648,6 +648,46 @@ test('/mcp says what the files defined that chord did not pass', () =>
     },
   ));
 
+test('an agent set to take no MCP servers is given none, says so at its start, and /mcp names the setting (CHD-441)', async () => {
+  const server = serveChord();
+  const command = fakeAgentCommand();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await window.shows('which takes none: chord');
+
+        expect(window.frame()).toContain(
+          "3 MCP servers were not passed to fake, which takes none: chord (chord's own), filesystem, docs.",
+        );
+        await ready(window);
+        // What the agent holds: no server at all.
+        await send(window, 'mcp');
+        await window.shows('│ []');
+        await window.type('/mcp');
+        await window.press('\r');
+        await window.shows("chord's MCP servers for fake.");
+        expect(window.frame()).toContain(
+          "chord's server was not passed: fake takes no MCP servers, so it cannot start other agents.",
+        );
+        // The paragraph wraps in the panel; its words, in order.
+        expect(window.frame().replace(/\s*│\s*\n│\s*/g, ' ')).toContain(
+          'filesystem and docs were not passed: fake takes no MCP servers. agents.fake.mcpServers in your settings changes that.',
+        );
+      },
+      {
+        server,
+        mcpServers: SERVERS,
+        rows: 60,
+        agentCommand: command,
+        startupOf: () => ({ agentCommand: command, mcpServers: false }),
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
 test("/mcp on a picked child on another runtime names that child's agent and what it held back (CHD-441)", async () => {
   const server = serveChord();
   const admit = server.admit.bind(server);

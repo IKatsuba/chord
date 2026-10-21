@@ -15,6 +15,12 @@ export interface CliAgent {
   readonly argv: readonly string[];
   /** Where the agent says to install the CLI. */
   readonly install: string;
+  /**
+   * `false` for an agent that refuses a session given any MCP server, which
+   * then gets none, as `agents.<name>.mcpServers: false` gives; a setting
+   * of `true` gives them back (CHD-441).
+   */
+  readonly mcpServers?: false;
 }
 
 export const CLI_AGENTS: readonly CliAgent[] = [
@@ -74,6 +80,9 @@ export const CLI_AGENTS: readonly CliAgent[] = [
     title: 'OpenClaw',
     argv: ['openclaw', 'acp'],
     install: 'https://docs.openclaw.ai/install',
+    // Its ACP bridge refuses any non-empty mcpServers on new, load and
+    // resume (docs/agent-capabilities.md oc3; the owner's Q90).
+    mcpServers: false,
   },
   {
     // https://opencode.ai/docs/acp/

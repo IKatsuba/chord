@@ -20,6 +20,8 @@ export interface ChordRow {
   readonly tools: readonly string[];
   /** The session is a long-lived child, whose one tool reaches `main`. */
   readonly child?: boolean;
+  /** Not passed as the agent takes no MCP servers at all (CHD-441). */
+  readonly none?: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export interface ChordRow {
 export function chordRow(
   passed: McpServer | undefined,
   child = false,
+  none = false,
 ): ChordRow {
   return {
     server: {
@@ -43,6 +46,7 @@ export function chordRow(
     passed: passed !== undefined,
     tools: toolNames(child ? 'child' : 'person'),
     ...(child ? { child } : {}),
+    ...(none && passed === undefined ? { none } : {}),
   };
 }
 
@@ -60,7 +64,11 @@ export function chordLine(row: ChordRow, agent: string): string {
             'main only'
           : list(row.tools)
       }.`
-    : `chord's server was not passed: ${agent} does not take MCP servers over HTTP, so it cannot start other agents.`;
+    : `chord's server was not passed: ${agent} ${
+        row.none === true
+          ? 'takes no MCP servers'
+          : 'does not take MCP servers over HTTP'
+      }, so it cannot start other agents.`;
 }
 
 /** One server's parts, before they are laid out. */
@@ -98,8 +106,18 @@ function shellWord(word: string): string {
   return /\s/.test(word) || word === '' ? JSON.stringify(word) : word;
 }
 
-/** What the server runs, or where it is. Env and headers are never shown. */
-export function targetOf({ server }: DefinedServer): string {
+/** A server as `/mcp` lists it: one its agent was not given is `held`. */
+export type ListedServer = DefinedServer & { readonly held?: true };
+
+/**
+ * What the server runs, or where it is, or `not passed` for one held back.
+ * Env and headers are never shown.
+ */
+export function targetOf({ server, held }: ListedServer): string {
+  if (held === true) {
+    return 'not passed';
+  }
+
   if ('url' in server) {
     return server.url;
   }
@@ -181,7 +199,7 @@ export function wrapTarget(text: string, width: number): string[] {
  * `npx -y @scope/server-x`, which tells servers apart, is never cut off.
  */
 export function mcpRows(
-  servers: readonly DefinedServer[],
+  servers: readonly ListedServer[],
   width: number,
 ): { headings: string; rows: string[][] } {
   const named = servers.map((defined) => ({
@@ -300,26 +318,14 @@ export function mcpRowLimit(windowRows: number): number {
 export function withHeldBack(
   servers: readonly DefinedServer[],
   heldBack: readonly HeldBack[],
-): DefinedServer[] {
+): ListedServer[] {
   const held = new Set(
     heldBack.filter((each) => !each.own).map((each) => each.server),
   );
 
-  return servers.map((defined) => {
-    const { server } = defined;
-
-    if (!held.has(server.name)) {
-      return defined;
-    }
-
-    return {
-      ...defined,
-      server:
-        'url' in server
-          ? { ...server, url: 'not passed' }
-          : { name: server.name, command: 'not passed', args: [], env: [] },
-    };
-  });
+  return servers.map((defined) =>
+    held.has(defined.server.name) ? { ...defined, held: true } : defined,
+  );
 }
 
 /**
@@ -339,7 +345,9 @@ export function heldNote(heldBack: readonly HeldBack[]): string | undefined {
     held.map((each) => each.server),
   );
 
-  return `${names} ${held.length === 1 ? 'was' : 'were'} not passed: ${
-    first.agent
-  } takes MCP servers over ${takenWords(first.takes)} only.`;
+  const { agent, takes } = first;
+
+  return takes.length === 0
+    ? `${names} ${held.length === 1 ? 'was' : 'were'} not passed: ${agent} takes no MCP servers. agents.${agent}.mcpServers in your settings changes that.`
+    : `${names} ${held.length === 1 ? 'was' : 'were'} not passed: ${agent} takes MCP servers over ${takenWords(takes)} only.`;
 }

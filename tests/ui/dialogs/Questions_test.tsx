@@ -780,6 +780,9 @@ describe('CHD-1 tester: task question collision in the window', () => {
             );
             expect(live).toContain("The parent's own call.");
 
+            await window.press(ESC);
+            await window.shows('Interrupted by user');
+
             const records = await readRecords(join(window.dir, 'state'));
             const parent = records.find(
               (record) => record.parent === undefined,

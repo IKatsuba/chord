@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import {
+  GATE,
+  GATE_RELEASE,
+} from '../../fixtures/fake_agent/scenarios/agents.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   asked,
@@ -372,10 +378,14 @@ test('a resize clears a selection, as its text rewraps (CHD-172)', () =>
 test("a selection whose text has gone is cleared, and ctrl+c is the window's again (CHD-172)", () =>
   withWindow(
     async (window) => {
-      await send(window, 'planshrink');
+      // The step goes once the test says so, so it is selected before it
+      // goes however slow the drag is (CHD-399).
+      await send(window, 'planshrinkgated');
       await window.shows('◐ Read the code');
       await dragOver(window, 'Read the code');
       await window.shows('ctrl + c to copy');
+      await mkdir(join(window.dir, GATE), { recursive: true });
+      await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
       await window.shows('Dropped a step.');
       // The step and its text went with the drop, and the hint with them.
       await until(

@@ -831,6 +831,96 @@ async function background(
   }
 }
 
+/** How long `subagentstatesstay`'s pair is at work if no cancel comes. */
+const PAIR_HOLD_MS = 10_000;
+
+/**
+ * `subagentstates`' play: with `holdPair`, its pair stays at work until the
+ * turn is cancelled, so a test's Esc meets it running however slow it is.
+ */
+async function subagentStates(
+  turn: Turn,
+  holdPair: boolean,
+): Promise<acp.StopReason> {
+  if (!clientTakesSubagents) {
+    await turn.say('Subagents go only to a client that takes them.');
+
+    return 'end_turn';
+  }
+
+  const open: Children = new Map();
+
+  try {
+    await turn.send(parentPlan(1));
+    await readSessionLayer(
+      await spawn(
+        turn,
+        open,
+        'Find the session layer',
+        'Find where chord hands each session/update to its listeners.',
+      ),
+      open,
+    );
+    await turn.send(parentPlan(2));
+    await turn.say('Routing is in src/acp/connection.ts. Now both sides.');
+
+    const explorer = await spawn(
+      turn,
+      open,
+      'explorer',
+      'Find where chord routes session/update.',
+    );
+    const worker = await spawn(
+      turn,
+      open,
+      'worker',
+      'Find where tool calls are drawn on screen.',
+    );
+    const wait = turn.callId('wait');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId: wait,
+      title: 'Wait explorer, worker',
+      kind: 'other',
+      status: 'in_progress',
+    });
+
+    if (holdPair) {
+      // At work until the turn is cancelled, which ends the pair as the
+      // catch below does, or for a while at most.
+      await pause(turn.signal, PAIR_HOLD_MS);
+    }
+
+    await Promise.all([
+      readAll(explorer, open, [
+        'src/acp/connection.ts',
+        'src/session/session.ts',
+        'src/session/conversation.ts',
+      ]),
+      readAll(worker, open, ['src/ui/transcript/tools/Tool.tsx']),
+    ]);
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: wait,
+      status: 'completed',
+    });
+    await turn.send(parentPlan(3));
+    await turn.say(
+      'Both sides found: routing is in src/acp/connection.ts, ',
+      'drawing is Tool in src/ui/transcript/tools/Tool.tsx.',
+    );
+
+    return 'end_turn';
+  } catch (error) {
+    for (const child of [...open.keys()].toReversed()) {
+      await finish(child, open, 'cancelled');
+    }
+
+    throw error;
+  }
+}
+
 export const SUBAGENTS = {
   // One subagent whose call is the only one open: the parent has none of
   // its own while the subagent's `sleep 2` runs, then it ends.
@@ -967,78 +1057,11 @@ export const SUBAGENTS = {
   // The states `subagent` never reaches: the parent's own plan beside a lone
   // subagent whose calls outrun its fold, then a pair the parent waits on
   // with a call of its own, as Codex's adapter does, both finishing.
-  async subagentstates(turn) {
-    if (!clientTakesSubagents) {
-      await turn.say('Subagents go only to a client that takes them.');
+  subagentstates: (turn) => subagentStates(turn, false),
 
-      return 'end_turn';
-    }
-
-    const open: Children = new Map();
-
-    try {
-      await turn.send(parentPlan(1));
-      await readSessionLayer(
-        await spawn(
-          turn,
-          open,
-          'Find the session layer',
-          'Find where chord hands each session/update to its listeners.',
-        ),
-        open,
-      );
-      await turn.send(parentPlan(2));
-      await turn.say('Routing is in src/acp/connection.ts. Now both sides.');
-
-      const explorer = await spawn(
-        turn,
-        open,
-        'explorer',
-        'Find where chord routes session/update.',
-      );
-      const worker = await spawn(
-        turn,
-        open,
-        'worker',
-        'Find where tool calls are drawn on screen.',
-      );
-      const wait = turn.callId('wait');
-
-      await turn.send({
-        sessionUpdate: 'tool_call',
-        toolCallId: wait,
-        title: 'Wait explorer, worker',
-        kind: 'other',
-        status: 'in_progress',
-      });
-      await Promise.all([
-        readAll(explorer, open, [
-          'src/acp/connection.ts',
-          'src/session/session.ts',
-          'src/session/conversation.ts',
-        ]),
-        readAll(worker, open, ['src/ui/transcript/tools/Tool.tsx']),
-      ]);
-      await turn.send({
-        sessionUpdate: 'tool_call_update',
-        toolCallId: wait,
-        status: 'completed',
-      });
-      await turn.send(parentPlan(3));
-      await turn.say(
-        'Both sides found: routing is in src/acp/connection.ts, ',
-        'drawing is Tool in src/ui/transcript/tools/Tool.tsx.',
-      );
-
-      return 'end_turn';
-    } catch (error) {
-      for (const child of [...open.keys()].toReversed()) {
-        await finish(child, open, 'cancelled');
-      }
-
-      throw error;
-    }
-  },
+  // As `subagentstates`, its pair at work until the turn is cancelled
+  // (CHD-399).
+  subagentstatesstay: (turn) => subagentStates(turn, true),
 
   // A subagent as ACP's own `subagent_update` says it, as an agent that
   // already speaks it sends one: announced running, then idle once done.

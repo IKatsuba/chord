@@ -2,12 +2,44 @@
 import * as acp from '@agentclientprotocol/sdk';
 import { clientTakesPlans } from '../client.ts';
 import { PLAN_CAPABILITY_ONLY, STEP_MS } from '../options.ts';
-import { pause, type Play } from '../turn.ts';
+import { pause, type Play, type Turn } from '../turn.ts';
+import { GATE_RELEASE, gateOpened } from './agents.ts';
 
 /** How long the `plan` scenario holds each step: 400 steps, 2 s by default. */
 const PLAN_STEP_MS = STEP_MS * 400;
 
 const PRIORITIES = ['high', 'medium', 'low'] as const;
+
+/**
+ * Three steps, the first in progress, then the first dropped: after a
+ * while, or with `gated` once the test opens the gate (`gateOpened`).
+ */
+async function planShrink(turn: Turn, gated: boolean) {
+  const entry = (content: string, index: number): acp.PlanEntry => ({
+    content,
+    priority: PRIORITIES[index] ?? 'low',
+    status: index === 0 ? 'in_progress' : 'pending',
+  });
+  const steps = ['Read the code', 'Write the change', 'Run the tests'];
+
+  await turn.send({ sessionUpdate: 'plan', entries: steps.map(entry) });
+  await turn.say('Planned.');
+
+  if (gated) {
+    await gateOpened(turn, GATE_RELEASE);
+  } else {
+    await pause(turn.signal, STEP_MS * 200);
+  }
+
+  await turn.send({
+    sessionUpdate: 'plan',
+    entries: steps.slice(1).map(entry),
+  });
+  await turn.say(' Dropped a step.');
+  await pause(turn.signal, STEP_MS * 200);
+
+  return 'end_turn' as const;
+}
 
 export const PLANS = {
   // The plan moves a step at a time, slowly enough to be seen mid-turn.
@@ -60,26 +92,12 @@ export const PLANS = {
 
   // A plan whose first step goes mid-turn, a second after it is drawn, so
   // a selection on that step can be seen not to pass to the next.
-  async planshrink(turn) {
-    const entry = (content: string, index: number): acp.PlanEntry => ({
-      content,
-      priority: PRIORITIES[index] ?? 'low',
-      status: index === 0 ? 'in_progress' : 'pending',
-    });
-    const steps = ['Read the code', 'Write the change', 'Run the tests'];
+  planshrink: (turn) => planShrink(turn, false),
 
-    await turn.send({ sessionUpdate: 'plan', entries: steps.map(entry) });
-    await turn.say('Planned.');
-    await pause(turn.signal, STEP_MS * 200);
-    await turn.send({
-      sessionUpdate: 'plan',
-      entries: steps.slice(1).map(entry),
-    });
-    await turn.say(' Dropped a step.');
-    await pause(turn.signal, STEP_MS * 200);
-
-    return 'end_turn';
-  },
+  // As `planshrink`, the step dropped only once the test writes
+  // `GATE_RELEASE` in the session's gate, so a selection made on it is
+  // made before it goes however slow the test is (CHD-399).
+  planshrinkgated: (turn) => planShrink(turn, true),
 
   // Codex's proposed plan: whole markdown each time, rewritten from the
   // start, then a file plan beside it, then the markdown one withdrawn.

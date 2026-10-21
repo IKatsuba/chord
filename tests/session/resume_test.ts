@@ -943,9 +943,11 @@ test("a turn Codex's adapter started on its own and chord cancelled is recorded,
     try {
       conversation.start();
       await until(() => events.some((event) => event.type === 'connected'));
-      conversation.send('text');
+      // Its turn ends once the message has been steered into it, so the steer
+      // meets it running however slow the test is (CHD-399).
+      conversation.send('texttillsteered');
       // Until the prompt has gone, its turn takes no message.
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await until(() => events.some((event) => event.type === 'prompt'));
       conversation.tell({ name: 'main', reachable: true }, 'Then the docs.');
       await until(
         () => events.filter((event) => event.type === 'result').length === 2,

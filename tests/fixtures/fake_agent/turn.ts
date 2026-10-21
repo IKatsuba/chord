@@ -31,6 +31,19 @@ export function pause(signal: AbortSignal, ms = STEP_MS): Promise<void> {
 }
 
 /**
+ * Until `count` messages were steered into `turn`, as a model's next step
+ * comes only after the tool's result, or 10 s without them, so a message
+ * never steered in fails its test rather than hanging the turn (CHD-399).
+ */
+export async function steeredIn(turn: Turn, count: number): Promise<void> {
+  const deadline = Date.now() + 10_000;
+
+  while (turn.told < count && Date.now() < deadline) {
+    await pause(turn.signal);
+  }
+}
+
+/**
  * Aborted once the client has closed the connection: work that outlives
  * every turn, a background subagent or a stop held for a test, ends on it,
  * so no timer keeps the process alive after its client left.
@@ -59,6 +72,8 @@ export class Turn {
   readonly #steered: string[] = [];
   /** How many messages steered into the turn it has read. */
   #read = 0;
+  /** Settles once the turn's play has returned, its answer on its way. */
+  readonly #over = Promise.withResolvers<void>();
 
   constructor(
     readonly client: Client,
@@ -88,6 +103,20 @@ export class Turn {
       sessionId: this.sessionId,
       update,
     });
+  }
+
+  /**
+   * Settles once the turn's play has returned and its answer goes out next,
+   * so what an agent does on its own after the turn comes after its end on
+   * the wire, however slow the turn's end was to go (CHD-399).
+   */
+  get over(): Promise<void> {
+    return this.#over.promise;
+  }
+
+  /** Marks the turn's play returned: `over` settles. */
+  end(): void {
+    this.#over.resolve();
   }
 
   /**

@@ -89,8 +89,15 @@
  * `clientCapabilities._meta`, the terminal named up front and nothing of the
  * output until the command is done, about half a second later, then all of
  * it and the exit; to any other, the output as a `console` code block.
- * `bashtwo` does the same, its next step after the command waiting until
- * two messages were steered in.
+ * `bashtwo` and `bashone` do the same, their next step after the command
+ * waiting until two messages, or one, were steered in, 10 s at most
+ * (`steeredIn`). The gated and held variants other scenarios have
+ * (`overlaptwo`, `subagentstatesstay`, `planshrinkgated`, `agentsheldgated`,
+ * `longheld`, `leftformgated`, `taskstayshold`, `texttillsteered`) are
+ * named in this folder's AGENTS.md. Each wait they add, for a gate, a
+ * message or a cancel, is 10 s at most; `taskstayshold`'s parent, as
+ * `taskstays`', still holds its turn until it is cancelled or the client
+ * goes.
  * `bashcut` leaves a command running and a call that never ran for about
  * 10 s: a cancel ends both `failed` with the lines Claude's adapter gives,
  * the command's terminal with no exit code; left alone, the turn ends and
@@ -302,6 +309,7 @@ import {
 
 const SCENARIOS = [
   'text',
+  'texttillsteered',
   'thought',
   'tools',
   'steps',
@@ -309,6 +317,7 @@ const SCENARIOS = [
   'calls',
   'longresults',
   'overlap',
+  'overlaptwo',
   'overlapfail',
   'overlapask',
   'subagentcall',
@@ -325,11 +334,13 @@ const SCENARIOS = [
   'permission',
   'plan',
   'planshrink',
+  'planshrinkgated',
   'proposal',
   'shell',
   'shellcut',
   'bash',
   'bashtwo',
+  'bashone',
   'bashcut',
   'bashask',
   'claudebetween',
@@ -338,6 +349,7 @@ const SCENARIOS = [
   'mainbetweentwice',
   'taskbetween',
   'taskstays',
+  'taskstayshold',
   'tasktillsteered',
   'teamtask',
   'compact',
@@ -349,6 +361,7 @@ const SCENARIOS = [
   'costwait',
   'costwaitlate',
   'long',
+  'longheld',
   'todos',
   'exitplan',
   'claudeexitplan',
@@ -384,6 +397,7 @@ const SCENARIOS = [
   'claudewaiting',
   'claudenostop',
   'subagentstates',
+  'subagentstatesstay',
   'chordtools',
   'cutcalls',
   'cutcallsback',
@@ -392,12 +406,14 @@ const SCENARIOS = [
   'codexchordcalls',
   'codexmodels',
   'leftform',
+  'leftformgated',
   'bigaskleft',
   'claudecycle',
   'claudecyclebare',
   'claudecycleask',
   'codebuddycycle',
   'taskchild',
+  'taskchildhold',
   'tasklong',
   'taskcost',
   'tasktallname',
@@ -405,6 +421,7 @@ const SCENARIOS = [
   'taskwait',
   'agents',
   'agentsheld',
+  'agentsheldgated',
   'agentchild',
   'agentclose',
   'agentcall',
@@ -790,9 +807,9 @@ async function playPrompt(
   const asked = text.trim();
   const scenario = isScenario(asked) ? asked : fallback;
 
-  try {
-    const turn = new Turn(client, params.sessionId, controller.signal);
+  const turn = new Turn(client, params.sessionId, controller.signal);
 
+  try {
     playing.set(params.sessionId, turn);
     await answered;
 
@@ -889,6 +906,8 @@ async function playPrompt(
 
     throw error;
   } finally {
+    turn.end();
+
     if (turns.get(params.sessionId) === controller) {
       turns.delete(params.sessionId);
       playing.delete(params.sessionId);

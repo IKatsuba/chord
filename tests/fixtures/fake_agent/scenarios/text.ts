@@ -10,11 +10,20 @@ import {
   MARKDOWN_OPEN_NESTED_FENCE,
 } from '../../markdown.ts';
 import { STEP_MS } from '../options.ts';
-import { mcpServers } from '../sessions.ts';
+import { mcpServers, steeredInto } from '../sessions.ts';
 import { lifetime, pause, type Play } from '../turn.ts';
+import { GATE_RELEASE, gateOpened } from './agents.ts';
 
 /** How many items the `long` scenario's list has. */
 const LONG_LINES = 200;
+
+/** `long`'s line `n`, the first without the newline before it. */
+function longLine(n: number): string {
+  return `${n === 1 ? '' : '\n'}${n}. Line ${n} of ${LONG_LINES}, streamed one at a time.`;
+}
+
+/** How long `longheld` holds its turn for a cancel. */
+const HELD_WITHIN_MS = 10_000;
 
 /**
  * Reports the session's cost so far, then works on until it is cancelled, as
@@ -38,6 +47,30 @@ const costWait: Play = async (turn) => {
 export const TEXT = {
   async text(turn) {
     await turn.say('Hello', ', world', '. This reply', ' came in chunks.');
+
+    return 'end_turn';
+  },
+
+  // As `text`, its turn ending only once a message has been steered into
+  // it, or after 10 s without one: a test that tells a message during the
+  // turn meets it running however slow it is (CHD-399).
+  async texttillsteered(turn) {
+    // Listening before the reply, so a steer that comes during it counts.
+    const waiting = steeredInto(
+      turn.sessionId,
+      AbortSignal.any([
+        turn.signal,
+        lifetime.signal,
+        AbortSignal.timeout(10_000),
+      ]),
+    );
+
+    try {
+      await turn.say('Hello', ', world', '. This reply', ' came in chunks.');
+      await waiting.steered.catch(() => {});
+    } finally {
+      waiting.stop();
+    }
 
     return 'end_turn';
   },
@@ -149,12 +182,27 @@ export const TEXT = {
   async long(turn) {
     for (let n = 1; n <= LONG_LINES; n++) {
       await pause(turn.signal, STEP_MS * 19);
-      await turn.say(
-        `${
-          n === 1 ? '' : '\n'
-        }${n}. Line ${n} of ${LONG_LINES}, streamed one at a time.`,
-      );
+      await turn.say(longLine(n));
     }
+
+    return 'end_turn';
+  },
+
+  // `long`'s first 20 lines, then, once the test writes `GATE_RELEASE`,
+  // line 21 alone, then the turn held until it is cancelled: a test sees
+  // line 20 last for as long as it needs, then exactly one row below it,
+  // which the held rule counts as two (CHD-397, CHD-399).
+  async longheld(turn) {
+    for (let n = 1; n <= 20; n++) {
+      await pause(turn.signal, STEP_MS * 19);
+      await turn.say(longLine(n));
+    }
+
+    await gateOpened(turn, GATE_RELEASE);
+
+    await turn.say(longLine(21));
+
+    await pause(turn.signal, HELD_WITHIN_MS);
 
     return 'end_turn';
   },

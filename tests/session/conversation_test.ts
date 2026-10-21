@@ -1202,7 +1202,10 @@ async function callOpen(events: readonly ConversationEvent[]): Promise<void> {
 
 test("on Claude's adapter, a message told while the turn's call is open waits in the queue until the call ends, then goes into the same turn", () =>
   onFake(['--steering', 'claude'], async (conversation, events) => {
-    conversation.send('bash');
+    // Its next step after the command waits for the message, as the model's
+    // comes only after the tool's result: chord steers it in once the
+    // command ends, which could otherwise meet the turn's end (CHD-399).
+    conversation.send('bashone');
     await callOpen(events);
 
     let queued = 0;
@@ -2398,7 +2401,7 @@ describe('CHD-417 tester: held steer lifecycle', () => {
             event.update.toolCallId === id,
         );
 
-      conversation.send('overlap');
+      conversation.send('overlaptwo');
       await until(() => has('overlap-a'));
       conversation.tell(MAIN, 'First.');
       await until(() => has('overlap-b'));

@@ -12,6 +12,7 @@ import {
 } from '../../questions.ts';
 import { STEP_MS } from '../options.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
+import { GATE_RELEASE, gateOpened } from './agents.ts';
 
 /**
  * Asks the client for input and says what came back: the action, and an
@@ -142,6 +143,48 @@ function askClaude(form: QuestionForm): Play {
   };
 }
 
+/**
+ * `leftform`'s play: the form asked, then the turn ended with it open,
+ * after a while, or with `gated` once the test opens the gate.
+ */
+async function leftForm(turn: Turn, gated: boolean): Promise<acp.StopReason> {
+  const { client, sessionId } = turn;
+
+  void (async () => {
+    try {
+      const answer = await client.request('elicitation/create', {
+        sessionId,
+        mode: 'form',
+        message: 'Set up the deploy target',
+        requestedSchema: FORM_SCHEMA,
+      });
+
+      await client.notify('session/update', {
+        sessionId,
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: {
+            type: 'text',
+            text: `Elicitation answer: ${answer.action}`,
+          },
+        },
+      });
+    } catch {
+      // The client went before it was answered.
+    }
+  })();
+
+  if (gated) {
+    await gateOpened(turn, GATE_RELEASE);
+  } else {
+    await pause(turn.signal, STEP_MS * 100);
+  }
+
+  await turn.say('I asked; the turn ends with the form open.');
+
+  return 'end_turn';
+}
+
 export const FORMS = {
   // Each adapter's question form, as `tests/fixtures/questions.ts` has it.
   askclaude: askClaude(CLAUDE_QUESTIONS),
@@ -183,38 +226,12 @@ export const FORMS = {
   // The form asked in its turn, which then ends with it open, as an agent
   // may: the form outlives the turn (the owner's Q53, CHD-158), and its
   // answer is said once it comes.
-  async leftform(turn) {
-    const { client, sessionId } = turn;
+  leftform: (turn) => leftForm(turn, false),
 
-    void (async () => {
-      try {
-        const answer = await client.request('elicitation/create', {
-          sessionId,
-          mode: 'form',
-          message: 'Set up the deploy target',
-          requestedSchema: FORM_SCHEMA,
-        });
-
-        await client.notify('session/update', {
-          sessionId,
-          update: {
-            sessionUpdate: 'agent_message_chunk',
-            content: {
-              type: 'text',
-              text: `Elicitation answer: ${answer.action}`,
-            },
-          },
-        });
-      } catch {
-        // The client went before it was answered.
-      }
-    })();
-
-    await pause(turn.signal, STEP_MS * 100);
-    await turn.say('I asked; the turn ends with the form open.');
-
-    return 'end_turn';
-  },
+  // As `leftform`, its turn ending only once the test writes
+  // `GATE_RELEASE`, so a test sees the form within its turn however slow
+  // it is (CHD-399).
+  leftformgated: (turn) => leftForm(turn, true),
 
   // A form with a field of each kind, then what came back, so a capture
   // shows the round trip.

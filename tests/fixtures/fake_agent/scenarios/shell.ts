@@ -6,7 +6,7 @@ import { BASH_OUTPUT, CUT_OUTPUT, SHELL_OUTPUT } from '../../terminals.ts';
 import { clientTerminalOutput } from '../client.ts';
 import { STEP_MS } from '../options.ts';
 import { cwds } from '../sessions.ts';
-import { pause, type Play, type Turn } from '../turn.ts';
+import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
 
 /**
  * How long the `shell` scenario's command takes between pieces of output:
@@ -314,9 +314,7 @@ async function claudeBash(turn: Turn, untilTold = 0): Promise<acp.StopReason> {
 
   // The next step comes once the messages told during the call are in, as
   // a model's next step comes only after the tool's result (CHD-467).
-  while (turn.told < untilTold) {
-    await pause(turn.signal);
-  }
+  await steeredIn(turn, untilTold);
 
   await turn.say('Two files changed.');
 
@@ -364,6 +362,10 @@ export const SHELL = {
   // steered in, so both told during the call land in the turn whatever the
   // load (CHD-467).
   bashtwo: (turn) => claudeBash(turn, 2),
+
+  // As `bash`, its next step after the command waiting for the one message
+  // held behind it, which chord steers in once the command ends (CHD-399).
+  bashone: (turn) => claudeBash(turn, 1),
 
   // A turn Claude's adapter ends with a command still running and a call
   // that never ran: cancelled, each ends `failed` with the line the adapter

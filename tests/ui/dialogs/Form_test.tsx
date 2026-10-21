@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import process from 'node:process';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
@@ -8,6 +10,10 @@ import { draw } from '../harness.tsx';
 import type { ElicitationReply } from '../../../src/session/elicitations.ts';
 import { DROID_QUESTIONS } from '../../fixtures/questions.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import {
+  GATE,
+  GATE_RELEASE,
+} from '../../fixtures/fake_agent/scenarios/agents.ts';
 import { ElicitationForm } from '../../../src/ui/dialogs/Form.tsx';
 import {
   CTRL_C,
@@ -298,19 +304,19 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
         await until('the second agent', () => window.pids.length === 2);
         await window.shows('● 1 fake asks for input · ctrl+x a');
         await send(window, 'form');
-        await inputAsked(window);
+        await inputAsked(window, '│ fake asks for input');
         await window.type('beta');
         await window.press(DOWN);
         await window.type('beta@example.com');
         await leader(window, '1');
-        await inputAsked(window);
+        await inputAsked(window, '│ fake asks for input');
         await window.shows('1. Europe');
         aligned(window.frame());
         await window.press('2');
         await window.press(ESC);
         await window.shows('Elicitation answer: cancel');
         await leader(window, '2');
-        await inputAsked(window);
+        await inputAsked(window, '│ fake asks for input');
         await window.shows('Project name   beta');
         await window.shows('Contact email  beta@example.com');
         aligned(window.frame());
@@ -464,10 +470,14 @@ describe("a form left open at its turn's end (CHD-158 C5, the owner's Q53)", () 
     test(`stays answerable between turns, the queue behind it, at ${columns} columns`, () =>
       withWindow(
         async (window) => {
-          await send(window, 'leftform');
+          // Its turn ends once the test says so, so the form is seen in it
+          // however slow the test is (CHD-399).
+          await send(window, 'leftformgated');
           // In its turn it has the keys.
           await inputAsked(window);
           await window.shows('❯ * Project name');
+          await mkdir(join(window.dir, GATE), { recursive: true });
+          await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
           // Its turn over, it waits between turns, without the keys; at 80
           // by 24 the form hides the turn's last words.
           await window.shows('main asks for input · between turns');

@@ -13,7 +13,7 @@ import process from 'node:process';
 import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
 import { cwds } from '../sessions.ts';
-import { pause, type Play, type Turn } from '../turn.ts';
+import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
 /** A child's pace: 20 steps, a tenth of a second by default. */
@@ -76,6 +76,19 @@ export const LONG_INSTRUCTION = [
 export const GATE = '.fake-gate';
 export const GATE_OPEN = 'open';
 export const GATE_RELEASE = 'release';
+
+/**
+ * Until `file` is in the gate of `turn`'s session, or 10 s without it, so a
+ * test that never opens it fails rather than hanging the turn (CHD-399).
+ */
+export async function gateOpened(turn: Turn, file: string): Promise<void> {
+  const at = join(cwds.get(turn.sessionId) ?? '.', GATE, file);
+  const deadline = Date.now() + 10_000;
+
+  while (!existsSync(at) && Date.now() < deadline) {
+    await pause(turn.signal, STEP_MS * 2);
+  }
+}
 
 /** Until `file` is in the gate of `turn`'s session, or the turn is stopped. */
 async function gated(turn: Turn, file: string): Promise<void> {
@@ -348,11 +361,45 @@ async function callChild(turn: Turn, untilTold = 0): Promise<acp.StopReason> {
     ],
   });
 
-  while (turn.told < untilTold) {
-    await pause(turn.signal);
+  await steeredIn(turn, untilTold);
+  await turn.say('The tests pass.');
+
+  return 'end_turn';
+}
+
+/**
+ * Opens `docs` on `permission` and messages it: after a pause, or with
+ * `gated` once `GATE_RELEASE` is in the gate (`gateOpened`).
+ */
+async function messageDocsAsking(
+  turn: Turn,
+  gated: boolean,
+): Promise<acp.StopReason> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
   }
 
-  await turn.say('The tests pass.');
+  try {
+    await callChord(turn, client, 'open_agent', DOCS_ARGS);
+
+    if (gated) {
+      await gateOpened(turn, GATE_RELEASE);
+    } else {
+      await pause(turn.signal, AGENT_STEP_MS * 10);
+    }
+
+    await callChord(turn, client, 'send_message', {
+      to: 'docs',
+      text: DOCS_MESSAGE,
+    });
+    await turn.say('Waiting on docs.');
+  } finally {
+    await client.close();
+  }
 
   return 'end_turn';
 }
@@ -390,29 +437,13 @@ export const AGENTS = {
 
   // Opens `docs`, which asks to write, and messages it while it waits on
   // the person, where a runtime that steers holds it for their answer.
-  async agentsheld(turn) {
-    const client = await chordClient(turn);
+  agentsheld: (turn) => messageDocsAsking(turn, false),
 
-    if (client === undefined) {
-      await turn.say('No chord server in this session.');
-
-      return 'end_turn';
-    }
-
-    try {
-      await callChord(turn, client, 'open_agent', DOCS_ARGS);
-      await pause(turn.signal, AGENT_STEP_MS * 10);
-      await callChord(turn, client, 'send_message', {
-        to: 'docs',
-        text: DOCS_MESSAGE,
-      });
-      await turn.say('Waiting on docs.');
-    } finally {
-      await client.close();
-    }
-
-    return 'end_turn';
-  },
+  // As `agentsheld`, the message sent only once the test writes
+  // `GATE_RELEASE` in the gate, which it does once chord shows docs
+  // asking: chord has its request by then, however slow docs started
+  // (CHD-399).
+  agentsheldgated: (turn) => messageDocsAsking(turn, true),
 
   // `parser`'s first turn: a test run, a message to its parent, another run
   // and a second message.

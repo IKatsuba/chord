@@ -2356,6 +2356,27 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
         await window.shows('Waiting on parser.');
         await rootTurns(window, 'agenttask', 1);
         await window.shows('1 task asking');
+        await until('parser spawning turn recorded', async () => {
+          const records = await readRecords(join(window.dir, 'state'));
+          const parser = records.find((record) => record.name === 'parser');
+
+          if (!parser) {
+            return false;
+          }
+
+          const past = await readPast(parser.path);
+          const prompt = past.find((entry) => entry.type === 'prompt');
+
+          return (
+            prompt?.type === 'prompt' &&
+            past.some(
+              (entry) =>
+                entry.type === 'result' && entry.turnId === prompt.turnId,
+            )
+          );
+        });
+        await leader(window, 'a');
+        await window.shows('between turns');
         await leader(window, 'a');
         await window.shows('Agent(Fix the tokenizer)');
         await window.shows('Esc to reject');

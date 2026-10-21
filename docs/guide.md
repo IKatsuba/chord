@@ -773,9 +773,10 @@ replacement or the row above; the last row leaving closes the view.
 An agent ending after the turn that announced it leaves a line in its
 owner's transcript: `✓ Run tests · agent · done in 4s`,
 `✗ Run tests · agent · failed after 22s: tsc exited 2` or
-`■ Run tests · agent · stopped with x after 43s`. A resumed transcript
-says `stopped after`; a monitor's end message is its line. Ended tasks stay
-until your next prompt to any agent in that tab. Messages clear nothing.
+`■ Run tests · agent · stopped with x after 43s`. A resumed transcript keeps
+`stopped with x`; older records say `stopped after`. A monitor's end message
+is its line. Ended tasks stay until your next prompt to any agent in that
+tab. Messages clear nothing.
 Closing an owner removes its items.
 
 A session resumed after its agents ran draws them as they were: each task

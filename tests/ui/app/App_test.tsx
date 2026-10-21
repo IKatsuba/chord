@@ -2786,6 +2786,30 @@ test("the terminal hears chord work, then done with the notification's words, th
   );
 });
 
+test("the record's title is the agent's own title for the main session once it gives one, and follows it as it changes (CHD-491, Q119)", () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'text');
+      await window.shows('came in chunks.');
+      // None from the agent yet: the first prompt.
+      await until('the title', () => lastStatus(log)?.title === 'text');
+      await send(window, 'retitled');
+      await window.shows('Renamed.');
+      await until(
+        "the agent's title",
+        () => lastStatus(log)?.title === 'Fix the parser',
+      );
+      expect(statusReports(log).map((report) => report.title)).toContain(
+        'Look at the parser',
+      );
+    },
+    { log },
+  );
+});
+
 test("the record's title is the main session's first prompt, a child picked and prompted leaving it so (CHD-491)", async () => {
   const log: string[] = [];
   const server = serveChord();

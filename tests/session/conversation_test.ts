@@ -4728,3 +4728,71 @@ test("a session's first prompt is kept whole, shell output ahead of it too, and 
     await rm(dir, { recursive: true });
   }
 });
+
+test("the agent's own title for its session is kept as it comes and changes, none while it gives none, and comes back on resume (CHD-491)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const stateDir = join(dir, 'state');
+  const opened = async (resume?: Resume) => {
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(stateDir, () => {});
+
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(),
+          ...(resume === undefined ? {} : { resume }),
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connected'));
+
+    return { conversation, events, recording };
+  };
+
+  const results = (events: readonly ConversationEvent[]) =>
+    events.filter((event) => event.type === 'result').length;
+
+  try {
+    const live = await opened();
+
+    live.conversation.send('text');
+    await until(() => results(live.events) === 1);
+    expect(live.conversation.title).toStrictEqual(undefined);
+
+    // Named, then named again: the last name holds.
+    live.conversation.send('retitled');
+    await until(() => results(live.events) === 2);
+    expect(live.conversation.title).toStrictEqual('Fix the parser');
+
+    live.conversation.send('titled');
+    await until(() => results(live.events) === 3);
+    expect(live.conversation.title).toStrictEqual('Fix the tokenizer');
+    await live.conversation.close();
+    await live.recording.flushed();
+
+    const [record] = await readRecords(stateDir);
+
+    assert(record);
+
+    const resumed = await opened({
+      sessionId: record.sessionId,
+      cwd: dir,
+      record: record.path,
+    });
+
+    try {
+      expect(resumed.conversation.title).toStrictEqual('Fix the tokenizer');
+    } finally {
+      await resumed.conversation.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});

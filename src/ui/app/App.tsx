@@ -866,14 +866,15 @@ export function App({
   // key, which has the agent shown looked at whether or not it draws.
   const reportStatus = useProgramStatus();
 
-  // The record names the main session, as /resume will (CHD-491).
+  // The record names the main session: by the agent's own title for it
+  // once it gave one, else as /resume will (the owner's Q119, CHD-491).
   const status = () => {
     const { tabs, front } = sessions.sessions.tabs;
     const main = tabs.find((tab) => tab.key === front)?.conversation;
 
     return programStatus(
       sessions.sessions.tabs,
-      openSessionLabel(main?.firstPrompt),
+      main?.title ?? openSessionLabel(main?.firstPrompt),
     );
   };
 

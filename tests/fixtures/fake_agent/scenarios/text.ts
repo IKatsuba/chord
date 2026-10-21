@@ -179,6 +179,34 @@ export const TEXT = {
     }
   },
 
+  // Names its session, as Claude's and Codex's adapters do once they have
+  // read the first prompt, with a `session_info_update` (CHD-491).
+  async titled(turn) {
+    await turn.send({
+      sessionUpdate: 'session_info_update',
+      title: 'Fix the tokenizer',
+    });
+    await turn.say('Named.');
+
+    return 'end_turn';
+  },
+
+  // Names its session, then names it again as the work moves on.
+  async retitled(turn) {
+    await turn.send({
+      sessionUpdate: 'session_info_update',
+      title: 'Look at the parser',
+    });
+    await turn.say('Looking.');
+    await turn.send({
+      sessionUpdate: 'session_info_update',
+      title: 'Fix the parser',
+    });
+    await turn.say('Renamed.');
+
+    return 'end_turn';
+  },
+
   async slow(turn) {
     await turn.say('Working');
 

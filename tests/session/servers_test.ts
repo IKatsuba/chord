@@ -169,3 +169,98 @@ describe("the start line says what an agent was not given, in docs/design/CHD-44
     ).toBeUndefined();
   });
 });
+
+describe('CHD-441 tester: immutable transport filtering across agents', () => {
+  test('frozen request payloads survive filtering and collision renaming unchanged', () => {
+    const stdio: McpServer = {
+      name: 'chord',
+      command: 'docs-server',
+      args: ['--watch'],
+      env: [{ name: 'MODE', value: 'docs' }],
+    };
+    const http: McpServer = {
+      type: 'http',
+      name: 'search',
+      url: 'https://search.example/mcp',
+      headers: [{ name: 'X-Route', value: 'docs' }],
+    };
+    const chord = structuredClone(CHORD);
+
+    Object.freeze(stdio.args);
+    Object.freeze(stdio.env[0]);
+    Object.freeze(stdio.env);
+    Object.freeze(stdio);
+    Object.freeze(http.headers[0]);
+    Object.freeze(http.headers);
+    Object.freeze(http);
+    Object.freeze(chord);
+
+    const users = Object.freeze([stdio, http]);
+    const before = structuredClone([...users, chord]);
+    const given = serversFor('fake', { http: true }, users, chord);
+
+    expect(given.servers).toStrictEqual([
+      stdio,
+      http,
+      { ...chord, name: 'chord-2' },
+    ]);
+    expect(given.servers[0]).toBe(stdio);
+    expect(given.servers[1]).toBe(http);
+    expect(given.chord).toStrictEqual({ ...chord, name: 'chord-2' });
+    expect([...users, chord]).toStrictEqual(before);
+  });
+
+  test('one agent’s retained servers and warnings do not inherit another agent’s capabilities', () => {
+    const users = [SSE, STDIO, HTTP];
+    const first = serversFor('alpha', { http: true }, users, CHORD);
+    const second = serversFor('beta', { sse: true }, users, CHORD);
+
+    expect(second.servers).toStrictEqual([SSE, STDIO]);
+    expect(second.chord).toBeUndefined();
+    expect(
+      second.heldBack.map(({ server, agent, transport }) => ({
+        server,
+        agent,
+        transport,
+      })),
+    ).toStrictEqual([
+      { server: 'search', agent: 'beta', transport: 'http' },
+      { server: 'chord', agent: 'beta', transport: 'http' },
+    ]);
+    expect(first.servers).toStrictEqual([STDIO, HTTP, CHORD]);
+    expect(first.chord).toStrictEqual(CHORD);
+    expect(
+      first.heldBack.map(({ server, agent, transport }) => ({
+        server,
+        agent,
+        transport,
+      })),
+    ).toStrictEqual([{ server: 'logs', agent: 'alpha', transport: 'sse' }]);
+  });
+
+  test('an unsupported server leaves the first naming gap free without reordering the accepted servers', () => {
+    const userChord = { ...HTTP, name: 'chord' };
+    const blockedGap = { ...SSE, name: 'chord-2' };
+    const laterName = { ...STDIO, name: 'chord-3' };
+    const given = serversFor(
+      'fake',
+      { http: true, sse: false },
+      [userChord, blockedGap, laterName],
+      CHORD,
+    );
+
+    expect(given.servers).toStrictEqual([
+      userChord,
+      laterName,
+      { ...CHORD, name: 'chord-2' },
+    ]);
+    expect(
+      given.heldBack.map(({ server, agent, transport }) => ({
+        server,
+        agent,
+        transport,
+      })),
+    ).toStrictEqual([{ server: 'chord-2', agent: 'fake', transport: 'sse' }]);
+    expect(given.chord?.name).toBe('chord-2');
+  });
+});

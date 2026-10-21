@@ -326,6 +326,7 @@ const SCENARIOS = [
   'permission',
   'plan',
   'planshrink',
+  'planshrinkgated',
   'proposal',
   'shell',
   'shellcut',

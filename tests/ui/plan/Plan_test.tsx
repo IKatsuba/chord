@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import stripAnsi from 'strip-ansi';
+import {
+  GATE,
+  GATE_RELEASE,
+} from '../../fixtures/fake_agent/scenarios/agents.ts';
 import {
   asked,
   CTRL_O,
@@ -93,7 +99,9 @@ test('an interrupted plan hangs from a line of its own', () =>
 test('a step removed under a selection does not hand it to the step drawn in its place (CHD-172)', () =>
   withWindow(
     async (window) => {
-      await send(window, 'planshrink');
+      // The step goes once the test says so, so it is selected before it goes
+      // however slow the drag is (CHD-399).
+      await send(window, 'planshrinkgated');
       await window.shows('◐ Read the code');
 
       const rows = stripAnsi(window.frame()).split('\n');
@@ -105,6 +113,8 @@ test('a step removed under a selection does not hand it to the step drawn in its
       await window.press(left(x + 'Read the code'.length - 1, y, 'up'));
       expect(window.selected()).toStrictEqual('Read the code');
 
+      await mkdir(join(window.dir, GATE), { recursive: true });
+      await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
       await window.shows('Dropped a step.');
       // Its text has gone; none of the step now first is selected.
       expect(window.selected()).not.toContain('Write');

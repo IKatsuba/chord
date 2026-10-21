@@ -10,7 +10,7 @@ import {
   MARKDOWN_OPEN_NESTED_FENCE,
 } from '../../markdown.ts';
 import { STEP_MS } from '../options.ts';
-import { mcpServers } from '../sessions.ts';
+import { mcpServers, steeredInto } from '../sessions.ts';
 import { lifetime, pause, type Play } from '../turn.ts';
 import { GATE_RELEASE, gateOpened } from './agents.ts';
 
@@ -47,6 +47,30 @@ const costWait: Play = async (turn) => {
 export const TEXT = {
   async text(turn) {
     await turn.say('Hello', ', world', '. This reply', ' came in chunks.');
+
+    return 'end_turn';
+  },
+
+  // As `text`, its turn ending only once a message has been steered into
+  // it, or after 10 s without one: a test that tells a message during the
+  // turn meets it running however slow it is (CHD-399).
+  async texttillsteered(turn) {
+    // Listening before the reply, so a steer that comes during it counts.
+    const waiting = steeredInto(
+      turn.sessionId,
+      AbortSignal.any([
+        turn.signal,
+        lifetime.signal,
+        AbortSignal.timeout(10_000),
+      ]),
+    );
+
+    try {
+      await turn.say('Hello', ', world', '. This reply', ' came in chunks.');
+      await waiting.steered.catch(() => {});
+    } finally {
+      waiting.stop();
+    }
 
     return 'end_turn';
   },

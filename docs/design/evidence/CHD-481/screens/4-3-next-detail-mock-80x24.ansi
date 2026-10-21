@@ -1,0 +1,24 @@
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from 30-min heartbeat while the owner is away ·[38;2;255;255;255m
+   [39mmonitor.[38;2;255;255;255m
+
+ ← [0m[2mfrom [0m[1m30-min heartbeat while the owner is away[0m[2m · monitor · timed out[0m
+[2m   ⎿  [0mTimed out after 1h (timeout_ms 3600000); chord stopped it.[0m
+[0m
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮[0m
+[38;2;177;185;249m│[0m [1m[38;2;177;185;249mBackground[0m[2m · m2, 1 of 1[0m                                                      [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [0m                                                                             [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [1m30-min heartbeat while the owner is away[0m                                     [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [2mrunning 59m 40s · 1 event · started 59m ago · timeout 1h · main[0m              [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [2m$ for i in 1 2; do sleep 1; echo "heartbeat $i: check the ship run for a[0m     [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [2m  stall"; sleep 1800; done[0m                                                   [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [2m← heartbeat 1: check the ship run for a stall · 59m ago[0m                      [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [0m                                                                             [38;2;177;185;249m│[0m
+[38;2;177;185;249m│[0m [2mEnter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back[0m  [38;2;177;185;249m│[0m
+[38;2;177;185;249m╰──────────────────────────────────────────────────────────────────────────────╯[0m
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39mbackground  1 monitor running[0m[38;2;255;255;255m

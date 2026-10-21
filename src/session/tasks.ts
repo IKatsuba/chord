@@ -358,6 +358,13 @@ export class TaskAgent {
               ...event,
               message: `${this.start.name}: ${event.message}`,
             });
+      // The servers its agent was not given, in its parent's turn, named as
+      // the task (CHD-441).
+      case 'warned':
+        return this.#parent.relay({
+          ...event,
+          message: `${this.start.name}: ${event.message}`,
+        });
       case 'prompt':
         this.#turnId = event.turnId;
 

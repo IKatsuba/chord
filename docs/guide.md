@@ -542,10 +542,16 @@ whole. Each is written the way `.mcp.json` writes it:
 
 A server started as a command has `command`, and may have `args` and `env`;
 one reached over the network has `type` (`http` or `sse`), `url`, and may
-have `headers`. `/mcp` lists the servers chord passed: each one's name, its
-transport, its command or URL, and the file that defined it; Esc closes it.
-It does not show `env` or `headers`. Whether the agent then connected to
-them, ACP does not say, and neither does `/mcp`. chord only reads these
+have `headers`. An agent is given only the servers whose transport it
+says it takes when it starts: a command always, `http` and `sse` only
+where it says so. The rest are held back, chord's own among them, and each
+session says at its start, in a warning line, which ones were not passed
+to its agent and why; a task agent's line is in its parent's turn, named
+as the task. `/mcp` lists the servers: each one's name, its transport, its
+command or URL, or `not passed` for one held back, with why under the
+list, and the file that defined it; Esc closes it. It does not show `env`
+or `headers`. Whether the agent then connected to the ones it was passed,
+ACP does not say, and neither does `/mcp`. chord only reads these
 files; it never writes `.mcp.json` or the agent's own configuration. A
 server that is wrong is named with its file and left out, and the others
 still count; a `.mcp.json` that is not a JSON object is named and ignored.

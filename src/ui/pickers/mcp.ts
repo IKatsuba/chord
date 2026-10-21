@@ -8,6 +8,7 @@ import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import type { McpServer } from '@agentclientprotocol/sdk';
 import { type DefinedServer, type Ignored, transportOf } from '../../mcp.ts';
+import type { HeldBack } from '../../session/servers.ts';
 import { toolNames } from '../../server/tools.ts';
 
 /** chord's own server, as `/mcp` lists it ahead of the user's. */
@@ -289,4 +290,62 @@ export function ignoredNote(ignored: readonly Ignored[]): string | undefined {
  */
 export function mcpRowLimit(windowRows: number): number {
   return Math.max(3, windowRows - 16);
+}
+
+/**
+ * The person's servers as `/mcp` lists them, each `heldBack` names (chord's
+ * own aside, which has a row of its own) with `not passed` for its command
+ * or URL, as chord's own reads when it was not passed (CHD-441).
+ */
+export function withHeldBack(
+  servers: readonly DefinedServer[],
+  heldBack: readonly HeldBack[],
+): DefinedServer[] {
+  const held = new Set(
+    heldBack.filter((each) => !each.own).map((each) => each.server),
+  );
+
+  return servers.map((defined) => {
+    const { server } = defined;
+
+    if (!held.has(server.name)) {
+      return defined;
+    }
+
+    return {
+      ...defined,
+      server:
+        'url' in server
+          ? { ...server, url: 'not passed' }
+          : { name: server.name, command: 'not passed', args: [], env: [] },
+    };
+  });
+}
+
+/**
+ * The paragraph under `/mcp`'s table for the person's servers its agent was
+ * not given, and why; none when all of them went. chord's own has
+ * `chordLine`.
+ */
+export function heldNote(heldBack: readonly HeldBack[]): string | undefined {
+  const held = heldBack.filter((each) => !each.own);
+  const first = held[0];
+
+  if (first === undefined) {
+    return undefined;
+  }
+
+  const whys = new Set(held.map((each) => each.why));
+  const left = [...new Set(held.map((each) => each.transport.toUpperCase()))];
+  const why =
+    whys.size === 1 && whys.has('stdio only')
+      ? 'takes MCP servers over stdio only'
+      : `does not take MCP servers over ${left.join(' or ')}`;
+  const names = new Intl.ListFormat('en', { type: 'conjunction' }).format(
+    held.map((each) => each.server),
+  );
+
+  return `${names} ${held.length === 1 ? 'was' : 'were'} not passed: ${
+    first.agent
+  } ${why}.`;
 }

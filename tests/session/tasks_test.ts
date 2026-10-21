@@ -242,6 +242,20 @@ test('a failed turn ends the task Failed with the error as its report; a refused
   expect(lacking.ended).toStrictEqual(['task-1']);
 });
 
+test("the servers a task's agent was not given are said in its parent's turn, named as the task (CHD-441)", () => {
+  const { task, relayed } = harness();
+  const message =
+    '1 MCP server was not passed to fake, which does not take them over ' +
+    'SSE: tracker. /mcp lists it.';
+
+  task.heard({ type: 'warned', turnId: 'w1', message });
+  expect(relayed).toContainEqual({
+    type: 'warned',
+    turnId: 'w1',
+    message: `Fix it: ${message}`,
+  });
+});
+
 test('a task the parent stopped ends Cancelled with no report, a line held for the next prompt instead', () => {
   const { task, relayed, delivered, ahead, asked } = harness();
 

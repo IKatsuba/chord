@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import type { McpCapabilities, McpServer } from '@agentclientprotocol/sdk';
-import { type HeldBack, serversFor } from '../../src/session/servers.ts';
+import {
+  type HeldBack,
+  heldBackLine,
+  type HeldWhy,
+  serversFor,
+} from '../../src/session/servers.ts';
 
 const STDIO: McpServer = {
   name: 'docs',
@@ -28,11 +33,17 @@ const CHORD: McpServer = {
 };
 
 /** A held-back entry as `serversFor` gives it for the fake. */
-const held = (server: string, transport: string): HeldBack => ({
+const held = (
+  server: string,
+  transport: string,
+  why: HeldWhy,
+  own = false,
+): HeldBack => ({
   server,
   agent: 'fake',
   transport,
-  why: 'transport not advertised',
+  why,
+  ...(own ? { own: true as const } : {}),
 });
 
 describe('an agent gets only the MCP servers whose transport it advertises (CHD-441)', () => {
@@ -49,6 +60,8 @@ describe('an agent gets only the MCP servers whose transport it advertises (CHD-
     test(`advertising ${label}`, () => {
       const http = capabilities?.http === true;
       const sse = capabilities?.sse === true;
+      const why = (transport: 'http' | 'sse'): HeldWhy =>
+        http || sse ? `no ${transport}` : 'stdio only';
       const given = serversFor('fake', capabilities, [STDIO, HTTP, SSE], CHORD);
 
       expect(given.servers).toStrictEqual([
@@ -58,9 +71,9 @@ describe('an agent gets only the MCP servers whose transport it advertises (CHD-
         ...(http ? [CHORD] : []),
       ]);
       expect(given.heldBack).toStrictEqual([
-        ...(http ? [] : [held('search', 'http')]),
-        ...(sse ? [] : [held('logs', 'sse')]),
-        ...(http ? [] : [held('chord', 'http')]),
+        ...(http ? [] : [held('search', 'http', why('http'))]),
+        ...(sse ? [] : [held('logs', 'sse', why('sse'))]),
+        ...(http ? [] : [held('chord', 'http', why('http'), true)]),
       ]);
       expect(given.chord).toStrictEqual(http ? CHORD : undefined);
     });
@@ -73,7 +86,7 @@ describe('an agent gets only the MCP servers whose transport it advertises (CHD-
       acp,
     ]);
     expect(serversFor('fake', { http: true }, [acp]).heldBack).toStrictEqual([
-      held('peer', 'acp'),
+      held('peer', 'acp', 'no acp'),
     ]);
   });
 
@@ -106,4 +119,53 @@ test("chord's server takes the first free name among the servers that go", () =>
   expect(serversFor('fake', { http: true }, [sse], CHORD).chord).toStrictEqual(
     CHORD,
   );
+});
+
+describe("the start line says what an agent was not given, in docs/design/CHD-441.md's words", () => {
+  const tracker: McpServer = { ...SSE, name: 'tracker' };
+  const docs: McpServer = { ...HTTP, name: 'docs' };
+  const line = (
+    capabilities: McpCapabilities | undefined,
+    servers: readonly McpServer[],
+    chord?: McpServer,
+  ) => heldBackLine(serversFor('fake', capabilities, servers, chord).heldBack);
+
+  test('stdio alone names each with its transport, chord first, and what losing it costs', () => {
+    expect(line(undefined, [STDIO, docs, tracker], CHORD)).toBe(
+      '3 MCP servers were not passed to fake, which takes them over stdio ' +
+        "only: chord (http, chord's own), docs (http), tracker (sse). " +
+        "Without chord's own, fake cannot start other agents or use chord's " +
+        'tools. /mcp lists them.',
+    );
+  });
+
+  test('one transport left out names them bare', () => {
+    expect(line({ http: true }, [STDIO, tracker], CHORD)).toBe(
+      '1 MCP server was not passed to fake, which does not take them over ' +
+        'SSE: tracker. /mcp lists it.',
+    );
+    expect(line({ sse: true }, [docs, tracker])).toBe(
+      '1 MCP server was not passed to fake, which does not take them over ' +
+        'HTTP: docs. /mcp lists it.',
+    );
+  });
+
+  test("chord's own alone is 'it', and beside others 'chord's own'", () => {
+    expect(line({}, [STDIO], CHORD)).toBe(
+      '1 MCP server was not passed to fake, which takes them over stdio ' +
+        "only: chord (http, chord's own). Without it, fake cannot start " +
+        "other agents or use chord's tools. /mcp lists it.",
+    );
+    expect(line({ sse: true }, [docs], CHORD)).toBe(
+      '2 MCP servers were not passed to fake, which does not take them over ' +
+        "HTTP: chord (chord's own), docs. Without chord's own, fake cannot " +
+        "start other agents or use chord's tools. /mcp lists them.",
+    );
+  });
+
+  test('nothing is said when every server went', () => {
+    expect(
+      line({ http: true, sse: true }, [STDIO, docs, tracker], CHORD),
+    ).toBeUndefined();
+  });
 });

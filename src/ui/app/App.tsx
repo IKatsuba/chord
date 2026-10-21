@@ -1215,6 +1215,7 @@ export function App({
                 <McpPanel
                   servers={here.mcpServers}
                   ignored={here.mcpIgnored}
+                  heldBack={conversation()?.session?.heldBack ?? []}
                   agent={frontAgent}
                   windowRows={rows}
                   {...(server === undefined

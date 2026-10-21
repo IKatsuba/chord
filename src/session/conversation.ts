@@ -36,6 +36,7 @@ import type {
   SteerOutcome,
   Turn,
 } from './session.ts';
+import { heldBackLine } from './servers.ts';
 import {
   type TaskAgent,
   type TaskParent,
@@ -2346,6 +2347,15 @@ export class Conversation {
     this.#models = session.models();
 
     this.#emit({ type: 'model', models: this.#models });
+
+    // The servers its agent was not given, said afresh by every session it
+    // opens, a resumed one's too, after the settings problems and before its
+    // past (CHD-441); never recorded, as the next open says its own.
+    const held = heldBackLine(session.heldBack);
+
+    if (held !== undefined) {
+      this.#emit({ type: 'warned', turnId: this.#stamp(), message: held });
+    }
 
     // Before `connected`, so a resumed session's past is on screen before a
     // prompt can follow it.

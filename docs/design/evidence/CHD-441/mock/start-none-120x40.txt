@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des441120
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ /tmp/chord-qa-home.des441/chord/settings.json: "mcpServers.broken.url": missing; the server is ignored
+
+ ⏺ 3 MCP servers were not passed to openclaw, which takes none: filesystem, docs, tracker. /mcp lists them.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

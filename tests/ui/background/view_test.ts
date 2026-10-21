@@ -1094,3 +1094,51 @@ describe("a monitor row's kind names its id (CHD-481)", () => {
     expect(kinds[0]).not.toContain('t1');
   });
 });
+
+describe('CHD-481 U1 tester: monitor ids survive wrapping and shared local ids', () => {
+  const kind = (row: ViewRow) =>
+    row.lines
+      .flatMap((line) => line.filter((cell) => cell.role === 'kind'))
+      .map((cell) => cell.text)
+      .join('')
+      .replace(/\s/g, '');
+
+  for (const width of [20, 42, 76, 116]) {
+    test(`a long multibyte monitor id stays whole at ${width} cells`, () => {
+      const id = `m-${'語é👩‍💻'.repeat(8)}-end`;
+      const rows = viewRows(
+        [monitor(id, 'Same description', { group: 'running' })],
+        { width, focus: { key: 1, id }, now: NOW },
+      );
+
+      // wrap-ansi normalizes combining accents when it wraps text.
+      expect(kind(rows[0]!).normalize()).toBe(`monitor·${id}`.normalize());
+      expect(rows[0]!.item.id).toBe(id);
+      expect(text(rows).every((line) => stringWidth(line) <= width)).toBe(true);
+      expect(text(rows).filter((line) => line.startsWith('❯'))).toHaveLength(1);
+    });
+  }
+
+  test('two owners can have the same monitor id without moving the focus or losing the owner', () => {
+    const items = [
+      monitor('m1', 'Same description', { group: 'running' }),
+      monitor(
+        'm1',
+        'Same description',
+        { group: 'running' },
+        { key: 2, owner: PARSER },
+      ),
+    ];
+    const rows = viewRows(items, {
+      width: 76,
+      focus: { key: 2, id: 'm1' },
+      now: NOW,
+    });
+
+    expect(rows.map(kind)).toStrictEqual(['monitor·m1', 'monitor·m1']);
+    expect(text([rows[0]!]).join('\n')).toContain('main');
+    expect(text([rows[1]!]).join('\n')).toContain('parser');
+    expect(text([rows[0]!]).some((line) => line.startsWith('❯'))).toBe(false);
+    expect(text([rows[1]!]).some((line) => line.startsWith('❯'))).toBe(true);
+  });
+});

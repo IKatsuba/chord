@@ -561,3 +561,138 @@ test("a task's spend that a record or an agent bent is read part by part, what d
   expect(spentFrom('lots')).toBe(undefined);
   expect(spentFrom(null)).toBe(undefined);
 });
+
+describe("an agent item's end, once its turn has ended (CHD-479)", () => {
+  /** Claude's subagent `id`, open to a cancel, announced at 2. */
+  const announced = (id: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at: 2,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      title: `${id} (Explore)`,
+      description: `Find ${id}`,
+      state: { state: 'running' },
+      capabilities: { cancel: {} },
+    },
+  });
+  const told = (
+    id: string,
+    state: Record<string, unknown>,
+    at: number,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      state,
+    } as unknown as SessionUpdate,
+  });
+  const ENDED: TranscriptAction = {
+    type: 'result',
+    turnId: TURN,
+    result: { status: 'completed', stopReason: 'end_turn' },
+  };
+  const ends = (transcript: Transcript) =>
+    transcript.entries.filter((entry) => entry.kind === 'item_ended');
+
+  test('one that ends after its turn says so once, with its name, end and times', () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          announced('a'),
+          ENDED,
+          told('a', { state: 'completed' }, 6002),
+        ]),
+      ),
+    ).toStrictEqual([
+      {
+        kind: 'item_ended',
+        turnId: TURN,
+        item: 'agent',
+        name: 'Find a',
+        end: 'done',
+        startedAt: 2,
+        endedAt: 6002,
+      },
+    ]);
+  });
+
+  test('one that ends while its turn runs is said by its own block, not by a line', () => {
+    expect(
+      ends(
+        fold([PROMPT, announced('a'), told('a', { state: 'completed' }, 9)]),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  test('a subagent that is no item, offering no cancel of its own, gets none', () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          spawned('a', 'Find'),
+          ENDED,
+          told('a', { state: 'completed' }, 9),
+        ]),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  test("a failure carries its agent's reason, a stop the person's x, a gone agent its disconnect", () => {
+    const failed = fold([
+      PROMPT,
+      announced('a'),
+      announced('b'),
+      announced('c'),
+      ENDED,
+      told(
+        'a',
+        {
+          state: 'idle',
+          stopReason: 'error',
+          error: { message: 'tsc exited 2' },
+        },
+        9,
+      ),
+      {
+        type: 'subagent_stopping',
+        turnId: TURN,
+        subagentId: 'b',
+        stopping: true,
+      },
+      told('b', { state: 'cancelled' }, 10),
+      { type: 'disconnected', turnId: TURN, at: 11 },
+    ]);
+
+    expect(
+      ends(failed).map((entry) =>
+        entry.kind === 'item_ended'
+          ? [entry.name, entry.end, entry.byPerson, entry.error]
+          : [],
+      ),
+    ).toStrictEqual([
+      ['Find a', 'failed', undefined, 'tsc exited 2'],
+      ['Find b', 'stopped', true, undefined],
+      ['Find c', 'disconnected', undefined, undefined],
+    ]);
+  });
+
+  test('an ended one told again says nothing more', () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          announced('a'),
+          ENDED,
+          told('a', { state: 'completed' }, 9),
+          told('a', { state: 'completed' }, 10),
+        ]),
+      ),
+    ).toHaveLength(1);
+  });
+});

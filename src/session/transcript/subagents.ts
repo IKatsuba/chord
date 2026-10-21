@@ -13,6 +13,7 @@ import { TOKEN_FIELDS, type TokenUsage } from '../usage.ts';
 import {
   emptyTranscript,
   type Entry,
+  type ItemEnd,
   type Subagent,
   type SubagentState,
   type TaskInfo,
@@ -197,11 +198,18 @@ export function mergeSubagent(
   at: number | undefined,
 ): Transcript {
   if (findSubagent(state.entries, update.sessionId)) {
+    const entries = changeSubagent(
+      state.entries,
+      update.sessionId,
+      (subagent) => patched(subagent, update, at),
+    );
+
     return {
       ...state,
-      entries: changeSubagent(state.entries, update.sessionId, (subagent) =>
-        patched(subagent, update, at),
-      ),
+      entries: [
+        ...entries,
+        ...itemEndLines(state.entries, entries, state.turn),
+      ],
     };
   }
 
@@ -452,6 +460,88 @@ function errorOf(state: StateUpdate | null | undefined): string | undefined {
   return typeof error?.message === 'string' && error.message !== ''
     ? error.message
     : undefined;
+}
+
+/**
+ * Whether a subagent is a background `agent` item: one announced with
+ * `capabilities.cancel`, which can be stopped alone. The rule is open with
+ * the owner (Q40), so it is here alone.
+ */
+export function isAgentItem(subagent: Subagent): boolean {
+  return subagent.task === undefined && subagent.offeredCancel === true;
+}
+
+/** An agent item's name: its short task, else its title. */
+export function agentItemName(subagent: Subagent): string {
+  return subagent.description ?? subagent.title ?? 'agent';
+}
+
+/** The end each state that ends an agent item says. */
+const ITEM_ENDS: Partial<Record<SubagentState, ItemEnd>> = {
+  completed: 'done',
+  failed: 'failed',
+  cancelled: 'stopped',
+  ended: 'ended',
+  disconnected: 'disconnected',
+};
+
+/**
+ * The lines to add for the agent items that `entries` ended since
+ * `before`: one each, unless the turn that announced it, `turn`'s while it
+ * runs, says it in its own block (docs/design/CHD-479.md).
+ */
+export function itemEndLines(
+  before: readonly Entry[],
+  entries: readonly Entry[],
+  turn: Transcript['turn'],
+): Entry[] {
+  return itemsIn(before).flatMap(({ subagent: was, turnId }): Entry[] => {
+    const now = findSubagent(entries, was.id);
+    const end = now && ITEM_ENDS[now.state];
+
+    if (
+      now === undefined ||
+      end === undefined ||
+      !isAgentItem(now) ||
+      (was.state !== 'running' && was.state !== 'untracked') ||
+      (turn.status !== 'idle' && turn.turnId === turnId)
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        kind: 'item_ended',
+        turnId,
+        item: 'agent',
+        name: agentItemName(now),
+        end,
+        ...(was.stopping === true && (end === 'stopped' || end === 'ended')
+          ? { byPerson: true as const }
+          : {}),
+        ...(now.startedAt === undefined ? {} : { startedAt: now.startedAt }),
+        ...(now.endedAt === undefined ? {} : { endedAt: now.endedAt }),
+        ...(end === 'failed' && now.error !== undefined
+          ? { error: now.error }
+          : {}),
+      },
+    ];
+  });
+}
+
+/** Every subagent among `entries`, with the turn its outermost came in. */
+function itemsIn(
+  entries: readonly Entry[],
+  turnId?: string,
+): { subagent: Subagent; turnId: string }[] {
+  return entries.flatMap((entry) =>
+    entry.kind === 'subagent'
+      ? [
+          { subagent: entry.subagent, turnId: turnId ?? entry.turnId },
+          ...itemsIn(entry.subagent.entries, turnId ?? entry.turnId),
+        ]
+      : [],
+  );
 }
 
 /** Whether a subagent is at work, as far as chord knows. */

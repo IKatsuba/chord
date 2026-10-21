@@ -2,7 +2,12 @@
  * The turn itself: its prompt, a cancel asked for, the agent's answer that
  * settles it, and the agent going away under its subagents.
  */
-import { endRunning, findSubagent, isRunning } from './subagents.ts';
+import {
+  endRunning,
+  findSubagent,
+  isRunning,
+  itemEndLines,
+} from './subagents.ts';
 import type {
   Entry,
   MessageFrom,
@@ -139,7 +144,15 @@ export function disconnected(
     (subagent) => isRunning(subagent) || subagent.state === 'untracked',
   );
 
-  return entries === state.entries ? state : { ...state, entries };
+  return entries === state.entries
+    ? state
+    : {
+        ...state,
+        entries: [
+          ...entries,
+          ...itemEndLines(state.entries, entries, state.turn),
+        ],
+      };
 }
 
 export function isCurrent(

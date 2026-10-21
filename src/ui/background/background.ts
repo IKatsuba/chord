@@ -7,6 +7,10 @@
  */
 import stringWidth from 'string-width';
 import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
+import {
+  agentItemName,
+  isAgentItem,
+} from '../../session/transcript/subagents.ts';
 import type {
   Entry,
   MonitorEnd,
@@ -300,15 +304,6 @@ function taskAsking(
 }
 
 /**
- * Whether a subagent is an `agent` item: one announced with
- * `capabilities.cancel`, which can be stopped alone. The rule is open with
- * the owner (Q40), so it is here alone.
- */
-export function isAgentItem(subagent: Subagent): boolean {
-  return subagent.task === undefined && subagent.offeredCancel === true;
-}
-
-/**
  * The groups each kind's items leave the list in, at once, as they end (the
  * owner's Q83 and Q86, docs/design/CHD-479.md): an `agent` once done,
  * failed or stopped, and a monitor, whose end its agent's transcript says
@@ -356,7 +351,7 @@ function agentItems(agent: BackgroundAgent, at: number): BackgroundItem[] {
         id: subagent.id,
         key: agent.key,
         ...(agent.owner === undefined ? {} : { owner: agent.owner }),
-        name: subagent.description ?? subagent.title ?? 'agent',
+        name: agentItemName(subagent),
         startedAt,
         status: agentStatus(
           subagent,

@@ -4,6 +4,7 @@ import stripAnsi from 'strip-ansi';
 import { COMPACT_ERROR } from '../../fixtures/compactions.ts';
 import {
   CTRL_O,
+  DOWN,
   END,
   leader,
   left,
@@ -507,3 +508,29 @@ test('a drag selects what the agent wrote, and none of the furniture beside it (
     },
     { columns: 100, rows: 30 },
   ));
+
+for (const size of [
+  { columns: 120, rows: 40 },
+  { columns: 80, rows: 24 },
+]) {
+  const at = `${size.columns}x${size.rows}`;
+
+  test(`at ${at}, an agent that ends after its turn says so in one line, one that ends in the turn in its own block only (CHD-479)`, () =>
+    withWindow(async (window) => {
+      await send(window, 'claudebackground');
+      await window.shows('The tests run on; I will say when they end.');
+      await window.shows('✓ Run the test suite · agent · done in');
+      expect(window.frame()).not.toContain('Find the cancel path · agent');
+    }, size));
+
+  test(`at ${at}, an agent stopped with x after its turn says the person stopped it (CHD-479)`, () =>
+    withWindow(async (window) => {
+      await send(window, 'claudebackground');
+      await window.shows('The tests run on; I will say when they end.');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Run the test suite');
+      await window.press('x');
+      await window.shows('■ Run the test suite · agent · stopped with x after');
+    }, size));
+}

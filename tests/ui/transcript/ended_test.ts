@@ -1,0 +1,64 @@
+import { expect, test } from 'bun:test';
+import type { Entry } from '../../../src/session/transcript/types.ts';
+import { endedLine } from '../../../src/ui/transcript/ended.ts';
+
+type ItemEnded = Extract<Entry, { kind: 'item_ended' }>;
+
+const ended = (more: Partial<ItemEnded>): ItemEnded => ({
+  kind: 'item_ended',
+  turnId: 't1',
+  item: 'agent',
+  name: 'Run the test suite',
+  end: 'done',
+  startedAt: 0,
+  endedAt: 4000,
+  ...more,
+});
+
+/** The line as it reads, its parts joined. */
+const read = (more: Partial<ItemEnded>, width = 120) => {
+  const line = endedLine(ended(more), width);
+
+  return `${line.marker} ${line.name}${line.kind}${line.end}${
+    line.reason === undefined ? '' : `: ${line.reason}`
+  }`;
+};
+
+test("each end in the view's words, its marker and tone with it (CHD-479)", () => {
+  expect(read({})).toStrictEqual('✓ Run the test suite · agent · done in 4s');
+  expect(read({ end: 'failed', endedAt: 22_000 })).toStrictEqual(
+    '✗ Run the test suite · agent · failed after 22s',
+  );
+  expect(read({ end: 'stopped', byPerson: true, endedAt: 43_000 })).toBe(
+    '■ Run the test suite · agent · stopped with x after 43s',
+  );
+  expect(read({ end: 'stopped', endedAt: 30_000 })).toBe(
+    '■ Run the test suite · agent · stopped after 30s',
+  );
+  expect(read({ end: 'ended', endedAt: 62_000 })).toBe(
+    '■ Run the test suite · agent · ended after 1m 2s',
+  );
+  expect(read({ end: 'disconnected', endedAt: 240_000 })).toBe(
+    '✗ Run the test suite · agent · disconnected after 4m',
+  );
+  expect(
+    (['done', 'failed', 'stopped', 'ended', 'disconnected'] as const).map(
+      (end) => endedLine(ended({ end }), 80).tone,
+    ),
+  ).toStrictEqual(['success', 'error', 'dim', 'dim', 'error']);
+});
+
+test("a failure's reason is its error's first line, cut to the width with …", () => {
+  expect(
+    read({ end: 'failed', endedAt: 22_000, error: 'tsc exited 2\nat line 4' }),
+  ).toBe('✗ Run the test suite · agent · failed after 22s: tsc exited 2');
+
+  const cut = read(
+    { end: 'failed', endedAt: 22_000, error: 'x'.repeat(200) },
+    60,
+  );
+
+  expect(cut.endsWith('…')).toBeTruthy();
+  // The gutter's marker and its space stand beside the 60 cells.
+  expect([...cut].length - 2).toStrictEqual(60);
+});

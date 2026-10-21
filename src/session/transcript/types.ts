@@ -486,6 +486,26 @@ export type Entry =
       readonly failed: boolean;
     }
   | {
+      /**
+       * A background item that ended after the turn that started it, said
+       * once in its owner's transcript as it leaves the background list; one
+       * that ends while that turn runs is said by its own block
+       * (docs/design/CHD-479.md). `turnId` is that turn's.
+       */
+      readonly kind: 'item_ended';
+      readonly turnId: string;
+      readonly item: 'agent';
+      /** Its name, as its background row had it. */
+      readonly name: string;
+      readonly end: ItemEnd;
+      /** chord's stop, the person's `x`, ended it. */
+      readonly byPerson?: true;
+      readonly startedAt?: number;
+      readonly endedAt?: number;
+      /** What its agent said went wrong. */
+      readonly error?: string;
+    }
+  | {
       /** The turn ended on its own for a reason other than `end_turn`. */
       readonly kind: 'stopped';
       readonly turnId: string;
@@ -541,6 +561,9 @@ export type Entry =
       readonly from: MessageFrom;
       readonly alone: boolean;
     };
+
+/** How a background item ended, as its row's state words say it. */
+export type ItemEnd = 'done' | 'failed' | 'stopped' | 'ended' | 'disconnected';
 
 /** What one `/team` command left in the transcript. */
 export type TeamShown =

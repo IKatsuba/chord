@@ -1212,3 +1212,70 @@ describe('CHD-473 T4 tester: error scroller lifetime', () => {
     expect(scroller.current).toBeUndefined();
   });
 });
+
+test('a detail taller than its room pages to its last line at 46×24, every line inside the frame, the hint under it (CHD-481)', async () => {
+  const item: BackgroundItem = {
+    kind: 'monitor',
+    id: 'm2',
+    key: 1,
+    name: 'dev server errors',
+    startedAt: Date.now() - 60_000,
+    status: { group: 'running' },
+    events: 2,
+    command:
+      'sleep 1; echo "ERROR [router] POST /login 500: Cannot read ' +
+      "properties of undefined (reading 'trim')\"; sleep 600",
+    timeoutMs: 600_000,
+    owner: { name: 'a-child-with-a-very-long-name', colour: 2 },
+    lastEvent: {
+      lines: ['ERROR [router] POST /login 500', '    at validate (login.tsx)'],
+      at: Date.now() - 5_000,
+    },
+  };
+  const scroller: { current: RequestScroller | undefined } = {
+    current: undefined,
+  };
+  const drawn = await draw(
+    <BackgroundView
+      items={[item]}
+      focus={item}
+      detail={item}
+      columns={46}
+      rows={24}
+      scroller={scroller}
+    />,
+    { columns: 46, rows: 24 },
+  );
+  const frame = () =>
+    drawn
+      .frame()
+      .split('\n')
+      .filter((line) => /^[╭│╰]/.test(line));
+
+  try {
+    await until('the rule below', () =>
+      frame().some((line) => line.includes('lines below')),
+    );
+
+    for (let page = 0; page < 10; page++) {
+      if (!frame().some((line) => line.includes('lines below'))) {
+        break;
+      }
+
+      const before = frame().join('\n');
+
+      scroller.current?.('page_down');
+      await until('a page on', () => frame().join('\n') !== before);
+    }
+
+    const lines = frame();
+
+    expect(lines.some((line) => line.includes('lines below'))).toBe(false);
+    expect(lines.some((line) => line.includes('at validate'))).toBe(true);
+    expect(lines.at(-2)).toContain('Esc ← to go back');
+    // Nothing wrapped by the renderer: every line is a frame line.
+    expect(lines.every((line) => /^[╭│╰].*[╮│╯]$/.test(line))).toBe(true);
+  } finally {
+    await drawn.unmount();
+  }
+});

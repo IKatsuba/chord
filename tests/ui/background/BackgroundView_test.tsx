@@ -693,6 +693,23 @@ describe("a monitor's detail in the window (CHD-481)", () => {
       expect(window.frame()).not.toContain('dev server errors   ');
     }));
 
+  test('↓ on an ended one steps on, its item gone; on the last one left, it closes the frame (Q126)', () =>
+    withBackground(async (window) => {
+      await opened(window);
+      await window.press('\r');
+      await window.press('x');
+      await window.shows('Background · m1, 1 of 2 · ended');
+      await window.press(DOWN);
+      await window.shows('Background · m2, 1 of 1');
+      await window.press('x');
+      await window.shows('Background · m2, 1 of 1 · ended');
+      await window.press(DOWN);
+      await until(
+        'the frame closed',
+        () => !window.frame().includes('Background ·'),
+      );
+    }));
+
   test('taller than its room at 80×24, it scrolls by a page', () =>
     withBackground(
       async (window) => {

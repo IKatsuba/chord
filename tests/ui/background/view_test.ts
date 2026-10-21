@@ -4,6 +4,7 @@ import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
   detailLines,
   focusAfter,
+  stepDetail,
   hintLines,
   laidAt,
   moveView,
@@ -1235,4 +1236,98 @@ describe("a monitor's detail lines (CHD-481)", () => {
       'Exited with code 1 after 3m 32s.',
     ]);
   });
+});
+
+describe('↑ ↓ in a detail (CHD-481)', () => {
+  const ended = {
+    group: 'stopped',
+    endedAt: NOW,
+    end: { kind: 'stopped' },
+  } as const;
+  const tall = monitor('m1', 'a long description '.repeat(8), {
+    group: 'running',
+  });
+  const items = [
+    tall,
+    monitor('m2', 'b', { group: 'running' }),
+    monitor('m3', 'c', { group: 'running' }),
+  ];
+  const ref = (id: string) => ({ key: 1, id });
+
+  test('they step whole items, a tall one too, and stop at the ends while it runs', () => {
+    expect(stepDetail(items, ref('m1'), 1)).toStrictEqual(ref('m2'));
+    expect(stepDetail(items, ref('m2'), -1)).toStrictEqual(ref('m1'));
+    expect(stepDetail(items, ref('m1'), -1)).toBe(undefined);
+    expect(stepDetail(items, ref('m3'), 1)).toBe(undefined);
+  });
+
+  test("an ended one's item leaves on either: past an end to the item that takes its place, the last closing the frame (Q126)", () => {
+    const last = [...items.slice(0, 2), monitor('m3', 'c', ended)];
+    const first = [monitor('m1', 'a', ended), ...items.slice(1)];
+
+    expect(stepDetail(last, ref('m3'), -1)).toStrictEqual(ref('m2'));
+    expect(stepDetail(last, ref('m3'), 1)).toStrictEqual(ref('m2'));
+    expect(stepDetail(first, ref('m1'), -1)).toStrictEqual(ref('m2'));
+    expect(stepDetail([monitor('m1', 'a', ended)], ref('m1'), 1)).toBe(
+      'closed',
+    );
+    expect(stepDetail([monitor('m1', 'a', ended)], ref('m1'), -1)).toBe(
+      'closed',
+    );
+    // A task's end keeps it listed, so an end stays an end.
+    expect(
+      stepDetail(
+        [task('t1', 'x', { group: 'done', endedAt: NOW })],
+        ref('t1'),
+        1,
+      ),
+    ).toBe(undefined);
+  });
+});
+
+test("no detail line is wider than its width, every part's role kept, at any width (CHD-481)", () => {
+  const item = monitor(
+    'm2',
+    'dev server errors',
+    { group: 'running' },
+    {
+      command: 'npm run dev 2>&1 | grep --line-buffered ERROR',
+      timeoutMs: 3_600_000,
+      events: 2,
+      owner: { name: 'a-child-with-a-very-long-name-indeed', colour: 2 },
+      lastEvent: { lines: ['ERROR one', '    at two'], at: NOW - 12_000 },
+    },
+  );
+
+  // Below three cells, a `$ ` or `← ` and one cell of text cannot fit.
+  for (let width = 3; width <= 80; width++) {
+    const lines = detailLines(item, { width, now: NOW });
+    const said = lines.map((line) => line.map(({ text }) => text).join(''));
+
+    expect({
+      width,
+      wide: said.filter((line) => stringWidth(line) > width),
+    }).toStrictEqual({ width, wide: [] });
+
+    const of = (role: string) =>
+      lines
+        .flat()
+        .filter((cell) => cell.role === role)
+        .map(({ text }) => text)
+        .join('')
+        .replace(/\s/g, '');
+
+    expect(of('state')).toBe('running4m2s');
+    expect(of('owner')).toBe('a-child-with-a-very-long-name-indeed');
+  }
+
+  expect(
+    detailLines(item, { width: 24, now: NOW })
+      .slice(1, 4)
+      .map((line) => line.map(({ text }) => text).join('')),
+  ).toStrictEqual([
+    'running 4m 2s · 2 events',
+    '· started 4m ago ·',
+    'timeout 1h ·',
+  ]);
 });

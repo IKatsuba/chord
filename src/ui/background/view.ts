@@ -10,7 +10,12 @@ import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { endSentence, endWord, timeoutWords } from '../../session/monitors.ts';
 import { spentParts } from '../transcript/agents/subagents.ts';
-import type { BackgroundGroup, BackgroundItem } from './background.ts';
+import { wrapLine } from '../transcript/message.ts';
+import {
+  type BackgroundGroup,
+  type BackgroundItem,
+  leavesList,
+} from './background.ts';
 
 /** An item by its owner's session and its id there. */
 export interface ItemRef {
@@ -63,6 +68,39 @@ export function focusAfter(
   const next = items[Math.min(above, items.length - 1)]!;
 
   return { key: next.key, id: next.id };
+}
+
+/**
+ * Where ↑ ↓ (`by`) take an open detail on `detail` over `items`: the
+ * item `by` on, whole items, not lines, as a page key scrolls a tall one;
+ * at an end, nowhere, unless its item has ended and leaves once left, when
+ * it goes to the item that takes its place under CHD-479's rule, or, none
+ * left, `closed` (docs/design/CHD-481.md, Q126).
+ */
+export function stepDetail(
+  items: readonly BackgroundItem[],
+  detail: ItemRef,
+  by: 1 | -1,
+): ItemRef | 'closed' | undefined {
+  const at = items.findIndex((item) => sameItem(item, detail));
+  const item = items[at];
+  const next = at === -1 ? undefined : items[at + by];
+
+  if (next !== undefined) {
+    return { key: next.key, id: next.id };
+  }
+
+  if (item === undefined || !leavesList(item)) {
+    return undefined;
+  }
+
+  return (
+    focusAfter(
+      items,
+      items.filter((each) => each !== item),
+      detail,
+    ) ?? 'closed'
+  );
 }
 
 /** The hint line on an agent item whose agent offers no stop of its own. */
@@ -780,31 +818,48 @@ function agoWords(ms: number): string {
 }
 
 /**
- * `parts` joined by ` · ` in lines of at most `width` cells, each part
- * whole, a line broken after a `·`, as a state's line wraps.
+ * `parts` joined by ` · ` in lines of at most `width` cells, broken as a
+ * kind is (`kindIn`), each run keeping its part's role and the `·`s dim.
  */
 function dotted(parts: readonly ViewCell[], width: number): ViewCell[][] {
-  const lines: ViewCell[][] = [[]];
-  let used = 0;
+  // Every character of the joined line with the cell it came from; the
+  // wrapped lines hold the same characters less the spaces broken at.
+  const source: { readonly char: string; readonly of: ViewCell }[] = [];
+  const gap: ViewCell = { text: ' · ', role: 'kind' };
 
   for (const [at, part] of parts.entries()) {
-    const line = lines.at(-1)!;
-    const gap: ViewCell = { text: ' · ', role: 'kind' };
-    const need = stringWidth(part.text) + (at === 0 ? 0 : 3);
-
-    if (at > 0 && used + need > width && line.length > 0) {
-      line.push({ text: ' ·', role: 'kind' });
-      lines.push([part]);
-
-      used = stringWidth(part.text);
-    } else {
-      line.push(...(at === 0 ? [part] : [gap, part]));
-
-      used += need;
+    for (const piece of at === 0 ? [part] : [gap, part]) {
+      for (const char of piece.text) {
+        source.push({ char, of: piece });
+      }
     }
   }
 
-  return lines;
+  let next = 0;
+
+  return kindIn(
+    source.map(({ char }) => char).join(''),
+    Math.max(1, width),
+  ).map((line) => {
+    const cells: ViewCell[] = [];
+
+    for (const char of line) {
+      while (next < source.length && source[next]!.char !== char) {
+        next++;
+      }
+
+      const { of } = source[next++] ?? { of: gap };
+      const last = cells.at(-1);
+
+      if (last !== undefined && last.role === of.role) {
+        cells[cells.length - 1] = { ...last, text: last.text + char };
+      } else {
+        cells.push({ ...of, text: char });
+      }
+    }
+
+    return cells;
+  });
 }
 
 /**
@@ -818,17 +873,12 @@ function wrappedIn(
   role: ViewCell['role'],
 ): ViewCell[][] {
   const indent = first === '' ? '' : '  ';
-  // Its own leading spaces go before its first line, as an event's indent is
-  // part of what it said; the rest wraps trimmed, so no line starts on the
-  // space it broke at.
-  const own = /^\s*/.exec(text)![0];
-  const room = width - stringWidth(indent) - stringWidth(own);
 
-  return wrapAnsi(text.slice(own.length), Math.max(1, room), { hard: true })
-    .split('\n')
-    .map((line, at) => [
-      { text: at === 0 ? `${first}${own}${line}` : `${indent}${line}`, role },
-    ]);
+  // Its own indent on its first line, as an event's is part of what it said,
+  // as a monitor's message wraps it.
+  return wrapLine(text, Math.max(1, width - stringWidth(indent))).map(
+    (line, at) => [{ text: `${at === 0 ? first : indent}${line}`, role }],
+  );
 }
 
 /**

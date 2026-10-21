@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import stringWidth from 'string-width';
 import type { Entry } from '../../../src/session/transcript/types.ts';
 import { endedLine } from '../../../src/ui/transcript/ended.ts';
 
@@ -61,4 +62,27 @@ test("a failure's reason is its error's first line, cut to the width with …", 
   expect(cut.endsWith('…')).toBeTruthy();
   // The gutter's marker and its space stand beside the 60 cells.
   expect([...cut].length - 2).toStrictEqual(60);
+});
+
+test("a reason's cut keeps whole characters: wide, combined and joined ones (CHD-479)", () => {
+  const segments = new Intl.Segmenter();
+
+  for (const unit of ['語', 'é', '👩‍💻']) {
+    const line = endedLine(
+      ended({ end: 'failed', endedAt: 22_000, error: unit.repeat(80) }),
+      60,
+    );
+    const reason = line.reason ?? '';
+    const kept = [...segments.segment(reason)].map(({ segment }) => segment);
+
+    expect(kept.at(-1), unit).toStrictEqual('…');
+    expect(
+      kept.slice(0, -1).every((segment) => segment === unit),
+      unit,
+    ).toBeTruthy();
+    expect(
+      stringWidth(`${line.name}${line.kind}${line.end}: ${reason}`),
+      unit,
+    ).toBeLessThanOrEqual(60);
+  }
 });

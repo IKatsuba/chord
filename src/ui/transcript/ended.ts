@@ -3,6 +3,7 @@
  * `<marker> <name> · <kind> · <end>`, its end in the view's state words, a
  * failure's reason after a colon (docs/design/CHD-479.md).
  */
+import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import { timeoutWords } from '../../session/monitors.ts';
@@ -75,25 +76,6 @@ export function endedLine(entry: ItemEnded, width: number): EndedLine {
     name: entry.name,
     kind,
     end,
-    reason: cut(first, Math.max(1, room)),
+    reason: cliTruncate(first, Math.max(1, room), { position: 'end' }),
   };
-}
-
-/** `text` in at most `cells`, its end given to `…` when it does not fit. */
-function cut(text: string, cells: number): string {
-  if (stringWidth(text) <= cells) {
-    return text;
-  }
-
-  let kept = '';
-
-  for (const character of text) {
-    if (stringWidth(`${kept}${character}…`) > cells) {
-      break;
-    }
-
-    kept += character;
-  }
-
-  return `${kept}…`;
 }

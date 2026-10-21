@@ -269,14 +269,6 @@ function SelfStarted({
 }
 
 /**
- * A message another agent, or chord, sent the session: `←` and who sent it,
- * then what it said as markdown, as a reply is, whole; a monitor's event
- * folds after six lines. Never the person's `›`, so nothing an agent wrote
- * reads as theirs. The body hangs under `⎿`, dim, as a tool's result and
- * the outgoing `→` row's do, so a long instruction reads as quoted next to
- * the agent's own bright replies.
- */
-/**
  * A background item that ended after its turn: its marker where `⏺` stands,
  * the marker and its end in the state's colour, its name in the text's, the
  * kind dim (docs/design/CHD-479.md).
@@ -320,6 +312,14 @@ function ItemEnded({
   );
 }
 
+/**
+ * A message another agent, or chord, sent the session: `←` and who sent it,
+ * then what it said as markdown, as a reply is, whole; a monitor's event
+ * folds after six lines. Never the person's `›`, so nothing an agent wrote
+ * reads as theirs. The body hangs under `⎿`, dim, as a tool's result and
+ * the outgoing `→` row's do, so a long instruction reads as quoted next to
+ * the agent's own bright replies.
+ */
 function Message({
   from,
   text,

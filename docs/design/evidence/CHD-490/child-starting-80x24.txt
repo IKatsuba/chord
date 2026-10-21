@@ -1,0 +1,24 @@
+ foreign · codex · opened by main 3s ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ foreign ────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  codex has not started yet
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 12s
+    foreign  codex                                                 ◦ idle 0s

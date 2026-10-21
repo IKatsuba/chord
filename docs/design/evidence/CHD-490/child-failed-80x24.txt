@@ -1,0 +1,24 @@
+ broken · codex · opened by main 6s ago
+
+ ⏺ codex did not start: The agent exited.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ broken ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main     codex  ◦ idle 2s          ✓ new reply
+    foreign  codex  ◦ idle 9s
+    broken   codex  ✗ failed to start

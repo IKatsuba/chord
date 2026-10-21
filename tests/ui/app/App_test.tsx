@@ -2375,6 +2375,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
             )
           );
         });
+
         await leader(window, 'a');
         await window.shows('between turns');
         await leader(window, 'a');

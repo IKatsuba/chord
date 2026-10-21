@@ -112,13 +112,13 @@ test('the summary line is the stop after the agents: ↓ from the last agent, th
   ));
 
 describe('CHD-424 tester: standing background edges', () => {
-  test('a prompt in another tab leaves ended items alone; a prompt in their tab clears only ended items', () =>
+  test('ended monitors stay absent across prompts in their tab and another tab', () =>
     withBackground(async (window) => {
       await ready(window);
       await send(window, 'monitors');
       await window.shows('background  2 monitors running');
       await send(window, 'monitorexit');
-      await window.shows('background  ✗ 1 monitor failed · 2 monitors running');
+      await window.shows('background  2 monitors running');
       await window.shows('Received the message from CI run 4812');
 
       await leader(window, 'c');
@@ -130,7 +130,7 @@ describe('CHD-424 tester: standing background edges', () => {
       await window.shows('background  1 monitor running');
 
       await leader(window, '1');
-      await window.shows('background  ✗ 1 monitor failed · 2 monitors running');
+      await window.shows('background  2 monitors running');
       await send(window, 'hello');
       await window.shows('background  2 monitors running');
       expect(window.frame()).not.toContain('background  ✗');
@@ -138,16 +138,14 @@ describe('CHD-424 tester: standing background edges', () => {
       await window.shows('background  1 monitor running');
     }));
 
-  test('a child prompt clears the whole tab; closing that child removes its items without adding an ended row', () =>
+  test('a child prompt keeps running monitors; closing that child removes its items without adding an ended row', () =>
     withBackground(
       async (window) => {
         await ready(window);
         await send(window, 'monitorchild');
         await window.shows('background  2 monitors running');
         await send(window, 'monitorexit');
-        await window.shows(
-          'background  ✗ 1 monitor failed · 2 monitors running',
-        );
+        await window.shows('background  2 monitors running');
         await window.press(DOWN);
         await window.press(DOWN);
         await window.shows('❯ parser ');
@@ -464,7 +462,7 @@ describe('CHD-424 tester: background frame edges', () => {
       { rows: 24, columns: 80 },
     ));
 
-  test('a stopped monitor duration freezes while another monitor keeps ticking', () =>
+  test('a stopped monitor leaves while the replacement monitor keeps ticking', () =>
     withBackground(async (window) => {
       await ready(window);
       await send(window, 'monitors');
@@ -473,23 +471,24 @@ describe('CHD-424 tester: background frame edges', () => {
       await window.press('\r');
       await window.shows('❯ dev server errors');
       await window.press('x');
-      await window.shows('■ stopped after');
+      await window.shows('❯ CI run 4812');
+      await window.shows('Background · 1 in this tab');
 
-      const row = () =>
-        window
-          .frame()
-          .split('\n')
-          .find((line) => line.includes('❯ dev server errors'));
-      const stopped = row();
       const running = /running ([^·\n]+)/.exec(window.frame())?.[1];
 
       await until(
-        'running monitor time advances',
+        'remaining monitor time advances',
         () => /running ([^·\n]+)/.exec(window.frame())?.[1] !== running,
       );
+      expect(window.frame()).not.toContain('❯ dev server errors');
+      expect(window.frame()).not.toContain('■ stopped after');
       await window.press('x');
-      expect(row()).toBe(stopped);
-      expect(window.frame()).toContain('Background · 2 in this tab');
+      await until(
+        'last monitor closes view',
+        () => !window.frame().includes('Background ·'),
+      );
+      await window.type('back in prompt');
+      expect(promptRow(window)).toContain('back in prompt');
     }));
 
   test('long names render whole in a scrolled 80x24 view, with the focused item and hint visible', async () => {
@@ -814,7 +813,9 @@ describe('CHD-462 B1 tester: an arriving input hides and resumes the frame', () 
               await window.shows('❯ CI run 4812');
               expect(window.frame()).toContain('│ ›');
               await window.press('x');
-              await window.shows('■ stopped after');
+              await window.shows('Background · 1 in this tab');
+              await window.shows('❯ dev server errors');
+              expect(window.frame()).not.toContain('❯ CI run 4812');
               await window.press(ESC);
               await window.shows('❯ background');
               await window.press(ESC);

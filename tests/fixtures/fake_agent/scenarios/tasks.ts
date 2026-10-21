@@ -75,6 +75,104 @@ export const LONG_TASK_ARGS = {
 export const TALL_TASK_NAME =
   'Rewrite the tokenizer as a single pass over the source that reads every token, string and comment once, keeping the line and column of each one so the parser can point at the exact place a mistake starts, with the old lookahead buffer replaced by a small ring of the last three tokens, the escapes inside strings decoded where they are read rather than in a second walk, the numbers parsed with their radix and separators checked as they come, every error message reworded to say what was expected and what was found instead, with the positions kept for the error messages the parser prints, and the old two-pass reader removed together';
 
+/** `taskstays`' play, its task started with `args`. */
+async function taskStays(
+  turn: Turn,
+  args: typeof TASK_ARGS,
+): Promise<acp.StopReason> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
+  }
+
+  try {
+    await turn.say('I will send a task agent on fake for the fix.');
+    await callChord(turn, client, 'spawn_task', args);
+    await turn.say('It is running; I will check its report when it lands.');
+    turn.signal.throwIfAborted();
+    await once(turn.signal, 'abort', { signal: lifetime.signal });
+    turn.signal.throwIfAborted();
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn';
+}
+
+/** How long `taskchildhold` stays at work if no cancel comes. */
+const HOLD_MS = 10_000;
+
+/** `taskchild`'s play: with `hold`, at work after its message. */
+async function taskChild(turn: Turn, hold: boolean): Promise<acp.StopReason> {
+  const client = await chordClient(turn);
+
+  try {
+    await work(
+      turn,
+      'Search tokenize in src/parse',
+      'search',
+      'src/parse/tokenize.ts',
+    );
+    await work(turn, 'Read src/parse/tokenize.ts', 'read', '120 lines');
+
+    const toolCallId = turn.callId('edit');
+    const toolCall: acp.ToolCall = {
+      toolCallId,
+      title: 'Edit src/parse/tokenize.ts',
+      kind: 'edit',
+      status: 'pending',
+      locations: [{ path: 'src/parse/tokenize.ts' }],
+    };
+
+    await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
+
+    const answer = await turn.client.request('session/request_permission', {
+      sessionId: turn.sessionId,
+      toolCall,
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    });
+
+    if (answer.outcome.outcome === 'cancelled') {
+      return 'cancelled';
+    }
+
+    const allowed = answer.outcome.optionId === 'allow';
+
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId,
+      status: allowed ? 'completed' : 'failed',
+    });
+
+    if (!allowed) {
+      throw new acp.RequestError(-32603, TASK_FAILURE);
+    }
+
+    if (client !== undefined) {
+      await callChord(turn, client, 'send_message', { text: TASK_MESSAGE });
+    }
+
+    if (hold) {
+      // At work until the turn is cancelled, or for a while at most.
+      await pause(turn.signal, HOLD_MS);
+    }
+
+    await work(turn, '`deno task test`', 'execute', '214 passed, 0 failed');
+    await pause(turn.signal, TASK_STEP_MS * 10);
+    await turn.say(TASK_REPORT);
+  } finally {
+    await client?.close();
+  }
+
+  return 'end_turn';
+}
+
 export const TASKS = {
   // As tasklong, under a name taller than the background frame (CHD-430).
   async tasktallname(turn) {
@@ -204,28 +302,12 @@ export const TASKS = {
   // As `task`, its turn running on until it is cancelled, however long
   // the task takes to ask its permission and send its message: no timer
   // ends it, only the cancel, or the client going.
-  async taskstays(turn) {
-    const client = await chordClient(turn);
+  taskstays: (turn) => taskStays(turn, TASK_ARGS),
 
-    if (client === undefined) {
-      await turn.say('No chord server in this session.');
-
-      return 'end_turn';
-    }
-
-    try {
-      await turn.say('I will send a task agent on fake for the fix.');
-      await callChord(turn, client, 'spawn_task', TASK_ARGS);
-      await turn.say('It is running; I will check its report when it lands.');
-      turn.signal.throwIfAborted();
-      await once(turn.signal, 'abort', { signal: lifetime.signal });
-      turn.signal.throwIfAborted();
-    } finally {
-      await client.close();
-    }
-
-    return 'end_turn';
-  },
+  // As `taskstays`, its task on `taskchildhold`, which stays at work after
+  // its message until it is cancelled (CHD-399).
+  taskstayshold: (turn) =>
+    taskStays(turn, { ...TASK_ARGS, prompt: 'taskchildhold' }),
 
   // As `task`, its turn running on until a message is steered into it, as
   // the task's is, however long the task takes to ask and send it; for a
@@ -458,65 +540,9 @@ export const TASKS = {
   // A task's job: two calls, a write it asks the person for, a message to
   // its parent, a test run, then the report. A denied write fails the turn,
   // so the parent gets a failed report.
-  async taskchild(turn) {
-    const client = await chordClient(turn);
+  taskchild: (turn) => taskChild(turn, false),
 
-    try {
-      await work(
-        turn,
-        'Search tokenize in src/parse',
-        'search',
-        'src/parse/tokenize.ts',
-      );
-      await work(turn, 'Read src/parse/tokenize.ts', 'read', '120 lines');
-
-      const toolCallId = turn.callId('edit');
-      const toolCall: acp.ToolCall = {
-        toolCallId,
-        title: 'Edit src/parse/tokenize.ts',
-        kind: 'edit',
-        status: 'pending',
-        locations: [{ path: 'src/parse/tokenize.ts' }],
-      };
-
-      await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
-
-      const answer = await turn.client.request('session/request_permission', {
-        sessionId: turn.sessionId,
-        toolCall,
-        options: [
-          { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
-          { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
-        ],
-      });
-
-      if (answer.outcome.outcome === 'cancelled') {
-        return 'cancelled';
-      }
-
-      const allowed = answer.outcome.optionId === 'allow';
-
-      await turn.send({
-        sessionUpdate: 'tool_call_update',
-        toolCallId,
-        status: allowed ? 'completed' : 'failed',
-      });
-
-      if (!allowed) {
-        throw new acp.RequestError(-32603, TASK_FAILURE);
-      }
-
-      if (client !== undefined) {
-        await callChord(turn, client, 'send_message', { text: TASK_MESSAGE });
-      }
-
-      await work(turn, '`deno task test`', 'execute', '214 passed, 0 failed');
-      await pause(turn.signal, TASK_STEP_MS * 10);
-      await turn.say(TASK_REPORT);
-    } finally {
-      await client?.close();
-    }
-
-    return 'end_turn';
-  },
+  // As `taskchild`, at work after its message until it is cancelled, so a
+  // test's Esc meets it running however slow the test is (CHD-399).
+  taskchildhold: (turn) => taskChild(turn, true),
 } satisfies Record<string, Play>;

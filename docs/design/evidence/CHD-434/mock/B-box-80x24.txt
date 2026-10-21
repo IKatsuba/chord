@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ dimcode starts other agents                                                  │
+│                                                                              │
+│ dimcode may start other agent CLIs it finds on your PATH, such as claude,    │
+│ codex and cursor, as subagents of its own. It starts them with their         │
+│ approvals bypassed, on your own accounts, and nothing they do reaches        │
+│ chord's permission box.                                                      │
+│                                                                              │
+│ To turn it off, set <KEY> in dimcode's own config, or set dimcode's          │
+│ permission option to <VALUE> in /config, which gates its agent tool.         │
+│                                                                              │
+│ ❯ 1. Got it, don't show this again                                           │
+│   2. Show it again next time                                                 │
+│                                                                              │
+│ Enter to pick · 1–2 · ↑↓ to move · Esc to show it again next time            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                        dimcode · claude-sonnet-4-5 · read-only

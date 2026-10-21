@@ -345,6 +345,8 @@
   `tools` and `text` scenarios) before it answers; any other id is not found,
   and `CHORD_FAKE_REFUSE_LOAD=1` refuses every load; `--resume-only` also
   offers `session/resume`, which takes the same ids and replays nothing.
+  Adding `--no-load` leaves out `session/load`, so chord resumes even a
+  session it has no record of.
   `--steering claude` or `--steering codex` (`CHORD_FAKE_STEERING`)
   advertises `_session/steering` and answers it as that adapter does: into
   the turn playing, `injected`, read at its next step or as it ends with

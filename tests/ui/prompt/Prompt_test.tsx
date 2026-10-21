@@ -2384,6 +2384,12 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
           const held =
             Promise.withResolvers<Awaited<ReturnType<ClipboardReader>>>();
           let reads = 0;
+          let readFinished = false;
+
+          void held.promise.then(() => {
+            readFinished = true;
+          });
+
           let finished = false;
           let childReplied = false;
           const notice = 'The parent clipboard has no image';
@@ -2440,8 +2446,22 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
 
                 await window.press(CTRL_V);
                 await window.shows(notice);
+                expect(readFinished).toBe(false);
                 await writeFile(gate, '');
                 await until('the background startup settles', () => finished);
+
+                if (!child && !fails) {
+                  // The open promise precedes the UI's connected event.
+                  await leader(window, '2');
+                  await until(
+                    'the original tab is connected',
+                    () =>
+                      !window.frame().includes('Starting codex…') &&
+                      window.frame().includes('? for shortcuts'),
+                  );
+                  await leader(window, '1');
+                  await window.shows(notice);
+                }
 
                 if (child && !fails) {
                   await until(
@@ -2450,6 +2470,8 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
                   );
                 }
 
+                expect(readFinished).toBe(false);
+                expect(reads).toBe(2);
                 held.resolve({
                   image: {
                     mediaType: 'image/png',

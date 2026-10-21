@@ -94,7 +94,10 @@
  * (`steeredIn`). The gated and held variants other scenarios have
  * (`overlaptwo`, `subagentstatesstay`, `planshrinkgated`, `agentsheldgated`,
  * `longheld`, `leftformgated`, `taskstayshold`, `texttillsteered`) are
- * named in this folder's AGENTS.md; each waits 10 s at most.
+ * named in this folder's AGENTS.md. Each wait they add, for a gate, a
+ * message or a cancel, is 10 s at most; `taskstayshold`'s parent, as
+ * `taskstays`', still holds its turn until it is cancelled or the client
+ * goes.
  * `bashcut` leaves a command running and a call that never ran for about
  * 10 s: a cancel ends both `failed` with the lines Claude's adapter gives,
  * the command's terminal with no exit code; left alone, the turn ends and

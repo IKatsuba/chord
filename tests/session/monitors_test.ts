@@ -1220,3 +1220,30 @@ test("a monitor keeps its last batch's lines and when it went, the lines its end
   await monitor.ended;
   expect(monitor.running.lastEvent?.lines).toStrictEqual(['last words']);
 });
+
+test("the person's x keeps the lines its monitor had not sent yet as its last, in the ended monitor the window shows (CHD-481)", () =>
+  withAgent(async (conversation, events, dir) => {
+    const command = fakeCommand();
+    const ended = () =>
+      events
+        .flatMap((event) => (event.type === 'monitors' ? [event.ended] : []))
+        .at(-1)?.[0];
+
+    idOf(
+      conversation.startMonitor(
+        { command: 'watch', description: 'build' },
+        dir,
+        command.run,
+      ),
+    );
+    command.line('first');
+    await until(
+      () => conversation.monitors[0]?.lastEvent?.lines[0] === 'first',
+    );
+    // Not handed on yet when the person stops it: its end carries it.
+    command.line('unsent');
+    conversation.stopMonitor('m1', 'person');
+    expect(ended()?.end).toStrictEqual({ kind: 'stopped' });
+    await until(() => ended()?.lastEvent?.lines[0] === 'unsent');
+    expect(ended()?.end).toStrictEqual({ kind: 'stopped' });
+  }));

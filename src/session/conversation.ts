@@ -1606,9 +1606,20 @@ export class Conversation {
     });
   }
 
-  /** Keeps `monitor`'s end for the window, once: a stop's comes first. */
+  /**
+   * Keeps `monitor`'s end for the window, once: a stop's comes first, and
+   * the end that follows it only brings the last lines it carried (CHD-481).
+   */
   #endedMonitor(monitor: RunningMonitor, end: MonitorEnd): void {
     if (this.#endedMonitors.some((ended) => ended.id === monitor.id)) {
+      const { lastEvent } = monitor;
+
+      if (lastEvent !== undefined) {
+        this.#endedMonitors = this.#endedMonitors.map((ended) =>
+          ended.id === monitor.id ? { ...ended, lastEvent } : ended,
+        );
+      }
+
       return;
     }
 

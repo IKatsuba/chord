@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
@@ -1545,8 +1545,8 @@ describe('CHD-467 tester: answer and cost settlement in either wire order', () =
     }));
 });
 
-describe('CHD-479 tester: replay keeps wire endings without inventing who stopped', () => {
-  test('a recorded late stop has one end line after replay, with no synthetic x attribution', () => {
+describe('CHD-479 tester: legacy records without a person-stop line keep their wording', () => {
+  test('an old recorded late stop says stopped after, without inventing x attribution', () => {
     const entries: RecordEntry[] = [
       { type: 'prompt', turnId: 't1', prompt: 'work', images: 0, at: 1 },
       {
@@ -1596,6 +1596,10 @@ describe('CHD-479 tester: replay keeps wire endings without inventing who stoppe
       endedAt: 4002,
     });
     expect(ends[0]?.byPerson).toBeUndefined();
+    assert(ends[0]);
+    expect(endedText(ends[0])).toBe(
+      '■ Check replay · agent · stopped after 4s',
+    );
     expect(actions.some((action) => action.type === 'subagent_stopping')).toBe(
       false,
     );
@@ -1781,3 +1785,130 @@ function endedText(entry: Extract<Entry, { kind: 'item_ended' }>): string {
 
   return `${line.marker} ${line.name}${line.kind}${line.end}`;
 }
+
+describe('CHD-479 U4 tester: persisted stop ordering and isolation', () => {
+  const update = (
+    id: string,
+    state: 'running' | 'cancelled' | 'completed',
+    at: number,
+    parent?: string,
+  ): RecordEntry => ({
+    type: 'update',
+    turnId: 'root',
+    at,
+    ...(parent === undefined ? {} : { subagentId: parent }),
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: id,
+      description: `Check ${id}`,
+      state: { state },
+      capabilities: { cancel: {} },
+    },
+  });
+  const prefix: RecordEntry[] = [
+    { type: 'prompt', turnId: 'root', prompt: 'work', images: 0, at: 1 },
+    update('outer', 'running', 2),
+    update('inner', 'running', 3, 'outer'),
+    {
+      type: 'result',
+      turnId: 'root',
+      result: { status: 'completed', stopReason: 'end_turn' },
+    },
+  ];
+  const stop = (id: string, stopping: boolean): RecordEntry => ({
+    type: 'stopping',
+    subagentId: id,
+    stopping,
+  });
+  const replay = (entries: readonly RecordEntry[]) =>
+    recordActions(entries)
+      .reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      )
+      .entries.filter((entry) => entry.kind === 'item_ended');
+
+  test('serialized nested stop and retraction keep their order, without changing a sibling stop', () =>
+    withDir(async (dir) => {
+      const entries = [
+        ...prefix,
+        stop('inner', true),
+        stop('inner', true),
+        stop('outer', true),
+        stop('inner', false),
+        update('inner', 'cancelled', 4003, 'outer'),
+        update('outer', 'cancelled', 5002),
+      ];
+      const path = join(dir, 'nested.jsonl');
+
+      await writeFile(
+        path,
+        entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n',
+      );
+
+      const read = await readPast(path);
+      const stopping = recordActions(read).filter(
+        (action) => action.type === 'subagent_stopping',
+      );
+      const lines = replay(read);
+
+      expect(
+        stopping.map(({ subagentId, stopping }) => [subagentId, stopping]),
+      ).toStrictEqual([
+        ['inner', true],
+        ['inner', true],
+        ['outer', true],
+        ['inner', false],
+      ]);
+      expect(lines.map(endedText)).toStrictEqual([
+        '■ Check inner · agent · stopped after 4s',
+        '■ Check outer · agent · stopped with x after 5s',
+      ]);
+      expect(lines.every(({ turnId }) => turnId === 'history-root')).toBe(true);
+    }));
+
+  test('a repeated stop retried after retraction produces one attributed end, while late duplicates produce none', () => {
+    const lines = replay([
+      ...prefix,
+      stop('inner', true),
+      stop('inner', false),
+      stop('inner', true),
+      stop('inner', true),
+      update('inner', 'cancelled', 4003, 'outer'),
+      stop('inner', true),
+      update('inner', 'cancelled', 5003, 'outer'),
+    ]);
+
+    expect(
+      lines.filter(({ name }) => name === 'Check inner').map(endedText),
+    ).toStrictEqual(['■ Check inner · agent · stopped with x after 4s']);
+  });
+
+  test('natural completion and another record reusing the id cannot inherit person-stop wording', () => {
+    const natural = replay([
+      ...prefix,
+      stop('inner', true),
+      update('inner', 'completed', 4003, 'outer'),
+    ]);
+    const stopped = replay([
+      ...prefix,
+      stop('inner', true),
+      update('inner', 'cancelled', 4003, 'outer'),
+    ]);
+    const other = replay([
+      ...prefix,
+      update('inner', 'cancelled', 4003, 'outer'),
+    ]);
+
+    expect(
+      natural.filter(({ name }) => name === 'Check inner').map(endedText),
+    ).toStrictEqual(['✓ Check inner · agent · done in 4s']);
+    expect(
+      stopped.filter(({ name }) => name === 'Check inner').map(endedText),
+    ).toStrictEqual(['■ Check inner · agent · stopped with x after 4s']);
+    expect(
+      other.filter(({ name }) => name === 'Check inner').map(endedText),
+    ).toStrictEqual(['■ Check inner · agent · stopped after 4s']);
+  });
+});

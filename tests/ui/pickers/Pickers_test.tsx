@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
@@ -6,6 +7,7 @@ import { ConfigPicker } from '../../../src/ui/pickers/Pickers.tsx';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseServers } from '../../../src/mcp.ts';
+import { serveChord } from '../../../src/server/server.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { recordSession } from '../../fixtures/records.ts';
@@ -644,6 +646,68 @@ test('/mcp says what the files defined that chord did not pass', () =>
       rows: 60,
     },
   ));
+
+test("/mcp on a picked child on another runtime names that child's agent and what it held back (CHD-441)", async () => {
+  const server = serveChord();
+  const admit = server.admit.bind(server);
+  let main: Parameters<typeof admit>[0] | undefined;
+  const command = fakeAgentCommand();
+
+  server.admit = (caller) => {
+    if (caller.role === 'person') {
+      main = caller;
+    }
+
+    return admit(caller);
+  };
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        assert(main);
+        await main.window.open(main.key, {
+          agent: 'codex',
+          name: 'foreign',
+          prompt: 'text',
+        });
+        await window.shows('foreign');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('╭─ foreign ─');
+        await window.type('/mcp');
+        await window.press('\r');
+        await window.shows("chord's MCP servers for codex.");
+
+        const frame = window.frame();
+
+        expect(frame).toContain(
+          "chord's server was not passed: codex does not take MCP servers over HTTP",
+        );
+        expect(frame).toContain(
+          'docs was not passed: codex takes MCP servers over stdio only.',
+        );
+        expect(frame).not.toContain('for fake');
+      },
+      {
+        server,
+        mcpServers: SERVERS,
+        rows: 60,
+        runtimes: ['fake', 'codex'],
+        agentCommand: command,
+        startupOf: (agent) => ({
+          agentCommand:
+            agent === 'codex'
+              ? fakeAgentCommand(undefined, '--mcp-transports', 'none')
+              : command,
+        }),
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
 
 test('/mcp with every server ignored says so, not that none are defined', () =>
   withWindow(

@@ -1,0 +1,24 @@
+   │  ⎿  Failed
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(watcher) · 1 tool use · 0s
+      ⎿  Untracked
+
+ ››› Waiting for permission… (6s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(explorer (Explore)) asks                                               │
+│ Write notes/routing.md                                                       │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  ● main's agent asking · ? main's agent untracked

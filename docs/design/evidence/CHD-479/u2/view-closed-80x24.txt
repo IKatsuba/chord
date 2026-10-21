@@ -1,0 +1,24 @@
+
+ ⏺ Two monitors are running.
+
+ ← from dev server errors · monitor
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined
+      (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+ ← from CI run 4812 · monitor · stopped
+   ⎿  The person stopped it after 8s.
+
+ ⏺ Received the message from CI run 4812 · monitor · stopped.
+
+ ← from dev server errors · monitor · stopped
+   ⎿  The person stopped it after 9s.
+
+ ⏺ Received the message from dev server errors · monitor · stopped.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 2% used

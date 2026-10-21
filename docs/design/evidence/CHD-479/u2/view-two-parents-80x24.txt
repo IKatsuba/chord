@@ -1,0 +1,24 @@
+   └─ Agent(explorer (Explore)) · 1 tool use
+      ⎿  Search(cancelled in src/session)
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 3 in this tab                                                   │
+│                                                                              │
+│ ❯ Run the test suite    agent  running 2s  main                              │
+│   Run the test suite    agent  running 1s  coder                             │
+│   Find the cancel path  agent  running 1s  coder                             │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ coder · bugfix ─────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a · ⏸ plan mode on   Fake… · 1% used
+    main       fake         ◦ idle 0s         ✓ new reply
+    bugfix     team · fake  ◦ idle 41s
+    ├─ tester  fake         ● permission 40s
+    └─ coder   fake         ✻ working 0s
+    background  main's agent and coder's 2 agents running

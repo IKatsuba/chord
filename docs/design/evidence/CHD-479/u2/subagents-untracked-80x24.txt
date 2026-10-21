@@ -1,0 +1,24 @@
+
+ ⏺ The tests run on; I will say when they end.
+
+ › claudesubagents
+
+ ⏺ I will send four agents.
+
+ ⏺ 4 agents ended · 1 failed, 1 untracked, 1 cancelled (ctrl+o to expand)
+   ├─ Agent(explorer (Explore)) · 3 tool uses · 10s
+   │  ⎿  Done
+   ├─ Agent(reviewer (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Failed
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(watcher) · 1 tool use · 0s
+      ⎿  Untracked
+
+ ⏺ Each agent has ended.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  ? main's agent untracked

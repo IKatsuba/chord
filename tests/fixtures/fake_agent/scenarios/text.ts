@@ -165,8 +165,9 @@ export const TEXT = {
   },
 
   // `long`'s first 20 lines, then, once the test writes `GATE_RELEASE`,
-  // two more, then the turn held until it is cancelled: a test sees line 20
-  // last for as long as it needs, then exactly two below it (CHD-399).
+  // line 21 alone, then the turn held until it is cancelled: a test sees
+  // line 20 last for as long as it needs, then exactly one row below it,
+  // which the held rule counts as two (CHD-397, CHD-399).
   async longheld(turn) {
     for (let n = 1; n <= 20; n++) {
       await pause(turn.signal, STEP_MS * 19);
@@ -175,9 +176,7 @@ export const TEXT = {
 
     await gateOpened(turn, GATE_RELEASE);
 
-    for (let n = 21; n <= 22; n++) {
-      await turn.say(longLine(n));
-    }
+    await turn.say(longLine(21));
 
     await pause(turn.signal, HELD_WITHIN_MS);
 

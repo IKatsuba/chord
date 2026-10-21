@@ -332,6 +332,7 @@ const SCENARIOS = [
   'shellcut',
   'bash',
   'bashtwo',
+  'bashone',
   'bashcut',
   'bashask',
   'claudebetween',

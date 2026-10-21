@@ -12,7 +12,7 @@ import {
 } from '../../headlines.ts';
 import { STEP_MS } from '../options.ts';
 import { codexCall } from './chord_tools.ts';
-import { pause, type Play, type Turn } from '../turn.ts';
+import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
 
 /** Calls in a `steps` turn, each an entry of the transcript. */
 const STEPS = 150;
@@ -132,14 +132,8 @@ export const LONG_TERMINAL =
   'character early and the quote was read as the start of the next one\n';
 
 /**
- * How long a step waits for the messages it waits on, so one never steered
- * in fails its test rather than hanging the turn.
- */
-const TOLD_WITHIN_MS = 10_000;
-
-/**
  * `overlap`'s two calls, then its last step once `untilTold` messages were
- * steered into the turn, or after `TOLD_WITHIN_MS` without them.
+ * steered into the turn (`steeredIn`).
  */
 async function overlapping(turn: Turn, untilTold: number) {
   const open = (toolCallId: string, title: string) =>
@@ -165,11 +159,7 @@ async function overlapping(turn: Turn, untilTold: number) {
   await pause(turn.signal, STEP_MS * 20);
   await end('overlap-b');
 
-  const deadline = Date.now() + TOLD_WITHIN_MS;
-
-  while (turn.told < untilTold && Date.now() < deadline) {
-    await pause(turn.signal);
-  }
+  await steeredIn(turn, untilTold);
 
   await turn.say('Both slept.');
 

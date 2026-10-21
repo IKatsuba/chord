@@ -13,7 +13,7 @@ import process from 'node:process';
 import * as acp from '@agentclientprotocol/sdk';
 import { STEP_MS } from '../options.ts';
 import { cwds } from '../sessions.ts';
-import { pause, type Play, type Turn } from '../turn.ts';
+import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
 /** A child's pace: 20 steps, a tenth of a second by default. */
@@ -348,10 +348,7 @@ async function callChild(turn: Turn, untilTold = 0): Promise<acp.StopReason> {
     ],
   });
 
-  while (turn.told < untilTold) {
-    await pause(turn.signal);
-  }
-
+  await steeredIn(turn, untilTold);
   await turn.say('The tests pass.');
 
   return 'end_turn';

@@ -31,6 +31,19 @@ export function pause(signal: AbortSignal, ms = STEP_MS): Promise<void> {
 }
 
 /**
+ * Until `count` messages were steered into `turn`, as a model's next step
+ * comes only after the tool's result, or 10 s without them, so a message
+ * never steered in fails its test rather than hanging the turn (CHD-399).
+ */
+export async function steeredIn(turn: Turn, count: number): Promise<void> {
+  const deadline = Date.now() + 10_000;
+
+  while (turn.told < count && Date.now() < deadline) {
+    await pause(turn.signal);
+  }
+}
+
+/**
  * Aborted once the client has closed the connection: work that outlives
  * every turn, a background subagent or a stop held for a test, ends on it,
  * so no timer keeps the process alive after its client left.

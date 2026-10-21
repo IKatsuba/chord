@@ -422,8 +422,10 @@ chord also reports the whole window's status through the
 (OSC 7501), always on, independently of `preferredNotifChannel`. One root
 record with `app=chord` covers every agent in every tab, including children.
 Its `title` names the front tab's main session, even with a child picked:
-the first prompt on one line, as `/resume` shows it (`!ls` when the first
-prompt is that shell command). It is absent before a prompt and after `/clear`.
+the agent's own session title, updated when it renames the session and
+restored on resume. Until the agent gives a title, it uses the first prompt
+on one line (`!ls` for that shell command), as `/resume` still shows it.
+With neither, the title is absent; `/clear` resets it.
 The title takes at most 192 UTF-8 bytes (256 in base64 on the wire).
 The first state present wins: `blocked`, `error`, `working`, `done`, `idle`.
 A permission, form or link makes it `blocked`, with kind `permission`,

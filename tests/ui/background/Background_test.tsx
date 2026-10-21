@@ -145,6 +145,7 @@ describe('CHD-424 tester: standing background edges', () => {
         await send(window, 'monitorchild');
         await window.shows('background  2 monitors running');
         await send(window, 'monitorexit');
+        await window.shows('Received the message from CI run 4812');
         await window.shows('background  2 monitors running');
         await window.press(DOWN);
         await window.press(DOWN);
@@ -156,9 +157,15 @@ describe('CHD-424 tester: standing background edges', () => {
 
         await window.press(DOWN);
         await window.shows('❯ parser ');
+        await window.shows('Received the message from parser tests · monitor.');
+        // A busy child's first x only arms closing; wait for its monitor reply.
+        await until('parser idle before closing', () =>
+          /❯ parser .*◦ idle/.test(window.frame()),
+        );
         await window.press('x');
         await window.shows('background  1 monitor running');
-        expect(window.frame()).not.toContain('❯ parser ');
+        expect(window.frame()).not.toMatch(/^.*parser +fake.*$/m);
+        expect(window.frame()).not.toContain('╭─ parser ─');
         expect(window.frame()).not.toContain('1 monitor stopped');
         await window.press(ESC);
         await send(window, '/clear');

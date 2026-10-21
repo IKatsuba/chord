@@ -1,0 +1,40 @@
+ ⏺ Received the message from 30-min heartbeat while the owner is away · monitor.
+
+ ← from 30-min heartbeat while the owner is away · monitor
+   ⎿  heartbeat 1: check the ship run for a stall
+
+ ⏺ Received the message from 30-min heartbeat while the owner is away · monitor.
+
+ ← from 30-min heartbeat while the owner is away · monitor
+   ⎿  heartbeat 1: check the ship run for a stall
+
+ ⏺ Received the message from 30-min heartbeat while the owner is away · monitor.
+
+ ← from 30-min heartbeat while the owner is away · monitor
+   ⎿  heartbeat 1: check the ship run for a stall
+
+ ⏺ Received the message from 30-min heartbeat while the owner is away · monitor.
+
+ ← from 30-min heartbeat while the owner is away · monitor
+   ⎿  heartbeat 1: check the ship run for a stall
+
+ ⏺ Received the message from 30-min heartbeat while the owner is away · monitor.
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · m22, 1 of 4 in this tab                                                                                 │
+│                                                                                                                      │
+│ 30-min heartbeat while the owner is away                                                                             │
+│ ✗ timed out after 1h · 1 event · started 3h 46m ago · timeout 1h · main                                              │
+│ $ for i in 1 2; do sleep 1800; echo "heartbeat $i: check the ship run for a stall"; done                             │
+│ ← heartbeat 1: check the ship run for a stall · 3h 16m ago                                                           │
+│ Timed out after 1h (timeout_ms 3600000); chord stopped it.                                                           │
+│                                                                                                                      │
+│ ↑ ↓ for the others · Enter to go to its call · x to stop · Esc to go back                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                 Fake Large with a 1M context window · medium effort · 1% context used
+    background  ✗ 3 monitors failed · 1 monitor running

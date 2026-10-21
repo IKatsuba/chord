@@ -1,0 +1,24 @@
+[38;2;255;255;255m
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mOpen[0m(tester)[2m · fake · fake-small · acceptEdits[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mcostwait[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mOpen[0m(coder)[2m · fake · fake-large · plan[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mYou will edit src/parse/tokenize.ts, and only it, once tester's test[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mfails. Read it now; change nothing yet.[0m[38;2;255;255;255m
+
+ [39m→[38;2;255;255;255m [2m[39mto [0;1m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39min tests/parse/tokenize_test.ts; coder waits for it and will edit[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39msrc/parse/tokenize.ts only. I will report when the test fails[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mfor the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mtester and coder are open; I wait for tester's test.[38;2;255;255;255m
+
+[38;2;108;182;255m╭─[1m bugfix[0m[38;2;108;182;255m ─────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;2;108;182;255m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;255;193;7m● docs needs your permission · ctrl+x a[38;2;255;255;255m  [2m[39mFake Large with a 1M con… · 1% used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39mmain     [2m  fake         ◦ idle 3s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [1m[38;2;108;182;255mbugfix   [0;2m  team · fake  ◦ idle 12s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39m├─ [0m[38;2;196;156;255mtester[2m[39m  fake       [0m[38;2;72;150;140m  ✻ working 12s   [2m[39m  ← new message[0m[38;2;255;255;255m
+  [2m[39m  … +4 more[0m[38;2;255;255;255m

@@ -1,0 +1,40 @@
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ › agentexit
+
+ ⏺ Open(parser 2) · fake · fake-small
+   ⎿  crash
+
+ ⏺ Waiting on parser.
+
+ ← from chord
+   ⎿  parser 2's agent exited: fatal: out of memory reading tests/parse/fixtures/huge.json. open_agent opens it
+      again.
+
+ ⏺ Received the message from chord.
+
+ › /team show bugfix
+   ⎿  bugfix · /tmp/chord-qa-home.des483tsv1/chord/teams/bugfix.md · working 9s on "Issue 214: a string at the end of
+      a line loses its closing quote. readString in src/parse/tokenize.ts stops at the newline before it consumes the
+      quote. Add a test that fails for that reason, fix it, and have the diff reviewed. Report to me when it is
+      done."
+
+      lead    fake · fake-large  default      ◦ idle 9s     ✓ new reply    → to @main
+      tester  fake · fake-small  acceptEdits  ✻ working 9s  ← new message  ← from @bugfix
+      coder   fake · fake-large  plan         ◦ idle 8s     ✓ new reply    → to @tester
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts        Fake Large with a 1M context window · 2% used
+    main       fake · Fake Large with a 1M context window · medium  ◦ idle 2s
+    bugfix     team · fake · 3 agents                               ✻ tester: working 10s  ✓ new reply
+    parser     fake · Fake Small · medium                           ◦ idle 4s              ✓ new reply
+    docs       fake · Fake Large with a 1M context window · medium  ● permission 8s        ← new message
+    parser 2   fake · Fake Small · medium                           ✗ exited

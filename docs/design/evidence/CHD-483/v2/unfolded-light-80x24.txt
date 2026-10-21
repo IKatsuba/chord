@@ -1,0 +1,24 @@
+
+ ⏺ Open(tester) · fake · fake-small · acceptEdits
+   ⎿  costwait
+
+ ⏺ Open(coder) · fake · fake-large · plan
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test
+      fails. Read it now; change nothing yet.
+
+ → to @main
+   ⎿  On it. tester is writing a failing test
+      in tests/parse/tokenize_test.ts; coder waits for it and will edit
+      src/parse/tokenize.ts only. I will report when the test fails
+      for the bug's own reason.
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main       fake         ◦ idle 3s
+    bugfix     team · fake  ◦ idle 10s
+    ├─ tester  fake         ✻ working 10s    ← new message
+    … +4 more

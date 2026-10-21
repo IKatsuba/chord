@@ -88,6 +88,8 @@ function claudeCycle(usage: boolean): Play {
   return async (turn) => {
     void (async () => {
       try {
+        // Quiet counts from the turn's end, which may be slow to go.
+        await turn.over;
         await pause(lifetime.signal, QUIET);
         await say(turn, 'The background build ended; reading its log.');
         await pause(lifetime.signal, STEP);
@@ -117,6 +119,8 @@ export const CYCLES = {
   async claudecycleask(turn) {
     void (async () => {
       try {
+        // Quiet counts from the turn's end, which may be slow to go.
+        await turn.over;
         await pause(lifetime.signal, QUIET);
         await say(turn, 'The background build ended; saving its log.');
 

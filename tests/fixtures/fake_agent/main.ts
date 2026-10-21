@@ -799,9 +799,9 @@ async function playPrompt(
   const asked = text.trim();
   const scenario = isScenario(asked) ? asked : fallback;
 
-  try {
-    const turn = new Turn(client, params.sessionId, controller.signal);
+  const turn = new Turn(client, params.sessionId, controller.signal);
 
+  try {
     playing.set(params.sessionId, turn);
     await answered;
 
@@ -898,6 +898,8 @@ async function playPrompt(
 
     throw error;
   } finally {
+    turn.end();
+
     if (turns.get(params.sessionId) === controller) {
       turns.delete(params.sessionId);
       playing.delete(params.sessionId);

@@ -72,6 +72,8 @@ export class Turn {
   readonly #steered: string[] = [];
   /** How many messages steered into the turn it has read. */
   #read = 0;
+  /** Settles once the turn's play has returned, its answer on its way. */
+  readonly #over = Promise.withResolvers<void>();
 
   constructor(
     readonly client: Client,
@@ -101,6 +103,20 @@ export class Turn {
       sessionId: this.sessionId,
       update,
     });
+  }
+
+  /**
+   * Settles once the turn's play has returned and its answer goes out next,
+   * so what an agent does on its own after the turn comes after its end on
+   * the wire, however slow the turn's end was to go (CHD-399).
+   */
+  get over(): Promise<void> {
+    return this.#over.promise;
+  }
+
+  /** Marks the turn's play returned: `over` settles. */
+  end(): void {
+    this.#over.resolve();
   }
 
   /**

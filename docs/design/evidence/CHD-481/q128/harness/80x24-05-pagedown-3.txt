@@ -1,0 +1,24 @@
+   │  ⎿  Bash(bun test)
+   └─ Agent(explorer (Explore)) · 1 tool use
+      ⎿  Search(cancelled in src/session)
+
+ ››› Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 of 3                                                          │
+│                                                                              │
+│ Run the test suite  agent  running 0s  main                                  │
+│                                                                              │
+│ ── ↑ 13 lines above · pageup to scroll ───────────────────────────────────── │
+│ refusal line 13                                                              │
+│ refusal line 14                                                              │
+│ refusal line 15                                                              │
+│ refusal line 16                                                              │
+│ ── ↓ 14 lines below · pagedown to scroll ─────────────────────────────────── │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  1 monitor and main's 2 agents running

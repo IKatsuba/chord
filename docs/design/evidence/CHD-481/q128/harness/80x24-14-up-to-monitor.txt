@@ -1,0 +1,24 @@
+   │  ⎿  Bash(bun test)
+   └─ Agent(explorer (Explore)) · 1 tool use
+      ⎿  Search(cancelled in src/session)
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · m1, 1 of 3                                                      │
+│                                                                              │
+│ dev server errors                                                            │
+│ running 0s · no events · started 0s ago · timeout 10m · main                 │
+│ $ sleep 1; echo "ERROR [router] POST /login 500: Cannot read properties of   │
+│   undefined (reading 'trim')"; echo "    at validate                         │
+│   (src/routes/login.tsx:41:22)"; sleep 600                                   │
+│ ← no events yet                                                              │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  1 monitor and main's 2 agents running

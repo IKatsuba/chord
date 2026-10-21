@@ -409,6 +409,7 @@ const SCENARIOS = [
   'taskwait',
   'agents',
   'agentsheld',
+  'agentsheldgated',
   'agentchild',
   'agentclose',
   'agentcall',

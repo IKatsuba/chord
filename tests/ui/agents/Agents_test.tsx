@@ -5,7 +5,7 @@
  */
 import { describe, expect, setSystemTime, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
 import { readPast } from '../../../src/session/record.ts';
@@ -424,8 +424,12 @@ test("a queued message's row keeps its header whole on a narrow window and cuts 
     await withWindow(
       async (window) => {
         await ready(window);
-        await send(window, 'agentsheld');
+        // The message goes once chord shows docs asking, so chord holds it for
+        // the answer however slow docs started (CHD-399).
+        await send(window, 'agentsheldgated');
         await window.shows('● docs needs your permission');
+        await mkdir(join(window.dir, GATE), { recursive: true });
+        await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
         await leader(window, 'a');
         await window.shows('docs asks');
         await window.shows('← from @main · after your answer: ');

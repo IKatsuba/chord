@@ -2,23 +2,17 @@
 import * as acp from '@agentclientprotocol/sdk';
 import { clientTakesPlans } from '../client.ts';
 import { PLAN_CAPABILITY_ONLY, STEP_MS } from '../options.ts';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { cwds } from '../sessions.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
-import { GATE, GATE_RELEASE } from './agents.ts';
+import { GATE_RELEASE, gateOpened } from './agents.ts';
 
 /** How long the `plan` scenario holds each step: 400 steps, 2 s by default. */
 const PLAN_STEP_MS = STEP_MS * 400;
 
 const PRIORITIES = ['high', 'medium', 'low'] as const;
 
-/** How long `planshrinkgated` waits for its gate before dropping the step. */
-const GATE_WITHIN_MS = 10_000;
-
 /**
  * Three steps, the first in progress, then the first dropped: after a
- * while, or with `gated` once the test opens the gate, 10 s at most.
+ * while, or with `gated` once the test opens the gate (`gateOpened`).
  */
 async function planShrink(turn: Turn, gated: boolean) {
   const entry = (content: string, index: number): acp.PlanEntry => ({
@@ -27,16 +21,12 @@ async function planShrink(turn: Turn, gated: boolean) {
     status: index === 0 ? 'in_progress' : 'pending',
   });
   const steps = ['Read the code', 'Write the change', 'Run the tests'];
-  const release = join(cwds.get(turn.sessionId) ?? '.', GATE, GATE_RELEASE);
-  const deadline = Date.now() + GATE_WITHIN_MS;
 
   await turn.send({ sessionUpdate: 'plan', entries: steps.map(entry) });
   await turn.say('Planned.');
 
   if (gated) {
-    while (!existsSync(release) && Date.now() < deadline) {
-      await pause(turn.signal, STEP_MS * 2);
-    }
+    await gateOpened(turn, GATE_RELEASE);
   } else {
     await pause(turn.signal, STEP_MS * 200);
   }

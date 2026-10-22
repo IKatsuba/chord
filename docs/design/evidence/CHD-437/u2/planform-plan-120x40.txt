@@ -1,0 +1,40 @@
+      3. Run the tests.
+
+      Move
+      ◐ Move the routing
+      ☐ Run the tests
+
+      Todos
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ ⏺ Plan answer: {"outcome":"rejected"}
+
+ › planform
+
+ ⏺ Plan
+   ⎿  Waiting…
+      Route updates by session
+
+      1. Read src/acp/connection.ts.
+      2. Move the routing into src/session/session.ts.
+      3. Run the tests.
+
+ ››› Waiting for your answer to the plan… (2s)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│ ❯ 1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│   Note  Tell fake what to change, sent with 2 (optional)                                                             │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · Esc to keep planning                                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

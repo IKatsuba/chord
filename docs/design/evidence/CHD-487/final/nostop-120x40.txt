@@ -1,0 +1,40 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d487f-120
+ ▀▀     ? for shortcuts · /help
+
+ › subagentstatesstay
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Done (5 tool uses · 3s)
+
+ ⏺ Routing is in src/acp/connection.ts. Now both sides.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(explorer) · 0 tool uses
+   │  ⎿  Initializing…
+   └─ Agent(worker) · 0 tool uses
+      ⎿  Initializing…
+
+ ⏺ Wait(explorer, worker)
+   ⎿  Running…
+
+ ››› Working… (5s · esc to interrupt)
+  ⎿  ☒ Plan the change
+     ☒ Read the session layer
+     ◐ Write the design
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 of 2                                                                                                  │
+│                                                                                                                      │
+│ Find where chord routes session/update.                                                                              │
+│ running 2s · 0 tool uses · main                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│ this agent offers no stop                                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    background  main's 2 agents running

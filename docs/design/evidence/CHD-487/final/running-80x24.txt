@@ -1,0 +1,24 @@
+   │  ⎿  Bash(bun test)
+   └─ Agent(explorer (Explore)) · 1 tool use
+      ⎿  Search(cancelled in src/session)
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 of 2                                                          │
+│                                                                              │
+│ Run the test suite                                                           │
+│ running 1s · 1 tool use · main                                               │
+│ › Run bun test in the background and report what fails.                      │
+│                                                                              │
+│ ⏺ Bash(bun test)                                                             │
+│   ⎿  Running…                                                                │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    background  main's 2 agents running

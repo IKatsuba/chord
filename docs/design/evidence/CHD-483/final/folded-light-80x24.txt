@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from parser · fake.
+
+ › agentexit
+
+ ⏺ Open(parser 2) · fake · fake-small
+   ⎿  crash
+
+ ⏺ Waiting on parser.
+
+ ← from chord
+   ⎿  parser 2's agent exited: fatal: out of memory reading
+      tests/parse/fixtures/huge.json. open_agent opens it again.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 2% used
+    main       fake                    ◦ idle 9s
+    bugfix     team · fake · 3 agents  ✻ tester: working 35s  ✓ new reply
+    parser     fake                    ◦ idle 19s             ✓ new reply
+    … +2 more

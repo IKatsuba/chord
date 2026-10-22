@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { RGBA, TextAttributes } from '@opentui/core';
-import { colour, runs } from '../../../src/ui/theme/text.ts';
+import { colour, named, runs } from '../../../src/ui/theme/text.ts';
 
 test('a string with no escapes is one run with nothing set', () => {
   expect(runs('plain words')).toStrictEqual([
@@ -59,4 +59,17 @@ test("chalk's names stay the terminal's own colours, a hex its own", () => {
 test("chalk's ansi256(n) is the terminal's colour n, not OpenTUI's magenta", () => {
   expect(colour('ansi256(196)')).toStrictEqual(RGBA.fromIndex(196));
   expect(colour('ansi256(43)')).toStrictEqual(RGBA.fromIndex(43));
+});
+
+test("chalk's names for the terminal's sixteen are named; a hex, ansi256 or nothing is not (CHD-483)", () => {
+  expect(['yellow', 'greenBright', 'gray'].map(named)).toStrictEqual([
+    true,
+    true,
+    true,
+  ]);
+  expect(['#47e7a5', 'ansi256(152)', undefined].map(named)).toStrictEqual([
+    false,
+    false,
+    false,
+  ]);
 });

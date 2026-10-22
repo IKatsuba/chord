@@ -144,7 +144,7 @@ test('an agent always has one state, most urgent first, and what is not yet seen
   );
   expect(state({ exited: true })).toStrictEqual('✗ exited (error)');
   expect(state({ working: NOW - 62_000 })).toStrictEqual(
-    '✻ working 1m 2s (dim)',
+    '✻ working 1m 2s (working)',
   );
   // Idle since it last stopped, in its first unit.
   expect(state({ stopped: NOW - 190_000 })).toStrictEqual('◦ idle 3m (dim)');
@@ -162,7 +162,7 @@ test('an agent always has one state, most urgent first, and what is not yet seen
   expect(state(failed)).toStrictEqual('◦ idle 12s (dim)');
   expect(mark(failed)).toStrictEqual('✗ turn failed (error)');
   expect(mark({ unseen: { kind: 'replied', since: NOW } })).toStrictEqual(
-    '✓ new reply (success)',
+    '✓ new reply (dim)',
   );
   expect(
     mark({ unseen: { kind: 'message', from: '@main', since: NOW } }),

@@ -1,6 +1,8 @@
 /** The list under the prompt drawn on its own, its times counting. */
 import { describe, expect, setSystemTime, spyOn, test } from 'bun:test';
 import { useEffect } from 'react';
+import assert from 'node:assert/strict';
+import { colour, DIM, runs } from '../../../src/ui/theme/text.ts';
 import { until } from '../app/render.tsx';
 import { draw } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
@@ -369,6 +371,194 @@ test('a picked row taller than the list is drawn in the list’s lines and no mo
       }
     } finally {
       await drawn.unmount();
+    }
+  }
+});
+
+describe('working in the accent with dim, a new reply dim, in each theme (CHD-483)', () => {
+  // The SGR working is drawn in: dim, then the accent; the 16-colour
+  // themes' accent is the warning's yellow, so working takes green there.
+  const cases = [
+    ['dark', true, '\x1b[38;2;71;231;165m'],
+    ['light', true, '\x1b[38;2;20;125;85m'],
+    ['dark-daltonized', true, '\x1b[38;2;71;231;165m'],
+    ['dark-ansi', true, '\x1b[92m'],
+    ['light-ansi', true, '\x1b[32m'],
+    // Without colour, dim alone, as before.
+    ['dark', false, ''],
+  ] as const;
+
+  for (const [theme, colour, working] of cases) {
+    test(`${theme}${colour ? '' : ' without colour'}`, async () => {
+      const level = chalk.level;
+
+      chalk.level = 3;
+
+      setSystemTime(new Date('2026-10-21T12:00:00Z'));
+
+      try {
+        const now = Date.now();
+        const agents: AgentRow[] = [
+          row('main', 1, {
+            picked: true,
+            wait: { watch: emptyWatch, working: now - 9_000 },
+          }),
+          row('bugfix', 2, { runtime: 'team · fake', team: 2 }),
+          row('tester', 3, {
+            team: 2,
+            wait: { watch: emptyWatch, working: now - 9_000 },
+          }),
+          row('parser', 4, {
+            wait: {
+              watch: emptyWatch,
+              stopped: now - 4_000,
+              unseen: { kind: 'replied', since: now },
+            },
+          }),
+        ];
+        const drawn = await draw(
+          <Colours.Provider value={paletteOf(theme, colour)}>
+            <AgentsList
+              rows={listRows(agents, 1)}
+              limit={6}
+              width={96}
+              focused={false}
+            />
+          </Colours.Provider>,
+          { columns: 100, rows: 8 },
+        );
+
+        try {
+          const frame = drawn.frame();
+          // The run `text` is drawn in: from the dim it opens with.
+          const run = (text: string) => {
+            const at = frame.indexOf(text);
+
+            return frame.slice(frame.lastIndexOf('\x1b[2m', at), at);
+          };
+
+          // The folded team's row too, its most urgent member working.
+          for (const text of ['✻ working 9s', '✻ tester: working 9s']) {
+            expect(run(text).startsWith(`\x1b[2m${working}`)).toBe(true);
+          }
+
+          // A new reply in dim alone, as is working without colour.
+          for (const text of [
+            '✓ new reply',
+            ...(working === '' ? ['✻ working 9s'] : []),
+          ]) {
+            expect(run(text)).not.toContain('\x1b[3');
+          }
+        } finally {
+          await drawn.unmount();
+        }
+      } finally {
+        chalk.level = level;
+
+        setSystemTime();
+      }
+    });
+  }
+});
+
+describe('CHD-483 V1 tester: neighbouring states keep separate styles', () => {
+  for (const columns of [80, 120]) {
+    for (const [theme, enabled] of [
+      ['dark', true],
+      ['light', true],
+      ['light-daltonized', true],
+      ['dark-ansi', true],
+      ['light-ansi', true],
+      ['light', false],
+    ] as const) {
+      test(`${theme}, colour ${enabled}, at ${columns} columns`, async () => {
+        const level = chalk.level;
+
+        chalk.level = 3;
+
+        setSystemTime(new Date('2026-10-21T12:00:00Z'));
+
+        const now = Date.now();
+        const palette = paletteOf(theme, enabled);
+        const agents = [
+          row('解析担当', 1, {
+            picked: true,
+            wait: { watch: emptyWatch, working: now - 9_000 },
+          }),
+          row('reply', 2, {
+            wait: {
+              watch: emptyWatch,
+              stopped: now - 4_000,
+              unseen: { kind: 'replied', since: now },
+            },
+          }),
+          row('permission', 3, {
+            wait: {
+              watch: emptyWatch,
+              working: now - 9_000,
+              asking: { on: { kind: 'permission' }, since: now - 8_000 },
+            },
+          }),
+          row('input', 4, {
+            wait: {
+              watch: emptyWatch,
+              asking: {
+                on: { kind: 'input', message: 'Choose it.' },
+                since: now - 8_000,
+              },
+            },
+          }),
+          row('gone', 5, {
+            wait: { watch: emptyWatch, working: now - 9_000, exited: true },
+          }),
+          row('idle', 6, { wait: { watch: emptyWatch, stopped: now - 4_000 } }),
+        ];
+        let drawn: Awaited<ReturnType<typeof draw>> | undefined;
+
+        try {
+          drawn = await draw(
+            <Colours.Provider value={palette}>
+              <AgentsList
+                rows={agents}
+                limit={12}
+                width={columns - 4}
+                focused={false}
+              />
+            </Colours.Provider>,
+            { columns, rows: 24 },
+          );
+
+          const styles = runs(drawn.frame());
+          const check = (
+            words: string,
+            fg: string | undefined,
+            dim: boolean,
+          ) => {
+            const style = styles.find((run) => run.text.includes(words));
+
+            assert(style, `${words} is visible`);
+            expect(style.fg).toEqual(colour(fg));
+            expect(Boolean(style.attributes & DIM)).toBe(dim);
+          };
+
+          check(
+            'working 9s',
+            theme.endsWith('-ansi') ? palette.success : palette.accent,
+            true,
+          );
+          check('new reply', undefined, true);
+          check('permission 8s', palette.warning, false);
+          check('input 8s', palette.warning, false);
+          check('exited', palette.error, false);
+          check('idle 4s', undefined, true);
+        } finally {
+          await drawn?.unmount();
+
+          chalk.level = level;
+
+          setSystemTime();
+        }
+      });
     }
   }
 });

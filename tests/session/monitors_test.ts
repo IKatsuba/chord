@@ -1,6 +1,6 @@
 import { describe, expect, jest, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
@@ -1579,4 +1579,148 @@ test('the note to a resumed agent names each monitor it left running by id and d
       'session was left. chord stopped them then, and nothing restarts ' +
       'them; start them again with monitor if you still need them.',
   );
+});
+
+describe('CHD-482 U1 tester: resumed notes reach only their agent once', () => {
+  async function recordLeft(
+    dir: string,
+    stateDir: string,
+    names: readonly string[],
+    stop?: number,
+  ): Promise<Resume> {
+    await mkdir(dir);
+
+    let sessionId = '';
+
+    await withAgent(
+      async (conversation, events) => {
+        conversation.send('text');
+        await until(() => events.some((event) => event.type === 'result'));
+
+        sessionId = conversation.session!.id;
+
+        for (const [index, description] of names.entries()) {
+          const input = { command: 'watch', description };
+          const answer = conversation.startMonitor(
+            input,
+            dir,
+            fakeCommand().run,
+          );
+
+          idOf(answer);
+          conversation.served({ tool: 'monitor', input, answer });
+
+          if (index === stop) {
+            const id = `m${index + 1}`;
+            const answer = conversation.stopMonitor(id);
+
+            conversation.served({
+              tool: 'stop_monitor',
+              input: { id },
+              answer,
+            });
+          }
+        }
+      },
+      { stateDir, dir },
+    );
+
+    const record = (await readRecords(stateDir)).find(
+      (record) => record.sessionId === sessionId,
+    );
+
+    assert(record);
+
+    return { sessionId, cwd: dir, record: record.path };
+  }
+
+  test('the actual resumed prompt names only the left monitors, not an explicitly stopped one', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-left-note-'));
+    const stateDir = join(root, 'state');
+    const dir = join(root, 'project');
+
+    try {
+      const resume = await recordLeft(
+        dir,
+        stateDir,
+        ['watch one', 'already stopped', 'watch three'],
+        1,
+      );
+      const expected = wrapMessage(
+        { name: 'chord' },
+        leftStoppedNote([
+          { id: 'm1', description: 'watch one' },
+          { id: 'm3', description: 'watch three' },
+        ]),
+      );
+
+      await withAgent(
+        async (conversation, events) => {
+          await until(() => received(events).includes(expected));
+          await until(() => events.some((event) => event.type === 'result'));
+          expect(received(events)).toStrictEqual([expected]);
+          expect(received(events).join('')).not.toContain('already stopped');
+          expect(conversation.monitors).toStrictEqual([]);
+          conversation.send('text');
+          await until(
+            () =>
+              events.filter((event) => event.type === 'result').length === 2,
+          );
+          expect(received(events)).toStrictEqual([expected]);
+        },
+        { stateDir, dir, resume },
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test('two sessions resumed together keep same local monitor ids and notes separate', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-left-notes-'));
+    const stateDir = join(root, 'state');
+
+    try {
+      const a = await recordLeft(join(root, 'a'), stateDir, ['watch A']);
+      const b = await recordLeft(join(root, 'b'), stateDir, ['watch B']);
+      const outcomes = await Promise.allSettled(
+        [a, b].map((resume, index) =>
+          withAgent(
+            async (conversation, events) => {
+              const expected = wrapMessage(
+                { name: 'chord' },
+                leftStoppedNote([
+                  {
+                    id: 'm1',
+                    description: index === 0 ? 'watch A' : 'watch B',
+                  },
+                ]),
+              );
+
+              await until(() => received(events).includes(expected));
+              await until(() =>
+                events.some((event) => event.type === 'result'),
+              );
+              conversation.send('text');
+              await until(
+                () =>
+                  events.filter((event) => event.type === 'result').length ===
+                  2,
+              );
+              expect(received(events)).toStrictEqual([expected]);
+              expect(conversation.monitors).toStrictEqual([]);
+            },
+            { stateDir, dir: resume.cwd, resume },
+          ),
+        ),
+      );
+
+      for (const outcome of outcomes) {
+        if (outcome.status === 'rejected') {
+          throw outcome.reason;
+        }
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

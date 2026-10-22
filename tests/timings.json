@@ -1,7 +1,6 @@
 {
   "version": 1,
   "files": {
-    "tests/session/session_test.ts": 65074,
     "tests/ui/background/BackgroundView_test.tsx": 62194,
     "tests/ui/background/Background_test.tsx": 52934,
     "tests/ui/transcript/agents/Agents_test.tsx": 49749,
@@ -32,10 +31,12 @@
     "tests/ui/agents/AgentsSpend_test.tsx": 34168,
     "tests/session/conversation_test.ts": 32186,
     "tests/session/subagents_test.ts": 29398,
+    "tests/session/session_updates_test.ts": 29334,
     "tests/ui/dialogs/Permission_test.tsx": 28773,
     "tests/ui/dialogs/PermissionQueue_test.tsx": 28048,
     "tests/ui/prompt/PromptSearch_test.tsx": 27737,
     "tests/session/monitors_test.ts": 27441,
+    "tests/session/session_test.ts": 26562,
     "tests/ui/app/Selection_test.tsx": 26520,
     "tests/ui/shortcuts/keys_question_test.tsx": 26098,
     "tests/ui/prompt/PromptKeys_test.tsx": 26061,

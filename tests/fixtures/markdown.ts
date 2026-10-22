@@ -65,3 +65,31 @@ export const MARKDOWN_OPEN_NESTED_FENCE =
   MARKDOWN_LINES.indexOf('   ```sh') + 2;
 
 export const MARKDOWN_REPLY = MARKDOWN_LINES.join('\n');
+
+/**
+ * The fake agent's `markdownwrap` reply (`docs/design/CHD-396.md`): a
+ * heading, a list nested three deep, a quote and a paragraph each long
+ * enough to wrap at 80 columns, a two-digit marker, task items, and a soft
+ * and a hard line break.
+ */
+export const MARKDOWN_WRAP = [
+  '## A heading long enough that at eighty columns it has to wrap onto a second row of its own',
+  '',
+  '- package.json:3: the package @chorded/chord at version 0.54.1 needs Bun 1.4.2 or newer. check runs check:static and then the tests.',
+  '  - a nested item long enough to wrap at eighty columns, whose wrapped lines should hang under its own text',
+  '    1. deeper still, a numbered item that also runs past the edge of the window so its hang shows too',
+  '- a short item',
+  '',
+  '> A quote whose paragraph is long enough to wrap inside its bar at eighty columns, and at a hundred and twenty too, once it runs on.',
+  '',
+  '8. eight',
+  '9. nine',
+  '10. ten, with a two-digit marker and text long enough to wrap so the hang under a wider marker shows',
+  '',
+  '- [ ] open task',
+  '- [x] done task',
+  '',
+  'Soft',
+  'break and a hard  ',
+  'break here.',
+].join('\n');

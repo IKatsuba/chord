@@ -8,6 +8,7 @@ import {
   MARKDOWN_LINES,
   MARKDOWN_OPEN_FENCE,
   MARKDOWN_OPEN_NESTED_FENCE,
+  MARKDOWN_WRAP,
 } from '../../markdown.ts';
 import { STEP_MS } from '../options.ts';
 import { mcpServers, openedWith, steeredInto } from '../sessions.ts';
@@ -129,6 +130,14 @@ export const TEXT = {
     );
     await pause(turn.signal, STEP_MS * 300);
     await turn.say(...chunks.slice(MARKDOWN_OPEN_NESTED_FENCE));
+
+    return 'end_turn';
+  },
+
+  // Paragraphs, items and a quote long enough to wrap, to look at where
+  // OpenTUI breaks them and what a copy over them joins (CHD-396).
+  async markdownwrap(turn) {
+    await turn.say(MARKDOWN_WRAP);
 
     return 'end_turn';
   },

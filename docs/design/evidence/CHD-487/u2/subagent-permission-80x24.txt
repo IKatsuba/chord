@@ -1,0 +1,24 @@
+   │  ⎿  Write(notes/routing.md) · waiting for permission
+   └─ Agent(Find where tool calls are drawn on screen and how they fold) ·
+      2 tool uses · 0s
+      ⎿  Failed
+
+ ››› Waiting for permission… (4s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Find the session layer) asks                                           │
+│ Write notes/routing.md                                                       │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    background  ● main's agent asking

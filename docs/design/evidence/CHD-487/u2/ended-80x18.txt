@@ -1,0 +1,18 @@
+
+ ✓ Run the test suite · agent · done in 4s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 of 1 · ended                                                  │
+│                                                                              │
+│ Run the test suite                                                           │
+│ ✓ done in 4s · 1 tool use · main                                             │
+│ ⏺ Every test passed.                                         ↑ 5 lines above │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · Esc ← to go back              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  ✓ main's agent done

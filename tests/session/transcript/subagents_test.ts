@@ -631,7 +631,7 @@ describe("an agent item's end, once its turn has ended (CHD-479)", () => {
     ).toStrictEqual([]);
   });
 
-  test('a subagent that is no item, offering no cancel of its own, gets none', () => {
+  test('one that offers no cancel of its own is an item too, and says its end as one (Q135, CHD-487)', () => {
     expect(
       ends(
         fold([
@@ -640,8 +640,8 @@ describe("an agent item's end, once its turn has ended (CHD-479)", () => {
           ENDED,
           told('a', { state: 'completed' }, 9),
         ]),
-      ),
-    ).toStrictEqual([]);
+      ).map((entry) => entry.kind === 'item_ended' && [entry.item, entry.end]),
+    ).toStrictEqual([['agent', 'done']]);
   });
 
   test("a failure carries its agent's reason, a stop the person's x, a gone agent its disconnect", () => {

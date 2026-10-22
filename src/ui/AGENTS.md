@@ -12,3 +12,7 @@
   single log of the caught error and passes every other console error on.
 - A string an agent sent goes through `theme/Ansi.tsx` unless something cleaned it: OpenTUI's text draws escape bytes as text.
 - Choose colours by role from `theme/theme.ts`.
+- Transcript blocks use `transcript/gap.ts`'s `useGap`: margins in the
+  transcript, spacer rows in background logs. OpenTUI #1739 omits margins
+  from a one-row scrollbox's height; `tests/ui/transcript/gap_test.tsx`
+  pins it so the spacer can go once the pinned library counts them.

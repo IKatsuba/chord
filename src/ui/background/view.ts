@@ -4,11 +4,16 @@
  * the columns giving way at a narrow width and nothing cut; which rows are in
  * sight around the `❯`; and where ↑ ↓ move it (CHD-424).
  */
+import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { endSentence, endWord, timeoutWords } from '../../session/monitors.ts';
+import type { Subagent } from '../../session/transcript/types.ts';
+import { hiddenRows, requestStep, requestView } from '../dialogs/permission.ts';
+import { toolUses } from '../transcript/agents/subagents.ts';
+import type { ScrollStep } from '../transcript/scroll.ts';
 import { wrapLine } from '../transcript/message.ts';
 import {
   type BackgroundGroup,
@@ -102,6 +107,141 @@ export function stepDetail(
   );
 }
 
+/**
+ * Where a log that follows its end, an agent's or a task's detail, is
+ * read from: its end, as work comes (CHD-487, Q140).
+ */
+export const FOLLOWING = Number.POSITIVE_INFINITY;
+
+/**
+ * Where `step` takes a log of `total` lines in `room` from `top`, under
+ * CHD-246's rule: back to following once it reaches the end, and `end`
+ * back to it always (CHD-487).
+ */
+export function logStep(
+  step: ScrollStep,
+  total: number,
+  room: number,
+  top: number,
+): number {
+  if (step === 'bottom') {
+    return FOLLOWING;
+  }
+
+  const next = requestStep(step, total, room, top);
+  const view = requestView(total, room, next);
+
+  // The rows still below, not whether a rule says so: a room of one row has
+  // none to draw it in (CHD-464), as CHD-481's detail found.
+  return hiddenRows(total, view.top, view.shown).below > 0 ? next : FOLLOWING;
+}
+
+/**
+ * The two lines pinned on top of an agent's or a task's detail, which the
+ * title, naming no item, leaves to say whose log it is (CHD-487, Q139):
+ * its description on one line, then its state in its colour, its tool
+ * uses, a task's kind and its owner, dotted, at `width`, wrapping after a
+ * ` · `.
+ */
+export function workHead(
+  item: BackgroundItem,
+  subagent: Subagent,
+  {
+    width,
+    now,
+    short = false,
+    reserve = 0,
+  }: {
+    readonly width: number;
+    readonly now: number;
+    /**
+     * A room too short for the state line's wrapping: it takes one line,
+     * cut with `…`, leaving `reserve` cells at its end for the work's
+     * count, which the detail sets there (CHD-487).
+     */
+    readonly short?: boolean;
+    readonly reserve?: number;
+  },
+): ViewCell[][] {
+  const state = stateText(item, now);
+  const uses = toolUses(subagent);
+  const parts: ViewCell[] = [
+    { text: oneLine(state.text), role: 'state', group: state.group },
+    {
+      text: `${uses} ${uses === 1 ? 'tool use' : 'tool uses'}`,
+      role: 'kind',
+    },
+    ...(item.kind === 'task'
+      ? [
+          {
+            text: ['task', item.runtime, item.model]
+              .filter((part) => part !== undefined)
+              .join(' · '),
+            role: 'kind' as const,
+          },
+        ]
+      : []),
+    { text: ownerText(item), role: 'owner' },
+  ];
+  const name: ViewCell[] = [
+    { text: pinnedName(item, width).text, role: 'name' },
+  ];
+
+  if (!short) {
+    return [name, ...dotted(parts, width)];
+  }
+
+  // On one line, cut where the count, set at its end, leaves it.
+  const room = Math.max(1, width - reserve);
+  const line: ViewCell[] = [];
+  let used = 0;
+
+  for (const [index, part] of parts.entries()) {
+    const text = `${index === 0 ? '' : ' · '}${part.text}`;
+    const wide = stringWidth(text);
+
+    if (used + wide <= room) {
+      line.push(index === 0 ? part : { ...part, text });
+
+      used += wide;
+
+      continue;
+    }
+
+    // A part that exactly filled the room gives its last cell to the `…`
+    // that says more was cut, rather than the line passing its room.
+    const last = line.at(-1);
+
+    if (used === room && last !== undefined) {
+      line[line.length - 1] = {
+        ...last,
+        text: cliTruncate(`${last.text}${text}`, stringWidth(last.text)),
+      };
+    } else {
+      line.push({ ...part, text: cliTruncate(text, room - used) });
+    }
+
+    break;
+  }
+
+  return [name, line];
+}
+
+/**
+ * An agent's or a task's name as its detail pins it: one line, cut at its
+ * end with `…` when longer, so the work keeps its room; whether it was cut,
+ * as its whole task is then said under it (CHD-487).
+ */
+export function pinnedName(
+  item: Pick<BackgroundItem, 'name'>,
+  width: number,
+): { readonly text: string; readonly cut: boolean } {
+  const whole = oneLine(stripAnsi(item.name));
+  const text = cliTruncate(whole, Math.max(1, width));
+
+  return { text, cut: text !== whole };
+}
+
 /** The hint line on an agent item whose agent offers no stop of its own. */
 export const NO_STOP_HINT = 'this agent offers no stop';
 
@@ -168,9 +308,25 @@ export function stateText(
         group: 'asking',
       };
     default: {
-      // Only a monitor is drawn once ended, in its detail until the person
-      // leaves it (Q126); every other kind leaves as it ends (CHD-482).
+      // An item is drawn once ended only in its detail, until the person
+      // leaves it (Q126, Q136); a row leaves as it ends (CHD-482). An
+      // agent's and a task's end in CHD-2's and CHD-424's words (CHD-487).
       const ran = after(status.endedAt - item.startedAt);
+
+      if (item.kind !== 'monitor') {
+        return {
+          text:
+            status.group === 'stopped'
+              ? `■ ${status.word ?? 'stopped'} after ${ran}`
+              : status.group === 'done'
+                ? item.kind === 'agent'
+                  ? `✓ done in ${ran}`
+                  : `✓ reported after ${ran}`
+                : `✗ ${status.word ?? 'failed'} after ${ran}`,
+          group: status.group,
+        };
+      }
+
       const word =
         status.end === undefined ? status.group : endWord(status.end);
 

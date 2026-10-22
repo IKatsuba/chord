@@ -550,7 +550,7 @@ describe('CHD-424 tester: background frame edges', () => {
       expect(drawn.frame()).not.toMatch(/│ ↓/);
       expect(bottom - top + 1).toBeLessThanOrEqual(12);
       expect(lines[bottom - 1]).toContain(
-        'Enter to go to its call · x to stop · Esc to close',
+        'Enter for details · x to stop · Esc to close',
       );
     } finally {
       await drawn.unmount();
@@ -589,6 +589,9 @@ for (const size of [
         expect(frame).not.toContain(words);
       }
 
+      // Its detail first, then its call from there (CHD-487).
+      await window.press('\r');
+      await window.shows('Enter to go to its call');
       await window.press('\r');
       // At the transcript's end, it goes as high as scrolling allows.
       await until("the view to close on the watcher's own row", () =>
@@ -638,6 +641,8 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
           await window.press('\r');
           await window.shows('Background · 1 in this tab');
           expect(window.frame()).toContain('Run the test suite');
+          await window.press('\r');
+          await window.shows('Enter to go to its call');
           await window.press('\r');
           await until(
             'the earlier agent row visible and later transcript tail out of view',
@@ -986,6 +991,8 @@ describe('CHD-430 tester: a scrolled task keeps its identity', () => {
             expect(itemLines()).toEqual(before);
             expect(window.frame()).not.toContain('❯ Rewrite');
             await window.press('\r');
+            await window.shows('Enter to go to its call');
+            await window.press('\r');
             await until(
               'the frame closes at the tall task call',
               () => !window.frame().includes('│ Background'),
@@ -1029,7 +1036,7 @@ describe('CHD-473 the frame says its hint, or an error in its place, whole', () 
 
       expect(bottom - top + 1).toBeLessThanOrEqual(12);
       expect(inside(lines[bottom - 2]!)).toBe(
-        'Enter to go to its call · x to stop ·',
+        'Enter for details · x to stop ·',
       );
       expect(inside(lines[bottom - 1]!)).toBe('Esc to close');
       expect(drawn.frame()).toContain('❯ task 0');

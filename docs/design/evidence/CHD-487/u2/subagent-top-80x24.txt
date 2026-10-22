@@ -1,0 +1,24 @@
+   ⎿  Done (1 tool use · 2s)
+
+ ⏺ It is running; I will say when it ends.
+
+ ✓ Run deno task test and report what fails. · agent · done in 2s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 of 1 · ended                                                  │
+│                                                                              │
+│ Find where chord hands each session/update to its listeners and say which f… │
+│ ✓ done in 2s · 5 tool uses · main                                            │
+│ › Find where chord hands each session/update to its listeners and say which  │
+│   file owns the routing. Report paths and line numbers.                      │
+│                                                                              │
+│ ── ↓ 25 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · Esc ← to go back              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  ✓ main's agent done

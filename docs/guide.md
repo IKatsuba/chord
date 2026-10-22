@@ -798,9 +798,11 @@ and not restarted, and to start it again if still needed. A monitor
 reaching its timeout is a stop:
 `■ timed out after 1h`, dim, including its transcript message.
 
-Monitors, `spawn_task` tasks and subagents that offer an individual stop
-share the `background` summary under the agents list. These subagents,
-including Claude's, have kind `agent`; background Bash is not listed.
+Monitors, `spawn_task` tasks and subagents from Claude, Codex and Cursor
+share the `background` summary under the agents list, stoppable or not.
+These subagents have kind `agent`; background Bash is not listed.
+opencode, codebuddy, fast-agent, qwen and grok's subagent forms are not
+covered by this view yet.
 The summary names whose subagents they are: `main's 2 agents running` or
 `main's 2 agents and tester's agent running`.
 The summary counts the front tab's items, including its children's and
@@ -825,7 +827,7 @@ the agent lost sight of the subagent, which may still work. Its summary reads
 `? main's agent untracked`.
 `x` stops the focused item alone, without confirmation; an agent reads
 `■ stopping` until its agent reports the end. A stop that cannot be sent
-says `could not stop: …` in place of the hint; one no longer offered says
+says `could not stop: …` in place of the hint; an agent without a stop says
 `this agent offers no stop`. The hint and error wrap under the rows; the
 whole error stays, with its line breaks kept. At the half-screen cap, rows
 give way first, then pgup/pgdn scroll an error taller than its remaining
@@ -838,18 +840,22 @@ Enter on a monitor row opens its detail in place of the rows, titled
 `Background · m2, 2 of 2`: its description, state and event count,
 `started 3h 46m ago`, timeout and owner, then `$ ` and its command, and
 `← ` and the last event batch with how long ago it came, or `← no events yet`.
-pgup/pgdn and home/end page a tall detail; ↑ ↓ or j k step to the other
-items' details. ← or Esc returns to the list; a second Esc closes it.
-A monitor ending with its detail open stays shown until you leave it:
-the title adds `· ended`, its end state and chord's end sentence appear,
-and `x` does nothing. Enter in a detail, or on a task or agent row, picks
-the owner and scrolls to its call or subagent block; a folded block stays
-folded, and a missing call leaves the view open. A task's or agent's
-row-only detail leaves when it ends: the next item takes its place, or the
-one above, and with none left the frame closes.
+Enter on an agent or task row opens its detail too: its name and state
+stay under the title, then its whole task and work as ctrl+o draws it.
+It opens at the end and follows live. pgup stops following; End resumes.
+From one line above the end, new output or a resize starts following again.
+A short room shows one work row with its hidden-line count, or only the
+count when no work row fits. The name and state give way to keep that count.
+pgup/pgdn and home/end scroll the detail; ↑ ↓ or j k step between items.
+← or Esc returns to the list; a second Esc closes it.
+Any item ending with its detail open stays shown until you leave it:
+the title adds `· ended`, its end state appears, and `x` does nothing.
+A monitor shows chord's end sentence. Enter in a detail picks the owner
+and scrolls to its call or subagent block; a folded block stays
+folded, and a missing call leaves the view open.
 A new request taking the keys hides the frame until answered, then it
-returns as it was. Over a held request, it takes that box's place;
-ctrl+x a closes it and gives the request the keys. When a list row leaves,
+returns where you were reading. Over a held request, it takes that box's
+place; ctrl+x a closes it and gives the request the keys. When a list row leaves,
 `❯` moves to its replacement or the row above; the last row leaving closes
 the view.
 An agent ending after the turn that announced it leaves a line in its
@@ -862,12 +868,12 @@ turn ended gets a dim line instead: `■ Watch the build · task · stopped
 with x after 3s`, `stopped with esc after …` or `stopped after …`.
 A monitor's end message is its line. Closing an owner removes its items.
 
-A session resumed after its agents ran draws them as they were: each task
-agent's block, its work behind ctrl+o (read from the task's own record,
-so a task whose record was deleted keeps its block and how long it ran,
-without the work), a
-task still running when the
-session was left ending `Disconnected`, every message both ways, and the
+A session resumed after its agents ran draws them as they were. A subagent
+left running when its agent process ended reads as ended at that point,
+before any later resumed work. Each task keeps its block and, behind
+ctrl+o, its work from the task's own record. If that record was deleted,
+the block and elapsed time remain. A task left running reads
+`Disconnected`. The transcript keeps every message both ways and the
 `Open`, `Close` and `→` calls. Its long-lived agents are not reopened with
 it; a closing line names those still open when it was left, which
 `/resume` lists like any session, and a message the parent sends one is

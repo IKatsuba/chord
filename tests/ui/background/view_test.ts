@@ -4,7 +4,11 @@ import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
   detailLines,
   focusAfter,
+  FOLLOWING,
+  logStep,
+  pinnedName,
   stepDetail,
+  workHead,
   hintLines,
   laidAt,
   moveView,
@@ -1250,4 +1254,230 @@ describe("no detail line is wider than its width, every part's role kept, at any
       'timeout 1h ·',
     ]);
   });
+});
+
+describe("an agent's or a task's detail (CHD-487)", () => {
+  test('its log opens at its end, following; paging up leaves it, paging back to the end or end follows again (Q140)', () => {
+    // 30 lines in a room of 10.
+    const up = logStep('page_up', 30, 10, FOLLOWING);
+
+    expect(up).toBeLessThan(30);
+    expect(logStep('page_up', 30, 10, up)).toBeLessThan(up);
+    expect(logStep('page_down', 30, 10, up)).toBe(FOLLOWING);
+    expect(logStep('bottom', 30, 10, 0)).toBe(FOLLOWING);
+    expect(logStep('top', 30, 10, FOLLOWING)).toBe(0);
+    // A log that fits follows whatever the key.
+    expect(logStep('page_up', 5, 10, FOLLOWING)).toBe(FOLLOWING);
+  });
+
+  const plain = (lines: readonly (readonly ViewCell[])[]) =>
+    lines.map((line) => line.map(({ text }) => text).join(''));
+  const subagent = {
+    id: 'a',
+    state: 'running',
+    entries: [],
+    plan: [],
+  } as unknown as Parameters<typeof workHead>[1];
+
+  test("its pinned lines: the description, then its state, tool uses and owner; a task's kind among them (Q139)", () => {
+    const agent: BackgroundItem = {
+      kind: 'agent',
+      id: 'a',
+      key: 1,
+      name: 'Run the test suite',
+      startedAt: NOW - 41_000,
+      status: { group: 'running' },
+      stoppable: true,
+    };
+
+    expect(
+      plain(workHead(agent, subagent, { width: 116, now: NOW })),
+    ).toStrictEqual(['Run the test suite', 'running 41s · 0 tool uses · main']);
+    expect(
+      plain(
+        workHead(
+          task(
+            't',
+            'Fix the tokenizer',
+            { group: 'running' },
+            { owner: CODER },
+          ),
+          subagent,
+          { width: 116, now: NOW },
+        ),
+      ),
+    ).toStrictEqual([
+      'Fix the tokenizer',
+      'working 32s · 0 tool uses · task · fake · Fake Small · coder',
+    ]);
+    // Narrow, its parts wrap after a ` · `, no line wider than its width.
+    expect(
+      workHead(agent, subagent, { width: 20, now: NOW }).every(
+        (line) => stringWidth(line.map(({ text }) => text).join('')) <= 20,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("an agent's or a task's detail: reviewer's edges (CHD-487)", () => {
+  test('in a room of one row or two, the log still pages away from its end, home goes to its top, and end or reaching the end follows again', () => {
+    for (const room of [1, 2]) {
+      const up = logStep('page_up', 30, room, FOLLOWING);
+
+      expect(up).not.toBe(FOLLOWING);
+      expect(logStep('top', 30, room, FOLLOWING)).toBe(0);
+      expect(logStep('bottom', 30, room, 0)).toBe(FOLLOWING);
+
+      // Paged down one row at a time, it follows again on its last.
+      let at = 0;
+
+      while (at !== FOLLOWING) {
+        at = logStep('line_down', 30, room, at);
+      }
+
+      expect(at).toBe(FOLLOWING);
+    }
+  });
+
+  const ended = (
+    kind: 'agent' | 'task',
+    group: 'done' | 'failed' | 'stopped',
+    word?: 'ended' | 'disconnected',
+  ): BackgroundItem => ({
+    kind,
+    id: 'a',
+    key: 1,
+    name: 'x',
+    startedAt: NOW - 124_000,
+    status: { group, endedAt: NOW, ...(word === undefined ? {} : { word }) },
+  });
+
+  test("an agent's end reads as CHD-2's table, a task's as CHD-424's; a monitor's as it did", () => {
+    expect(
+      [
+        ended('agent', 'done'),
+        ended('agent', 'failed'),
+        ended('agent', 'failed', 'disconnected'),
+        ended('agent', 'stopped'),
+        ended('agent', 'stopped', 'ended'),
+        ended('task', 'done'),
+        ended('task', 'failed'),
+        ended('task', 'stopped'),
+      ].map((item) => stateText(item, NOW).text),
+    ).toStrictEqual([
+      '✓ done in 2m 4s',
+      '✗ failed after 2m 4s',
+      '✗ disconnected after 2m 4s',
+      '■ stopped after 2m 4s',
+      '■ ended after 2m 4s',
+      '✓ reported after 2m 4s',
+      '✗ failed after 2m 4s',
+      '■ stopped after 2m 4s',
+    ]);
+    expect(
+      stateText(
+        monitor(
+          'm1',
+          'CI',
+          { group: 'failed', endedAt: NOW, end: { kind: 'exit', code: 1 } },
+          { startedAt: NOW - 192_000, events: 3 },
+        ),
+        NOW,
+      ).text,
+    ).toBe('✗ exit code 1 after 3m 12s · 3 events');
+  });
+});
+
+test("a detail's pinned name takes one line, cut at its end with … when longer, saying whether it was (CHD-487)", () => {
+  expect(pinnedName({ name: 'Run the test suite' }, 40)).toStrictEqual({
+    text: 'Run the test suite',
+    cut: false,
+  });
+
+  const long = pinnedName(
+    { name: 'Find where chord hands each session/update to its listeners' },
+    30,
+  );
+
+  expect(long.cut).toBe(true);
+  expect(long.text.endsWith('…')).toBe(true);
+  expect(stringWidth(long.text)).toBe(30);
+});
+
+test("in a short room the state line takes one line, cut with …, leaving the work's count its cells (CHD-487)", () => {
+  const item = task(
+    't',
+    'Fix the tokenizer',
+    { group: 'running' },
+    {
+      owner: CODER,
+      runtime: 'a-runtime-with-a-long-name',
+      model: 'a model with a very long public name',
+    },
+  );
+  const subagent = {
+    id: 't',
+    state: 'running',
+    entries: [],
+    plan: [],
+  } as unknown as Parameters<typeof workHead>[1];
+  const text = (line: readonly ViewCell[]) =>
+    line.map((cell) => cell.text).join('');
+  const wrapped = workHead(item, subagent, { width: 40, now: NOW });
+  const short = workHead(item, subagent, {
+    width: 40,
+    now: NOW,
+    short: true,
+    reserve: 16,
+  });
+
+  expect(wrapped.length).toBeGreaterThan(2);
+  expect(short).toHaveLength(2);
+  // The work's count, `↑ 3 lines above`, takes 16 cells at its end.
+  expect(stringWidth(text(short[1]!))).toBeLessThanOrEqual(24);
+  expect(text(short[1]!)).toMatch(/^working 32s · .*…$/);
+});
+
+test("a short room's state line never passes the cells left it, a part that exactly fills them giving its last to the … (CHD-487)", () => {
+  const item = task(
+    't',
+    'Fix the tokenizer',
+    { group: 'running' },
+    { owner: CODER, runtime: 'bun', model: 'fake' },
+  );
+  const subagent = {
+    id: 't',
+    state: 'running',
+    entries: [],
+    plan: [],
+  } as unknown as Parameters<typeof workHead>[1];
+  const text = (line: readonly ViewCell[]) =>
+    line.map((cell) => cell.text).join('');
+  const whole = text(
+    workHead(item, subagent, { width: 200, now: NOW, short: true })[1]!,
+  );
+
+  for (let width = 1; width <= stringWidth(whole) + 2; width++) {
+    for (let reserve = 0; reserve < width; reserve++) {
+      const line = text(
+        workHead(item, subagent, { width, now: NOW, short: true, reserve })[1]!,
+      );
+
+      expect(stringWidth(line)).toBeLessThanOrEqual(width - reserve);
+      expect(line === whole || line.endsWith('…')).toBe(true);
+    }
+  }
+
+  // The state alone fills the room: it ends with the … the rest was cut to.
+  const state = whole.slice(0, whole.indexOf(' · '));
+
+  expect(
+    text(
+      workHead(item, subagent, {
+        width: stringWidth(state),
+        now: NOW,
+        short: true,
+      })[1]!,
+    ),
+  ).toBe(`${state.slice(0, -1)}…`);
 });

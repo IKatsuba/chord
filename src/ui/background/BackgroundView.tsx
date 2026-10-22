@@ -1,5 +1,20 @@
-import { TextAttributes } from '@opentui/core';
-import { type RefObject, useCallback, useEffect, useState } from 'react';
+import {
+  type BoxRenderable,
+  type ScrollBoxRenderable,
+  TextAttributes,
+} from '@opentui/core';
+import stringWidth from 'string-width';
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import type { Subagent, TurnState } from '../../session/transcript/types.ts';
+import { AgentWork } from '../transcript/agents/Agents.tsx';
+import { BlockGap } from '../transcript/gap.ts';
 import {
   hintOf,
   useCloseHint,
@@ -9,22 +24,27 @@ import {
 import { useAgentsClock } from '../agents/Agents.tsx';
 import type { RequestScroller } from '../dialogs/Permission.tsx';
 import {
+  countRoom,
   hiddenRows,
+  requestCount,
   requestRule,
   requestStep,
   requestView,
 } from '../dialogs/permission.ts';
 import { borderOf } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
-import { DIM, fg, TEXT } from '../theme/text.ts';
+import { DIM, fg, FILL, TEXT } from '../theme/text.ts';
 import { agentColour, type Palette } from '../theme/theme.ts';
 import type { ScrollStep } from '../transcript/scroll.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
 import {
   detailLines,
   edgeMarked,
-  focusedItem,
+  FOLLOWING,
   hintLines,
+  logStep,
+  pinnedName,
+  workHead,
   type ItemRef,
   laidAt,
   type ViewAt,
@@ -71,10 +91,10 @@ export function backgroundRowLimit(windowRows: number, hintHeight = 1): number {
 }
 
 /**
- * Which keys the frame's hint names: on a row, enter to the call, or on a
- * monitor's row to its details; in a detail, its own (CHD-481).
+ * Which keys the frame's hint names: on a row, enter to its details; in a
+ * detail, its own (CHD-481, CHD-487).
  */
-export type HintMode = 'call' | 'details' | 'detail' | 'ended';
+export type HintMode = 'details' | 'detail' | 'ended';
 
 /** Whether `item` has ended, as an open detail keeps one until it is left. */
 function ended(item: BackgroundItem | undefined): boolean {
@@ -104,9 +124,7 @@ export function hintMode(
       : 'detail';
   }
 
-  return focusedItem(items, view?.focus)?.kind === 'monitor'
-    ? 'details'
-    : 'call';
+  return 'details';
 }
 
 /**
@@ -115,7 +133,7 @@ export function hintMode(
  */
 export function useBackgroundHint(
   hint: string | undefined,
-  mode: HintMode = 'call',
+  mode: HintMode = 'details',
 ): string {
   const stop = useHintKey('agents:close');
   const close = useCloseHint();
@@ -131,11 +149,7 @@ export function useBackgroundHint(
           mode === 'detail' ? stopping : undefined,
           back,
         )
-      : hintOf(
-          mode === 'details' ? 'Enter for details' : 'Enter to go to its call',
-          stopping,
-          close,
-        ))
+      : hintOf('Enter for details', stopping, close))
   );
 }
 
@@ -153,6 +167,8 @@ export function BackgroundView({
   columns,
   rows,
   scroller,
+  work,
+  hidden: away = false,
 }: {
   items: readonly BackgroundItem[];
   focus: ItemRef | undefined;
@@ -168,10 +184,18 @@ export function BackgroundView({
   rows: number;
   /** Where the window finds how to scroll an error taller than its room. */
   scroller?: RefObject<RequestScroller | undefined>;
+  /** The work of the agent or task whose detail is open (CHD-487). */
+  work?: DetailWork | undefined;
+  /**
+   * Not drawn, where its details are read kept, while a request in the
+   * front tab stands in its place; it comes back as it was (CHD-481,
+   * CHD-487).
+   */
+  hidden?: boolean;
 }) {
   const colours = useColours();
   // Times count a second at a time while the view is drawn.
-  const now = useAgentsClock(true);
+  const now = useAgentsClock(!away);
   const width = columns - 4;
   const shownAt =
     detail === undefined
@@ -235,14 +259,20 @@ export function BackgroundView({
   const hidden = hiddenRows(said.length, shown.top, shown.shown);
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
+  // An agent's or a task's log pages itself (CHD-487).
+  const workScroll = useRef<RequestScroller | undefined>(undefined);
+  const logged =
+    detailed !== undefined && detailed.kind !== 'monitor' && work !== undefined;
   const scroll = useCallback(
     (step: ScrollStep) =>
-      detailRows === undefined || errorTall
-        ? setTop((at) => requestStep(step, said.length, room, at))
-        : setDetailTop((at) =>
-            requestStep(step, detailRows.length, detailRoom, at),
-          ),
-    [said.length, room, detailRows, detailRoom, errorTall],
+      logged && !errorTall && workScroll.current !== undefined
+        ? workScroll.current(step)
+        : detailRows === undefined || errorTall
+          ? setTop((at) => requestStep(step, said.length, room, at))
+          : setDetailTop((at) =>
+              requestStep(step, detailRows.length, detailRoom, at),
+            ),
+    [said.length, room, detailRows, detailRoom, errorTall, logged],
   );
 
   // Another error, or none, starts from its first line.
@@ -256,7 +286,7 @@ export function BackgroundView({
   }, [detail?.key, detail?.id]);
 
   useEffect(() => {
-    if (scroller === undefined) {
+    if (scroller === undefined || away) {
       return;
     }
 
@@ -265,7 +295,7 @@ export function BackgroundView({
     return () => {
       scroller.current = undefined;
     };
-  }, [scroller, scroll]);
+  }, [scroller, scroll, away]);
 
   const cell = (piece: ViewCell, item: BackgroundItem, focused: boolean) => {
     switch (piece.role) {
@@ -298,6 +328,7 @@ export function BackgroundView({
       paddingX={1}
       marginTop={1}
       flexShrink={0}
+      visible={!away}
     >
       <text {...TEXT}>
         <span {...fg(colours.permission)} attributes={TextAttributes.BOLD}>
@@ -311,7 +342,20 @@ export function BackgroundView({
               } of ${items.length}${ended(detailed) ? ' · ended' : ''}`}
         </span>
       </text>
+      {logged && !errorTall && (
+        <WorkDetail
+          key={`${detailed.key}:${detailed.id}`}
+          item={detailed}
+          work={work}
+          width={width}
+          rows={detailRoom}
+          now={now}
+          scroller={workScroll}
+          cell={(piece) => cell(piece, detailed, true)}
+        />
+      )}
       {detailed !== undefined &&
+        !(logged && !errorTall) &&
         detailRows !== undefined &&
         detailShown !== undefined &&
         detailHidden !== undefined && (
@@ -367,6 +411,258 @@ export function BackgroundView({
           </text>
         )}
       </box>
+    </box>
+  );
+}
+
+/** The work an agent's or a task's detail draws, found where its owner keeps it. */
+export interface DetailWork {
+  readonly subagent: Subagent;
+  /** Its owner's turn, which its calls' waiting is read from. */
+  readonly turn: TurnState;
+  /** The agent its owner runs, as the transcript names it. */
+  readonly agent: string;
+}
+
+/**
+ * An agent's or a task's detail (CHD-487): its description and state line
+ * pinned, then, in the room left, its whole task after `› ` and its work
+ * as its open block draws it, read from the end and following it as it
+ * comes while not paged up (Q139, Q140); a dim rule says what is out of
+ * view, under CHD-246's rule.
+ */
+function WorkDetail({
+  item,
+  work,
+  width,
+  rows,
+  now,
+  scroller,
+  cell,
+}: {
+  item: BackgroundItem;
+  work: DetailWork;
+  width: number;
+  /** The frame's rows for the detail, the pinned lines among them. */
+  rows: number;
+  now: number;
+  scroller: RefObject<RequestScroller | undefined>;
+  cell: (piece: ViewCell) => { attributes: number };
+}) {
+  // The frame never passes its cap (docs/design/CHD-487.md, the short
+  // room): the state line gives way to one line first, then the work to one
+  // row, then to none, its count at the state line's end.
+  const full = workHead(item, work.subagent, { width, now });
+  const short = full.length + 1 > rows;
+  const workRows = Math.max(0, rows - (short ? 2 : full.length));
+  // With no row, it still pages, as a row of one would: its scrollbox is
+  // laid out a row tall, out of sight, and keeps where it is read as the
+  // rows come and go.
+  const room = Math.max(1, workRows);
+  const view = useRef<ScrollBoxRenderable | null>(null);
+  const content = useRef<BoxRenderable | null>(null);
+  // Its lines as laid out, none until they are, with no row to draw them in
+  // too; where OpenTUI's scrollbox stands in them, which follows their end
+  // itself while it is at it.
+  const [total, setTotal] = useState<number | undefined>(undefined);
+  const [at, setAt] = useState(0);
+  // Following its end, as it opens and once paged back to it (Q140): kept
+  // so a room that changes, which the scrollbox's own following does not
+  // always see through, still leaves it at its end.
+  const following = useRef(true);
+  const lines = total ?? 0;
+  const shown = requestView(lines, room, following.current ? FOLLOWING : at);
+  // Where the scrollbox is to stand, which it is put at once laid out.
+  const wanted = useRef(shown.top);
+
+  wanted.current = shown.top;
+
+  const hidden = hiddenRows(lines, shown.top, shown.shown);
+  // A room of one row, or of none, has no row for a rule: what is hidden is
+  // said beside the row, or at the state line's end (CHD-464).
+  const count =
+    workRows <= 1 && total !== undefined && lines > 1
+      ? requestCount(hidden)
+      : undefined;
+  const workWidth =
+    workRows === 1 && count !== undefined
+      ? Math.max(1, width - countRoom(lines) - 1)
+      : width;
+  const lineCells = short
+    ? workHead(item, work.subagent, {
+        width,
+        now,
+        short,
+        ...(workRows === 0 && count !== undefined
+          ? { reserve: stringWidth(count) + 1 }
+          : {}),
+      })
+    : full;
+  // Not even its name and state: its state line alone.
+  const head = rows < 2 ? lineCells.slice(-1) : lineCells;
+  const pageUp = useHintKey('scroll:pageUp');
+  const pageDown = useHintKey('scroll:pageDown');
+  const whole = (work.subagent.prompt ?? work.subagent.description)?.trim();
+  // Its task, unless the pinned name already says it whole, as when it
+  // gave no short description of its own; a name cut to its line keeps it.
+  const task =
+    whole === undefined ||
+    (!pinnedName(item, width).cut &&
+      whole.replace(/\s+/g, ' ') === item.name.replace(/\s+/g, ' ').trim())
+      ? undefined
+      : whole;
+
+  // Read once laid out, never at React's commit, where a scroll is clamped
+  // to the layout before it (CHD-437, CHD-487): its lines, and where the
+  // scrollbox stands now that it has followed them or not.
+  const measure = () => {
+    const height = content.current?.getLayout().height;
+    const box = view.current;
+
+    if (height !== undefined && Number.isFinite(height) && height > 0) {
+      setTotal(height);
+    }
+
+    if (box !== null) {
+      // Following, at the end view as this frame lays it out. A scroll the
+      // scrollbox clamps to limits it has yet to lay out lands a frame
+      // later, which is asked for, as nothing else may draw one.
+      if (following.current && box.scrollTop !== wanted.current) {
+        box.scrollTo(wanted.current);
+
+        if (box.scrollTop !== wanted.current) {
+          box.requestRender();
+        }
+      }
+
+      setAt(box.scrollTop);
+    }
+  };
+
+  // The scrollbox moves by itself as it follows; its scrollbar says where.
+  useLayoutEffect(() => {
+    const bar = view.current?.verticalScrollBar;
+    const moved = ({ position }: { position: number }) => setAt(position);
+
+    bar?.on('change', moved);
+
+    return () => {
+      bar?.off('change', moved);
+    };
+  }, []);
+
+  useEffect(() => {
+    // On the key, when the frame is laid out: the page keys move the
+    // scrollbox, and its end gives the following back to it.
+    scroller.current = (step) => {
+      const box = view.current;
+
+      if (box === null) {
+        return;
+      }
+
+      const next =
+        step === 'bottom'
+          ? FOLLOWING
+          : logStep(step, lines, room, box.scrollTop);
+
+      following.current = next === FOLLOWING;
+
+      box.scrollTo(next === FOLLOWING ? box.scrollHeight : next);
+    };
+
+    return () => {
+      scroller.current = undefined;
+    };
+  }, [scroller, lines, room]);
+
+  return (
+    <box marginTop={1} flexShrink={0}>
+      {head.map((cells, index) => (
+        <box key={`head-${index}`} flexDirection='row' flexShrink={0}>
+          <text {...TEXT} flexGrow={1}>
+            {cells.map((piece, place) => (
+              <span key={place} {...cell(piece)}>
+                {piece.text}
+              </span>
+            ))}
+          </text>
+          {workRows === 0 &&
+            count !== undefined &&
+            index === head.length - 1 && (
+              <text {...TEXT} attributes={DIM} flexShrink={0}>
+                {count}
+              </text>
+            )}
+        </box>
+      ))}
+      {shown.above && workRows > 0 && (
+        <text {...TEXT} attributes={DIM}>
+          {requestRule('↑', hidden.above, pageUp, width)}
+        </text>
+      )}
+      {/* With no row, still laid out at the frame's width, so its lines are
+          counted, but out of the flow and drawn clear: hidden, OpenTUI
+          would not lay it out (docs/design/CHD-487.md). Both said each
+          time: a prop left out keeps what it was set to. */}
+      <box
+        flexDirection='row'
+        flexShrink={0}
+        position={workRows === 0 ? 'absolute' : 'relative'}
+        opacity={workRows === 0 ? 0 : 1}
+      >
+        <scrollbox
+          ref={view}
+          height={Math.max(shown.shown, 1)}
+          width={workWidth}
+          flexShrink={0}
+          focusable={false}
+          stickyScroll
+          stickyStart='bottom'
+          verticalScrollbarOptions={{ visible: false }}
+        >
+          <box
+            ref={content}
+            flexShrink={0}
+            onSizeChange={measure}
+            renderAfter={measure}
+          >
+            {task !== undefined && task !== '' && (
+              <box flexDirection='row' flexShrink={0}>
+                <text {...TEXT} attributes={DIM} flexShrink={0}>
+                  {'› '}
+                </text>
+                <text {...FILL}>
+                  <Ansi text={task} />
+                </text>
+              </box>
+            )}
+            {/* Its blocks spaced by rows of their own, which OpenTUI's
+                scrollbox counts one row tall, where it misses a margin
+                (opentui#1739). */}
+            <BlockGap.Provider value='row'>
+              <AgentWork
+                subagent={work.subagent}
+                turn={work.turn}
+                agent={work.agent}
+                width={workWidth}
+              />
+            </BlockGap.Provider>
+          </box>
+        </scrollbox>
+        {workRows === 1 && count !== undefined && (
+          <box flexGrow={1} flexDirection='row' justifyContent='flex-end'>
+            <text {...TEXT} attributes={DIM} flexShrink={0}>
+              {count}
+            </text>
+          </box>
+        )}
+      </box>
+      {shown.below && workRows > 0 && (
+        <text {...TEXT} attributes={DIM}>
+          {requestRule('↓', hidden.below, pageDown, width)}
+        </text>
+      )}
     </box>
   );
 }

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d487
+ ▀▀     ? for shortcuts · /help
+
+ › claudebackground
+
+ ⏺ The tests run in the background while I look.
+
+ ⏺ Running 2 agents…
+   ├─ Agent(tester (general-purpose)) · 1 tool use
+   │  ⎿  Run bun test in the background and report what fails.
+   │
+   │     ⏺ Bash(bun test)
+   │       ⎿  Running…
+   └─ Agent(explorer (Explore)) · 1 tool use · 2s
+      ⎿  Find where chord ends a turn on Esc.
+
+         ⏺ Search(cancelled in src/session)
+           ⎿  Found 3 files
+
+         ⏺ Esc ends the turn in src/session/transcript/turn.ts.
+      ⎿  Done
+
+ ⏺ The tests run on; I will say when they end.
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running                          Fake Large with a 1M context window · medium effort · 1% context used
+    background  main's agent running

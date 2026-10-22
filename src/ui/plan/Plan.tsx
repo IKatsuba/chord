@@ -1,4 +1,5 @@
 import type { PlanEntry } from '@agentclientprotocol/sdk';
+import { useGap } from '../transcript/gap.ts';
 import { TextAttributes } from '@opentui/core';
 import { useSelectable } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
@@ -70,25 +71,30 @@ function rowKeys(rows: readonly PlanRow[]): string[] {
 
 /** A finished plan in the transcript, whole and dim: a record, not news. */
 export function PlanRecord({ entries }: { entries: readonly PlanEntry[] }) {
+  const gap = useGap();
+
   const keys = entryKeys(entries.map(({ content }) => content));
 
   return (
-    <box marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <Gutter dimColor>⏺</Gutter>
-        <text {...FILL} attributes={DIM}>
-          Plan
-        </text>
-      </box>
-      {entries.map((entry, index) => (
-        <box key={keys[index]!} flexDirection='row' paddingLeft={2}>
-          <Gutter width={3} dimColor>
-            {index === 0 ? '⎿' : ' '}
-          </Gutter>
-          <PlanEntry entry={entry} running={false} dim />
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <Gutter dimColor>⏺</Gutter>
+          <text {...FILL} attributes={DIM}>
+            Plan
+          </text>
         </box>
-      ))}
-    </box>
+        {entries.map((entry, index) => (
+          <box key={keys[index]!} flexDirection='row' paddingLeft={2}>
+            <Gutter width={3} dimColor>
+              {index === 0 ? '⎿' : ' '}
+            </Gutter>
+            <PlanEntry entry={entry} running={false} dim />
+          </box>
+        ))}
+      </box>
+    </>
   );
 }
 

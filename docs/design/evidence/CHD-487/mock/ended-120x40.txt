@@ -1,0 +1,15 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 of 3 · ended                                                                                          │
+│                                                                                                                      │
+│ Run the test suite                                                                                                   │
+│ ✓ done in 2m 4s · 2 tool uses · main                                                                                 │
+│ › Run bun test in the background and report what fails.                                                              │
+│                                                                                                                      │
+│ ⏺ Bash(bun test)                                                                                                     │
+│   ⎿  412 pass, 1 fail: tests/session/turn_test.ts "Esc ends the turn"                                                │
+│ ⏺ Agent(Find the failing assertion) · 3 tool uses · 41s                                                              │
+│   ⎿  Done                                                                                                            │
+│ ⏺ One test fails: turn_test.ts expects the turn to end on Esc, and it now waits for the subagent.                    │
+│                                                                                                                      │
+│ Enter to go to its call · ↑ ↓ for the others · Esc ← to go back                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

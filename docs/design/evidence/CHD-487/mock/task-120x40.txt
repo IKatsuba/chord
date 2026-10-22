@@ -1,0 +1,13 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 of 3                                                                                                  │
+│                                                                                                                      │
+│ Fix the tokenizer                                                                                                    │
+│ working 32s · task · fake · Fake Small · main                                                                        │
+│ › Issue 214: a string at the end of a line loses its closing quote. Fix it in src/parse/tokenize.ts and report.      │
+│                                                                                                                      │
+│ ⏺ Read(src/parse/tokenize.ts)                                                                                        │
+│   ⎿  Read 212 lines                                                                                                  │
+│ ⏺ Found it: readString stops at the newline before it consumes the quote.                                            │
+│                                                                                                                      │
+│ Enter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

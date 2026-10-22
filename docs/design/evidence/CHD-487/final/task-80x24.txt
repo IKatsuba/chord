@@ -1,0 +1,24 @@
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+ ⏺ The build is being watched.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 of 1                                                          │
+│                                                                              │
+│ Watch the build                                                              │
+│ working 2s · 0 tool uses · task · fake · main                                │
+│ › taskwait                                                                   │
+│                                                                              │
+│ ⏺ Watching the build.                                                        │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running          Fake Large with a 1M context window · 1% used
+    background  1 task running

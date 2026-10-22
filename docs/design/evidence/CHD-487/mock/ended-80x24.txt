@@ -1,0 +1,12 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 of 3 · ended                                                  │
+│                                                                              │
+│ Run the test suite                                                           │
+│ ✓ done in 2m 4s · 2 tool uses · main                                         │
+│ ── ↑ 5 lines above · pageup to scroll ────────────────────────────────────── │
+│   ⎿  Done                                                                    │
+│ ⏺ One test fails: turn_test.ts expects the turn to end on Esc, and it now    │
+│   waits for the subagent.                                                    │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · Esc ← to go back              │
+╰──────────────────────────────────────────────────────────────────────────────╯

@@ -5066,3 +5066,21 @@ test('on dirac with no cost of its own, an answer priced and then one on a model
     await rm(dir, { recursive: true });
   }
 });
+
+test('a permission asked in a turn says when it came, as one between turns does, which a subagent asking counts from (CHD-487)', () =>
+  onFake([], async (conversation, events) => {
+    const before = Date.now();
+
+    conversation.send('permission');
+    await until(() =>
+      events.some((event) => event.type === 'permission_requested'),
+    );
+
+    const asked = events.find((event) => event.type === 'permission_requested');
+
+    assert(asked?.type === 'permission_requested');
+    expect(asked.at).toBeGreaterThanOrEqual(before);
+    expect(asked.at).toBeLessThanOrEqual(Date.now());
+    expect(asked).not.toHaveProperty('between');
+    conversation.interrupt();
+  }));

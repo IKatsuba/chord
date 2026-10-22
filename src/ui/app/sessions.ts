@@ -1979,12 +1979,9 @@ export function useSessions(
   const goToCall = () => {
     const item = focusedItem(background(), state.backgroundView?.focus);
 
-    // On a monitor's row, enter opens its detail; in it, to its call
-    // (CHD-481).
-    if (
-      item?.kind === 'monitor' &&
-      state.backgroundView?.detail === undefined
-    ) {
+    // On a row, enter opens its detail; in it, to its call (CHD-481; an
+    // agent's or a task's too, Q134 and Q138).
+    if (item !== undefined && state.backgroundView?.detail === undefined) {
       dispatch({
         type: 'background_detail_opened',
         focus: { key: item.key, id: item.id },

@@ -48,6 +48,8 @@ export interface Spent {
    * last gave them, in place of each turn's (CHD-472).
    */
   readonly total?: TokenUsage;
+  /** The model the session's last running total came on. */
+  readonly totalModel?: string;
   /**
    * Each turn's own cost by the turn's id, the agent's own cycles' among
    * them, where it had one or was left uncounted (CHD-373).
@@ -73,7 +75,12 @@ export function addTurn(
 
   return {
     ...spent,
-    ...(total && some ? { total: tokens } : {}),
+    ...(total && some
+      ? {
+          total: tokens,
+          ...(cost.model === undefined ? {} : { totalModel: cost.model }),
+        }
+      : {}),
     turns:
       !some || total
         ? (spent?.turns ?? {})

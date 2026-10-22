@@ -1036,6 +1036,8 @@ export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
   readonly kind: SpendKind;
   /** The agent a tab's own session is. */
   readonly agent?: string | undefined;
+  /** The agent a child runs on, as chord starts it. */
+  readonly runtime?: string | undefined;
 };
 
 /** A closing session, and where what it spent is kept. */
@@ -1063,8 +1065,8 @@ export function keptSpend(
   session: SessionState | undefined,
   place: KeptPlace,
 ): KeptSpend {
-  const { name, kind, agent, ...where } = place;
-  const [own, ...tasks] = sessionParts(name, kind, session, agent);
+  const { name, kind, agent, runtime, ...where } = place;
+  const [own, ...tasks] = sessionParts(name, kind, session, agent, runtime);
 
   return {
     ...where,

@@ -16,7 +16,7 @@ import {
 import type { AppState } from '../app/state.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { contextEstimated, contextUsed } from '../status/status.ts';
-import { sessionFigure, type SpendPart } from './spend.ts';
+import { type Figure, sessionFigure, type SpendPart } from './spend.ts';
 import { manySessions, spendTable } from './spend_table.ts';
 
 /** Said after a figure chord worked out itself, never the agent's. */
@@ -216,10 +216,57 @@ export function costReport(facts: ReportFacts): ReportRow[] {
     : [...own, { text: '' }, ...spendTable(window.spend, window.width)];
 }
 
+/** A model by the name its agent gives it, else by its id. */
+function modelNamed(facts: ReportFacts, id: string | undefined): string {
+  return id === undefined
+    ? 'its model'
+    : (facts.models?.available.find((model) => model.id === id)?.name ?? id);
+}
+
+/**
+ * What `/cost` says after the rows of an agent that gives running totals
+ * (CHD-472): how its figures were read, and, where it gave no cost and chord
+ * priced its tokens, why.
+ */
+function totalsLines(
+  facts: ReportFacts,
+  figure: Figure | undefined,
+): ReportRow[] {
+  if (figure?.totals === undefined) {
+    return [];
+  }
+
+  const { agent } = facts;
+  const [model, ...more] = figure.models ?? [];
+  const price =
+    model !== undefined && more.length === 0
+      ? `${modelNamed(facts, model)}'s price`
+      : "its models' prices";
+
+  return [
+    {
+      text: `${agent} reports these as the session's running total; chord shows the last it sent.`,
+    },
+    ...(figure.estimated === 'all'
+      ? [
+          {
+            text: `${agent}'s provider reports no cost, so chord priced these tokens at ${price}.`,
+          },
+        ]
+      : []),
+  ];
+}
+
 /** The session's own rows of `/cost`. */
 function sessionReport(facts: ReportFacts): ReportRow[] {
   const spent = sessionTokens(facts.spent);
   const figure = sessionFigure(facts.spent);
+  // An agent that gives running totals and no cost, whose model chord has no
+  // price for: both reasons, in the cost's cell (CHD-472).
+  const unpriced =
+    figure?.totals !== undefined && figure.cost === undefined
+      ? `not reported: ${facts.agent}'s provider reports none, and chord has no price for ${modelNamed(facts, figure.totals.model ?? facts.models?.current)}`
+      : undefined;
   const cost =
     figure?.cost === undefined
       ? undefined
@@ -285,15 +332,18 @@ function sessionReport(facts: ReportFacts): ReportRow[] {
     counts.push(['Tokens', tokens(spent.totalTokens)]);
   }
 
-  return aligned([
-    ['Total cost', cost ?? `not reported by ${facts.agent}`],
-    ...marks,
-    ...running,
-    ...(spent === undefined
-      ? [['Tokens', `not reported by ${facts.agent}`] as [string, string]]
-      : counts),
-    ...time,
-  ]);
+  return [
+    ...aligned([
+      ['Total cost', unpriced ?? cost ?? `not reported by ${facts.agent}`],
+      ...marks,
+      ...running,
+      ...(spent === undefined
+        ? [['Tokens', `not reported by ${facts.agent}`] as [string, string]]
+        : counts),
+      ...time,
+    ]),
+    ...totalsLines(facts, figure),
+  ];
 }
 
 /**

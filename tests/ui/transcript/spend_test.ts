@@ -175,7 +175,7 @@ const child = (
   key: number,
   id: string,
   name: string,
-  more: { team?: string; lead?: string } = {},
+  more: { team?: string; lead?: string; runtime?: string } = {},
 ): Child<string> => ({
   key,
   id,
@@ -457,5 +457,54 @@ test("a session whose agent gives running totals has its last total as its token
   expect(sessionFigure(spent)).toStrictEqual({
     cost: { amount: expect.closeTo(0.03, 9), currency: 'USD' },
     tokens: 6000,
+    totals: {},
   });
+  // The model the last total came on, where it said.
+  expect(
+    sessionFigure(
+      addTurn(spent, 'd', { totalTokens: 8000 }, { model: 'm' }, true),
+    )?.totals,
+  ).toStrictEqual({ model: 'm' });
+});
+
+test("a long-lived agent's and a team member's part names the agent it runs on, for its notes, as a tab's main names its own (CHD-472)", () => {
+  const runtimes = (parts: readonly SpendPart[]): unknown =>
+    parts.map((part) => [
+      part.name,
+      part.runtime,
+      ...(part.parts === undefined ? [] : [runtimes(part.parts)]),
+    ]);
+
+  expect(
+    runtimes(
+      windowSpend(
+        [
+          tab(1, 'fake', [
+            child(2, 'a', 'docs', { runtime: 'dirac' }),
+            child(3, 'l', 'bugfix', { team: 'bugfix', runtime: 'dirac' }),
+            child(4, 't', 'tester', { team: 'bugfix', lead: 'l' }),
+          ]),
+        ],
+        {},
+        [],
+      ),
+    ),
+  ).toStrictEqual([
+    [
+      '1 fake',
+      undefined,
+      [
+        ['main', undefined],
+        ['docs', 'dirac'],
+        [
+          'bugfix',
+          undefined,
+          [
+            ['lead', 'dirac'],
+            ['tester', 'fake'],
+          ],
+        ],
+      ],
+    ],
+  ]);
 });

@@ -38,6 +38,11 @@ export interface Figure {
   readonly before?: { readonly cost: Cost; readonly until?: number };
   /** The models whose prices chord's estimate came from, where it says. */
   readonly models?: readonly string[];
+  /**
+   * Its figures are the running totals its agent last gave, not turns added
+   * up (CHD-472); the model the last came on, where it said.
+   */
+  readonly totals?: { readonly model?: string };
 }
 
 /** A turn's tokens, or a session's, in all: the total, else each kind. */
@@ -105,6 +110,12 @@ export function sessionFigure(spent: Spent | undefined): Figure | undefined {
     ...(tokens === undefined ? {} : { tokens }),
     ...(uncounted === 0 ? {} : { uncounted }),
     ...(models.length === 0 ? {} : { models }),
+    ...(spent?.total === undefined
+      ? {}
+      : {
+          totals:
+            spent.totalModel === undefined ? {} : { model: spent.totalModel },
+        }),
     ...(before?.cost === undefined
       ? {}
       : {
@@ -148,6 +159,11 @@ export interface SpendPart {
   readonly kind: SpendKind;
   /** The agent a tab's own session is, which says what reported nothing. */
   readonly agent?: string;
+  /**
+   * The agent a long-lived agent or team member runs on, as chord starts it,
+   * which its notes name, as `agent` is a tab's own (CHD-472).
+   */
+  readonly runtime?: string;
   /** Its own figure; none when it reported nothing. */
   readonly figure?: Figure;
   readonly parts?: readonly SpendPart[];
@@ -301,6 +317,7 @@ export function sessionParts(
   kind: SpendKind,
   session: SpendSession | undefined,
   agent?: string,
+  runtime?: string,
 ): SpendPart[] {
   const figure = sessionFigure(session?.spent);
   const tasks = (session?.transcript.entries ?? []).flatMap(
@@ -329,6 +346,7 @@ export function sessionParts(
       name,
       kind,
       ...(agent === undefined ? {} : { agent }),
+      ...(runtime === undefined ? {} : { runtime }),
       ...(figure === undefined ? {} : { figure }),
     },
     ...tasks,
@@ -344,8 +362,9 @@ function ownPart(
   kind: SpendKind,
   session: SpendSession | undefined,
   agent?: string,
+  runtime?: string,
 ): SpendPart {
-  const [own, ...tasks] = sessionParts(name, kind, session, agent);
+  const [own, ...tasks] = sessionParts(name, kind, session, agent, runtime);
 
   return tasks.length === 0 ? own! : { ...own!, parts: tasks };
 }
@@ -386,9 +405,15 @@ export function windowSpend<C>(
       kind: 'team',
       parts: [
         // Its row is named by the team; its lead is `lead` under it.
-        ownPart('lead', 'member', sessions[lead.key]),
+        ownPart('lead', 'member', sessions[lead.key], undefined, lead.runtime),
         ...membersOf(tab, lead.id).map((member) =>
-          ownPart(member.name, 'member', sessions[member.key]),
+          ownPart(
+            member.name,
+            'member',
+            sessions[member.key],
+            undefined,
+            member.runtime,
+          ),
         ),
         ...keptHere
           .filter((each) => each.lead === lead.id)
@@ -397,7 +422,15 @@ export function windowSpend<C>(
     }));
     const agents = tab.children
       .filter((child) => child.team === undefined)
-      .map((child) => ownPart(child.name, 'agent', sessions[child.key]));
+      .map((child) =>
+        ownPart(
+          child.name,
+          'agent',
+          sessions[child.key],
+          undefined,
+          child.runtime,
+        ),
+      );
 
     return {
       name: `${index + 1} ${tab.agent}`,

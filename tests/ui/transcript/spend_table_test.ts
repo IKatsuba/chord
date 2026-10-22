@@ -830,3 +830,43 @@ describe('CHD-473 tester: full cells at the note floor and nested accounting', (
     }
   });
 });
+
+test('an agent that gives running totals reads as any row; only with no cost of its own do its notes say its provider gives none (CHD-472)', () => {
+  const dirac = (name: string, figure: SpendPart['figure']): SpendPart => ({
+    name,
+    ...(name === 'main'
+      ? { kind: 'main', agent: 'dirac' }
+      : { kind: 'agent', runtime: 'dirac' }),
+    ...(figure === undefined ? {} : { figure }),
+  });
+  const table = lines(
+    [
+      {
+        name: '1 dirac',
+        kind: 'tab',
+        parts: [
+          dirac('main', { cost: USD(0.025), tokens: 4000, totals: {} }),
+          dirac('scout', {
+            cost: USD(0.0094),
+            estimated: 'all',
+            models: ['gpt-5.3-codex'],
+            tokens: 6000,
+            totals: { model: 'gpt-5.3-codex' },
+          }),
+          dirac('docs', { tokens: 6000, totals: { model: 'fake-large' } }),
+        ],
+      },
+    ],
+    200,
+  );
+  const row = (name: string) =>
+    table.find((line) => line.trimStart().startsWith(name)) ?? '';
+
+  expect(row('main').trimEnd()).toMatch(/\$0\.0250\s+4,000$/);
+  expect(row('scout')).toMatch(
+    /~\$0\.0094\s+6,000 {2}agent; dirac's provider reports no cost; chord's estimate from gpt-5\.3-codex's price$/,
+  );
+  expect(row('docs')).toMatch(
+    /not reported\s+6,000 {2}agent; dirac's provider reports no cost; no price for fake-large$/,
+  );
+});

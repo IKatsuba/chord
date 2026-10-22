@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import {
-  chmodSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -22,7 +21,7 @@ import {
 import { runRelease } from '../../../../scripts/dev/release/stages.ts';
 import { KINDS } from '../../../../scripts/dev/release/build.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
-import { type Scratch, scratch } from './scratch.ts';
+import { executable, type Scratch, scratch } from './scratch.ts';
 
 // A whole run's guards and their order, on a scratch repository with a bare
 // origin: npm, bun, security and xcrun faked, each logging what it was asked,
@@ -589,8 +588,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
     const head = out(at.root, 'rev-parse', 'HEAD');
     const hook = join(origin(), 'hooks', 'pre-receive');
 
-    writeFileSync(hook, '#!/bin/sh\necho refused >&2\nexit 1\n');
-    chmodSync(hook, 0o755);
+    executable(hook, '#!/bin/sh\necho refused >&2\nexit 1\n');
 
     expect(await died(releasedAt('patch', {}))).toStartWith(
       'git push origin main failed, so chore: chord v9.9.10 is dropped:',

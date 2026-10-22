@@ -7,6 +7,7 @@
  * never opened, and sessions that open one on a long instruction, or whose
  * first turn starts a task agent, or whose agent exits or turn fails in it.
  */
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -16,8 +17,19 @@ import { cwds } from '../sessions.ts';
 import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
-/** A child's pace: 20 steps, a tenth of a second by default. */
-const AGENT_STEP_MS = STEP_MS * 20;
+/**
+ * A child's pace: 2 steps, 10 ms by default. Where an order is a gate's,
+ * the pace is only how a turn's steps are spread (CHD-501).
+ */
+const AGENT_STEP_MS = STEP_MS * 2;
+
+/**
+ * The pace before CHD-501, 100 ms by default, kept where a wait stands for
+ * something no gate says yet: a call open long enough for messages to be
+ * held behind it, a moment for a child to open its call, a line's way to
+ * chord before the pipe closes.
+ */
+const HELD_STEP_MS = STEP_MS * 20;
 
 /** What `agents` opens first: the fake runtime's small model on `agentchild`. */
 export const PARSER_ARGS = {
@@ -87,6 +99,33 @@ export async function gateOpened(turn: Turn, file: string): Promise<void> {
 
   while (!existsSync(at) && Date.now() < deadline) {
     await pause(turn.signal, STEP_MS * 2);
+  }
+}
+
+/** The mark in a gate that its session has heard `text`, told it in a message. */
+export function toldMark(text: string): string {
+  return `told-${createHash('sha1').update(text.trim()).digest('hex').slice(0, 12)}`;
+}
+
+/** Each message chord wrapped in a prompt, its text. */
+const TOLD =
+  /<message from="[^"]*"(?: monitor="[^"]*")?>\n([\s\S]*?)\n<\/message>/g;
+
+/**
+ * Marks in session `sessionId`'s gate each message `text` tells it, as it
+ * hears it, a turn's prompt or steered in, so a play that told it can wait
+ * until it has, rather than for a while: only where the gate is, which a
+ * play that waits on it makes (CHD-501).
+ */
+export function heard(sessionId: string, text: string): void {
+  const gate = join(cwds.get(sessionId) ?? '.', GATE);
+
+  if (!existsSync(gate)) {
+    return;
+  }
+
+  for (const [, told] of text.matchAll(TOLD)) {
+    writeFileSync(join(gate, toldMark(told!)), '');
   }
 }
 
@@ -299,7 +338,7 @@ async function tellParserDuringCall(
     if (child === 'callchildgated') {
       await gated(turn, GATE_OPEN);
     } else {
-      await pause(turn.signal, AGENT_STEP_MS * 2);
+      await pause(turn.signal, HELD_STEP_MS * 2);
     }
 
     for (const text of texts) {
@@ -348,7 +387,7 @@ async function callChild(turn: Turn, untilTold = 0): Promise<acp.StopReason> {
     kind: 'execute',
     status: 'in_progress',
   });
-  await pause(turn.signal, AGENT_STEP_MS * 30);
+  await pause(turn.signal, HELD_STEP_MS * 30);
   await turn.send({
     sessionUpdate: 'tool_call_update',
     toolCallId,
@@ -405,8 +444,9 @@ async function messageDocsAsking(
 }
 
 export const AGENTS = {
-  // Opens `parser` and `docs`, then tells `parser` twice what changed, a
-  // while apart, so the second waits behind the turn the first started.
+  // Opens `parser` and `docs`, then tells `parser` twice what changed,
+  // the first once parser is at its first turn, the second once parser has
+  // the first, so the second waits behind the turn the first started.
   async agents(turn) {
     const client = await chordClient(turn);
 
@@ -417,14 +457,17 @@ export const AGENTS = {
     }
 
     try {
+      mkdirSync(join(cwds.get(turn.sessionId) ?? '.', GATE), {
+        recursive: true,
+      });
       await turn.say('I will open parser on the tests and docs on the README.');
       await callChord(turn, client, 'open_agent', PARSER_ARGS);
       await callChord(turn, client, 'open_agent', DOCS_ARGS);
-      await pause(turn.signal, AGENT_STEP_MS * 10);
+      await gateOpened(turn, toldMark(PARSER_ARGS.prompt));
 
       for (const text of MAIN_MESSAGES) {
         await callChord(turn, client, 'send_message', { to: 'parser', text });
-        await pause(turn.signal, AGENT_STEP_MS * 10);
+        await gateOpened(turn, toldMark(text));
       }
 
       await turn.say('Waiting on parser.');
@@ -500,7 +543,7 @@ export const AGENTS = {
     await work(turn, '`deno task test tests/parse`', 'Killed');
     console.error(CRASH_WORDS);
     // Long enough for the line to reach chord before the pipe closes.
-    await pause(turn.signal, AGENT_STEP_MS);
+    await pause(turn.signal, HELD_STEP_MS);
     process.exit(1);
   },
 

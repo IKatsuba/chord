@@ -20,6 +20,7 @@ import {
 import { preflight } from '../../../../scripts/dev/release/preflight.ts';
 import { publish } from '../../../../scripts/dev/release/publish.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
+import { executable } from './scratch.ts';
 
 // The release's publishing, on the resume path, which publishes from the
 // packages a stopped run left without building again: npm faked on PATH, the
@@ -105,11 +106,11 @@ beforeEach(() => {
   }
 
   mkdirSync(bin);
+  // A file of its own, not a link: a test writes a different npm over it.
   writeFileSync(join(bin, 'npm'), NPM);
   chmodSync(join(bin, 'npm'), 0o755);
   // npm runs as `node <npm>`; this node runs the fake npm with bash.
-  writeFileSync(join(bin, 'node'), NODE);
-  chmodSync(join(bin, 'node'), 0o755);
+  executable(join(bin, 'node'), NODE);
 
   mkdirSync(repo);
   writeFileSync(
@@ -654,7 +655,7 @@ describe('tester: publish guard boundaries', () => {
   });
 
   test('a successful npm view with the wrong version stops with its answer', async () => {
-    writeFileSync(
+    executable(
       join(bin, 'npm'),
       NPM.replace('echo "${spec##*@}"', 'echo "9.9.8"'),
     );
@@ -680,7 +681,7 @@ describe('tester: publish guard boundaries', () => {
     ];
 
     for (const [command, message] of cases) {
-      writeFileSync(
+      executable(
         join(bin, 'git'),
         `#!/bin/sh
 case "$*" in
@@ -690,7 +691,6 @@ case "$*" in
 esac
 `,
       );
-      chmodSync(join(bin, 'git'), 0o755);
 
       expect(
         await died(() =>
@@ -709,7 +709,7 @@ esac
     }
 
     for (const command of ['tag', 'push']) {
-      writeFileSync(
+      executable(
         join(bin, 'git'),
         `#!/bin/sh
 printf '%s\\n' "$*" >>"$RELEASE_STATE/git.log"
@@ -718,7 +718,6 @@ case "$1" in
 esac
 `,
       );
-      chmodSync(join(bin, 'git'), 0o755);
       rmSync(join(state, 'git.log'), { force: true });
 
       expect(

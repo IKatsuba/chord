@@ -288,6 +288,14 @@ export const ADAPTER = (() => {
 export const STEER_LATE =
   ARGS.includes('--steer-late') || process.env.CHORD_FAKE_STEER_LATE === '1';
 
+/**
+ * A turn on a message ends only once `GATE_RELEASE` is in its session's
+ * gate, or 10 s on, so a test says when it is answered: a reply that comes
+ * after a moment the test chose, rather than a while after (CHD-501).
+ */
+export const HOLD_REPLY =
+  ARGS.includes('--hold-reply') || process.env.CHORD_FAKE_HOLD_REPLY === '1';
+
 export const REFUSE_CONFIG =
   ARGS.includes('--refuse-config') ||
   process.env.CHORD_FAKE_REFUSE_CONFIG === '1';

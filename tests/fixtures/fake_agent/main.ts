@@ -267,6 +267,7 @@ import {
   NO_LOAD,
   SILENT_SET_MODE,
   STEER_LATE,
+  HOLD_REPLY,
   STEERING,
   ADAPTER,
   COST_AT_NEXT,
@@ -289,7 +290,7 @@ import { SHELL } from './scenarios/shell.ts';
 import { claudeChildren, SUBAGENTS } from './scenarios/subagents.ts';
 import { TASKS } from './scenarios/tasks.ts';
 import { CYCLES, runCycle } from './scenarios/cycles.ts';
-import { AGENTS } from './scenarios/agents.ts';
+import { AGENTS, GATE_RELEASE, gateOpened, heard } from './scenarios/agents.ts';
 import { EFFORTS } from './scenarios/efforts.ts';
 import { MONITORS } from './scenarios/monitors.ts';
 import { senders, SOAK } from './scenarios/soak.ts';
@@ -844,6 +845,8 @@ async function playPrompt(
     await never();
   }
 
+  heard(params.sessionId, promptText(params.prompt));
+
   // Codex's adapter does not stop a turn it started itself for a prompt:
   // the two would run side by side.
   const alongside = STEERING === 'codex' && turns.has(params.sessionId);
@@ -945,6 +948,10 @@ async function playPrompt(
     // A message steered in after the last step is read before the end, as
     // an adapter's turn goes on until it has answered one.
     await turn.read();
+
+    if (HOLD_REPLY && message) {
+      await gateOpened(turn, GATE_RELEASE);
+    }
 
     if (turn.usage === undefined && stopReason === 'end_turn' && !NO_USAGE) {
       await reportUsage(turn);
@@ -1251,6 +1258,7 @@ const connection = acp
       const turn = playing.get(params.sessionId);
 
       if (turn !== undefined) {
+        heard(params.sessionId, promptText(params.prompt));
         turn.steer(promptText(params.prompt));
 
         return { outcome: 'injected' };

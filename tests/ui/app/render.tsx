@@ -53,10 +53,12 @@ export async function until(
   check: () => boolean | Promise<boolean>,
   timeout = 10_000,
 ): Promise<void> {
-  const deadline = Date.now() + timeout;
+  // On the monotonic clock: a test that sets the system time freezes
+  // `Date`, and a wait on it would never end (CHD-501).
+  const deadline = performance.now() + timeout;
 
   while (!(await check())) {
-    if (Date.now() > deadline) {
+    if (performance.now() > deadline) {
       throw new Error(`timed out waiting for ${what}`);
     }
 

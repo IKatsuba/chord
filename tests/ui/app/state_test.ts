@@ -855,3 +855,14 @@ test("a resize lets go of where the agents list's tall row was read from, keepin
     reduceApp(scrolled, { type: 'agents_focused', focused: false }).agentsView,
   ).toBeUndefined();
 });
+
+test('a one-time notice opens once, a second coming while it is open making no other, and closes (CHD-434)', () => {
+  const open = reduceApp(ready, {
+    type: 'notice_opened',
+    id: 'dimcode-agents',
+  });
+
+  expect(open.notice).toBe('dimcode-agents');
+  expect(reduceApp(open, { type: 'notice_opened', id: 'other' })).toBe(open);
+  expect(reduceApp(open, { type: 'notice_closed' }).notice).toBe(undefined);
+});

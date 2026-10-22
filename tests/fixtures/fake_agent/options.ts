@@ -97,6 +97,16 @@ function valueOf(flag: string, variable: string): string | undefined {
 }
 
 /**
+ * `--dimcode-permission <value>`, or `CHORD_FAKE_DIMCODE_PERMISSION`: every
+ * session offers dimcode's `permission` config option, `read-only`,
+ * `workspace-write` or `full-access`, starting at the value given (CHD-434).
+ */
+export const DIMCODE_PERMISSION = valueOf(
+  '--dimcode-permission',
+  'CHORD_FAKE_DIMCODE_PERMISSION',
+);
+
+/**
  * The members a team's lead opens on its first turn, in order: `tester` and
  * `coder` unless `--lead-opens tester,coder,reviewer` (or
  * `CHORD_FAKE_LEAD_OPENS`) says, as the README's screenshots ask.

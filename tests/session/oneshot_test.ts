@@ -138,3 +138,42 @@ test('-p puts no plan to anyone, so cursor and grok hear cancelled, never a yes 
     await rm(dir, { recursive: true });
   }
 });
+
+test("-p says dimcode's notice once when its permission leaves read-only, and only then (CHD-434)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-oneshot-notice-'));
+  const noticed = async (agent: string, permission: string, prompt: string) => {
+    const said: (readonly string[])[] = [];
+
+    await runOneshot({
+      agent,
+      cwd: dir,
+      prompt,
+      agentCommand: fakeAgentCommand(
+        undefined,
+        '--dimcode-permission',
+        permission,
+      ),
+      onUpdate: () => {},
+      onRefused: () => {},
+      onNotice: (paragraphs) => {
+        said.push(paragraphs);
+      },
+    });
+
+    return said;
+  };
+
+  try {
+    // At its start already, or moved there in the turn: once either way.
+    expect(await noticed('dimcode', 'workspace-write', 'text')).toHaveLength(1);
+    expect(await noticed('dimcode', 'read-only', 'fullaccess')).toHaveLength(1);
+    expect(await noticed('dimcode', 'read-only', 'text')).toHaveLength(0);
+    // Another agent's option of that name is not dimcode's.
+    expect(await noticed('fake', 'full-access', 'text')).toHaveLength(0);
+    expect((await noticed('dimcode', 'full-access', 'text'))[0]?.[0]).toMatch(
+      /^With its permission option at full-access, dimcode may start/,
+    );
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});

@@ -4,6 +4,9 @@
  * (CHD-487).
  */
 import { describe, expect, test } from 'bun:test';
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import { GATE } from '../../fixtures/fake_agent/scenarios/agents.ts';
 import { DOWN, END, ready, send, until, withWindow } from '../app/render.tsx';
 import { withBackground } from './background_window.tsx';
 
@@ -30,6 +33,8 @@ describe("an agent's or a task's row opens its detail (CHD-487)", () => {
 
   test("codex's subagents, which offer no cancel, are rows too, and x on one says so (Q135)", () =>
     withWindow(async (window) => {
+      // Its subagent held at work until the test is done with it (CHD-501).
+      await mkdir(join(window.dir, GATE), { recursive: true });
       await send(window, 'subagent');
       await window.shows('background ');
       await window.press(DOWN);
@@ -139,6 +144,8 @@ describe("an agent's detail draws its whole task and its work, following its end
 
 test('a detail pins its name on one line, cut with … when longer, and its whole task after › only when cut (CHD-487)', () =>
   withWindow(async (window) => {
+    // Its subagent held at work until the test is done with it (CHD-501).
+    await mkdir(join(window.dir, GATE), { recursive: true });
     await send(window, 'subagent');
     await window.shows('Do you want to proceed?');
     await window.press('1');

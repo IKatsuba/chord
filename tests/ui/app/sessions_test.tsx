@@ -844,7 +844,7 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
       permission = 'read-only',
     }: {
       agent?: string;
-      record?: string | 'directory';
+      record?: string | 'directory' | 'blocked';
       permission?: string;
     } = {},
   ) {
@@ -878,6 +878,10 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
 
     if (record === 'directory') {
       await mkdir(file, { recursive: true });
+    } else if (record === 'blocked') {
+      // A file where chord's directory goes: nothing is written there.
+      await mkdir(configHome, { recursive: true });
+      await writeFile(join(configHome, 'chord'), '');
     } else if (record !== undefined) {
       await mkdir(join(configHome, 'chord'), { recursive: true });
       await writeFile(file, record);
@@ -1119,4 +1123,30 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
       },
       { agent: 'dimcode', permission: 'full-access' },
     ));
+
+  for (const blocked of [false, true]) {
+    test(
+      blocked
+        ? 'a dismissal that cannot be written is given back: the next session at risk shows it'
+        : '1 dismisses it for the window at once: a child coming due after shows nothing',
+      () =>
+        withNotices(
+          async (read, main) => {
+            await fullAccess(read, await openDimcode(read, main));
+            await until(
+              'the notice',
+              () => read().all.window.notice === 'dimcode-agents',
+            );
+            read().drive.dismissNotice('dimcode-agents');
+            read().dispatch({ type: 'notice_closed' });
+            await fullAccess(read, await openDimcode(read, main));
+            await settle();
+            expect(read().all.window.notice).toBe(
+              blocked ? 'dimcode-agents' : undefined,
+            );
+          },
+          blocked ? { record: 'blocked' } : {},
+        ),
+    );
+  }
 });

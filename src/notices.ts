@@ -117,6 +117,58 @@ export class NoticeWatch {
   }
 }
 
+/**
+ * Where a window's notices come due and are dismissed, so the record's
+ * reads and its write never cross: one dismissed in the window shows no
+ * more from that moment, whatever a read begun before it, or before the
+ * write lands, finds; one whose write failed is given back, to show the
+ * next time it comes due, the side a failure errs on.
+ */
+export class NoticeGate {
+  readonly #read: () => Promise<ReadonlySet<string>>;
+  readonly #write: (id: string) => Promise<void>;
+  readonly #dismissed = new Set<string>();
+  // Moves on each dismissal, so a read begun before one shows nothing.
+  #generation = 0;
+
+  constructor(
+    read: () => Promise<ReadonlySet<string>>,
+    write: (id: string) => Promise<void>,
+  ) {
+    this.#read = read;
+    this.#write = write;
+  }
+
+  /**
+   * Whether notice `id`, come due, is to show: the record read, a record
+   * that does not read showing it, and `holds` still true once it is.
+   */
+  async due(id: string, holds: () => boolean): Promise<boolean> {
+    const generation = this.#generation;
+    const recorded = await this.#read().catch(() => new Set<string>());
+
+    return (
+      generation === this.#generation &&
+      !this.#dismissed.has(id) &&
+      !recorded.has(id) &&
+      holds()
+    );
+  }
+
+  /** Dismisses notice `id` for good: at once here, then in the record. */
+  async dismiss(id: string): Promise<void> {
+    this.#dismissed.add(id);
+
+    this.#generation += 1;
+
+    try {
+      await this.#write(id);
+    } catch {
+      this.#dismissed.delete(id);
+    }
+  }
+}
+
 /** The record of dismissed notices, beside the user settings file. */
 export function noticesFile(
   configHome: string | undefined,

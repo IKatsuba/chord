@@ -106,6 +106,8 @@ import type { AgentOption } from '../../session/config.ts';
 import {
   DIMCODE_NOTICE,
   dismissedNotices,
+  dismissNotice,
+  NoticeGate,
   NoticeWatch,
   noticesFile,
 } from '../../notices.ts';
@@ -368,6 +370,16 @@ export function useSessions(
   // that moment, closed or was cleared while the record was read shows none
   // (docs/design/CHD-434.md).
   const noticeWatch = useRef(new NoticeWatch());
+  const noticeGate = useRef(
+    new NoticeGate(
+      () => dismissedNotices(noticesFile(configHome)),
+      (id) => {
+        const file = noticesFile(configHome);
+
+        return file === undefined ? Promise.resolve() : dismissNotice(file, id);
+      },
+    ),
+  );
 
   const watchNotice = (id: string, agent: string, event: ConversationEvent) => {
     const watch = noticeWatch.current;
@@ -387,13 +399,18 @@ export function useSessions(
       return;
     }
 
-    void dismissedNotices(noticesFile(configHome))
-      .catch(() => new Set<string>())
-      .then((dismissed) => {
-        if (!dismissed.has(DIMCODE_NOTICE) && watch.holds(id, ticket)) {
+    void noticeGate.current
+      .due(DIMCODE_NOTICE, () => watch.holds(id, ticket))
+      .then((shows) => {
+        if (shows) {
           dispatch({ type: 'notice_opened', id: DIMCODE_NOTICE });
         }
       });
+  };
+
+  /** Dismisses notice `id` for good on this machine: the person's `1`. */
+  const dismissNoticeFor = (id: string) => {
+    void noticeGate.current.dismiss(id);
   };
 
   const conversationOf = (
@@ -3312,5 +3329,6 @@ export function useSessions(
     listed,
     background,
     picked,
+    dismissNotice: dismissNoticeFor,
   };
 }

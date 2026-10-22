@@ -15,6 +15,7 @@ import {
   dismissNotice,
   dismissedNotices,
   noticesFile,
+  NoticeGate,
   NoticeWatch,
 } from '../src/notices.ts';
 
@@ -212,5 +213,74 @@ describe('CHD-434 U1 tester: machine records and independent eligibility', () =>
     } finally {
       await rm(dir, { recursive: true });
     }
+  });
+});
+
+describe("CHD-434: the window's gate between the record's reads and its write", () => {
+  /** A read or write held until the test lets it go. */
+  const held = <T>() => Promise.withResolvers<T>();
+  const always = () => true;
+
+  test('a read begun before 1 that finds the record empty shows nothing', async () => {
+    const read = held<ReadonlySet<string>>();
+    const gate = new NoticeGate(
+      () => read.promise,
+      () => Promise.resolve(),
+    );
+    const due = gate.due(DIMCODE_NOTICE, always);
+
+    await gate.dismiss(DIMCODE_NOTICE);
+    read.resolve(new Set());
+    expect(await due).toBe(false);
+  });
+
+  test('while 1 is still being written, another session coming due shows nothing', async () => {
+    const write = held<void>();
+    const gate = new NoticeGate(
+      () => Promise.resolve(new Set()),
+      () => write.promise,
+    );
+    const dismissed = gate.dismiss(DIMCODE_NOTICE);
+
+    // The rename has not landed: the record still reads empty.
+    expect(await gate.due(DIMCODE_NOTICE, always)).toBe(false);
+    write.resolve();
+    await dismissed;
+    expect(await gate.due(DIMCODE_NOTICE, always)).toBe(false);
+  });
+
+  test('a write that fails gives it back, to show the next time it comes due, and no read begun before shows it', async () => {
+    const write = held<void>();
+    const read = held<ReadonlySet<string>>();
+    let reads = 0;
+    const gate = new NoticeGate(
+      () => (reads++ === 0 ? read.promise : Promise.resolve(new Set())),
+      () => write.promise,
+    );
+    const before = gate.due(DIMCODE_NOTICE, always);
+    const dismissed = gate.dismiss(DIMCODE_NOTICE);
+
+    write.reject(new Error('read-only file system'));
+    await dismissed;
+    read.resolve(new Set());
+    expect(await before).toBe(false);
+    expect(await gate.due(DIMCODE_NOTICE, always)).toBe(true);
+  });
+
+  test('a record that does not read shows it; one that names it, or a session no longer at risk, does not', async () => {
+    const failing = new NoticeGate(
+      () => Promise.reject(new Error('EISDIR')),
+      () => Promise.resolve(),
+    );
+
+    expect(await failing.due(DIMCODE_NOTICE, always)).toBe(true);
+    expect(await failing.due(DIMCODE_NOTICE, () => false)).toBe(false);
+
+    const recorded = new NoticeGate(
+      () => Promise.resolve(new Set([DIMCODE_NOTICE])),
+      () => Promise.resolve(),
+    );
+
+    expect(await recorded.due(DIMCODE_NOTICE, always)).toBe(false);
   });
 });

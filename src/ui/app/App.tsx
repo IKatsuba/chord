@@ -43,7 +43,6 @@ import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
 import { PlanBox } from '../dialogs/PlanBox.tsx';
-import { dismissNotice, noticesFile } from '../../notices.ts';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import { placeholderBefore } from '../prompt/images.ts';
 import { matchFiles, mentionAt } from '../prompt/mentions.ts';
@@ -1358,12 +1357,8 @@ export function App({
                   columns={columns}
                   active={listening}
                   onAnswer={(dismissed) => {
-                    const file = noticesFile(configHome);
-
-                    // A record that cannot be written leaves it to show again
-                    // next time, which is the side to err on.
-                    if (dismissed && file !== undefined) {
-                      void dismissNotice(file, notice).catch(() => {});
+                    if (dismissed) {
+                      sessions.dismissNotice(notice);
                     }
 
                     dispatch({ type: 'notice_closed' });

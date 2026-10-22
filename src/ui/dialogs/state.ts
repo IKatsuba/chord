@@ -4,6 +4,7 @@
  */
 import type {
   ElicitationWait,
+  PlanAsk,
   Transcript,
 } from '../../session/transcript/types.ts';
 import { askedPermission } from './permission.ts';
@@ -90,7 +91,8 @@ export function reduceDialogs(
 export function asksPerson(transcript: Transcript): boolean {
   return (
     transcript.turn.status === 'awaiting_permission' ||
-    transcript.asking.length > 0
+    transcript.asking.length > 0 ||
+    askedPlan(transcript) !== undefined
   );
 }
 
@@ -103,7 +105,20 @@ export function askedIds(transcript: Transcript): string[] {
       ? turn.permissions.map((wait) => wait.id)
       : []),
     ...transcript.asking.map((wait) => wait.id),
+    ...(transcript.planAsks ?? []).flatMap((ask) =>
+      ask.answer === undefined ? [ask.wait.id] : [],
+    ),
   ];
+}
+
+/**
+ * The plan on screen, waiting on the person: the oldest not answered yet,
+ * once no permission is asked, as that prompt answers first (CHD-437).
+ */
+export function askedPlan(transcript: Transcript): PlanAsk | undefined {
+  return transcript.turn.status === 'awaiting_permission'
+    ? undefined
+    : transcript.planAsks?.find((ask) => ask.answer === undefined);
 }
 
 /**

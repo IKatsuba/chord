@@ -4088,8 +4088,9 @@ the person's own `agent`.
 **In chord.** chord declares `subagents`, so the draft shape arrives and its
 enricher maps all four end states; nobody has seen it live. Questions come as
 permission boxes, and `-p` with `--dangerously-skip-permissions` answers one
-with its first option. chord answers `cursor/create_plan` with
-method-not-found, so a plan counts as approved without the person. Shell
+with its first option. chord puts `cursor/create_plan` to the person in
+its plan box and answers cursor with their choice, `cancelled` when it is
+not theirs (CHD-437). Shell
 output is only in `rawOutput`, which chord never draws; a running call stays a
 grey `Waiting…` and a failed one reads `completed`. No usage, so no meter and
 no estimate. The effort picker is empty. Without `agent login` or
@@ -5362,8 +5363,8 @@ agent's Custom or In chord paragraph instead, the item says so.
   permission-safety item or a note for the guide is the owner's.
 - **cursor approves without asking.** Cursor CLI 2026.10.16 approves a request
   that has no `toolCallId` without asking the client (cu11). It also counts a
-  plan as accepted when `cursor/create_plan` gets method-not-found, which is how
-  chord answers it (cursor, Custom).
+  plan as accepted when `cursor/create_plan` gets method-not-found; chord now
+  answers it with the person's choice, or `cancelled` (CHD-437).
 - **zeroclaw's edits cannot be approved.** chord's SDK schema refuses zeroclaw's
   `reject_with_edit` option kind, so in supervised mode every file edit or write
   is answered invalid-params before chord sees it (zc9; zeroclaw, In chord).
@@ -5838,10 +5839,11 @@ New items that a question above already holds are not repeated here.
   and declaring `terminal_output` would show only its last chunk (dr12;
   factory-droid, Custom). pi's is the same (pi10; pi-acp, In chord); reading
   either as a delta treats one agent's key differently.
-- **grok's plan mode.** grok's `x.ai/exit_plan_mode` gets method-not-found, and
-  grok ends the turn as cancelled while staying in plan mode (grok-build,
-  Custom). How chord reads such a turn, and whether `exit_plan_mode` is ever
-  answered, is open; no task covers it.
+- **grok's plan mode.** grok's `x.ai/exit_plan_mode` got method-not-found, and
+  grok ended the turn as cancelled while staying in plan mode (grok-build,
+  Custom). chord now puts it to the person in its plan box and answers
+  approved, revise with their note, or abandoned, `cancelled` when it is not
+  theirs (CHD-457).
 - **gemini's permission inside a prompt.** A `@` mention outside the workspace
   makes gemini ask before the turn's first update, with a tool call id no
   `tool_call` announced (gemini, In chord). Whether chord draws that box with a

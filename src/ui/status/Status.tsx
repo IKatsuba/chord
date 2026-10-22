@@ -51,8 +51,9 @@ export function Working({
   compacting,
 }: {
   turn: TurnState;
-  /** The form or link open below, if any, and when it asked. */
-  asking: { readonly at?: number | undefined } | undefined;
+  /** The form, link or plan open below, if any, and when it asked. */
+  asking:
+    { readonly at?: number | undefined; readonly plan?: true } | undefined;
   compacting: boolean;
 }) {
   const [now, setNow] = useState(Date.now);

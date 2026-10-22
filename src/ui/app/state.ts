@@ -53,6 +53,7 @@ import {
 } from '../background/state.ts';
 import {
   askedInput,
+  askedPlan,
   asksPerson,
   asksWithKeys,
   heldBack,
@@ -1384,9 +1385,11 @@ function listHasKeys(state: AppState): boolean {
   return asksWithKeys(state) || pickerShown(state);
 }
 
-/** The form or link on screen, when it has the keys. */
+/** The form, link or plan on screen, when it has the keys. */
 function inputWithKeys(state: AppState) {
-  return heldBack(state) ? undefined : askedInput(state.transcript);
+  return heldBack(state)
+    ? undefined
+    : (askedInput(state.transcript) ?? askedPlan(state.transcript));
 }
 
 /** One of chord's pickers or panels is open over the prompt. */

@@ -255,6 +255,11 @@ it and it may still be working. ctrl+o shows any error or explanation.
 After Esc, a subagent that announced it can be cancelled stays running on
 screen until its agent reports its end.
 An approved Claude plan appears once, as the plan.
+A plan cursor or grok asks you to approve shows under its `Plan` call, its
+overview, steps and cursor's todos, and an `Approve Plan` box asks: yes, or
+keep planning with an optional note typed on its Note row, and for grok,
+leave plan mode. Esc keeps planning. A plan you did not answer is never taken
+as approved.
 
 In Claude and Codex sessions, an MCP call reads
 `server - tool (MCP)(key: JSON, …)`, with its arguments whole and wrapped.

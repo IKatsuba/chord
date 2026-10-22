@@ -41,6 +41,7 @@ import {
 } from './turn.ts';
 import type {
   Entry,
+  PlanAsk,
   Transcript,
   TranscriptAction,
   UsageField,
@@ -96,6 +97,18 @@ function withEndLines(state: Transcript, next: Transcript): Transcript {
     : { ...next, entries: [...next.entries, ...lines] };
 }
 
+/** `entries` with `ask` on the call it came out of, the latest of that id. */
+function withPlan(entries: readonly Entry[], ask: PlanAsk): readonly Entry[] {
+  const at = entries.findLastIndex(
+    (entry) => entry.kind === 'tool' && entry.call.id === ask.wait.toolCallId,
+  );
+  const entry = entries[at];
+
+  return entry?.kind === 'tool'
+    ? entries.with(at, { ...entry, call: { ...entry.call, plan: ask } })
+    : entries;
+}
+
 function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
   switch (action.type) {
     case 'prompt':
@@ -137,27 +150,40 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
       return elicitationRequested(state, action.turnId, action.elicitation);
     case 'elicitation_settled':
       return elicitationSettled(state, action.turnId, action.id, action.answer);
-    case 'plan_requested':
-      return (state.planAsks ?? []).some(
-        (ask) => ask.wait.id === action.plan.id,
-      )
-        ? state
-        : {
-            ...state,
-            planAsks: [
-              ...(state.planAsks ?? []),
-              { turnId: action.turnId, wait: action.plan },
-            ],
-          };
-    case 'plan_settled':
+    case 'plan_requested': {
+      if (
+        (state.planAsks ?? []).some((ask) => ask.wait.id === action.plan.id)
+      ) {
+        return state;
+      }
+
+      const ask: PlanAsk = { turnId: action.turnId, wait: action.plan };
+
       return {
         ...state,
-        planAsks: (state.planAsks ?? []).map((ask) =>
-          ask.wait.id === action.id && ask.answer === undefined
-            ? { ...ask, answer: action.answer }
-            : ask,
+        entries: withPlan(state.entries, ask),
+        planAsks: [...(state.planAsks ?? []), ask],
+      };
+    }
+    case 'plan_settled': {
+      const ask = (state.planAsks ?? []).find(
+        (each) => each.wait.id === action.id && each.answer === undefined,
+      );
+
+      if (ask === undefined) {
+        return state;
+      }
+
+      const answered: PlanAsk = { ...ask, answer: action.answer };
+
+      return {
+        ...state,
+        entries: withPlan(state.entries, answered),
+        planAsks: (state.planAsks ?? []).map((each) =>
+          each === ask ? answered : each,
         ),
       };
+    }
     case 'cancel':
       return cancelled(state, action.turnId, action.at);
     case 'subagent_stopping':

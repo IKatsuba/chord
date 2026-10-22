@@ -43,6 +43,7 @@ import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
 import { askedPermission } from '../dialogs/permission.ts';
+import { PlanBox } from '../dialogs/PlanBox.tsx';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import { placeholderBefore } from '../prompt/images.ts';
 import { matchFiles, mentionAt } from '../prompt/mentions.ts';
@@ -61,7 +62,12 @@ import {
   resumableSession,
   windowed,
 } from './state.ts';
-import { askedInput, betweenAsked, heldBack } from '../dialogs/state.ts';
+import {
+  askedInput,
+  askedPlan,
+  betweenAsked,
+  heldBack,
+} from '../dialogs/state.ts';
 import { askerParts } from '../dialogs/asker.ts';
 import {
   configOption,
@@ -512,6 +518,7 @@ export function App({
   const listening =
     state.connection.status !== 'closing' && state.pendingKeys === undefined;
   const inputAsked = askedInput(state.transcript);
+  const planAsked = askedPlan(state.transcript);
   const picking = modelPickerShown(state);
   const resumingShown = resumePickerShown(state);
   const listingSessions = sessionsPickerShown(state);
@@ -1193,7 +1200,10 @@ export function App({
               </Clip>
               <Working
                 turn={state.transcript.turn}
-                asking={inputAsked}
+                asking={
+                  inputAsked ??
+                  (planAsked === undefined ? undefined : { plan: true })
+                }
                 compacting={state.transcript.entries.some((entry) =>
                   inSpinner(entry, state.transcript.turn),
                 )}
@@ -1237,6 +1247,19 @@ export function App({
                       id: asked.id,
                       overflows,
                     })
+                  }
+                />
+              )}
+              {!asked && planAsked && !listingSessions && (
+                <PlanBox
+                  key={planAsked.wait.id}
+                  wait={planAsked.wait}
+                  agent={shownAgent}
+                  width={columns}
+                  hidden={viewing}
+                  active={listening && !listFocus && !viewing}
+                  onAnswer={(answer) =>
+                    conversation()?.answerPlan(planAsked.wait.id, answer)
                   }
                 />
               )}

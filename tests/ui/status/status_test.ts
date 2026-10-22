@@ -379,6 +379,13 @@ test('the spinner line follows the turn', () => {
   expect(workingLine(turn('idle'), 13_000, false, 'esc')).toStrictEqual(
     undefined,
   );
+  // A plan waiting on the person says so (CHD-437).
+  expect(
+    workingLine(turn('working'), 13_000, { plan: true }, 'esc'),
+  ).toStrictEqual({
+    label: 'Waiting for your answer to the plan…',
+    detail: '12s',
+  });
   expect(workingLine(turn('working'), 13_000, false, 'esc')).toStrictEqual({
     label: 'Working…',
     detail: '12s · esc to interrupt',

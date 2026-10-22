@@ -171,8 +171,12 @@ export interface AskKey extends KeyPress {
   readonly rightArrow?: boolean;
 }
 
-/** Typing and deleting at the end of a text row's value. */
-function edited(value: string, input: string, key: AskKey): string | undefined {
+/** Typing and deleting at the end of a text row's value, as the plan box's Note too. */
+export function edited(
+  value: string,
+  input: string,
+  key: AskKey,
+): string | undefined {
   const chars = [...value];
 
   if (key.backspace) {

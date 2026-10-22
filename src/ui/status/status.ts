@@ -759,7 +759,13 @@ export function workingLine(
    * A form or link is open, below the line, with when it was asked if known:
    * held past its turn or asked between turns too, it still waits (CHD-158).
    */
-  asking: boolean | { readonly at?: number | undefined } = false,
+  asking:
+    | boolean
+    | {
+        readonly at?: number | undefined;
+        /** It is a plan put to the person, not a form (CHD-437). */
+        readonly plan?: true;
+      } = false,
   /** The key that interrupts, named in the line; none when none is bound. */
   cancelKey: string | undefined,
   /** The agent is compacting the conversation within the turn. */
@@ -767,19 +773,23 @@ export function workingLine(
 ): { readonly label: string; readonly detail: string } | undefined {
   if (asking !== false && turn.status !== 'awaiting_permission') {
     const at = asking === true ? undefined : asking.at;
+    const waiting =
+      asking !== true && asking.plan === true
+        ? 'Waiting for your answer to the plan…'
+        : 'Waiting for your input…';
 
     // Esc answers the form below rather than interrupting the turn; its time
     // counts from when it asked, as a permission's does.
     if (turn.status === 'working') {
       return {
-        label: 'Waiting for your input…',
+        label: waiting,
         detail: formatElapsed(now - (at ?? turn.since)),
       };
     }
 
     if (turn.status === 'idle') {
       return {
-        label: 'Waiting for your input…',
+        label: waiting,
         detail: formatElapsed(now - (at ?? now)),
       };
     }

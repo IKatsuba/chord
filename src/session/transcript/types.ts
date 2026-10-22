@@ -34,6 +34,11 @@ export interface ToolCall {
   readonly rawInput?: unknown;
   readonly rawOutput?: unknown;
   /**
+   * The plan its agent put to the person out of it, and their answer once
+   * given (CHD-437, CHD-457): drawn under it in place of its content.
+   */
+  readonly plan?: PlanAsk;
+  /**
    * An MCP call's server, tool and arguments where the agent wrapped them in its
    * `rawInput`, as chord's enrichers file them; a request chord served is
    * tied to the call by these rather than by the `rawInput`.

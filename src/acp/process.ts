@@ -41,6 +41,12 @@ export interface AgentProcess {
   /** The end of what it wrote to stderr, for a start that failed. */
   stderrTail(): string;
   /**
+   * `stderrTail` once stderr has ended, or once `STDERR_SETTLE_MS` pass
+   * without its end: what an agent that goes says last, as its exit and the
+   * end of its stdout can be heard before its stderr's last piece (CHD-495).
+   */
+  lastWords(): Promise<string>;
+  /**
    * Stops it within the bounds whatever it answers, and returns once its exit
    * is seen; rejects with `AgentExitError` if that exit is not seen even after
    * SIGKILL. Idempotent.
@@ -60,6 +66,15 @@ export interface SpawnAgentOptions {
 
 /** How much of the agent's stderr is kept for an error that quotes it. */
 const STDERR_TAIL = 4096;
+
+/**
+ * How long an agent's last words wait for its stderr to end. The end comes
+ * within milliseconds of an exit, under load too, as it is an event of the
+ * same loop that heard the exit; only a process the agent left behind
+ * holding the pipe keeps it open, and an error is not held for that past
+ * half a second, which a person does not notice as a delay (CHD-495).
+ */
+export const STDERR_SETTLE_MS = 500;
 
 /**
  * The argv a command names. A command line is split by shell-quote as a shell
@@ -134,6 +149,18 @@ export async function spawnAgent(
     options.onStderr?.(text);
   });
 
+  // Its stderr's own end, after which nothing more of it comes.
+  const stderrEnded = new Promise<void>((resolve) => {
+    if (child.stderr === null) {
+      resolve();
+
+      return;
+    }
+
+    child.stderr.once('end', resolve);
+    child.stderr.once('close', resolve);
+  });
+
   // stdin is ended on the child's own stream, past this one, so a stop ends
   // it even while a write the agent never reads is still waiting.
   const input = child.stdin;
@@ -188,6 +215,11 @@ export async function spawnAgent(
     stdout,
     status,
     stderrTail: () => tail,
+    lastWords: async () => {
+      await settledWithin(stderrEnded, STDERR_SETTLE_MS);
+
+      return tail;
+    },
     stop: (bounds = {}) => (stopping ??= stop(bounds)),
   };
 }

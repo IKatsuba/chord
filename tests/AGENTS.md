@@ -12,6 +12,9 @@
   one from a start that already failed.
 - Bun's `expect` narrows no type; use `node:assert`'s `assert` where a later line needs it.
 - Start chord or the fake agent under `process.execPath`, the Bun running the test.
+- ACP pipe-order tests can pass an `AgentProcess` with held streams to
+  `src/acp/connection.ts`'s `connectAgent`, controlling stdout and stderr
+  independently.
 - Helpers sit beside the tests that share them.
 - Add a new test to `tsconfig.json`'s `files` when its path differs from
   another file only by case, so tsc checks both on a case-blind file system.

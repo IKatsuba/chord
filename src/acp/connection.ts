@@ -118,7 +118,10 @@ export interface Agent {
    * `initialize` says under `_meta.steering.supported`.
    */
   readonly steering: boolean;
-  /** Settles once the agent's exit is seen, however it came. */
+  /**
+   * Settles once the agent's exit is seen, however it came, and what it left
+   * on stderr has come, or could not in time (CHD-495).
+   */
   readonly exited: Promise<Exit>;
   /**
    * Once the agent's connection has gone, the end of what it wrote to stderr,
@@ -233,6 +236,18 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
     cwd: options.cwd,
     onStderr: (text) => options.onTraffic({ from: 'stderr', text }),
   });
+
+  return await connectAgent(process, options);
+}
+
+/**
+ * `openAgent`'s connection over an agent process already started: apart,
+ * so a test can drive the process's pipes in the order it needs (CHD-495).
+ */
+export async function connectAgent(
+  process: AgentProcess,
+  options: OpenAgentOptions,
+): Promise<Agent> {
   /** What each session has waiting on the person, to cancel with its turn. */
   const waiting = new Map<string, Set<AbortController>>();
   const closing = new AbortController();
@@ -336,6 +351,22 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
   );
 
   /**
+   * The agent's exit as an error, once its last words have come; the
+   * caller's abort while they are awaited ends the wait at once, with its
+   * own reason (CHD-495).
+   */
+  const exitError = (signal: AbortSignal | undefined): Promise<unknown> =>
+    new Promise((resolve) => {
+      const aborted = () => resolve(signal?.reason);
+
+      signal?.addEventListener('abort', aborted, { once: true });
+      void exitMessage(process).then((message) => {
+        signal?.removeEventListener('abort', aborted);
+        resolve(new Error(message));
+      });
+    });
+
+  /**
    * Waits for the agent's answer, giving up on the signal or on the agent's
    * exit, whichever comes first.
    */
@@ -352,10 +383,18 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
     // Withdrawn work must not reach the agent: a rejected set_mode that still
     // changed the mode, or a prompt that still started a turn, lies to the caller.
     if (gone.aborted) {
-      throw signal?.aborted ? signal.reason : new Error(exitMessage(process));
+      throw signal?.aborted ? signal.reason : await exitError(signal);
     }
 
-    const request = send();
+    // A request the closed connection fails is the agent's exit too, said
+    // with its last words, which can come after the close (CHD-495).
+    const request = send().catch(async (error: unknown) => {
+      if (!signal?.aborted && connection.signal.aborted) {
+        throw await exitError(signal);
+      }
+
+      throw error;
+    });
 
     request.catch(() => {});
 
@@ -363,10 +402,13 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
       return await Promise.race([
         request,
         new Promise<never>((_, reject) => {
-          stop = () =>
-            reject(
-              signal?.aborted ? signal.reason : new Error(exitMessage(process)),
-            );
+          stop = () => {
+            if (signal?.aborted) {
+              reject(signal.reason);
+            } else {
+              void exitError(signal).then(reject);
+            }
+          };
 
           if (gone.aborted) {
             stop();
@@ -424,14 +466,23 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
   };
 
   const steering = steeringOf(init);
+  // What the agent left on stderr, once it has gone and all of it has come.
+  let lastWords: string | undefined;
 
   const agent: Agent = {
     pid: process.pid,
     init,
     steering,
-    exited: process.status,
+    // Once its last words have come too, which `gone` then gives whole.
+    exited: process.status.then(async (exit) => {
+      lastWords = (await process.lastWords()).trim();
+
+      return exit;
+    }),
     gone: () =>
-      connection.signal.aborted ? process.stderrTail().trim() : undefined,
+      connection.signal.aborted
+        ? (lastWords ?? process.stderrTail().trim())
+        : undefined,
     newSession: (request, signal) =>
       ask(() => connection.agent.request('session/new', request), signal),
     loadSession: async (request, signal) => {
@@ -522,9 +573,12 @@ function steeringOf(init: acp.InitializeResponse): boolean {
   );
 }
 
-/** The agent went, with the end of its stderr when it left any. */
-function exitMessage(process: AgentProcess): string {
-  const tail = process.stderrTail().trim();
+/**
+ * The agent went, with the end of its stderr when it left any, once that
+ * has all come (CHD-495).
+ */
+async function exitMessage(process: AgentProcess): Promise<string> {
+  const tail = (await process.lastWords()).trim();
 
   return tail === '' ? 'The agent exited.' : `The agent exited: ${tail}`;
 }

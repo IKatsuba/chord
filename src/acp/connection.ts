@@ -236,6 +236,18 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
     cwd: options.cwd,
     onStderr: (text) => options.onTraffic({ from: 'stderr', text }),
   });
+
+  return await connectAgent(process, options);
+}
+
+/**
+ * `openAgent`'s connection over an agent process already started: apart,
+ * so a test can drive the process's pipes in the order it needs (CHD-495).
+ */
+export async function connectAgent(
+  process: AgentProcess,
+  options: OpenAgentOptions,
+): Promise<Agent> {
   /** What each session has waiting on the person, to cancel with its turn. */
   const waiting = new Map<string, Set<AbortController>>();
   const closing = new AbortController();
@@ -339,6 +351,22 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
   );
 
   /**
+   * The agent's exit as an error, once its last words have come; the
+   * caller's abort while they are awaited ends the wait at once, with its
+   * own reason (CHD-495).
+   */
+  const exitError = (signal: AbortSignal | undefined): Promise<unknown> =>
+    new Promise((resolve) => {
+      const aborted = () => resolve(signal?.reason);
+
+      signal?.addEventListener('abort', aborted, { once: true });
+      void exitMessage(process).then((message) => {
+        signal?.removeEventListener('abort', aborted);
+        resolve(new Error(message));
+      });
+    });
+
+  /**
    * Waits for the agent's answer, giving up on the signal or on the agent's
    * exit, whichever comes first.
    */
@@ -355,16 +383,14 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
     // Withdrawn work must not reach the agent: a rejected set_mode that still
     // changed the mode, or a prompt that still started a turn, lies to the caller.
     if (gone.aborted) {
-      throw signal?.aborted
-        ? signal.reason
-        : new Error(await exitMessage(process));
+      throw signal?.aborted ? signal.reason : await exitError(signal);
     }
 
     // A request the closed connection fails is the agent's exit too, said
     // with its last words, which can come after the close (CHD-495).
     const request = send().catch(async (error: unknown) => {
       if (!signal?.aborted && connection.signal.aborted) {
-        throw new Error(await exitMessage(process));
+        throw await exitError(signal);
       }
 
       throw error;
@@ -380,9 +406,7 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
             if (signal?.aborted) {
               reject(signal.reason);
             } else {
-              void exitMessage(process).then((message) =>
-                reject(new Error(message)),
-              );
+              void exitError(signal).then(reject);
             }
           };
 

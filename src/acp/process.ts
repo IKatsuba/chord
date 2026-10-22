@@ -74,7 +74,7 @@ const STDERR_TAIL = 4096;
  * holding the pipe keeps it open, and an error is not held for that past
  * half a second, which a person does not notice as a delay (CHD-495).
  */
-const STDERR_SETTLE_MS = 500;
+export const STDERR_SETTLE_MS = 500;
 
 /**
  * The argv a command names. A command line is split by shell-quote as a shell

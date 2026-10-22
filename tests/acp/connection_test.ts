@@ -8,6 +8,7 @@ import process from 'node:process';
 import type * as acp from '@agentclientprotocol/sdk';
 import {
   type Agent,
+  connectAgent,
   openAgent,
   type OpenAgentOptions,
 } from '../../src/acp/connection.ts';
@@ -694,51 +695,191 @@ test("the agent's stderr reaches the subscriber, and an agent that exits at star
   );
 });
 
-test("an agent that exits at start after closing its stdout still says why, its stderr's last piece read before the message is made (CHD-495)", async () => {
-  const seen = new Seen();
+describe('CHD-495: an agent that goes says why, its stderr read to its end first', () => {
+  /**
+   * An agent process whose pipes the test drives: what chord writes is
+   * heard, stdout is closed and stderr written and ended when the test
+   * says, in that order, whatever the scheduler would do with real pipes.
+   */
+  function heldProcess() {
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    let out!: ReadableStreamDefaultController<Uint8Array>;
+    let tail = '';
+    let written = '';
+    const heard: Record<string, unknown>[] = [];
+    const stderrEnded = Promise.withResolvers<void>();
+    const exit = Promise.withResolvers<{ code: number }>();
+    const stopped: number[] = [];
+    const held = {
+      heard,
+      stopped,
+      /** Answers the request chord sent under `method` with `result`. */
+      answer: (method: string, result: unknown) => {
+        const request = heard.find((each) => each['method'] === method);
 
-  const refused = openAgent({
-    // Its stdout ends first, its last words come after, and then the exit.
-    command: [
-      'sh',
-      '-c',
-      'exec 1>&-; sleep 0.1; echo "no credentials" >&2; exit 1',
-    ],
-    cwd: process.cwd(),
-    onTraffic: seen.push,
-    stop: STOP,
-    ...REFUSE,
-  });
+        assert(request !== undefined, `no ${method} heard`);
+        out.enqueue(
+          encoder.encode(
+            `${JSON.stringify({ jsonrpc: '2.0', id: request['id'], result })}\n`,
+          ),
+        );
+      },
+      /** The agent's stdout ends, before its stderr has. */
+      closeStdout: () => out.close(),
+      /** Its last words, then its stderr's end and its exit. */
+      leave: (words: string) => {
+        tail += words;
 
-  await expect(refused).rejects.toThrow('The agent exited: no credentials');
-});
+        stderrEnded.resolve();
+        exit.resolve({ code: 1 });
+      },
+      process: {
+        pid: 0,
+        stdin: new WritableStream<Uint8Array>({
+          write: (chunk) => {
+            written += decoder.decode(chunk);
 
-test('an agent that goes mid-session after closing its stdout fails the request with its last words, and leaves them once exited (CHD-495)', async () => {
-  // Answers `initialize` with the id it was asked under; at the next
-  // request its stdout ends first, its last words come after, then the exit.
-  const script = [
-    'read -r line',
-    String.raw`id=$(printf "%s" "$line" | sed -n "s/.*\"id\":\([0-9]*\).*/\1/p")`,
-    String.raw`printf "{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{},\"authMethods\":[]}}\n" "$id"`,
-    'read -r line',
-    'exec 1>&-',
-    'sleep 0.1',
-    'echo "out of tokens" >&2',
-    'exit 1',
-  ].join('\n');
-  const agent = await openAgent({
-    command: ['sh', '-c', script],
+            const lines = written.split('\n');
+
+            written = lines.pop()!;
+
+            heard.push(...lines.map((line) => JSON.parse(line)));
+          },
+        }),
+        stdout: new ReadableStream<Uint8Array>({
+          start: (controller) => {
+            out = controller;
+          },
+        }),
+        status: exit.promise,
+        stderrTail: () => tail,
+        lastWords: async () => {
+          await stderrEnded.promise;
+
+          return tail;
+        },
+        stop: () => {
+          stopped.push(Date.now());
+          held.leave('');
+
+          return Promise.resolve();
+        },
+      } as unknown as Parameters<typeof connectAgent>[0],
+    };
+
+    return held;
+  }
+
+  /** Waits for `check`, a few seconds at most. */
+  const soon = async (check: () => boolean) => {
+    const deadline = Date.now() + 5000;
+
+    while (!check()) {
+      assert(Date.now() < deadline, 'timed out');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  };
+
+  const OPTIONS = {
+    command: 'held',
     cwd: process.cwd(),
     onTraffic: () => {},
     stop: STOP,
     ...REFUSE,
+  } satisfies OpenAgentOptions;
+
+  /** Whether `promise` has settled by the time the loop is idle. */
+  const settled = async (promise: Promise<unknown>) => {
+    let done = false;
+
+    void promise.then(
+      () => (done = true),
+      () => (done = true),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    return done;
+  };
+
+  const opened = async (held: ReturnType<typeof heldProcess>) => {
+    const agent = connectAgent(held.process, OPTIONS);
+
+    await soon(() => held.heard.length > 0);
+    held.answer('initialize', {
+      protocolVersion: 1,
+      agentCapabilities: {},
+      authMethods: [],
+    });
+
+    return await agent;
+  };
+
+  test('at start: the open waits past the end of stdout for the last words, and says them', async () => {
+    const held = heldProcess();
+    const refused = connectAgent(held.process, OPTIONS);
+
+    refused.catch(() => {});
+
+    await soon(() => held.heard.length > 0);
+    held.closeStdout();
+    expect(await settled(refused)).toBe(false);
+    held.leave('no credentials\n');
+    await expect(refused).rejects.toThrow('The agent exited: no credentials');
   });
 
-  await expect(
-    agent.newSession({ cwd: process.cwd(), mcpServers: [] }),
-  ).rejects.toThrow('The agent exited: out of tokens');
-  await agent.exited;
-  expect(agent.gone()).toBe('out of tokens');
+  test('mid-session: a request fails with the last words, and gone() gives them once exited', async () => {
+    const held = heldProcess();
+    const agent = await opened(held);
+    const asked = agent.newSession({ cwd: process.cwd(), mcpServers: [] });
+
+    asked.catch(() => {});
+
+    await soon(() => held.heard.length > 1);
+    held.closeStdout();
+    expect(await settled(asked)).toBe(false);
+    held.leave('out of tokens\n');
+    await expect(asked).rejects.toThrow('The agent exited: out of tokens');
+    await agent.exited;
+    expect(agent.gone()).toBe('out of tokens');
+  });
+
+  test("the caller's abort while the last words are awaited ends the wait at once, with its reason", async () => {
+    const held = heldProcess();
+    const agent = await opened(held);
+    const caller = new AbortController();
+    const reason = new Error('the person pressed esc');
+    const asked = agent.newSession(
+      { cwd: process.cwd(), mcpServers: [] },
+      caller.signal,
+    );
+
+    asked.catch(() => {});
+
+    await soon(() => held.heard.length > 1);
+    held.closeStdout();
+    expect(await settled(asked)).toBe(false);
+    caller.abort(reason);
+    await expect(asked).rejects.toBe(reason);
+    // The agent never said its last words; nothing waits on them.
+    expect(held.stopped).toStrictEqual([]);
+    await agent.close();
+  });
+
+  test('a close while the last words are awaited stops the agent, and the request fails at once', async () => {
+    const held = heldProcess();
+    const agent = await opened(held);
+    const asked = agent.newSession({ cwd: process.cwd(), mcpServers: [] });
+
+    asked.catch(() => {});
+
+    await soon(() => held.heard.length > 1);
+    held.closeStdout();
+    expect(await settled(asked)).toBe(false);
+    await agent.close();
+    expect(held.stopped).toHaveLength(1);
+    await expect(asked).rejects.toThrow('The agent exited.');
+  });
 });
 
 test('an agent that cannot be started says so', async () => {

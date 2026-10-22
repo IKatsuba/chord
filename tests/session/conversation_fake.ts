@@ -66,8 +66,22 @@ export function heldSession() {
   return { session, state };
 }
 
-export async function until(check: () => boolean): Promise<void> {
+/**
+ * Until `check` holds, looked at on every turn of the event loop; it gives
+ * up after `timeout` ms on the monotonic clock, naming the check, so a wait
+ * that never ends fails rather than hanging the file (CHD-501).
+ */
+export async function until(
+  check: () => boolean,
+  timeout = 10_000,
+): Promise<void> {
+  const deadline = performance.now() + timeout;
+
   while (!check()) {
+    if (performance.now() > deadline) {
+      throw new Error(`timed out waiting for ${String(check)}`);
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 }

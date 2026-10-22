@@ -496,6 +496,18 @@ test('a long-lived child starts, stops and lists monitors of its own, each answe
         'stop_monitor',
         'list_monitors',
       ]);
+      // timeout_ms reads as a hard stop longer than the work (CHD-482, Q87).
+      expect(
+        (
+          tools.find(({ name }) => name === 'monitor')?.inputSchema.properties
+            ?.timeout_ms as { description?: string } | undefined
+        )?.description,
+      ).toBe(
+        'A hard stop: chord stops the command when it passes, whatever it ' +
+          'is doing, so make it longer than the command is meant to run (a ' +
+          "loop's whole length and a margin). 1000 to 3600000; 600000 (10 " +
+          'minutes) if left out',
+      );
 
       const started = await client.callTool({
         name: 'monitor',

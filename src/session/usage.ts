@@ -37,6 +37,26 @@ export function tokensOf(usage: Usage): TokenUsage {
   );
 }
 
+/**
+ * What a running total grew by since `last`: each field's increase, never
+ * less than none, as a total that fell, as after a reset, adds nothing
+ * (CHD-472, the owner's Q133).
+ */
+export function grownBy(
+  last: TokenUsage | undefined,
+  now: TokenUsage,
+): TokenUsage {
+  return Object.fromEntries(
+    TOKEN_FIELDS.flatMap((field) => {
+      const count = now[field];
+
+      return count === undefined
+        ? []
+        : [[field, Math.max(0, count - (last?.[field] ?? 0))]];
+    }),
+  );
+}
+
 /** A turn's own cost as a session keeps it, with the model it ended on. */
 export type SpentTurn = TurnCost & { readonly model?: string };
 

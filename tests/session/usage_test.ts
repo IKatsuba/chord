@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { addTurn, tokensOf } from '../../src/session/usage.ts';
+import { addTurn, grownBy, tokensOf } from '../../src/session/usage.ts';
 import { sessionTokens } from '../../src/ui/transcript/reports.ts';
 
 test("a turn's tokens are ACP's without its nulls", () => {
@@ -160,4 +160,19 @@ describe('CHD-472 U1 tester: the last total replaces every token field', () => {
 
     expect(sessionTokens(own)).toEqual({ inputTokens: 2, outputTokens: 3 });
   });
+});
+
+test("a running total grew by each field's increase since the last, never less than none, the first counting whole (CHD-472)", () => {
+  expect(grownBy(undefined, { inputTokens: 5, outputTokens: 2 })).toStrictEqual(
+    {
+      inputTokens: 5,
+      outputTokens: 2,
+    },
+  );
+  expect(
+    grownBy(
+      { inputTokens: 5, outputTokens: 2, thoughtTokens: 9 },
+      { inputTokens: 8, outputTokens: 1 },
+    ),
+  ).toStrictEqual({ inputTokens: 3, outputTokens: 0 });
 });

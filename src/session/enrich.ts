@@ -12,6 +12,7 @@ import type {
   SessionNotification,
   SessionUpdate,
   ToolKind,
+  Usage,
 } from '@agentclientprotocol/sdk';
 import type { Relay } from '../acp/traffic.ts';
 import {
@@ -23,6 +24,7 @@ import {
   withOptions,
 } from './agent_state.ts';
 import { isModelState } from './models.ts';
+import { type TokenUsage, tokensOf } from './usage.ts';
 
 /**
  * The `_meta` key on what chord filled in, naming the fields it filled, so a
@@ -50,6 +52,11 @@ export interface SessionWire {
   readonly agentCost: boolean;
   /** chord's estimate of what the session has cost, once there is one. */
   readonly estimate?: number;
+  /**
+   * The running total of tokens the agent's last answer gave, on an agent
+   * whose answers give one (CHD-472).
+   */
+  readonly total?: TokenUsage;
 }
 
 export interface ToolFacts {
@@ -183,6 +190,16 @@ export function heardFromAgent(wire: Wire, message: AnyMessage): Wire {
           commands: session.agent.commands,
         },
       }));
+    case 'session/prompt': {
+      const usage = result.usage as Usage | null | undefined;
+
+      return wire.totals === true && usage
+        ? withSession(answered, sessionId, (session) => ({
+            ...session,
+            total: tokensOf(usage),
+          }))
+        : answered;
+    }
     case 'session/set_config_option':
       return withSession(answered, sessionId, (session) => ({
         ...session,
@@ -215,17 +232,20 @@ export function heardFromAgent(wire: Wire, message: AnyMessage): Wire {
 
 /**
  * `wire` with what a session's past said, for a session reopened from chord's
- * record, whose past the agent does not replay: the cost it had come to, and
- * whether the agent gave its own.
+ * record, whose past the agent does not replay: the cost it had come to,
+ * whether the agent gave its own, and the running total of tokens it last
+ * gave, on an agent that gives one.
  */
 export function recalled(
   wire: Wire,
   sessionId: string,
   past: readonly SessionUpdate[],
+  total?: TokenUsage,
 ): Wire {
-  return withSession(wire, sessionId, (session) =>
-    past.reduce(heardUpdate, session),
-  );
+  return withSession(wire, sessionId, (session) => ({
+    ...past.reduce(heardUpdate, session),
+    ...(total === undefined ? {} : { total }),
+  }));
 }
 
 /**
@@ -237,8 +257,15 @@ export function enricherRelay(
   chain: readonly Enricher[],
   totals = false,
 ): Relay & {
-  /** Folds in a session's recorded past before it is reopened. */
-  recall(sessionId: string, past: readonly SessionUpdate[]): void;
+  /**
+   * Folds in a session's recorded past before it is reopened, with the
+   * running total its agent last gave, where it gives one.
+   */
+  recall(
+    sessionId: string,
+    past: readonly SessionUpdate[],
+    total?: TokenUsage,
+  ): void;
 } {
   let wire: Wire = totals ? { ...EMPTY_WIRE, totals } : EMPTY_WIRE;
 
@@ -255,8 +282,8 @@ export function enricherRelay(
 
       return out;
     },
-    recall: (sessionId, past) => {
-      wire = recalled(wire, sessionId, past);
+    recall: (sessionId, past, total) => {
+      wire = recalled(wire, sessionId, past, total);
     },
   };
 }

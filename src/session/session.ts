@@ -34,6 +34,7 @@ import { PlanBridge } from './plan_asks.ts';
 import { type HeldBack, serversFor } from './servers.ts';
 import { dirname } from 'node:path';
 import {
+  lastTotal,
   pastBySession,
   readPast,
   recordActions,
@@ -395,7 +396,8 @@ export async function openSession(
     }
   };
 
-  const relay = enricherRelay(ENRICHERS, usageCountOf(agent) === 'session');
+  const totals = usageCountOf(agent) === 'session';
+  const relay = enricherRelay(ENRICHERS, totals);
   const connection = await openAgent({
     command: start.command,
     relay,
@@ -445,20 +447,30 @@ export async function openSession(
       answer = created;
     } else {
       // A task's work is in its own record, beside its parent's.
+      const own =
+        resume.record === undefined ? [] : await readPast(resume.record);
       const recorded =
         resume.record === undefined
           ? []
           : withTaskWork(
-              await readPast(resume.record),
+              own,
               await taskPasts(dirname(resume.record), resume.sessionId),
             );
+      // On an agent whose answers give the session's running total, the last
+      // the session's own record kept, which chord's estimate goes on from.
+      const total = totals ? lastTotal(own) : undefined;
+      const pasts = pastBySession(resume.sessionId, recorded);
+
+      if (total !== undefined && !pasts.has(resume.sessionId)) {
+        pasts.set(resume.sessionId, []);
+      }
 
       // The agent replays nothing of a session resumed from the record, so
       // the enrichers hear its past, the cost it had come to, from there. Each
       // update goes back to the session that sent it, as it did live, so a
       // child's cost and calls never count as the parent's.
-      for (const [id, past] of pastBySession(resume.sessionId, recorded)) {
-        relay.recall(id, past);
+      for (const [id, past] of pasts) {
+        relay.recall(id, past, id === resume.sessionId ? total : undefined);
       }
 
       const loaded = await reopen(

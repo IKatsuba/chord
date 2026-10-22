@@ -152,11 +152,12 @@ test("a turn priced from its tokens goes ahead of its answer, marked as chord's"
   ]);
 });
 
-test("an agent whose answers give the session's running total is priced whole from the last, never added up (CHD-472)", () => {
-  const { prompt } = relayOn([costFromTokens], undefined, {}, true);
-  const twice = Object.fromEntries(
-    Object.entries(TOKENS).map(([field, count]) => [field, count * 2]),
-  );
+describe("CHD-472: chord's estimate on an agent whose answers give the session's running total", () => {
+  const times = (count: number) =>
+    Object.fromEntries(
+      Object.entries(TOKENS).map(([field, tokens]) => [field, tokens * count]),
+    );
+  const price = (model: string, count = 1) => turnCost(model, times(count))!;
   const amount = (out: readonly AnyMessage[]) => {
     const [update] = updates(out);
 
@@ -165,10 +166,74 @@ test("an agent whose answers give the session's running total is priced whole fr
       : undefined;
   };
 
-  expect(amount(prompt(TOKENS))).toStrictEqual(
-    turnCost('gpt-5.3-codex', TOKENS),
-  );
-  expect(amount(prompt(twice))).toStrictEqual(turnCost('gpt-5.3-codex', twice));
+  const totals = (model = 'gpt-5.3-codex') =>
+    relayOn([costFromTokens], [modelOption(model)], {}, true);
+  const switchTo = (
+    update: ReturnType<typeof relayOn>['update'],
+    model: string,
+  ) =>
+    update({
+      sessionUpdate: 'config_option_update',
+      configOptions: [modelOption(model)],
+    });
+
+  test('each answer has what the total grew by priced, and added: the same model sums to the total priced', () => {
+    const { prompt } = totals();
+
+    expect(amount(prompt(times(1)))).toBeCloseTo(price('gpt-5.3-codex'), 12);
+    expect(amount(prompt(times(3)))).toBeCloseTo(price('gpt-5.3-codex', 3), 12);
+  });
+
+  for (const [first, then] of [
+    ['gpt-5.3-codex', 'claude-haiku-4-5'],
+    ['claude-haiku-4-5', 'gpt-5.3-codex'],
+  ] as const) {
+    test(`after a switch from ${first} to ${then}, what grew since is priced at ${then}, what came before kept at ${first}`, () => {
+      const { prompt, update } = totals(first);
+
+      prompt(times(1));
+      switchTo(update, then);
+      expect(amount(prompt(times(2)))).toBeCloseTo(
+        price(first) + price(then),
+        12,
+      );
+    });
+  }
+
+  test('a total that fell, as after a reset, adds nothing, and the next grows from it', () => {
+    const { prompt } = totals();
+
+    prompt(times(3));
+    expect(amount(prompt(times(1)))).toBeCloseTo(price('gpt-5.3-codex', 3), 12);
+    expect(amount(prompt(times(2)))).toBeCloseTo(price('gpt-5.3-codex', 4), 12);
+  });
+
+  test('reopened from the record, it goes on from the estimate and the total the record kept', () => {
+    const { relay, prompt } = totals();
+    const kept = price('gpt-5.3-codex', 2);
+
+    relay.recall(
+      SESSION,
+      [
+        {
+          sessionUpdate: 'usage_update',
+          used: 4000,
+          size: 400_000,
+          cost: { amount: kept, currency: 'USD' },
+          _meta: { [FILLED]: ['cost'] },
+        },
+      ],
+      times(2),
+    );
+    expect(amount(prompt(times(3)))).toBeCloseTo(price('gpt-5.3-codex', 3), 12);
+  });
+
+  test("an agent whose answers are its turns' own adds each whole, as it did", () => {
+    const { prompt } = relayOn([costFromTokens]);
+
+    prompt(times(1));
+    expect(amount(prompt(times(3)))).toBeCloseTo(price('gpt-5.3-codex', 4), 12);
+  });
 });
 
 test("each turn adds to the estimate, and an agent's own cost stops it", () => {

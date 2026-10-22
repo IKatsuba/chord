@@ -29,6 +29,7 @@ import type {
   TurnResult,
 } from './transcript/types.ts';
 import { lastReading, type TurnFigures } from './turn_costs.ts';
+import type { TokenUsage } from './usage.ts';
 
 /** One line of a record. */
 export type RecordEntry =
@@ -387,6 +388,16 @@ export function withTaskWork(
  * session's own, a subagent's ID for its. The enrichers keep each session
  * apart live, and so must hear a resumed past apart.
  */
+/** The tokens of the last turn `entries` kept that had any. */
+export function lastTotal(
+  entries: readonly RecordEntry[],
+): TokenUsage | undefined {
+  return entries.findLast(
+    (entry): entry is Extract<RecordEntry, { type: 'usage' }> =>
+      entry.type === 'usage' && Object.keys(entry.usage).length > 0,
+  )?.usage;
+}
+
 export function pastBySession(
   rootId: string,
   entries: readonly RecordEntry[],

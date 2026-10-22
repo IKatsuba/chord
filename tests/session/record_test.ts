@@ -9,6 +9,7 @@ import {
   type Entry,
 } from '../../src/session/transcript/types.ts';
 import { turnCost } from '../../src/session/prices.ts';
+import { runOneshot } from '../../src/session/oneshot.ts';
 import {
   Conversation,
   type ConversationEvent,
@@ -2252,4 +2253,80 @@ describe('a result sent only as rawOutput in the record (CHD-440)', () => {
 
     expect(drawn(entries)).toStrictEqual([[]]);
   });
+});
+
+describe('CHD-440 tester: every fallback agrees live, replayed and in -p', () => {
+  const snapshot = (state: typeof emptyTranscript) =>
+    state.entries.flatMap((entry) =>
+      entry.kind === 'tool'
+        ? [
+            {
+              title: entry.call.title,
+              status: entry.call.status,
+              content: entry.call.content,
+            },
+          ]
+        : [],
+    );
+
+  test('all six shapes and the keyed exit failure survive the same full-chain round trip', () =>
+    withDir(async (dir) => {
+      const live: SessionUpdate[] = [];
+
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(),
+        prompts: ['rawoutputs'],
+        heard: (event) => {
+          if (event.type === 'update') {
+            live.push(event.update);
+          }
+        },
+      });
+
+      const entries = await readPast((await theRecord(dir)).path);
+      const replayed = recordActions(entries).reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      );
+      const fold = (updates: readonly SessionUpdate[]) =>
+        updates.reduce(
+          (state, update) =>
+            reduceTranscript(state, {
+              type: 'update',
+              turnId: 't',
+              at: 1,
+              update,
+            }),
+          emptyTranscript,
+        );
+      const headless: SessionUpdate[] = [];
+      const outcome = await runOneshot({
+        agent: 'fake',
+        cwd: dir,
+        prompt: 'rawoutputs',
+        agentCommand: fakeAgentCommand(),
+        onUpdate: (update) => {
+          headless.push(update);
+        },
+        onRefused: () => {},
+        onDeclined: () => {},
+      });
+      const expected = snapshot(fold(live));
+
+      expect(expected).toHaveLength(6);
+      expect(expected.map((call) => call.status)).toEqual([
+        'completed',
+        'completed',
+        'failed',
+        'completed',
+        'completed',
+        'completed',
+      ]);
+      expect(snapshot(replayed)).toEqual(expected);
+      expect(snapshot(fold(headless))).toEqual(expected);
+      expect(outcome.result).toMatchObject({ status: 'completed' });
+    }));
 });

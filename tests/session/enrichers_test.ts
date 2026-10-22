@@ -1587,3 +1587,196 @@ describe("a result sent only as rawOutput is filled in as the call's content (CH
     expect(ENRICHERS).toContain(rawOutputContent);
   });
 });
+
+describe('CHD-440 tester: fallback provenance across sessions and replay', () => {
+  const text = (value: string) => [
+    {
+      type: 'content' as const,
+      content: { type: 'text' as const, text: value },
+    },
+  ];
+  const call = (
+    more: Partial<Extract<SessionUpdate, { sessionUpdate: 'tool_call' }>> = {},
+  ): SessionUpdate => ({
+    sessionUpdate: 'tool_call',
+    toolCallId: 'shared',
+    title: 'Run tests',
+    kind: 'execute',
+    status: 'in_progress',
+    ...more,
+  });
+  const changed = (
+    more: Partial<
+      Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>
+    >,
+  ): SessionUpdate => ({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: 'shared',
+    ...more,
+  });
+  const harness = () => {
+    const relay = enricherRelay(ENRICHERS);
+    const transcripts = new Map<string, typeof emptyTranscript>();
+    const send = (sessionId: string, update: SessionUpdate) => {
+      const read = updates(
+        relay.fromAgent({
+          jsonrpc: '2.0',
+          method: 'session/update',
+          params: { sessionId, update },
+        }),
+      );
+      const next = read.reduce(
+        (state, each) =>
+          reduceTranscript(state, {
+            type: 'update',
+            turnId: 't',
+            at: 1,
+            update: each,
+          }),
+        transcripts.get(sessionId) ?? emptyTranscript,
+      );
+
+      transcripts.set(sessionId, next);
+
+      const entry = next.entries.find((entry) => entry.kind === 'tool');
+
+      assert(entry?.kind === 'tool');
+
+      return entry.call;
+    };
+
+    return { relay, send };
+  };
+
+  test('two sessions reuse a call id without sharing content ownership or generated snapshots', () => {
+    const { send } = harness();
+
+    send('own', call({ content: text('agent original') }));
+    send('generated', call({ rawOutput: 'partial' }));
+    expect(
+      send('own', changed({ status: 'completed', rawOutput: 'ignored' }))
+        .content,
+    ).toEqual(text('agent original'));
+    expect(
+      send(
+        'generated',
+        changed({ status: 'completed', rawOutput: { stdout: 'final\n' } }),
+      ).content,
+    ).toEqual(text('final'));
+    expect(
+      send('own', changed({ content: [], rawOutput: 'replacement' })).content,
+    ).toEqual(text('replacement'));
+    expect(
+      send('generated', changed({ rawOutput: 'another snapshot' })).content,
+    ).toEqual(text('another snapshot'));
+  });
+
+  for (const content of [
+    [
+      {
+        type: 'diff' as const,
+        path: 'src/a.ts',
+        oldText: 'old',
+        newText: 'new',
+      },
+    ],
+    [{ type: 'terminal' as const, terminalId: 'terminal-1' }],
+    [
+      {
+        type: 'content' as const,
+        content: {
+          type: 'image' as const,
+          data: 'AA==',
+          mimeType: 'image/png',
+        },
+      },
+    ],
+  ]) {
+    test(`agent ${content[0]!.type} content replaces a fill and survives later raw-only updates`, () => {
+      const { send } = harness();
+
+      send('s', call({ rawOutput: 'generated' }));
+      send('s', changed({ content }));
+      expect(
+        send(
+          's',
+          changed({ rawOutput: 'must not replace', status: 'completed' }),
+        ).content,
+      ).toEqual(content);
+    });
+  }
+
+  test('recalling generated versus agent content preserves their different replacement rules', () => {
+    const { relay, send } = harness();
+
+    relay.recall('generated', [
+      call({ content: text('old fallback'), _meta: { [FILLED]: ['content'] } }),
+    ]);
+    relay.recall('own', [call({ content: text('agent original') })]);
+    expect(
+      send('generated', changed({ rawOutput: 'new fallback' })).content,
+    ).toEqual(text('new fallback'));
+
+    // An update omitting content must not invent a replacement after resume.
+    const own = updates(
+      relay.fromAgent({
+        jsonrpc: '2.0',
+        method: 'session/update',
+        params: { sessionId: 'own', update: changed({ rawOutput: 'ignored' }) },
+      }),
+    )[0];
+
+    expect(own).not.toHaveProperty('content');
+  });
+
+  test('empty later output keeps the previous generated snapshot (Q131 option 1)', () => {
+    const { send } = harness();
+
+    send('s', call({ rawOutput: 'last shown' }));
+
+    for (const rawOutput of [
+      '',
+      { stdout: '', stderr: '' },
+      { output: '', result: '' },
+    ]) {
+      expect(
+        send('s', changed({ rawOutput, status: 'completed' })).content,
+      ).toEqual(text('last shown'));
+    }
+
+    expect(send('s', changed({ rawOutput: 'new snapshot' })).content).toEqual(
+      text('new snapshot'),
+    );
+  });
+
+  test('named fields keep their order and blank lines; scalar JSON is not missing output', () => {
+    const { send } = harness();
+    const rawOutput = {
+      result: 'result\n',
+      output: 'output\n',
+      stderr: 'warning\n',
+      stdout: 'one\n\n',
+      exitCode: -1,
+    };
+    const result = send('s', call({ status: 'completed', rawOutput }));
+
+    expect(result.content).toEqual(text('one\n\nwarning\noutput\nresult'));
+    expect(result.status).toBe('failed');
+
+    for (const value of [false, 0]) {
+      expect(send('s', changed({ rawOutput: value })).content).toEqual(
+        text(JSON.stringify(value)),
+      );
+    }
+
+    expect(
+      send(
+        'non-numeric',
+        call({
+          status: 'completed',
+          rawOutput: { stdout: 'ok', exitCode: '1' },
+        }),
+      ).status,
+    ).toBe('completed');
+  });
+});

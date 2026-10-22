@@ -1098,3 +1098,62 @@ describe('CHD-404 tester: cancelling an open command permission', () => {
       expect(window.frame()).not.toContain('Waiting…');
     }));
 });
+
+describe('CHD-440 tester: raw-only results remain reachable on screen', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`paging and expansion keep every result and the draft at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'rawoutputs');
+          await window.shows('Ran them.');
+          await window.type('keep this draft');
+          await window.press(CTRL_O);
+          await window.shows('"b.ts"');
+
+          const expected = [
+            'Thu Oct 22 12:00:00 UTC 2026',
+            'ok 1',
+            'ok 2',
+            'Error: src/a.ts:3 unused x',
+            'const x = 1;',
+            'built 3 targets',
+            '"matches": 2',
+            '"b.ts"',
+          ];
+          const seen = new Set<string>();
+
+          for (let page = 0; page < 12; page++) {
+            const frame = window.frame();
+
+            for (const value of expected) {
+              if (frame.includes(value)) {
+                seen.add(value);
+              }
+            }
+
+            expect(frame).toContain('keep this draft');
+
+            if (seen.size === expected.length) {
+              break;
+            }
+
+            await window.press('\x1b[5~');
+            await until(
+              'the result page changes',
+              () => window.frame() !== frame,
+            );
+          }
+
+          expect([...seen].sort()).toEqual([...expected].sort());
+          await window.press(END);
+          await window.shows('Ran them.');
+          expect(window.frame()).toContain('keep this draft');
+          expect(window.frame()).not.toContain('Running…');
+        },
+        { columns, rows },
+      ));
+  }
+});

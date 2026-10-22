@@ -3,7 +3,7 @@
  * thoughts, tool calls, permissions, plans, commands' output and
  * compactions.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import process from 'node:process';
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
@@ -12,6 +12,7 @@ import { plainText } from '../../src/session/terminal_text.ts';
 import { agentEnv, type Session } from '../../src/session/session.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../src/session/transcript/types.ts';
+import { MARKDOWN_WRAP } from '../fixtures/markdown.ts';
 import { EDIT_NEW, EDIT_OLD } from '../fixtures/edits.ts';
 import { COMPACT_ERROR, COMPACT_SUMMARY } from '../fixtures/compactions.ts';
 import { BASH_OUTPUT, SHELL_OUTPUT } from '../fixtures/terminals.ts';
@@ -552,3 +553,27 @@ test('usage and mode updates come through as the agent sent them', () =>
     // The mode the agent moved to by the update alone is the one it is in.
     expect(session.modes()?.current).toStrictEqual('plan');
   }));
+
+describe('CHD-396 tester: markdownwrap fake reply', () => {
+  test('the named prompt sends the exact sample and completes without a tool or thought', () =>
+    withSession(async (session) => {
+      const { updates, result } = await run(session, 'markdownwrap');
+
+      expect(said(updates)).toStrictEqual([MARKDOWN_WRAP]);
+      expect(said(updates, 'agent_thought_chunk')).toStrictEqual([]);
+      expect(calls(updates)).toStrictEqual([]);
+      expect(said(updates).join('')).toContain(
+        'Soft\nbreak and a hard  \nbreak here.',
+      );
+      expect(result.status).toBe('completed');
+      assert(result.status === 'completed');
+      expect(result.stopReason).toBe('end_turn');
+
+      const next = await run(session, 'text');
+
+      expect(said(next.updates).join('')).toBe(
+        'Hello, world. This reply came in chunks.',
+      );
+      expect(next.result.status).toBe('completed');
+    }));
+});

@@ -63,7 +63,10 @@ export const QUOTE_INSET = 2;
 /**
  * `text` as its top-level blocks, rendered to lines no wider than `width`
  * cells. markdansi puts no blank line between blocks, so paragraphs would run
- * together; the component puts one between these. Each call renders the whole
+ * together; the component puts one between these. Unless `wrap`, a
+ * paragraph, a heading and a quote's paragraphs come as one line each, for
+ * OpenTUI to wrap: its soft wraps join again in a copy, where markdansi's
+ * line breaks would copy as newlines (CHD-396). Each call renders the whole
  * reply again, so a reply cut mid-stream reads as markdown cut there: an open
  * fence is a code block to the end, and an unclosed `**` stays as typed until
  * its pair arrives. Colour follows whether stdout is a terminal, unless
@@ -74,6 +77,7 @@ export function markdown(
   width: number,
   color?: boolean,
   palette: Palette = PALETTES.dark,
+  wrap = true,
 ): Block[] {
   // Resolved here rather than by markdansi, since the code box and the table
   // borders are drawn here too.
@@ -91,7 +95,7 @@ export function markdown(
     .map((token) => token.raw.trimEnd())
     .join('\n');
   const block = (raw: string, width: number, options: RenderOptions = {}) =>
-    renderBlock(raw, width, on, options, references);
+    renderBlock(raw, width, on, { wrap, ...options }, references);
 
   return tokens.flatMap((token) => {
     if (token.type === 'space') {
@@ -108,7 +112,7 @@ export function markdown(
           blockCode((token as Tokens.Blockquote).tokens, 0),
           width - QUOTE_INSET,
           on,
-          { quotePrefix: '' },
+          { quotePrefix: '', wrap },
           references,
         )
       : token.type === 'table'
@@ -128,7 +132,7 @@ export function markdown(
               ? block(token.raw, width, { theme: themeOf(on, true) })
               : token.type === 'def'
                 ? // The definitions show, as markdansi shows them in a whole reply.
-                  renderBlock(token.raw, width, on)
+                  renderBlock(token.raw, width, on, { wrap })
                 : block(token.raw, width);
 
     return rendered === '' ? [] : [{ quote, text: rendered }];

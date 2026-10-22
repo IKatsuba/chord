@@ -120,8 +120,13 @@ test('a long note at 80x24 wraps in the box, read whole as typed, and goes whole
       expect(window.frame()).toContain('Enter to keep planning with this note');
       await window.press('\r');
       await window.shows('Plan answer:');
-      expect(window.frame().replace(/\s+/g, ' ')).toContain(
-        JSON.stringify({ outcome: 'rejected', reason: note }),
+      // OpenTUI may wrap the reply inside a word (after `.`, as in
+      // `connection.ts`), so the rows are read with no whitespace at all.
+      expect(window.frame().replace(/\s+/g, '')).toContain(
+        JSON.stringify({ outcome: 'rejected', reason: note }).replace(
+          /\s+/g,
+          '',
+        ),
       );
     },
     { rows: 24, columns: 80 },

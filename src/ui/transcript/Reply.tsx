@@ -6,7 +6,8 @@ import { DIM_BORDER, FILL, TEXT } from '../theme/text.ts';
 import { markdown, QUOTE_INSET } from './markdown.ts';
 
 /**
- * A reply as markdown, laid out by markdansi to the width it is drawn in;
+ * A reply as markdown, rendered by markdansi for the width it is drawn in,
+ * its paragraphs left whole for OpenTUI to wrap, so a copy joins them;
  * rendered again only when the text or the width changes. It takes the rest
  * of its row, so its texts are measured whole (`FILL`).
  */
@@ -14,7 +15,7 @@ export function Reply({ text, width }: { text: string; width: number }) {
   const colours = useColours();
   const blocks = useMemo(
     // An agent's own escapes are text, not styling chord answers for.
-    () => markdown(stripAnsi(text), width, undefined, colours),
+    () => markdown(stripAnsi(text), width, undefined, colours, false),
     [text, width, colours],
   );
   const selectable = useSelectable();

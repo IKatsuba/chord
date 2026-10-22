@@ -75,6 +75,7 @@
     "tests/shell_test.ts": 4338,
     "tests/scripts/dev/covered_test.ts": 3760,
     "tests/cli_test.ts": 3698,
+    "tests/ui/transcript/Reply_test.tsx": 2796,
     "tests/ui/dialogs/Asker_test.tsx": 2676,
     "tests/ui/dialogs/Link_test.tsx": 2574,
     "tests/scripts/dev/release/selftest_test.ts": 2344,

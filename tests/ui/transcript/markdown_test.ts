@@ -502,3 +502,32 @@ test("inline code and links take the palette's colours", () => {
   ).toBeTruthy();
   expect(shown!.text.includes('\x1b[38;2;11;92;173m'), 'link').toBeTruthy();
 });
+
+test('unwrapped, a paragraph, a heading and a quote are a line each (CHD-396)', () => {
+  const blocks = markdown(
+    [
+      '## A heading long enough to wrap',
+      '',
+      'A paragraph long enough to wrap,',
+      'with a soft break and a hard  ',
+      'one.',
+      '',
+      '> A quote long enough to wrap at this width.',
+      '',
+      '- a list item long enough to wrap',
+    ].join('\n'),
+    20,
+    false,
+    PALETTES.dark,
+    false,
+  );
+
+  expect(blocks.map((block) => block.text)).toStrictEqual([
+    'A heading long enough to wrap',
+    // A soft break joins with a space; a hard break stays a line break.
+    'A paragraph long enough to wrap, with a soft break and a hard\none.',
+    'A quote long enough to wrap at this width.',
+    // Lists keep their rows in this unit.
+    '- a list item long\n  enough to wrap',
+  ]);
+});

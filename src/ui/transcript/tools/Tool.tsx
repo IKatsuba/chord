@@ -220,7 +220,13 @@ export function MessageBody({
   const blocks = useMemo(
     () =>
       // An agent's own escapes are text, not styling chord answers for.
-      markdown(stripAnsi(text), Math.max(width - 5, 1), undefined, colours),
+      markdown(
+        stripAnsi(text),
+        Math.max(width - 5, 1),
+        undefined,
+        colours,
+        false,
+      ),
     [text, width, colours],
   );
   const lines = wholeMessage(

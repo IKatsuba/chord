@@ -1,5 +1,12 @@
-import { expect, test } from 'bun:test';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { describe, expect, test } from 'bun:test';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -105,4 +112,105 @@ test('its dismissal is recorded beside the user settings file, others kept, and 
   } finally {
     await rm(home, { recursive: true });
   }
+});
+
+describe('CHD-434 U1 tester: machine records and independent eligibility', () => {
+  test('a late ticket cannot cross session ids or survive lost eligibility, even after repeated id reuse', () => {
+    const watch = new NoticeWatch();
+    const tickets: number[] = [];
+    const other = watch.heard('other', 'dimcode', [
+      permission('workspace-write'),
+    ])!;
+
+    for (let cycle = 0; cycle < 30; cycle++) {
+      const ticket = watch.heard('reused', 'dimcode', [
+        permission('full-access'),
+      ])!;
+
+      expect(ticket).toBeNumber();
+      expect(tickets).not.toContain(ticket);
+      expect(watch.holds('other', ticket)).toBe(false);
+      tickets.push(ticket);
+      expect(
+        watch.heard('reused', 'dimcode', [permission('workspace-write')]),
+      ).toBeUndefined();
+      expect(watch.holds('reused', ticket)).toBe(true);
+
+      if (cycle % 3 === 0) {
+        watch.gone('reused');
+      } else if (cycle % 3 === 1) {
+        watch.heard('reused', 'dimcode', []);
+      } else {
+        watch.heard('reused', 'fake', [permission('full-access')]);
+      }
+
+      for (const stale of tickets) {
+        expect(watch.holds('reused', stale)).toBe(false);
+      }
+
+      expect(watch.holds('other', other)).toBe(true);
+    }
+  });
+
+  test('future permission values remain eligible, while a similarly named option or runtime does not', () => {
+    expect(dimcodeAtRisk('dimcode', [permission('future-access')])).toBe(true);
+    expect(
+      dimcodeAtRisk('dimcode', [
+        { ...permission('full-access'), id: 'permissionMode' },
+      ]),
+    ).toBe(false);
+    expect(dimcodeAtRisk('Dimcode', [permission('full-access')])).toBe(false);
+
+    const watch = new NoticeWatch();
+    const ticket = watch.heard('a', 'dimcode', [permission('future-access')])!;
+
+    watch.heard('a', 'dimcode', [permission('read-only')]);
+    expect(watch.holds('a', ticket)).toBe(false);
+  });
+
+  test('empty and structurally corrupt records fail open; a failed write leaves no temporary record', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-notice-corrupt-'));
+    const file = join(dir, 'notices.json');
+
+    try {
+      for (const text of [
+        '',
+        'null',
+        '[]',
+        '{"dismissed":[1]}',
+        '{"dismissed":null}',
+      ]) {
+        await writeFile(file, text);
+        expect([...(await dismissedNotices(file))]).toEqual([]);
+      }
+
+      await rm(file);
+      await mkdir(file);
+      await expect(dismissedNotices(file)).rejects.toThrow();
+      await expect(dismissNotice(file, DIMCODE_NOTICE)).rejects.toThrow();
+      expect(await readdir(dir)).toEqual(['notices.json']);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('dismissal is shared within one user directory, not another machine directory or the project', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-notice-machines-'));
+    const first = noticesFile(join(dir, 'one'))!;
+    const second = noticesFile(join(dir, 'two'))!;
+
+    try {
+      await dismissNotice(first, 'unrelated');
+      await dismissNotice(first, DIMCODE_NOTICE);
+      expect((await dismissedNotices(first)).has(DIMCODE_NOTICE)).toBe(true);
+      expect((await dismissedNotices(second)).has(DIMCODE_NOTICE)).toBe(false);
+      expect([...(await dismissedNotices(first))]).toEqual([
+        'unrelated',
+        DIMCODE_NOTICE,
+      ]);
+      expect((await readdir(dir)).sort()).toEqual(['one']);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
 });

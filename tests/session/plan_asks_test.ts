@@ -248,6 +248,41 @@ describe('a plan through the session layer, on the fake (CHD-437, CHD-457)', () 
       }));
   }
 
+  test("a request naming another session than the conversation's is answered cancelled, never shown", () =>
+    withAgent(async (conversation, events) => {
+      conversation.send('grokplanwrong');
+      await until(() => heard(events) !== undefined);
+      expect(JSON.parse(heard(events)!)).toStrictEqual({
+        outcome: 'cancelled',
+      });
+      expect(asked(events)).toStrictEqual([]);
+    }));
+
+  test('a request that comes after the person interrupted the turn is answered cancelled with no answer of theirs', () =>
+    withAgent(async (conversation, events) => {
+      conversation.send('cursorplanlate');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'update' &&
+            event.update.sessionUpdate === 'tool_call',
+        ),
+      );
+      conversation.interrupt();
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'result' && event.result.status === 'cancelled',
+        ),
+      );
+      expect(asked(events)).toStrictEqual([]);
+      conversation.send('planheard');
+      await until(() => heard(events) !== undefined);
+      expect(JSON.parse(heard(events)!)).toStrictEqual({
+        outcome: 'cancelled',
+      });
+    }));
+
   test('one waiting when the conversation closes is withdrawn, the agent never told a yes', () =>
     withAgent(async (conversation, events) => {
       conversation.send('cursorplan');

@@ -2036,12 +2036,6 @@ export class Conversation {
       task.cancel();
     }
 
-    // A plan goes with it, never taken: cursor's names no session, so the
-    // transport cannot tie it to the cancel as it does a permission.
-    for (const id of [...this.#plans.keys()]) {
-      this.answerPlan(id, { type: 'cancelled' });
-    }
-
     const turn = this.#turn;
 
     // Before the asks are withdrawn, which would let held messages into the
@@ -2049,6 +2043,11 @@ export class Conversation {
     if (turn) {
       this.#sealed = turn.id;
     }
+
+    // A plan goes with it, never taken: cursor's names no session, so the
+    // transport cannot tie it to the cancel as it does a permission. Once
+    // sealed, as answering one releases what waited on it.
+    this.#cancelPlans();
 
     this.#unhold();
     this.#withdrawAsks();
@@ -2959,17 +2958,27 @@ export class Conversation {
     }
   }
 
+  /** Answers every plan on screen `cancelled`, never taken. */
+  #cancelPlans(): void {
+    for (const id of [...this.#plans.keys()]) {
+      this.answerPlan(id, { type: 'cancelled' });
+    }
+  }
+
   /**
    * Puts a plan on screen to wait on the person. One from a session `clear`
-   * let go, with no turn running, or out of a call the turn never announced
-   * is answered `cancelled` at once, never shown and never taken (Q95).
+   * let go or another than the session's own, with no turn running or one
+   * the person interrupted, or out of a call the turn never announced, is
+   * answered `cancelled` at once, never shown and never taken (Q95).
    */
   #planned(session: Session, request: PendingPlan): void {
     const { id, toolCallId } = request.wait;
 
     if (
       !this.#current(session) ||
+      (request.sessionId !== undefined && request.sessionId !== session.id) ||
       this.#turn === undefined ||
+      this.#sealed === this.#turn.id ||
       !this.#madeAt.has(toolCallId)
     ) {
       return request.answer({ type: 'cancelled' });
@@ -3152,6 +3161,8 @@ export class Conversation {
     if (this.#current(session)) {
       this.#sealed = turnId;
 
+      // A plan its agent left open has nothing left to wait on.
+      this.#cancelPlans();
       this.#unhold();
     }
 

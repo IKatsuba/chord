@@ -19,7 +19,7 @@
   `mainbetweentwice`, `bigaskleft`),
   `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`,
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
-  `grokplanempty`, `planheard`),
+  `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`),
   `forms.ts` (`form`, `link`, `leftform`, `leftformgated`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),

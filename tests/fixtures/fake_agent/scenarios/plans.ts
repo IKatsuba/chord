@@ -240,6 +240,41 @@ export const PLANS = {
       toolCallId,
       planContent: ASKED_PLAN,
     })),
+  // grok's request naming a session other than its own.
+  grokplanwrong: (turn) =>
+    askPlan(turn, 'x.ai/exit_plan_mode', (toolCallId) => ({
+      sessionId: 'another-session',
+      toolCallId,
+      planContent: ASKED_PLAN,
+    })),
+
+  // cursor's request sent only once the turn has been cancelled, before the
+  // turn ends: it waits for its answer, which only chord can give.
+  async cursorplanlate(turn) {
+    const toolCallId = turn.callId('plan');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: 'Plan',
+      kind: 'switch_mode',
+      status: 'pending',
+    });
+    await new Promise((resolve) =>
+      turn.signal.addEventListener('abort', resolve, { once: true }),
+    );
+
+    const answer: unknown = await turn.client.request('cursor/create_plan', {
+      toolCallId,
+      plan: ASKED_PLAN,
+      todos: [],
+    });
+
+    planAnswers.set(turn.sessionId, JSON.stringify(answer));
+
+    return 'cancelled';
+  },
+
   // Says the answer the session's last plan got, which a turn cut short
   // by an interrupt could not.
   async planheard(turn) {

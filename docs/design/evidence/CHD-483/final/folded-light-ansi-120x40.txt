@@ -1,0 +1,40 @@
+ → to @parser · queued
+   ⎿  I changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.
+
+ → to @parser · queued
+   ⎿  The printer is fixed too; run the whole parser suite once more.
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ › agentexit
+
+ ⏺ Open(parser 2) · fake · fake-small
+   ⎿  crash
+
+ ⏺ Waiting on parser.
+
+ ← from chord
+   ⎿  parser 2's agent exited: fatal: out of memory reading tests/parse/fixtures/huge.json. open_agent opens it
+      again.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts        Fake Large with a 1M context window · 2% used
+    main       fake · Fake Large with a 1M context window · medium  ◦ idle 9s
+    bugfix     team · fake · 3 agents                               ✻ tester: working 34s  ✓ new reply
+    parser     fake · Fake Small · medium                           ◦ idle 18s             ✓ new reply
+    docs       fake · Fake Large with a 1M context window · medium  ● permission 22s       ← new message
+    parser 2   fake · Fake Small · medium                           ✗ exited

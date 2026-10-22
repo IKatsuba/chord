@@ -1,0 +1,24 @@
+ ← from @main
+
+ ››› Waiting for permission… (25s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ docs asks                                                                    │
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs ───────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back    Fake Large with a 1M context…
+    bugfix     team · fake · 3 agents  ✻ tester: working 36s
+    parser     fake                    ◦ idle 20s
+  ❯ docs       fake                    ● permission 24s
+    … +2 more

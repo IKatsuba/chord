@@ -1,0 +1,40 @@
+[38;2;255;255;255m [38;5;2m→[38;2;255;255;255m [2m[39mto [0;1m[38;5;2m@parser[0;2m · queued[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mI changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.[0m[38;2;255;255;255m
+
+ [38;5;2m→[38;2;255;255;255m [2m[39mto [0;1m[38;5;2m@parser[0;2m · queued[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThe printer is fixed too; run the whole parser suite once more.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mWaiting on parser.[38;2;255;255;255m
+
+ [38;5;2m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;5;2m@parser[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mRan deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from parser · fake.[38;2;255;255;255m
+
+ [38;5;2m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;5;2m@parser[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mAll 214 parser tests pass now.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from parser · fake.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39magentexit[38;2;255;255;255m
+
+ [38;5;2m⏺[38;2;255;255;255m [1m[39mOpen[0m(parser 2)[2m · fake · fake-small[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mcrash[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mWaiting on parser.[38;2;255;255;255m
+
+ [2m[39m←[0m[38;2;255;255;255m [2m[39mfrom [0;1mchord[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mparser 2's agent exited: fatal: out of memory reading tests/parse/fixtures/huge.json. open_agent opens it[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39magain.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from chord.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;5;3m● docs needs your permission · ctrl+x a to go[39m [2m·[0m [2m? for shortcuts[0m[38;2;255;255;255m        [2m[39mFake Large with a 1M context window · 2% used[0m[38;2;255;255;255m
+  [38;5;4m  [1m[39mmain     [0;2m  fake · Fake Large with a 1M context window · medium  ◦ idle 9s[0m[38;2;255;255;255m
+  [38;5;4m  bugfix   [2m[39m  team · fake · 3 agents                             [38;5;2m  ✻ tester: working 34s[39m  ✓ new reply[0m[38;2;255;255;255m
+  [38;5;4m  [38;5;2mparser   [2m[39m  fake · Fake Small · medium                           ◦ idle 18s             ✓ new reply[0m[38;2;255;255;255m
+  [38;5;4m  [38;5;3mdocs     [2m[39m  fake · Fake Large with a 1M context window · medium[0m[38;5;3m  ● permission 22s     [2m[39m  ← new message[0m[38;2;255;255;255m
+  [38;5;4m  [38;5;1mparser 2 [2m[39m  fake · Fake Small · medium                         [0m[38;5;1m  ✗ exited[38;2;255;255;255m

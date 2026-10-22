@@ -379,15 +379,26 @@ tokens but no cost, as Codex can, gets a cost chord works out from the
 model's price, with `cost_estimated: true` beside it; `/cost` says
 `(chord's estimate)` after such a cost, and a context window chord took from
 the model's data is marked `~` on the status line.
-`/cost` totals the session's earlier turns from its record and this window,
-each turn counted once. Older records show `Before <date>: $… as last
-reported`; turns whose spend could not be counted from cost or tokens show
+Except for dirac, `/cost` totals the session's earlier turns from its record
+and this window, each turn counted once. Older records show
+`Before <date>: $… as last reported`; turns whose spend could not be counted
+from cost or tokens show
 `Not counted: N turns`. The order is `Total cost`, `Before`, `Not counted`,
 `This turn`, tokens, then `Session time`, with absent parts left out.
 While the reported session's turn runs with none of its spend received,
 `This turn:     counted when it ends` follows those marks, or the sentence
 saying nothing is reported yet. A permission held inside the agent's own
 cycle counts as a running turn too.
+
+dirac reports running session totals: `/cost` shows the last tokens and
+cost it sent, with a line explaining that reading and no per-turn figure.
+When its provider reports no cost, chord prices each answer's growth in
+the token total at the model that answered, sums it, and marks the cost
+`(chord's estimate)`. A note names the price used, or says several models
+were priced. Answers on models with no price are left out of the cost and
+counted under `Not counted`; the token rows still show the whole total.
+With no price for any answer, the cost says the provider reports none and
+chord has no price for the model.
 
 With more than one session, a task included, `/cost` adds a window table:
 each tab's subtotal, its own agent, children and team runs with their
@@ -396,7 +407,8 @@ a team's tasks have separate rows. Each row shows its own spend, except
 tab subtotals. Names and full notes wrap inside their cells; cost and tokens
 stay aligned. A note with fewer than 20 cells of room moves under the row's
 figures. `~` marks estimates in the table and task summaries. Closed children
-and tabs stay counted, as do sessions cleared or resumed in place.
+and tabs stay counted, as do sessions cleared or resumed in place. The
+table also carries dirac's no-cost and missing-price notes.
 
 ## Settings
 

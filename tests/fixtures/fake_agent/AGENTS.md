@@ -58,7 +58,8 @@
   `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
   `callchildtwo`, `agenttitled`, `agentsheldgated`, `plan`, `planshrinkgated`,
-  `proposal`,
+  `proposal`, `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
+  `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`,
   `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`, `tasktillsteered`,
   `teamtask`,
   `shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`, `bashask`,
@@ -225,6 +226,12 @@
   moves its three steps along about 2 s apart, to see the list mid-turn;
   `planshrinkgated` holds its first step until the gate opens, so a test can
   select a surviving step before the first is dropped;
+  `cursorplan` asks `cursor/create_plan`, with todos and a phase;
+  `cursorplanearly` asks before announcing its call, `cursorplanbad` sends
+  unreadable todos, and `cursorplanlate` asks after cancellation;
+  `grokplan` asks `x.ai/exit_plan_mode`, `grokplanempty` sends no plan, and
+  `grokplanwrong` names another session. `planheard` says the last plan's
+  answer; `planform` asks a plan and a form together and says both answers;
   `proposal` sends Codex's proposed plan by id about 2 s a step: markdown
   rewritten then grown, a file plan, then the markdown one removed;
   `shell` runs a command as Codex's adapter does, to any client: its

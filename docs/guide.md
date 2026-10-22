@@ -255,11 +255,21 @@ it and it may still be working. ctrl+o shows any error or explanation.
 After Esc, a subagent that announced it can be cancelled stays running on
 screen until its agent reports its end.
 An approved Claude plan appears once, as the plan.
-A plan cursor or grok asks you to approve shows under its `Plan` call, its
-overview, steps and cursor's todos, and an `Approve Plan` box asks: yes, or
-keep planning with an optional note typed on its Note row, and for grok,
-leave plan mode. Esc keeps planning. A plan you did not answer is never taken
-as approved.
+cursor's `cursor/create_plan` and grok's `x.ai/exit_plan_mode` show under
+`⏺ Plan(<name>)`, or `Plan` without a name: overview, markdown, then each
+cursor phase with its todos, then the top-level Todos, both as sent even
+when they repeat. With no plan from grok, it says `grok has written no plan.`
+An `Approve Plan` box asks whether to proceed. cursor offers accept or keep
+planning; grok offers start implementing, keep planning, or leave plan mode.
+↓ past the choices reaches Note; Enter there keeps planning with the text,
+and ↑ returns to the choices. The note also goes with keep planning picked
+from the choices; accepting or leaving sends none. Esc keeps planning
+without the note. A tall Note pages inside the box with pgup/pgdn while
+selected; elsewhere those keys scroll the transcript. The call keeps its
+plan and shows `Accepted`, `Kept planning: <note>`, `Left plan mode` or
+`Cancelled`. Plans and permissions share the box in arrival order, before
+forms, questions and links. An unanswered request is never accepted.
+Cancellation, withdrawal, closing or an unreadable request gets `cancelled`.
 
 In Claude and Codex sessions, an MCP call reads
 `server - tool (MCP)(key: JSON, …)`, with its arguments whole and wrapped.
@@ -345,7 +355,8 @@ is anybody there to answer an agent's questions: each form is skipped
 (declined), which an agent reads as its questions left unanswered and goes
 on, with a `chord: <agent> asked: <question> — skipped (no one to answer
 under -p)` line on stderr for each question, or for the form; a link to
-open is cancelled.
+open is cancelled. cursor's and grok's plan requests are answered
+`cancelled`, including with `--dangerously-skip-permissions`.
 `--permission-mode`, or `permissionMode` in the settings files, starts the
 turn in that mode, and `--effort`, or `effort`, on that effort; one the
 agent does not take is a `chord: could not start in <mode> mode, …` or

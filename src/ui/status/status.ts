@@ -771,25 +771,31 @@ export function workingLine(
   /** The agent is compacting the conversation within the turn. */
   compacting = false,
 ): { readonly label: string; readonly detail: string } | undefined {
+  // A plan shown says so, even with a later permission waiting behind it.
+  if (asking !== false && asking !== true && asking.plan === true) {
+    return {
+      label: 'Waiting for your answer to the plan…',
+      detail: formatElapsed(
+        now - (asking.at ?? (turn.status === 'idle' ? now : turn.since)),
+      ),
+    };
+  }
+
   if (asking !== false && turn.status !== 'awaiting_permission') {
     const at = asking === true ? undefined : asking.at;
-    const waiting =
-      asking !== true && asking.plan === true
-        ? 'Waiting for your answer to the plan…'
-        : 'Waiting for your input…';
 
     // Esc answers the form below rather than interrupting the turn; its time
     // counts from when it asked, as a permission's does.
     if (turn.status === 'working') {
       return {
-        label: waiting,
+        label: 'Waiting for your input…',
         detail: formatElapsed(now - (at ?? turn.since)),
       };
     }
 
     if (turn.status === 'idle') {
       return {
-        label: waiting,
+        label: 'Waiting for your input…',
         detail: formatElapsed(now - (at ?? now)),
       };
     }

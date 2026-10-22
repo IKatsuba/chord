@@ -353,6 +353,7 @@ const SCENARIOS = [
   'planheard',
   'grokplanwrong',
   'cursorplanlate',
+  'planform',
   'shell',
   'shellcut',
   'bash',

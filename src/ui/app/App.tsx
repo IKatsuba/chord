@@ -42,7 +42,6 @@ import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
-import { askedPermission } from '../dialogs/permission.ts';
 import { PlanBox } from '../dialogs/PlanBox.tsx';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import { placeholderBefore } from '../prompt/images.ts';
@@ -66,6 +65,7 @@ import {
   askedInput,
   askedPlan,
   betweenAsked,
+  shownPermission,
   heldBack,
 } from '../dialogs/state.ts';
 import { askerParts } from '../dialogs/asker.ts';
@@ -509,7 +509,7 @@ export function App({
 
   useTimers(state, dispatch);
 
-  const asked = askedPermission(state.transcript.turn);
+  const asked = shownPermission(state.transcript);
   // A request between turns waits without the keys until `ctrl+x a`.
   const held = heldBack(state);
   const between = betweenAsked(state.transcript) !== undefined;

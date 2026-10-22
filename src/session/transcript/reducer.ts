@@ -157,7 +157,15 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
         return state;
       }
 
-      const ask: PlanAsk = { turnId: action.turnId, wait: action.plan };
+      const waiting =
+        state.turn.status === 'awaiting_permission'
+          ? state.turn.permissions.map((wait) => wait.id)
+          : [];
+      const ask: PlanAsk = {
+        turnId: action.turnId,
+        wait: action.plan,
+        ...(waiting.length === 0 ? {} : { after: waiting }),
+      };
 
       return {
         ...state,

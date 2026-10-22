@@ -63,3 +63,58 @@ test("grok's plan at 80x24: its third choice leaves plan mode; esc keeps plannin
     },
     { rows: 24, columns: 80 },
   ));
+
+test('a plan and a form asked at once: the plan box alone has the keys, and the form only once it is answered (CHD-437)', () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'planform');
+      await window.shows('Approve Plan');
+      expect(window.frame()).not.toContain('Name the branch');
+      // A key typed for a form reaches the box alone: no letter types, no
+      // enter accepts on the form's behalf; 2 is the person's choice.
+      await window.type('main');
+      expect(window.frame()).toContain('❯ 1. Yes, accept the plan');
+      await window.press('2');
+      await window.shows('Name the branch');
+      expect(window.frame()).not.toContain('Approve Plan');
+      await window.press(ESC);
+      await window.shows('Plan answer: {"outcome":"rejected"} · form: cancel');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+test('a long note at 80x24 wraps in the box, read whole as typed, and goes whole (CHD-437)', () =>
+  withWindow(
+    async (window) => {
+      const note =
+        'Keep the routing in connection.ts and only add a test for it; ' +
+        'leave session.ts as it is until the next release, and ' +
+        'name the test after the bug it covers so it reads back later.';
+
+      await ready(window);
+      await send(window, 'cursorplan');
+      await window.shows('Approve Plan');
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.type(note);
+
+      const box = window
+        .frame()
+        .split('\n')
+        .filter((line) => line.startsWith('│'))
+        .map((line) => line.slice(1, -1).trim())
+        .join(' ');
+
+      expect(box.replace(/\s+/g, ' ')).toContain(
+        `Note ${note}`.replace(/\s+/g, ' '),
+      );
+      expect(window.frame()).toContain('Enter to keep planning with this note');
+      await window.press('\r');
+      await window.shows('Plan answer:');
+      expect(window.frame().replace(/\s+/g, ' ')).toContain(
+        JSON.stringify({ outcome: 'rejected', reason: note }),
+      );
+    },
+    { rows: 24, columns: 80 },
+  ));

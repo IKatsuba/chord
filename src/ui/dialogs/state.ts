@@ -113,12 +113,26 @@ export function askedIds(transcript: Transcript): string[] {
 
 /**
  * The plan on screen, waiting on the person: the oldest not answered yet,
- * once no permission is asked, as that prompt answers first (CHD-437).
+ * unless a permission waiting is older, as a plan ranks with permissions,
+ * Claude's own being one (docs/design/CHD-437.md). One request has the box
+ * and the keys at a time.
  */
 export function askedPlan(transcript: Transcript): PlanAsk | undefined {
-  return transcript.turn.status === 'awaiting_permission'
+  const plan = transcript.planAsks?.find((ask) => ask.answer === undefined);
+  const permission = askedPermission(transcript.turn);
+
+  return plan !== undefined &&
+    permission !== undefined &&
+    (plan.after ?? []).includes(permission.id)
     ? undefined
-    : transcript.planAsks?.find((ask) => ask.answer === undefined);
+    : plan;
+}
+
+/** The permission on screen: the oldest, unless a plan waiting is older. */
+export function shownPermission(transcript: Transcript) {
+  return askedPlan(transcript) === undefined
+    ? askedPermission(transcript.turn)
+    : undefined;
 }
 
 /**
@@ -128,7 +142,8 @@ export function askedPlan(transcript: Transcript): PlanAsk | undefined {
 export function askedInput(
   transcript: Transcript,
 ): ElicitationWait | undefined {
-  return transcript.turn.status === 'awaiting_permission'
+  return transcript.turn.status === 'awaiting_permission' ||
+    (transcript.planAsks ?? []).some((ask) => ask.answer === undefined)
     ? undefined
     : transcript.asking[0];
 }

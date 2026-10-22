@@ -787,6 +787,11 @@ export interface PlanAsk {
   readonly turnId: string;
   readonly wait: PlanWait;
   readonly answer?: PlanAnswer;
+  /**
+   * The permissions already waiting when it came, which go before it: a
+   * plan ranks with them, the oldest first (docs/design/CHD-437.md).
+   */
+  readonly after?: readonly string[];
 }
 
 /** What the turn in flight is doing; times are epoch milliseconds. */

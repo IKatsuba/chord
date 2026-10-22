@@ -275,6 +275,42 @@ export const PLANS = {
     return 'cancelled';
   },
 
+  // cursor's plan and a form asked at once, each waiting on its own answer;
+  // says both, the plan's first.
+  async planform(turn) {
+    const toolCallId = turn.callId('plan');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: 'Plan',
+      kind: 'switch_mode',
+      status: 'pending',
+    });
+
+    const plan = turn.client.request('cursor/create_plan', {
+      toolCallId,
+      plan: ASKED_PLAN,
+      todos: [],
+    });
+    const form = turn.client.request('elicitation/create', {
+      sessionId: turn.sessionId,
+      mode: 'form',
+      message: 'Name the branch',
+      requestedSchema: {
+        type: 'object',
+        properties: { branch: { type: 'string', title: 'Branch' } },
+      },
+    });
+    const [planned, formed] = await Promise.all([plan, form]);
+
+    await turn.say(
+      `Plan answer: ${JSON.stringify(planned)} · form: ${formed.action}`,
+    );
+
+    return 'end_turn';
+  },
+
   // Says the answer the session's last plan got, which a turn cut short
   // by an interrupt could not.
   async planheard(turn) {

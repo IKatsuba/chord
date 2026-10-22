@@ -289,7 +289,7 @@ import { SHELL } from './scenarios/shell.ts';
 import { claudeChildren, SUBAGENTS } from './scenarios/subagents.ts';
 import { TASKS } from './scenarios/tasks.ts';
 import { CYCLES, runCycle } from './scenarios/cycles.ts';
-import { AGENTS } from './scenarios/agents.ts';
+import { AGENTS, heard } from './scenarios/agents.ts';
 import { EFFORTS } from './scenarios/efforts.ts';
 import { MONITORS } from './scenarios/monitors.ts';
 import { senders, SOAK } from './scenarios/soak.ts';
@@ -844,6 +844,8 @@ async function playPrompt(
     await never();
   }
 
+  heard(params.sessionId, promptText(params.prompt));
+
   // Codex's adapter does not stop a turn it started itself for a prompt:
   // the two would run side by side.
   const alongside = STEERING === 'codex' && turns.has(params.sessionId);
@@ -1251,6 +1253,7 @@ const connection = acp
       const turn = playing.get(params.sessionId);
 
       if (turn !== undefined) {
+        heard(params.sessionId, promptText(params.prompt));
         turn.steer(promptText(params.prompt));
 
         return { outcome: 'injected' };

@@ -319,23 +319,31 @@ test("a child's message not yet seen, then its reply, are marks beside its state
       await ready(window);
       await send(window, 'agents');
       await window.shows('← new message');
-      await until(
-        'parser replied',
-        () => /parser .*✓ new reply/.test(window.frame()),
-        30_000,
-      );
 
-      const idle = /parser .*◦ idle (\d+)s +✓ new reply/.exec(window.frame());
+      // Its reply held, chord's clock is put ten seconds past the message,
+      // where it stays, and then the reply comes: an idle time counted
+      // from the message would say ten seconds or more.
+      try {
+        setSystemTime(new Date(Date.now() + 10_000));
+        await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
+        await until(
+          'parser replied',
+          () => /parser .*✓ new reply/.test(window.frame()),
+          30_000,
+        );
 
-      // The message came seconds before; it stopped as its reply came.
-      expect(Number(idle?.[1])).toBeLessThanOrEqual(2);
+        const idle = /parser .*◦ idle (\d+)s +✓ new reply/.exec(window.frame());
+
+        // The message came seconds before; it stopped as its reply came.
+        expect(Number(idle?.[1])).toBeLessThanOrEqual(2);
+      } finally {
+        setSystemTime();
+      }
     },
     '--steering',
     'codex',
     '--steer-late',
-    // Slow enough that the reply comes seconds after the message.
-    '--step-ms',
-    '30',
+    '--hold-reply',
   ));
 
 /** A left click on the prompt box's text row, as a terminal reports one. */

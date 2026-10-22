@@ -55,6 +55,7 @@ import {
   frontState,
   initialAppState,
   liveChords,
+  noticeShown,
   pendingBindings,
   reduceApp,
   reduceWindowed,
@@ -154,6 +155,7 @@ import {
   ConfigPicker,
   McpPanel,
   ModelPicker,
+  NoticeBox,
   ResumePicker,
   SessionsPicker,
   TeamsPicker,
@@ -527,6 +529,8 @@ export function App({
   const theming = themePickerShown(state);
   const listingMcp = mcpShown(state);
   const listingTeams = teamsPickerShown(state);
+  const noticing = noticeShown(state);
+  const { notice } = state;
   const viewing = backgroundShown(state);
   // The list under the prompt has the keys, not the view opened from it.
   const listFocus = agentsHaveKeys(state);
@@ -539,7 +543,8 @@ export function App({
     theming ||
     listingMcp ||
     listingSessions ||
-    listingTeams;
+    listingTeams ||
+    noticing;
   const colours = paletteOf(
     resolveTheme(shownTheme(state), background),
     COLOUR,
@@ -1345,6 +1350,19 @@ export function App({
                     dispatch({ type: 'theme_previewed', theme })
                   }
                   onPick={commands.keepTheme}
+                />
+              )}
+              {noticing && notice !== undefined && (
+                <NoticeBox
+                  columns={columns}
+                  active={listening}
+                  onAnswer={(dismissed) => {
+                    if (dismissed) {
+                      sessions.dismissNotice(notice);
+                    }
+
+                    dispatch({ type: 'notice_closed' });
+                  }}
                 />
               )}
               {listingTeams && state.teamsPicker && (

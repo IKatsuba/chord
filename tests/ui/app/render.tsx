@@ -109,6 +109,8 @@ function stopFailed(error: unknown): boolean {
 export async function withWindow(
   body: (window: Window) => Promise<void>,
   {
+    agent = 'fake',
+    configHome,
     rows,
     columns,
     agentCommand = fakeAgentCommand(),
@@ -146,6 +148,10 @@ export async function withWindow(
     copyOnSelect,
     mouse = true,
   }: {
+    /** The agent the window runs, as `chord <agent>` names it, on the fake. */
+    agent?: string;
+    /** chord's user directory, given the window's own directory; none by default. */
+    configHome?: (dir: string) => string;
     rows?: number;
     columns?: number;
     agentCommand?: string[];
@@ -238,7 +244,8 @@ export async function withWindow(
     keybindings === undefined ? undefined : readKeybindings(keybindings);
   const app = await draw(
     <App
-      agent='fake'
+      agent={agent}
+      {...(configHome === undefined ? {} : { configHome: configHome(dir) })}
       cwd={dir}
       stateDir={stateDir ?? join(dir, 'state')}
       {...(resumes ? { resumes } : {})}

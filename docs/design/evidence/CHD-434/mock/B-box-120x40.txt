@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   dimcode · claude-sonnet-4-5
+ ▄▀▀▀   /tmp/chord-qa.dimcode
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ dimcode can start other agents                                                                                       │
+│                                                                                                                      │
+│ With its permission option at full-access, dimcode may start other agent CLIs it finds on your PATH, such as claude, │
+│ codex and cursor, as subagents of its own, with their approvals bypassed and on your own accounts. At                │
+│ workspace-write it asks you first, and once you allow it, the same holds. Nothing those agents do reaches chord's    │
+│ permission box.                                                                                                      │
+│                                                                                                                      │
+│ To turn a CLI off, set externalAgents.<type>.enabled to false in ~/.dimcode/v2/config.json (claude-code, codex,      │
+│ cursor, …), or use /external-agents in dimcode's own TUI. Or keep the permission option at read-only in /config,     │
+│ where dimcode refuses its agent tool.                                                                                │
+│                                                                                                                      │
+│ ❯ 1. Got it, don't show this again                                                                                   │
+│   2. Show it again next time                                                                                         │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · Esc to show it again next time                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                            dimcode · claude-sonnet-4-5

@@ -12,7 +12,7 @@ import type { PlanWait } from '../../../src/session/transcript/types.ts';
 import { PlanBox } from '../../../src/ui/dialogs/PlanBox.tsx';
 import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
 import { PermissionPrompt } from '../../../src/ui/dialogs/Permission.tsx';
-import { ModelPicker } from '../../../src/ui/pickers/Pickers.tsx';
+import { ModelPicker, NoticeBox } from '../../../src/ui/pickers/Pickers.tsx';
 import { PromptInput } from '../../../src/ui/prompt/Prompt.tsx';
 import {
   type Action,
@@ -238,6 +238,10 @@ const STATES: Record<string, AppState> = {
     { type: 'connected', sessionId: 'session-1' },
     { type: 'sessions_picker_opened' },
   ),
+  notice: after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'notice_opened', id: 'dimcode-agents' },
+  ),
   'picker, busy': after({ type: 'connected', sessionId: 'session-1' }, prompt, {
     type: 'model_picker_opened',
   }),
@@ -458,19 +462,54 @@ const NINE = [...'123456789'];
 /**
  * Presses every key on a numbered list and checks that each one it answers,
  * by moving its highlight or picking, is in the panel, and that each the
- * panel promises does something.
+ * panel promises does something: each digit up to its `count` choices.
+ * A list too short to open in its middle is tried once from each place
+ * `openings` presses it to, as its highlight stops at either end.
  */
 async function listKeys(
   what: string,
   draw: (onPick: (value: string) => void) => ReactNode,
+  count = NINE.length,
+  openings = [''],
+) {
+  const answered = new Set<string>();
+
+  for (const opening of openings) {
+    await listPresses(what, draw, opening, answered);
+  }
+
+  for (const shortcut of SHORTCUTS) {
+    for (const name of shortcut.choices ?? []) {
+      if (/^[1-9]$/.test(name) && Number(name) > count) {
+        continue;
+      }
+
+      expect(
+        answered.has(name),
+        `${name} does nothing in the ${what}`,
+      ).toBeTruthy();
+    }
+  }
+}
+
+/** Presses every key on a list opened with `opening`, adding each answered. */
+async function listPresses(
+  what: string,
+  draw: (onPick: (value: string) => void) => ReactNode,
+  opening: string,
+  answered: Set<string>,
 ) {
   const chosen: string[] = [];
   const app = await harness.draw(draw((value) => chosen.push(value)));
   const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
-  const answered = new Set<string>();
 
   try {
     await settle();
+
+    if (opening !== '') {
+      await app.write(opening);
+      await settle();
+    }
 
     for (const { name, sequence } of RAW_PRESSES) {
       const before = app.frame();
@@ -491,15 +530,6 @@ async function listKeys(
     }
   } finally {
     await app.unmount();
-  }
-
-  for (const shortcut of SHORTCUTS) {
-    for (const name of shortcut.choices ?? []) {
-      expect(
-        answered.has(name),
-        `${name} does nothing in the ${what}`,
-      ).toBeTruthy();
-    }
   }
 }
 
@@ -889,6 +919,21 @@ test('every key the model picker answers is in the panel', () =>
       onPick={onPick}
     />
   )));
+
+test("every key dimcode's notice answers is in the panel (CHD-434)", () =>
+  listKeys(
+    'notice',
+    (onPick) => (
+      <NoticeBox
+        columns={80}
+        active
+        onAnswer={(dismissed) => onPick(dismissed ? 'dismiss' : 'later')}
+      />
+    ),
+    2,
+    // Opened on 1, and on 2.
+    ['', '\x1b[B'],
+  ));
 
 /** The prompt box with a draft, counting what each press did to it. */
 async function promptBox(walking: boolean) {

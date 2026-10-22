@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
@@ -137,4 +137,156 @@ test('-p puts no plan to anyone, so cursor and grok hear cancelled, never a yes 
   } finally {
     await rm(dir, { recursive: true });
   }
+});
+
+test("-p says dimcode's notice once when its permission leaves read-only, and only then (CHD-434)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-oneshot-notice-'));
+  const noticed = async (agent: string, permission: string, prompt: string) => {
+    const said: (readonly string[])[] = [];
+
+    await runOneshot({
+      agent,
+      cwd: dir,
+      prompt,
+      agentCommand: fakeAgentCommand(
+        undefined,
+        '--dimcode-permission',
+        permission,
+      ),
+      onUpdate: () => {},
+      onRefused: () => {},
+      onNotice: (paragraphs) => {
+        said.push(paragraphs);
+      },
+    });
+
+    return said;
+  };
+
+  try {
+    // At its start already, or moved there in the turn: once either way.
+    expect(await noticed('dimcode', 'workspace-write', 'text')).toHaveLength(1);
+    expect(await noticed('dimcode', 'read-only', 'fullaccess')).toHaveLength(1);
+    expect(await noticed('dimcode', 'read-only', 'text')).toHaveLength(0);
+    // Another agent's option of that name is not dimcode's.
+    expect(await noticed('fake', 'full-access', 'text')).toHaveLength(0);
+    expect((await noticed('dimcode', 'full-access', 'text'))[0]?.[0]).toMatch(
+      /^With its permission option at full-access, dimcode may start/,
+    );
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+describe('CHD-434 U1 tester: headless diagnostic completion', () => {
+  test('a repeated at-risk option does not duplicate the diagnostic, and completion awaits its asynchronous delivery', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-notice-delivery-'));
+    const offered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const notices: (readonly string[])[] = [];
+    let complete = false;
+    const work = runOneshot({
+      agent: 'dimcode',
+      cwd: dir,
+      prompt: 'fullaccess',
+      agentCommand: fakeAgentCommand(
+        undefined,
+        '--dimcode-permission',
+        'full-access',
+      ),
+      onUpdate: () => {},
+      onRefused: () => {},
+      onNotice: async (paragraphs) => {
+        notices.push(paragraphs);
+        offered.resolve();
+        await release.promise;
+      },
+    }).then((result) => {
+      complete = true;
+
+      return result;
+    });
+
+    try {
+      await offered.promise;
+      expect(complete).toBe(false);
+      release.resolve();
+      expect((await work).result.status).toBe('completed');
+      expect(notices).toHaveLength(1);
+      expect(notices[0]).toHaveLength(2);
+      expect(notices[0]![1]).toContain('externalAgents.<type>.enabled');
+    } finally {
+      release.resolve();
+      await work;
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('simultaneous headless invocations each warn once and leave no dismissal record', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-notice-parallel-'));
+    const notices = [0, 0];
+
+    try {
+      const results = await Promise.all(
+        ['workspace-write', 'full-access'].map((permission, index) =>
+          runOneshot({
+            agent: 'dimcode',
+            cwd: dir,
+            prompt: 'fullaccess',
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--dimcode-permission',
+              permission,
+            ),
+            onUpdate: () => {},
+            onRefused: () => {},
+            onNotice: () => {
+              notices[index]! += 1;
+            },
+          }),
+        ),
+      );
+
+      expect(results.map((result) => result.result.status)).toEqual([
+        'completed',
+        'completed',
+      ]);
+      expect(notices).toEqual([1, 1]);
+      expect(await readdir(dir)).toEqual([]);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
+describe('CHD-434 U1 tester: agent exit after eligibility', () => {
+  test('a crashing fake preserves the once-only warning and yields failure, not a second notice', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-notice-crash-'));
+    const notices: (readonly string[])[] = [];
+
+    try {
+      const outcome = await runOneshot({
+        agent: 'dimcode',
+        cwd: dir,
+        prompt: 'crash',
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--dimcode-permission',
+          'full-access',
+        ),
+        onUpdate: () => {},
+        onRefused: () => {},
+        onNotice: (paragraphs) => {
+          notices.push(paragraphs);
+        },
+      });
+
+      expect(outcome.result.status).toBe('failed');
+      expect(notices).toHaveLength(1);
+      expect(notices[0]).toHaveLength(2);
+      expect(await readdir(dir)).toEqual([]);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
 });

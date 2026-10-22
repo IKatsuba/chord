@@ -142,6 +142,8 @@ export type KeyCommand =
   | 'close_mcp'
   /** Esc closes `/team`'s picker. */
   | 'close_teams_picker'
+  /** Esc closes dimcode's notice, to show it again the next time. */
+  | 'close_notice'
   /** Tab in the `@` file finder: the highlighted path into the prompt. */
   | 'complete_mention'
   /** ↑ and ↓ in the `@` file finder move its highlight, not history. */

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { useReducer } from 'react';
@@ -15,6 +15,7 @@ import {
   initialAppState,
   reduceWindowed,
   windowed,
+  type WindowedAction,
   type WindowedState,
 } from '../../../src/ui/app/state.ts';
 import { sum, windowSpend } from '../../../src/ui/transcript/spend.ts';
@@ -819,4 +820,333 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
       await rm(dir, { recursive: true });
     }
   });
+});
+
+describe("CHD-434: dimcode's notice comes due from any session of the window", () => {
+  type Admitted = Parameters<ReturnType<typeof serveChord>['admit']>[0];
+  interface Seen {
+    all: WindowedState;
+    drive: ReturnType<typeof useSessions>;
+    dispatch: (action: WindowedAction) => void;
+  }
+
+  /**
+   * The window's sessions on the fake, `main` on `agent`, `dimcode` on the
+   * fake starting at `permission`, `read-only` unless said, until a turn
+   * moves it, chord's user directory
+   * holding `record` as its notices file, or a directory in its place.
+   */
+  async function withNotices(
+    body: (read: () => Seen, main: Admitted) => Promise<void>,
+    {
+      agent = 'fake',
+      record,
+      permission = 'read-only',
+    }: {
+      agent?: string;
+      record?: string | 'directory' | 'blocked';
+      permission?: string;
+    } = {},
+  ) {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-notice-'));
+    const configHome = join(dir, 'config');
+    const file = join(configHome, 'chord', 'notices.json');
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Admitted | undefined;
+    const fake = fakeAgentCommand();
+    const dimcode = fakeAgentCommand(
+      undefined,
+      '--dimcode-permission',
+      permission,
+    );
+    const opened: Session[] = [];
+    let seen: Seen | undefined;
+    const read = () => {
+      assert(seen);
+
+      return seen;
+    };
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    if (record === 'directory') {
+      await mkdir(file, { recursive: true });
+    } else if (record === 'blocked') {
+      // A file where chord's directory goes: nothing is written there.
+      await mkdir(configHome, { recursive: true });
+      await writeFile(join(configHome, 'chord'), '');
+    } else if (record !== undefined) {
+      await mkdir(join(configHome, 'chord'), { recursive: true });
+      await writeFile(file, record);
+    }
+
+    function Host() {
+      const [all, dispatch] = useReducer(
+        reduceWindowed,
+        windowed(initialAppState, 1),
+      );
+      const [, redraw] = useReducer((n: number) => n + 1, 0);
+      const drive = useSessions(
+        {
+          agent,
+          place: {
+            cwd: dir,
+            startupOf: (runtime) =>
+              runtime === 'dimcode'
+                ? { agentCommand: dimcode }
+                : runtime === 'fake'
+                  ? { agentCommand: fake }
+                  : undefined,
+            mcpServers: [],
+            mcpIgnored: [],
+          },
+          stateDir: join(dir, 'state'),
+          readRecords,
+          open: async (options) => {
+            const session = await openSession(options);
+
+            opened.push(session);
+
+            return session;
+          },
+          resume: undefined,
+          resumes: undefined,
+          resumedFront: undefined,
+          resumedNote: undefined,
+          server,
+          runtimes: ['fake', 'dimcode'],
+          home: undefined,
+          configHome,
+          onQuit: undefined,
+        },
+        {
+          all,
+          state: frontState(all),
+          dispatch,
+          redraw,
+          showDraft: () => {},
+          notify: () => {},
+          remember: () => {},
+          stopCommand: () => {},
+        },
+      );
+
+      seen = { all, drive, dispatch };
+
+      return <text>Notice host</text>;
+    }
+
+    const drawn = await draw(<Host />);
+
+    try {
+      await until(
+        'main ready',
+        () => read().all.sessions[1]?.connection.status === 'ready',
+      );
+      assert(main);
+      await body(read, main);
+    } finally {
+      await read().drive.sessions.closeAll();
+      await drawn.unmount();
+
+      for (const session of opened) {
+        await session.close();
+      }
+
+      await server.close();
+      await rm(dir, { recursive: true });
+    }
+  }
+
+  const permissionOf = (read: () => Seen, key: number) =>
+    read().all.sessions[key]?.options.find(
+      (option) => option.id === 'permission',
+    )?.current;
+
+  /** A dimcode child opened beside `main`, not picked, at `read-only`. */
+  const openDimcode = async (read: () => Seen, main: Admitted) => {
+    const before = new Set(Object.keys(read().all.sessions));
+    const answer = await main.window.open(main.key, {
+      agent: 'dimcode',
+      name: `Scout ${before.size}`,
+      prompt: 'hello',
+    });
+
+    assert('id' in answer, JSON.stringify(answer));
+
+    let key: number | undefined;
+
+    await until('the child at read-only', () => {
+      key = Object.keys(read().all.sessions)
+        .map(Number)
+        .find((each) => !before.has(String(each)));
+
+      return key !== undefined && permissionOf(read, key) === 'read-only';
+    });
+
+    assert(key !== undefined);
+    expect(read().drive.sessions.tabs.tabs[0]?.picked).toBe(1);
+
+    return key;
+  };
+
+  const fullAccess = async (read: () => Seen, key: number) => {
+    read().drive.sessions.conversationOf(key)?.send('fullaccess');
+    await until(
+      'full-access heard',
+      () => permissionOf(read, key) === 'full-access',
+    );
+  };
+
+  /** A moment for a notice that is not due to have come anyway. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 200));
+
+  test('an unpicked dimcode child leaving read-only opens it in the window; at read-only it stays shut', () =>
+    withNotices(async (read, main) => {
+      const child = await openDimcode(read, main);
+
+      await settle();
+      expect(read().all.window.notice).toBe(undefined);
+
+      await fullAccess(read, child);
+      await until(
+        'the notice',
+        () => read().all.window.notice === 'dimcode-agents',
+      );
+    }));
+
+  test("a dimcode task's own option leaving read-only opens it", () =>
+    withNotices(async (read, main) => {
+      void main.window.spawn(main, {
+        agent: 'dimcode',
+        name: 'Probe',
+        prompt: 'fullaccess',
+      });
+      await until(
+        'the notice',
+        () => read().all.window.notice === 'dimcode-agents',
+      );
+    }));
+
+  test('after "show it again" for one session, another reaching that moment opens it again', () =>
+    withNotices(async (read, main) => {
+      const first = await openDimcode(read, main);
+      const second = await openDimcode(read, main);
+
+      await fullAccess(read, first);
+      await until(
+        'the first notice',
+        () => read().all.window.notice === 'dimcode-agents',
+      );
+      read().dispatch({ type: 'notice_closed' });
+      await settle();
+      expect(read().all.window.notice).toBe(undefined);
+
+      await fullAccess(read, second);
+      await until(
+        'the second notice',
+        () => read().all.window.notice === 'dimcode-agents',
+      );
+    }));
+
+  test('a record that does not read, a directory in its place, shows it rather than failing', () =>
+    withNotices(
+      async (read, main) => {
+        await fullAccess(read, await openDimcode(read, main));
+        await until(
+          'the notice',
+          () => read().all.window.notice === 'dimcode-agents',
+        );
+      },
+      { record: 'directory' },
+    ));
+
+  test('once dismissed on this machine it never opens', () =>
+    withNotices(
+      async (read, main) => {
+        await fullAccess(read, await openDimcode(read, main));
+        await settle();
+        expect(read().all.window.notice).toBe(undefined);
+      },
+      { record: JSON.stringify({ dismissed: ['dimcode-agents'] }) },
+    ));
+
+  test("a main session of dimcode's opens it as its children do", () =>
+    withNotices(
+      async (read) => {
+        await until(
+          'main at read-only',
+          () => permissionOf(read, 1) === 'read-only',
+        );
+        await settle();
+        expect(read().all.window.notice).toBe(undefined);
+
+        await fullAccess(read, 1);
+        await until(
+          'the notice',
+          () => read().all.window.notice === 'dimcode-agents',
+        );
+      },
+      { agent: 'dimcode' },
+    ));
+
+  test('"show it again", then /clear to a session that starts at full-access too: that session opens it anew', () =>
+    withNotices(
+      async (read) => {
+        await until(
+          "the first session's notice",
+          () => read().all.window.notice === 'dimcode-agents',
+        );
+        read().dispatch({ type: 'notice_closed' });
+
+        const old = read().all.sessions[1]?.sessionId;
+
+        read().drive.clearFront(() => {});
+
+        await until(
+          'the session after it, at full-access',
+          () =>
+            read().all.sessions[1]?.sessionId !== old &&
+            permissionOf(read, 1) === 'full-access',
+        );
+        await until(
+          'the notice anew',
+          () => read().all.window.notice === 'dimcode-agents',
+        );
+      },
+      { agent: 'dimcode', permission: 'full-access' },
+    ));
+
+  for (const blocked of [false, true]) {
+    test(
+      blocked
+        ? 'a dismissal that cannot be written is given back: the next session at risk shows it'
+        : '1 dismisses it for the window at once: a child coming due after shows nothing',
+      () =>
+        withNotices(
+          async (read, main) => {
+            await fullAccess(read, await openDimcode(read, main));
+            await until(
+              'the notice',
+              () => read().all.window.notice === 'dimcode-agents',
+            );
+            read().drive.dismissNotice('dimcode-agents');
+            read().dispatch({ type: 'notice_closed' });
+            await fullAccess(read, await openDimcode(read, main));
+            await settle();
+            expect(read().all.window.notice).toBe(
+              blocked ? 'dimcode-agents' : undefined,
+            );
+          },
+          blocked ? { record: 'blocked' } : {},
+        ),
+    );
+  }
 });

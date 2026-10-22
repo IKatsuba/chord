@@ -3,7 +3,7 @@
  * its own.
  */
 import { NO_MODES } from '../options.ts';
-import { configOptions, locked, modes } from '../sessions.ts';
+import { configOptions, locked, modes, permissions } from '../sessions.ts';
 import * as acp from '@agentclientprotocol/sdk';
 import { type Play } from '../turn.ts';
 
@@ -32,6 +32,19 @@ export const MODES = {
     await turn.say('Status sent.');
 
     turn.usage = { inputTokens: 1000, outputTokens: 200, totalTokens: 1200 };
+
+    return 'end_turn';
+  },
+
+  // dimcode's permission moved to full-access from the agent's side, as a
+  // config_option_update (CHD-434).
+  async fullaccess(turn) {
+    permissions.set(turn.sessionId, 'full-access');
+    await turn.send({
+      sessionUpdate: 'config_option_update',
+      configOptions: configOptions(turn.sessionId),
+    });
+    await turn.say('Permission is full-access.');
 
     return 'end_turn';
   },

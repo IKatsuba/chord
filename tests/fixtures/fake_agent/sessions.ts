@@ -6,7 +6,12 @@
  */
 import { EventEmitter, once } from 'node:events';
 import * as acp from '@agentclientprotocol/sdk';
-import { NO_CONFIG, NO_MODES, TOKENS_ONLY } from './options.ts';
+import {
+  DIMCODE_PERMISSION,
+  NO_CONFIG,
+  NO_MODES,
+  TOKENS_ONLY,
+} from './options.ts';
 
 /** Each session's working directory, which its commands run in. */
 export const cwds = new Map<string, string>();
@@ -36,6 +41,15 @@ export const modes = new Map<string, string>();
 export const models = new Map<string, string>();
 /** Each session's effort, once one was asked for. */
 export const efforts = new Map<string, string>();
+/** Each session's dimcode `permission`, once moved from its start. */
+export const permissions = new Map<string, string>();
+
+/** dimcode's `permission` values, `read-only` refusing its agent tool. */
+export const DIMCODE_PERMISSIONS = [
+  { value: 'read-only', name: 'Read only' },
+  { value: 'workspace-write', name: 'Workspace write' },
+  { value: 'full-access', name: 'Full access' },
+];
 
 /** The efforts every session offers, `medium` until set. */
 export const AVAILABLE_EFFORTS = [
@@ -131,6 +145,20 @@ export function configOptions(sessionId: string): acp.SessionConfigOption[] {
         },
       ];
 
+  // dimcode's own option, with no category, as dimcode sends it (CHD-434).
+  const permission: acp.SessionConfigOption[] =
+    DIMCODE_PERMISSION === undefined
+      ? []
+      : [
+          {
+            id: 'permission',
+            name: 'Permission',
+            type: 'select',
+            currentValue: permissions.get(sessionId) ?? DIMCODE_PERMISSION,
+            options: DIMCODE_PERMISSIONS,
+          },
+        ];
+
   return [
     {
       id: 'model',
@@ -142,5 +170,6 @@ export function configOptions(sessionId: string): acp.SessionConfigOption[] {
     },
     ...mode,
     ...effort,
+    ...permission,
   ];
 }

@@ -231,6 +231,11 @@ export interface WindowState
    */
   readonly agentCloseArmed?: number;
   /**
+   * A one-time notice open above the prompt, by its id: dimcode's, that it
+   * can start other agents (CHD-434).
+   */
+  readonly notice?: string;
+  /**
    * What a key on the sessions could not do, such as `ctrl+x a` with no
    * session waiting, said in the status line until the draft is touched,
    * another session comes forward, or an armed close or quit takes its place.
@@ -270,6 +275,9 @@ export type AppAction =
   /** ctrl+c, or with `by` ctrl+d or `/exit`, asks for a second press. */
   | { readonly type: 'quit_armed'; readonly by?: 'ctrl+d' }
   | { readonly type: 'quit_disarmed' }
+  /** A one-time notice came due, or its box was answered (CHD-434). */
+  | { readonly type: 'notice_opened'; readonly id: string }
+  | { readonly type: 'notice_closed' }
   /** `ctrl+x k` on the busy session `key` asks for a second press. */
   | { readonly type: 'close_armed'; readonly key: number }
   | { readonly type: 'close_disarmed' }
@@ -745,6 +753,15 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     }
     case 'quit_disarmed':
       return { ...state, quitArmed: false };
+    case 'notice_opened':
+      return state.notice === undefined
+        ? { ...state, notice: action.id }
+        : state;
+    case 'notice_closed': {
+      const { notice: _, ...rest } = state;
+
+      return rest;
+    }
     case 'close_armed': {
       const { sessionsNote: _, ...rest } = state;
 
@@ -1391,8 +1408,29 @@ function inputWithKeys(state: AppState) {
     : (askedInput(state.transcript) ?? askedPlan(state.transcript));
 }
 
+/**
+ * Whether dimcode's notice is on screen: open, and not closing. It waits
+ * behind a picker or the background view the person has open, and a
+ * permission or form asked meanwhile hides it, as it hides every picker
+ * (CHD-462), until answered (docs/design/CHD-434.md).
+ */
+export function noticeShown(state: AppState): boolean {
+  return (
+    state.notice !== undefined &&
+    state.connection.status !== 'closing' &&
+    !asksPerson(state.transcript) &&
+    !otherPickerShown(state) &&
+    state.backgroundView === undefined
+  );
+}
+
 /** One of chord's pickers or panels is open over the prompt. */
 function pickerShown(state: AppState): boolean {
+  return otherPickerShown(state) || noticeShown(state);
+}
+
+/** One of chord's pickers or panels but the notice is open over the prompt. */
+function otherPickerShown(state: AppState): boolean {
   return (
     sessionsPickerShown(state) ||
     modelPickerShown(state) ||
@@ -1862,6 +1900,10 @@ function boundCommand(
 
   if (closing && teamsPickerShown(state)) {
     return 'close_teams_picker';
+  }
+
+  if (closing && noticeShown(state)) {
+    return 'close_notice';
   }
 
   // Vim's keys come after every list's Esc, so Esc still closes them, and

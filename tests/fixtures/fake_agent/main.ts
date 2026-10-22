@@ -253,6 +253,7 @@ import {
   ARGS,
   HANG,
   NO_CONFIG,
+  DIMCODE_PERMISSION,
   MCP_TRANSPORTS,
   NO_IMAGES,
   NO_MODES,
@@ -298,6 +299,8 @@ import {
   configOptions,
   cwds,
   efforts,
+  DIMCODE_PERMISSIONS,
+  permissions,
   FIRST_MODEL,
   locked,
   mcpServers,
@@ -388,6 +391,7 @@ const SCENARIOS = [
   'longheld',
   'todos',
   'exitplan',
+  'fullaccess',
   'claudeexitplan',
   'lock',
   'mcp',
@@ -1127,7 +1131,10 @@ const connection = acp
           ? AVAILABLE_MODES.map(({ id }) => ({ value: id }))
           : params.configId === 'effort' && !NO_CONFIG
             ? AVAILABLE_EFFORTS
-            : [];
+            : params.configId === 'permission' &&
+                DIMCODE_PERMISSION !== undefined
+              ? DIMCODE_PERMISSIONS
+              : [];
 
     if (!offered.some((entry) => entry.value === value)) {
       throw acp.RequestError.invalidParams(
@@ -1149,7 +1156,9 @@ const connection = acp
         ? models
         : params.configId === 'mode'
           ? modes
-          : efforts;
+          : params.configId === 'permission'
+            ? permissions
+            : efforts;
 
     chosen.set(params.sessionId, value);
 

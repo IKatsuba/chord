@@ -7,6 +7,7 @@ import {
   initialAppState,
   keyCommand,
   modeAfter,
+  noticeShown,
   reduceApp,
   reduceWindowed,
   resumableSession,
@@ -854,4 +855,58 @@ test("a resize lets go of where the agents list's tall row was read from, keepin
   expect(
     reduceApp(scrolled, { type: 'agents_focused', focused: false }).agentsView,
   ).toBeUndefined();
+});
+
+test('a one-time notice opens once, a second coming while it is open making no other, and closes (CHD-434)', () => {
+  const open = reduceApp(ready, {
+    type: 'notice_opened',
+    id: 'dimcode-agents',
+  });
+
+  expect(open.notice).toBe('dimcode-agents');
+  expect(reduceApp(open, { type: 'notice_opened', id: 'other' })).toBe(open);
+  expect(reduceApp(open, { type: 'notice_closed' }).notice).toBe(undefined);
+});
+
+test('the notice holds the keys, Esc closes it, and it waits behind a picker or a permission (CHD-434)', () => {
+  const open = reduceApp(ready, {
+    type: 'notice_opened',
+    id: 'dimcode-agents',
+  });
+
+  expect(noticeShown(open)).toBe(true);
+  expect(keyCommand('', escape, open, '')).toBe('close_notice');
+  // Esc is the notice's while a turn runs, not the turn's.
+  expect(
+    keyCommand(
+      '',
+      escape,
+      reduceApp(open, { type: 'prompt', turnId: 't1', text: 'hi', at: 0 }),
+      '',
+    ),
+  ).toBe('close_notice');
+
+  const picking = reduceApp(open, { type: 'theme_picker_opened' });
+
+  expect(noticeShown(picking)).toBe(false);
+  expect(keyCommand('', escape, picking, '')).toBe('close_theme_picker');
+  expect(noticeShown(reduceApp(picking, { type: 'theme_picker_closed' }))).toBe(
+    true,
+  );
+
+  const asked = [
+    { type: 'prompt', turnId: 't1', text: 'hi', at: 0 },
+    {
+      type: 'permission_requested',
+      turnId: 't1',
+      permission: { id: 'p1', options: [] },
+    },
+  ].reduce<AppState>(
+    (state, action) => reduceApp(state, action as AppAction),
+    open,
+  );
+
+  expect(noticeShown(asked)).toBe(false);
+  expect(asked.notice).toBe('dimcode-agents');
+  expect(noticeShown(reduceApp(ready, { type: 'notice_closed' }))).toBe(false);
 });

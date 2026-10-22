@@ -300,6 +300,8 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
       onRefused: (toolCall) => stderr(refusalLine(toolCall)),
       onAllowed: (toolCall) => stderr(allowedLine(toolCall)),
       onDeclined: (form) => stderr(skippedLines(options.agent, form)),
+      onNotice: (paragraphs) =>
+        stderr(paragraphs.map((paragraph) => `chord: ${paragraph}\n`).join('')),
     });
   } catch (error) {
     await stderr(

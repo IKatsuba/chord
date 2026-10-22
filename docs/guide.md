@@ -929,6 +929,28 @@ within its column on a terminal and one line per agent when piped.
 You sign in to the agent the way it expects: chord starts the agent's ACP
 adapter or CLI, it does not sign you in to anybody.
 
+`dimcode` may start up to 18 other CLIs it finds on PATH through its own
+`agent` tool, with their approvals bypassed and on your accounts. Their
+actions do not reach chord's permission box. Its `/config` option
+`permission` gates that tool: `read-only` refuses it, `workspace-write`
+asks you first, and `full-access` runs it without asking. To disable a CLI,
+set `externalAgents.<type>.enabled` to `false` in
+`~/.dimcode/v2/config.json`, or use `/external-agents` (`/agents`) in
+dimcode's own TUI. A missing entry is enabled. The types are `antigravity`,
+`claude-code`, `codebuddy`, `codex`, `cursor`, `devin`, `droid`, `goose`,
+`grok`, `hermes`, `kimi`, `kiro`, `mcode`, `mimo`, `opencode`, `pi`,
+`qoder` and `zcode`. Disabled CLIs are still probed with `--version`.
+
+When dimcode's `permission` is first seen at `workspace-write` or
+`full-access`, chord shows `dimcode can start other agents` above the
+prompt, with these facts and off switches. This includes children, tasks
+and team members, shown at their parent or lead. `1. Got it, don't show
+this again` records dismissal per machine in `notices.json` beside chord's
+user settings file. `2. Show it again next time` or Esc records nothing.
+↑ ↓ or j k move between choices; Enter picks. Permissions and forms hide
+the notice until answered. With `-p`, its two paragraphs go once to stderr
+and no dismissal is recorded.
+
 ## Development
 
 ```sh

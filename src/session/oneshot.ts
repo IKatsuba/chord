@@ -4,6 +4,7 @@ import type {
   SessionUpdate,
   ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
+import { DIMCODE_WORDS, dimcodeAtRisk } from '../notices.ts';
 import { filledIn } from './enrich.ts';
 import { allowOption } from './permissions.ts';
 import { openSession } from './session.ts';
@@ -55,6 +56,11 @@ export interface OneshotOptions {
   onDeclined?(
     form: Extract<ElicitationWait, { mode: 'form' }>,
   ): void | Promise<void>;
+  /**
+   * dimcode's one-time notice came due, its permission option seen at
+   * anything but read-only: said once, recorded nowhere (CHD-434).
+   */
+  onNotice?(paragraphs: readonly string[]): void | Promise<void>;
 }
 
 /** How a one-shot turn ended, read after its agent has exited. */
@@ -160,10 +166,27 @@ export async function runOneshot(
       }
     }
 
+    // dimcode's notice, once, as soon as its permission leaves read-only:
+    // at the start, or as an update moves it (docs/design/CHD-434.md).
+    let noticed = false;
+    const notice = () => {
+      if (!noticed && dimcodeAtRisk(options.agent, session.options())) {
+        noticed = true;
+        handed = handed.then(() =>
+          options.onNotice?.(DIMCODE_WORDS.paragraphs),
+        );
+      }
+    };
+
+    notice();
     session.subscribe((update, subagentId) => {
       // A subagent's words are not the reply, nor its usage the session's.
       if (subagentId !== undefined) {
         return;
+      }
+
+      if (update.sessionUpdate === 'config_option_update') {
+        notice();
       }
 
       if (update.sessionUpdate === 'usage_update' && update.cost) {

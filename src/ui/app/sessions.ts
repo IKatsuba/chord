@@ -103,6 +103,14 @@ import { subagentPath } from '../../session/subagents.ts';
 import { askerParts } from '../dialogs/asker.ts';
 import { homePath } from '../../settings.ts';
 import type { AgentOption } from '../../session/config.ts';
+import {
+  DIMCODE_NOTICE,
+  dismissedNotices,
+  dismissNotice,
+  NoticeGate,
+  NoticeWatch,
+  noticesFile,
+} from '../../notices.ts';
 import { modelName } from '../../session/models.ts';
 import { modelToAsk, type TabRow, valueToAsk } from '../pickers/picker.ts';
 import { attachmentsOf, imagesIn, type PastedImage } from '../prompt/images.ts';
@@ -355,6 +363,56 @@ export function useSessions(
 
   hear.current = heard;
 
+  // dimcode's one-time notice comes due the first time any of the
+  // window's sessions, `main`, a child, a team member or a task, has its
+  // permission option at anything but read-only, unless dismissed on this
+  // machine; a record that does not read shows it, and a session that left
+  // that moment, closed or was cleared while the record was read shows none
+  // (docs/design/CHD-434.md).
+  const noticeWatch = useRef(new NoticeWatch());
+  const noticeGate = useRef(
+    new NoticeGate(
+      () => dismissedNotices(noticesFile(configHome)),
+      (id) => {
+        const file = noticesFile(configHome);
+
+        return file === undefined ? Promise.resolve() : dismissNotice(file, id);
+      },
+    ),
+  );
+
+  const watchNotice = (id: string, agent: string, event: ConversationEvent) => {
+    const watch = noticeWatch.current;
+
+    // A session cleared is gone as one closed is: the one after it, under
+    // the same id, comes due of its own.
+    if (event.type === 'closing' || event.type === 'cleared') {
+      watch.gone(id);
+    }
+
+    const ticket =
+      event.type === 'options'
+        ? watch.heard(id, agent, event.options)
+        : undefined;
+
+    if (ticket === undefined) {
+      return;
+    }
+
+    void noticeGate.current
+      .due(DIMCODE_NOTICE, () => watch.holds(id, ticket))
+      .then((shows) => {
+        if (shows) {
+          dispatch({ type: 'notice_opened', id: DIMCODE_NOTICE });
+        }
+      });
+  };
+
+  /** Dismisses notice `id` for good on this machine: the person's `1`. */
+  const dismissNoticeFor = (id: string) => {
+    void noticeGate.current.dismiss(id);
+  };
+
   const conversationOf = (
     agent: string,
     emit: (event: ConversationEvent) => void,
@@ -412,7 +470,10 @@ export function useSessions(
           },
         );
       },
-      emit,
+      (event) => {
+        watchNotice(`main:${key}`, agent, event);
+        emit(event);
+      },
       Date.now,
       starting,
       new FileRecording(stateDir ?? chordStateDir(), (message) =>
@@ -542,7 +603,14 @@ export function useSessions(
           },
         );
       },
-      emit,
+      (event) => {
+        watchNotice(
+          caller.task ?? caller.agent ?? `child:${key}`,
+          args.agent,
+          event,
+        );
+        emit(event);
+      },
       Date.now,
       // The model asked for, which the child runs on or not at all, and the
       // mode a team file set, likewise, or else the tab's settings' one.
@@ -3261,5 +3329,6 @@ export function useSessions(
     listed,
     background,
     picked,
+    dismissNotice: dismissNoticeFor,
   };
 }

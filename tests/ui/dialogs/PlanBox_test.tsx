@@ -54,7 +54,9 @@ test("grok's plan at 80x24: its third choice leaves plan mode; esc keeps plannin
       await window.press(ESC);
       await window.shows('Plan answer: {"outcome":"revise"}');
       await send(window, 'grokplanempty');
-      await window.shows('grok has written no plan.');
+      // The box and the call say so alike, the agent named as the window does.
+      await window.shows('fake has written no plan. Do you want to proceed?');
+      await window.shows('   fake has written no plan.');
       await window.press('3');
       await window.shows('⎿  Left plan mode');
       await window.shows('Plan answer: {"outcome":"abandoned"}');

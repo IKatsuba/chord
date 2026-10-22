@@ -26,6 +26,18 @@ export function planChoices(agent: PlanWait['agent']): PlanChoice[] {
       ];
 }
 
+/**
+ * The box's question, `agent` named as the agents list names it: whether
+ * it has a plan, or wrote none, which grok may ask about all the same.
+ */
+export function planQuestion(agent: string, wait: PlanWait): string {
+  const written = [wait.overview, wait.plan].some(
+    (part) => part !== undefined && part.trim() !== '',
+  );
+
+  return `${agent} ${written ? 'has a plan' : 'has written no plan'}. Do you want to proceed?`;
+}
+
 /** The box as the person has it: the `❯`'s row, the Note row last. */
 export interface PlanBoxState {
   readonly row: number;

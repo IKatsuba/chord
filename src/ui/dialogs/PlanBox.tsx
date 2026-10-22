@@ -12,6 +12,7 @@ import {
   planHint,
   planKey,
   planPaste,
+  planQuestion,
 } from './plan.ts';
 import { Typed } from './Questions.tsx';
 
@@ -92,7 +93,7 @@ export function PlanBox({
         Approve Plan
       </text>
       <text {...TEXT}> </text>
-      <text {...TEXT}>{`${agent} has a plan. Do you want to proceed?`}</text>
+      <text {...TEXT}>{planQuestion(agent, wait)}</text>
       {choices.map((choice, index) => (
         <box key={index} flexDirection='row' flexShrink={0}>
           {marker(index)}

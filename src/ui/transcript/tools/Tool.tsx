@@ -84,6 +84,7 @@ export function Tool({
   expanded,
   ended = false,
   asked = false,
+  agent,
   width,
 }: {
   call: ToolCall;
@@ -91,6 +92,8 @@ export function Tool({
   ended?: boolean;
   /** A permission box is open for it. */
   asked?: boolean;
+  /** The agent as the window names it, for a plan's words (CHD-437). */
+  agent?: string | undefined;
   /** Cells beside the marker. */
   width: number;
 }) {
@@ -144,7 +147,11 @@ export function Tool({
         <MessageBody text={sent.text} width={width} ending={sent.ending} />
       )}
       {call.plan !== undefined && (
-        <PlanAskBody ask={call.plan} width={Math.max(width - 5, 1)} />
+        <PlanAskBody
+          ask={call.plan}
+          agent={agent}
+          width={Math.max(width - 5, 1)}
+        />
       )}
       {proposal === undefined &&
         sent === undefined &&
@@ -482,7 +489,16 @@ function TerminalOutput({
  * plan as any message is drawn, then cursor's todos as the plan list draws
  * its steps, a cancelled one dim and struck through (CHD-437, CHD-457).
  */
-export function PlanAskBody({ ask, width }: { ask: PlanAsk; width: number }) {
+export function PlanAskBody({
+  ask,
+  agent,
+  width,
+}: {
+  ask: PlanAsk;
+  /** The agent as the window names it, as the plan box does. */
+  agent: string | undefined;
+  width: number;
+}) {
   const selectable = useSelectable();
   const text = planText(ask);
   const rows = todoRows(ask);
@@ -498,7 +514,7 @@ export function PlanAskBody({ ask, width }: { ask: PlanAsk; width: number }) {
         <box flexDirection='column' flexGrow={1} gap={1}>
           {text === undefined ? (
             <text {...TEXT} {...selectable}>
-              {ask.wait.agent} has written no plan.
+              {agent ?? ask.wait.agent} has written no plan.
             </text>
           ) : (
             <Reply text={text} width={width} />

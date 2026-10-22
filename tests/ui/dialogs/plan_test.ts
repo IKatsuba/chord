@@ -5,6 +5,7 @@ import {
   planHint,
   planKey,
   planPaste,
+  planQuestion,
 } from '../../../src/ui/dialogs/plan.ts';
 
 const key = (more: Record<string, boolean> = {}) => ({
@@ -23,6 +24,17 @@ test("each agent's choices: cursor's yes and no; grok's, and its way out of plan
     'No, keep planning',
     'No, and leave plan mode',
   ]);
+});
+
+test('the question names the agent, and says so when grok wrote no plan (CHD-457)', () => {
+  const wait = { id: 'p', agent: 'grok', toolCallId: 'c' } as const;
+
+  expect(planQuestion('grok', { ...wait, plan: '# Route' })).toBe(
+    'grok has a plan. Do you want to proceed?',
+  );
+  expect(planQuestion('grok', wait)).toBe(
+    'grok has written no plan. Do you want to proceed?',
+  );
 });
 
 describe('a press in the plan box', () => {

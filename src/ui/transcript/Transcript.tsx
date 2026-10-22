@@ -185,6 +185,7 @@ export const TranscriptEntry = memo(function TranscriptEntry({
           // in: one left open by its turn's end too (the owner's Q44).
           ended={turnEnded(turn, entry.turnId) && !asksFor(turn, entry.call.id)}
           asked={asksFor(turn, entry.call.id)}
+          agent={agent}
           width={width}
         />
       );

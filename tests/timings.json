@@ -1,7 +1,6 @@
 {
   "version": 1,
   "files": {
-    "tests/ui/background/Background_test.tsx": 52934,
     "tests/ui/transcript/agents/Agents_test.tsx": 49749,
     "tests/ui/agents/Teams_test.tsx": 48111,
     "tests/ui/agents/AgentsTasks_test.tsx": 47761,
@@ -28,6 +27,7 @@
     "tests/ui/dialogs/PermissionBetween_test.tsx": 35457,
     "tests/session/record_test.ts": 35444,
     "tests/ui/agents/AgentsSpend_test.tsx": 34168,
+    "tests/ui/background/BackgroundFrame_test.tsx": 33037,
     "tests/session/conversation_test.ts": 32186,
     "tests/session/subagents_test.ts": 29398,
     "tests/session/session_updates_test.ts": 29334,
@@ -55,6 +55,7 @@
     "tests/ui/app/Held_test.tsx": 19433,
     "tests/ui/background/BackgroundDetail_test.tsx": 17554,
     "tests/ui/shortcuts/Shortcuts_test.tsx": 17266,
+    "tests/ui/background/Background_test.tsx": 17043,
     "tests/ui/app/AppResume_test.tsx": 16489,
     "tests/ui/agents/AgentsOrdering_test.tsx": 15911,
     "tests/ui/agents/TeamsList_test.tsx": 15786,

@@ -140,3 +140,21 @@ describe('CHD-479 tester: failure reason and stop edge cases', () => {
     );
   });
 });
+
+test("a stopped task's line names its kind and the key that stopped it, dim (CHD-482)", () => {
+  const task = (more: Partial<ItemEnded>) =>
+    read({ item: 'task', name: 'Watch the build', end: 'stopped', ...more });
+
+  expect(task({ byPerson: true, endedAt: 3000 })).toBe(
+    '■ Watch the build · task · stopped with x after 3s',
+  );
+  expect(task({ byEsc: true, endedAt: 3000 })).toBe(
+    '■ Watch the build · task · stopped with esc after 3s',
+  );
+  expect(task({ endedAt: 3000 })).toBe(
+    '■ Watch the build · task · stopped after 3s',
+  );
+  expect(
+    endedLine(ended({ item: 'task', end: 'stopped', byEsc: true }), 120).tone,
+  ).toBe('dim');
+});

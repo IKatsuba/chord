@@ -1,15 +1,9 @@
-/**
- * The background's part of the window's state: when the person last sent a
- * prompt in each tab, which clears the tab's ended items, and the view of
- * them while it is open.
- */
+/** The background's part of the window's state: its view, while open. */
 import type { Transcript } from '../../session/transcript/types.ts';
 import { askedIds } from '../dialogs/state.ts';
 import type { ItemRef } from './view.ts';
 
 export interface BackgroundState {
-  /** By tab key: the person's last prompt there, epoch milliseconds. */
-  readonly backgroundCleared: Readonly<Record<number, number>>;
   /**
    * The background view is open over the window, with the `❯` on the item
    * `focus` names, or on the first while it names none still listed.
@@ -47,12 +41,6 @@ export interface BackgroundState {
 }
 
 export type BackgroundAction =
-  /** The person sent a prompt in tab `tab` at `at`, to any of its agents. */
-  | {
-      readonly type: 'background_cleared';
-      readonly tab: number;
-      readonly at: number;
-    }
   /**
    * `enter` on the summary line opened the view over the requests `over`
    * already waiting; esc closes it.
@@ -92,7 +80,7 @@ export type BackgroundAction =
   /** `esc` or `←` in the detail went back to the rows, the `❯` where it was. */
   | { readonly type: 'background_detail_closed' };
 
-export const initialBackground: BackgroundState = { backgroundCleared: {} };
+export const initialBackground: BackgroundState = {};
 
 /**
  * Whether the background view is on screen: open, and not hidden by a
@@ -131,14 +119,6 @@ export function reduceBackground(
   action: BackgroundAction,
 ): BackgroundState {
   switch (action.type) {
-    case 'background_cleared':
-      return {
-        ...state,
-        backgroundCleared: {
-          ...state.backgroundCleared,
-          [action.tab]: action.at,
-        },
-      };
     case 'background_opened':
       return {
         ...state,

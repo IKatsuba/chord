@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import type { ContentBlock, SessionUpdate } from '@agentclientprotocol/sdk';
 import { subagentsIn } from '../../../src/session/subagents.ts';
+import { taskUpdate } from '../../../src/session/tasks.ts';
 import type {
   Entry,
   Subagent,
@@ -859,5 +860,95 @@ describe('CHD-479 tester: late item transitions keep the announcing root turn', 
     expect(lines(b)).toStrictEqual([]);
     expect(lines(endedA)[0]).toMatchObject({ end: 'done' });
     expect(lines(endedB)[0]).toMatchObject({ end: 'stopped' });
+  });
+});
+
+describe("a task's end, once its turn has ended (CHD-482)", () => {
+  const START = { name: 'Watch the build', runtime: 'fake', prompt: 'Watch' };
+  const started = (id: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at: 2,
+    update: taskUpdate(id, 'running', START),
+  });
+  const ending = (
+    id: string,
+    state: Parameters<typeof taskUpdate>[1],
+    stoppedWith?: 'x' | 'esc',
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: '',
+    at: 3002,
+    update: taskUpdate(id, state, undefined, undefined, stoppedWith),
+  });
+  const ENDED: TranscriptAction = {
+    type: 'result',
+    turnId: TURN,
+    result: { status: 'completed', stopReason: 'end_turn' },
+  };
+  const ends = (transcript: Transcript) =>
+    transcript.entries.filter((entry) => entry.kind === 'item_ended');
+  const stop = (
+    more: Partial<Extract<Entry, { kind: 'item_ended' }>> = {},
+  ): Extract<Entry, { kind: 'item_ended' }> => ({
+    kind: 'item_ended',
+    turnId: TURN,
+    item: 'task',
+    name: 'Watch the build',
+    end: 'stopped',
+    ...more,
+    startedAt: 2,
+    endedAt: 3002,
+  });
+
+  test("a stop gets chord's line, saying the person's key where it was theirs", () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          started('a'),
+          started('b'),
+          started('c'),
+          ENDED,
+          ending('a', 'cancelled', 'x'),
+          ending('b', 'cancelled', 'esc'),
+          ending('c', 'cancelled'),
+        ]),
+      ),
+    ).toStrictEqual([stop({ byPerson: true }), stop({ byEsc: true }), stop()]);
+  });
+
+  test('a report or a failure is its own message, so it gets none', () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          started('a'),
+          started('b'),
+          started('c'),
+          ENDED,
+          ending('a', 'completed'),
+          ending('b', 'failed'),
+          ending('c', 'disconnected'),
+        ]),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  test('one stopped while its turn runs is said by its own block', () => {
+    expect(
+      ends(fold([PROMPT, started('a'), ending('a', 'cancelled', 'esc')])),
+    ).toStrictEqual([]);
+  });
+
+  test('who stopped it is kept on the task, as a record replays its update', () => {
+    const subagent = fold([
+      PROMPT,
+      started('a'),
+      ending('a', 'cancelled', 'x'),
+    ]).entries.find((entry) => entry.kind === 'subagent');
+
+    assert(subagent?.kind === 'subagent');
+    expect(subagent.subagent.task?.stoppedWith).toBe('x');
   });
 });

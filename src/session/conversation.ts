@@ -2043,7 +2043,7 @@ export class Conversation {
 
     // The turn's work is stopped, its task agents' with it.
     for (const task of this.#tasks.values()) {
-      task.cancel();
+      task.cancel('esc');
     }
 
     const turn = this.#turn;

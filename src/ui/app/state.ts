@@ -495,7 +495,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'help_opened':
     case 'keys_pending':
       return reduceShortcuts(state, action) as AppState;
-    case 'background_cleared':
     case 'background_opened':
     case 'background_closed':
     case 'background_resized':
@@ -678,8 +677,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // with its images.
       return {
         ...initialAppState,
-        // Every tab's, which another tab's clear leaves be.
-        backgroundCleared: state.backgroundCleared,
         // What closed agents and let-go sessions spent, which still counts.
         ...(state.keptSpend === undefined
           ? {}

@@ -18,7 +18,8 @@
 - Helpers sit beside the tests that share them.
 - Keep each test file within 90 s; split independent blocks into files
   before a file grows past the budget, sharing helpers beside them.
-  Bare whole runs check measured times against `tests/timings.json`.
+  Bare whole runs fail growth of at least 35% and 20 s over
+  `tests/timings.json`; speedups do not fail the comparison.
   After a justified timing change or adding, removing or splitting files,
   run `bun dev test --update-timings` and commit that record. Refreshing
   still enforces the budget; targeted runs do not compare timings.

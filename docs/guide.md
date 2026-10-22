@@ -1000,9 +1000,10 @@ for chord's own help.
 
 Bare `bun dev test` and the suite in `bun dev check`, including CI, measure
 per-file times in gitignored `tests/timings.measured.json`. Compared with
-`tests/timings.json`, a file over 90 s, a change of at least 35% and 20 s
-in either direction, or an unrecorded or removed file fails the run by
-name. Test failures keep precedence; a timing-only failure says the tests
+`tests/timings.json`, a file fails if it takes over 90 s, is slower by at
+least 35% and 20 s, is unrecorded or is no longer present. The report names
+the files; speedups do not fail the comparison. Test failures keep
+precedence; a timing-only failure says the tests
 passed. The record stays untouched: after checking the change is right,
 run `bun dev test --update-timings` and commit `tests/timings.json`.
 Refreshing still fails a file over 90 s; split it. Other extra test

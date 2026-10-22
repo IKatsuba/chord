@@ -60,9 +60,10 @@ argument needs `--` (`bun dev test -- -t ''`); the tool's own help does too
 
 Whole runs with no extra arguments (`bun dev test`, `bun dev check`, CI)
 measure each file into gitignored `tests/timings.measured.json` and compare
-with `tests/timings.json`. A file over 90 s, a change of at least 35% and
-20 s in either direction, an unrecorded file or a removed recorded file
-fails the run, naming the files. Test failures keep their exit status;
+with `tests/timings.json`. A file fails if it takes over 90 s, is slower
+than its record by at least 35% and 20 s, is unrecorded or is no longer
+present. The report names the files.
+Speedups do not fail the comparison. Test failures keep their exit status;
 timing failures are reported separately. The record is never refreshed
 automatically. If the change is right, run `bun dev test --update-timings`
 and commit `tests/timings.json`; files over 90 s still fail and must be

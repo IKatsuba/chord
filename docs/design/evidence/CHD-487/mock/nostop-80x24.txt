@@ -1,0 +1,12 @@
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 3 of 3                                                          │
+│                                                                              │
+│ Map the parser                                                               │
+│ running 12s · 1 tool use · main                                              │
+│ › Read src/parse and list what each module exports.                          │
+│                                                                              │
+│ ⏺ Search(export in src/parse)                                                │
+│   ⎿  Found 6 files                                                           │
+│                                                                              │
+│ this agent offers no stop                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯

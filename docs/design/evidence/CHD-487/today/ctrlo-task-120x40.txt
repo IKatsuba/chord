@@ -1,0 +1,40 @@
+
+ › claudebackground
+
+ ⏺ The tests run in the background while I look.
+
+ ⏺ 2 agents finished
+   ├─ Agent(tester (general-purpose)) · 1 tool use · 4s
+   │  ⎿  Run bun test in the background and report what fails.
+   │
+   │     ⏺ Bash(bun test)
+   │
+   │     ⏺ Every test passed.
+   │  ⎿  Done
+   └─ Agent(explorer (Explore)) · 1 tool use · 2s
+      ⎿  Find where chord ends a turn on Esc.
+
+         ⏺ Search(cancelled in src/session)
+           ⎿  Found 3 files
+
+         ⏺ Esc ends the turn in src/session/transcript/turn.ts.
+      ⎿  Done
+
+ ⏺ The tests run on; I will say when they end.
+
+ ✓ Run the test suite · agent · done in 4s
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  taskwait
+
+      ⏺ Watching the build.
+
+ ⏺ The build is being watched.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running                          Fake Large with a 1M context window · medium effort · 1% context used
+    background  1 task running

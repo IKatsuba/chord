@@ -1,7 +1,50 @@
-import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Release } from '../../../../scripts/dev/release/lib.ts';
+
+/** Where each executable a test fakes is written once, by its content. */
+const EXECUTABLES = join(tmpdir(), 'chord-test-executables');
+
+/**
+ * An executable at `path` that runs `body`: a link to the one copy of
+ * those bytes, written once per machine. macOS checks an executable the first
+ * time it runs, about a quarter of a second each, and a test that wrote its
+ * fakes afresh paid that for each of them; a link to one already run is not
+ * checked again. Each test keeps its own directory (CHD-501).
+ */
+export function executable(path: string, body: string): void {
+  const file = join(
+    EXECUTABLES,
+    createHash('sha256').update(body).digest('hex').slice(0, 32),
+  );
+
+  if (!existsSync(file)) {
+    mkdirSync(EXECUTABLES, { recursive: true });
+
+    // Whole or not there: the test workers write it side by side.
+    const temporary = `${file}.${process.pid}.${crypto.randomUUID()}`;
+
+    // Read-only: a write through a link fails rather than changing every test's copy.
+    writeFileSync(temporary, body, { mode: 0o555 });
+    chmodSync(temporary, 0o555);
+    renameSync(temporary, file);
+  }
+
+  // A fake made again in the same test takes the place of the one before.
+  rmSync(path, { force: true });
+  symlinkSync(file, path);
+}
 
 /**
  * A release on a scratch directory: its root, a bin directory first on PATH
@@ -30,8 +73,7 @@ export function scratch(): Scratch {
   mkdirSync(root);
   mkdirSync(bin);
   // npm runs as `node <npm>`: this node runs a faked npm with bash.
-  writeFileSync(join(bin, 'node'), '#!/bin/bash\nexec /bin/bash "$@"\n');
-  chmodSync(join(bin, 'node'), 0o755);
+  executable(join(bin, 'node'), '#!/bin/bash\nexec /bin/bash "$@"\n');
 
   return {
     place,
@@ -53,8 +95,7 @@ export function scratch(): Scratch {
       tty: true,
     },
     fake(name, body) {
-      writeFileSync(join(bin, name), `#!/bin/bash\n${body}`);
-      chmodSync(join(bin, name), 0o755);
+      executable(join(bin, name), `#!/bin/bash\n${body}`);
     },
   };
 }

@@ -20,6 +20,7 @@ import {
 import { preflight } from '../../../../scripts/dev/release/preflight.ts';
 import { publish } from '../../../../scripts/dev/release/publish.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
+import { executable } from './scratch.ts';
 
 // The release's publishing, on the resume path, which publishes from the
 // packages a stopped run left without building again: npm faked on PATH, the
@@ -105,11 +106,11 @@ beforeEach(() => {
   }
 
   mkdirSync(bin);
+  // A file of its own, not a link: a test writes a different npm over it.
   writeFileSync(join(bin, 'npm'), NPM);
   chmodSync(join(bin, 'npm'), 0o755);
   // npm runs as `node <npm>`; this node runs the fake npm with bash.
-  writeFileSync(join(bin, 'node'), NODE);
-  chmodSync(join(bin, 'node'), 0o755);
+  executable(join(bin, 'node'), NODE);
 
   mkdirSync(repo);
   writeFileSync(

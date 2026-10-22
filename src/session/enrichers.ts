@@ -3,8 +3,9 @@
  * adapters' draft shape put in ACP's, a cost from the turn's tokens, the
  * context window from the model, a tool call's title and kind carried onto
  * its updates, a mode read back from an answer that says nothing, and the
- * questions in each adapter's question form read into one shape. Each fills
- * in only what the agent left out.
+ * questions in each adapter's question form read into one shape, and a
+ * result sent only as `rawOutput` as content. Each fills in only what the
+ * agent left out.
  */
 import type {
   SessionConfigOption,
@@ -775,11 +776,83 @@ export const codexMcpCall: Enricher = (message) => {
   ];
 };
 
+/** The keys of a `rawOutput` object read as its text, in this order. */
+const OUTPUT_KEYS = ['stdout', 'stderr', 'output', 'result'] as const;
+
+/**
+ * A tool call whose result comes only in `rawOutput`, with no `content`,
+ * as cursor's shell, codebuddy's, auggie's, minion-code's, minimax's and
+ * cline's do (CHD-440): the `rawOutput` filled in as one text block, so
+ * the call shows what it returned. A string is the text; an object whose
+ * `stdout`, `stderr`, `output` or `result` are strings is those, in
+ * that order, and its `exitCode` other than 0 fails a call said
+ * `completed`; anything else is its JSON. Read by shape, as the chain
+ * knows no agent's name (the owner's Q89); content the agent sent stays,
+ * in this message or in an earlier one that a later leaves as it is.
+ */
+export const rawOutputContent: Enricher = (message, wire) => {
+  const notification = notificationOf(message);
+  const update = notification?.update;
+
+  if (
+    (update?.sessionUpdate !== 'tool_call' &&
+      update?.sessionUpdate !== 'tool_call_update') ||
+    (update.content !== undefined &&
+      update.content !== null &&
+      update.content.length > 0) ||
+    ((update.content === undefined || update.content === null) &&
+      wire.sessions[notification!.sessionId]?.tools[update.toolCallId]
+        ?.ownContent === true) ||
+    update.rawOutput === undefined ||
+    update.rawOutput === null
+  ) {
+    return [message];
+  }
+
+  const raw = update.rawOutput;
+  const fields = isRecord(raw) ? raw : {};
+  const named = OUTPUT_KEYS.filter((key) => typeof fields[key] === 'string');
+  const keyed = isRecord(raw) && named.length > 0;
+  const text =
+    typeof raw === 'string'
+      ? raw
+      : keyed
+        ? named
+            .map((key) => (fields[key] as string).replace(/\n$/, ''))
+            .filter((part) => part !== '')
+            .join('\n')
+        : JSON.stringify(raw, null, 2);
+  const failed =
+    keyed &&
+    update.status === 'completed' &&
+    typeof fields.exitCode === 'number' &&
+    fields.exitCode !== 0;
+
+  if (text === '' && !failed) {
+    return [message];
+  }
+
+  return [
+    withUpdate(message, {
+      ...update,
+      ...(text === ''
+        ? {}
+        : { content: [{ type: 'content', content: { type: 'text', text } }] }),
+      ...(failed ? { status: 'failed' } : {}),
+      _meta: markFilled(update._meta, [
+        ...(text === '' ? [] : ['content']),
+        ...(failed ? ['status'] : []),
+      ]),
+    } as SessionUpdate),
+  ];
+};
+
 /** Every enricher, in the order each runs over what the last one made. */
 export const ENRICHERS: readonly Enricher[] = [
   subagentShape,
   toolCallFacts,
   codexMcpCall,
+  rawOutputContent,
   modeReadBack,
   costFromTokens,
   windowFromModel,

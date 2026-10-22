@@ -528,8 +528,8 @@ person's own prompts.
   output comes from the tool call's `_meta` (`terminal_info`,
   `terminal_output_delta`, `terminal_output`, `terminal_exit`). Claude's
   `_meta.claudeCode.nonExecutionKind` marks an interrupted call.
-- **Unused:** rawOutput is kept but never drawn, and locations show only in
-  the permission box.
+- **Unused:** locations show only in the permission box. rawOutput is drawn
+  only on a call with no content, as that content (CHD-440).
 
 ### Asking the person (B15–B17)
 
@@ -824,8 +824,9 @@ rejects it unseen with `reject_once`, which is the session-disable option:
 the workspace is not indexed for that session, and the person is not told.
 The first prompt does not hang. An `@` mention goes out as a
 `resource_link`, which auggie reads only as a local `file://` path. Shell,
-file-view and MCP results are only in `rawOutput`, which chord keeps but
-never draws, and a running call is a grey `Waiting…` until it ends.
+file-view and MCP results are only in `rawOutput`, whose `output` chord
+draws as the call's content (CHD-440), and a running call is a grey
+`Waiting…` until it ends.
 Subagents read as one call. No usage arrives, so chord estimates nothing.
 No title arrives, so none is lost. chord reopens with `session/load`, as
 auggie has no resume, and never calls `session/list`. chord's own MCP server
@@ -1403,7 +1404,8 @@ status line names the provider. The real `model` option is left out of
 (`src/session/config.ts:28-40`, `:60-62`). So the model cannot be chosen in
 chord. Pasted images vanish, and an image-only prompt ends at once with
 nothing said; @-mentions survive only as the path in the text. Command
-output arrives only in `rawOutput`, which chord does not draw. Without a
+output arrives only in `rawOutput`, which chord draws as the call's content
+(CHD-440). Without a
 login or `CLINE_API_KEY` the start fails with `auth_required`, as chord never
 calls `authenticate`. chord's MCP server is not offered, and `mcpServers`
 would be ignored. chord queues its own mid-turn prompts, so the
@@ -1542,8 +1544,9 @@ advertised. Text, images and `@` links reach the model, the links as link
 text. Modes, models, `thought_level` effort, plans, permissions, commands
 and usage work. chord's own MCP server goes in over http, and its stdio
 entries carry no `type`, so none is skipped. A successful foreground Bash
-shows no output, live or final: chord keeps `rawOutput` but never draws it,
-and codebuddy does not read `terminal_output_delta`. A backgrounded command
+has its output only in `rawOutput`, which chord draws as the call's
+content, live and final (CHD-440); codebuddy does not read
+`terminal_output_delta`. A backgrounded command
 ends with an empty terminal block that chord filters out, so the call reads
 as done with nothing said, and its end never arrives. The unsolicited turn
 that follows starts a cycle on `codebuddy.ai/unsolicitedTurn`, shown as
@@ -2749,7 +2752,8 @@ whole. chord reopens with resume when it holds a record, else load, which
 replays text only. Model, effort and mode come from glm's config options.
 Usage comes only in the prompt answer, so there is no live meter; there is
 no cost, so chord estimates one. Edits arrive with no diff, only a title,
-paths and an elided rawInput, and rawOutput is never drawn. @ mentions reach
+paths and an elided rawInput; rawOutput is drawn only on a call with no
+content (CHD-440). @ mentions reach
 the model as `[name](uri)`, so it opens files with its own tool. chord queues
 a mid-turn prompt, which keeps glm from aborting the running turn. chord
 drops glm's `session_info_update` titles, never calls `session/list`, fork
@@ -3176,8 +3180,9 @@ of the next-prompt switch. chord declares the form capability, so questions
 come as real forms, and `plan`, so the markdown plan is drawn as reply text.
 The agent's cost stops chord's estimate. chord's own MCP server goes in
 over http (`mcpCapabilities.http` is true; CHD-432's table left the cell
-blank). What reads wrong: a permission is not tied to its card, shell output
-only in `rawOutput` is not drawn, and restarted tool ids land on old cards.
+blank). What reads wrong: a permission is not tied to its card, and
+restarted tool ids land on old cards; shell output only in `rawOutput` is
+drawn as the call's content (CHD-440).
 Titles, every `mcode/*` extension and the login method are ignored; chord
 declares no terminal auth, so `authMethods` never arrives, and without a
 prior login the start fails. chord queues its own mid-turn prompts, so the
@@ -3286,7 +3291,7 @@ as chord never calls `authenticate`. After an OpenRouter login chord sets
 the model by `session/set_model`, there being no `model` option, and gets a
 method-not-found error. A session cannot be reopened: no `loadSession`, no
 resume. Esc answers `cancelled`, and minion runs the tool. Output only in
-`rawOutput` is not drawn. Mentions are dropped as links, though chord's
+`rawOutput` is drawn as the call's content (CHD-440). Mentions are dropped as links, though chord's
 prompt text names the files. chord's own MCP server is not offered, and the
 person's servers are ignored. chord queues its own mid-turn prompts and
 sends no steering, so neither the second-prompt path nor the stubs are
@@ -4091,9 +4096,10 @@ enricher maps all four end states; nobody has seen it live. Questions come as
 permission boxes, and `-p` with `--dangerously-skip-permissions` answers one
 with its first option. chord puts `cursor/create_plan` to the person in
 its plan box and answers cursor with their choice, `cancelled` when it is
-not theirs (CHD-437). Shell
-output is only in `rawOutput`, which chord never draws; a running call stays a
-grey `Waiting…` and a failed one reads `completed`. No usage, so no meter and
+not theirs (CHD-437). Shell output is only in `rawOutput`
+`{exitCode, stdout, stderr}`, which chord draws as the call's content, a
+non-zero exit failing it (CHD-440); a running call stays a grey `Waiting…`.
+No usage, so no meter and
 no estimate. The effort picker is empty. Without `agent login` or
 `CURSOR_API_KEY` the start fails `authRequired`. chord's queue keeps a
 mid-turn prompt from cancelling the turn. chord reopens with `session/load`,
@@ -5415,11 +5421,16 @@ agent's Custom or In chord paragraph instead, the item says so.
 ### Questions that reach many agents
 
 - **Drawing `rawOutput` when a call has no content.** This one reaches the most
-  agents. Results come only in `rawOutput`, which chord keeps but never draws,
-  from cursor's shell (cu9), codebuddy's successful foreground Bash (cb10),
-  minion-code (mi9), auggie's shell, file-view and MCP results (au7), minimax
-  (mm12) and cline (ci11). Options found: draw it, take it upstream per agent,
-  or leave it. Beside it, among what CHD-432 found drawn wrong: deepagents'
+  agents. Results come only in `rawOutput` from cursor's shell (cu9),
+  codebuddy's successful foreground Bash (cb10), minion-code (mi9), auggie's
+  shell, file-view and MCP results (au7), minimax (mm12) and cline (ci11).
+  Decided (Q89) and built (CHD-440): an enricher in the chain fills a call
+  with no content with its `rawOutput` as text, read by shape, as the chain
+  knows no agent's name: a string as itself; `stdout`, `stderr`, `output`
+  or `result` strings as those, a non-zero `exitCode` failing a
+  `completed` call; anything else as JSON. An agent whose `rawOutput`
+  repeats its input (dimcode, di13) draws that input as JSON on a call that
+  has no content of its own. Beside it, among what CHD-432 found drawn wrong: deepagents'
   `input` and `output` and its `error` and `cancelled` statuses, drawn as
   `Waiting…` (da9, da10); gemini's mode changes as `[MODE_UPDATE]` reply text
   (ge6); fast-agent's resume, drawn twice (fa4).

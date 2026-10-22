@@ -9,6 +9,7 @@ import {
   type Entry,
 } from '../../src/session/transcript/types.ts';
 import { turnCost } from '../../src/session/prices.ts';
+import { runOneshot } from '../../src/session/oneshot.ts';
 import {
   Conversation,
   type ConversationEvent,
@@ -2159,5 +2160,173 @@ describe('CHD-437 U1 tester: plans replay without granting fresh acceptance', ()
         { agent: 'cursor', answer: { type: 'accepted' } },
         { agent: 'grok', answer: { type: 'kept', note: 'More 日本語 tests.' } },
       ]);
+    }));
+});
+
+describe('a result sent only as rawOutput in the record (CHD-440)', () => {
+  /** Each tool call's content text, as `entries` replay into a transcript. */
+  const drawn = (entries: readonly RecordEntry[]) =>
+    recordActions(entries)
+      .reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      )
+      .entries.flatMap((entry) =>
+        entry.kind === 'tool'
+          ? [
+              (entry.call.content ?? []).map((each) =>
+                each.type === 'content' && each.content.type === 'text'
+                  ? each.content.text
+                  : each.type,
+              ),
+            ]
+          : [],
+      );
+
+  test('the record keeps it as content, filled in, and draws it again', () =>
+    withDir(async (dir) => {
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(),
+        prompts: ['rawoutputs'],
+      });
+
+      const entries = await readPast((await theRecord(dir)).path);
+      const filled = entries.flatMap((entry) =>
+        entry.type === 'update' &&
+        entry.update.sessionUpdate === 'tool_call_update' &&
+        entry.update.status !== 'in_progress'
+          ? [
+              // Beside the title and kind `toolCallFacts` carries over.
+              (entry.update._meta?.['chord/filled'] as string[]).filter(
+                (field) => field === 'content' || field === 'status',
+              ),
+            ]
+          : [],
+      );
+
+      expect(filled).toStrictEqual([
+        ['content'],
+        ['content'],
+        ['content', 'status'],
+        ['content'],
+        ['content'],
+        ['content'],
+      ]);
+      expect(drawn(entries)[2]).toStrictEqual(['src/a.ts:3 unused x']);
+    }));
+
+  test('an older record, written before it was filled in, draws as it did', () => {
+    const entries: RecordEntry[] = [
+      { type: 'prompt', turnId: 't1', prompt: 'run', images: 0, at: 1 },
+      {
+        type: 'update',
+        turnId: 't1',
+        at: 2,
+        update: {
+          sessionUpdate: 'tool_call',
+          toolCallId: 'c1',
+          title: 'Run npm test',
+          kind: 'execute',
+          status: 'in_progress',
+        },
+      },
+      {
+        type: 'update',
+        turnId: 't1',
+        at: 3,
+        update: {
+          sessionUpdate: 'tool_call_update',
+          toolCallId: 'c1',
+          status: 'completed',
+          rawOutput: { exitCode: 0, stdout: 'ok 1\n' },
+        },
+      },
+      {
+        type: 'result',
+        turnId: 't1',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+    ];
+
+    expect(drawn(entries)).toStrictEqual([[]]);
+  });
+});
+
+describe('CHD-440 tester: every fallback agrees live, replayed and in -p', () => {
+  const snapshot = (state: typeof emptyTranscript) =>
+    state.entries.flatMap((entry) =>
+      entry.kind === 'tool'
+        ? [
+            {
+              title: entry.call.title,
+              status: entry.call.status,
+              content: entry.call.content,
+            },
+          ]
+        : [],
+    );
+
+  test('all six shapes and the keyed exit failure survive the same full-chain round trip', () =>
+    withDir(async (dir) => {
+      const live: SessionUpdate[] = [];
+
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(),
+        prompts: ['rawoutputs'],
+        heard: (event) => {
+          if (event.type === 'update') {
+            live.push(event.update);
+          }
+        },
+      });
+
+      const entries = await readPast((await theRecord(dir)).path);
+      const replayed = recordActions(entries).reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      );
+      const fold = (updates: readonly SessionUpdate[]) =>
+        updates.reduce(
+          (state, update) =>
+            reduceTranscript(state, {
+              type: 'update',
+              turnId: 't',
+              at: 1,
+              update,
+            }),
+          emptyTranscript,
+        );
+      const headless: SessionUpdate[] = [];
+      const outcome = await runOneshot({
+        agent: 'fake',
+        cwd: dir,
+        prompt: 'rawoutputs',
+        agentCommand: fakeAgentCommand(),
+        onUpdate: (update) => {
+          headless.push(update);
+        },
+        onRefused: () => {},
+        onDeclined: () => {},
+      });
+      const expected = snapshot(fold(live));
+
+      expect(expected).toHaveLength(6);
+      expect(expected.map((call) => call.status)).toEqual([
+        'completed',
+        'completed',
+        'failed',
+        'completed',
+        'completed',
+        'completed',
+      ]);
+      expect(snapshot(replayed)).toEqual(expected);
+      expect(snapshot(fold(headless))).toEqual(expected);
+      expect(outcome.result).toMatchObject({ status: 'completed' });
     }));
 });

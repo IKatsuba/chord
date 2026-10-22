@@ -6,11 +6,14 @@ import type {
   SessionUpdate,
 } from '@agentclientprotocol/sdk';
 import { enricherRelay, FILLED, MCP_CALL } from '../../src/session/enrich.ts';
+import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
+import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import {
   codexMcpCall,
   costFromTokens,
   ENRICHERS,
   modeReadBack,
+  rawOutputContent,
   SUBAGENT_DRAFT,
   subagentShape,
   toolCallFacts,
@@ -1387,5 +1390,393 @@ describe('CHD-419 tester: optional wrapper arguments and replay', () => {
 
       expect(updates(update(sent))).toEqual([sent]);
     }
+  });
+});
+
+describe("a result sent only as rawOutput is filled in as the call's content (CHD-440)", () => {
+  const { update } = relayOn([rawOutputContent]);
+  const done = (
+    rawOutput: unknown,
+    more: Partial<
+      Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>
+    > = {},
+  ) =>
+    updates(
+      update({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-1',
+        status: 'completed',
+        rawOutput,
+        ...more,
+      }),
+    )[0] as
+      Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }> | undefined;
+  const text = (said: string) => [
+    {
+      type: 'content' as const,
+      content: { type: 'text' as const, text: said },
+    },
+  ];
+
+  test('a string is its text', () => {
+    expect(done('built in 3s\n')).toStrictEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'completed',
+      rawOutput: 'built in 3s\n',
+      content: text('built in 3s\n'),
+      _meta: { [FILLED]: ['content'] },
+    });
+  });
+
+  test("cursor's shell: stdout then stderr; a non-zero exitCode fails the call", () => {
+    const shell = { exitCode: 0, stdout: 'ok 1\nok 2\n', stderr: 'warn\n' };
+
+    expect(done(shell)).toMatchObject({
+      status: 'completed',
+      content: text('ok 1\nok 2\nwarn'),
+      _meta: { [FILLED]: ['content'] },
+    });
+    expect(done({ ...shell, exitCode: 2 })).toMatchObject({
+      status: 'failed',
+      content: text('ok 1\nok 2\nwarn'),
+      _meta: { [FILLED]: ['content', 'status'] },
+    });
+    // Nothing printed, yet failed: the status alone.
+    expect(done({ exitCode: 1, stdout: '', stderr: '' })).toStrictEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'failed',
+      rawOutput: { exitCode: 1, stdout: '', stderr: '' },
+      _meta: { [FILLED]: ['status'] },
+    });
+  });
+
+  test("auggie's output and bob's result are their text; any other object its JSON", () => {
+    expect(done({ output: 'file text' })?.content).toStrictEqual(
+      text('file text'),
+    );
+    expect(done({ result: 'done' })?.content).toStrictEqual(text('done'));
+    expect(done({ files: ['a.ts'], count: 1 })?.content).toStrictEqual(
+      text('{\n  "files": [\n    "a.ts"\n  ],\n  "count": 1\n}'),
+    );
+    expect(done([1, 2])?.content).toStrictEqual(text('[\n  1,\n  2\n]'));
+  });
+
+  test('a running call is filled too, so its output shows as it comes', () => {
+    expect(done('line 1', { status: 'in_progress' })?.content).toStrictEqual(
+      text('line 1'),
+    );
+  });
+
+  test('content the agent sent stays, and a call with no rawOutput passes as it came', () => {
+    const own: SessionUpdate = {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'completed',
+      content: text('its own'),
+      rawOutput: { stdout: 'other' },
+    } as SessionUpdate;
+    const bare: SessionUpdate = {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'completed',
+    };
+
+    expect(updates(update(own))).toStrictEqual([own]);
+    expect(updates(update(bare))).toStrictEqual([bare]);
+    expect(done('')).toStrictEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'completed',
+      rawOutput: '',
+    });
+  });
+
+  test('content the agent sent earlier stays when a later update brings only rawOutput, through the whole chain and the transcript', () => {
+    const chain = relayOn(ENRICHERS);
+    const sent: SessionUpdate[] = [
+      {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'call-2',
+        title: 'Run npm test',
+        kind: 'execute',
+        status: 'in_progress',
+        content: text('its own'),
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-2',
+        status: 'completed',
+        rawOutput: 'raw',
+      },
+    ];
+    const read = sent.flatMap((each) => updates(chain.update(each)));
+    const transcript = read.reduce(
+      (state, update) =>
+        reduceTranscript(state, {
+          type: 'update',
+          turnId: 't1',
+          at: 1,
+          update,
+        }),
+      emptyTranscript,
+    );
+    const call = transcript.entries.find((entry) => entry.kind === 'tool');
+
+    // Its title and kind carried on, as `toolCallFacts` does; no content.
+    expect(read[1]).toMatchObject({ rawOutput: 'raw', status: 'completed' });
+    expect('content' in read[1]!).toBe(false);
+    assert(call?.kind === 'tool');
+    expect(call.call.content).toStrictEqual(text('its own'));
+
+    // Content the agent clears is its own word too: then rawOutput fills it.
+    const cleared = updates(
+      chain.update({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-2',
+        content: [],
+      }),
+    );
+    const after = updates(
+      chain.update({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-2',
+        status: 'completed',
+        rawOutput: 'raw',
+      }),
+    )[0] as Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>;
+
+    expect(cleared).toHaveLength(1);
+    expect(after.content).toStrictEqual(text('raw'));
+  });
+
+  test('a clear sent with rawOutput in one update is the agent clearing too, so a newer rawOutput fills again', () => {
+    const chain = relayOn(ENRICHERS);
+    const content = (each: SessionUpdate) =>
+      (updates(chain.update(each))[0] as { content?: unknown }).content;
+
+    content({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call-3',
+      title: 'Run npm test',
+      kind: 'execute',
+      status: 'in_progress',
+      content: text('its own'),
+    });
+
+    expect(
+      content({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-3',
+        content: [],
+        rawOutput: 'first',
+      }),
+    ).toStrictEqual(text('first'));
+    expect(
+      content({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-3',
+        status: 'completed',
+        rawOutput: 'second',
+      }),
+    ).toStrictEqual(text('second'));
+  });
+
+  test('it runs in the chain every session gets', () => {
+    expect(ENRICHERS).toContain(rawOutputContent);
+  });
+});
+
+describe('CHD-440 tester: fallback provenance across sessions and replay', () => {
+  const text = (value: string) => [
+    {
+      type: 'content' as const,
+      content: { type: 'text' as const, text: value },
+    },
+  ];
+  const call = (
+    more: Partial<Extract<SessionUpdate, { sessionUpdate: 'tool_call' }>> = {},
+  ): SessionUpdate => ({
+    sessionUpdate: 'tool_call',
+    toolCallId: 'shared',
+    title: 'Run tests',
+    kind: 'execute',
+    status: 'in_progress',
+    ...more,
+  });
+  const changed = (
+    more: Partial<
+      Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>
+    >,
+  ): SessionUpdate => ({
+    sessionUpdate: 'tool_call_update',
+    toolCallId: 'shared',
+    ...more,
+  });
+  const harness = () => {
+    const relay = enricherRelay(ENRICHERS);
+    const transcripts = new Map<string, typeof emptyTranscript>();
+    const send = (sessionId: string, update: SessionUpdate) => {
+      const read = updates(
+        relay.fromAgent({
+          jsonrpc: '2.0',
+          method: 'session/update',
+          params: { sessionId, update },
+        }),
+      );
+      const next = read.reduce(
+        (state, each) =>
+          reduceTranscript(state, {
+            type: 'update',
+            turnId: 't',
+            at: 1,
+            update: each,
+          }),
+        transcripts.get(sessionId) ?? emptyTranscript,
+      );
+
+      transcripts.set(sessionId, next);
+
+      const entry = next.entries.find((entry) => entry.kind === 'tool');
+
+      assert(entry?.kind === 'tool');
+
+      return entry.call;
+    };
+
+    return { relay, send };
+  };
+
+  test('two sessions reuse a call id without sharing content ownership or generated snapshots', () => {
+    const { send } = harness();
+
+    send('own', call({ content: text('agent original') }));
+    send('generated', call({ rawOutput: 'partial' }));
+    expect(
+      send('own', changed({ status: 'completed', rawOutput: 'ignored' }))
+        .content,
+    ).toEqual(text('agent original'));
+    expect(
+      send(
+        'generated',
+        changed({ status: 'completed', rawOutput: { stdout: 'final\n' } }),
+      ).content,
+    ).toEqual(text('final'));
+    expect(
+      send('own', changed({ content: [], rawOutput: 'replacement' })).content,
+    ).toEqual(text('replacement'));
+    expect(
+      send('generated', changed({ rawOutput: 'another snapshot' })).content,
+    ).toEqual(text('another snapshot'));
+  });
+
+  for (const content of [
+    [
+      {
+        type: 'diff' as const,
+        path: 'src/a.ts',
+        oldText: 'old',
+        newText: 'new',
+      },
+    ],
+    [{ type: 'terminal' as const, terminalId: 'terminal-1' }],
+    [
+      {
+        type: 'content' as const,
+        content: {
+          type: 'image' as const,
+          data: 'AA==',
+          mimeType: 'image/png',
+        },
+      },
+    ],
+  ]) {
+    test(`agent ${content[0]!.type} content replaces a fill and survives later raw-only updates`, () => {
+      const { send } = harness();
+
+      send('s', call({ rawOutput: 'generated' }));
+      send('s', changed({ content }));
+      expect(
+        send(
+          's',
+          changed({ rawOutput: 'must not replace', status: 'completed' }),
+        ).content,
+      ).toEqual(content);
+    });
+  }
+
+  test('recalling generated versus agent content preserves their different replacement rules', () => {
+    const { relay, send } = harness();
+
+    relay.recall('generated', [
+      call({ content: text('old fallback'), _meta: { [FILLED]: ['content'] } }),
+    ]);
+    relay.recall('own', [call({ content: text('agent original') })]);
+    expect(
+      send('generated', changed({ rawOutput: 'new fallback' })).content,
+    ).toEqual(text('new fallback'));
+
+    // An update omitting content must not invent a replacement after resume.
+    const own = updates(
+      relay.fromAgent({
+        jsonrpc: '2.0',
+        method: 'session/update',
+        params: { sessionId: 'own', update: changed({ rawOutput: 'ignored' }) },
+      }),
+    )[0];
+
+    expect(own).not.toHaveProperty('content');
+  });
+
+  test('empty later output keeps the previous generated snapshot (Q131 option 1)', () => {
+    const { send } = harness();
+
+    send('s', call({ rawOutput: 'last shown' }));
+
+    for (const rawOutput of [
+      '',
+      { stdout: '', stderr: '' },
+      { output: '', result: '' },
+    ]) {
+      expect(
+        send('s', changed({ rawOutput, status: 'completed' })).content,
+      ).toEqual(text('last shown'));
+    }
+
+    expect(send('s', changed({ rawOutput: 'new snapshot' })).content).toEqual(
+      text('new snapshot'),
+    );
+  });
+
+  test('named fields keep their order and blank lines; scalar JSON is not missing output', () => {
+    const { send } = harness();
+    const rawOutput = {
+      result: 'result\n',
+      output: 'output\n',
+      stderr: 'warning\n',
+      stdout: 'one\n\n',
+      exitCode: -1,
+    };
+    const result = send('s', call({ status: 'completed', rawOutput }));
+
+    expect(result.content).toEqual(text('one\n\nwarning\noutput\nresult'));
+    expect(result.status).toBe('failed');
+
+    for (const value of [false, 0]) {
+      expect(send('s', changed({ rawOutput: value })).content).toEqual(
+        text(JSON.stringify(value)),
+      );
+    }
+
+    expect(
+      send(
+        'non-numeric',
+        call({
+          status: 'completed',
+          rawOutput: { stdout: 'ok', exitCode: '1' },
+        }),
+      ).status,
+    ).toBe('completed');
   });
 });

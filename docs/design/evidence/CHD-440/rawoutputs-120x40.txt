@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d440
+ ▀▀     ? for shortcuts · /help
+
+ › rawoutputs
+
+ ⏺ Run(date)
+   ⎿  Thu Oct 22 12:00:00 UTC 2026
+
+ ⏺ Run(npm test)
+   ⎿  ok 1
+      ok 2
+
+ ⏺ Run(npm run lint)
+   ⎿  Error: src/a.ts:3 unused x
+
+ ⏺ View(src/a.ts)
+   ⎿  const x = 1;
+
+ ⏺ Run(make)
+   ⎿  built 3 targets
+
+ ⏺ Search(TODO)
+   ⎿  {
+        "matches": 2,
+        "files": [
+          "a.ts",
+          "b.ts"
+        ]
+      }
+
+ ⏺ Ran them.
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,24 @@
+ ⏺ Run(npm run lint)
+   ⎿  Error: src/a.ts:3 unused x
+
+ ⏺ View(src/a.ts)
+   ⎿  const x = 1;
+
+ ⏺ Run(make)
+   ⎿  built 3 targets
+
+ ⏺ Search(TODO)
+   ⎿  {
+        "matches": 2,
+        "files": [
+          "a.ts",
+          "b.ts"
+        ]
+      }
+
+ ⏺ Ran them.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

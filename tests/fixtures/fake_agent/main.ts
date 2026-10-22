@@ -329,6 +329,7 @@ const SCENARIOS = [
   'steps',
   'stepslater',
   'calls',
+  'rawoutputs',
   'longresults',
   'overlap',
   'overlaptwo',

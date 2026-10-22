@@ -55,6 +55,11 @@ export interface SessionWire {
 export interface ToolFacts {
   readonly title?: string;
   readonly kind?: ToolKind;
+  /**
+   * The agent sent content of its own for the call, not chord's filled in,
+   * which an update that leaves content out keeps (CHD-440).
+   */
+  readonly ownContent?: boolean;
 }
 
 /** A request chord sent and the agent has not answered yet. */
@@ -291,6 +296,15 @@ function heardUpdate(session: SessionWire, update: SessionUpdate): SessionWire {
         ...known,
         ...(typeof update.title === 'string' ? { title: update.title } : {}),
         ...(typeof update.kind === 'string' ? { kind: update.kind } : {}),
+        // Content chord filled in is none of the agent's: what it sent there
+        // was none, or an empty list that cleared its own.
+        ...(Array.isArray(update.content)
+          ? {
+              ownContent:
+                update.content.length > 0 &&
+                !filledIn(update).includes('content'),
+            }
+          : {}),
       };
 
       return {

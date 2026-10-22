@@ -659,7 +659,7 @@ describe('CHD-470 tester: a steering-gated task parent closes before any steer',
   }
 });
 
-test("an ended task's block says what it spent, its tokens and money, and its background row its money (CHD-373)", async () => {
+test("an ended task's block says what it spent, its tokens and money, and it leaves the background list (CHD-373, CHD-482)", async () => {
   const server = serveChord();
 
   try {
@@ -672,11 +672,10 @@ test("an ended task's block says what it spent, its tokens and money, and its ba
         await window.shows(
           'Received the message from Fix the tokenizer · fake · report.',
         );
-        await window.press(DOWN);
-        await window.press('\r');
-        await window.shows('│ Background · 1 in this tab');
-        await window.shows('✓ reported after');
-        expect(window.frame()).toMatch(/✓ reported after \d+s · \$0\.0125/);
+        await until(
+          'the summary line gone',
+          () => !window.frame().includes('background  '),
+        );
       },
       { server, runtimes: ['fake'], rows: 40, columns: 120 },
     );

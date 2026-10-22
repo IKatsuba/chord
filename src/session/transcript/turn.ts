@@ -180,8 +180,10 @@ export function settle(
   // A cancel stops the turn's subagents with it, as the adapters' draft
   // form does, which says so too, perhaps only after the turn's answer. One
   // that can be cancelled alone is left for its agent to report: it may live
-  // on, as a background one does. Those still running after a turn that
-  // ended on its own are left: they may outlive it.
+  // on, as a background one does; and so is chord's own task, whose end
+  // chord always tells, with the key that stopped it (CHD-482). Those still
+  // running after a turn that ended on its own are left: they may outlive
+  // it.
   if (result.status === 'cancelled') {
     state = {
       ...state,
@@ -189,7 +191,10 @@ export function settle(
         state.entries,
         'cancelled',
         state.turn.status === 'cancelling' ? state.turn.cancelledAt : undefined,
-        (subagent) => isRunning(subagent) && subagent.cancellable !== true,
+        (subagent) =>
+          isRunning(subagent) &&
+          subagent.cancellable !== true &&
+          subagent.task === undefined,
       ),
     };
   }

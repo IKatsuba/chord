@@ -935,6 +935,28 @@ describe("a task's end, once its turn has ended (CHD-482)", () => {
     ).toStrictEqual([]);
   });
 
+  test("esc on a later turn: its line says so though that turn's cancelled answer comes before the task's end", () => {
+    const later = 't2';
+
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          started('a'),
+          ENDED,
+          { type: 'prompt', turnId: later, text: 'slow', at: 2000 },
+          { type: 'cancel', turnId: later, at: 2500 },
+          {
+            type: 'result',
+            turnId: later,
+            result: { status: 'cancelled', stopReason: 'cancelled' },
+          },
+          ending('a', 'cancelled', 'esc'),
+        ]),
+      ),
+    ).toStrictEqual([stop({ byEsc: true })]);
+  });
+
   test('one stopped while its turn runs is said by its own block', () => {
     expect(
       ends(fold([PROMPT, started('a'), ending('a', 'cancelled', 'esc')])),

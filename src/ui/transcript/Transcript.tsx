@@ -1,4 +1,5 @@
 import { TextAttributes } from '@opentui/core';
+import { useGap } from './gap.ts';
 import { memo } from 'react';
 import type {
   Compaction,
@@ -104,16 +105,20 @@ export const TranscriptEntry = memo(function TranscriptEntry({
   width: number;
 }) {
   const selectable = useSelectable();
+  const gap = useGap();
 
   switch (entry.kind) {
     case 'user':
       return (
-        <box flexDirection='row' marginTop={1} flexShrink={0}>
-          <Gutter dimColor>›</Gutter>
-          <text {...FILL} {...selectable}>
-            {entry.text}
-          </text>
-        </box>
+        <>
+          {gap.spacer}
+          <box flexDirection='row' {...gap.props} flexShrink={0}>
+            <Gutter dimColor>›</Gutter>
+            <text {...FILL} {...selectable}>
+              {entry.text}
+            </text>
+          </box>
+        </>
       );
     case 'message':
       return (
@@ -126,10 +131,13 @@ export const TranscriptEntry = memo(function TranscriptEntry({
       );
     case 'assistant':
       return (
-        <box flexDirection='row' marginTop={1} flexShrink={0}>
-          <Gutter>⏺</Gutter>
-          <Reply text={entry.text} width={width} />
-        </box>
+        <>
+          {gap.spacer}
+          <box flexDirection='row' {...gap.props} flexShrink={0}>
+            <Gutter>⏺</Gutter>
+            <Reply text={entry.text} width={width} />
+          </box>
+        </>
       );
     case 'error':
       return <Failure text={entry.message} />;
@@ -147,23 +155,29 @@ export const TranscriptEntry = memo(function TranscriptEntry({
       );
     case 'left_open':
       return (
-        <box flexDirection='row' marginTop={1} flexShrink={0}>
-          <Gutter dimColor>⏺</Gutter>
-          <text {...FILL} attributes={DIM}>
-            <Ansi text={leftOpenLine(entry.agents)} />
-          </text>
-        </box>
+        <>
+          {gap.spacer}
+          <box flexDirection='row' {...gap.props} flexShrink={0}>
+            <Gutter dimColor>⏺</Gutter>
+            <text {...FILL} attributes={DIM}>
+              <Ansi text={leftOpenLine(entry.agents)} />
+            </text>
+          </box>
+        </>
       );
     case 'team_part':
       return <TeamPartLine part={entry.part} expanded={expanded} />;
     case 'monitors_left':
       return (
-        <box flexDirection='row' marginTop={1} flexShrink={0}>
-          <Gutter dimColor>⏺</Gutter>
-          <text {...FILL} attributes={DIM}>
-            <Ansi text={leftRunningLine(entry.monitors)} />
-          </text>
-        </box>
+        <>
+          {gap.spacer}
+          <box flexDirection='row' {...gap.props} flexShrink={0}>
+            <Gutter dimColor>⏺</Gutter>
+            <text {...FILL} attributes={DIM}>
+              <Ansi text={leftRunningLine(entry.monitors)} />
+            </text>
+          </box>
+        </>
       );
     case 'permission': {
       const { text, allowed } = permissionOutcome(entry);
@@ -246,16 +260,21 @@ function SelfStarted({
   /** Cells beside the gutter. */
   width: number;
 }) {
+  const gap = useGap();
+
   // Under the turn, `⎿` sits three cells further in than `⏺`.
   const text = selfStartedLine(from, alone ? width : width - 3);
 
   return alone ? (
-    <box flexDirection='row' marginTop={1} flexShrink={0}>
-      <Gutter dimColor>⏺</Gutter>
-      <text {...CUT} attributes={DIM}>
-        {text}
-      </text>
-    </box>
+    <>
+      {gap.spacer}
+      <box flexDirection='row' {...gap.props} flexShrink={0}>
+        <Gutter dimColor>⏺</Gutter>
+        <text {...CUT} attributes={DIM}>
+          {text}
+        </text>
+      </box>
+    </>
   ) : (
     <box flexDirection='row' paddingLeft={2} flexShrink={0}>
       <Gutter width={3} dimColor>
@@ -280,6 +299,8 @@ function ItemEnded({
   entry: Extract<Entry, { kind: 'item_ended' }>;
   width: number;
 }) {
+  const gap = useGap();
+
   const colours = useColours();
   const line = endedLine(entry, width - 2);
   const colour =
@@ -291,24 +312,27 @@ function ItemEnded({
   const tone = line.tone === 'dim' ? { attributes: DIM } : fg(colour);
 
   return (
-    <box flexDirection='row' marginTop={1} flexShrink={0}>
-      <Gutter
-        dimColor={line.tone === 'dim'}
-        {...(colour === undefined ? {} : { color: colour })}
-      >
-        {line.marker}
-      </Gutter>
-      <text {...CUT}>
-        <span>
-          <Ansi text={line.name} />
-        </span>
-        <span attributes={DIM}>{line.kind}</span>
-        <span {...tone}>{line.end}</span>
-        {line.reason !== undefined && (
-          <span {...tone}>{`: ${line.reason}`}</span>
-        )}
-      </text>
-    </box>
+    <>
+      {gap.spacer}
+      <box flexDirection='row' {...gap.props} flexShrink={0}>
+        <Gutter
+          dimColor={line.tone === 'dim'}
+          {...(colour === undefined ? {} : { color: colour })}
+        >
+          {line.marker}
+        </Gutter>
+        <text {...CUT}>
+          <span>
+            <Ansi text={line.name} />
+          </span>
+          <span attributes={DIM}>{line.kind}</span>
+          <span {...tone}>{line.end}</span>
+          {line.reason !== undefined && (
+            <span {...tone}>{`: ${line.reason}`}</span>
+          )}
+        </text>
+      </box>
+    </>
   );
 }
 
@@ -331,39 +355,44 @@ function Message({
   expanded: boolean;
   width: number;
 }) {
+  const gap = useGap();
+
   const sender = useAgentColour(from.name);
   const { word, name, rest } = messageHeader(from);
 
   return (
-    <box marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <Arrow glyph='←' tone={inArrow(from)} colour={sender} />
-        <text {...CUT}>
-          <span attributes={DIM}>{word}</span>
-          <span attributes={TextAttributes.BOLD} {...fg(sender)}>
-            <Ansi text={name} />
-          </span>
-          <span attributes={DIM}>
-            <Ansi text={rest} />
-          </span>
-        </text>
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <Arrow glyph='←' tone={inArrow(from)} colour={sender} />
+          <text {...CUT}>
+            <span attributes={DIM}>{word}</span>
+            <span attributes={TextAttributes.BOLD} {...fg(sender)}>
+              <Ansi text={name} />
+            </span>
+            <span attributes={DIM}>
+              <Ansi text={rest} />
+            </span>
+          </text>
+        </box>
+        {from.monitor === undefined ? (
+          <MessageBody
+            text={text}
+            width={width}
+            failed={from.note === 'failed'}
+          />
+        ) : (
+          <MonitorBody
+            text={text}
+            ended={from.monitor.end !== undefined}
+            expanded={expanded}
+            width={width}
+            failed={from.note === 'failed'}
+          />
+        )}
       </box>
-      {from.monitor === undefined ? (
-        <MessageBody
-          text={text}
-          width={width}
-          failed={from.note === 'failed'}
-        />
-      ) : (
-        <MonitorBody
-          text={text}
-          ended={from.monitor.end !== undefined}
-          expanded={expanded}
-          width={width}
-          failed={from.note === 'failed'}
-        />
-      )}
-    </box>
+    </>
   );
 }
 
@@ -428,25 +457,30 @@ function Report({
   command: string;
   rows: readonly ReportRow[];
 }) {
+  const gap = useGap();
+
   return (
-    <box marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <Gutter dimColor>›</Gutter>
-        <text {...FILL}>/{command}</text>
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <Gutter dimColor>›</Gutter>
+          <text {...FILL}>/{command}</text>
+        </box>
+        {rows.map((row, index) => (
+          <Under key={index} first={index === 0}>
+            {row.label !== undefined && (
+              <box flexDirection='row' flexShrink={0}>
+                <text {...TEXT} attributes={DIM}>
+                  {row.label}
+                </text>
+              </box>
+            )}
+            <text {...FILL}>{row.text}</text>
+          </Under>
+        ))}
       </box>
-      {rows.map((row, index) => (
-        <Under key={index} first={index === 0}>
-          {row.label !== undefined && (
-            <box flexDirection='row' flexShrink={0}>
-              <text {...TEXT} attributes={DIM}>
-                {row.label}
-              </text>
-            </box>
-          )}
-          <text {...FILL}>{row.text}</text>
-        </Under>
-      ))}
-    </box>
+    </>
   );
 }
 
@@ -463,29 +497,34 @@ function Note({
   text: string;
   failed: boolean;
 }) {
+  const gap = useGap();
+
   const { error } = useColours();
 
   return (
-    <box marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <Gutter dimColor>›</Gutter>
-        <text {...FILL}>/{command}</text>
-      </box>
-      {failed ? (
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
         <box flexDirection='row'>
-          <Gutter {...paint(error)}>⏺</Gutter>
-          <text {...FILL} {...fg(error)}>
-            {text}
-          </text>
+          <Gutter dimColor>›</Gutter>
+          <text {...FILL}>/{command}</text>
         </box>
-      ) : (
-        <Under first>
-          <text {...FILL} attributes={DIM}>
-            {text}
-          </text>
-        </Under>
-      )}
-    </box>
+        {failed ? (
+          <box flexDirection='row'>
+            <Gutter {...paint(error)}>⏺</Gutter>
+            <text {...FILL} {...fg(error)}>
+              {text}
+            </text>
+          </box>
+        ) : (
+          <Under first>
+            <text {...FILL} attributes={DIM}>
+              {text}
+            </text>
+          </Under>
+        )}
+      </box>
+    </>
   );
 }
 
@@ -496,6 +535,8 @@ function Note({
  * (CHD-422).
  */
 function Shell({ run, width }: { run: ShellRun; width: number }) {
+  const gap = useGap();
+
   const { lines, hidden, note } = shellView(
     run,
     true,
@@ -512,33 +553,39 @@ function Shell({ run, width }: { run: ShellRun; width: number }) {
   const selectable = useSelectable();
 
   return (
-    <box marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <Gutter {...paint(bash)}>!</Gutter>
-        <text {...FILL} {...selectable}>
-          {run.command}
-        </text>
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <Gutter {...paint(bash)}>!</Gutter>
+          <text {...FILL} {...selectable}>
+            {run.command}
+          </text>
+        </box>
+        {rows.map((line, index) => (
+          <Under key={index} first={index === 0}>
+            <text
+              {...ROWS}
+              {...selectable}
+              {...(line.stream === 'stderr' ? fg(error) : {})}
+            >
+              {line.text === '' ? ' ' : line.text}
+            </text>
+          </Under>
+        ))}
+        {hidden > 0 && <Folded hidden={hidden} />}
+        {note && (
+          <Under first={lines.length === 0}>
+            <text
+              {...FILL}
+              {...(note.failed ? fg(error) : { attributes: DIM })}
+            >
+              {note.text}
+            </text>
+          </Under>
+        )}
       </box>
-      {rows.map((line, index) => (
-        <Under key={index} first={index === 0}>
-          <text
-            {...ROWS}
-            {...selectable}
-            {...(line.stream === 'stderr' ? fg(error) : {})}
-          >
-            {line.text === '' ? ' ' : line.text}
-          </text>
-        </Under>
-      ))}
-      {hidden > 0 && <Folded hidden={hidden} />}
-      {note && (
-        <Under first={lines.length === 0}>
-          <text {...FILL} {...(note.failed ? fg(error) : { attributes: DIM })}>
-            {note.text}
-          </text>
-        </Under>
-      )}
-    </box>
+    </>
   );
 }
 
@@ -556,6 +603,8 @@ function CompactionRecord({
   expanded: boolean;
   width: number;
 }) {
+  const gap = useGap();
+
   const line = compactionLine(
     compaction,
     expanded,
@@ -566,12 +615,15 @@ function CompactionRecord({
 
   if (line.tone === 'running') {
     return (
-      <box flexDirection='row' marginTop={1} flexShrink={0}>
-        <Gutter {...paint(accent)}>✻</Gutter>
-        <text {...FILL} {...fg(accent)}>
-          {line.text}
-        </text>
-      </box>
+      <>
+        {gap.spacer}
+        <box flexDirection='row' {...gap.props} flexShrink={0}>
+          <Gutter {...paint(accent)}>✻</Gutter>
+          <text {...FILL} {...fg(accent)}>
+            {line.text}
+          </text>
+        </box>
+      </>
     );
   }
 
@@ -600,25 +652,30 @@ function TeamPartLine({
   part: TeamPart;
   expanded: boolean;
 }) {
+  const gap = useGap();
+
   const key = useHintKey('app:toggleTranscript');
   const selectable = useSelectable();
 
   return (
-    <box marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <Gutter dimColor>⏺</Gutter>
-        <text {...FILL} attributes={DIM}>
-          {teamPartLine(part, expanded, key)}
-        </text>
-      </box>
-      {expanded && (
-        <box flexDirection='row' paddingLeft={2}>
-          <text {...FILL} {...selectable} attributes={DIM}>
-            <Ansi text={part.text} />
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <Gutter dimColor>⏺</Gutter>
+          <text {...FILL} attributes={DIM}>
+            {teamPartLine(part, expanded, key)}
           </text>
         </box>
-      )}
-    </box>
+        {expanded && (
+          <box flexDirection='row' paddingLeft={2}>
+            <text {...FILL} {...selectable} attributes={DIM}>
+              <Ansi text={part.text} />
+            </text>
+          </box>
+        )}
+      </box>
+    </>
   );
 }
 
@@ -627,27 +684,32 @@ function TeamPartLine({
  * Code it names no key; the shortcuts panel does.
  */
 function Thought({ text, expanded }: { text: string; expanded: boolean }) {
+  const gap = useGap();
+
   const selectable = useSelectable();
 
   return (
-    <box marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <Gutter dimColor>∴</Gutter>
-        <text {...FILL} attributes={DIM | TextAttributes.ITALIC}>
-          Thinking…
-        </text>
-      </box>
-      {expanded && (
-        <box flexDirection='row' paddingLeft={2}>
-          <text
-            {...FILL}
-            {...selectable}
-            attributes={DIM | TextAttributes.ITALIC}
-          >
-            <Ansi text={text.trim()} />
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <Gutter dimColor>∴</Gutter>
+          <text {...FILL} attributes={DIM | TextAttributes.ITALIC}>
+            Thinking…
           </text>
         </box>
-      )}
-    </box>
+        {expanded && (
+          <box flexDirection='row' paddingLeft={2}>
+            <text
+              {...FILL}
+              {...selectable}
+              attributes={DIM | TextAttributes.ITALIC}
+            >
+              <Ansi text={text.trim()} />
+            </text>
+          </box>
+        )}
+      </box>
+    </>
   );
 }

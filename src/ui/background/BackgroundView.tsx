@@ -14,6 +14,7 @@ import {
 } from 'react';
 import type { Subagent, TurnState } from '../../session/transcript/types.ts';
 import { AgentWork } from '../transcript/agents/Agents.tsx';
+import { BlockGap } from '../transcript/gap.ts';
 import {
   hintOf,
   useCloseHint,
@@ -470,6 +471,7 @@ function WorkDetail({
   const wanted = useRef(shown.top);
 
   wanted.current = shown.top;
+
   const hidden = hiddenRows(lines, shown.top, shown.shown);
   // A room of one row, or of none, has no row for a rule: what is hidden is
   // said beside the row, or at the state line's end (CHD-464).
@@ -573,6 +575,7 @@ function WorkDetail({
           : logStep(step, lines, room, box.scrollTop);
 
       following.current = next === FOLLOWING;
+
       box.scrollTo(next === FOLLOWING ? box.scrollHeight : next);
     };
 
@@ -633,12 +636,17 @@ function WorkDetail({
                 </text>
               </box>
             )}
-            <AgentWork
-              subagent={work.subagent}
-              turn={work.turn}
-              agent={work.agent}
-              width={workWidth}
-            />
+            {/* Its blocks spaced by rows of their own, which OpenTUI's
+                scrollbox counts one row tall, where it misses a margin
+                (opentui#1739). */}
+            <BlockGap.Provider value='row'>
+              <AgentWork
+                subagent={work.subagent}
+                turn={work.turn}
+                agent={work.agent}
+                width={workWidth}
+              />
+            </BlockGap.Provider>
           </box>
         </scrollbox>
         {workRows === 1 && count !== undefined && (

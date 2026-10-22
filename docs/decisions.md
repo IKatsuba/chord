@@ -7059,3 +7059,18 @@ key, when the frame is laid out, lands. A first try (823babbe) read that as
 the scrollbox not fitting and drew the log in a clipped box of chord's own;
 it was chord's timing, and the scrollbox stays. Scroll it on the key, or
 let `stickyScroll` follow, never from an effect.
+
+**The margin trap (opentui#1739, the owner's Q141 and Q142).** In
+OpenTUI 0.6.6 a `scrollbox` one row tall leaves out of its `scrollHeight` a
+child's `marginTop`, and `paddingTop` too once the padded box holds a box
+rather than bare text; at two rows and more it counts them. The lines past
+what it counts cannot be scrolled to. chord's transcript blocks are boxes
+spaced by a row of margin over a box of their own, so a detail one row tall
+could not page to its log's last lines. The owner had it reported upstream
+(https://github.com/anomalyco/opentui/issues/1739) and, meanwhile, the
+blocks drawn inside the detail's scrollbox alone with their row of space as
+an empty box of its own before each, which the scrollbox counts at every
+height: `BlockGap` (`src/ui/transcript/gap.ts`), which the transcript leaves
+at margins. `tests/ui/transcript/gap_test.tsx` pins OpenTUI's behaviour;
+once a pinned OpenTUI counts the margin, that test fails, and `BlockGap`
+and its provider go.

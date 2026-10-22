@@ -1,4 +1,5 @@
 import { TextAttributes } from '@opentui/core';
+import { useGap } from '../gap.ts';
 import { memo, type ReactNode, useContext } from 'react';
 import type {
   PermissionWait,
@@ -189,53 +190,58 @@ function AgentBlock({
   open: boolean;
   width: number;
 }) {
+  const gap = useGap();
+
   const fold = blockFold(subagent, waitsOf(turn), useContext(ChordServerName));
   const key = useHintKey('app:toggleTranscript');
   const ended = endedLine(subagent);
 
   return (
-    <box id={agentTarget(subagent.id)} marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <ToolMarker tone={agentTone(subagent.state)} />
-        <HeadlineText line={agentHeadline(subagent)} width={width} />
-      </box>
-      {open ? (
-        <>
-          <Task subagent={subagent} />
-          <box paddingLeft={5}>
-            <Work
-              subagent={subagent}
-              turn={turn}
-              agent={agent}
-              width={Math.max(width - 5, 1)}
-            />
-          </box>
-          {ended && <Outcome text={ended.text} failed={ended.failed} />}
-          <EndNote subagent={subagent} />
-        </>
-      ) : fold.kind === 'ended' ? (
-        <Outcome text={fold.text} failed={fold.failed} />
-      ) : fold.kind === 'starting' ? (
-        <Outcome text='Initializing…' />
-      ) : (
-        <>
-          {fold.lines.map((line, index) => (
-            <Under key={index} first={index === 0}>
-              <WorkLineText line={line} />
-            </Under>
-          ))}
-          {fold.more > 0 && (
-            <box flexDirection='row' paddingLeft={5}>
-              <text {...CUT} attributes={DIM}>
-                {`+${fold.more} more tool ${
-                  fold.more === 1 ? 'use' : 'uses'
-                }${key === undefined ? '' : ` (${key} to expand)`}`}
-              </text>
+    <>
+      {gap.spacer}
+      <box id={agentTarget(subagent.id)} {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <ToolMarker tone={agentTone(subagent.state)} />
+          <HeadlineText line={agentHeadline(subagent)} width={width} />
+        </box>
+        {open ? (
+          <>
+            <Task subagent={subagent} />
+            <box paddingLeft={5}>
+              <Work
+                subagent={subagent}
+                turn={turn}
+                agent={agent}
+                width={Math.max(width - 5, 1)}
+              />
             </box>
-          )}
-        </>
-      )}
-    </box>
+            {ended && <Outcome text={ended.text} failed={ended.failed} />}
+            <EndNote subagent={subagent} />
+          </>
+        ) : fold.kind === 'ended' ? (
+          <Outcome text={fold.text} failed={fold.failed} />
+        ) : fold.kind === 'starting' ? (
+          <Outcome text='Initializing…' />
+        ) : (
+          <>
+            {fold.lines.map((line, index) => (
+              <Under key={index} first={index === 0}>
+                <WorkLineText line={line} />
+              </Under>
+            ))}
+            {fold.more > 0 && (
+              <box flexDirection='row' paddingLeft={5}>
+                <text {...CUT} attributes={DIM}>
+                  {`+${fold.more} more tool ${
+                    fold.more === 1 ? 'use' : 'uses'
+                  }${key === undefined ? '' : ` (${key} to expand)`}`}
+                </text>
+              </box>
+            )}
+          </>
+        )}
+      </box>
+    </>
   );
 }
 
@@ -288,6 +294,8 @@ function AgentGroup({
   open: boolean;
   width: number;
 }) {
+  const gap = useGap();
+
   const header = groupHeader(agents);
   const key = useHintKey('app:toggleTranscript');
   const colours = useHeadlineColours();
@@ -297,123 +305,126 @@ function AgentGroup({
   const selectable = useSelectable();
 
   return (
-    <box marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        <ToolMarker tone={header.tone} />
-        <text {...CUT}>
-          {header.text}
-          {!open && key !== undefined && (
-            <span attributes={DIM}>{` (${key} to expand)`}</span>
-          )}
-        </text>
-      </box>
-      {agents.map((subagent, index) => {
-        const last = index === agents.length - 1;
-        // The row's glyphs take three cells after the block's two.
-        const rows = groupRow(subagent, width - 3);
-        const line = rowLine(subagent, waits, chordServer);
-        // Its counts are on its row, so its ending is the word alone.
-        const ending = endingOf(subagent.state);
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <ToolMarker tone={header.tone} />
+          <text {...CUT}>
+            {header.text}
+            {!open && key !== undefined && (
+              <span attributes={DIM}>{` (${key} to expand)`}</span>
+            )}
+          </text>
+        </box>
+        {agents.map((subagent, index) => {
+          const last = index === agents.length - 1;
+          // The row's glyphs take three cells after the block's two.
+          const rows = groupRow(subagent, width - 3);
+          const line = rowLine(subagent, waits, chordServer);
+          // Its counts are on its row, so its ending is the word alone.
+          const ending = endingOf(subagent.state);
 
-        return (
-          <box key={subagent.id} id={agentTarget(subagent.id)}>
-            {/* The agent's title, as a lone block's, then its counts,
+          return (
+            <box key={subagent.id} id={agentTarget(subagent.id)}>
+              {/* The agent's title, as a lone block's, then its counts,
                 chord's; a row that does not fit wraps behind the tree's `│`. */}
-            {rows.map((runs, at) => (
-              <box key={at} flexDirection='row' paddingLeft={2}>
-                <Gutter width={3} dimColor>
-                  {at > 0 ? (last ? ' ' : '│') : last ? '└─' : '├─'}
-                </Gutter>
-                {/* The title selects; chord's counts after it do not. */}
-                {[false, true].map((counts) => {
-                  const own = runs.filter(
-                    (run) => (run.counts === true) === counts,
-                  );
+              {rows.map((runs, at) => (
+                <box key={at} flexDirection='row' paddingLeft={2}>
+                  <Gutter width={3} dimColor>
+                    {at > 0 ? (last ? ' ' : '│') : last ? '└─' : '├─'}
+                  </Gutter>
+                  {/* The title selects; chord's counts after it do not. */}
+                  {[false, true].map((counts) => {
+                    const own = runs.filter(
+                      (run) => (run.counts === true) === counts,
+                    );
 
-                  return own.length === 0 ? null : (
-                    <text
-                      key={String(counts)}
-                      {...(counts ? CUT : { ...CUT, ...selectable })}
-                    >
-                      {own.map((run, index) => (
-                        <span
-                          key={index}
-                          attributes={
-                            run.style === 'bold'
-                              ? TextAttributes.BOLD
-                              : run.style === 'dim'
-                                ? DIM
-                                : 0
-                          }
-                        >
-                          <Ansi text={run.text} />
-                        </span>
-                      ))}
-                    </text>
-                  );
-                })}
-              </box>
-            ))}
-            <box
-              marginLeft={2}
-              // A row that stops being last loses its padding of 1: OpenTUI
-              // 0.6.6 resets a prop dropped to its default (Q41).
-              {...(last
-                ? { paddingLeft: 1 }
-                : {
-                    border: ['left' as const],
-                    borderStyle: 'single' as const,
-                    borderColor: DIM_BORDER,
+                    return own.length === 0 ? null : (
+                      <text
+                        key={String(counts)}
+                        {...(counts ? CUT : { ...CUT, ...selectable })}
+                      >
+                        {own.map((run, index) => (
+                          <span
+                            key={index}
+                            attributes={
+                              run.style === 'bold'
+                                ? TextAttributes.BOLD
+                                : run.style === 'dim'
+                                  ? DIM
+                                  : 0
+                            }
+                          >
+                            <Ansi text={run.text} />
+                          </span>
+                        ))}
+                      </text>
+                    );
                   })}
-            >
-              {open ? (
-                <>
-                  <Task subagent={subagent} />
-                  <box paddingLeft={5}>
-                    <Work
-                      subagent={subagent}
-                      turn={turn}
-                      agent={agent}
-                      width={Math.max(width - 8, 1)}
-                    />
-                  </box>
-                  {ending && (
-                    <Under first>
+                </box>
+              ))}
+              <box
+                marginLeft={2}
+                // A row that stops being last loses its padding of 1: OpenTUI
+                // 0.6.6 resets a prop dropped to its default (Q41).
+                {...(last
+                  ? { paddingLeft: 1 }
+                  : {
+                      border: ['left' as const],
+                      borderStyle: 'single' as const,
+                      borderColor: DIM_BORDER,
+                    })}
+              >
+                {open ? (
+                  <>
+                    <Task subagent={subagent} />
+                    <box paddingLeft={5}>
+                      <Work
+                        subagent={subagent}
+                        turn={turn}
+                        agent={agent}
+                        width={Math.max(width - 8, 1)}
+                      />
+                    </box>
+                    {ending && (
+                      <Under first>
+                        <text
+                          {...FILL}
+                          {...(ending.failed ? fg(error) : { attributes: DIM })}
+                        >
+                          {ending.word}
+                        </text>
+                      </Under>
+                    )}
+                    <EndNote subagent={subagent} />
+                  </>
+                ) : (
+                  <Under first>
+                    {line.kind === 'call' ? (
+                      <WorkLineText line={line.line} />
+                    ) : line.kind === 'starting' ? (
+                      <text {...FILL} attributes={DIM}>
+                        Initializing…
+                      </text>
+                    ) : (
                       <text
                         {...FILL}
-                        {...(ending.failed ? fg(error) : { attributes: DIM })}
+                        {...(line.ending.failed
+                          ? fg(error)
+                          : { attributes: DIM })}
                       >
-                        {ending.word}
+                        {line.ending.word}
                       </text>
-                    </Under>
-                  )}
-                  <EndNote subagent={subagent} />
-                </>
-              ) : (
-                <Under first>
-                  {line.kind === 'call' ? (
-                    <WorkLineText line={line.line} />
-                  ) : line.kind === 'starting' ? (
-                    <text {...FILL} attributes={DIM}>
-                      Initializing…
-                    </text>
-                  ) : (
-                    <text
-                      {...FILL}
-                      {...(line.ending.failed
-                        ? fg(error)
-                        : { attributes: DIM })}
-                    >
-                      {line.ending.word}
-                    </text>
-                  )}
-                </Under>
-              )}
+                    )}
+                  </Under>
+                )}
+              </box>
             </box>
-          </box>
-        );
-      })}
-    </box>
+          );
+        })}
+      </box>
+    </>
   );
 }
 

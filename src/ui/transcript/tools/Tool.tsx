@@ -1,4 +1,5 @@
 import { TextAttributes } from '@opentui/core';
+import { useGap } from '../gap.ts';
 import { useTerminalDimensions } from '@opentui/react';
 import {
   Fragment,
@@ -97,6 +98,8 @@ export function Tool({
   /** Cells beside the marker. */
   width: number;
 }) {
+  const gap = useGap();
+
   const chordServer = useContext(ChordServerName);
   const line = headline(call, chordServer);
   const recipient = useAgentColour(line.name);
@@ -127,64 +130,69 @@ export function Tool({
   );
 
   return (
-    <box id={callTarget(call.id)} marginTop={1} flexShrink={0}>
-      <box flexDirection='row'>
-        {line.sent ? (
-          <Arrow glyph='→' tone={outArrow(tone)} colour={recipient} />
-        ) : (
-          <ToolMarker tone={tone} />
+    <>
+      {gap.spacer}
+      <box id={callTarget(call.id)} {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          {line.sent ? (
+            <Arrow glyph='→' tone={outArrow(tone)} colour={recipient} />
+          ) : (
+            <ToolMarker tone={tone} />
+          )}
+          <HeadlineText line={line} width={width} colour={recipient} />
+        </box>
+        {proposal !== undefined && (
+          <Proposal
+            view={proposal}
+            expanded={expanded}
+            width={Math.max(width - 5, 1)}
+          />
         )}
-        <HeadlineText line={line} width={width} colour={recipient} />
-      </box>
-      {proposal !== undefined && (
-        <Proposal
-          view={proposal}
-          expanded={expanded}
-          width={Math.max(width - 5, 1)}
-        />
-      )}
-      {sent !== undefined && (
-        <MessageBody text={sent.text} width={width} ending={sent.ending} />
-      )}
-      {call.plan !== undefined && (
-        <PlanAskBody
-          ask={call.plan}
-          agent={agent}
-          width={Math.max(width - 5, 1)}
-        />
-      )}
-      {proposal === undefined &&
-        sent === undefined &&
-        call.plan === undefined &&
-        lines.map((line, index) => (
-          <Under key={index} first={index === 0}>
-            <text
-              {...ROWS}
-              {...selectable}
-              {...(tone === 'failed' ? fg(colours.error) : { attributes: DIM })}
-            >
-              <Ansi text={line === '' ? ' ' : line} />
-            </text>
-          </Under>
+        {sent !== undefined && (
+          <MessageBody text={sent.text} width={width} ending={sent.ending} />
+        )}
+        {call.plan !== undefined && (
+          <PlanAskBody
+            ask={call.plan}
+            agent={agent}
+            width={Math.max(width - 5, 1)}
+          />
+        )}
+        {proposal === undefined &&
+          sent === undefined &&
+          call.plan === undefined &&
+          lines.map((line, index) => (
+            <Under key={index} first={index === 0}>
+              <text
+                {...ROWS}
+                {...selectable}
+                {...(tone === 'failed'
+                  ? fg(colours.error)
+                  : { attributes: DIM })}
+              >
+                <Ansi text={line === '' ? ' ' : line} />
+              </text>
+            </Under>
+          ))}
+        {sent === undefined && hidden > 0 && <Folded hidden={hidden} />}
+        {terminals.map((view, index) => (
+          <TerminalOutput
+            key={index}
+            view={view}
+            first={ahead[index] === 0}
+            width={Math.max(width - 5, 1)}
+          />
         ))}
-      {sent === undefined && hidden > 0 && <Folded hidden={hidden} />}
-      {terminals.map((view, index) => (
-        <TerminalOutput
-          key={index}
-          view={view}
-          first={ahead[index] === 0}
-          width={Math.max(width - 5, 1)}
-        />
-      ))}
-      {diffs.map((view, index) => (
-        <Diff
-          key={index}
-          view={view}
-          first={ahead.at(-1) === 0 && index === 0}
-          width={Math.max(width - 5, 1)}
-        />
-      ))}
-    </box>
+        {diffs.map((view, index) => (
+          <Diff
+            key={index}
+            view={view}
+            first={ahead.at(-1) === 0 && index === 0}
+            width={Math.max(width - 5, 1)}
+          />
+        ))}
+      </box>
+    </>
   );
 }
 
@@ -499,6 +507,8 @@ export function PlanAskBody({
   agent: string | undefined;
   width: number;
 }) {
+  const gap = useGap();
+
   const selectable = useSelectable();
   const text = planText(ask);
   const rows = todoRows(ask);
@@ -523,15 +533,17 @@ export function PlanAskBody({
             <box flexDirection='column'>
               {rows.map((row, index) =>
                 row.kind === 'heading' ? (
-                  <text
-                    key={index}
-                    {...TEXT}
-                    {...selectable}
-                    // A blank line sets each group apart.
-                    marginTop={index === 0 ? 0 : 1}
-                  >
-                    {row.text}
-                  </text>
+                  <Fragment key={index}>
+                    {/* A blank line sets each group apart. */}
+                    {index === 0 ? null : gap.spacer}
+                    <text
+                      {...TEXT}
+                      {...selectable}
+                      {...(index === 0 ? {} : gap.props)}
+                    >
+                      {row.text}
+                    </text>
+                  </Fragment>
                 ) : (
                   <text
                     key={index}
@@ -806,14 +818,19 @@ export function Failure({
   text: string;
   tone?: 'error' | 'warning';
 }) {
+  const gap = useGap();
+
   const colour = useColours()[tone];
 
   return (
-    <box flexDirection='row' marginTop={1} flexShrink={0}>
-      <Gutter {...paint(colour)}>⏺</Gutter>
-      <text {...FILL} {...fg(colour)}>
-        <Ansi text={text} />
-      </text>
-    </box>
+    <>
+      {gap.spacer}
+      <box flexDirection='row' {...gap.props} flexShrink={0}>
+        <Gutter {...paint(colour)}>⏺</Gutter>
+        <text {...FILL} {...fg(colour)}>
+          <Ansi text={text} />
+        </text>
+      </box>
+    </>
   );
 }

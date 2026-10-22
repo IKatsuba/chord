@@ -1325,3 +1325,40 @@ describe("an agent's detail in a short window keeps the frame within its cap (CH
       { rows: 24, columns: 80 },
     ));
 });
+
+test('a detail one row tall pages its log to its last line, its blocks spaced so the scrollbox counts them (opentui#1739, CHD-487)', () =>
+  withWindow(
+    async (window) => {
+      const frame = () =>
+        window.frame().slice(window.frame().indexOf('Background · '));
+
+      await send(window, 'claudebackground');
+      await window.shows("background  main's 2 agents running");
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Run the test suite');
+      await window.press('\r');
+      await window.shows('Background · 1 of 1 · ended');
+      await window.shows('⏺ Every test passed.');
+      await window.resize({ columns: 80, rows: 18 });
+      // At its end, its last line in the one row.
+      await window.press(END);
+      await until('the last line in the one row', () =>
+        /⏺ Every test passed\.\s+↑ \d+ lines? above/.test(frame()),
+      );
+      // To its top and back down a line at a time, every line reached.
+      await window.press('\x1b[H');
+      await window.shows('› Run bun test');
+
+      for (
+        let step = 0;
+        step < 12 && !/Every test passed/.test(frame());
+        step++
+      ) {
+        await window.press('\x1b[6~');
+      }
+
+      expect(frame()).toContain('⏺ Every test passed.');
+    },
+    { rows: 24, columns: 80 },
+  ));

@@ -2419,6 +2419,17 @@ describe("a subagent left running when its agent's process went is said ended wh
     ]);
   });
 
+  test('a first run whose turn the record has no end for: its ends before the second prompt, once', () => {
+    const first = run('t1', 'a', 1).filter((entry) => entry.type !== 'result');
+
+    expect(outline([...first, ...run('t2', 'b', 1000)])).toStrictEqual([
+      'user: start a',
+      'ended: Check a (disconnected)',
+      'user: start b',
+      'ended: Check b (disconnected)',
+    ]);
+  });
+
   test('a record written before openings were: at its end, as it was', () => {
     const old = [...run('t1', 'a', 1), ...run('t2', 'b', 1000)].filter(
       (entry) => entry.type !== 'opened',

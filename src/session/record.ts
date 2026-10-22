@@ -732,9 +732,12 @@ export function recordActions(
 
         break;
       // Another agent opened the session: the one before it, and the
-      // subagents still running with it, are gone.
+      // subagents still running with it, are gone, and a turn it left with
+      // no end is over, ended first, as a subagent's end is not said within
+      // its turn.
       case 'opened':
-        actions.push({ type: 'disconnected', turnId: open ?? 'history' });
+        end();
+        actions.push({ type: 'disconnected', turnId: 'history' });
 
         break;
       case 'result':

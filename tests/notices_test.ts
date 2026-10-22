@@ -267,6 +267,24 @@ describe("CHD-434: the window's gate between the record's reads and its write", 
     expect(await gate.due(DIMCODE_NOTICE, always)).toBe(true);
   });
 
+  test('a session come due while the write is pending is spent, though the write then fails; the next one shows it', async () => {
+    const write = held<void>();
+    const read = held<ReadonlySet<string>>();
+    let reads = 0;
+    const gate = new NoticeGate(
+      () => (reads++ === 0 ? read.promise : Promise.resolve(new Set())),
+      () => write.promise,
+    );
+    const dismissed = gate.dismiss(DIMCODE_NOTICE);
+    const during = gate.due(DIMCODE_NOTICE, always);
+
+    write.reject(new Error('read-only file system'));
+    await dismissed;
+    read.resolve(new Set());
+    expect(await during).toBe(false);
+    expect(await gate.due(DIMCODE_NOTICE, always)).toBe(true);
+  });
+
   test('a record that does not read shows it; one that names it, or a session no longer at risk, does not', async () => {
     const failing = new NoticeGate(
       () => Promise.reject(new Error('EISDIR')),

@@ -144,6 +144,12 @@ export class NoticeGate {
    * that does not read showing it, and `holds` still true once it is.
    */
   async due(id: string, holds: () => boolean): Promise<boolean> {
+    // Come due while dismissed here, its write pending or done, it is spent:
+    // a write that fails after gives back the next time, not this one.
+    if (this.#dismissed.has(id)) {
+      return false;
+    }
+
     const generation = this.#generation;
     const recorded = await this.#read().catch(() => new Set<string>());
 

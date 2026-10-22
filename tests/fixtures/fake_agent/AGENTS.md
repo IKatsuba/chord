@@ -51,7 +51,7 @@
   The gated scenarios below use `<cwd>/.fake-gate/release`.
   A prompt that is exactly a scenario name (`text`, `texttillsteered`,
   `titled`, `retitled`, `titledlook`, `titledfix`,
-  `thought`, `tools`, `steps`, `stepslater`, `calls`,
+  `thought`, `tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlaptwo`, `overlapfail`, `overlapask`,
   `subagentcall`,
@@ -77,7 +77,10 @@
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
   `claudeslowstop`, `chordtools`, `codexchordcalls`, `codexmodels`,
   `claudecycle`, `claudecyclebare`, `claudecycleask`, `codebuddycycle`)
-  plays that scenario; `steps` makes 150 calls, a transcript longer than
+  plays that scenario; `rawoutputs` sends results with no content: a string,
+  stdout/stderr with successful and failed exits, `output`, `result` and
+  an object with no known text fields;
+  `steps` makes 150 calls, a transcript longer than
   its mounted tail in one turn, and `stepslater` the same after a second;
   `longresults` plays an MCP result, command output, an edit and terminal
   output with long lines, to check wrapping;

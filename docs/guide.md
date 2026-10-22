@@ -247,6 +247,13 @@ Bash output, your `!` shell output, Codex plans and subagent work. Diffs
 show every row, with long lines wrapped under their code. Read shows its
 first three source lines, each wrapped, then `… +N lines (ctrl+o to expand)`;
 ctrl+o shows the rest. Terminal output keeps its last three lines, wrapped.
+When a call has no content of its own, its `rawOutput` supplies the result:
+a string as text; an object's string `stdout`, `stderr`, `output` and
+`result` fields in that order; anything else as indented JSON. On an object
+with those text fields, a non-zero `exitCode` makes a call reported as
+completed read as failed. The agent's own content takes priority. A
+non-empty refresh replaces the shown output; an empty one keeps the last
+text. The session record and `-p` output carry the same result.
 An Agent call shows its description; ctrl+o shows the subagent's whole task
 and work, with later messages as `← from <sender>` rows. A Claude subagent
 ends `Done`, `Failed` or `Cancelled` by the reason its agent reports;

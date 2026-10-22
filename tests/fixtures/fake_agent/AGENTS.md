@@ -68,7 +68,7 @@
   `codexcompact`,
   `compactfail`, `status`,
   `cancels`, `error`, `slow`, `long`, `longheld`, `costwait`, `costwaitlate`,
-  `todos`, `exitplan`, `claudeexitplan`, `lock`,
+  `todos`, `exitplan`, `claudeexitplan`, `lock`, `fullaccess`,
   `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `subagentstatesstay`,
@@ -268,6 +268,10 @@
   sends it as a markdown plan on approval, or keeps planning on rejection;
   `lock` moves to plan the same way and refuses every mode asked for after;
   `mode` says the mode the turn runs in;
+  `--dimcode-permission <value>` (`CHORD_FAKE_DIMCODE_PERMISSION`) offers
+  dimcode's `permission` option, starting at the given `read-only`,
+  `workspace-write` or `full-access`; `fullaccess` changes it to
+  `full-access` through `config_option_update`;
   `subagent` runs subagents in Codex's draft form, sent to a
   client that declares `clientCapabilities.subagents` (`subagent_spawned`,
   `subagent_state_update`, each subagent's work under its own session id,

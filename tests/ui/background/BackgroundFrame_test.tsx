@@ -3,7 +3,7 @@
  * asking, a request held between turns, a tall task's name, and an error or
  * a detail paged in its room.
  */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setSystemTime, test } from 'bun:test';
 import { useState } from 'react';
 import { serveChord } from '../../../src/server/server.ts';
 import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
@@ -586,6 +586,8 @@ describe('CHD-430 tester: a scrolled task keeps its identity', () => {
         return admit(caller);
       };
 
+      setSystemTime(new Date());
+
       try {
         await withWindow(
           async (window) => {
@@ -632,7 +634,11 @@ describe('CHD-430 tester: a scrolled task keeps its identity', () => {
           { server, runtimes: ['fake'], columns, rows },
         );
       } finally {
-        await server.close();
+        try {
+          await server.close();
+        } finally {
+          setSystemTime();
+        }
       }
     });
   }

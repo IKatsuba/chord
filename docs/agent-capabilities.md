@@ -2916,8 +2916,9 @@ with resume, and takes models and effort from the config options. grok uses
 its own files and PTY, as chord declares neither. Questions break: the
 question tool is on by default, chord answers it method-not-found, and the
 model gets an error while the person sees nothing. If grok enters plan mode,
-its plan approval gets method-not-found and the turn ends cancelled with grok
-still in plan mode. grok sends `current_mode_update` without offering modes;
+chord puts its plan approval to the person in its plan box and answers
+approved, revise with their note, or abandoned, `cancelled` when it is not
+theirs (CHD-457). grok sends `current_mode_update` without offering modes;
 how chord draws that was not checked. Images are never sent, as grok does not
 advertise them. A mention reaches grok both as chord's text and as an
 `@path` it expands. chord shows no agent usage or cost: grok's are only in

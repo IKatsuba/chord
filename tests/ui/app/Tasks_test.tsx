@@ -537,13 +537,13 @@ describe('CHD-387 tester: sent messages in the window', () => {
           await ready(window);
           await send(window, 'agentsendrefused');
           await window.shows('parser is not open, so I will review it myself.');
-          await window.shows("the check passes and I'll look again.");
+          await window.shows("check passes and I'll look again.");
           await window.shows('No agent parser is open in this session');
           expect(window.frame()).not.toContain('to expand)');
           expect(window.frame()).not.toContain('… +');
 
           await window.press('\x19');
-          await window.shows("the check passes and I'll look again.");
+          await window.shows("check passes and I'll look again.");
           expect(window.frame()).not.toContain('to expand)');
           await window.shows('No agent parser is open in this session');
 
@@ -551,7 +551,7 @@ describe('CHD-387 tester: sent messages in the window', () => {
           await window.shows('esc to interrupt');
           await window.press(ESC);
           await window.shows('Interrupted');
-          await window.shows("the check passes and I'll look again.");
+          await window.shows("check passes and I'll look again.");
           await window.shows('No agent parser is open in this session');
         },
         {

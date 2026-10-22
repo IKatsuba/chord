@@ -787,10 +787,12 @@ const OUTPUT_KEYS = ['stdout', 'stderr', 'output', 'result'] as const;
  * `stdout`, `stderr`, `output` or `result` are strings is those, in
  * that order, and its `exitCode` other than 0 fails a call said
  * `completed`; anything else is its JSON. Read by shape, as the chain
- * knows no agent's name (the owner's Q89); content the agent sent stays.
+ * knows no agent's name (the owner's Q89); content the agent sent stays,
+ * in this message or in an earlier one that a later leaves as it is.
  */
-export const rawOutputContent: Enricher = (message) => {
-  const update = notificationOf(message)?.update;
+export const rawOutputContent: Enricher = (message, wire) => {
+  const notification = notificationOf(message);
+  const update = notification?.update;
 
   if (
     (update?.sessionUpdate !== 'tool_call' &&
@@ -798,6 +800,9 @@ export const rawOutputContent: Enricher = (message) => {
     (update.content !== undefined &&
       update.content !== null &&
       update.content.length > 0) ||
+    ((update.content === undefined || update.content === null) &&
+      wire.sessions[notification!.sessionId]?.tools[update.toolCallId]
+        ?.ownContent === true) ||
     update.rawOutput === undefined ||
     update.rawOutput === null
   ) {

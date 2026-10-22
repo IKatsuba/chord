@@ -6,6 +6,8 @@ import type {
   SessionUpdate,
 } from '@agentclientprotocol/sdk';
 import { enricherRelay, FILLED, MCP_CALL } from '../../src/session/enrich.ts';
+import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
+import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import {
   codexMcpCall,
   costFromTokens,
@@ -1489,6 +1491,64 @@ describe("a result sent only as rawOutput is filled in as the call's content (CH
       status: 'completed',
       rawOutput: '',
     });
+  });
+
+  test('content the agent sent earlier stays when a later update brings only rawOutput, through the whole chain and the transcript', () => {
+    const chain = relayOn(ENRICHERS);
+    const sent: SessionUpdate[] = [
+      {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'call-2',
+        title: 'Run npm test',
+        kind: 'execute',
+        status: 'in_progress',
+        content: text('its own'),
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-2',
+        status: 'completed',
+        rawOutput: 'raw',
+      },
+    ];
+    const read = sent.flatMap((each) => updates(chain.update(each)));
+    const transcript = read.reduce(
+      (state, update) =>
+        reduceTranscript(state, {
+          type: 'update',
+          turnId: 't1',
+          at: 1,
+          update,
+        }),
+      emptyTranscript,
+    );
+    const call = transcript.entries.find((entry) => entry.kind === 'tool');
+
+    // Its title and kind carried on, as `toolCallFacts` does; no content.
+    expect(read[1]).toMatchObject({ rawOutput: 'raw', status: 'completed' });
+    expect('content' in read[1]!).toBe(false);
+    assert(call?.kind === 'tool');
+    expect(call.call.content).toStrictEqual(text('its own'));
+
+    // Content the agent clears is its own word too: then rawOutput fills it.
+    const cleared = updates(
+      chain.update({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-2',
+        content: [],
+      }),
+    );
+    const after = updates(
+      chain.update({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-2',
+        status: 'completed',
+        rawOutput: 'raw',
+      }),
+    )[0] as Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>;
+
+    expect(cleared).toHaveLength(1);
+    expect(after.content).toStrictEqual(text('raw'));
   });
 
   test('it runs in the chain every session gets', () => {

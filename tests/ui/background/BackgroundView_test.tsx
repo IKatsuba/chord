@@ -142,6 +142,8 @@ describe('CHD-424 tester: call navigation edges', () => {
         await window.press('\r');
         await window.shows('Background · 1 in this tab');
         await window.press('\r');
+        await window.shows('Enter to go to its call');
+        await window.press('\r');
         await until('the lone task call on the first line', () =>
           window.frame().split('\n')[0]!.includes('⏺ Agent(Watch the build)'),
         );
@@ -1159,4 +1161,37 @@ describe("an agent's or a task's row opens its detail (CHD-487)", () => {
       await window.press('x');
       await window.shows('this agent offers no stop');
     }));
+});
+
+describe('CHD-487 U1 tester: detail stop and return keys', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a stopped agent detail stays until left and x cannot stop it twice at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudeslowstop');
+          await window.shows("background  main's 2 agents running");
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('❯ Run the test suite');
+          await window.press('\r');
+          await window.shows('Enter to go to its call');
+          await window.press('x');
+          await window.shows('· ended');
+          await window.shows('■ stopped after');
+          expect(window.frame()).not.toContain('x to stop');
+          await window.press('x');
+          expect(window.frame()).toContain('· ended');
+          await window.press('\x1b[D');
+          await until(
+            'the ended detail released',
+            () => !window.frame().includes('· ended'),
+          );
+          expect(window.frame()).not.toContain('❯ Run the test suite');
+        },
+        { columns, rows },
+      ));
+  }
 });

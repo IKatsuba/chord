@@ -292,6 +292,8 @@ describe('tester: selectable group titles', () => {
         async (window) => {
           await send(window, 'subagent');
           await asked(window);
+          await window.press('\x1b[5~');
+          await window.shows('├─ Agent(Find the session layer)');
 
           const lines = stripAnsi(window.frame()).split('\n');
           const y = lines.findIndex((line) =>

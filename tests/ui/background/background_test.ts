@@ -1266,6 +1266,7 @@ describe('CHD-479 tester: parent identity survives nested and reused adapter ids
       ]);
 
       expect(items.map(({ id, parent }) => ({ id, parent }))).toStrictEqual([
+        { id: 'container', parent: owner?.name ?? 'main' },
         { id: 'inner', parent: owner?.name ?? 'main' },
         { id: 'leaf', parent: owner?.name ?? 'main' },
       ]);
@@ -1416,5 +1417,41 @@ describe("an agent's or a task's detail (CHD-487)", () => {
     expect(itemSubagent(entries, { kind: 'task', id: 't' })?.id).toBe('t');
     expect(itemSubagent(entries, { kind: 'agent', id: 'x' })).toBe(undefined);
     expect(itemSubagent(entries, { kind: 'monitor', id: 'a' })).toBe(undefined);
+  });
+});
+
+describe('CHD-487 U1 tester: retained non-cancellable rows are session-local', () => {
+  test('keeping one ended nested agent never keeps its reused id in another session or its ancestor', () => {
+    const transcript = withEntries([
+      claude('outer', 10, {
+        state: 'completed',
+        endedAt: 30,
+        entries: [
+          claude('inner', 11, { state: 'disconnected', endedAt: 29 }, [
+            'offeredCancel',
+            'cancellable',
+          ]),
+        ],
+      }),
+    ]);
+    const agents = [
+      agent(1, { transcript }),
+      agent(2, { transcript, owner: { name: 'other', colour: 2 } }),
+    ];
+
+    expect(backgroundItems(agents)).toEqual([]);
+    expect(backgroundItems(agents, { key: 2, id: 'inner' })).toMatchObject([
+      {
+        id: 'inner',
+        key: 2,
+        parent: 'other',
+        stoppable: false,
+        status: { group: 'failed', word: 'disconnected', endedAt: 29 },
+      },
+    ]);
+    expect(backgroundItems(agents, { key: 1, id: 'outer' })).toMatchObject([
+      { id: 'outer', key: 1, parent: 'main', status: { group: 'done' } },
+    ]);
+    expect(backgroundItems(agents)).toEqual([]);
   });
 });

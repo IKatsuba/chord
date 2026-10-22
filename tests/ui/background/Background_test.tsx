@@ -550,7 +550,7 @@ describe('CHD-424 tester: background frame edges', () => {
       expect(drawn.frame()).not.toMatch(/│ ↓/);
       expect(bottom - top + 1).toBeLessThanOrEqual(12);
       expect(lines[bottom - 1]).toContain(
-        'Enter to go to its call · x to stop · Esc to close',
+        'Enter for details · x to stop · Esc to close',
       );
     } finally {
       await drawn.unmount();
@@ -641,6 +641,8 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
           await window.press('\r');
           await window.shows('Background · 1 in this tab');
           expect(window.frame()).toContain('Run the test suite');
+          await window.press('\r');
+          await window.shows('Enter to go to its call');
           await window.press('\r');
           await until(
             'the earlier agent row visible and later transcript tail out of view',
@@ -988,6 +990,8 @@ describe('CHD-430 tester: a scrolled task keeps its identity', () => {
             await window.shows('Background · 2 in this tab');
             expect(itemLines()).toEqual(before);
             expect(window.frame()).not.toContain('❯ Rewrite');
+            await window.press('\r');
+            await window.shows('Enter to go to its call');
             await window.press('\r');
             await until(
               'the frame closes at the tall task call',

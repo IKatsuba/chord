@@ -17,8 +17,19 @@ import { cwds } from '../sessions.ts';
 import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
-/** A child's pace: 20 steps, a tenth of a second by default. */
-const AGENT_STEP_MS = STEP_MS * 20;
+/**
+ * A child's pace: 2 steps, 10 ms by default. Where an order is a gate's,
+ * the pace is only how a turn's steps are spread (CHD-501).
+ */
+const AGENT_STEP_MS = STEP_MS * 2;
+
+/**
+ * The pace before CHD-501, 100 ms by default, kept where a wait stands for
+ * something no gate says yet: a call open long enough for messages to be
+ * held behind it, a moment for a child to open its call, a line's way to
+ * chord before the pipe closes.
+ */
+const HELD_STEP_MS = STEP_MS * 20;
 
 /** What `agents` opens first: the fake runtime's small model on `agentchild`. */
 export const PARSER_ARGS = {
@@ -327,7 +338,7 @@ async function tellParserDuringCall(
     if (child === 'callchildgated') {
       await gated(turn, GATE_OPEN);
     } else {
-      await pause(turn.signal, AGENT_STEP_MS * 2);
+      await pause(turn.signal, HELD_STEP_MS * 2);
     }
 
     for (const text of texts) {
@@ -376,7 +387,7 @@ async function callChild(turn: Turn, untilTold = 0): Promise<acp.StopReason> {
     kind: 'execute',
     status: 'in_progress',
   });
-  await pause(turn.signal, AGENT_STEP_MS * 30);
+  await pause(turn.signal, HELD_STEP_MS * 30);
   await turn.send({
     sessionUpdate: 'tool_call_update',
     toolCallId,
@@ -532,7 +543,7 @@ export const AGENTS = {
     await work(turn, '`deno task test tests/parse`', 'Killed');
     console.error(CRASH_WORDS);
     // Long enough for the line to reach chord before the pipe closes.
-    await pause(turn.signal, AGENT_STEP_MS);
+    await pause(turn.signal, HELD_STEP_MS);
     process.exit(1);
   },
 

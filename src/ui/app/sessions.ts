@@ -365,25 +365,32 @@ export function useSessions(
   // window's sessions, `main`, a child, a team member or a task, has its
   // permission option at anything but read-only, unless dismissed on this
   // machine; a record that does not read shows it, and a session that left
-  // that moment, or closed, while the record was read shows none
+  // that moment, closed or was cleared while the record was read shows none
   // (docs/design/CHD-434.md).
   const noticeWatch = useRef(new NoticeWatch());
 
   const watchNotice = (id: string, agent: string, event: ConversationEvent) => {
     const watch = noticeWatch.current;
 
-    if (event.type === 'closing') {
+    // A session cleared is gone as one closed is: the one after it, under
+    // the same id, comes due of its own.
+    if (event.type === 'closing' || event.type === 'cleared') {
       watch.gone(id);
     }
 
-    if (event.type !== 'options' || !watch.heard(id, agent, event.options)) {
+    const ticket =
+      event.type === 'options'
+        ? watch.heard(id, agent, event.options)
+        : undefined;
+
+    if (ticket === undefined) {
       return;
     }
 
     void dismissedNotices(noticesFile(configHome))
       .catch(() => new Set<string>())
       .then((dismissed) => {
-        if (!dismissed.has(DIMCODE_NOTICE) && watch.atRisk(id)) {
+        if (!dismissed.has(DIMCODE_NOTICE) && watch.holds(id, ticket)) {
           dispatch({ type: 'notice_opened', id: DIMCODE_NOTICE });
         }
       });

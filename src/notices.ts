@@ -60,35 +60,54 @@ export function dimcodeAtRisk(
  * kept apart, so one session's options leaving `read-only` makes it due
  * whatever any other is at, and a session at it still says so after the
  * person answered "show it again" for another (docs/design/CHD-434.md).
+ * Each time one comes due it is given a ticket, which the record's read
+ * then shows for only while that session is still at risk: not once it went
+ * back to `read-only`, closed, or was cleared for a session of its own
+ * under the same id.
  */
 export class NoticeWatch {
-  readonly #atRisk = new Set<string>();
+  /** The ticket of each session at risk now. */
+  readonly #atRisk = new Map<string, number>();
+  #tickets = 0;
 
   /**
-   * Hears session `id`, of `agent`, with its options now `options`; whether
-   * the notice came due: the session is at risk now and was not before.
+   * Hears session `id`, of `agent`, with its options now `options`; when
+   * the notice came due, as it is at risk now and was not before, its
+   * ticket.
    */
-  heard(id: string, agent: string, options: readonly AgentOption[]): boolean {
-    const was = this.#atRisk.has(id);
-    const now = dimcodeAtRisk(agent, options);
-
-    if (now) {
-      this.#atRisk.add(id);
-    } else {
+  heard(
+    id: string,
+    agent: string,
+    options: readonly AgentOption[],
+  ): number | undefined {
+    if (!dimcodeAtRisk(agent, options)) {
       this.#atRisk.delete(id);
+
+      return undefined;
     }
 
-    return now && !was;
+    if (this.#atRisk.has(id)) {
+      return undefined;
+    }
+
+    this.#tickets += 1;
+
+    this.#atRisk.set(id, this.#tickets);
+
+    return this.#tickets;
   }
 
-  /** Forgets session `id`, which has closed: it is at risk no longer. */
+  /**
+   * Forgets session `id`, closed or cleared: it is at risk no longer, and a
+   * session after it under the same id comes due of its own.
+   */
   gone(id: string): void {
     this.#atRisk.delete(id);
   }
 
-  /** Whether session `id` is at risk now, as last heard. */
-  atRisk(id: string): boolean {
-    return this.#atRisk.has(id);
+  /** Whether the session `ticket` was given to is still at risk as it was. */
+  holds(id: string, ticket: number): boolean {
+    return this.#atRisk.get(id) === ticket;
   }
 }
 

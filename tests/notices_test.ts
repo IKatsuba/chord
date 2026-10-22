@@ -31,29 +31,48 @@ test("dimcode's notice is due once its permission is at anything but read-only, 
 
 test('each session comes due on its own way out of read-only, whatever another is at, and anew after going back (CHD-434)', () => {
   const watch = new NoticeWatch();
+  const at = (id: string, value: string, agent = 'dimcode') =>
+    watch.heard(id, agent, [permission(value)]);
 
-  expect(watch.heard('a', 'dimcode', [permission('read-only')])).toBe(false);
-  expect(watch.heard('a', 'dimcode', [permission('full-access')])).toBe(true);
+  expect(at('a', 'read-only')).toBe(undefined);
+
+  const first = at('a', 'full-access');
+
+  expect(first).toBeNumber();
   // Still there, and from one value at risk to another: not again.
-  expect(watch.heard('a', 'dimcode', [permission('full-access')])).toBe(false);
-  expect(watch.heard('a', 'dimcode', [permission('workspace-write')])).toBe(
-    false,
-  );
+  expect(at('a', 'full-access')).toBe(undefined);
+  expect(at('a', 'workspace-write')).toBe(undefined);
+  expect(watch.holds('a', first!)).toBe(true);
+
   // Another session, while the first is at risk, is due of its own.
-  expect(watch.heard('b', 'dimcode', [permission('full-access')])).toBe(true);
-  expect(watch.heard('a', 'dimcode', [permission('read-only')])).toBe(false);
-  expect(watch.atRisk('a')).toBe(false);
-  expect(watch.heard('a', 'dimcode', [permission('full-access')])).toBe(true);
-  expect(watch.heard('c', 'codex', [permission('full-access')])).toBe(false);
+  const other = at('b', 'full-access');
+
+  expect(other).toBeNumber();
+  expect(other).not.toBe(first);
+  expect(at('a', 'read-only')).toBe(undefined);
+  expect(watch.holds('a', first!)).toBe(false);
+  expect(watch.holds('b', other!)).toBe(true);
+  expect(at('a', 'full-access')).toBeNumber();
+  expect(at('c', 'full-access', 'codex')).toBe(undefined);
 });
 
-test('a session closed is at risk no longer, so a read finishing after applies to none', () => {
+test('a read that finishes after its session closed, was cleared, or came due again holds for none but the latest (CHD-434)', () => {
   const watch = new NoticeWatch();
+  const full = [permission('full-access')];
+  const held = watch.heard('main:1', 'dimcode', full)!;
 
-  watch.heard('a', 'dimcode', [permission('full-access')]);
-  expect(watch.atRisk('a')).toBe(true);
-  watch.gone('a');
-  expect(watch.atRisk('a')).toBe(false);
+  // Cleared: the session after it, under the same id, at full-access too.
+  watch.gone('main:1');
+  expect(watch.holds('main:1', held)).toBe(false);
+
+  const next = watch.heard('main:1', 'dimcode', full)!;
+
+  expect(next).not.toBe(held);
+  // The read begun before the clear still finds nothing to show for.
+  expect(watch.holds('main:1', held)).toBe(false);
+  expect(watch.holds('main:1', next)).toBe(true);
+  watch.gone('main:1');
+  expect(watch.holds('main:1', next)).toBe(false);
 });
 
 test('its dismissal is recorded beside the user settings file, others kept, and read back', async () => {

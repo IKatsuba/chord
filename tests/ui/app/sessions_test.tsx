@@ -832,7 +832,8 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
 
   /**
    * The window's sessions on the fake, `main` on `agent`, `dimcode` on the
-   * fake at `read-only` until a turn moves it, chord's user directory
+   * fake starting at `permission`, `read-only` unless said, until a turn
+   * moves it, chord's user directory
    * holding `record` as its notices file, or a directory in its place.
    */
   async function withNotices(
@@ -840,7 +841,12 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
     {
       agent = 'fake',
       record,
-    }: { agent?: string; record?: string | 'directory' } = {},
+      permission = 'read-only',
+    }: {
+      agent?: string;
+      record?: string | 'directory';
+      permission?: string;
+    } = {},
   ) {
     const dir = await mkdtemp(join(tmpdir(), 'chord-notice-'));
     const configHome = join(dir, 'config');
@@ -852,7 +858,7 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
     const dimcode = fakeAgentCommand(
       undefined,
       '--dimcode-permission',
-      'read-only',
+      permission,
     );
     const opened: Session[] = [];
     let seen: Seen | undefined;
@@ -1085,5 +1091,32 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
         );
       },
       { agent: 'dimcode' },
+    ));
+
+  test('"show it again", then /clear to a session that starts at full-access too: that session opens it anew', () =>
+    withNotices(
+      async (read) => {
+        await until(
+          "the first session's notice",
+          () => read().all.window.notice === 'dimcode-agents',
+        );
+        read().dispatch({ type: 'notice_closed' });
+
+        const old = read().all.sessions[1]?.sessionId;
+
+        read().drive.clearFront(() => {});
+
+        await until(
+          'the session after it, at full-access',
+          () =>
+            read().all.sessions[1]?.sessionId !== old &&
+            permissionOf(read, 1) === 'full-access',
+        );
+        await until(
+          'the notice anew',
+          () => read().all.window.notice === 'dimcode-agents',
+        );
+      },
+      { agent: 'dimcode', permission: 'full-access' },
     ));
 });

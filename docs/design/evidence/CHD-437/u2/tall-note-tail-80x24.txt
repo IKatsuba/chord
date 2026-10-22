@@ -1,0 +1,24 @@
+
+ ››› Waiting for your answer to the plan… (4s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ fake has a plan. Do you want to proceed?                                     │
+│   1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│ ❯ Note  ── ↑ 27 lines above · pageup to scroll ───────────────────────────── │
+│         keep it small and test it; step 53 keep it small and test it; step   │
+│         54 keep it small and test it; step 55 keep it small and test it;     │
+│         step 56 keep it small and test it; step 57 keep it small and test    │
+│         it; step 58 keep it small and test it; step 59 keep it small and     │
+│         test it; step 60 keep it small and test it                           │
+│                                                                              │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep       │
+│ planning                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

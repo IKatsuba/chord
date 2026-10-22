@@ -1,0 +1,24 @@
+
+ ⏺ Wait(explorer, worker)
+   ⎿  Running…
+
+ ››› Working… (5s · esc to interrupt)
+  ⎿  ☒ Plan the change
+     ☒ Read the session layer
+     ◐ Write the design
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 of 2                                                          │
+│                                                                              │
+│ Find where chord routes session/update.                                      │
+│ running 2s · 0 tool uses · main                                              │
+│                                                                              │
+│                                                                              │
+│ this agent offers no stop                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    background  main's 2 agents running

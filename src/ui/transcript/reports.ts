@@ -239,15 +239,18 @@ function totalsLines(
   const { agent } = facts;
   const [model, ...more] = figure.models ?? [];
   const unpriced = figure.totals.unpriced ?? [];
-  const price =
-    unpriced.length > 0
-      ? `the price of the model that gave it; it has no price for ${unpriced
-          .map((each) => modelNamed(facts, each))
-          .join(' and ')}`
-      : model !== undefined && more.length === 0
-        ? `${modelNamed(facts, model)}'s price`
-        : "its models' prices";
-  const tokens = unpriced.length > 0 ? "each answer's tokens" : 'these tokens';
+  // One model: its price. Several, or some unpriced: each answer at its
+  // own, as Q133 prices them.
+  const one = model !== undefined && more.length === 0 && unpriced.length === 0;
+  const price = one
+    ? `these tokens at ${modelNamed(facts, model)}'s price`
+    : `each answer's tokens at the price of the model that gave it${
+        unpriced.length === 0
+          ? ''
+          : `; it has no price for ${unpriced
+              .map((each) => modelNamed(facts, each))
+              .join(' and ')}`
+      }`;
 
   return [
     {
@@ -256,7 +259,7 @@ function totalsLines(
     ...(figure.estimated === 'all'
       ? [
           {
-            text: `${agent}'s provider reports no cost, so chord priced ${tokens} at ${price}.`,
+            text: `${agent}'s provider reports no cost, so chord priced ${price}.`,
           },
         ]
       : []),

@@ -560,3 +560,26 @@ describe("CHD-472: /cost when some of dirac's answering models have no price", (
     ]);
   });
 });
+
+test('with no dirac cost and several models all priced, the line says each answer was priced at the model that gave it (CHD-472)', () => {
+  const usd = (amount: number) => ({ amount, currency: 'USD' });
+  const [, , line] = text(
+    costReport({
+      ...FACTS,
+      agent: 'dirac',
+      since: undefined,
+      spent: {
+        turns: {},
+        total: { totalTokens: 4000 },
+        costs: {
+          a: { cost: usd(0.004), estimated: true, model: 'gpt-5.3-codex' },
+          b: { cost: usd(0.001), estimated: true, model: 'claude-haiku-4-5' },
+        },
+      },
+    }),
+  ).slice(1);
+
+  expect(line).toBe(
+    "dirac's provider reports no cost, so chord priced each answer's tokens at the price of the model that gave it.",
+  );
+});

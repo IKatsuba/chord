@@ -932,6 +932,8 @@ export function App({
   const boxKeys =
     state.connection.status !== 'closing' &&
     (!asked || held) &&
+    // A plan's box has the keys, its Note's text too (CHD-437).
+    planAsked === undefined &&
     !choosing &&
     state.pendingKeys === undefined &&
     !state.search &&
@@ -1403,6 +1405,7 @@ export function App({
                   // draft's either.
                   onChange={(value) =>
                     (!asked || held) &&
+                    planAsked === undefined &&
                     !choosing &&
                     !chordKey.current &&
                     play(changeSteps(value, context()))

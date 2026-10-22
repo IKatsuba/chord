@@ -74,7 +74,7 @@ export function planKey(
       return { state, answer: answerOf(kept, state.note) };
     }
 
-    if (key.upArrow) {
+    if (key.upArrow && !key.shift) {
       return { state: { ...state, row: noteRow - 1 } };
     }
 
@@ -87,11 +87,12 @@ export function planKey(
     return { state, answer: answerOf(choices[state.row]!, state.note) };
   }
 
-  if (key.upArrow || input === 'k') {
+  // shift with an arrow scrolls the transcript: the window's, not the box's.
+  if ((key.upArrow && !key.shift) || input === 'k') {
     return { state: { ...state, row: Math.max(0, state.row - 1) } };
   }
 
-  if (key.downArrow || input === 'j') {
+  if ((key.downArrow && !key.shift) || input === 'j') {
     return { state: { ...state, row: Math.min(noteRow, state.row + 1) } };
   }
 

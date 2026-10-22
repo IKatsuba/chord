@@ -507,7 +507,13 @@ export function PlanAskBody({ ask, width }: { ask: PlanAsk; width: number }) {
             <box flexDirection='column'>
               {rows.map((row, index) =>
                 row.kind === 'heading' ? (
-                  <text key={index} {...TEXT} {...selectable}>
+                  <text
+                    key={index}
+                    {...TEXT}
+                    {...selectable}
+                    // A blank line sets each group apart.
+                    marginTop={index === 0 ? 0 : 1}
+                  >
                     {row.text}
                   </text>
                 ) : (

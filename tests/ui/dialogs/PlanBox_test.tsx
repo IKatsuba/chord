@@ -37,6 +37,10 @@ test("cursor's plan: drawn under its call, the box asks, and enter on the Note k
         'Plan answer: {"outcome":"rejected","reason":"two tests"}',
       );
       expect(window.frame()).not.toContain('Approve Plan');
+      // The note went to the box alone: never into the prompt, never sent.
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(window.frame()).not.toContain('› two tests');
+      expect(window.frame()).not.toContain('Hello, world');
     },
     { rows: 40, columns: 120 },
   ));

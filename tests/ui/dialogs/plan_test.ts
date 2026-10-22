@@ -43,6 +43,19 @@ describe('a press in the plan box', () => {
     }
   });
 
+  test("shift with an arrow is the window's scroll, and moves nothing in the box", () => {
+    for (const row of [0, 2]) {
+      for (const more of [
+        { shift: true, upArrow: true },
+        { shift: true, downArrow: true },
+      ]) {
+        expect(
+          planKey('cursor', { row, note: '' }, '', key(more)).state.row,
+        ).toBe(row);
+      }
+    }
+  });
+
   test('a digit picks its choice; enter the one under the ❯; esc keeps planning with no note', () => {
     expect(planKey('grok', OPEN_PLAN_BOX, '3', key()).answer).toStrictEqual({
       type: 'left',

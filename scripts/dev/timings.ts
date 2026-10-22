@@ -30,7 +30,11 @@ export const MOVED = { share: 0.35, ms: 20_000 } as const;
 /** Each test file's time, in ms, by its path from the repository's root. */
 export type Timings = Readonly<Record<string, number>>;
 
-/** A file whose time moved from its record past `MOVED`. */
+/**
+ * A file slower than its record past `MOVED`. Only growth is held to: a
+ * file that got faster never fails, whatever the record says (the owner,
+ * CHD-501).
+ */
 export interface Moved {
   readonly file: string;
   readonly recorded: number;
@@ -127,7 +131,7 @@ export function compare(
         return [];
       }
 
-      const by = Math.abs(ms - was);
+      const by = ms - was;
 
       return by >= MOVED.ms && by >= MOVED.share * was
         ? [{ file, recorded: was, measured: ms }]
@@ -174,7 +178,7 @@ export function reportLines(report: TimingReport): string[] {
     ...(report.moved.length === 0
       ? []
       : [
-          `timings: moved from ${RECORD} by ${MOVED.share * 100}% and ${seconds(MOVED.ms)} or more:`,
+          `timings: slower than ${RECORD} by ${MOVED.share * 100}% and ${seconds(MOVED.ms)} or more:`,
           ...report.moved.map(
             ({ file, recorded, measured }) =>
               `  ${file}  ${seconds(recorded)} recorded, ${seconds(measured)} now`,

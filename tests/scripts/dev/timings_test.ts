@@ -68,13 +68,12 @@ describe('a run against the record', () => {
     expect(report.over).toStrictEqual([{ file: A, ms: BUDGET_MS + 1 }]);
   });
 
-  test('moved is both the share and the ms, either way', () => {
+  test('moved is slower by both the share and the ms', () => {
     const at = 40_000;
     const by = Math.max(MOVED.ms, MOVED.share * at);
 
-    // Slower or faster by exactly the threshold moves; a ms short does not.
+    // Slower by exactly the threshold moves; a ms short does not.
     expect(compare({ [A]: at }, { [A]: at + by }, [A]).moved).toHaveLength(1);
-    expect(compare({ [A]: at }, { [A]: at - by }, [A]).moved).toHaveLength(1);
     expect(compare({ [A]: at }, { [A]: at + by - 1 }, [A]).moved).toHaveLength(
       0,
     );
@@ -84,6 +83,18 @@ describe('a run against the record', () => {
     expect(compare({ [A]: 200_000 }, { [A]: 215_000 }, [A]).moved).toHaveLength(
       0,
     );
+  });
+
+  test('a file that got faster never fails, by any share or ms', () => {
+    const at = 60_000;
+    const by = Math.max(MOVED.ms, MOVED.share * at);
+
+    for (const ms of [at - by + 1, at - by, at - by - 1, 0]) {
+      const report = compare({ [A]: at }, { [A]: ms }, [A]);
+
+      expect(report.moved).toStrictEqual([]);
+      expect(fails(report)).toBe(false);
+    }
   });
 
   test('unrecorded is a test file on disk the record lacks; gone, one recorded no longer there', () => {

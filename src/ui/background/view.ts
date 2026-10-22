@@ -146,35 +146,77 @@ export function logStep(
 export function workHead(
   item: BackgroundItem,
   subagent: Subagent,
-  { width, now }: { readonly width: number; readonly now: number },
+  {
+    width,
+    now,
+    short = false,
+    count,
+  }: {
+    readonly width: number;
+    readonly now: number;
+    /**
+     * A room too short for the state line's wrapping: it takes one line,
+     * cut with `…`, and `count`, the work's, at its end (CHD-487).
+     */
+    readonly short?: boolean;
+    readonly count?: string;
+  },
 ): ViewCell[][] {
   const state = stateText(item, now);
   const uses = toolUses(subagent);
-
-  return [
-    [{ text: pinnedName(item, width).text, role: 'name' }],
-    ...dotted(
-      [
-        { text: oneLine(state.text), role: 'state', group: state.group },
-        {
-          text: `${uses} ${uses === 1 ? 'tool use' : 'tool uses'}`,
-          role: 'kind',
-        },
-        ...(item.kind === 'task'
-          ? [
-              {
-                text: ['task', item.runtime, item.model]
-                  .filter((part) => part !== undefined)
-                  .join(' · '),
-                role: 'kind' as const,
-              },
-            ]
-          : []),
-        { text: ownerText(item), role: 'owner' },
-      ],
-      width,
-    ),
+  const parts: ViewCell[] = [
+    { text: oneLine(state.text), role: 'state', group: state.group },
+    {
+      text: `${uses} ${uses === 1 ? 'tool use' : 'tool uses'}`,
+      role: 'kind',
+    },
+    ...(item.kind === 'task'
+      ? [
+          {
+            text: ['task', item.runtime, item.model]
+              .filter((part) => part !== undefined)
+              .join(' · '),
+            role: 'kind' as const,
+          },
+        ]
+      : []),
+    { text: ownerText(item), role: 'owner' },
   ];
+  const name: ViewCell[] = [
+    { text: pinnedName(item, width).text, role: 'name' },
+  ];
+
+  if (!short) {
+    return [name, ...dotted(parts, width)];
+  }
+
+  // On one line, cut where the count, said at its end, leaves it.
+  const tail =
+    count === undefined ? [] : [{ text: ` ${count}`, role: 'kind' as const }];
+  const room = Math.max(
+    1,
+    width - (count === undefined ? 0 : stringWidth(count) + 1),
+  );
+  const line: ViewCell[] = [];
+  let used = 0;
+
+  for (const [index, part] of parts.entries()) {
+    const text = `${index === 0 ? '' : ' · '}${part.text}`;
+    const wide = stringWidth(text);
+
+    if (used + wide <= room) {
+      line.push(index === 0 ? part : { ...part, text });
+
+      used += wide;
+
+      continue;
+    }
+
+    line.push({ ...part, text: cliTruncate(text, Math.max(1, room - used)) });
+    break;
+  }
+
+  return [name, [...line, ...tail]];
 }
 
 /**

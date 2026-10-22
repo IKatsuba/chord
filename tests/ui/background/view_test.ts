@@ -1403,3 +1403,36 @@ test("a detail's pinned name takes one line, cut at its end with … when longer
   expect(long.text.endsWith('…')).toBe(true);
   expect(stringWidth(long.text)).toBe(30);
 });
+
+test("in a short room the state line takes one line, cut with …, the work's count at its end (CHD-487)", () => {
+  const item = task(
+    't',
+    'Fix the tokenizer',
+    { group: 'running' },
+    {
+      owner: CODER,
+      runtime: 'a-runtime-with-a-long-name',
+      model: 'a model with a very long public name',
+    },
+  );
+  const subagent = {
+    id: 't',
+    state: 'running',
+    entries: [],
+    plan: [],
+  } as unknown as Parameters<typeof workHead>[1];
+  const text = (line: readonly ViewCell[]) =>
+    line.map((cell) => cell.text).join('');
+  const wrapped = workHead(item, subagent, { width: 40, now: NOW });
+  const short = workHead(item, subagent, {
+    width: 40,
+    now: NOW,
+    short: true,
+    count: '↑ 3 lines above',
+  });
+
+  expect(wrapped.length).toBeGreaterThan(2);
+  expect(short).toHaveLength(2);
+  expect(stringWidth(text(short[1]!))).toBeLessThanOrEqual(40);
+  expect(text(short[1]!)).toMatch(/^working 32s · .*… ↑ 3 lines above$/);
+});

@@ -1286,3 +1286,42 @@ test('a detail pins its name on one line, cut with … when longer, and its whol
       expect(frame).not.toContain(`› ${name}`);
     }
   }));
+
+describe("an agent's detail in a short window keeps the frame within its cap (CHD-487)", () => {
+  test("at 80x18 the work is one row, its count beside it; at 80x16 none, its count at the state line's end; the hint and the prompt always shown", () =>
+    withWindow(
+      async (window) => {
+        const frame = () =>
+          window.frame().slice(window.frame().indexOf('Background · '));
+
+        await send(window, 'claudebackground');
+        await window.shows("background  main's 2 agents running");
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('❯ Run the test suite');
+        await window.press('\r');
+        await window.shows('Background · 1 of 1 · ended');
+        await window.shows('⏺ Every test passed.');
+
+        await window.resize({ columns: 80, rows: 18 });
+        await until('a lone row with its count', () =>
+          / ↑ \d+ lines? above\s*│/.test(frame()),
+        );
+        expect(frame()).not.toContain('── ↑');
+        expect(window.frame()).toContain('Enter to go to its call');
+        expect(window.frame()).toContain('│ ›');
+
+        await window.resize({ columns: 80, rows: 16 });
+        await until('the count on the state line', () =>
+          /✓ done in \d+s · .*↑ \d+ lines? above/.test(frame()),
+        );
+        expect(window.frame()).toContain('Enter to go to its call');
+        expect(window.frame()).toContain('│ ›');
+        await window.press('\x1b[5~');
+        await until('paged with no row', () =>
+          /↓ \d+ (lines? )?below/.test(frame()),
+        );
+      },
+      { rows: 24, columns: 80 },
+    ));
+});

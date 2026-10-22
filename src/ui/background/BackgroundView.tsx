@@ -1,8 +1,4 @@
-import {
-  type BoxRenderable,
-  type ScrollBoxRenderable,
-  TextAttributes,
-} from '@opentui/core';
+import { type BoxRenderable, TextAttributes } from '@opentui/core';
 import {
   type RefObject,
   useCallback,
@@ -21,7 +17,9 @@ import {
 import { useAgentsClock } from '../agents/Agents.tsx';
 import type { RequestScroller } from '../dialogs/Permission.tsx';
 import {
+  countRoom,
   hiddenRows,
+  requestCount,
   requestRule,
   requestStep,
   requestView,
@@ -436,15 +434,41 @@ function WorkDetail({
   scroller: RefObject<RequestScroller | undefined>;
   cell: (piece: ViewCell) => { attributes: number };
 }) {
-  const head = workHead(item, work.subagent, { width, now });
-  const room = Math.max(1, rows - head.length);
+  // The frame never passes its cap (docs/design/CHD-487.md, the short
+  // room): the state line gives way to one line first, then the work to one
+  // row, then to none, its count at the state line's end.
+  const full = workHead(item, work.subagent, { width, now });
+  const short = full.length + 1 > rows;
+  const workRows = Math.max(0, rows - (short ? 2 : full.length));
+  // With no row, it still pages, as a row of one would.
+  const room = Math.max(1, workRows);
   const content = useRef<BoxRenderable | null>(null);
-  const view = useRef<ScrollBoxRenderable | null>(null);
   // Its lines as laid out; the room until they are.
   const [total, setTotal] = useState(room);
   const [top, setTop] = useState(FOLLOWING);
   const shown = requestView(total, room, top);
   const hidden = hiddenRows(total, shown.top, shown.shown);
+  const lines = short
+    ? workHead(item, work.subagent, {
+        width,
+        now,
+        short,
+        ...(workRows === 0 && total > 0
+          ? {
+              count: requestCount({
+                above: shown.top,
+                below: Math.max(0, total - shown.top - 1),
+              }),
+            }
+          : {}),
+      })
+    : full;
+  // Not even its name and state: its state line alone.
+  const head = rows < 2 ? lines.slice(-1) : lines;
+  // A room of one row has none for a rule: what is hidden is said beside
+  // the row, which the work leaves the cells for (CHD-464).
+  const counted = workRows === 1 && total > 1;
+  const workWidth = counted ? Math.max(1, width - countRoom(total) - 1) : width;
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
   const whole = (work.subagent.prompt ?? work.subagent.description)?.trim();
@@ -456,31 +480,14 @@ function WorkDetail({
       whole.replace(/\s+/g, ' ') === item.name.replace(/\s+/g, ' ').trim())
       ? undefined
       : whole;
-  // Where the view should stand, which a scroll at React's commit, before
-  // the work that came is laid out, would leave short of the end.
-  const wanted = useRef(shown.top);
-
-  wanted.current = shown.top;
-
-  // Read once laid out, never at React's commit (CHD-437); the view put
-  // where it should stand then too.
+  // Read once laid out, never at React's commit (CHD-437).
   const measure = () => {
     const height = content.current?.getLayout().height;
 
     if (height !== undefined && Number.isFinite(height)) {
       setTotal(height);
     }
-
-    const box = view.current;
-
-    if (box !== null && box.scrollTop !== wanted.current) {
-      box.scrollTo(wanted.current);
-    }
   };
-
-  useEffect(() => {
-    view.current?.scrollTo(shown.top);
-  }, [shown.top, total]);
 
   useEffect(() => {
     scroller.current = (step) => setTop((at) => logStep(step, total, room, at));
@@ -506,37 +513,47 @@ function WorkDetail({
           {requestRule('↑', hidden.above, pageUp, width)}
         </text>
       )}
-      <scrollbox
-        ref={view}
-        height={Math.max(shown.shown, 1)}
-        flexShrink={0}
-        focusable={false}
-        verticalScrollbarOptions={{ visible: false }}
-      >
+      <box flexDirection='row' flexShrink={0} visible={workRows > 0}>
+        {/* Its rows in view: the work drawn whole, moved up by the rows
+            above them and cut to the room, where it is laid out as it is
+            drawn, so no scroll waits on a layout to land (CHD-487). */}
         <box
-          ref={content}
+          height={Math.max(shown.shown, 1)}
+          width={workWidth}
           flexShrink={0}
-          onSizeChange={measure}
-          renderAfter={measure}
+          overflow='hidden'
         >
-          {task !== undefined && task !== '' && (
-            <box flexDirection='row' flexShrink={0}>
-              <text {...TEXT} attributes={DIM} flexShrink={0}>
-                {'› '}
-              </text>
-              <text {...FILL}>
-                <Ansi text={task} />
-              </text>
-            </box>
-          )}
-          <AgentWork
-            subagent={work.subagent}
-            turn={work.turn}
-            agent={work.agent}
-            width={width}
-          />
+          <box
+            ref={content}
+            marginTop={-shown.top}
+            flexShrink={0}
+            onSizeChange={measure}
+            renderAfter={measure}
+          >
+            {task !== undefined && task !== '' && (
+              <box flexDirection='row' flexShrink={0}>
+                <text {...TEXT} attributes={DIM} flexShrink={0}>
+                  {'› '}
+                </text>
+                <text {...FILL}>
+                  <Ansi text={task} />
+                </text>
+              </box>
+            )}
+            <AgentWork
+              subagent={work.subagent}
+              turn={work.turn}
+              agent={work.agent}
+              width={workWidth}
+            />
+          </box>
         </box>
-      </scrollbox>
+        {counted && (
+          <text {...TEXT} attributes={DIM} flexShrink={0}>
+            {` ${requestCount(hidden)}`}
+          </text>
+        )}
+      </box>
       {shown.below && (
         <text {...TEXT} attributes={DIM}>
           {requestRule('↓', hidden.below, pageDown, width)}

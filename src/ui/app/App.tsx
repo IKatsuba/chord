@@ -33,12 +33,6 @@ import type { ChordServer } from '../../server/server.ts';
 import { frontTab, noTabs } from '../../session/tabs.ts';
 import { programStatus } from '../../status.ts';
 import { promptLine } from '../../session/record.ts';
-import {
-  DIMCODE_NOTICE,
-  dimcodeAtRisk,
-  dismissedNotices,
-  noticesFile,
-} from '../../notices.ts';
 import { type EditorMode, homePath } from '../../settings.ts';
 import { runShell, type ShellOptions, type ShellProcess } from '../../shell.ts';
 import { subagentPath } from '../../session/subagents.ts';
@@ -640,30 +634,6 @@ export function App({
     listShown,
     backgroundItems.length,
   ]);
-
-  // dimcode's one-time notice comes due the first time the session shown
-  // has its permission option at anything but read-only, unless dismissed on
-  // this machine; answered "show it again", it comes at the next such time
-  // (docs/design/CHD-434.md).
-  const noticeFile = noticesFile(configHome);
-  const atRisk = dimcodeAtRisk(shownAgent, state.options);
-  const wasAtRisk = useRef(false);
-
-  useEffect(() => {
-    const before = wasAtRisk.current;
-
-    wasAtRisk.current = atRisk;
-
-    if (!atRisk || before) {
-      return;
-    }
-
-    void dismissedNotices(noticeFile).then((dismissed) => {
-      if (!dismissed.has(DIMCODE_NOTICE)) {
-        dispatch({ type: 'notice_opened', id: DIMCODE_NOTICE });
-      }
-    });
-  }, [atRisk, noticeFile]);
 
   // A row that leaves the view as its item ends hands the `❯` to the row
   // that took its place, and the last to leave closes the view, as esc

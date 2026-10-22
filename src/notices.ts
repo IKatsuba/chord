@@ -55,6 +55,43 @@ export function dimcodeAtRisk(
   );
 }
 
+/**
+ * Which sessions the notice's moment holds for, by an id of chord's for each,
+ * kept apart, so one session's options leaving `read-only` makes it due
+ * whatever any other is at, and a session at it still says so after the
+ * person answered "show it again" for another (docs/design/CHD-434.md).
+ */
+export class NoticeWatch {
+  readonly #atRisk = new Set<string>();
+
+  /**
+   * Hears session `id`, of `agent`, with its options now `options`; whether
+   * the notice came due: the session is at risk now and was not before.
+   */
+  heard(id: string, agent: string, options: readonly AgentOption[]): boolean {
+    const was = this.#atRisk.has(id);
+    const now = dimcodeAtRisk(agent, options);
+
+    if (now) {
+      this.#atRisk.add(id);
+    } else {
+      this.#atRisk.delete(id);
+    }
+
+    return now && !was;
+  }
+
+  /** Forgets session `id`, which has closed: it is at risk no longer. */
+  gone(id: string): void {
+    this.#atRisk.delete(id);
+  }
+
+  /** Whether session `id` is at risk now, as last heard. */
+  atRisk(id: string): boolean {
+    return this.#atRisk.has(id);
+  }
+}
+
 /** The record of dismissed notices, beside the user settings file. */
 export function noticesFile(
   configHome: string | undefined,

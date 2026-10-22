@@ -8,6 +8,7 @@ import {
   dismissNotice,
   dismissedNotices,
   noticesFile,
+  NoticeWatch,
 } from '../src/notices.ts';
 
 const permission = (current: string) => ({
@@ -26,6 +27,33 @@ test("dimcode's notice is due once its permission is at anything but read-only, 
   expect(dimcodeAtRisk('dimcode', [permission('read-only')])).toBe(false);
   expect(dimcodeAtRisk('dimcode', [])).toBe(false);
   expect(dimcodeAtRisk('codex', [permission('full-access')])).toBe(false);
+});
+
+test('each session comes due on its own way out of read-only, whatever another is at, and anew after going back (CHD-434)', () => {
+  const watch = new NoticeWatch();
+
+  expect(watch.heard('a', 'dimcode', [permission('read-only')])).toBe(false);
+  expect(watch.heard('a', 'dimcode', [permission('full-access')])).toBe(true);
+  // Still there, and from one value at risk to another: not again.
+  expect(watch.heard('a', 'dimcode', [permission('full-access')])).toBe(false);
+  expect(watch.heard('a', 'dimcode', [permission('workspace-write')])).toBe(
+    false,
+  );
+  // Another session, while the first is at risk, is due of its own.
+  expect(watch.heard('b', 'dimcode', [permission('full-access')])).toBe(true);
+  expect(watch.heard('a', 'dimcode', [permission('read-only')])).toBe(false);
+  expect(watch.atRisk('a')).toBe(false);
+  expect(watch.heard('a', 'dimcode', [permission('full-access')])).toBe(true);
+  expect(watch.heard('c', 'codex', [permission('full-access')])).toBe(false);
+});
+
+test('a session closed is at risk no longer, so a read finishing after applies to none', () => {
+  const watch = new NoticeWatch();
+
+  watch.heard('a', 'dimcode', [permission('full-access')]);
+  expect(watch.atRisk('a')).toBe(true);
+  watch.gone('a');
+  expect(watch.atRisk('a')).toBe(false);
 });
 
 test('its dismissal is recorded beside the user settings file, others kept, and read back', async () => {

@@ -655,7 +655,7 @@ describe('tester: publish guard boundaries', () => {
   });
 
   test('a successful npm view with the wrong version stops with its answer', async () => {
-    writeFileSync(
+    executable(
       join(bin, 'npm'),
       NPM.replace('echo "${spec##*@}"', 'echo "9.9.8"'),
     );
@@ -681,7 +681,7 @@ describe('tester: publish guard boundaries', () => {
     ];
 
     for (const [command, message] of cases) {
-      writeFileSync(
+      executable(
         join(bin, 'git'),
         `#!/bin/sh
 case "$*" in
@@ -691,7 +691,6 @@ case "$*" in
 esac
 `,
       );
-      chmodSync(join(bin, 'git'), 0o755);
 
       expect(
         await died(() =>
@@ -710,7 +709,7 @@ esac
     }
 
     for (const command of ['tag', 'push']) {
-      writeFileSync(
+      executable(
         join(bin, 'git'),
         `#!/bin/sh
 printf '%s\\n' "$*" >>"$RELEASE_STATE/git.log"
@@ -719,7 +718,6 @@ case "$1" in
 esac
 `,
       );
-      chmodSync(join(bin, 'git'), 0o755);
       rmSync(join(state, 'git.log'), { force: true });
 
       expect(

@@ -1,6 +1,7 @@
 import process from 'node:process';
 import { useTerminalDimensions } from '@opentui/react';
 import { useMemo, useState } from 'react';
+import wrapAnsi from 'wrap-ansi';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
 import type { AgentOption } from '../../session/config.ts';
@@ -551,9 +552,12 @@ export function ThemePicker({
  * and shows it again next time, as 2 does.
  */
 export function NoticeBox({
+  columns,
   active,
   onAnswer,
 }: {
+  /** The window's width; the box takes all of it. */
+  columns: number;
   active: boolean;
   /** Whether the person dismissed it for good, or asked to see it again. */
   onAnswer: (dismissed: boolean) => void;
@@ -566,9 +570,18 @@ export function NoticeBox({
       <text {...TEXT} {...fg(permission)} attributes={BOLD}>
         {DIMCODE_WORDS.title}
       </text>
+      {/* Wrapped at spaces, as the transcript is, so a path or a value a
+          person types stays whole on its line; only a word longer than the
+          line is broken, where it is drawn. */}
       {DIMCODE_WORDS.paragraphs.map((paragraph) => (
-        <box key={paragraph} marginTop={1}>
-          <text {...TEXT}>{paragraph}</text>
+        <box key={paragraph} marginTop={1} flexDirection='column'>
+          {wrapAnsi(paragraph, Math.max(columns - 4, 1), { trim: true })
+            .split('\n')
+            .map((line, index) => (
+              <text key={index} {...TEXT}>
+                {line}
+              </text>
+            ))}
         </box>
       ))}
       <PickerList

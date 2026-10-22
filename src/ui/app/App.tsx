@@ -1355,6 +1355,7 @@ export function App({
               )}
               {noticing && notice !== undefined && (
                 <NoticeBox
+                  columns={columns}
                   active={listening}
                   onAnswer={(dismissed) => {
                     const file = noticesFile(configHome);

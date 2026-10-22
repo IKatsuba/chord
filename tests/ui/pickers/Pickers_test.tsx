@@ -1485,3 +1485,166 @@ describe("CHD-434: dimcode's notice in the pickers' frame", () => {
       { permission: 'read-only' },
     ));
 });
+
+describe('CHD-434 U2 tester: notice ownership and recovery', () => {
+  const title = 'dimcode can start other agents';
+  const file = (window: Window) =>
+    join(window.dir, 'config', 'chord', 'notices.json');
+  const box = async (window: Window) => {
+    await window.shows(title);
+    await window.shows("❯ 1. Got it, don't show this again");
+  };
+
+  const options = (
+    columns: number,
+    rows: number,
+    permission = 'read-only',
+  ) => ({
+    agent: 'dimcode',
+    agentCommand: fakeAgentCommand(
+      undefined,
+      '--dimcode-permission',
+      permission,
+    ),
+    configHome: (dir: string) => join(dir, 'config'),
+    columns,
+    rows,
+  });
+
+  const clear = async (window: Window) => {
+    await ready(window);
+
+    const old = window.session();
+
+    await send(window, '/clear');
+    await until(
+      'the replacement session opened',
+      () => window.session() !== undefined && window.session() !== old,
+    );
+    await ready(window);
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`digits outside the choices and pasted text stay out of the draft; j/k and both answers work at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await box(window);
+          await window.type('3456789');
+          await window.paste('PRIVATE DRAFT SHOULD NOT LEAK');
+          expect(promptRow(window)).not.toContain('PRIVATE');
+          expect(promptRow(window)).not.toContain('345');
+          await window.press('j');
+          await window.shows('❯ 2. Show it again next time');
+          await window.press('j');
+          await window.shows('❯ 2. Show it again next time');
+          await window.press('\r');
+          await until(
+            'the notice closed without recording',
+            () => !window.frame().includes(title),
+          );
+          await expect(readFile(file(window), 'utf8')).rejects.toThrow();
+          await clear(window);
+          await box(window);
+          await window.press('j');
+          await window.shows('❯ 2. Show it again next time');
+          await window.press('k');
+          await window.shows("❯ 1. Got it, don't show this again");
+          await window.press('k');
+          await window.press('\r');
+          await until('dismissal persisted', async () => {
+            try {
+              return JSON.parse(
+                await readFile(file(window), 'utf8'),
+              ).dismissed.includes('dimcode-agents');
+            } catch {
+              return false;
+            }
+          });
+
+          expect(window.frame()).not.toContain(title);
+          expect(promptRow(window)).not.toContain('PRIVATE');
+          await clear(window);
+          await send(window, 'text');
+          await window.shows('Hello, world. This reply came in chunks.');
+          expect(window.frame()).not.toContain(title);
+        },
+        options(columns, rows, 'full-access'),
+      ));
+
+    test(`a pending notice waits behind the model picker and obeys the rebound close key at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/model');
+          await window.shows("Switch dimcode's model");
+          await window.session()!.prompt('fullaccess').result;
+          expect(window.frame()).not.toContain(title);
+          await window.press('\x14');
+          await box(window);
+          await window.shows('Ctrl+t to show it again next time');
+          await window.press(ESC);
+          expect(window.frame()).toContain(title);
+          await window.press('\x14');
+          await until(
+            'rebound close releases the prompt',
+            () => !window.frame().includes(title),
+          );
+          await expect(readFile(file(window), 'utf8')).rejects.toThrow();
+          await send(window, 'text');
+          await window.shows('Hello, world. This reply came in chunks.');
+        },
+        {
+          ...options(columns, rows),
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'Select',
+                bindings: { escape: null, 'ctrl+t': 'select:cancel' },
+              },
+            ],
+          }),
+        },
+      ));
+
+    for (const request of ['permission', 'form']) {
+      test(`the ${request} owns Esc before the notice, then the notice owns it alone at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, request);
+            await window.shows(
+              request === 'permission'
+                ? 'Do you want to proceed?'
+                : 'Set up the deploy target',
+            );
+            await window.session()!.prompt('fullaccess').result;
+            expect(window.frame()).not.toContain(title);
+            await window.press(ESC);
+            await box(window);
+            expect(
+              window
+                .frame()
+                .split('\n')
+                .filter((line) => line.startsWith('│'))
+                .join('\n'),
+            ).not.toContain(
+              request === 'permission'
+                ? 'Do you want to proceed?'
+                : 'Set up the deploy target',
+            );
+            await window.press(ESC);
+            await until(
+              'notice alone closed',
+              () => !window.frame().includes(title),
+            );
+            await expect(readFile(file(window), 'utf8')).rejects.toThrow();
+            expect(promptRow(window)).toMatch(/│ ›\s*│/);
+          },
+          options(columns, rows),
+        ));
+    }
+  }
+});

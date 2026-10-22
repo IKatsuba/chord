@@ -302,3 +302,68 @@ describe("CHD-434: the window's gate between the record's reads and its write", 
     expect(await recorded.due(DIMCODE_NOTICE, always)).toBe(false);
   });
 });
+
+describe('CHD-434 U2 tester: eligibility at the end of a record read', () => {
+  test('a held read for a cleared session cannot open for its replacement or another live session', async () => {
+    const watch = new NoticeWatch();
+    const reads: ReturnType<
+      typeof Promise.withResolvers<ReadonlySet<string>>
+    >[] = [];
+    const gate = new NoticeGate(
+      () => {
+        const read = Promise.withResolvers<ReadonlySet<string>>();
+
+        reads.push(read);
+
+        return read.promise;
+      },
+      () => Promise.resolve(),
+    );
+    const first = watch.heard('reused', 'dimcode', [
+      permission('full-access'),
+    ])!;
+    const old = gate.due(DIMCODE_NOTICE, () => watch.holds('reused', first));
+
+    watch.gone('reused');
+
+    const next = watch.heard('reused', 'dimcode', [
+      permission('workspace-write'),
+    ])!;
+    const other = watch.heard('other', 'dimcode', [permission('full-access')])!;
+    const fresh = gate.due(DIMCODE_NOTICE, () => watch.holds('reused', next));
+    const parallel = gate.due(DIMCODE_NOTICE, () =>
+      watch.holds('other', other),
+    );
+
+    reads[2]!.resolve(new Set());
+    reads[0]!.resolve(new Set());
+    reads[1]!.resolve(new Set());
+    expect(await old).toBe(false);
+    expect(await fresh).toBe(true);
+    expect(await parallel).toBe(true);
+  });
+
+  test('an unreadable record still cannot resurrect a closed or read-only session', async () => {
+    for (const ends of ['closed', 'read-only']) {
+      const watch = new NoticeWatch();
+      const read = Promise.withResolvers<ReadonlySet<string>>();
+      const gate = new NoticeGate(
+        () => read.promise,
+        () => Promise.resolve(),
+      );
+      const ticket = watch.heard('one', 'dimcode', [
+        permission('full-access'),
+      ])!;
+      const due = gate.due(DIMCODE_NOTICE, () => watch.holds('one', ticket));
+
+      if (ends === 'closed') {
+        watch.gone('one');
+      } else {
+        watch.heard('one', 'dimcode', [permission('read-only')]);
+      }
+
+      read.reject(new Error('record unreadable'));
+      expect(await due).toBe(false);
+    }
+  });
+});

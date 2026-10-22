@@ -11,7 +11,11 @@ import type { ConversationEvent } from './conversation.ts';
 import type { ElicitationReply } from './elicitations.ts';
 import { endWord } from './monitors.ts';
 import { reduceTranscript } from './transcript/reducer.ts';
-import { TASK_META, TASK_SPENT_META } from './transcript/subagents.ts';
+import {
+  TASK_META,
+  TASK_SPENT_META,
+  TASK_STOPPED_META,
+} from './transcript/subagents.ts';
 import {
   emptyTranscript,
   type MessageFrom,
@@ -163,6 +167,7 @@ export function taskUpdate(
   state: SubagentState,
   task?: TaskInfo & { readonly prompt: string },
   spent?: TaskSpent,
+  stoppedWith?: 'x' | 'esc',
 ): SessionUpdate {
   return {
     sessionUpdate: 'subagent_update',
@@ -171,7 +176,7 @@ export function taskUpdate(
     ...(task === undefined
       ? {}
       : { title: task.name, description: task.prompt }),
-    ...(task === undefined && spent === undefined
+    ...(task === undefined && spent === undefined && stoppedWith === undefined
       ? {}
       : {
           _meta: {
@@ -189,6 +194,10 @@ export function taskUpdate(
                 }),
             // What it spent, on its ending update (CHD-373).
             ...(spent === undefined ? {} : { [TASK_SPENT_META]: spent }),
+            // Who stopped it, which its end line says (CHD-482).
+            ...(stoppedWith === undefined
+              ? {}
+              : { [TASK_STOPPED_META]: stoppedWith }),
           },
         }),
   };
@@ -271,6 +280,8 @@ export class TaskAgent {
   #ended = false;
   /** The parent cancelled it: it ends `cancelled` and sends no report. */
   #stopped = false;
+  /** The person's key that stopped it, if theirs did. */
+  #stoppedWith: 'x' | 'esc' | undefined;
   /** Its turn's tokens, as the answer to its prompt gave them. */
   #tokens: TokenUsage | undefined;
 
@@ -421,14 +432,15 @@ export class TaskAgent {
   /**
    * Stops the task's turn, as the parent's Esc does; it sends no report. One
    * still starting has no turn to stop: it ends here, so its job is never
-   * sent.
+   * sent. `by` is the person's key that stopped it, which its end says.
    */
-  cancel(): void {
+  cancel(by?: 'x' | 'esc'): void {
     if (this.#ended) {
       return;
     }
 
     this.#stopped = true;
+    this.#stoppedWith ??= by;
 
     if (!this.#sent) {
       return this.#end('cancelled', '');
@@ -478,6 +490,7 @@ export class TaskAgent {
         state,
         undefined,
         taskSpent(this.#transcript, this.#tokens),
+        state === 'cancelled' ? this.#stoppedWith : undefined,
       ),
       at: this.#now(),
     });

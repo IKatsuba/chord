@@ -960,7 +960,9 @@ describe('CHD-464 tester: request scrolling and list recovery', () => {
             await window.shows('Esc to reject');
             await window.press('1');
             // The task's report adds fixed rows; wait for it before paging.
-            await window.shows('background  ✓ 1 task done');
+            await window.shows(
+              'Received the message from Fix the tokenizer · fake · report.',
+            );
             await send(window, 'bigask');
             await window.shows('lines below · pagedown to scroll');
 

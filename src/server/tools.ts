@@ -1096,7 +1096,12 @@ const startMonitor: Register = (server, caller) =>
           .number()
           .optional()
           .describe(
-            'When to stop it, 1000 to 3600000; 600000 (10 minutes) if left out',
+            // An agent once set it to a timer loop's length, so every
+            // heartbeat was cut off as it came (CHD-482, Q87).
+            'A hard stop: chord stops the command when it passes, whatever ' +
+              'it is doing, so make it longer than the command is meant to ' +
+              "run (a loop's whole length and a margin). 1000 to 3600000; " +
+              '600000 (10 minutes) if left out',
           ),
       },
     },

@@ -118,12 +118,11 @@ describe('the items', () => {
       }),
     ]);
 
-    // The ended monitor has left (CHD-479); the ended task stays (CHD-482).
+    // The ended monitor and the ended task have left (CHD-479, CHD-482).
     expect(brief(items)).toStrictEqual([
       'task Fix the tokenizer 1 running',
       'monitor parser tests 2 running',
       'monitor dev server 1 running',
-      'task Fix the printer 1 done',
     ]);
     expect(items[0]).toStrictEqual({
       kind: 'task',
@@ -173,34 +172,50 @@ describe('the items', () => {
       }),
     ];
 
-    expect(
-      brief(backgroundItems(agents, -Infinity, { key: 1, id: 'm1' })),
-    ).toStrictEqual(['monitor kept 1 stopped']);
-    expect(
-      brief(backgroundItems(agents, -Infinity, { key: 2, id: 'm1' })),
-    ).toStrictEqual([]);
+    expect(brief(backgroundItems(agents, { key: 1, id: 'm1' }))).toStrictEqual([
+      'monitor kept 1 stopped',
+    ]);
+    expect(brief(backgroundItems(agents, { key: 2, id: 'm1' }))).toStrictEqual(
+      [],
+    );
   });
 
-  test('a task reported is done, a failed or gone one failed, a cancelled one stopped', () => {
-    const states = (
-      ['completed', 'failed', 'disconnected', 'cancelled'] as const
-    ).map(
-      (state) =>
-        backgroundItems([
+  test('a task leaves at once however it ends, its detail open or not; a monitor whose detail is open stays (CHD-482, Q126)', () => {
+    const items = (
+      state: Subagent['state'],
+      keep?: { key: number; id: string },
+    ) =>
+      backgroundItems(
+        [
           agent(1, {
             transcript: withEntries([
               task('t', 'x', 10, { state, endedAt: 20 }),
             ]),
           }),
-        ])[0]?.status,
-    );
+        ],
+        keep,
+      );
+    const ends = ['completed', 'failed', 'disconnected', 'cancelled'] as const;
 
-    expect(states).toStrictEqual([
-      { group: 'done', endedAt: 20 },
-      { group: 'failed', endedAt: 20 },
-      { group: 'failed', endedAt: 20 },
-      { group: 'stopped', endedAt: 20 },
+    expect(ends.map((state) => items(state).length)).toStrictEqual([
+      0, 0, 0, 0,
     ]);
+    expect(
+      ends.map((state) => items(state, { key: 1, id: 't' }).length),
+    ).toStrictEqual([0, 0, 0, 0]);
+    // An agent too; only a monitor's open detail keeps it.
+    expect(
+      backgroundItems(
+        [
+          agent(1, {
+            transcript: withEntries([
+              claude('a', 10, { state: 'completed', endedAt: 20 }),
+            ]),
+          }),
+        ],
+        { key: 1, id: 'a' },
+      ),
+    ).toStrictEqual([]);
   });
 
   test('a task asking for a permission or an input counts from when it asked, its oldest request first', () => {
@@ -305,7 +320,7 @@ describe('the items', () => {
 
     expect(before).toStrictEqual(['one', 'two', 'a', 'b', 'three']);
     // m2 and the other agent's ended first, then m1, and left (CHD-479);
-    // the tasks keep their places, the ended one too.
+    // the running task keeps its place, the ended one left (CHD-482).
     expect(
       order(
         {
@@ -325,46 +340,42 @@ describe('the items', () => {
           ],
         },
       ),
-    ).toStrictEqual(['a', 'b']);
+    ).toStrictEqual(['a']);
   });
 
-  test("the person's prompt clears what ended before it; what runs or asks stays", () => {
-    const items = backgroundItems(
-      [
-        agent(1, {
-          monitors: [running('m2', 'still', 10)],
-          // A task, as an ended monitor leaves at once (CHD-479).
-          transcript: withEntries(
-            [
-              task('task-0', 'before', 0, { state: 'completed', endedAt: 50 }),
-              task('task-1', 'asking', 5),
-              task('task-3', 'after', 20, {
-                state: 'completed',
-                endedAt: 150,
-              }),
+  test('an ended task leaves at once; what runs or asks stays (CHD-482)', () => {
+    const items = backgroundItems([
+      agent(1, {
+        monitors: [running('m2', 'still', 10)],
+        // A task, as an ended monitor leaves at once (CHD-479).
+        transcript: withEntries(
+          [
+            task('task-0', 'before', 0, { state: 'completed', endedAt: 50 }),
+            task('task-1', 'asking', 5),
+            task('task-3', 'after', 20, {
+              state: 'completed',
+              endedAt: 150,
+            }),
+          ],
+          {
+            asking: [
+              {
+                id: 'e',
+                mode: 'url',
+                url: 'u',
+                message: 'm',
+                subagentId: 'task-1',
+                at: 6,
+              },
             ],
-            {
-              asking: [
-                {
-                  id: 'e',
-                  mode: 'url',
-                  url: 'u',
-                  message: 'm',
-                  subagentId: 'task-1',
-                  at: 6,
-                },
-              ],
-            },
-          ),
-        }),
-      ],
-      100,
-    );
+          },
+        ),
+      }),
+    ]);
 
     expect(brief(items)).toStrictEqual([
       'task asking 1 asking',
       'monitor still 1 running',
-      'task after 1 done',
     ]);
   });
 });
@@ -490,23 +501,20 @@ describe('CHD-424 tester: background item edges', () => {
     expect(items.map(({ id }) => id)).toStrictEqual(['m1', 'm10', 'm11']);
   });
 
-  test('a prompt clears every ended task state at its cutoff, but keeps later ends and running tasks', () => {
-    const items = backgroundItems(
-      [
-        agent(1, {
-          transcript: withEntries([
-            ...(
-              ['completed', 'failed', 'cancelled', 'disconnected'] as const
-            ).map((state) => task(state, state, 10, { state, endedAt: 50 })),
-            task('later', 'later', 20, { state: 'completed', endedAt: 51 }),
-            task('running', 'running', 30),
-          ]),
-        }),
-      ],
-      50,
-    );
+  test('all ended task states leave immediately, including later ends; running tasks stay', () => {
+    const items = backgroundItems([
+      agent(1, {
+        transcript: withEntries([
+          ...(
+            ['completed', 'failed', 'cancelled', 'disconnected'] as const
+          ).map((state) => task(state, state, 10, { state, endedAt: 50 })),
+          task('later', 'later', 20, { state: 'completed', endedAt: 51 }),
+          task('running', 'running', 30),
+        ]),
+      }),
+    ]);
 
-    expect(items.map(({ id }) => id)).toStrictEqual(['later', 'running']);
+    expect(items.map(({ id }) => id)).toStrictEqual(['running']);
   });
 
   test('resumed historical tasks are excluded even while running; a task started when the session came up remains', () => {
@@ -565,7 +573,7 @@ describe('CHD-424 tester: background item edges', () => {
         ...transcript,
         entries: [task('t', 'task', 10, { state: 'cancelled', endedAt: 50 })],
       }),
-    ).toStrictEqual({ group: 'stopped', endedAt: 50 });
+    ).toBeUndefined();
   });
 
   test('all summary words and separators survive wrapping at every width from 26 through 120', () => {
@@ -843,13 +851,12 @@ describe('agent items', () => {
     ]);
   });
 
-  test('the next prompt leaves an untracked agent listed, as it has not ended; an ended one has left already (CHD-479, Q110)', () => {
+  test('an untracked agent stays listed, as it has not ended; an ended one has left (CHD-479, Q110)', () => {
     const at = (more: Partial<Subagent>) =>
       brief(
-        backgroundItems(
-          [agent(1, { transcript: withEntries([claude('a', 10, more)]) })],
-          40,
-        ),
+        backgroundItems([
+          agent(1, { transcript: withEntries([claude('a', 10, more)]) }),
+        ]),
       );
 
     expect(at({ state: 'untracked', endedAt: 30 })).toStrictEqual([
@@ -974,7 +981,7 @@ describe('an agent item names its parent, and which items leave as they end (CHD
     ]);
   });
 
-  test('an agent or a monitor leaves once done, failed or stopped; running, asking and untracked stay; a task stays as before', () => {
+  test('every kind leaves once done, failed or stopped; running, asking and untracked stay (CHD-479, CHD-482)', () => {
     const at = (group: ItemStatus['group']): ItemStatus =>
       group === 'running'
         ? { group }
@@ -1002,7 +1009,7 @@ describe('an agent item names its parent, and which items leave as they end (CHD
     ).toStrictEqual(['done', 'failed', 'stopped']);
     expect(
       groups.filter((group) => leavesList({ kind: 'task', status: at(group) })),
-    ).toStrictEqual([]);
+    ).toStrictEqual(['done', 'failed', 'stopped']);
   });
 });
 
@@ -1045,20 +1052,17 @@ describe('CHD-2 tester: agent item ownership and terminal precedence', () => {
   test('nested item order and owner remain stable when an untracked item persists and recovers', () => {
     const owner = { name: 'parser', colour: 2 };
     const listed = (state: Subagent['state']) =>
-      backgroundItems(
-        [
-          agent(1, { transcript: withEntries([claude('same', 20)]) }),
-          agent(2, {
-            owner,
-            transcript: withEntries([
-              claude('outer', 10, {
-                entries: [claude('same', 15, { state, endedAt: 30 })],
-              }),
-            ]),
-          }),
-        ],
-        30,
-      );
+      backgroundItems([
+        agent(1, { transcript: withEntries([claude('same', 20)]) }),
+        agent(2, {
+          owner,
+          transcript: withEntries([
+            claude('outer', 10, {
+              entries: [claude('same', 15, { state, endedAt: 30 })],
+            }),
+          ]),
+        }),
+      ]);
 
     expect(listed('untracked').map(({ key, id }) => [key, id])).toStrictEqual([
       [2, 'outer'],
@@ -1295,23 +1299,20 @@ describe('CHD-479 tester: parent identity survives nested and reused adapter ids
 describe('CHD-479 tester: parent order follows the list through live state changes', () => {
   test('interleaved start times cannot reorder parents, and a removed parent returns in its list position', () => {
     const list = (state: Subagent['state']) =>
-      backgroundItems(
-        [
-          agent(1, { transcript: withEntries([claude('main', 40)]) }),
-          agent(2, {
-            owner: { name: 'parser', colour: 1 },
-            transcript: withEntries([claude('parser', 30, { state })]),
-          }),
-          agent(3, {
-            owner: { name: 'tester', colour: 2 },
-            transcript: withEntries([
-              claude('tester-1', 10),
-              claude('tester-2', 20),
-            ]),
-          }),
-        ],
-        100,
-      );
+      backgroundItems([
+        agent(1, { transcript: withEntries([claude('main', 40)]) }),
+        agent(2, {
+          owner: { name: 'parser', colour: 1 },
+          transcript: withEntries([claude('parser', 30, { state })]),
+        }),
+        agent(3, {
+          owner: { name: 'tester', colour: 2 },
+          transcript: withEntries([
+            claude('tester-1', 10),
+            claude('tester-2', 20),
+          ]),
+        }),
+      ]);
 
     expect(list('running').map(({ parent }) => parent)).toStrictEqual([
       'tester',

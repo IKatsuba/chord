@@ -624,7 +624,6 @@ codex · gpt-5.3-codex`. Its ended block shows reported tokens and cost:
 `Done (5 tool uses · 2.0k tokens · $0.0125 · 13s)`; unreported parts are
 left out. In a group such as `Running 2 agents…`, a row that does not fit
 wraps behind `│`, keeping its model, tokens, cost, tool uses and time.
-Its background row adds `· $0.0125` after its state.
 Its permission requests, forms and links come to you
 in the parent's tab, and what it tells its parent with `send_message`, its
 one tool, and the report its first turn ends with reach the parent as
@@ -771,9 +770,13 @@ that agent later as a message: a turn of its own, drawn `← from dev server err
 · monitor` with the lines as printed, folded after six. Its end is one more,
 `· exit code 1`, `· timed out`, `· flooded` or `· stopped`, with chord's
 sentence last. A turn an event starts does not ring the terminal when it
-ends. `stop_monitor` and `list_monitors` are the agent's own. A resumed
-session draws its events again and names monitors left running, without
-restarting them. A monitor reaching its timeout is a stop:
+ends. `timeout_ms` is a hard stop: set it longer than the whole command's
+work, including a loop's whole length and a margin. `stop_monitor` and
+`list_monitors` are the agent's own. A resumed session draws its events
+again and names monitors left running. It also tells the agent at once,
+in a turn of its own, each monitor's id and description, that it was stopped
+and not restarted, and to start it again if still needed. A monitor
+reaching its timeout is a stop:
 `■ timed out after 1h`, dim, including its transcript message.
 
 Monitors, `spawn_task` tasks and subagents that offer an individual stop
@@ -782,8 +785,8 @@ including Claude's, have kind `agent`; background Bash is not listed.
 The summary names whose subagents they are: `main's 2 agents running` or
 `main's 2 agents and tester's agent running`.
 The summary counts the front tab's items, including its children's and
-team members', by state: asking, failed, untracked, running, done and
-stopped. It wraps without cutting text. From an empty prompt, ↓ past the
+team members', by state: asking, untracked and running, including stopping.
+It wraps without cutting text. From an empty prompt, ↓ past the
 agents reaches it; Enter opens the background view above the prompt, full
 width in the pickers' rounded frame in the permission colour. It is as tall
 as its rows, at most half the screen; the prompt, status line and summary
@@ -797,8 +800,8 @@ a dim `↑` in the gutter stands in when that line is out of sight. Resizing
 or reopening starts it from its first line again.
 
 An agent row reads `running`, `● permission` or `● input`; `● waiting`
-means it needs action but no request reaches you. Ended agents and monitors
-leave the list at once. `? untracked` stays, even past the next prompt:
+means it needs action but no request reaches you. Every ended item leaves
+the list at once. `? untracked` stays, even past the next prompt:
 the agent lost sight of the subagent, which may still work. Its summary reads
 `? main's agent untracked`.
 `x` stops the focused item alone, without confirmation; an agent reads
@@ -822,7 +825,9 @@ A monitor ending with its detail open stays shown until you leave it:
 the title adds `· ended`, its end state and chord's end sentence appear,
 and `x` does nothing. Enter in a detail, or on a task or agent row, picks
 the owner and scrolls to its call or subagent block; a folded block stays
-folded, and a missing call leaves the view open.
+folded, and a missing call leaves the view open. A task's or agent's
+row-only detail leaves when it ends: the next item takes its place, or the
+one above, and with none left the frame closes.
 A new request taking the keys hides the frame until answered, then it
 returns as it was. Over a held request, it takes that box's place;
 ctrl+x a closes it and gives the request the keys. When a list row leaves,
@@ -832,10 +837,11 @@ An agent ending after the turn that announced it leaves a line in its
 owner's transcript: `✓ Run tests · agent · done in 4s`,
 `✗ Run tests · agent · failed after 22s: tsc exited 2` or
 `■ Run tests · agent · stopped with x after 43s`. A resumed transcript keeps
-`stopped with x`; older records say `stopped after`. A monitor's end message
-is its line. Ended tasks stay until your next prompt to any agent in that
-tab. Messages clear nothing.
-Closing an owner removes its items.
+`stopped with x`; older records say `stopped after`. A task's `· report` or
+`· failed` message is its end line. A task stopped after its announcing
+turn ended gets a dim line instead: `■ Watch the build · task · stopped
+with x after 3s`, `stopped with esc after …` or `stopped after …`.
+A monitor's end message is its line. Closing an owner removes its items.
 
 A session resumed after its agents ran draws them as they were: each task
 agent's block, its work behind ctrl+o (read from the task's own record,

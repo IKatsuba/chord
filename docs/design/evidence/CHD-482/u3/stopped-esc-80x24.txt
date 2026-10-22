@@ -1,0 +1,24 @@
+ ▄▀▀▀   /tmp/chord-qa.d482
+ ▀▀     ? for shortcuts · /help
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Cancelled (0 tool uses · 4s)
+
+ ⏺ The build is being watched.
+
+ › slow
+
+ ⏺ Working.....................................................................
+   ............................................................................
+   ............................................................................
+   ..........................
+   ⎿  Interrupted by user
+
+ ■ Watch the build · task · stopped with esc after 4s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

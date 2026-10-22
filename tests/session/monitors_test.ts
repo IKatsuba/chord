@@ -1,6 +1,6 @@
 import { describe, expect, jest, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
@@ -12,7 +12,7 @@ import type { SignalName } from '../../src/platform/process.ts';
 import { FileRecording } from '../../src/session/record.ts';
 import { openSession } from '../../src/session/session.ts';
 import { readRecords, type Resume } from '../../src/session/sessions.ts';
-import { fromLine } from '../../src/session/tasks.ts';
+import { fromLine, wrapMessage } from '../../src/session/tasks.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import {
   emptyTranscript,
@@ -27,6 +27,7 @@ import {
   eventText,
   FloodWatch,
   leftRunningLine,
+  leftStoppedNote,
   type MonitorInfo,
   monitorRefusal,
   MonitorRun,
@@ -565,6 +566,7 @@ async function withAgent(
         cwd: dir,
         agentCommand: fakeAgentCommand(
           undefined,
+          '--echo-messages',
           ...(resume === undefined ? [] : ['--resume-only']),
         ),
         signal,
@@ -600,6 +602,24 @@ function delivered(events: readonly ConversationEvent[]) {
       ? [{ from: event.from, text: event.text }]
       : [],
   );
+}
+
+/**
+ * The prompts the fake agent got for messages and answered, each whole as
+ * its `session/prompt` carried it, which it echoes under
+ * `--echo-messages`.
+ */
+function received(events: readonly ConversationEvent[]): string[] {
+  return events.flatMap((event) => {
+    const said =
+      event.type === 'update' &&
+      event.update.sessionUpdate === 'agent_message_chunk' &&
+      event.update.content.type === 'text'
+        ? /^Received (".*")$/s.exec(event.update.content.text)
+        : null;
+
+    return said === null ? [] : [JSON.parse(said[1]!) as string];
+  });
 }
 
 function idOf(answer: unknown): string {
@@ -854,7 +874,7 @@ test("the agent's stop_monitor stops it with no message, the person's with one; 
   expect(pids.map(alive)).toStrictEqual([false, false, false]);
 });
 
-test("a monitor's messages are in the record, and a resume names the one left running and goes on from its ids", async () => {
+test("a monitor's messages are in the record, and a resume names the one left running to the person and its agent, and goes on from its ids", async () => {
   const dir = await mkdtemp(join(tmpdir(), 'chord-monitor-'));
   const stateDir = join(dir, 'state');
   const serve = (
@@ -902,7 +922,18 @@ test("a monitor's messages are in the record, and a resume names the one left ru
     assert(record !== undefined);
 
     await withAgent(
-      (conversation, events) => {
+      async (conversation, events) => {
+        // Its agent is told, as a turn of its own once the session is up,
+        // and gets it (CHD-482, Q129).
+        await until(() =>
+          received(events).includes(
+            wrapMessage(
+              { name: 'chord' },
+              leftStoppedNote([{ id: 'm2', description: 'watch' }]),
+            ),
+          ),
+        );
+
         const transcript = events
           .flatMap((event) =>
             event.type === 'connected' || !('turnId' in event) ? [] : [event],
@@ -924,6 +955,9 @@ test("a monitor's messages are in the record, and a resume names the one left ru
         ).toStrictEqual([
           'build · monitor · exit code 0: built\nExited with code 0 after 0s.',
           'watch was running when this session was left and is not restarted',
+          'chord: Your monitor m2 (watch) was running when this session was ' +
+            'left. chord stopped it then, and nothing restarts it; start it ' +
+            'again with monitor if you still need it.',
         ]);
         expect(
           idOf(
@@ -944,8 +978,6 @@ test("a monitor's messages are in the record, and a resume names the one left ru
             'm2 was running when this session was left and was not ' +
             'restarted; monitor starts another',
         });
-
-        return Promise.resolve();
       },
       {
         stateDir,
@@ -1381,6 +1413,314 @@ describe('CHD-481 U2 tester: last batches stay bounded and belong to their run',
       a.monitor.stop('close');
       b.monitor.stop('close');
       await Promise.all([a.monitor.ended, b.monitor.ended]);
+    }
+  });
+});
+
+describe('what the agent is told for each way its monitor ends (CHD-482)', () => {
+  /**
+   * Monitor m1's end message, once the agent has it: what chord sent, and
+   * the agent's own echo of the prompt it got and answered.
+   */
+  const endOf = async (events: readonly ConversationEvent[]) => {
+    await until(() =>
+      delivered(events).some(({ from }) => from.monitor?.end !== undefined),
+    );
+
+    const sent = delivered(events).find(({ from }) => from.monitor?.end)!;
+
+    await until(() =>
+      received(events).includes(wrapMessage(sent.from, sent.text)),
+    );
+
+    return sent;
+  };
+
+  /** The monitor messages the agent got, a while after a stop. */
+  const silent = async (events: readonly ConversationEvent[]) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    return [
+      ...delivered(events).filter(({ from }) => from.monitor?.end),
+      ...received(events).filter((prompt) => prompt.includes(' monitor="')),
+    ];
+  };
+
+  const told: readonly [
+    string,
+    { command: string; timeoutMs?: number },
+    MonitorEnd,
+    RegExp,
+    ((conversation: Conversation) => void)?,
+  ][] = [
+    [
+      'its command exits',
+      { command: 'exit 3' },
+      { kind: 'exit', code: 3 },
+      /^Exited with code 3 after \d+s\.$/,
+    ],
+    [
+      'a signal chord did not send kills it',
+      { command: 'kill -KILL $$' },
+      { kind: 'signal', signal: 'SIGKILL' },
+      /^Killed by SIGKILL after \d+s\.$/,
+    ],
+    [
+      'its timeout passes',
+      { command: 'sleep 30', timeoutMs: 1000 },
+      { kind: 'timed_out', timeoutMs: 1000 },
+      /^Timed out after 1s \(timeout_ms 1000\); chord stopped it\.$/,
+    ],
+    [
+      'it floods',
+      {
+        command:
+          'i=0; while [ $i -lt 3000 ]; do echo "line $i"; ' +
+          'i=$((i+1)); done; sleep 30',
+      },
+      { kind: 'flooded', by: 'lines' },
+      /\nchord stopped it: 1,000 lines in 10s is more than a monitor may print\. Filter its output \(grep --line-buffered\) and start it again\.$/,
+    ],
+    [
+      'the person stops it',
+      { command: 'sleep 30' },
+      { kind: 'stopped' },
+      /^The person stopped it after \d+s\.$/,
+      (conversation) => conversation.stopMonitor('m1', 'person'),
+    ],
+  ];
+
+  for (const [when, args, end, text, act] of told) {
+    test(`told when ${when}`, () =>
+      withAgent(async (conversation, events, dir) => {
+        idOf(conversation.startMonitor({ ...args, description: 'x' }, dir));
+        act?.(conversation);
+
+        const message = await endOf(events);
+
+        expect(message.from).toStrictEqual({
+          name: 'x',
+          monitor: { id: 'm1', end },
+        });
+        expect(message.text).toMatch(text);
+      }));
+  }
+
+  test("its own stop_monitor is told by the tool's answer, with no message", () =>
+    withAgent(async (conversation, events, dir) => {
+      idOf(
+        conversation.startMonitor(
+          { command: 'sleep 30', description: 'x' },
+          dir,
+        ),
+      );
+
+      expect(conversation.stopMonitor('m1')).toMatchObject({
+        id: 'm1',
+        description: 'x',
+        events: 0,
+      });
+      expect(await silent(events)).toStrictEqual([]);
+    }));
+
+  test('a command that does not start is the monitor call’s refusal', () =>
+    withAgent(async (conversation, events, dir) => {
+      expect(
+        conversation.startMonitor(
+          { command: 'sleep 30', description: 'x' },
+          dir,
+          () => ({
+            failed: 'spawn ENOENT',
+            stop: () => {},
+            ended: Promise.resolve({ code: 1 }),
+          }),
+        ),
+      ).toStrictEqual({ error: 'Could not start the command: spawn ENOENT' });
+      expect(await silent(events)).toStrictEqual([]);
+    }));
+
+  test('a /clear stops it with no message, as its agent session is let go', () =>
+    withAgent(async (conversation, events, dir) => {
+      idOf(
+        conversation.startMonitor(
+          { command: 'sleep 30', description: 'x' },
+          dir,
+        ),
+      );
+      conversation.clear();
+      await until(
+        () => events.filter((event) => event.type === 'connected').length === 2,
+      );
+      expect(conversation.monitors).toStrictEqual([]);
+      expect(await silent(events)).toStrictEqual([]);
+    }));
+
+  test('a closing session stops it with no message, as its agent goes with it', () =>
+    withAgent(async (conversation, events, dir) => {
+      idOf(
+        conversation.startMonitor(
+          { command: 'sleep 30', description: 'x' },
+          dir,
+        ),
+      );
+      await conversation.close();
+      expect(await silent(events)).toStrictEqual([]);
+    }));
+});
+
+test('the note to a resumed agent names each monitor it left running by id and description (CHD-482)', () => {
+  expect(
+    leftStoppedNote([
+      { id: 'm2', description: 'watch' },
+      { id: 'm4', description: 'heartbeat' },
+    ]),
+  ).toBe(
+    'Your monitors m2 (watch) and m4 (heartbeat) were running when this ' +
+      'session was left. chord stopped them then, and nothing restarts ' +
+      'them; start them again with monitor if you still need them.',
+  );
+});
+
+describe('CHD-482 U1 tester: resumed notes reach only their agent once', () => {
+  async function recordLeft(
+    dir: string,
+    stateDir: string,
+    names: readonly string[],
+    stop?: number,
+  ): Promise<Resume> {
+    await mkdir(dir);
+
+    let sessionId = '';
+
+    await withAgent(
+      async (conversation, events) => {
+        conversation.send('text');
+        await until(() => events.some((event) => event.type === 'result'));
+
+        sessionId = conversation.session!.id;
+
+        for (const [index, description] of names.entries()) {
+          const input = { command: 'watch', description };
+          const answer = conversation.startMonitor(
+            input,
+            dir,
+            fakeCommand().run,
+          );
+
+          idOf(answer);
+          conversation.served({ tool: 'monitor', input, answer });
+
+          if (index === stop) {
+            const id = `m${index + 1}`;
+            const answer = conversation.stopMonitor(id);
+
+            conversation.served({
+              tool: 'stop_monitor',
+              input: { id },
+              answer,
+            });
+          }
+        }
+      },
+      { stateDir, dir },
+    );
+
+    const record = (await readRecords(stateDir)).find(
+      (record) => record.sessionId === sessionId,
+    );
+
+    assert(record);
+
+    return { sessionId, cwd: dir, record: record.path };
+  }
+
+  test('the actual resumed prompt names only the left monitors, not an explicitly stopped one', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-left-note-'));
+    const stateDir = join(root, 'state');
+    const dir = join(root, 'project');
+
+    try {
+      const resume = await recordLeft(
+        dir,
+        stateDir,
+        ['watch one', 'already stopped', 'watch three'],
+        1,
+      );
+      const expected = wrapMessage(
+        { name: 'chord' },
+        leftStoppedNote([
+          { id: 'm1', description: 'watch one' },
+          { id: 'm3', description: 'watch three' },
+        ]),
+      );
+
+      await withAgent(
+        async (conversation, events) => {
+          await until(() => received(events).includes(expected));
+          await until(() => events.some((event) => event.type === 'result'));
+          expect(received(events)).toStrictEqual([expected]);
+          expect(received(events).join('')).not.toContain('already stopped');
+          expect(conversation.monitors).toStrictEqual([]);
+          conversation.send('text');
+          await until(
+            () =>
+              events.filter((event) => event.type === 'result').length === 2,
+          );
+          expect(received(events)).toStrictEqual([expected]);
+        },
+        { stateDir, dir, resume },
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test('two sessions resumed together keep same local monitor ids and notes separate', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-left-notes-'));
+    const stateDir = join(root, 'state');
+
+    try {
+      const a = await recordLeft(join(root, 'a'), stateDir, ['watch A']);
+      const b = await recordLeft(join(root, 'b'), stateDir, ['watch B']);
+      const outcomes = await Promise.allSettled(
+        [a, b].map((resume, index) =>
+          withAgent(
+            async (conversation, events) => {
+              const expected = wrapMessage(
+                { name: 'chord' },
+                leftStoppedNote([
+                  {
+                    id: 'm1',
+                    description: index === 0 ? 'watch A' : 'watch B',
+                  },
+                ]),
+              );
+
+              await until(() => received(events).includes(expected));
+              await until(() =>
+                events.some((event) => event.type === 'result'),
+              );
+              conversation.send('text');
+              await until(
+                () =>
+                  events.filter((event) => event.type === 'result').length ===
+                  2,
+              );
+              expect(received(events)).toStrictEqual([expected]);
+              expect(conversation.monitors).toStrictEqual([]);
+            },
+            { stateDir, dir: resume.cwd, resume },
+          ),
+        ),
+      );
+
+      for (const outcome of outcomes) {
+        if (outcome.status === 'rejected') {
+          throw outcome.reason;
+        }
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 });

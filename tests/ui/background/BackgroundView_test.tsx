@@ -1048,3 +1048,78 @@ describe('CHD-481 Q128 tester: rebound detail boundaries', () => {
     }
   });
 });
+
+test('a task that ends while its detail is open leaves at once, the detail going to the item that takes its place (CHD-482)', () =>
+  withBackground(
+    async (window) => {
+      await ready(window);
+      await send(window, 'monitor');
+      await window.shows('I will hear from the dev server when it errs.');
+      await send(window, 'tasklong');
+      await window.shows('The build is being watched.');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('Background · 2 in this tab');
+      await window.press('\r');
+      await window.shows('Background · m1, 1 of 2');
+      await window.press(DOWN);
+      await window.shows('Background · 2 of 2');
+      await window.press('x');
+      await window.shows('Background · m1, 1 of 1');
+      await window.shows('■ Watch the build · task · stopped with x after');
+      expect(window.frame()).not.toContain('· ended');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+describe('CHD-482 U3 tester: a later turn stops its running task with esc', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`the task leaves and its stop line appears once at ${columns} columns`, async () => {
+      const server = serveChord();
+      const command = fakeAgentCommand(undefined, '--step-ms 30');
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'tasklong');
+            await window.shows('The build is being watched.');
+            await until('the announcing turn is idle', () =>
+              /^ {2}1 agent still running/m.test(window.frame()),
+            );
+            await send(window, 'slow');
+            await window.shows('esc to interrupt');
+            await window.press(ESC);
+            await window.shows('Interrupted by user');
+
+            const line = '■ Watch the build · task · stopped with esc after';
+
+            await window.shows(line);
+            await until(
+              'the task leaves the summary',
+              () => !window.frame().includes('background  '),
+            );
+            expect(window.frame().split(line)).toHaveLength(2);
+            expect(window.frame()).not.toContain('stopped with x');
+            await send(window, 'hello');
+            await window.shows('came in chunks.');
+            expect(window.frame().split(line)).toHaveLength(2);
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            rows,
+            columns,
+            agentCommand: command,
+            startupOf: () => ({ agentCommand: command }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

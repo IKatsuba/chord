@@ -177,7 +177,7 @@ describe('CHD-424 tester: standing background edges', () => {
       { rows: 24, columns: 80 },
     ));
 
-  test('a task asks and reports in the summary without creating an agent row; its report message retains done', () =>
+  test('a task asks without creating an agent row; its report replaces the ended row', () =>
     withBackground(async (window) => {
       await ready(window);
       await send(window, 'task');
@@ -191,14 +191,11 @@ describe('CHD-424 tester: standing background edges', () => {
       await leader(window, 'a');
       await window.shows('Esc to reject');
       await window.press('1');
-      await window.shows('background  ✓ 1 task done');
       await window.shows(
         'Received the message from Fix the tokenizer · fake · report.',
       );
-      expect(window.frame()).toContain('background  ✓ 1 task done');
-      await send(window, 'hello');
       await until(
-        'reported task cleared',
+        'reported task leaves without another prompt',
         () => !window.frame().includes('background  '),
       );
     }));
@@ -337,7 +334,7 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     await until('the draft', () => promptRow(window)?.includes('› y') ?? false);
   }));
 
-test('x on a working task cancels its turn: its row turns to stopped, and it sends no report', () =>
+test('x on a working task cancels its turn: it leaves, the last row closing the view, and its line says the x stopped it (CHD-482)', () =>
   withBackground(
     async (window) => {
       await ready(window);
@@ -348,9 +345,31 @@ test('x on a working task cancels its turn: its row turns to stopped, and it sen
       await window.press('\r');
       await window.shows('❯ Watch the build  task · fake  working');
       await window.press('x');
-      await window.shows('■ stopped after');
+      await window.shows('■ Watch the build · task · stopped with x after');
+      await until(
+        'the view closed with its last row',
+        () => !window.frame().includes('Background ·'),
+      );
+      expect(window.frame()).not.toContain('background  ');
+    },
+    { rows: 24, columns: 80 },
+  ));
+
+test("esc on its parent's later turn stops a task too: it leaves, and its line says the esc stopped it (CHD-482)", () =>
+  withBackground(
+    async (window) => {
+      await ready(window);
+      await send(window, 'tasklong');
+      await window.shows('The build is being watched.');
+      await window.shows('    background  1 task running');
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
       await window.press(ESC);
-      await window.shows('❯ background  ■ 1 task stopped');
+      await window.shows('■ Watch the build · task · stopped with esc after');
+      await until(
+        'the summary line gone',
+        () => !window.frame().includes('background  '),
+      );
     },
     { rows: 24, columns: 80 },
   ));
@@ -398,7 +417,7 @@ describe('CHD-424 tester: background frame edges', () => {
     }
   }
 
-  test('an arriving permission hides the frame, then x stops its resumed task and a second x changes nothing', () =>
+  test('an arriving permission hides the frame, then x stops its resumed task and restores the keys', () =>
     withSlowTask(async (window) => {
       await ready(window);
       // Its turn runs until it is cancelled, so the task asks within it
@@ -412,21 +431,17 @@ describe('CHD-424 tester: background frame edges', () => {
       await window.press('1');
       await window.shows('❯ Fix the tokenizer');
       await window.press('x');
-      await window.shows('■ stopped after');
-
-      // The parent keeps working, so its clock outside the frame may tick.
-      const background = () =>
-        window.frame().match(/╭[^\n]*\n│ Background ·[\s\S]*?╰[^\n]*/)?.[0];
-      const stopped = background();
-
-      expect(stopped).toContain('❯ Fix the tokenizer');
-      expect(stopped).toContain('■ stopped after');
-
-      await window.press('x');
-      await window.press(UP);
-      expect(background()).toBe(stopped);
-      await window.press(ESC);
-      await window.shows('❯ background  ■ 1 task stopped');
+      await until(
+        'the last task closes the view',
+        () => !window.frame().includes('Background ·'),
+      );
+      await until(
+        'the task leaves the summary',
+        () => !window.frame().includes('background  '),
+      );
+      await window.shows('Cancelled');
+      await window.type('draft after stop');
+      expect(promptRow(window)).toContain('draft after stop');
       expect(window.frame()).not.toContain('waiting for permission');
       expect(window.frame()).not.toContain('· report');
     }));
@@ -457,10 +472,13 @@ describe('CHD-424 tester: background frame edges', () => {
         expect(window.frame()).not.toContain('│ ↓ Watch the build');
         expect(window.frame().split('\n')).toHaveLength(24);
         await window.press('x');
-        await window.shows('■ stopped after');
-        expect(window.frame()).toMatch(/❯ Watch the build .*■ stopped after/);
+        await window.shows('Background · 21 in this tab');
+        expect(window.frame()).toContain('❯ Watch the build');
+        expect(window.frame()).not.toMatch(
+          /❯ Watch the build .*■ stopped after/,
+        );
         await window.press(ESC);
-        await window.shows('❯ background  21 tasks running · ■ 1 task stopped');
+        await window.shows('❯ background  21 tasks running');
         await window.press('\r');
         await window.shows('❯ Watch the build');
         await window.shows('│ ↓ Watch the build');
@@ -878,10 +896,6 @@ test('a task name taller than the frame scrolls by line at 80x24: ↓ through it
       await window.shows('removed together');
       await window.shows('│ ↑   instead, with the');
 
-      // x stops the row the view is in, whatever line of it is in sight.
-      await window.press('x');
-      await window.shows('background  1 task running · ■ 1 task stopped');
-
       await window.resize({ columns: 82, rows: 24 });
       await window.shows('│ ❯ Rewrite the tokenizer');
 
@@ -907,6 +921,15 @@ test('a task name taller than the frame scrolls by line at 80x24: ↓ through it
       await window.press(ESC);
       await window.press('\r');
       await window.shows('│ ❯ Rewrite the tokenizer');
+
+      // x stops the row the view is in, whatever line of it is in sight;
+      // it leaves, the row below taking the `❯` (CHD-479, CHD-482).
+      await window.press('j');
+      await window.shows('│ ↑ ');
+      await window.press('x');
+      await window.shows('│ ❯ Watch the build');
+      await window.shows('background  1 task running');
+      await window.shows('· task · stopped with x after');
     },
     { rows: 24, columns: 80 },
   ));

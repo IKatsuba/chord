@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import type { ContentBlock, SessionUpdate } from '@agentclientprotocol/sdk';
 import { subagentsIn } from '../../../src/session/subagents.ts';
+import { taskUpdate } from '../../../src/session/tasks.ts';
 import type {
   Entry,
   Subagent,
@@ -859,5 +860,181 @@ describe('CHD-479 tester: late item transitions keep the announcing root turn', 
     expect(lines(b)).toStrictEqual([]);
     expect(lines(endedA)[0]).toMatchObject({ end: 'done' });
     expect(lines(endedB)[0]).toMatchObject({ end: 'stopped' });
+  });
+});
+
+describe("a task's end, once its turn has ended (CHD-482)", () => {
+  const START = { name: 'Watch the build', runtime: 'fake', prompt: 'Watch' };
+  const started = (id: string): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    at: 2,
+    update: taskUpdate(id, 'running', START),
+  });
+  const ending = (
+    id: string,
+    state: Parameters<typeof taskUpdate>[1],
+    stoppedWith?: 'x' | 'esc',
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: '',
+    at: 3002,
+    update: taskUpdate(id, state, undefined, undefined, stoppedWith),
+  });
+  const ENDED: TranscriptAction = {
+    type: 'result',
+    turnId: TURN,
+    result: { status: 'completed', stopReason: 'end_turn' },
+  };
+  const ends = (transcript: Transcript) =>
+    transcript.entries.filter((entry) => entry.kind === 'item_ended');
+  const stop = (
+    more: Partial<Extract<Entry, { kind: 'item_ended' }>> = {},
+  ): Extract<Entry, { kind: 'item_ended' }> => ({
+    kind: 'item_ended',
+    turnId: TURN,
+    item: 'task',
+    name: 'Watch the build',
+    end: 'stopped',
+    ...more,
+    startedAt: 2,
+    endedAt: 3002,
+  });
+
+  test("a stop gets chord's line, saying the person's key where it was theirs", () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          started('a'),
+          started('b'),
+          started('c'),
+          ENDED,
+          ending('a', 'cancelled', 'x'),
+          ending('b', 'cancelled', 'esc'),
+          ending('c', 'cancelled'),
+        ]),
+      ),
+    ).toStrictEqual([stop({ byPerson: true }), stop({ byEsc: true }), stop()]);
+  });
+
+  test('a report or a failure is its own message, so it gets none', () => {
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          started('a'),
+          started('b'),
+          started('c'),
+          ENDED,
+          ending('a', 'completed'),
+          ending('b', 'failed'),
+          ending('c', 'disconnected'),
+        ]),
+      ),
+    ).toStrictEqual([]);
+  });
+
+  test("esc on a later turn: its line says so though that turn's cancelled answer comes before the task's end", () => {
+    const later = 't2';
+
+    expect(
+      ends(
+        fold([
+          PROMPT,
+          started('a'),
+          ENDED,
+          { type: 'prompt', turnId: later, text: 'slow', at: 2000 },
+          { type: 'cancel', turnId: later, at: 2500 },
+          {
+            type: 'result',
+            turnId: later,
+            result: { status: 'cancelled', stopReason: 'cancelled' },
+          },
+          ending('a', 'cancelled', 'esc'),
+        ]),
+      ),
+    ).toStrictEqual([stop({ byEsc: true })]);
+  });
+
+  test('one stopped while its turn runs is said by its own block', () => {
+    expect(
+      ends(fold([PROMPT, started('a'), ending('a', 'cancelled', 'esc')])),
+    ).toStrictEqual([]);
+  });
+
+  test('who stopped it is kept on the task, as a record replays its update', () => {
+    const subagent = fold([
+      PROMPT,
+      started('a'),
+      ending('a', 'cancelled', 'x'),
+    ]).entries.find((entry) => entry.kind === 'subagent');
+
+    assert(subagent?.kind === 'subagent');
+    expect(subagent.subagent.task?.stoppedWith).toBe('x');
+  });
+});
+
+describe('CHD-482 U3 tester: late and nested task stops stay singular', () => {
+  const started: TranscriptAction = {
+    type: 'update',
+    turnId: TURN,
+    at: 3,
+    update: taskUpdate('task', 'running', {
+      name: 'Watch the build',
+      runtime: 'fake',
+      prompt: 'Watch',
+    }),
+  };
+  const ended: TranscriptAction = {
+    type: 'result',
+    turnId: TURN,
+    result: { status: 'completed', stopReason: 'end_turn' },
+  };
+  const stopped: TranscriptAction = {
+    type: 'update',
+    turnId: TURN,
+    at: 20,
+    update: taskUpdate('task', 'cancelled', undefined, undefined, 'x'),
+  };
+  const ends = (value: Transcript) =>
+    value.entries.filter((entry) => entry.kind === 'item_ended');
+
+  test('a nested task repeats its stop update without duplicating the root end line', () => {
+    const value = fold([
+      PROMPT,
+      spawned('outer', 'Outer'),
+      { ...started, subagentId: 'outer' },
+      ended,
+      { ...stopped, subagentId: 'outer' },
+      { ...stopped, subagentId: 'outer' },
+    ]);
+
+    expect(ends(value)).toMatchObject([
+      {
+        turnId: TURN,
+        item: 'task',
+        name: 'Watch the build',
+        byPerson: true,
+        startedAt: 3,
+        endedAt: 20,
+      },
+    ]);
+    expect(ends(value)).toHaveLength(1);
+  });
+
+  test('a late repeated stop belongs to its announcing turn while a newer turn keeps working', () => {
+    const value = fold([
+      PROMPT,
+      started,
+      ended,
+      { type: 'prompt', turnId: 'later', text: 'slow', at: 10 },
+      stopped,
+      stopped,
+    ]);
+
+    expect(ends(value)).toMatchObject([{ turnId: TURN, byPerson: true }]);
+    expect(ends(value)).toHaveLength(1);
+    expect(value.turn.status).toBe('working');
   });
 });

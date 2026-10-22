@@ -9,7 +9,6 @@ import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { endSentence, endWord, timeoutWords } from '../../session/monitors.ts';
-import { spentParts } from '../transcript/agents/subagents.ts';
 import { wrapLine } from '../transcript/message.ts';
 import {
   type BackgroundGroup,
@@ -139,9 +138,6 @@ export function stateText(
   now: number,
 ): { readonly text: string; readonly group: BackgroundGroup } {
   const { status } = item;
-  // An ended task's money, after its state (CHD-373).
-  const money = item.kind === 'task' ? spentParts(item.spent).money : undefined;
-  const paid = money === undefined ? '' : ` · ${money}`;
   const events =
     item.events === undefined ? '' : ` · ${eventsWords(item.events)}`;
 
@@ -172,41 +168,17 @@ export function stateText(
         group: 'asking',
       };
     default: {
+      // Only a monitor is drawn once ended, in its detail until the person
+      // leaves it (Q126); every other kind leaves as it ends (CHD-482).
       const ran = after(status.endedAt - item.startedAt);
-
-      if (status.group === 'stopped') {
-        // A monitor's timeout is a stop in its own words (CHD-482's Q85).
-        const word =
-          status.word ??
-          (status.end === undefined ? 'stopped' : endWord(status.end));
-
-        return {
-          text: `■ ${word} after ${ran}${events}${paid}`,
-          group: 'stopped',
-        };
-      }
-
-      if (item.kind === 'agent') {
-        return status.group === 'done'
-          ? { text: `✓ done in ${ran}`, group: 'done' }
-          : {
-              text: `✗ ${status.word ?? 'failed'} after ${ran}`,
-              group: 'failed',
-            };
-      }
-
-      if (item.kind === 'task') {
-        return status.group === 'done'
-          ? { text: `✓ reported after ${ran}${paid}`, group: 'done' }
-          : { text: `✗ failed after ${ran}${paid}`, group: 'failed' };
-      }
-
-      const glyph = status.group === 'done' ? '✓' : '✗';
       const word =
         status.end === undefined ? status.group : endWord(status.end);
 
+      // A monitor's timeout is a stop in its own words (CHD-482's Q85).
       return {
-        text: `${glyph} ${word} after ${ran}${events}`,
+        text: `${
+          status.group === 'stopped' ? '■' : status.group === 'done' ? '✓' : '✗'
+        } ${word} after ${ran}${events}`,
         group: status.group,
       };
     }

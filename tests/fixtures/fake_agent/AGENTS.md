@@ -122,6 +122,9 @@
   many `session/cancel` notifications its session got with no turn playing,
   `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) acknowledges each such cancel
   with `Cancel heard with no turn.`, so tests can wait for its arrival;
+  `--echo-messages` (`CHORD_FAKE_ECHO_MESSAGES=1`) answers a message from
+  another agent or chord with `Received` and the whole prompt as a JSON
+  string, so tests can read what reached the agent;
   `mcp` answers with the MCP servers its session was opened with, as JSON;
   `opened` with the request that last opened its session and that
   request's `_meta`, as JSON, to show what chord adds there (CHD-439);

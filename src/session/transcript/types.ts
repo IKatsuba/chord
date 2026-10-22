@@ -192,6 +192,11 @@ export interface TaskInfo {
   readonly workLost?: boolean;
   /** What it spent, as its agent reported it, once it has ended (CHD-373). */
   readonly spent?: TaskSpent;
+  /**
+   * The person stopped it: with `x` in the background view, or with `esc`
+   * on its parent's turn (CHD-482).
+   */
+  readonly stoppedWith?: 'x' | 'esc';
 }
 
 /**
@@ -500,12 +505,14 @@ export type Entry =
        */
       readonly kind: 'item_ended';
       readonly turnId: string;
-      readonly item: 'agent';
+      readonly item: 'agent' | 'task';
       /** Its name, as its background row had it. */
       readonly name: string;
       readonly end: ItemEnd;
       /** chord's stop, the person's `x`, ended it. */
       readonly byPerson?: true;
+      /** The person's `esc` on its parent's turn stopped it (CHD-482). */
+      readonly byEsc?: true;
       readonly startedAt?: number;
       readonly endedAt?: number;
       /** What its agent said went wrong. */

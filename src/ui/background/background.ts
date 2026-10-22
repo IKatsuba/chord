@@ -19,7 +19,6 @@ import type {
   Entry,
   MonitorEnd,
   Subagent,
-  TaskSpent,
   Transcript,
 } from '../../session/transcript/types.ts';
 import { GLYPHS } from '../app/strip.ts';
@@ -79,11 +78,6 @@ export type ItemStatus =
       readonly endedAt: number;
       /** A monitor's end, which its row words. */
       readonly end?: MonitorEnd;
-      /**
-       * An agent's end that its group does not word: no cause seen, or its
-       * agent gone.
-       */
-      readonly word?: 'ended' | 'disconnected';
     };
 
 /** Whose an item is: a child's or member's name and colour; none for `main`. */
@@ -114,8 +108,6 @@ export interface BackgroundItem {
   /** A task's runtime and model, as the agents list names an agent's. */
   readonly runtime?: string;
   readonly model?: string;
-  /** What a task spent, once it has ended (CHD-373). */
-  readonly spent?: TaskSpent;
   /** A task's `spawn_task` call, which `enter` scrolls to. */
   readonly callId?: string;
   /** An agent's own stop: its agent still offers one. */
@@ -144,16 +136,15 @@ export interface BackgroundAgent {
 
 /**
  * The tab's items, oldest first, each keeping its place as it changes: the
- * running, asking and untracked ones, and those ended after `clearedAt`,
- * the person's last prompt in the tab, of a kind that stays once ended; and
- * `keep`, whose detail is open, ended or not, until the person leaves it
- * (CHD-481, Q126). Two that started in the same millisecond keep the order
+ * running, asking and untracked ones, as every kind leaves once it ends
+ * (CHD-479, CHD-482); and `keep`, a monitor whose detail is open, ended
+ * or not, until the person leaves it (CHD-481, Q126), as an agent or a task
+ * leaves at once even then. Two that started in the same millisecond keep the order
  * of their agents, then of each agent's monitors by id and tasks as its
  * transcript has them, which no change of state moves.
  */
 export function backgroundItems(
   agents: readonly BackgroundAgent[],
-  clearedAt = -Infinity,
   keep?: { readonly key: number; readonly id: string },
 ): BackgroundItem[] {
   return agents
@@ -164,13 +155,11 @@ export function backgroundItems(
     ])
     .filter(
       (item) =>
-        (keep !== undefined && item.key === keep.key && item.id === keep.id) ||
-        (!leavesList(item) &&
-          // Untracked has not ended, so no prompt clears it (Q110).
-          (item.status.group === 'running' ||
-            item.status.group === 'asking' ||
-            item.status.group === 'untracked' ||
-            item.status.endedAt > clearedAt)),
+        (item.kind === 'monitor' &&
+          keep !== undefined &&
+          item.key === keep.key &&
+          item.id === keep.id) ||
+        !leavesList(item),
     )
     .sort((a, b) => a.startedAt - b.startedAt);
 }
@@ -252,7 +241,6 @@ function taskItems(agent: BackgroundAgent): BackgroundItem[] {
           status: taskStatus(subagent, startedAt, transcript),
           runtime: task.runtime,
           ...(task.model === undefined ? {} : { model: task.model }),
-          ...(task.spent === undefined ? {} : { spent: task.spent }),
           ...(subagent.callId === undefined ? {} : { callId: subagent.callId }),
         },
       ];
@@ -326,13 +314,14 @@ function taskAsking(
 /**
  * The groups each kind's items leave the list in, at once, as they end (the
  * owner's Q83 and Q86, docs/design/CHD-479.md): an `agent` once done,
- * failed or stopped, and a monitor, whose end its agent's transcript says
- * already (CHD-266). `untracked`, which a later state takes back, is not
+ * failed or stopped, a monitor, whose end its agent's transcript says
+ * already (CHD-266), and a task, whose report or failure says it, or a
+ * stop's line (docs/design/CHD-482.md). `untracked`, which a later state takes back, is not
  * ended and stays (Q110).
  */
 const LEAVES: Record<BackgroundKind, ReadonlySet<ItemStatus['group']>> = {
   monitor: new Set(['done', 'failed', 'stopped']),
-  task: new Set(),
+  task: new Set(['done', 'failed', 'stopped']),
   agent: new Set(['done', 'failed', 'stopped']),
 };
 
@@ -447,11 +436,11 @@ function agentStatus(
     case 'failed':
       return { group: 'failed', endedAt };
     case 'disconnected':
-      return { group: 'failed', endedAt, word: 'disconnected' };
+      return { group: 'failed', endedAt };
     case 'cancelled':
       return { group: 'stopped', endedAt };
     case 'ended':
-      return { group: 'stopped', endedAt, word: 'ended' };
+      return { group: 'stopped', endedAt };
     case 'untracked':
       return { group: 'untracked', endedAt };
   }

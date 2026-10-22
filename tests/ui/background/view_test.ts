@@ -142,20 +142,6 @@ test('each state says its time, an end its words, as the design table has them',
   expect(
     say(task('t', 'x', { group: 'asking', on: 'input', since: NOW - 13_000 })),
   ).toStrictEqual('● input 13s');
-  expect(
-    ['done', 'failed', 'stopped'].map((group) =>
-      say(
-        task('t', 'x', {
-          group: group as 'done',
-          endedAt: NOW - 2_000,
-        }),
-      ),
-    ),
-  ).toStrictEqual([
-    '✓ reported after 30s',
-    '✗ failed after 30s',
-    '■ stopped after 30s',
-  ]);
 });
 
 test('a row is name, kind, state and owner in columns two cells apart, the ❯ on the focused one', () => {
@@ -463,7 +449,7 @@ describe('CHD-424 tester: view layout edges', () => {
   });
 });
 
-test("an agent item's state reads as CHD-2's table words it", () => {
+test("an agent item's state reads as CHD-2's table words it, while it is listed (CHD-482)", () => {
   const say = (status: BackgroundItem['status']) =>
     stateText(
       {
@@ -476,14 +462,6 @@ test("an agent item's state reads as CHD-2's table words it", () => {
       },
       NOW,
     ).text;
-  const ended = (
-    group: 'done' | 'failed' | 'stopped',
-    word?: 'ended' | 'disconnected',
-  ) => ({
-    group,
-    endedAt: NOW - 41_000 + 124_000 - 83_000,
-    ...(word === undefined ? {} : { word }),
-  });
 
   expect(say({ group: 'running' })).toBe('running 41s');
   expect(say({ group: 'running', stopping: true })).toBe('■ stopping 41s');
@@ -496,11 +474,6 @@ test("an agent item's state reads as CHD-2's table words it", () => {
   expect(say({ group: 'asking', on: 'waiting', since: NOW - 13_000 })).toBe(
     '● waiting 13s',
   );
-  expect(say(ended('done'))).toBe('✓ done in 41s');
-  expect(say(ended('failed'))).toBe('✗ failed after 41s');
-  expect(say(ended('failed', 'disconnected'))).toBe('✗ disconnected after 41s');
-  expect(say(ended('stopped'))).toBe('■ stopped after 41s');
-  expect(say(ended('stopped', 'ended'))).toBe('■ ended after 41s');
   // Its time stands at the unknown.
   expect(say({ group: 'untracked', endedAt: NOW - 20_000 })).toBe(
     '? untracked 21s',
@@ -699,66 +672,6 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
   });
 });
 
-test("an ended task's row says its money after its state, which never gives way (CHD-373, CHD-473)", () => {
-  const spent = {
-    cost: { amount: 0.0125, currency: 'USD' },
-    tokens: { totalTokens: 2000 },
-  };
-  const ended = task(
-    't1',
-    'Fix the tokenizer',
-    { group: 'failed', endedAt: NOW },
-    { spent, startedAt: NOW - 15_000 },
-  );
-
-  expect(stateText(ended, NOW).text).toBe('✗ failed after 15s · $0.0125');
-  expect(
-    stateText({ ...ended, spent: { ...spent, estimated: true } }, NOW).text,
-  ).toBe('✗ failed after 15s · ~$0.0125');
-  // While it works, none.
-  expect(
-    stateText({ ...ended, status: { group: 'running' } }, NOW).text,
-  ).not.toContain('$');
-
-  // At any width its model, its money and its runtime all stay (CHD-473).
-  const drawn = (width: number) =>
-    text(viewRows([ended], { width, focus: undefined, now: NOW })).join(' ');
-
-  for (let width = 120; width > 30; width--) {
-    for (const part of ['task', 'fake', 'Fake Small', '$0.0125']) {
-      expect(drawn(width), `${width}`).toContain(part);
-    }
-  }
-});
-
-describe('CHD-373 S2 tester: zero and absent money in background states', () => {
-  for (const group of ['done', 'failed', 'stopped'] as const) {
-    test(`${group} retains reported zero money while absent cost stays absent`, () => {
-      const item = task(
-        'zero',
-        'Zero cost',
-        { group, endedAt: NOW },
-        {
-          spent: {
-            cost: { amount: 0, currency: 'USD' },
-            tokens: { totalTokens: 0 },
-          },
-        },
-      );
-
-      expect(stateText(item, NOW).text).toContain('$0.0000');
-      expect(
-        stateText(task('missing', 'No cost', { group, endedAt: NOW }), NOW)
-          .text,
-      ).not.toContain('$');
-      expect(
-        stateText({ ...item, spent: { ...item.spent!, estimated: true } }, NOW)
-          .text,
-      ).toContain('~$0.0000');
-    });
-  }
-});
-
 test("a task's runtime or model with CR, LF or tabs reads as spaces in every layout, no line holding a line break and no word lost (CHD-473)", () => {
   const odd = task(
     't9',
@@ -796,12 +709,11 @@ describe('CHD-473 T3 tester: complete metadata across layouts', () => {
   const item = task(
     'rich',
     'Read 日本語 files and keep every name visible',
-    { group: 'done', endedAt: NOW },
+    { group: 'running' },
     {
       runtime: 'fake\nlocal',
       model: 'Public\t👩🏽‍💻🇯🇵é model',
       owner: { name: '解析器', colour: 0 },
-      spent: { cost: { amount: 0.0125, currency: 'USD' }, estimated: true },
     },
   );
   const compact = (text: string) => text.normalize('NFC').replace(/\s/g, '');
@@ -864,28 +776,6 @@ describe('CHD-473 T3 tester: complete metadata across layouts', () => {
     }
 
     expect(layouts).toEqual(new Set([false, true]));
-  });
-
-  test('zero and missing cost stay distinct while an ended state wraps', () => {
-    for (const width of [24, 36, 46, 60, 76, 116]) {
-      const zero: BackgroundItem = {
-        ...item,
-        spent: { cost: { amount: 0, currency: 'USD' }, estimated: true },
-      };
-      const { spent: _, ...missing } = item;
-      const state = (value: BackgroundItem) =>
-        compact(
-          viewRows([value], { width, focus: undefined, now: NOW })[0]!
-            .lines.flat()
-            .filter((cell) => cell.role === 'state')
-            .map(({ text }) => text)
-            .join(''),
-        );
-
-      expect(state(zero)).toContain('~$0.0000');
-      expect(state(missing)).not.toContain('$');
-      expect(state(zero)).toContain('reportedafter32s');
-    }
   });
 
   test('kind-driven tall rows scroll through every line with stable focus and keep metadata after resizing', () => {
@@ -1275,14 +1165,14 @@ describe('↑ ↓ in a detail (CHD-481)', () => {
     expect(stepDetail([monitor('m1', 'a', ended)], ref('m1'), -1)).toBe(
       'closed',
     );
-    // A task's end keeps it listed, so an end stays an end.
+    // A task leaves as it ends too (CHD-482).
     expect(
       stepDetail(
         [task('t1', 'x', { group: 'done', endedAt: NOW })],
         ref('t1'),
         1,
       ),
-    ).toBe(undefined);
+    ).toBe('closed');
   });
 });
 

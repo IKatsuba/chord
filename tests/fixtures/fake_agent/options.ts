@@ -80,6 +80,15 @@ export const STOP_GATE =
 export const SAY_CANCELS =
   ARGS.includes('--say-cancels') || process.env.CHORD_FAKE_SAY_CANCELS === '1';
 
+/**
+ * A message another agent or chord sent is answered with the whole prompt
+ * that came, as a JSON string, `Received "<message …>…"`, so a test reads
+ * what the agent got in its `session/prompt` (CHD-482).
+ */
+export const ECHO_MESSAGES =
+  ARGS.includes('--echo-messages') ||
+  process.env.CHORD_FAKE_ECHO_MESSAGES === '1';
+
 /** The value given a flag `--name value`, or its environment variable. */
 function valueOf(flag: string, variable: string): string | undefined {
   const at = ARGS.indexOf(flag);

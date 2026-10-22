@@ -49,7 +49,13 @@ export function endedLine(entry: ItemEnded, width: number): EndedLine {
         return [
           '■',
           'dim',
-          `stopped${entry.byPerson === true ? ' with x' : ''}${after}`,
+          `stopped${
+            entry.byPerson === true
+              ? ' with x'
+              : entry.byEsc === true
+                ? ' with esc'
+                : ''
+          }${after}`,
         ];
       case 'ended':
         return [

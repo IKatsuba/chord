@@ -19,6 +19,7 @@ import {
   type MonitorsPast,
   monitorsPast,
   type EndedMonitor,
+  leftStoppedNote,
   type RunCommand,
   runMonitorCommand,
   type RunningMonitor,
@@ -294,6 +295,13 @@ interface Monitoring {
 
 const NO_PAST: MonitorsPast = { last: 0, ended: new Map(), left: [] };
 
+/**
+ * How a resumed session's agent hears of the monitors it left running: as
+ * a turn of its own once the session is up, or held for its next turn
+ * (Q129, built as its option 1 while it is open).
+ */
+const LEFT_MONITORS_TOLD: 'turn' | 'held' = 'turn';
+
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -444,6 +452,8 @@ export class Conversation {
     readonly made: number;
     readonly call: CutCall;
   }[] = [];
+  /** chord's notes held for the agent's next turn, ahead of what starts it. */
+  #notes: string[] = [];
   /** When each of the turn's calls was made, by id, from `#made`. */
   #madeAt = new Map<string, number>();
   /** Counts the calls made, never reset, so older ones always come first. */
@@ -791,6 +801,7 @@ export class Conversation {
     this.#madeAt = new Map();
     this.#servedNow = [];
     this.#cut = [];
+    this.#notes = [];
 
     this.#rouse();
 
@@ -2044,7 +2055,7 @@ export class Conversation {
 
     // The turn's work is stopped, its task agents' with it.
     for (const task of this.#tasks.values()) {
-      task.cancel();
+      task.cancel('esc');
     }
 
     const turn = this.#turn;
@@ -2546,6 +2557,20 @@ export class Conversation {
 
     this.#emit({ type: 'prompt_capabilities', image: session.takesImages() });
     this.#emit({ type: 'connected', sessionId: session.id, at: this.#now() });
+
+    // A resumed session's agent hears of the monitors it left running, which
+    // stopped with it (CHD-482); the person has the past's line already.
+    const left = this.#monitorsPast.left;
+
+    if (left.length > 0) {
+      const note = leftStoppedNote(left);
+
+      if (LEFT_MONITORS_TOLD === 'turn') {
+        this.#message({ name: 'chord' }, note);
+      } else {
+        this.#notes.push(note);
+      }
+    }
   }
 
   /**
@@ -3097,14 +3122,15 @@ export class Conversation {
     // chord's note of the calls cut off since the last turn goes ahead of
     // whatever starts this one, a message or the person's prompt.
     const cut = this.#cut.splice(0).sort((a, b) => a.made - b.made);
+    const notes = [
+      ...this.#notes.splice(0),
+      ...(cut.length === 0 ? [] : [cutNote(cut.map((each) => each.call))]),
+    ];
     const prompt =
-      cut.length === 0
+      notes.length === 0
         ? next.prompt
         : [
-            wrapMessage(
-              { name: 'chord' },
-              cutNote(cut.map((each) => each.call)),
-            ),
+            ...notes.map((note) => wrapMessage({ name: 'chord' }, note)),
             next.prompt,
           ].join('\n\n');
 

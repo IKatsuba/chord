@@ -275,10 +275,17 @@ function patched(
   // chord says a task's effort once it is up, after the block is drawn.
   const taskTold = taskOf(update);
   const spent = spentOf(update);
+  const stoppedWith = stoppedOf(update);
   const known =
     taskTold === undefined ? subagent.task : { ...subagent.task, ...taskTold };
   const task =
-    known === undefined || spent === undefined ? known : { ...known, spent };
+    known === undefined
+      ? known
+      : {
+          ...known,
+          ...(spent === undefined ? {} : { spent }),
+          ...(stoppedWith === undefined ? {} : { stoppedWith }),
+        };
 
   return {
     ...kept,
@@ -315,6 +322,12 @@ export const TASK_META = 'chord/task';
 
 /** Where a task's ending `subagent_update` carries what it spent (CHD-373). */
 export const TASK_SPENT_META = 'chord/spent';
+
+/**
+ * Where a stopped task's ending `subagent_update` says the person stopped
+ * it, and with which key (CHD-482).
+ */
+export const TASK_STOPPED_META = 'chord/stopped';
 
 /** A count of tokens: whole, and none below nothing. */
 const COUNT = z.number().int().nonnegative();
@@ -373,6 +386,13 @@ function spentOf(update: SubagentUpdate): TaskSpent | undefined {
   };
 
   return Object.keys(spent).length === 0 ? undefined : spent;
+}
+
+/** Who stopped a task, as its ending update says; none when it does not. */
+function stoppedOf(update: SubagentUpdate): TaskInfo['stoppedWith'] {
+  const with_ = update._meta?.[TASK_STOPPED_META];
+
+  return with_ === 'x' || with_ === 'esc' ? with_ : undefined;
 }
 
 /** The task a `subagent_update` describes, when chord sent it for one. */
@@ -479,9 +499,11 @@ const ITEM_ENDS: Partial<Record<SubagentState, ItemEnd>> = {
 };
 
 /**
- * The lines to add for the agent items that `entries` ended since
- * `before`: one each, unless the turn that announced it, `turn`'s while it
- * runs, says it in its own block (docs/design/CHD-479.md).
+ * The lines to add for the agent items and tasks that `entries` ended
+ * since `before`: one each, unless the turn that announced it, `turn`'s
+ * while it runs, says it in its own block (docs/design/CHD-479.md); a
+ * task's only when it was stopped, as its report or its failure is its
+ * own message (docs/design/CHD-482.md).
  */
 export function itemEndLines(
   before: readonly Entry[],
@@ -490,15 +512,24 @@ export function itemEndLines(
 ): Entry[] {
   return itemsIn(before).flatMap(({ subagent: was, turnId }): Entry[] => {
     const now = findSubagent(entries, was.id);
-    const end = now && ITEM_ENDS[now.state];
 
     if (
       now === undefined ||
-      end === undefined ||
-      !isAgentItem(now) ||
       (was.state !== 'running' && was.state !== 'untracked') ||
       (turn.status !== 'idle' && turn.turnId === turnId)
     ) {
+      return [];
+    }
+
+    if (now.task !== undefined) {
+      return now.state === 'cancelled'
+        ? [taskStopLine(now, now.task, turnId)]
+        : [];
+    }
+
+    const end = ITEM_ENDS[now.state];
+
+    if (end === undefined || !isAgentItem(now)) {
       return [];
     }
 
@@ -520,6 +551,27 @@ export function itemEndLines(
       },
     ];
   });
+}
+
+/** A stopped task's line: by its title, and the person's key that stopped it. */
+function taskStopLine(
+  subagent: Subagent,
+  task: TaskInfo,
+  turnId: string,
+): Entry {
+  return {
+    kind: 'item_ended',
+    turnId,
+    item: 'task',
+    name: task.name,
+    end: 'stopped',
+    ...(task.stoppedWith === 'x' ? { byPerson: true as const } : {}),
+    ...(task.stoppedWith === 'esc' ? { byEsc: true as const } : {}),
+    ...(subagent.startedAt === undefined
+      ? {}
+      : { startedAt: subagent.startedAt }),
+    ...(subagent.endedAt === undefined ? {} : { endedAt: subagent.endedAt }),
+  };
 }
 
 /** Every subagent among `entries`, with the turn its outermost came in. */

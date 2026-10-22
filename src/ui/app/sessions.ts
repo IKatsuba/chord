@@ -1897,7 +1897,7 @@ export function useSessions(
     } else if (item.kind === 'monitor') {
       conversationAt(item.key)?.stopMonitor(item.id, 'person');
     } else {
-      conversationAt(item.key)?.task(item.id)?.cancel();
+      conversationAt(item.key)?.task(item.id)?.cancel('x');
     }
   };
 
@@ -2238,18 +2238,6 @@ export function useSessions(
   };
 
   /**
-   * The person's prompt to session `key`: its tab's ended background items
-   * go, as a message between agents never clears them.
-   */
-  const backgroundCleared = (key: number) => {
-    const tab = agentOf(sessions.tabs, key)?.tab;
-
-    if (tab !== undefined) {
-      dispatch({ type: 'background_cleared', tab: tab.key, at: Date.now() });
-    }
-  };
-
-  /**
    * `/team new`: `typed` drawn as the person's
    * prompt in the front tab's `main`, `prompt` what its agent gets, with
    * the shell output held there ahead of it.
@@ -2264,7 +2252,6 @@ export function useSessions(
       canSend(now, typed) &&
       conversationAt(key)?.send(typed, withContext(heldContext(now), prompt))
     ) {
-      backgroundCleared(key);
       dispatch({
         type: 'in_session',
         key,
@@ -2406,7 +2393,6 @@ export function useSessions(
           agentIn(child.key, { name: child.name, colour: child.colour }),
         ),
       ],
-      all.window.backgroundCleared[tab.key],
       // The item whose detail is open stays, ended or not, until the person
       // leaves it (Q126).
       state.backgroundView?.detail,
@@ -2564,7 +2550,6 @@ export function useSessions(
         mentionsIn(text),
       )
     ) {
-      backgroundCleared(key);
       inSession({ type: 'context_sent', held: now.held });
       inSession({ type: 'images_sent', keeping: left });
       host.remember(text, imagesIn(text, sending));

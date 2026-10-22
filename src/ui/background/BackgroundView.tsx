@@ -451,8 +451,9 @@ function WorkDetail({
   const room = Math.max(1, workRows);
   const view = useRef<ScrollBoxRenderable | null>(null);
   const content = useRef<BoxRenderable | null>(null);
-  // Its lines as laid out, none until they are; where OpenTUI's scrollbox
-  // stands in them, which follows their end itself while it is at it.
+  // Its lines as laid out, none until they are, with no row to draw them in
+  // too; where OpenTUI's scrollbox stands in them, which follows their end
+  // itself while it is at it.
   const [total, setTotal] = useState<number | undefined>(undefined);
   const [at, setAt] = useState(0);
   // Where it is paged to with no row to draw it in.
@@ -514,12 +515,7 @@ function WorkDetail({
     const height = content.current?.getLayout().height;
     const box = view.current;
 
-    if (
-      workRows > 0 &&
-      height !== undefined &&
-      Number.isFinite(height) &&
-      height > 0
-    ) {
+    if (height !== undefined && Number.isFinite(height) && height > 0) {
       setTotal(height);
     }
 
@@ -609,7 +605,16 @@ function WorkDetail({
           {requestRule('↑', hidden.above, pageUp, width)}
         </text>
       )}
-      <box flexDirection='row' flexShrink={0} visible={workRows > 0}>
+      {/* With no row, still laid out at the frame's width, so its lines are
+          counted, but out of the flow and drawn clear: hidden, OpenTUI
+          would not lay it out (docs/design/CHD-487.md). */}
+      <box
+        flexDirection='row'
+        flexShrink={0}
+        {...(workRows === 0
+          ? { position: 'absolute' as const, opacity: 0 }
+          : {})}
+      >
         <scrollbox
           ref={view}
           height={Math.max(shown.shown, 1)}

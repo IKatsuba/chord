@@ -1324,6 +1324,32 @@ describe("an agent's detail in a short window keeps the frame within its cap (CH
       },
       { rows: 24, columns: 80 },
     ));
+
+  test("opened at 80x16, never a row tall, its count is at the state line's end all the same", () =>
+    withWindow(
+      async (window) => {
+        const frame = () =>
+          window.frame().slice(window.frame().indexOf('Background · '));
+
+        await send(window, 'claudebackground');
+        await window.shows("background  main's 2 agents running");
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('❯ Run the test suite');
+        await window.press('\r');
+        await window.shows('Background · 1 of 1 · ended');
+        await until('the count on the state line', () =>
+          /✓ done in \d+s · .*↑ \d+ lines? above/.test(frame()),
+        );
+        // Laid out to be counted, none of its work is drawn.
+        expect(frame()).not.toContain('⏺ Every test passed.');
+        await window.press('\x1b[5~');
+        await until('paged with no row', () =>
+          /↓ \d+ (lines? )?below/.test(frame()),
+        );
+      },
+      { rows: 16, columns: 80 },
+    ));
 });
 
 test('a detail one row tall pages its log to its last line, its blocks spaced so the scrollbox counts them (opentui#1739, CHD-487)', () =>

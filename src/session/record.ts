@@ -20,6 +20,8 @@ import type {
   ChordCall,
   ElicitationAnswer,
   ElicitationWait,
+  PlanAnswer,
+  PlanWait,
   LeftOpen,
   MessageFrom,
   ShellRun,
@@ -130,6 +132,19 @@ export type RecordEntry =
       readonly turnId: string;
       readonly id: string;
       readonly answer: ElicitationAnswer;
+    }
+  /** A plan cursor or grok put to the person (CHD-437, CHD-457). */
+  | {
+      readonly type: 'plan_asked';
+      readonly turnId: string;
+      readonly wait: PlanWait;
+    }
+  /** How a plan was answered, by its id; a record before these has none. */
+  | {
+      readonly type: 'plan_answered';
+      readonly turnId: string;
+      readonly id: string;
+      readonly answer: PlanAnswer;
     }
   /** The person interrupted a turn, which ends its subagents then. */
   | { readonly type: 'cancel'; readonly turnId: string; readonly at: number }
@@ -513,7 +528,11 @@ export function recordActions(
   const id = (turnId: string) => `history-${turnId}`;
   const reachable = answeredReachable(entries);
   const answered = new Set(
-    entries.flatMap((entry) => (entry.type === 'answered' ? [entry.id] : [])),
+    entries.flatMap((entry) =>
+      entry.type === 'answered' || entry.type === 'plan_answered'
+        ? [entry.id]
+        : [],
+    ),
   );
 
   const end = () => {
@@ -619,6 +638,34 @@ export function recordActions(
       case 'answered':
         actions.push({
           type: 'elicitation_settled',
+          turnId: id(entry.turnId),
+          id: entry.id,
+          answer: entry.answer,
+        });
+
+        break;
+      case 'plan_asked':
+        actions.push({
+          type: 'plan_requested',
+          turnId: id(entry.turnId),
+          plan: entry.wait,
+        });
+
+        // One the record never saw answered, as chord was stopped while it
+        // waited, comes back withdrawn: never waiting, never taken.
+        if (!answered.has(entry.wait.id)) {
+          actions.push({
+            type: 'plan_settled',
+            turnId: id(entry.turnId),
+            id: entry.wait.id,
+            answer: { type: 'withdrawn' },
+          });
+        }
+
+        break;
+      case 'plan_answered':
+        actions.push({
+          type: 'plan_settled',
           turnId: id(entry.turnId),
           id: entry.id,
           answer: entry.answer,
@@ -879,6 +926,15 @@ export function entryOf(
 
       return { type: 'asked', turnId: event.turnId, wait };
     }
+    case 'plan_requested':
+      return { type: 'plan_asked', turnId: event.turnId, wait: event.plan };
+    case 'plan_settled':
+      return {
+        type: 'plan_answered',
+        turnId: event.turnId,
+        id: event.id,
+        answer: event.answer,
+      };
     case 'cancel':
       return { type: 'cancel', turnId: event.turnId, at: event.at };
     case 'subagent_stopping':

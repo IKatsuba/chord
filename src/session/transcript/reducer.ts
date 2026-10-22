@@ -137,6 +137,27 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
       return elicitationRequested(state, action.turnId, action.elicitation);
     case 'elicitation_settled':
       return elicitationSettled(state, action.turnId, action.id, action.answer);
+    case 'plan_requested':
+      return (state.planAsks ?? []).some(
+        (ask) => ask.wait.id === action.plan.id,
+      )
+        ? state
+        : {
+            ...state,
+            planAsks: [
+              ...(state.planAsks ?? []),
+              { turnId: action.turnId, wait: action.plan },
+            ],
+          };
+    case 'plan_settled':
+      return {
+        ...state,
+        planAsks: (state.planAsks ?? []).map((ask) =>
+          ask.wait.id === action.id && ask.answer === undefined
+            ? { ...ask, answer: action.answer }
+            : ask,
+        ),
+      };
     case 'cancel':
       return cancelled(state, action.turnId, action.at);
     case 'subagent_stopping':

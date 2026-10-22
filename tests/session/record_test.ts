@@ -1912,3 +1912,71 @@ describe('CHD-479 U4 tester: persisted stop ordering and isolation', () => {
     ).toStrictEqual(['■ Check inner · agent · stopped after 4s']);
   });
 });
+
+describe('a plan put to the person, in the record (CHD-437, CHD-457)', () => {
+  const wait = {
+    id: 'plan-1',
+    agent: 'grok',
+    toolCallId: 'c1',
+    plan: '# Route',
+  } as const;
+  const asked: RecordEntry[] = [
+    { type: 'prompt', turnId: 't1', prompt: 'plan it', images: 0, at: 1 },
+    { type: 'plan_asked', turnId: 't1', wait },
+  ];
+  /** The plans a resumed transcript holds, and their answers. */
+  const resumed = (entries: readonly RecordEntry[]) =>
+    recordActions(entries)
+      .reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      )
+      .planAsks?.map(({ wait, answer }) => [wait.id, answer]);
+
+  test('its request and answer are written as lines of their own', () => {
+    const state = { type: 'state' } as never;
+
+    expect(
+      entryOf({ type: 'plan_requested', turnId: 't1', plan: wait }, state),
+    ).toStrictEqual({ type: 'plan_asked', turnId: 't1', wait });
+    expect(
+      entryOf(
+        {
+          type: 'plan_settled',
+          turnId: 't1',
+          id: 'plan-1',
+          answer: { type: 'kept', note: 'More tests.' },
+        },
+        state,
+      ),
+    ).toStrictEqual({
+      type: 'plan_answered',
+      turnId: 't1',
+      id: 'plan-1',
+      answer: { type: 'kept', note: 'More tests.' },
+    });
+  });
+
+  test('a settled one reopens with its answer', () => {
+    expect(
+      resumed([
+        ...asked,
+        {
+          type: 'plan_answered',
+          turnId: 't1',
+          id: 'plan-1',
+          answer: { type: 'accepted' },
+        },
+      ]),
+    ).toStrictEqual([['plan-1', { type: 'accepted' }]]);
+  });
+
+  test('one chord was stopped waiting on reopens withdrawn, never waiting and never accepted', () => {
+    expect(resumed(asked)).toStrictEqual([['plan-1', { type: 'withdrawn' }]]);
+  });
+
+  test('a record written before plans were kept reads as it did', () => {
+    expect(resumed([asked[0]!])).toBe(undefined);
+  });
+});

@@ -73,6 +73,7 @@ function heldSession() {
     heldBack: [],
     permissions: { subscribe: () => () => {} },
     elicitations: { subscribe: () => () => {} },
+    plans: { subscribe: () => () => {} },
     subscribe: () => () => {},
     history: () => [],
     // Its agent never goes on its own.
@@ -1771,6 +1772,7 @@ async function steeringStub() {
         return () => {};
       },
     },
+    plans: { subscribe: () => () => {} },
     subscribe: (listener: (update: SessionUpdate) => void) => {
       updates.push(listener);
 

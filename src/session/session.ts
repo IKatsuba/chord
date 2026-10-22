@@ -29,6 +29,7 @@ import { ENRICHERS } from './enrichers.ts';
 import { type AgentModels, isModelState, modelConfigId } from './models.ts';
 import { type AgentModes, modeConfigId } from './modes.ts';
 import { PermissionBridge } from './permissions.ts';
+import { PlanBridge } from './plan_asks.ts';
 import { type HeldBack, serversFor } from './servers.ts';
 import { dirname } from 'node:path';
 import {
@@ -175,6 +176,8 @@ export interface Session {
   readonly permissions: PermissionBridge;
   /** Forms and links the agent asks the person to fill in or open. */
   readonly elicitations: ElicitationBridge;
+  /** Plans cursor or grok puts to the person (CHD-437, CHD-457). */
+  readonly plans: PlanBridge;
   /** Agent processes this session started that have not exited yet. */
   readonly agentPids: ReadonlySet<number>;
   /** Settles once the agent's process has exited, however it came to. */
@@ -321,6 +324,7 @@ export async function openSession(
   const { agent, cwd, resume, signal } = options;
   const permissions = new PermissionBridge();
   const elicitations = new ElicitationBridge();
+  const plans = new PlanBridge();
   /** The agent's process until its exit is seen. */
   const live = new Set<number>();
   const start = agentStart(agent, options.agentCommand);
@@ -399,6 +403,7 @@ export async function openSession(
     onTraffic,
     onPermission: permissions.handler,
     onElicitation: elicitations.handler,
+    onPlan: plans.handler,
     ...(signal === undefined ? {} : { signal }),
   });
 
@@ -420,6 +425,7 @@ export async function openSession(
   const shutdown = async () => {
     permissions.close();
     elicitations.close();
+    plans.close();
     await connection.close();
   };
 
@@ -536,6 +542,7 @@ export async function openSession(
         }),
     permissions,
     elicitations,
+    plans,
     agentPids: live,
     exited: connection.exited.then(() => {}),
     gone: () => connection.gone(),
@@ -723,6 +730,7 @@ export async function openSession(
     withdraw: () => {
       permissions.close();
       elicitations.close();
+      plans.close();
     },
   };
 }

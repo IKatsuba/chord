@@ -111,3 +111,30 @@ describe('CHD-1 tester: oneshot elicitation lifecycle', () => {
     }
   });
 });
+
+test('-p puts no plan to anyone, so cursor and grok hear cancelled, never a yes (CHD-437, CHD-457)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-oneshot-plan-'));
+
+  try {
+    for (const prompt of ['cursorplan', 'grokplan']) {
+      const updates: SessionUpdate[] = [];
+
+      await runOneshot({
+        agent: 'fake',
+        cwd: dir,
+        prompt,
+        agentCommand: fakeAgentCommand(),
+        onUpdate: (update) => {
+          updates.push(update);
+        },
+        onRefused: () => {},
+        onDeclined: () => {},
+      });
+      expect(said(updates).join('')).toBe(
+        'Plan answer: {"outcome":"cancelled"}',
+      );
+    }
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});

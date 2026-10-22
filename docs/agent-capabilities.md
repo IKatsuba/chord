@@ -4068,7 +4068,15 @@ the person's own `agent`.
   single-select one becomes a permission request with a "Skip"
   (`reject_once`) option; multi-select ones are dropped.
 - `cursor/create_plan`: plan approval a client must answer. On -32601 the
-  plan counts as accepted.
+  plan counts as accepted. Its params (https://cursor.com/docs/cli/acp,
+  read 2026-10-22): `toolCallId` and `plan` (markdown) required, `name?`,
+  `overview?`, `todos` of `{id, content, status}` (status `pending`,
+  `in_progress`, `completed` or `cancelled`), `isProject?`, and
+  `phases?`, each `{name, todos}` with its todos inline in the same shape;
+  the page does not say how a phase's todos relate to the top-level ones.
+  Answers: `{outcome: "accepted", planUri?}`, `{outcome: "rejected",
+  reason?}`, `{outcome: "cancelled"}`. The agent blocks until it is
+  answered.
 - `cursor/update_todos`, `cursor/task`, `cursor/generate_image`: sent as
   requests whose errors are only logged; unanswered, the todos are lost.
 - `cursor/list_available_models`, client to agent: models with parameters.

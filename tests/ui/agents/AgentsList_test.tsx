@@ -1,6 +1,8 @@
 /** The list under the prompt drawn on its own, its times counting. */
 import { describe, expect, setSystemTime, spyOn, test } from 'bun:test';
 import { useEffect } from 'react';
+import assert from 'node:assert/strict';
+import { colour, DIM, runs } from '../../../src/ui/theme/text.ts';
 import { until } from '../app/render.tsx';
 import { draw } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
@@ -450,5 +452,107 @@ describe('working in the accent with dim, a new reply dim, in each theme (CHD-48
         setSystemTime();
       }
     });
+  }
+});
+
+describe('CHD-483 V1 tester: neighbouring states keep separate styles', () => {
+  for (const columns of [80, 120]) {
+    for (const [theme, enabled] of [
+      ['dark', true],
+      ['light', true],
+      ['light-daltonized', true],
+      ['dark-ansi', true],
+      ['light-ansi', true],
+      ['light', false],
+    ] as const) {
+      test(`${theme}, colour ${enabled}, at ${columns} columns`, async () => {
+        const level = chalk.level;
+
+        chalk.level = 3;
+
+        setSystemTime(new Date('2026-10-21T12:00:00Z'));
+
+        const now = Date.now();
+        const palette = paletteOf(theme, enabled);
+        const agents = [
+          row('解析担当', 1, {
+            picked: true,
+            wait: { watch: emptyWatch, working: now - 9_000 },
+          }),
+          row('reply', 2, {
+            wait: {
+              watch: emptyWatch,
+              stopped: now - 4_000,
+              unseen: { kind: 'replied', since: now },
+            },
+          }),
+          row('permission', 3, {
+            wait: {
+              watch: emptyWatch,
+              working: now - 9_000,
+              asking: { on: { kind: 'permission' }, since: now - 8_000 },
+            },
+          }),
+          row('input', 4, {
+            wait: {
+              watch: emptyWatch,
+              asking: {
+                on: { kind: 'input', message: 'Choose it.' },
+                since: now - 8_000,
+              },
+            },
+          }),
+          row('gone', 5, {
+            wait: { watch: emptyWatch, working: now - 9_000, exited: true },
+          }),
+          row('idle', 6, { wait: { watch: emptyWatch, stopped: now - 4_000 } }),
+        ];
+        let drawn: Awaited<ReturnType<typeof draw>> | undefined;
+
+        try {
+          drawn = await draw(
+            <Colours.Provider value={palette}>
+              <AgentsList
+                rows={agents}
+                limit={12}
+                width={columns - 4}
+                focused={false}
+              />
+            </Colours.Provider>,
+            { columns, rows: 24 },
+          );
+
+          const styles = runs(drawn.frame());
+          const check = (
+            words: string,
+            fg: string | undefined,
+            dim: boolean,
+          ) => {
+            const style = styles.find((run) => run.text.includes(words));
+
+            assert(style, `${words} is visible`);
+            expect(style.fg).toEqual(colour(fg));
+            expect(Boolean(style.attributes & DIM)).toBe(dim);
+          };
+
+          check(
+            'working 9s',
+            theme.endsWith('-ansi') ? palette.success : palette.accent,
+            true,
+          );
+          check('new reply', undefined, true);
+          check('permission 8s', palette.warning, false);
+          check('input 8s', palette.warning, false);
+          check('exited', palette.error, false);
+          check('idle 4s', undefined, true);
+        } finally {
+          await drawn?.unmount();
+
+          chalk.level = level;
+
+          setSystemTime();
+        }
+      });
+    }
   }
 });

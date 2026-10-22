@@ -6,6 +6,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
+import assert from 'node:assert/strict';
+import { colour, DIM, runs } from '../../../src/ui/theme/text.ts';
 import { readFile } from 'node:fs/promises';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { fileURLToPath } from 'node:url';
@@ -619,5 +621,109 @@ describe('CHD-471 L2 tester: inspecting a run preserves unread marks', () => {
         );
         expect(window.frame()).toContain('● permission');
       }));
+  }
+});
+
+describe('CHD-483 V1 tester: wrapped team snapshots keep tone boundaries', () => {
+  for (const columns of [80, 120]) {
+    for (const [theme, enabled] of [
+      ['light', true],
+      ['dark-ansi', true],
+      ['light-ansi', true],
+      ['light', false],
+    ] as const) {
+      test(`${theme}, colour ${enabled}, at ${columns} columns`, async () => {
+        const level = chalk.level;
+
+        chalk.level = 3;
+
+        const palette = paletteOf(theme, enabled);
+        const shown: TeamShown = {
+          kind: 'show',
+          name: 'bugfix',
+          file: '.chord/teams/bugfix.md',
+          team: {
+            description: 'Fixes a bug.',
+            body: '',
+            lead: {
+              agent: 'fake',
+              model: 'モデル-👩🏽‍💻-検証'.repeat(4),
+              mode: 'default',
+            },
+            members: [
+              {
+                name: 'guard',
+                role: 'Checks it',
+                agent: 'fake',
+                instructions: 'Check it.',
+              },
+            ],
+          },
+          running: {
+            name: 'bugfix',
+            since: 0,
+            at: 8000,
+            job: 'fix it',
+            agents: [
+              {
+                name: 'lead',
+                lead: true,
+                open: true,
+                state: { glyph: '✻', words: '✻ working 8s', tone: 'working' },
+                mark: { glyph: '✓', words: 'new reply', tone: 'dim' },
+              },
+              {
+                name: 'guard',
+                open: true,
+                state: { glyph: '●', words: 'permission 7s', tone: 'warning' },
+                mark: { glyph: '✗', words: 'turn failed', tone: 'error' },
+              },
+            ],
+          },
+        };
+        let drawn: Awaited<ReturnType<typeof draw>> | undefined;
+
+        try {
+          drawn = await draw(
+            <Colours.Provider value={palette}>
+              <TeamEntry
+                turnId='t'
+                command='team show bugfix'
+                shown={shown}
+                expanded={false}
+                width={columns - 4}
+              />
+            </Colours.Provider>,
+            { columns, rows: 40 },
+          );
+
+          const styles = runs(drawn.frame());
+          const check = (
+            words: string,
+            fg: string | undefined,
+            dim: boolean,
+          ) => {
+            const style = styles.find((run) => run.text.includes(words));
+
+            assert(style, `${words} is visible past wrapped metadata`);
+            expect(style.fg).toEqual(colour(fg));
+            expect(Boolean(style.attributes & DIM)).toBe(dim);
+          };
+
+          check(
+            '✻ working 8s',
+            theme.endsWith('-ansi') ? palette.success : palette.accent,
+            true,
+          );
+          check('new reply', undefined, true);
+          check('permission 7s', palette.warning, false);
+          check('turn failed', palette.error, false);
+        } finally {
+          await drawn?.unmount();
+
+          chalk.level = level;
+        }
+      });
+    }
   }
 });

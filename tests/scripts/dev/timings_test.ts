@@ -151,10 +151,12 @@ describe('CHD-501 tester: timing record edges', () => {
     }
   });
 
-  test('a zero baseline still needs ten seconds of change and refresh keeps the exact budget', () => {
-    expect(compare({ [A]: 0 }, { [A]: 9_999 }, [A]).moved).toStrictEqual([]);
-    expect(compare({ [A]: 0 }, { [A]: 10_000 }, [A]).moved).toStrictEqual([
-      { file: A, recorded: 0, measured: 10_000 },
+  test('a zero baseline still needs the full time threshold and refresh keeps the exact budget', () => {
+    expect(compare({ [A]: 0 }, { [A]: MOVED.ms - 1 }, [A]).moved).toStrictEqual(
+      [],
+    );
+    expect(compare({ [A]: 0 }, { [A]: MOVED.ms }, [A]).moved).toStrictEqual([
+      { file: A, recorded: 0, measured: MOVED.ms },
     ]);
     expect(
       fails(compare({}, { [A]: BUDGET_MS }, [A], { refreshing: true })),

@@ -447,7 +447,9 @@ function WorkDetail({
   const full = workHead(item, work.subagent, { width, now });
   const short = full.length + 1 > rows;
   const workRows = Math.max(0, rows - (short ? 2 : full.length));
-  // With no row, it still pages, as a row of one would.
+  // With no row, it still pages, as a row of one would: its scrollbox is
+  // laid out a row tall, out of sight, and keeps where it is read as the
+  // rows come and go.
   const room = Math.max(1, workRows);
   const view = useRef<ScrollBoxRenderable | null>(null);
   const content = useRef<BoxRenderable | null>(null);
@@ -456,18 +458,12 @@ function WorkDetail({
   // itself while it is at it.
   const [total, setTotal] = useState<number | undefined>(undefined);
   const [at, setAt] = useState(0);
-  // Where it is paged to with no row to draw it in.
-  const [parked, setParked] = useState(FOLLOWING);
   // Following its end, as it opens and once paged back to it (Q140): kept
   // so a room that changes, which the scrollbox's own following does not
   // always see through, still leaves it at its end.
   const following = useRef(true);
   const lines = total ?? 0;
-  const shown = requestView(
-    lines,
-    room,
-    following.current ? FOLLOWING : workRows === 0 ? parked : at,
-  );
+  const shown = requestView(lines, room, following.current ? FOLLOWING : at);
   // Where the scrollbox is to stand, which it is put at once laid out.
   const wanted = useRef(shown.top);
 
@@ -519,7 +515,7 @@ function WorkDetail({
       setTotal(height);
     }
 
-    if (box !== null && workRows > 0) {
+    if (box !== null) {
       // Following, at the end view as this frame lays it out. A scroll the
       // scrollbox clamps to limits it has yet to lay out lands a frame
       // later, which is asked for, as nothing else may draw one.
@@ -553,15 +549,7 @@ function WorkDetail({
     scroller.current = (step) => {
       const box = view.current;
 
-      if (workRows === 0 || box === null) {
-        setParked((top) => {
-          const next = logStep(step, lines, 1, top);
-
-          following.current = next === FOLLOWING;
-
-          return next;
-        });
-
+      if (box === null) {
         return;
       }
 
@@ -578,7 +566,7 @@ function WorkDetail({
     return () => {
       scroller.current = undefined;
     };
-  }, [scroller, lines, room, workRows]);
+  }, [scroller, lines, room]);
 
   return (
     <box marginTop={1} flexShrink={0}>

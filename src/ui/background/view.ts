@@ -208,7 +208,19 @@ export function workHead(
       continue;
     }
 
-    line.push({ ...part, text: cliTruncate(text, Math.max(1, room - used)) });
+    // A part that exactly filled the room gives its last cell to the `…`
+    // that says more was cut, rather than the line passing its room.
+    const last = line.at(-1);
+
+    if (used === room && last !== undefined) {
+      line[line.length - 1] = {
+        ...last,
+        text: cliTruncate(`${last.text}${text}`, stringWidth(last.text)),
+      };
+    } else {
+      line.push({ ...part, text: cliTruncate(text, room - used) });
+    }
+
     break;
   }
 

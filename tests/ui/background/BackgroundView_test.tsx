@@ -1356,6 +1356,64 @@ describe("an agent's detail in a short window keeps the frame within its cap (CH
       },
       { rows: 16, columns: 80 },
     ));
+
+  test('where its work is read stays as its row goes and comes back, with no key pressed after', () =>
+    withWindow(
+      async (window) => {
+        const frame = () =>
+          window.frame().slice(window.frame().indexOf('Background · '));
+
+        await send(window, 'claudebackground');
+        await window.shows("background  main's 2 agents running");
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('❯ Run the test suite');
+        await window.press('\r');
+        await window.shows('Background · 1 of 1 · ended');
+        await until('at its end', () =>
+          /⏺ Every test passed\.\s+↑ \d+ lines? above/.test(frame()),
+        );
+
+        // To its top with no row, then a row given back.
+        await window.resize({ columns: 80, rows: 16 });
+        await until('the count on the state line', () =>
+          /✓ done in \d+s · .*↑ \d+ lines? above/.test(frame()),
+        );
+        await window.press('\x1b[H');
+        await until('at its top with no row', () =>
+          /✓ done in \d+s · .*↓ \d+ lines? below/.test(frame()),
+        );
+        await window.resize({ columns: 80, rows: 18 });
+        await until('its top in the one row', () =>
+          /│ › Run bun test.*↓ \d+ lines? below/.test(frame()),
+        );
+
+        // Within it, three pages up from the end, through no row and back:
+        // more than a line from the end at either width, which wrap wider
+        // with no row. Within a line of it, a scrollbox whose lines change
+        // follows the end again, as OpenTUI's does.
+        await window.press(END);
+        await window.press('\x1b[5~');
+        await window.press('\x1b[5~');
+        await window.press('\x1b[5~');
+        await until('three pages up from its end', () =>
+          /↑ \d+ above · ↓ 3 below/.test(frame()),
+        );
+
+        const paged = frame().match(/↑ \d+ above · ↓ 3 below/)![0];
+
+        await window.resize({ columns: 80, rows: 16 });
+        await until('within it with no row', () =>
+          /✓ done in \d+s · .*↓ \d+ (lines? )?below/.test(frame()),
+        );
+        await window.resize({ columns: 80, rows: 18 });
+        await until('the same page in the one row', () =>
+          frame().includes(paged),
+        );
+        expect(frame()).not.toContain('⏺ Every test passed.');
+      },
+      { rows: 18, columns: 80 },
+    ));
 });
 
 test('a detail one row tall pages its log to its last line, its blocks spaced so the scrollbox counts them (opentui#1739, CHD-487)', () =>

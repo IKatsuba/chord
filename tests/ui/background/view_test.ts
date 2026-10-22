@@ -1437,3 +1437,47 @@ test("in a short room the state line takes one line, cut with …, leaving the w
   expect(stringWidth(text(short[1]!))).toBeLessThanOrEqual(24);
   expect(text(short[1]!)).toMatch(/^working 32s · .*…$/);
 });
+
+test("a short room's state line never passes the cells left it, a part that exactly fills them giving its last to the … (CHD-487)", () => {
+  const item = task(
+    't',
+    'Fix the tokenizer',
+    { group: 'running' },
+    { owner: CODER, runtime: 'bun', model: 'fake' },
+  );
+  const subagent = {
+    id: 't',
+    state: 'running',
+    entries: [],
+    plan: [],
+  } as unknown as Parameters<typeof workHead>[1];
+  const text = (line: readonly ViewCell[]) =>
+    line.map((cell) => cell.text).join('');
+  const whole = text(
+    workHead(item, subagent, { width: 200, now: NOW, short: true })[1]!,
+  );
+
+  for (let width = 1; width <= stringWidth(whole) + 2; width++) {
+    for (let reserve = 0; reserve < width; reserve++) {
+      const line = text(
+        workHead(item, subagent, { width, now: NOW, short: true, reserve })[1]!,
+      );
+
+      expect(stringWidth(line)).toBeLessThanOrEqual(width - reserve);
+      expect(line === whole || line.endsWith('…')).toBe(true);
+    }
+  }
+
+  // The state alone fills the room: it ends with the … the rest was cut to.
+  const state = whole.slice(0, whole.indexOf(' · '));
+
+  expect(
+    text(
+      workHead(item, subagent, {
+        width: stringWidth(state),
+        now: NOW,
+        short: true,
+      })[1]!,
+    ),
+  ).toBe(`${state.slice(0, -1)}…`);
+});

@@ -476,12 +476,13 @@ function errorOf(state: StateUpdate | null | undefined): string | undefined {
 }
 
 /**
- * Whether a subagent is a background `agent` item: one announced with
- * `capabilities.cancel`, which can be stopped alone. The rule is open with
- * the owner (Q40), so it is here alone.
+ * Whether a subagent is a background `agent` item: every one its agent
+ * announced on a session of its own, claude's, codex's and cursor's, which
+ * chord's own tasks are not; one with no `capabilities.cancel` is an item
+ * that offers no stop (the owner's Q135, CHD-487).
  */
 export function isAgentItem(subagent: Subagent): boolean {
-  return subagent.task === undefined && subagent.offeredCancel === true;
+  return subagent.task === undefined;
 }
 
 /** An agent item's name: its short task, else its title. */

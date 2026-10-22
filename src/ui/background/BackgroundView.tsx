@@ -23,7 +23,6 @@ import type { BackgroundGroup, BackgroundItem } from './background.ts';
 import {
   detailLines,
   edgeMarked,
-  focusedItem,
   hintLines,
   type ItemRef,
   laidAt,
@@ -71,10 +70,10 @@ export function backgroundRowLimit(windowRows: number, hintHeight = 1): number {
 }
 
 /**
- * Which keys the frame's hint names: on a row, enter to the call, or on a
- * monitor's row to its details; in a detail, its own (CHD-481).
+ * Which keys the frame's hint names: on a row, enter to its details; in a
+ * detail, its own (CHD-481, CHD-487).
  */
-export type HintMode = 'call' | 'details' | 'detail' | 'ended';
+export type HintMode = 'details' | 'detail' | 'ended';
 
 /** Whether `item` has ended, as an open detail keeps one until it is left. */
 function ended(item: BackgroundItem | undefined): boolean {
@@ -104,9 +103,7 @@ export function hintMode(
       : 'detail';
   }
 
-  return focusedItem(items, view?.focus)?.kind === 'monitor'
-    ? 'details'
-    : 'call';
+  return 'details';
 }
 
 /**
@@ -115,7 +112,7 @@ export function hintMode(
  */
 export function useBackgroundHint(
   hint: string | undefined,
-  mode: HintMode = 'call',
+  mode: HintMode = 'details',
 ): string {
   const stop = useHintKey('agents:close');
   const close = useCloseHint();
@@ -131,11 +128,7 @@ export function useBackgroundHint(
           mode === 'detail' ? stopping : undefined,
           back,
         )
-      : hintOf(
-          mode === 'details' ? 'Enter for details' : 'Enter to go to its call',
-          stopping,
-          close,
-        ))
+      : hintOf('Enter for details', stopping, close))
   );
 }
 

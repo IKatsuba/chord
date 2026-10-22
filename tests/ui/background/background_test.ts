@@ -18,6 +18,7 @@ import {
   type ItemStatus,
   backgroundItems,
   callPlace,
+  itemSubagent,
   leavesList,
   summaryGroups,
   summaryLines,
@@ -180,7 +181,7 @@ describe('the items', () => {
     );
   });
 
-  test('a task leaves at once however it ends, its detail open or not; a monitor whose detail is open stays (CHD-482, Q126)', () => {
+  test("a task leaves at once however it ends; its open detail keeps it, as a monitor's and an agent's do (CHD-482, Q126, Q136)", () => {
     const items = (
       state: Subagent['state'],
       keep?: { key: number; id: string },
@@ -202,8 +203,8 @@ describe('the items', () => {
     ]);
     expect(
       ends.map((state) => items(state, { key: 1, id: 't' }).length),
-    ).toStrictEqual([0, 0, 0, 0]);
-    // An agent too; only a monitor's open detail keeps it.
+    ).toStrictEqual([1, 1, 1, 1]);
+    // An agent too, while its detail is open (CHD-487).
     expect(
       backgroundItems(
         [
@@ -214,8 +215,8 @@ describe('the items', () => {
           }),
         ],
         { key: 1, id: 'a' },
-      ),
-    ).toStrictEqual([]);
+      ).map(({ id }) => id),
+    ).toStrictEqual(['a']);
   });
 
   test('a task asking for a permission or an input counts from when it asked, its oldest request first', () => {
@@ -717,14 +718,15 @@ function claude(
 }
 
 describe('agent items', () => {
-  test('a subagent that offered its own cancel is an agent item, named by its short task; one that never did is not', () => {
+  test('every subagent its agent announced is an agent item, named by its short task; one that offered no cancel stops nothing (Q135)', () => {
     const items = backgroundItems([
       agent(1, {
         transcript: withEntries([
           claude('a', 10, {
             entries: [claude('g', 12, {}, ['description'])],
           }),
-          // Codex's draft form, and a replayed one, offer none.
+          // Codex's draft form, and a replayed one, offer none: an item
+          // still, that offers no stop (CHD-487).
           claude('b', 11, {}, ['cancellable', 'offeredCancel']),
           task('t', 'Fix the tokenizer', 13),
           // Lost its cancel since: still an item, with no stop.
@@ -737,6 +739,7 @@ describe('agent items', () => {
       items.map(({ kind, name, stoppable }) => ({ kind, name, stoppable })),
     ).toStrictEqual([
       { kind: 'agent', name: 'Find a', stoppable: true },
+      { kind: 'agent', name: 'Find b', stoppable: false },
       { kind: 'agent', name: 'g (Explore)', stoppable: true },
       { kind: 'task', name: 'Fix the tokenizer', stoppable: undefined },
       { kind: 'agent', name: 'Find l', stoppable: false },
@@ -1385,5 +1388,33 @@ describe('a monitor item keeps what its detail says (CHD-481)', () => {
       },
     ]);
     expect('lastEvent' in items[0]!).toStrictEqual(false);
+  });
+});
+
+describe("an agent's or a task's detail (CHD-487)", () => {
+  test('its item stays while its detail is open, ended or not, and leaves once the detail is left (Q136)', () => {
+    const ended = agent(1, {
+      transcript: withEntries([
+        claude('a', 10, { state: 'completed', endedAt: 20 }),
+        claude('b', 11, {}, ['cancellable', 'offeredCancel']),
+      ]),
+    });
+
+    expect(backgroundItems([ended]).map(({ id }) => id)).toStrictEqual(['b']);
+    expect(
+      backgroundItems([ended], { key: 1, id: 'a' }).map(({ id }) => id),
+    ).toStrictEqual(['a', 'b']);
+  });
+
+  test("its subagent is found at any depth, an agent's and a task's alike, none for a monitor", () => {
+    const entries = withEntries([
+      claude('a', 10, { entries: [claude('g', 12)] }),
+      task('t', 'Fix the tokenizer', 13),
+    ]).entries;
+
+    expect(itemSubagent(entries, { kind: 'agent', id: 'g' })?.id).toBe('g');
+    expect(itemSubagent(entries, { kind: 'task', id: 't' })?.id).toBe('t');
+    expect(itemSubagent(entries, { kind: 'agent', id: 'x' })).toBe(undefined);
+    expect(itemSubagent(entries, { kind: 'monitor', id: 'a' })).toBe(undefined);
   });
 });

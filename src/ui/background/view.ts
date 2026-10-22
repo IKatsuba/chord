@@ -9,6 +9,10 @@ import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { endSentence, endWord, timeoutWords } from '../../session/monitors.ts';
+import type { Subagent } from '../../session/transcript/types.ts';
+import { requestStep, requestView } from '../dialogs/permission.ts';
+import { toolUses } from '../transcript/agents/subagents.ts';
+import type { ScrollStep } from '../transcript/scroll.ts';
 import { wrapLine } from '../transcript/message.ts';
 import {
   type BackgroundGroup,
@@ -102,6 +106,74 @@ export function stepDetail(
   );
 }
 
+/**
+ * Where a log that follows its end, an agent's or a task's detail, is
+ * read from: its end, as work comes (CHD-487, Q140).
+ */
+export const FOLLOWING = Number.POSITIVE_INFINITY;
+
+/**
+ * Where `step` takes a log of `total` lines in `room` from `top`, under
+ * CHD-246's rule: back to following once it reaches the end, and `end`
+ * back to it always (CHD-487).
+ */
+export function logStep(
+  step: ScrollStep,
+  total: number,
+  room: number,
+  top: number,
+): number {
+  if (step === 'bottom') {
+    return FOLLOWING;
+  }
+
+  const next = requestStep(step, total, room, top);
+
+  return requestView(total, room, next).below ? next : FOLLOWING;
+}
+
+/**
+ * The two lines pinned on top of an agent's or a task's detail, which the
+ * title, naming no item, leaves to say whose log it is (CHD-487, Q139):
+ * its description, then its state in its colour, its tool uses, a task's
+ * kind and its owner, dotted, at `width`.
+ */
+export function workHead(
+  item: BackgroundItem,
+  subagent: Subagent,
+  { width, now }: { readonly width: number; readonly now: number },
+): ViewCell[][] {
+  const state = stateText(item, now);
+  const uses = toolUses(subagent);
+
+  return [
+    ...wrapped(oneLine(stripAnsi(item.name)), Math.max(1, width)).map(
+      (text): ViewCell[] => [{ text, role: 'name' }],
+    ),
+    ...dotted(
+      [
+        { text: oneLine(state.text), role: 'state', group: state.group },
+        {
+          text: `${uses} ${uses === 1 ? 'tool use' : 'tool uses'}`,
+          role: 'kind',
+        },
+        ...(item.kind === 'task'
+          ? [
+              {
+                text: ['task', item.runtime, item.model]
+                  .filter((part) => part !== undefined)
+                  .join(' · '),
+                role: 'kind' as const,
+              },
+            ]
+          : []),
+        { text: ownerText(item), role: 'owner' },
+      ],
+      width,
+    ),
+  ];
+}
+
 /** The hint line on an agent item whose agent offers no stop of its own. */
 export const NO_STOP_HINT = 'this agent offers no stop';
 
@@ -168,8 +240,8 @@ export function stateText(
         group: 'asking',
       };
     default: {
-      // Only a monitor is drawn once ended, in its detail until the person
-      // leaves it (Q126); every other kind leaves as it ends (CHD-482).
+      // An item is drawn once ended only in its detail, until the person
+      // leaves it (Q126, Q136); a row leaves as it ends (CHD-482).
       const ran = after(status.endedAt - item.startedAt);
       const word =
         status.end === undefined ? status.group : endWord(status.end);

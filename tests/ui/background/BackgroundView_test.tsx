@@ -116,6 +116,9 @@ test("enter on the second task of a group puts that task's own row on top, not t
     await window.shows(' Background · 2 in this tab');
     await window.press('j');
     await window.shows('❯ Watch the deploy');
+    // Its detail first, then its call from there (CHD-487).
+    await window.press('\r');
+    await window.shows('Enter to go to its call');
     await window.press('\r');
     await until('the second task on top', () =>
       /^ +└─ .*Watch the deploy/.test(window.frame().split('\n')[0]!),
@@ -1049,7 +1052,7 @@ describe('CHD-481 Q128 tester: rebound detail boundaries', () => {
   });
 });
 
-test('a task that ends while its detail is open leaves at once, the detail going to the item that takes its place (CHD-482)', () =>
+test('a task that ends while its detail is open stays in it until left, then leaves (CHD-482, Q136)', () =>
   withBackground(
     async (window) => {
       await ready(window);
@@ -1065,9 +1068,10 @@ test('a task that ends while its detail is open leaves at once, the detail going
       await window.press(DOWN);
       await window.shows('Background · 2 of 2');
       await window.press('x');
-      await window.shows('Background · m1, 1 of 1');
+      await window.shows('Background · 2 of 2 · ended');
+      await window.press(ESC);
+      await window.shows('Background · 1 in this tab');
       await window.shows('■ Watch the build · task · stopped with x after');
-      expect(window.frame()).not.toContain('· ended');
     },
     { rows: 40, columns: 120 },
   ));
@@ -1122,4 +1126,37 @@ describe('CHD-482 U3 tester: a later turn stops its running task with esc', () =
       }
     });
   }
+});
+
+describe("an agent's or a task's row opens its detail (CHD-487)", () => {
+  test("enter on an agent's row opens its detail, and enter in it goes to its call (Q134)", () =>
+    withWindow(async (window) => {
+      await send(window, 'claudebackground');
+      await window.shows("background  main's 2 agents running");
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Run the test suite');
+      await window.shows('Enter for details · x to stop · Esc to close');
+      await window.press('\r');
+      await window.shows('Background · ');
+      await window.shows(
+        'Enter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back',
+      );
+      await window.press('\r');
+      await until(
+        'the view closed on its call',
+        () => !window.frame().includes('Background · '),
+      );
+    }));
+
+  test("codex's subagents, which offer no cancel, are rows too, and x on one says so (Q135)", () =>
+    withWindow(async (window) => {
+      await send(window, 'subagent');
+      await window.shows('background ');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ ');
+      await window.press('x');
+      await window.shows('this agent offers no stop');
+    }));
 });

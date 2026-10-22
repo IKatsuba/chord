@@ -137,9 +137,9 @@ export interface BackgroundAgent {
 /**
  * The tab's items, oldest first, each keeping its place as it changes: the
  * running, asking and untracked ones, as every kind leaves once it ends
- * (CHD-479, CHD-482); and `keep`, a monitor whose detail is open, ended
- * or not, until the person leaves it (CHD-481, Q126), as an agent or a task
- * leaves at once even then. Two that started in the same millisecond keep the order
+ * (CHD-479, CHD-482); and `keep`, the item whose detail is open, ended
+ * or not, until the person leaves it (CHD-481, Q126; an agent's or a task's
+ * too, Q136). Two that started in the same millisecond keep the order
  * of their agents, then of each agent's monitors by id and tasks as its
  * transcript has them, which no change of state moves.
  */
@@ -155,10 +155,7 @@ export function backgroundItems(
     ])
     .filter(
       (item) =>
-        (item.kind === 'monitor' &&
-          keep !== undefined &&
-          item.key === keep.key &&
-          item.id === keep.id) ||
+        (keep !== undefined && item.key === keep.key && item.id === keep.id) ||
         !leavesList(item),
     )
     .sort((a, b) => a.startedAt - b.startedAt);
@@ -660,6 +657,36 @@ export function callPlace(
       }
 
       return { entry: at, target };
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * The subagent an agent's or a task's item stands for, at any depth of
+ * `entries`, whose work its detail draws (CHD-487); none for a monitor.
+ */
+export function itemSubagent(
+  entries: readonly Entry[],
+  item: Pick<BackgroundItem, 'kind' | 'id'>,
+): Subagent | undefined {
+  if (item.kind === 'monitor') {
+    return undefined;
+  }
+
+  for (const entry of entries) {
+    if (entry.kind !== 'subagent') {
+      continue;
+    }
+
+    const found =
+      entry.subagent.id === item.id
+        ? entry.subagent
+        : itemSubagent(entry.subagent.entries, item);
+
+    if (found !== undefined) {
+      return found;
     }
   }
 

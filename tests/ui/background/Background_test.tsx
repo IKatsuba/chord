@@ -589,6 +589,9 @@ for (const size of [
         expect(frame).not.toContain(words);
       }
 
+      // Its detail first, then its call from there (CHD-487).
+      await window.press('\r');
+      await window.shows('Enter to go to its call');
       await window.press('\r');
       // At the transcript's end, it goes as high as scrolling allows.
       await until("the view to close on the watcher's own row", () =>
@@ -1029,7 +1032,7 @@ describe('CHD-473 the frame says its hint, or an error in its place, whole', () 
 
       expect(bottom - top + 1).toBeLessThanOrEqual(12);
       expect(inside(lines[bottom - 2]!)).toBe(
-        'Enter to go to its call · x to stop ·',
+        'Enter for details · x to stop ·',
       );
       expect(inside(lines[bottom - 1]!)).toBe('Esc to close');
       expect(drawn.frame()).toContain('❯ task 0');

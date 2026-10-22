@@ -4,7 +4,10 @@ import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
   detailLines,
   focusAfter,
+  FOLLOWING,
+  logStep,
   stepDetail,
+  workHead,
   hintLines,
   laidAt,
   moveView,
@@ -1249,5 +1252,68 @@ describe("no detail line is wider than its width, every part's role kept, at any
       '· started 4m ago ·',
       'timeout 1h ·',
     ]);
+  });
+});
+
+describe("an agent's or a task's detail (CHD-487)", () => {
+  test('its log opens at its end, following; paging up leaves it, paging back to the end or end follows again (Q140)', () => {
+    // 30 lines in a room of 10.
+    const up = logStep('page_up', 30, 10, FOLLOWING);
+
+    expect(up).toBeLessThan(30);
+    expect(logStep('page_up', 30, 10, up)).toBeLessThan(up);
+    expect(logStep('page_down', 30, 10, up)).toBe(FOLLOWING);
+    expect(logStep('bottom', 30, 10, 0)).toBe(FOLLOWING);
+    expect(logStep('top', 30, 10, FOLLOWING)).toBe(0);
+    // A log that fits follows whatever the key.
+    expect(logStep('page_up', 5, 10, FOLLOWING)).toBe(FOLLOWING);
+  });
+
+  const plain = (lines: readonly (readonly ViewCell[])[]) =>
+    lines.map((line) => line.map(({ text }) => text).join(''));
+  const subagent = {
+    id: 'a',
+    state: 'running',
+    entries: [],
+    plan: [],
+  } as unknown as Parameters<typeof workHead>[1];
+
+  test("its pinned lines: the description, then its state, tool uses and owner; a task's kind among them (Q139)", () => {
+    const agent: BackgroundItem = {
+      kind: 'agent',
+      id: 'a',
+      key: 1,
+      name: 'Run the test suite',
+      startedAt: NOW - 41_000,
+      status: { group: 'running' },
+      stoppable: true,
+    };
+
+    expect(
+      plain(workHead(agent, subagent, { width: 116, now: NOW })),
+    ).toStrictEqual(['Run the test suite', 'running 41s · 0 tool uses · main']);
+    expect(
+      plain(
+        workHead(
+          task(
+            't',
+            'Fix the tokenizer',
+            { group: 'running' },
+            { owner: CODER },
+          ),
+          subagent,
+          { width: 116, now: NOW },
+        ),
+      ),
+    ).toStrictEqual([
+      'Fix the tokenizer',
+      'working 32s · 0 tool uses · task · fake · Fake Small · coder',
+    ]);
+    // Narrow, its parts wrap after a ` · `, no line wider than its width.
+    expect(
+      workHead(agent, subagent, { width: 20, now: NOW }).every(
+        (line) => stringWidth(line.map(({ text }) => text).join('')) <= 20,
+      ),
+    ).toBe(true);
   });
 });

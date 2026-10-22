@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -6,8 +7,12 @@ import {
   Conversation,
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
-import { PlanBridge, planResponse } from '../../src/session/plan_asks.ts';
-import { openSession } from '../../src/session/session.ts';
+import {
+  type PendingPlan,
+  PlanBridge,
+  planResponse,
+} from '../../src/session/plan_asks.ts';
+import { openSession, type Session } from '../../src/session/session.ts';
 import type { PlanWait } from '../../src/session/transcript/types.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 
@@ -294,4 +299,191 @@ describe('a plan through the session layer, on the fake (CHD-437, CHD-457)', () 
       // The agent had no answer it could say: none but cancelled was sent.
       expect(heard(events)).toBe(undefined);
     }));
+});
+
+describe('CHD-437 U1 tester: stale answers and independent waits', () => {
+  const cursor = {
+    agent: 'cursor',
+    toolCallId: 'same',
+    plan: '# Route',
+    todos: [],
+  } as const;
+  const grok = {
+    agent: 'grok',
+    sessionId: 'g',
+    toolCallId: 'same',
+    plan: '# Route',
+  } as const;
+
+  test('withdrawing one reused call id does not settle another; late acceptance cannot replace cancellation', async () => {
+    const bridge = new PlanBridge();
+    const pending: PendingPlan[] = [];
+
+    bridge.subscribe((request) => pending.push(request));
+
+    const first = new AbortController();
+    const a = bridge.handler(cursor, first.signal);
+    const b = bridge.handler(grok, new AbortController().signal);
+
+    expect(pending).toHaveLength(2);
+    expect(pending[0]!.wait.id).not.toBe(pending[1]!.wait.id);
+    first.abort();
+    pending[0]!.answer({ type: 'accepted' });
+    pending[1]!.answer({ type: 'kept', note: 'Keep 日本語 and \n add tests.' });
+    expect(await a).toEqual({ outcome: 'cancelled' });
+    expect(await b).toEqual({
+      outcome: 'revise',
+      feedback: 'Keep 日本語 and \n add tests.',
+    });
+    bridge.close();
+  });
+
+  test('an explicit answer wins once; pre-aborted and closed bridges never offer a new yes', async () => {
+    const bridge = new PlanBridge();
+    const pending: PendingPlan[] = [];
+
+    bridge.subscribe((request) => pending.push(request));
+
+    const stop = new AbortController();
+    const answer = bridge.handler(grok, stop.signal);
+
+    pending[0]!.answer({ type: 'accepted' });
+    stop.abort();
+    pending[0]!.answer({ type: 'left' });
+    expect(await answer).toEqual({ outcome: 'approved' });
+    expect(await bridge.handler(cursor, AbortSignal.abort())).toEqual({
+      outcome: 'cancelled',
+    });
+    bridge.close();
+    bridge.subscribe((request) => pending.push(request));
+    expect(await bridge.handler(grok, new AbortController().signal)).toEqual({
+      outcome: 'cancelled',
+    });
+    expect(pending).toHaveLength(1);
+  });
+
+  test('two fake sessions keep their answers apart and a cancelled ask cannot answer a later one', () =>
+    withAgent((a, ae) =>
+      withAgent(async (b, be) => {
+        a.send('cursorplan');
+        b.send('grokplan');
+        await until(() => asked(ae).length === 1 && asked(be).length === 1);
+
+        const old = asked(ae)[0]!.id;
+
+        a.interrupt();
+        await until(() =>
+          ae.some(
+            (event) =>
+              event.type === 'result' && event.result.status === 'cancelled',
+          ),
+        );
+        b.answerPlan(old, { type: 'accepted' });
+        expect(
+          be.filter((event) => event.type === 'plan_settled'),
+        ).toHaveLength(0);
+        b.answerPlan(asked(be)[0]!.id, { type: 'kept', note: 'More tests.' });
+        await until(() => heard(be) !== undefined);
+        expect(JSON.parse(heard(be)!)).toEqual({
+          outcome: 'revise',
+          feedback: 'More tests.',
+        });
+        a.send('planheard');
+        await until(() => heard(ae) !== undefined);
+        expect(JSON.parse(heard(ae)!)).toEqual({ outcome: 'cancelled' });
+
+        const start = ae.length;
+
+        a.send('cursorplan');
+        await until(() => asked(ae).length === 2);
+        a.answerPlan(old, { type: 'accepted' });
+        expect(
+          ae.filter((event) => event.type === 'plan_settled'),
+        ).toHaveLength(1);
+        a.answerPlan(asked(ae)[1]!.id, { type: 'accepted' });
+        await until(() => heard(ae.slice(start)) !== undefined);
+        expect(JSON.parse(heard(ae.slice(start))!)).toEqual({
+          outcome: 'accepted',
+        });
+      }),
+    ));
+
+  test('clear withdraws the old ask and its late acceptance cannot affect the replacement session', () =>
+    withAgent(async (conversation, events) => {
+      conversation.send('cursorplan');
+      await until(() => asked(events).length === 1);
+
+      const old = asked(events)[0]!.id;
+
+      await conversation.clear();
+      await until(
+        () => events.filter((event) => event.type === 'connected').length === 2,
+      );
+      conversation.answerPlan(old, { type: 'accepted' });
+      expect(
+        events.find((event) => event.type === 'plan_settled'),
+      ).toMatchObject({ id: old, answer: { type: 'withdrawn' } });
+
+      const start = events.length;
+
+      conversation.send('grokplan');
+      await until(() => asked(events).length === 2);
+      conversation.answerPlan(asked(events)[1]!.id, { type: 'left' });
+      await until(() => heard(events.slice(start)) !== undefined);
+      expect(JSON.parse(heard(events.slice(start))!)).toEqual({
+        outcome: 'abandoned',
+      });
+    }));
+});
+
+describe('CHD-437 U1 tester: the asking fake exits', () => {
+  for (const scenario of ['cursorplan', 'grokplan']) {
+    test(`${scenario}: an exited agent cannot leave an approvable request behind`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-plan-exit-'));
+      const events: ConversationEvent[] = [];
+      let owned: Session | undefined;
+      const conversation = new Conversation(
+        async (signal) => {
+          owned = await openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(),
+            signal,
+          });
+
+          return owned;
+        },
+        (event) => events.push(event),
+        Date.now,
+      );
+
+      try {
+        conversation.start();
+        await until(() => events.some((event) => event.type === 'connected'));
+        conversation.send(scenario);
+        await until(() => asked(events).length === 1);
+
+        const id = asked(events)[0]!.id;
+        const pid = owned?.agentPids.values().next().value;
+
+        assert(typeof pid === 'number', 'the opened fake owns a process');
+        process.kill(pid, 'SIGKILL');
+        await until(() =>
+          events.some((event) => event.type === 'plan_settled'),
+        );
+
+        const settled = events.filter((event) => event.type === 'plan_settled');
+
+        expect(settled).toHaveLength(1);
+        expect(['cancelled', 'withdrawn']).toContain(settled[0]!.answer.type);
+        conversation.answerPlan(id, { type: 'accepted' });
+        expect(events.filter((event) => event.type === 'plan_settled')).toEqual(
+          settled,
+        );
+      } finally {
+        await conversation.close();
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
 });

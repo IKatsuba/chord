@@ -1980,3 +1980,184 @@ describe('a plan put to the person, in the record (CHD-437, CHD-457)', () => {
     expect(resumed([asked[0]!])).toBe(undefined);
   });
 });
+
+describe('CHD-437 U1 tester: plans replay without granting fresh acceptance', () => {
+  const replay = (entries: readonly RecordEntry[]) =>
+    recordActions(entries).reduce(
+      (state, action) =>
+        action.type === 'usage' ? state : reduceTranscript(state, action),
+      emptyTranscript,
+    );
+
+  test('reusing the call id in a later turn does not copy the earlier accepted answer', () => {
+    const state = replay([
+      { type: 'prompt', turnId: 'one', prompt: 'plan', images: 0, at: 1 },
+      {
+        type: 'plan_asked',
+        turnId: 'one',
+        wait: {
+          id: 'first',
+          agent: 'cursor',
+          toolCallId: 'same',
+          plan: '# First',
+        },
+      },
+      {
+        type: 'plan_answered',
+        turnId: 'one',
+        id: 'first',
+        answer: { type: 'accepted' },
+      },
+      { type: 'prompt', turnId: 'two', prompt: 'again', images: 0, at: 2 },
+      {
+        type: 'plan_asked',
+        turnId: 'two',
+        wait: {
+          id: 'second',
+          agent: 'grok',
+          toolCallId: 'same',
+          plan: '# Second',
+        },
+      },
+    ]);
+
+    expect(
+      state.planAsks?.map(({ wait, answer }) => [wait.id, answer]),
+    ).toEqual([
+      ['first', { type: 'accepted' }],
+      ['second', { type: 'withdrawn' }],
+    ]);
+  });
+
+  test('legacy tool plans and ACP lists stay history without becoming approval asks', () => {
+    const state = replay([
+      { type: 'prompt', turnId: 'old', prompt: 'plan it', images: 0, at: 1 },
+      {
+        type: 'update',
+        turnId: 'old',
+        at: 2,
+        update: {
+          sessionUpdate: 'plan',
+          entries: [
+            {
+              content: 'Keep the original list',
+              priority: 'high',
+              status: 'pending',
+            },
+          ],
+        },
+      },
+      {
+        type: 'update',
+        turnId: 'old',
+        at: 3,
+        update: {
+          sessionUpdate: 'tool_call',
+          toolCallId: 'old-plan',
+          title: 'ExitPlanMode',
+          kind: 'switch_mode',
+          status: 'completed',
+          content: [
+            {
+              type: 'content',
+              content: { type: 'text', text: '# Original plan' },
+            },
+          ],
+        },
+      },
+      {
+        type: 'result',
+        turnId: 'old',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+    ]);
+
+    expect(state.planAsks).toBeUndefined();
+    expect(state.plan).toEqual([
+      {
+        content: 'Keep the original list',
+        priority: 'high',
+        status: 'pending',
+      },
+    ]);
+    expect(JSON.stringify(state.entries)).toContain('# Original plan');
+  });
+
+  test('actual fake cursor acceptance and grok feedback retain their distinct answers on disk', () =>
+    withDir(async (dir) => {
+      const events: ConversationEvent[] = [];
+      const conversation = new Conversation(
+        (signal) =>
+          openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(),
+            signal,
+          }),
+        (event) => events.push(event),
+        Date.now,
+        {},
+        new FileRecording(join(dir, 'state'), () => {}),
+      );
+
+      const waitFor = async (check: () => boolean) => {
+        const by = Date.now() + 10_000;
+
+        while (!check()) {
+          assert(Date.now() < by, 'timed out waiting for recorded plan');
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      };
+
+      try {
+        conversation.start();
+        await waitFor(() => events.some((event) => event.type === 'connected'));
+
+        for (const [index, [scenario, answer]] of (
+          [
+            ['cursorplan', { type: 'accepted' }],
+            ['grokplan', { type: 'kept', note: 'More 日本語 tests.' }],
+          ] as const
+        ).entries()) {
+          conversation.send(scenario);
+          await waitFor(
+            () =>
+              events.filter((event) => event.type === 'plan_requested')
+                .length ===
+              index + 1,
+          );
+
+          const wait = events.flatMap((event) =>
+            event.type === 'plan_requested' ? [event.plan] : [],
+          )[index]!;
+
+          conversation.answerPlan(wait.id, answer);
+          await waitFor(
+            () =>
+              events.filter((event) => event.type === 'result').length ===
+              index + 1,
+          );
+        }
+      } finally {
+        await conversation.close();
+      }
+
+      const entries = await readPast((await theRecord(dir)).path);
+
+      expect(
+        entries.filter((entry) => entry.type === 'plan_asked'),
+      ).toHaveLength(2);
+      expect(
+        entries.filter((entry) => entry.type === 'plan_answered'),
+      ).toHaveLength(2);
+      expect(
+        replay(entries).planAsks?.map(({ wait, answer }) => ({
+          agent: wait.agent,
+          answer,
+        })),
+      ).toEqual([
+        { agent: 'cursor', answer: { type: 'accepted' } },
+        { agent: 'grok', answer: { type: 'kept', note: 'More 日本語 tests.' } },
+      ]);
+    }));
+});

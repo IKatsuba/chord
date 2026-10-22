@@ -1048,3 +1048,26 @@ describe('CHD-481 Q128 tester: rebound detail boundaries', () => {
     }
   });
 });
+
+test('a task that ends while its detail is open leaves at once, the detail going to the item that takes its place (CHD-482)', () =>
+  withBackground(
+    async (window) => {
+      await ready(window);
+      await send(window, 'monitor');
+      await window.shows('I will hear from the dev server when it errs.');
+      await send(window, 'tasklong');
+      await window.shows('The build is being watched.');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('Background · 2 in this tab');
+      await window.press('\r');
+      await window.shows('Background · m1, 1 of 2');
+      await window.press(DOWN);
+      await window.shows('Background · 2 of 2');
+      await window.press('x');
+      await window.shows('Background · m1, 1 of 1');
+      await window.shows('■ Watch the build · task · stopped with x after');
+      expect(window.frame()).not.toContain('· ended');
+    },
+    { rows: 40, columns: 120 },
+  ));

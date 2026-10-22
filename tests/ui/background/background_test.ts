@@ -180,7 +180,7 @@ describe('the items', () => {
     );
   });
 
-  test('a task reported is done, a failed or gone one failed, a cancelled one stopped, and each leaves at once unless kept (CHD-482)', () => {
+  test('a task leaves at once however it ends, its detail open or not; a monitor whose detail is open stays (CHD-482, Q126)', () => {
     const items = (
       state: Subagent['state'],
       keep?: { key: number; id: string },
@@ -201,13 +201,21 @@ describe('the items', () => {
       0, 0, 0, 0,
     ]);
     expect(
-      ends.map((state) => items(state, { key: 1, id: 't' })[0]?.status),
-    ).toStrictEqual([
-      { group: 'done', endedAt: 20 },
-      { group: 'failed', endedAt: 20 },
-      { group: 'failed', endedAt: 20 },
-      { group: 'stopped', endedAt: 20 },
-    ]);
+      ends.map((state) => items(state, { key: 1, id: 't' }).length),
+    ).toStrictEqual([0, 0, 0, 0]);
+    // An agent too; only a monitor's open detail keeps it.
+    expect(
+      backgroundItems(
+        [
+          agent(1, {
+            transcript: withEntries([
+              claude('a', 10, { state: 'completed', endedAt: 20 }),
+            ]),
+          }),
+        ],
+        { key: 1, id: 'a' },
+      ),
+    ).toStrictEqual([]);
   });
 
   test('a task asking for a permission or an input counts from when it asked, its oldest request first', () => {

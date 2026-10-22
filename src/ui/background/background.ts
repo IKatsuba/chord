@@ -145,8 +145,9 @@ export interface BackgroundAgent {
 /**
  * The tab's items, oldest first, each keeping its place as it changes: the
  * running, asking and untracked ones, as every kind leaves once it ends
- * (CHD-479, CHD-482); and `keep`, whose detail is open, ended or not,
- * until the person leaves it (CHD-481, Q126). Two that started in the same millisecond keep the order
+ * (CHD-479, CHD-482); and `keep`, a monitor whose detail is open, ended
+ * or not, until the person leaves it (CHD-481, Q126), as an agent or a task
+ * leaves at once even then. Two that started in the same millisecond keep the order
  * of their agents, then of each agent's monitors by id and tasks as its
  * transcript has them, which no change of state moves.
  */
@@ -162,7 +163,10 @@ export function backgroundItems(
     ])
     .filter(
       (item) =>
-        (keep !== undefined && item.key === keep.key && item.id === keep.id) ||
+        (item.kind === 'monitor' &&
+          keep !== undefined &&
+          item.key === keep.key &&
+          item.id === keep.id) ||
         !leavesList(item),
     )
     .sort((a, b) => a.startedAt - b.startedAt);

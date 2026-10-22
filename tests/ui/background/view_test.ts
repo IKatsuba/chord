@@ -1275,14 +1275,14 @@ describe('↑ ↓ in a detail (CHD-481)', () => {
     expect(stepDetail([monitor('m1', 'a', ended)], ref('m1'), -1)).toBe(
       'closed',
     );
-    // A task's end keeps it listed, so an end stays an end.
+    // A task leaves as it ends too (CHD-482).
     expect(
       stepDetail(
         [task('t1', 'x', { group: 'done', endedAt: NOW })],
         ref('t1'),
         1,
       ),
-    ).toBe(undefined);
+    ).toBe('closed');
   });
 });
 

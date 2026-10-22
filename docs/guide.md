@@ -638,6 +638,10 @@ column: `✗ turn failed`, `✓ new reply` or `← new message`, cleared when
 you open the agent. A failed turn leaves the agent open and idle;
 `✗ failed to start` means it never came up, `✗ exited` that its process
 is gone. Folded teams and ctrl+x w use the same words and clocks.
+`working` uses the theme's accent, dimmed; in `dark-ansi` and `light-ansi`
+it uses dimmed green, keeping it apart from the permission warning's
+yellow. `idle`, `✓ new reply` and `← new message` are dim; a permission
+keeps its warning colour. `/team show` uses the same colours.
 As room narrows, effort, model and the mark's words give way in that order;
 its glyph stays. Names and state words wrap without cutting, their lines
 counted toward the list's limit. In a short window, the list folds down to
@@ -704,10 +708,10 @@ directly. In the list the lead's row reads `team · claude · Opus` and its
 open members are nested under it (`├─ tester`); when the list does not fit
 its rows, each team folds to its lead's row, `team · claude · 4 agents` and
 its most urgent state with the member's name (`● tester: permission 12s`)
-and the first unseen mark beside it. The team you are in unfolds. A member
-picked has its box read `tester · bugfix`; its permissions are yours to
-answer, as a child's are, the
-notification says `tester (bugfix) needs your permission`, and with two
+in that state's colour, and the first unseen mark beside it. The team you
+are in unfolds. A picked member's box reads `tester · bugfix`; its
+permissions are yours to answer. The notification says
+`tester (bugfix) needs your permission`, and with two
 runs open the status line says which run's `tester` asks. `x` on a lead
 closes the team, members and all, twice while any of it works, and chord
 tells main; a member closed tells the lead, and a lead whose agent exits

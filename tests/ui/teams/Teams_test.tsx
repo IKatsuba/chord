@@ -489,6 +489,66 @@ test("/team show paints an agent's state and mark in their colours past a model 
   }
 });
 
+test('/team show paints a working agent in the accent with dim and a new reply dim, as the agents list does (CHD-483)', async () => {
+  const level = chalk.level;
+
+  chalk.level = 3;
+
+  try {
+    const shown: TeamShown = {
+      kind: 'show',
+      name: 'bugfix',
+      file: '.chord/teams/bugfix.md',
+      team: {
+        description: 'Fixes a bug.',
+        body: '',
+        lead: { agent: 'fake', model: 'fake-large', mode: 'default' },
+        members: [],
+      },
+      running: {
+        name: 'bugfix',
+        since: 0,
+        at: 8000,
+        job: 'fix it',
+        agents: [
+          {
+            name: 'lead',
+            lead: true,
+            open: true,
+            state: { glyph: '✻', words: 'working 8s', tone: 'working' },
+            mark: { glyph: '✓', words: 'new reply', tone: 'dim' },
+          },
+        ],
+      },
+    };
+
+    for (const [theme, working] of [
+      ['dark', '\x1b[2m\x1b[38;2;71;231;165m'],
+      ['dark-ansi', '\x1b[2m\x1b[92m'],
+    ] as const) {
+      const drawn = await draw(
+        <Colours.Provider value={paletteOf(theme, true)}>
+          <TeamEntry
+            turnId='t'
+            command='team show bugfix'
+            shown={shown}
+            expanded={false}
+            width={100}
+          />
+        </Colours.Provider>,
+        { columns: 100, rows: 20 },
+      );
+      const frame = drawn.frame();
+
+      await drawn.unmount();
+      expect(frame).toContain(`${working}✻ working 8s\x1b[`);
+      expect(frame).toContain('\x1b[2m✓ new reply\x1b[');
+    }
+  } finally {
+    chalk.level = level;
+  }
+});
+
 describe('CHD-471 L2 tester: inspecting a run preserves unread marks', () => {
   for (const columns of [80, 120]) {
     test(`repeated /team show keeps the member's mark until that member is opened at ${columns} columns`, () =>

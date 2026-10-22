@@ -615,7 +615,7 @@ export interface TeamAgentShown {
   readonly state?: {
     readonly glyph: string;
     readonly words: string;
-    readonly tone: 'warning' | 'error' | 'success' | 'dim';
+    readonly tone: 'warning' | 'error' | 'success' | 'dim' | 'working';
   };
   /**
    * What of it is not yet seen, as the agent list marks it beside its state
@@ -624,7 +624,7 @@ export interface TeamAgentShown {
   readonly mark?: {
     readonly glyph: string;
     readonly words: string;
-    readonly tone: 'warning' | 'error' | 'success' | 'dim';
+    readonly tone: 'warning' | 'error' | 'success' | 'dim' | 'working';
   };
   /**
    * Its latest call's or incoming message's headline, as its transcript

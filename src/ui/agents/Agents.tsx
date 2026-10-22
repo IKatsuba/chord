@@ -2,7 +2,7 @@ import { TextAttributes } from '@opentui/core';
 import { Fragment, useEffect, useState } from 'react';
 import { useColours } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
-import { CUT, DIM, fg, TEXT } from '../theme/text.ts';
+import { CUT, DIM, fg, named, TEXT } from '../theme/text.ts';
 import { agentColour, type Palette } from '../theme/theme.ts';
 import {
   type AgentRow,
@@ -57,11 +57,28 @@ export function useAgentsClock(on: boolean): number {
   return now;
 }
 
+/**
+ * A tone's colour: its role's, none for dim, and for working the accent;
+ * in the two 16-colour themes, whose accent is the warning's yellow, the
+ * success's green, which nothing else in the list takes (CHD-483).
+ */
 export function toneColour(
   tone: AgentTone,
   colours: Palette,
 ): string | undefined {
-  return tone === 'dim' ? undefined : colours[tone];
+  switch (tone) {
+    case 'dim':
+      return undefined;
+    case 'working':
+      return named(colours.accent) ? colours.success : colours.accent;
+    default:
+      return colours[tone];
+  }
+}
+
+/** Whether a tone is drawn dim: dim, and working in its colour. */
+export function toneDim(tone: AgentTone): boolean {
+  return tone === 'dim' || tone === 'working';
 }
 
 /**
@@ -104,7 +121,7 @@ export function AgentsList({
           <span
             key={key}
             {...fg(toneColour(tone, colours))}
-            attributes={tone === 'dim' ? DIM : 0}
+            attributes={toneDim(tone) ? DIM : 0}
           >
             {text}
           </span>

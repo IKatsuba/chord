@@ -40,8 +40,11 @@ export interface AgentRow {
   readonly folded?: readonly AgentRow[];
 }
 
-/** How a state is painted: the theme's role, or dim. */
-export type AgentTone = 'warning' | 'error' | 'success' | 'dim';
+/**
+ * How a state is painted: the theme's role, or dim; `working` is the
+ * accent with dim (CHD-483).
+ */
+export type AgentTone = 'warning' | 'error' | 'success' | 'dim' | 'working';
 
 /** What a row says of its agent: the glyph, then the words. */
 export interface AgentState {
@@ -113,7 +116,7 @@ export function agentState(row: AgentRow, now: number): AgentState {
     : {
         glyph: GLYPHS.working,
         words: `working ${formatElapsed(now - wait.working)}`,
-        tone: 'dim',
+        tone: 'working',
       };
 }
 
@@ -160,7 +163,8 @@ export function agentMark(row: AgentRow): AgentState | undefined {
     case 'failed':
       return { glyph: GLYPHS.failed, words: 'turn failed', tone: 'error' };
     case 'replied':
-      return { glyph: GLYPHS.replied, words: 'new reply', tone: 'success' };
+      // Quiet: noticed by its glyph and words, not its colour (CHD-483).
+      return { glyph: GLYPHS.replied, words: 'new reply', tone: 'dim' };
     case 'message':
       return { glyph: '←', words: 'new message', tone: 'dim' };
     default:

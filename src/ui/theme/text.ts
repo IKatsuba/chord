@@ -55,6 +55,11 @@ export function colour(name: string | undefined): RGBA | undefined {
 }
 
 /** A palette colour as a `<text>`'s or a `<span>`'s `fg`; none for none. */
+/** Whether `name` is one of the terminal's sixteen, by chalk's name. */
+export function named(name: string | undefined): boolean {
+  return name !== undefined && name in NAMED;
+}
+
 export function fg(name: string | undefined): { fg?: RGBA } {
   const value = colour(name);
 

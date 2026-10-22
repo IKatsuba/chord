@@ -6,6 +6,7 @@ import type {
   TeamShown,
 } from '../../session/transcript/types.ts';
 import type { Team } from '../../teams.ts';
+import { toneColour, toneDim } from '../agents/Agents.tsx';
 import { useColours } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, fg, FILL, ROWS } from '../theme/text.ts';
@@ -185,11 +186,6 @@ function RunningTeam({
   width: number;
 }) {
   const colours = useColours();
-  const tones = {
-    warning: colours.warning,
-    error: colours.error,
-    success: colours.success,
-  };
 
   return (
     <>
@@ -205,9 +201,12 @@ function RunningTeam({
       {runningTable(team, run.agents, width).map((line, index) => {
         const { text, state, stateLine, mark, markLine, under, agent } = line;
         const toned = (tone: Tone | undefined) =>
-          tone === undefined || tone === 'dim'
+          tone === undefined
             ? { attributes: DIM }
-            : fg(tones[tone]);
+            : {
+                ...fg(toneColour(tone, colours)),
+                attributes: toneDim(tone) ? DIM : 0,
+              };
         // The state's and the mark's spans in the line drawn, in order.
         const spans = (at: number) =>
           [

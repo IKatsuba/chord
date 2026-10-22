@@ -2034,6 +2034,67 @@ test("enter opens the background view from the summary line, and in it a monitor
   );
 });
 
+test("in an agent's or a task's detail, every key the panel names does what it says, its pages and end the log's (CHD-487)", () => {
+  const detail = after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'agents_focused', focused: true },
+    { type: 'summary_focused', focused: true },
+    { type: 'background_opened' },
+    { type: 'background_detail_opened', focus: { key: 1, id: 'agent-1' } },
+  );
+  const press = (input: string, key: Partial<KeyPress>) =>
+    keyCommand(input, { ctrl: false, escape: false, ...key }, detail, '');
+  const answers = {
+    enter: press('\r', { return: true }),
+    '↑': press('', { upArrow: true }),
+    '↓': press('', { downArrow: true }),
+    k: press('k', {}),
+    j: press('j', {}),
+    x: press('x', {}),
+    esc: press('', { escape: true }),
+    '←': press('', { leftArrow: true }),
+    pgup: press('', { pageUp: true }),
+    pgdn: press('', { pageDown: true }),
+    home: press('', { home: true }),
+    end: press('', { end: true }),
+  };
+
+  expect(answers).toStrictEqual({
+    enter: 'go_to_call',
+    '↑': 'background_up',
+    '↓': 'background_down',
+    k: 'background_up',
+    j: 'background_down',
+    x: 'stop_background',
+    esc: 'background_back',
+    '←': 'background_back',
+    pgup: 'background_page_up',
+    pgdn: 'background_page_down',
+    home: 'background_top',
+    end: 'background_bottom',
+  });
+
+  // Each is one the shortcuts panel lists; none is new. Enter is the
+  // panel's enter line, which names no command, as the key test presses no
+  // bare enter on the window.
+  expect(shortcuts().map(shortcutLine)).toContain(
+    'enter for background, details, a call',
+  );
+
+  for (const command of Object.values(answers).filter(
+    (each) => each !== 'go_to_call',
+  )) {
+    expect(
+      shortcuts().some((shortcut) =>
+        (shortcut.commands as readonly string[] | undefined)?.includes(
+          command as string,
+        ),
+      ),
+      `${command} is in the panel`,
+    ).toBe(true);
+  }
+});
+
 describe('CHD-386 tester: movement panel entries', () => {
   test('word and line moves follow paste, before history, in both layouts', () => {
     const lines = shortcuts().map(shortcutLine);

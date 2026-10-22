@@ -228,9 +228,9 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: ['close_agent', 'stop_background'],
     actions: ['agents:close'],
   },
-  // Enter on the summary line opens the background view; on a monitor's
-  // row its details, and in them or on another row the call that started
-  // it (CHD-481); not rebindable, as a picker's
+  // Enter on the summary line opens the background view; on a row its
+  // details, and in them the call that started it (CHD-481, CHD-487); not
+  // rebindable, as a picker's
   // Enter is not. The key test presses no bare Enter on the window, so its
   // own test does (`open_background`, `go_to_call`).
   {

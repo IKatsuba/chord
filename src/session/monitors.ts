@@ -352,6 +352,26 @@ export function leftRunningLine(monitors: readonly PastMonitor[]): string {
   } not restarted`;
 }
 
+/**
+ * What chord tells a resumed session's agent of the monitors it left
+ * running, which stopped with it and which nothing restarts, so that it can
+ * start them again (CHD-482, the owner's Q85).
+ */
+export function leftStoppedNote(monitors: readonly PastMonitor[]): string {
+  const one = monitors.length === 1;
+  const them = one ? 'it' : 'them';
+  const names = new Intl.ListFormat('en-GB', { type: 'conjunction' }).format(
+    monitors.map(({ id, description }) => `${id} (${description})`),
+  );
+
+  return (
+    `Your monitor${one ? '' : 's'} ${names} ${one ? 'was' : 'were'} running ` +
+    `when this session was left. chord stopped ${them} then, and nothing ` +
+    `restarts ${them}; start ${them} again with monitor if you still need ` +
+    `${them}.`
+  );
+}
+
 /** Starts a monitor's command, handing on each stdout line. */
 export type RunCommand = (
   command: string,

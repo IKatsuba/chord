@@ -27,6 +27,7 @@ import {
   eventText,
   FloodWatch,
   leftRunningLine,
+  leftStoppedNote,
   type MonitorInfo,
   monitorRefusal,
   MonitorRun,
@@ -854,7 +855,7 @@ test("the agent's stop_monitor stops it with no message, the person's with one; 
   expect(pids.map(alive)).toStrictEqual([false, false, false]);
 });
 
-test("a monitor's messages are in the record, and a resume names the one left running and goes on from its ids", async () => {
+test("a monitor's messages are in the record, and a resume names the one left running to the person and its agent, and goes on from its ids", async () => {
   const dir = await mkdtemp(join(tmpdir(), 'chord-monitor-'));
   const stateDir = join(dir, 'state');
   const serve = (
@@ -902,7 +903,15 @@ test("a monitor's messages are in the record, and a resume names the one left ru
     assert(record !== undefined);
 
     await withAgent(
-      (conversation, events) => {
+      async (conversation, events) => {
+        // Its agent is told, as a turn of its own once the session is up
+        // (CHD-482, Q129).
+        await until(() =>
+          events.some(
+            (event) => event.type === 'prompt' && event.from?.name === 'chord',
+          ),
+        );
+
         const transcript = events
           .flatMap((event) =>
             event.type === 'connected' || !('turnId' in event) ? [] : [event],
@@ -924,6 +933,9 @@ test("a monitor's messages are in the record, and a resume names the one left ru
         ).toStrictEqual([
           'build · monitor · exit code 0: built\nExited with code 0 after 0s.',
           'watch was running when this session was left and is not restarted',
+          'chord: Your monitor m2 (watch) was running when this session was ' +
+            'left. chord stopped it then, and nothing restarts it; start it ' +
+            'again with monitor if you still need it.',
         ]);
         expect(
           idOf(
@@ -944,8 +956,6 @@ test("a monitor's messages are in the record, and a resume names the one left ru
             'm2 was running when this session was left and was not ' +
             'restarted; monitor starts another',
         });
-
-        return Promise.resolve();
       },
       {
         stateDir,
@@ -1383,4 +1393,156 @@ describe('CHD-481 U2 tester: last batches stay bounded and belong to their run',
       await Promise.all([a.monitor.ended, b.monitor.ended]);
     }
   });
+});
+
+describe('what the agent is told for each way its monitor ends (CHD-482)', () => {
+  /** Waits for monitor m1's end message and gives it. */
+  const endOf = async (events: readonly ConversationEvent[]) => {
+    await until(() =>
+      delivered(events).some(({ from }) => from.monitor?.end !== undefined),
+    );
+
+    return delivered(events).find(({ from }) => from.monitor?.end)!;
+  };
+
+  /** That no end message went, a while after `act`. */
+  const silent = async (events: readonly ConversationEvent[]) => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    return delivered(events).filter(({ from }) => from.monitor?.end);
+  };
+
+  const told: readonly [
+    string,
+    { command: string; timeoutMs?: number },
+    MonitorEnd,
+    RegExp,
+    ((conversation: Conversation) => void)?,
+  ][] = [
+    [
+      'its command exits',
+      { command: 'exit 3' },
+      { kind: 'exit', code: 3 },
+      /^Exited with code 3 after \d+s\.$/,
+    ],
+    [
+      'a signal chord did not send kills it',
+      { command: 'kill -KILL $$' },
+      { kind: 'signal', signal: 'SIGKILL' },
+      /^Killed by SIGKILL after \d+s\.$/,
+    ],
+    [
+      'its timeout passes',
+      { command: 'sleep 30', timeoutMs: 1000 },
+      { kind: 'timed_out', timeoutMs: 1000 },
+      /^Timed out after 1s \(timeout_ms 1000\); chord stopped it\.$/,
+    ],
+    [
+      'it floods',
+      {
+        command:
+          'i=0; while [ $i -lt 3000 ]; do echo "line $i"; ' +
+          'i=$((i+1)); done; sleep 30',
+      },
+      { kind: 'flooded', by: 'lines' },
+      /\nchord stopped it: 1,000 lines in 10s is more than a monitor may print\. Filter its output \(grep --line-buffered\) and start it again\.$/,
+    ],
+    [
+      'the person stops it',
+      { command: 'sleep 30' },
+      { kind: 'stopped' },
+      /^The person stopped it after \d+s\.$/,
+      (conversation) => conversation.stopMonitor('m1', 'person'),
+    ],
+  ];
+
+  for (const [when, args, end, text, act] of told) {
+    test(`told when ${when}`, () =>
+      withAgent(async (conversation, events, dir) => {
+        idOf(conversation.startMonitor({ ...args, description: 'x' }, dir));
+        act?.(conversation);
+
+        const message = await endOf(events);
+
+        expect(message.from).toStrictEqual({
+          name: 'x',
+          monitor: { id: 'm1', end },
+        });
+        expect(message.text).toMatch(text);
+      }));
+  }
+
+  test("its own stop_monitor is told by the tool's answer, with no message", () =>
+    withAgent(async (conversation, events, dir) => {
+      idOf(
+        conversation.startMonitor(
+          { command: 'sleep 30', description: 'x' },
+          dir,
+        ),
+      );
+
+      expect(conversation.stopMonitor('m1')).toMatchObject({
+        id: 'm1',
+        description: 'x',
+        events: 0,
+      });
+      expect(await silent(events)).toStrictEqual([]);
+    }));
+
+  test('a command that does not start is the monitor call’s refusal', () =>
+    withAgent(async (conversation, events, dir) => {
+      expect(
+        conversation.startMonitor(
+          { command: 'sleep 30', description: 'x' },
+          dir,
+          () => ({
+            failed: 'spawn ENOENT',
+            stop: () => {},
+            ended: Promise.resolve({ code: 1 }),
+          }),
+        ),
+      ).toStrictEqual({ error: 'Could not start the command: spawn ENOENT' });
+      expect(await silent(events)).toStrictEqual([]);
+    }));
+
+  test('a /clear stops it with no message, as its agent session is let go', () =>
+    withAgent(async (conversation, events, dir) => {
+      idOf(
+        conversation.startMonitor(
+          { command: 'sleep 30', description: 'x' },
+          dir,
+        ),
+      );
+      conversation.clear();
+      await until(
+        () => events.filter((event) => event.type === 'connected').length === 2,
+      );
+      expect(conversation.monitors).toStrictEqual([]);
+      expect(await silent(events)).toStrictEqual([]);
+    }));
+
+  test('a closing session stops it with no message, as its agent goes with it', () =>
+    withAgent(async (conversation, events, dir) => {
+      idOf(
+        conversation.startMonitor(
+          { command: 'sleep 30', description: 'x' },
+          dir,
+        ),
+      );
+      await conversation.close();
+      expect(await silent(events)).toStrictEqual([]);
+    }));
+});
+
+test('the note to a resumed agent names each monitor it left running by id and description (CHD-482)', () => {
+  expect(
+    leftStoppedNote([
+      { id: 'm2', description: 'watch' },
+      { id: 'm4', description: 'heartbeat' },
+    ]),
+  ).toBe(
+    'Your monitors m2 (watch) and m4 (heartbeat) were running when this ' +
+      'session was left. chord stopped them then, and nothing restarts ' +
+      'them; start them again with monitor if you still need them.',
+  );
 });

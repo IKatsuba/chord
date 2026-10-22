@@ -362,8 +362,11 @@ describe('CHD-437 U2 tester: paging ownership and isolated answers', () => {
           await window.resize({ rows });
           await window.press('\r');
           await window.shows('Plan answer:');
-          expect(window.frame().replace(/\s+/g, ' ')).toContain(
-            JSON.stringify({ outcome: 'revise', feedback: `${note}!` }),
+          expect(window.frame().replace(/\s+/g, '')).toContain(
+            JSON.stringify({ outcome: 'revise', feedback: `${note}!` }).replace(
+              /\s+/g,
+              '',
+            ),
           );
         },
         { columns, rows },

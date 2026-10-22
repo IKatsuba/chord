@@ -296,9 +296,14 @@ function heardUpdate(session: SessionWire, update: SessionUpdate): SessionWire {
         ...known,
         ...(typeof update.title === 'string' ? { title: update.title } : {}),
         ...(typeof update.kind === 'string' ? { kind: update.kind } : {}),
-        ...(Array.isArray(update.content) &&
-        !filledIn(update).includes('content')
-          ? { ownContent: update.content.length > 0 }
+        // Content chord filled in is none of the agent's: what it sent there
+        // was none, or an empty list that cleared its own.
+        ...(Array.isArray(update.content)
+          ? {
+              ownContent:
+                update.content.length > 0 &&
+                !filledIn(update).includes('content'),
+            }
           : {}),
       };
 

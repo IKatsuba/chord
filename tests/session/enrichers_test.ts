@@ -1551,6 +1551,38 @@ describe("a result sent only as rawOutput is filled in as the call's content (CH
     expect(after.content).toStrictEqual(text('raw'));
   });
 
+  test('a clear sent with rawOutput in one update is the agent clearing too, so a newer rawOutput fills again', () => {
+    const chain = relayOn(ENRICHERS);
+    const content = (each: SessionUpdate) =>
+      (updates(chain.update(each))[0] as { content?: unknown }).content;
+
+    content({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call-3',
+      title: 'Run npm test',
+      kind: 'execute',
+      status: 'in_progress',
+      content: text('its own'),
+    });
+
+    expect(
+      content({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-3',
+        content: [],
+        rawOutput: 'first',
+      }),
+    ).toStrictEqual(text('first'));
+    expect(
+      content({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-3',
+        status: 'completed',
+        rawOutput: 'second',
+      }),
+    ).toStrictEqual(text('second'));
+  });
+
   test('it runs in the chain every session gets', () => {
     expect(ENRICHERS).toContain(rawOutputContent);
   });

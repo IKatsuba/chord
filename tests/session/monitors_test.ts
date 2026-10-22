@@ -12,7 +12,7 @@ import type { SignalName } from '../../src/platform/process.ts';
 import { FileRecording } from '../../src/session/record.ts';
 import { openSession } from '../../src/session/session.ts';
 import { readRecords, type Resume } from '../../src/session/sessions.ts';
-import { fromLine } from '../../src/session/tasks.ts';
+import { fromLine, wrapMessage } from '../../src/session/tasks.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import {
   emptyTranscript,
@@ -566,6 +566,7 @@ async function withAgent(
         cwd: dir,
         agentCommand: fakeAgentCommand(
           undefined,
+          '--echo-messages',
           ...(resume === undefined ? [] : ['--resume-only']),
         ),
         signal,
@@ -601,6 +602,24 @@ function delivered(events: readonly ConversationEvent[]) {
       ? [{ from: event.from, text: event.text }]
       : [],
   );
+}
+
+/**
+ * The prompts the fake agent got for messages and answered, each whole as
+ * its `session/prompt` carried it, which it echoes under
+ * `--echo-messages`.
+ */
+function received(events: readonly ConversationEvent[]): string[] {
+  return events.flatMap((event) => {
+    const said =
+      event.type === 'update' &&
+      event.update.sessionUpdate === 'agent_message_chunk' &&
+      event.update.content.type === 'text'
+        ? /^Received (".*")$/s.exec(event.update.content.text)
+        : null;
+
+    return said === null ? [] : [JSON.parse(said[1]!) as string];
+  });
 }
 
 function idOf(answer: unknown): string {
@@ -904,11 +923,14 @@ test("a monitor's messages are in the record, and a resume names the one left ru
 
     await withAgent(
       async (conversation, events) => {
-        // Its agent is told, as a turn of its own once the session is up
-        // (CHD-482, Q129).
+        // Its agent is told, as a turn of its own once the session is up,
+        // and gets it (CHD-482, Q129).
         await until(() =>
-          events.some(
-            (event) => event.type === 'prompt' && event.from?.name === 'chord',
+          received(events).includes(
+            wrapMessage(
+              { name: 'chord' },
+              leftStoppedNote([{ id: 'm2', description: 'watch' }]),
+            ),
           ),
         );
 
@@ -1396,20 +1418,32 @@ describe('CHD-481 U2 tester: last batches stay bounded and belong to their run',
 });
 
 describe('what the agent is told for each way its monitor ends (CHD-482)', () => {
-  /** Waits for monitor m1's end message and gives it. */
+  /**
+   * Monitor m1's end message, once the agent has it: what chord sent, and
+   * the agent's own echo of the prompt it got and answered.
+   */
   const endOf = async (events: readonly ConversationEvent[]) => {
     await until(() =>
       delivered(events).some(({ from }) => from.monitor?.end !== undefined),
     );
 
-    return delivered(events).find(({ from }) => from.monitor?.end)!;
+    const sent = delivered(events).find(({ from }) => from.monitor?.end)!;
+
+    await until(() =>
+      received(events).includes(wrapMessage(sent.from, sent.text)),
+    );
+
+    return sent;
   };
 
-  /** That no end message went, a while after `act`. */
+  /** The monitor messages the agent got, a while after a stop. */
   const silent = async (events: readonly ConversationEvent[]) => {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    return delivered(events).filter(({ from }) => from.monitor?.end);
+    return [
+      ...delivered(events).filter(({ from }) => from.monitor?.end),
+      ...received(events).filter((prompt) => prompt.includes(' monitor="')),
+    ];
   };
 
   const told: readonly [

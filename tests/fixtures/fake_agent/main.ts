@@ -269,6 +269,7 @@ import {
   CYCLE_ON_RESUME,
   LATE_COST,
   SAY_CANCELS,
+  ECHO_MESSAGES,
   STEP_MS,
   TOKENS_ONLY,
 } from './options.ts';
@@ -640,10 +641,19 @@ async function playCommand(
 
 /**
  * A message another agent sent through chord, wrapped as chord wraps one:
- * answered with a line that says who it was from, whatever it says.
+ * answered with a line that says who it was from, whatever it says, or with
+ * `asked`, the whole prompt, under `ECHO_MESSAGES`.
  */
-async function playMessage(turn: Turn, from: string): Promise<acp.StopReason> {
-  await turn.say(`Received the message from ${from}.`);
+async function playMessage(
+  turn: Turn,
+  from: string,
+  asked: string,
+): Promise<acp.StopReason> {
+  await turn.say(
+    ECHO_MESSAGES
+      ? `Received ${quoted(asked)}`
+      : `Received the message from ${from}.`,
+  );
 
   return 'end_turn';
 }
@@ -891,7 +901,7 @@ async function playPrompt(
         : message && isScenario(role)
           ? await PLAY[role](turn)
           : message
-            ? await playMessage(turn, message[1]!)
+            ? await playMessage(turn, message[1]!, asked)
             : ((await playCommand(turn, asked)) ??
               // The words after a proposal say what to change in it.
               (await (() => {

@@ -29,10 +29,11 @@ const root = join(import.meta.dir, '..', '..', '..');
 
 /**
  * The files `test` reads, as given: the record, what a run measured and
- * the test files on disk; what it removed and said, kept to be read.
+ * the test files on disk, one file agreeing unless said; what it removed
+ * and said, kept to be read.
  */
 function files(
-  record: Record<string, number> = {},
+  record: Record<string, number> = { 'tests/a_test.ts': 1_000 },
   measured: Record<string, number> | string | null = record,
   onDisk: string[] = Object.keys(record),
 ): SuiteFiles & { removed: string[]; said: string[] } {
@@ -212,6 +213,12 @@ describe("the suite's timings (CHD-501)", () => {
       [null, 'tests/timings.measured.json is not there'],
       ['{"files":', 'tests/timings.measured.json is not JSON'],
       ['{"version":1}', "tests/timings.measured.json holds no file's time"],
+      ['{"files":{}}', "tests/timings.measured.json holds no file's time"],
+      ['{"files":[]}', "tests/timings.measured.json holds no file's time"],
+      [
+        '{"files":{"tests/a_test.ts":-5}}',
+        "tests/timings.measured.json holds -5 as tests/a_test.ts's time",
+      ],
     ] as const) {
       const io = files({ [A]: 20_000 }, measured);
 
@@ -221,7 +228,12 @@ describe("the suite's timings (CHD-501)", () => {
   });
 
   test("the tests' own failure stays the status when the measurement is bad too", () => {
-    for (const measured of [null, '{"files":']) {
+    for (const measured of [
+      null,
+      '{"files":',
+      '{"files":{}}',
+      '{"files":[]}',
+    ]) {
       const io = files({ [A]: 20_000 }, measured);
 
       expect(suite([], faked([3]).run, io)).toBe(3);

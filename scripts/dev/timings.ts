@@ -46,8 +46,9 @@ export interface TimingReport {
 
 /**
  * The times in timings file `path`, whose text is `text`: a file that is
- * not there, is not JSON or holds no times is an error that says so, never
- * no times, as a run measured against nothing would pass.
+ * not there, is not JSON, holds no times, or a time that is not a finite
+ * count of ms is an error that says so, never no times, as a run measured
+ * against nothing would pass.
  */
 export function readTimings(path: string, text: string | undefined): Timings {
   if (text === undefined) {
@@ -70,9 +71,20 @@ export function readTimings(path: string, text: string | undefined): Timings {
   if (
     typeof files !== 'object' ||
     files === null ||
-    Object.values(files).some((ms) => typeof ms !== 'number')
+    Array.isArray(files) ||
+    Object.keys(files).length === 0
   ) {
     throw new Error(`timings: ${path} holds no file's time`);
+  }
+
+  const bad = Object.entries(files).find(
+    ([, ms]) => typeof ms !== 'number' || !Number.isFinite(ms) || ms < 0,
+  );
+
+  if (bad !== undefined) {
+    throw new Error(
+      `timings: ${path} holds ${JSON.stringify(bad[1])} as ${bad[0]}'s time`,
+    );
   }
 
   return files as Timings;

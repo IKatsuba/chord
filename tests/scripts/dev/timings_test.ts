@@ -24,9 +24,27 @@ test("a timings file's times; one missing, not JSON or without times is an error
   expect(() => readTimings('t.json', '{"version":1}')).toThrow(
     "timings: t.json holds no file's time",
   );
-  expect(() =>
-    readTimings('t.json', JSON.stringify({ files: { [A]: 'slow' } })),
-  ).toThrow("timings: t.json holds no file's time");
+
+  for (const files of [{}, [], [1200]]) {
+    expect(() => readTimings('t.json', JSON.stringify({ files }))).toThrow(
+      "timings: t.json holds no file's time",
+    );
+  }
+
+  for (const [ms, said] of [
+    ['slow', '"slow"'],
+    [-1, '-1'],
+    [null, 'null'],
+  ] as const) {
+    expect(() =>
+      readTimings('t.json', JSON.stringify({ files: { [A]: ms } })),
+    ).toThrow(`timings: t.json holds ${said} as ${A}'s time`);
+  }
+
+  // Infinity and NaN are not JSON's, but a text may still say 1e999.
+  expect(() => readTimings('t.json', `{"files":{"${A}":1e999}}`)).toThrow(
+    `timings: t.json holds null as ${A}'s time`,
+  );
 });
 
 test("a test file is named as Bun's runner finds one", () => {

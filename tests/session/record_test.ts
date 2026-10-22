@@ -2443,3 +2443,81 @@ describe("a subagent left running when its agent's process went is said ended wh
     ]);
   });
 });
+
+describe('CHD-487 Q144 tester: nested and partial legacy replay boundaries', () => {
+  for (const legacyFirst of [false, true]) {
+    test(`${legacyFirst ? 'an older first part' : 'an opened first part'} seals nested unfinished work before empty and active resumes, without altering the record`, () => {
+      const part = (turnId: string, at: number): RecordEntry[] => [
+        { type: 'prompt', turnId, prompt: `work ${turnId}`, images: 0, at },
+        {
+          type: 'update',
+          turnId,
+          at: at + 1,
+          update: {
+            sessionUpdate: 'subagent_update',
+            sessionId: `outer-${turnId}`,
+            description: `Outer ${turnId}`,
+            state: { state: 'running' },
+          },
+        },
+        {
+          type: 'update',
+          turnId,
+          subagentId: `outer-${turnId}`,
+          at: at + 2,
+          update: {
+            sessionUpdate: 'subagent_update',
+            sessionId: `inner-${turnId}`,
+            description: `Inner ${turnId}`,
+            state: { state: 'running' },
+          },
+        },
+      ];
+      const entries: RecordEntry[] = [
+        ...(legacyFirst ? [] : [{ type: 'opened' as const, at: 1 }]),
+        ...part('a', 2),
+        { type: 'opened', at: 100 },
+        { type: 'opened', at: 200 },
+        ...part('b', 201),
+      ];
+      const before = structuredClone(entries);
+      const replay = () =>
+        recordActions(entries).reduce(
+          (state, action) =>
+            action.type === 'usage' ? state : reduceTranscript(state, action),
+          emptyTranscript,
+        );
+      const state = replay();
+      const next = state.entries.findIndex(
+        (entry) => entry.kind === 'user' && entry.text === 'work b',
+      );
+      const endings = state.entries.flatMap((entry, index) =>
+        entry.kind === 'item_ended' ? [{ entry, index }] : [],
+      );
+
+      expect(endings).toHaveLength(4);
+      expect(
+        endings
+          .filter(({ index }) => index < next)
+          .map(({ entry }) => entry.name)
+          .sort(),
+      ).toEqual(['Inner a', 'Outer a']);
+      expect(
+        endings
+          .filter(({ index }) => index > next)
+          .map(({ entry }) => entry.name)
+          .sort(),
+      ).toEqual(['Inner b', 'Outer b']);
+
+      for (const { entry } of endings) {
+        expect(entry.end).toBe('disconnected');
+        expect(entry.endedAt).toBeUndefined();
+        expect(endedText(entry)).not.toContain('after');
+      }
+
+      expect(state.turn.status).toBe('idle');
+      expect(replay()).toEqual(state);
+      expect(entries).toEqual(before);
+    });
+  }
+});

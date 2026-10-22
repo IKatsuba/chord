@@ -168,6 +168,7 @@ export function BackgroundView({
   rows,
   scroller,
   work,
+  hidden: away = false,
 }: {
   items: readonly BackgroundItem[];
   focus: ItemRef | undefined;
@@ -185,10 +186,16 @@ export function BackgroundView({
   scroller?: RefObject<RequestScroller | undefined>;
   /** The work of the agent or task whose detail is open (CHD-487). */
   work?: DetailWork | undefined;
+  /**
+   * Not drawn, where its details are read kept, while a request in the
+   * front tab stands in its place; it comes back as it was (CHD-481,
+   * CHD-487).
+   */
+  hidden?: boolean;
 }) {
   const colours = useColours();
   // Times count a second at a time while the view is drawn.
-  const now = useAgentsClock(true);
+  const now = useAgentsClock(!away);
   const width = columns - 4;
   const shownAt =
     detail === undefined
@@ -279,7 +286,7 @@ export function BackgroundView({
   }, [detail?.key, detail?.id]);
 
   useEffect(() => {
-    if (scroller === undefined) {
+    if (scroller === undefined || away) {
       return;
     }
 
@@ -288,7 +295,7 @@ export function BackgroundView({
     return () => {
       scroller.current = undefined;
     };
-  }, [scroller, scroll]);
+  }, [scroller, scroll, away]);
 
   const cell = (piece: ViewCell, item: BackgroundItem, focused: boolean) => {
     switch (piece.role) {
@@ -321,6 +328,7 @@ export function BackgroundView({
       paddingX={1}
       marginTop={1}
       flexShrink={0}
+      visible={!away}
     >
       <text {...TEXT}>
         <span {...fg(colours.permission)} attributes={TextAttributes.BOLD}>

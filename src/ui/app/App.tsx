@@ -1306,8 +1306,9 @@ export function App({
                   }
                 />
               )}
-              {viewing && state.backgroundView && (
+              {state.backgroundView && (
                 <BackgroundView
+                  hidden={!viewing}
                   items={backgroundItems}
                   focus={state.backgroundView.focus}
                   detail={state.backgroundView.detail}

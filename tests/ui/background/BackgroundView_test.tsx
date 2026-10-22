@@ -1452,3 +1452,103 @@ test('a detail one row tall pages its log to its last line, its blocks spaced so
     },
     { rows: 24, columns: 80 },
   ));
+
+describe('a request asked while the view is open hides it, and it comes back where it was read (CHD-481, CHD-487)', () => {
+  /** Asks the front session's permission, and answers it from its box. */
+  async function askAndAnswer(window: Window) {
+    const session = window.session();
+
+    assert(session);
+
+    const abort = new AbortController();
+    const answer = session.permissions.handler(
+      {
+        sessionId: session.id,
+        toolCall: { toolCallId: 'asked-over-view', title: 'Write notes.md' },
+        options: [{ optionId: 'allow', name: 'Allow', kind: 'allow_once' }],
+      },
+      abort.signal,
+    );
+
+    try {
+      await window.shows('Do you want to proceed?');
+      expect(window.frame()).not.toContain('Background ·');
+      await window.press('1');
+      expect(await answer).toEqual({
+        outcome: { outcome: 'selected', optionId: 'allow' },
+      });
+    } finally {
+      abort.abort();
+    }
+  }
+
+  test("an agent's log paged to its top", () =>
+    withWindow(
+      async (window) => {
+        const frame = () =>
+          window.frame().slice(window.frame().indexOf('Background · '));
+
+        await send(window, 'claudebackground');
+        await window.shows("background  main's 2 agents running");
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('❯ Run the test suite');
+        await window.press('\r');
+        await window.shows('⏺ Bash(bun test)');
+        await window.resize({ columns: 80, rows: 18 });
+        await window.press('\x1b[H');
+        await until('at its top in the one row', () =>
+          /│ › Run bun test.*↓ \d+ lines? below/.test(frame()),
+        );
+
+        const read = frame().match(/↓ \d+ lines? below/)![0];
+
+        await askAndAnswer(window);
+        await until('back at its top', () => /│ › Run bun test/.test(frame()));
+        expect(frame()).toContain(read);
+      },
+      {
+        rows: 24,
+        columns: 80,
+        agentCommand: fakeAgentCommand(undefined, '--step-ms', '20'),
+      },
+    ));
+
+  test("a monitor's detail paged down", () =>
+    withBackground(
+      async (window) => {
+        const body = () =>
+          window
+            .frame()
+            .split('\n')
+            .filter((line) => line.startsWith('│'))
+            .join('\n');
+
+        await ready(window);
+        await send(window, 'monitors');
+        await window.shows(
+          'Received the message from dev server errors · monitor.',
+        );
+        // The request is asked in a turn, as one between turns is held.
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('Background · 2 in this tab');
+        await window.press('\r');
+        await window.shows('Background · m1, 1 of 2');
+        await window.press('\x1b[6~');
+        await until(
+          'the description paged away',
+          () => !body().includes('dev server errors'),
+        );
+
+        const read = body();
+
+        await askAndAnswer(window);
+        await window.shows('Background · m1, 1 of 2');
+        expect(body()).toBe(read);
+      },
+      { rows: 24, columns: 80 },
+    ));
+});

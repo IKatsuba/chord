@@ -176,3 +176,65 @@ test("a running total grew by each field's increase since the last, never less t
     ),
   ).toStrictEqual({ inputTokens: 3, outputTokens: 0 });
 });
+
+describe('CHD-472 Q133 tester: sparse counters and model metadata', () => {
+  test('growth is per field, zero for a lower counter, and absent for an omitted counter', () => {
+    const last = {
+      inputTokens: 100,
+      outputTokens: 20,
+      cachedReadTokens: 50,
+      thoughtTokens: 4,
+      totalTokens: 120,
+    };
+
+    expect(
+      grownBy(last, {
+        inputTokens: 90,
+        outputTokens: 23,
+        cachedWriteTokens: 5,
+        thoughtTokens: 0,
+        totalTokens: 130,
+      }),
+    ).toEqual({
+      inputTokens: 0,
+      outputTokens: 3,
+      cachedWriteTokens: 5,
+      thoughtTokens: 0,
+      totalTokens: 10,
+    });
+    expect(grownBy(undefined, { inputTokens: 0 })).toEqual({ inputTokens: 0 });
+    expect(grownBy(last, {})).toEqual({});
+    expect(last.cachedReadTokens).toBe(50);
+  });
+
+  test('cost-only corrections cannot rename the last token total, but a new total can', () => {
+    const first = addTurn(
+      undefined,
+      'one',
+      { totalTokens: 100 },
+      { model: 'old' },
+      true,
+    );
+    const correction = addTurn(
+      first,
+      'cycle',
+      {},
+      { model: 'next', cost: { amount: 0.1, currency: 'USD' } },
+      true,
+    );
+
+    expect(correction.totalModel).toBe('old');
+    expect(sessionTokens(correction)).toEqual({ totalTokens: 100 });
+
+    const next = addTurn(
+      correction,
+      'next',
+      { totalTokens: 110 },
+      { model: 'next' },
+      true,
+    );
+
+    expect(next.totalModel).toBe('next');
+    expect(sessionTokens(next)).toEqual({ totalTokens: 110 });
+  });
+});

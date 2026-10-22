@@ -583,3 +583,55 @@ test('with no dirac cost and several models all priced, the line says each answe
     "dirac's provider reports no cost, so chord priced each answer's tokens at the price of the model that gave it.",
   );
 });
+
+describe('CHD-472 U2 tester: report metadata stays tied to the last total', () => {
+  test('changing the selected model without a new total does not rename the model whose tokens had no price', () => {
+    const rows = costReport({
+      ...FACTS,
+      agent: 'dirac',
+      since: undefined,
+      models: {
+        current: 'gpt-5.3-codex',
+        available: [
+          { id: 'unpriced', name: 'Old unpriced model' },
+          { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' },
+        ],
+      },
+      spent: {
+        turns: {},
+        total: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        totalModel: 'unpriced',
+      },
+    });
+    const words = text(rows).join('\n');
+
+    expect(words).toContain('chord has no price for Old unpriced model');
+    expect(words).not.toContain('no price for GPT-5.3');
+    expect(words).toContain('Tokens in:  0');
+    expect(words).not.toContain('Not counted');
+    expect(words).not.toContain('Before');
+  });
+
+  test('a reported zero cost is not a missing provider cost or an estimate', () => {
+    const words = text(
+      costReport({
+        ...FACTS,
+        agent: 'dirac',
+        since: undefined,
+        spent: {
+          turns: {},
+          total: { totalTokens: 0 },
+          costs: { a: { cost: { amount: 0, currency: 'USD' } } },
+        },
+      }),
+    ).join('\n');
+
+    expect(words).toContain('Total cost: $0.0000');
+    expect(words).toContain('Tokens:     0');
+    expect(words).toContain(
+      "dirac reports these as the session's running total",
+    );
+    expect(words).not.toContain('provider');
+    expect(words).not.toContain('estimate');
+  });
+});

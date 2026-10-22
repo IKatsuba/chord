@@ -1953,3 +1953,80 @@ describe('CHD-472 U1 tester: isolated fake sessions and repeat replay', () => {
       }
     }));
 });
+
+describe('CHD-472 Q133 tester: the resumed fake counter resets and grows again', () => {
+  for (const legacy of [false, true]) {
+    test(`${legacy ? 'old unmarked' : 'new marked'} record keeps its estimate across reset, then adds only new growth`, () =>
+      withPlace(async (place) => {
+        const command = fakeAgentCommand(
+          undefined,
+          '--session-usage',
+          '--tokens-only',
+        );
+        const id = await recordSession({
+          stateDir: place.stateDir,
+          cwd: place.dir,
+          command,
+          agent: 'dirac',
+          prompts: ['text', 'text'],
+        });
+        const record = (await readRecords(place.stateDir)).find(
+          (record) => record.sessionId === id,
+        );
+
+        assert(record);
+
+        if (legacy) {
+          const old = (await readFile(record.path, 'utf8'))
+            .split('\n')
+            .map((line) =>
+              line === ''
+                ? line
+                : JSON.stringify({ ...JSON.parse(line), total: undefined }),
+            )
+            .join('\n');
+
+          await writeFile(record.path, old);
+        }
+
+        let state = initialAppState;
+        let connected = false;
+        const readings: {
+          tokens: number | undefined;
+          amount: number | undefined;
+        }[] = [];
+
+        await recordSession({
+          stateDir: place.stateDir,
+          cwd: place.dir,
+          command: [...command, '--resume-only'],
+          agent: 'dirac',
+          prompts: ['text', 'text'],
+          resume: { sessionId: id, cwd: place.dir, record: record.path },
+          heard: (event) => {
+            state = reduceApp(state, event);
+
+            if (event.type === 'connected') {
+              connected = true;
+            }
+
+            if (connected && event.type === 'usage') {
+              readings.push({
+                tokens: sessionTokens(state.spent)?.totalTokens,
+                amount: sessionFigure(state.spent)?.cost?.amount,
+              });
+            }
+          },
+        });
+        expect(readings).toHaveLength(2);
+        expect(readings[0]).toEqual({
+          tokens: 2000,
+          amount: expect.closeTo(0.00938, 9),
+        });
+        expect(readings[1]).toEqual({
+          tokens: 4000,
+          amount: expect.closeTo(0.01407, 9),
+        });
+      }));
+  }
+});

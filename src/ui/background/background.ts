@@ -19,7 +19,6 @@ import type {
   Entry,
   MonitorEnd,
   Subagent,
-  TaskSpent,
   Transcript,
 } from '../../session/transcript/types.ts';
 import { GLYPHS } from '../app/strip.ts';
@@ -79,11 +78,6 @@ export type ItemStatus =
       readonly endedAt: number;
       /** A monitor's end, which its row words. */
       readonly end?: MonitorEnd;
-      /**
-       * An agent's end that its group does not word: no cause seen, or its
-       * agent gone.
-       */
-      readonly word?: 'ended' | 'disconnected';
     };
 
 /** Whose an item is: a child's or member's name and colour; none for `main`. */
@@ -114,8 +108,6 @@ export interface BackgroundItem {
   /** A task's runtime and model, as the agents list names an agent's. */
   readonly runtime?: string;
   readonly model?: string;
-  /** What a task spent, once it has ended (CHD-373). */
-  readonly spent?: TaskSpent;
   /** A task's `spawn_task` call, which `enter` scrolls to. */
   readonly callId?: string;
   /** An agent's own stop: its agent still offers one. */
@@ -249,7 +241,6 @@ function taskItems(agent: BackgroundAgent): BackgroundItem[] {
           status: taskStatus(subagent, startedAt, transcript),
           runtime: task.runtime,
           ...(task.model === undefined ? {} : { model: task.model }),
-          ...(task.spent === undefined ? {} : { spent: task.spent }),
           ...(subagent.callId === undefined ? {} : { callId: subagent.callId }),
         },
       ];
@@ -445,11 +436,11 @@ function agentStatus(
     case 'failed':
       return { group: 'failed', endedAt };
     case 'disconnected':
-      return { group: 'failed', endedAt, word: 'disconnected' };
+      return { group: 'failed', endedAt };
     case 'cancelled':
       return { group: 'stopped', endedAt };
     case 'ended':
-      return { group: 'stopped', endedAt, word: 'ended' };
+      return { group: 'stopped', endedAt };
     case 'untracked':
       return { group: 'untracked', endedAt };
   }

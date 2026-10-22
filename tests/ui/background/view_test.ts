@@ -142,20 +142,6 @@ test('each state says its time, an end its words, as the design table has them',
   expect(
     say(task('t', 'x', { group: 'asking', on: 'input', since: NOW - 13_000 })),
   ).toStrictEqual('● input 13s');
-  expect(
-    ['done', 'failed', 'stopped'].map((group) =>
-      say(
-        task('t', 'x', {
-          group: group as 'done',
-          endedAt: NOW - 2_000,
-        }),
-      ),
-    ),
-  ).toStrictEqual([
-    '✓ reported after 30s',
-    '✗ failed after 30s',
-    '■ stopped after 30s',
-  ]);
 });
 
 test('a row is name, kind, state and owner in columns two cells apart, the ❯ on the focused one', () => {
@@ -463,7 +449,7 @@ describe('CHD-424 tester: view layout edges', () => {
   });
 });
 
-test("an agent item's state reads as CHD-2's table words it", () => {
+test("an agent item's state reads as CHD-2's table words it, while it is listed (CHD-482)", () => {
   const say = (status: BackgroundItem['status']) =>
     stateText(
       {
@@ -476,14 +462,6 @@ test("an agent item's state reads as CHD-2's table words it", () => {
       },
       NOW,
     ).text;
-  const ended = (
-    group: 'done' | 'failed' | 'stopped',
-    word?: 'ended' | 'disconnected',
-  ) => ({
-    group,
-    endedAt: NOW - 41_000 + 124_000 - 83_000,
-    ...(word === undefined ? {} : { word }),
-  });
 
   expect(say({ group: 'running' })).toBe('running 41s');
   expect(say({ group: 'running', stopping: true })).toBe('■ stopping 41s');
@@ -496,11 +474,6 @@ test("an agent item's state reads as CHD-2's table words it", () => {
   expect(say({ group: 'asking', on: 'waiting', since: NOW - 13_000 })).toBe(
     '● waiting 13s',
   );
-  expect(say(ended('done'))).toBe('✓ done in 41s');
-  expect(say(ended('failed'))).toBe('✗ failed after 41s');
-  expect(say(ended('failed', 'disconnected'))).toBe('✗ disconnected after 41s');
-  expect(say(ended('stopped'))).toBe('■ stopped after 41s');
-  expect(say(ended('stopped', 'ended'))).toBe('■ ended after 41s');
   // Its time stands at the unknown.
   expect(say({ group: 'untracked', endedAt: NOW - 20_000 })).toBe(
     '? untracked 21s',
@@ -697,38 +670,6 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
       }),
     ).toStrictEqual({ focus: t1, top: 0, laid: laidAt(76, 40) });
   });
-});
-
-test("an ended task's row says its money after its state, which never gives way (CHD-373, CHD-473)", () => {
-  const spent = {
-    cost: { amount: 0.0125, currency: 'USD' },
-    tokens: { totalTokens: 2000 },
-  };
-  const ended = task(
-    't1',
-    'Fix the tokenizer',
-    { group: 'failed', endedAt: NOW },
-    { spent, startedAt: NOW - 15_000 },
-  );
-
-  expect(stateText(ended, NOW).text).toBe('✗ failed after 15s · $0.0125');
-  expect(
-    stateText({ ...ended, spent: { ...spent, estimated: true } }, NOW).text,
-  ).toBe('✗ failed after 15s · ~$0.0125');
-  // While it works, none.
-  expect(
-    stateText({ ...ended, status: { group: 'running' } }, NOW).text,
-  ).not.toContain('$');
-
-  // At any width its model, its money and its runtime all stay (CHD-473).
-  const drawn = (width: number) =>
-    text(viewRows([ended], { width, focus: undefined, now: NOW })).join(' ');
-
-  for (let width = 120; width > 30; width--) {
-    for (const part of ['task', 'fake', 'Fake Small', '$0.0125']) {
-      expect(drawn(width), `${width}`).toContain(part);
-    }
-  }
 });
 
 describe('CHD-373 S2 tester: zero and absent money in background states', () => {

@@ -7074,3 +7074,153 @@ height: `BlockGap` (`src/ui/transcript/gap.ts`), which the transcript leaves
 at margins. `tests/ui/transcript/gap_test.tsx` pins OpenTUI's behaviour;
 once a pinned OpenTUI counts the margin, that test fails, and `BlockGap`
 and its provider go.
+
+## 2026-10-23 — CHD-493: one main session per chord process; tabs go (owner)
+
+The owner's call of 2026-10-21: chord drops tabs. A chord process runs one
+main session with its children (long-lived agents, team members, tasks,
+subagents, monitors) as today; sessions side by side are the terminal's
+panes. The design is `docs/design/CHD-493.md`; the architects' drafts are in
+`docs/design/evidence/CHD-493/drafts/`.
+
+- **Options considered.** Keep tabs (the owner's call removes them); keep
+  the session layer's tab list with a cap of one (dead code that every
+  feature would still have to fold over); collapse the state to one main
+  session and its children. **Choice: collapse.** The window becomes what
+  chord with one tab already is: the strip, `ctrl+x c n p 1–9 w k`, the
+  sessions picker, `/new` as a tab, the tenth-session refusal, `ctrl+x k`'s
+  and ctrl+d's arming over tabs, `/status`'s `Sessions` row, the tab level
+  of `/cost`, tab words in notices and notifications, `list_sessions`'
+  `tab`, window records and `--resume` of several ids go.
+- **The main conversation is never replaced.** `/clear` and a `/resume`
+  pick already replace the session inside one `Conversation` (`clear()`),
+  dropping a let-go session's late updates and handing the record over;
+  the main session keeps one key for the process. `tabs.ts` splits into
+  `waits.ts` (the per-agent wait fold) and `window_agents.ts` (main and
+  children, picking, attention); `open_sessions.ts` becomes
+  `open_agents.ts`. Keys, not places, still name an agent.
+- **What holds.** `ctrl+x a` (`session:attention`), now over main and its
+  children, with its walk, its remembered place and its key; the agents
+  list and its keys; `/resume` never loading a session twice (a session
+  open as a child is marked `open now` and picked); OSC 7501's fold over
+  main and children, byte for byte today's one-tab record; `chord_session`
+  as the main session's id; `startupOf` for children's runtimes.
+- **Consequences.** Several sessions are several processes, so nothing
+  stops two panes opening one session (Q156; documented, on the
+  recommended option). A codex session from a window started as `chord
+  claude` is reached from `chord codex`'s `/resume` or its command. Session
+  records are unchanged; no format changes.
+- **Libraries.** None added or dropped: everything removed was chord's
+  own, and nothing new is drawn.
+
+This overturns, in whole or in the parts named in the design: 2026-10-06
+"Several sessions in one window are chord's to build"; "Several sessions: a
+tab list of chord's own, each tab its own `Conversation`"; "Several
+sessions: the strip, the leader line and the `session:` keys"; "Several
+sessions: a session behind that needs the person"; 2026-10-07 "Several
+sessions: closing one, and quitting with several open"; "M4: agents start
+agents through an MCP server chord serves" (its tab-labelled senders and
+behind marks); 2026-10-08 "The sessions picker, and `/resume` knowing the
+open sessions"; "`/new <agent>`, each agent's starting values, and
+`/status`'s sessions"; "`-r <id> -r <id> …`: a tab each, each in its own
+place"; "Long-lived agents: a list under the prompt, picked as a tab is"
+(only its comparison to a tab); "chord's MCP server: @modelcontextprotocol/sdk
+1.32.1 on `Deno.serve`, a token per session, tools by role" (a token names
+the session, not a tab); "A window record, and `--resume w-…`"; "Windows in
+`/resume`, and `--resume` with no id" (the window rows; `[id:string]` and its
+accepted Cliffy limit hold); 2026-10-09 "`/team`: the picker, show, run and
+stop" ("the front tab's `main`" reads `main`); 2026-10-13 "CHD-355: the
+person's own sessions start on an effort from the files or `--effort`" ("each
+`/new`" reads main, each `/clear`, `-p`); 2026-10-21 "CHD-492: chord tells
+the terminal the session id to resume, in a user variable (owner, Q124)"
+(the clause "until CHD-493, the front tab's"). What holds of each is in the
+design and the drafts.
+
+## 2026-10-23 — CHD-493: `/new` is `/clear`'s alias (pending the owner, Q153)
+
+- **Options considered.** `/new` as `/clear`'s alias, `/new <agent>`
+  refused (Claude Code 2.1.307's menu lists `/clear (new)`); remove `/new`,
+  which lets an agent's own advertised `/new` through to the agent;
+  `/new <agent>` switching the main agent in place, which would replace the
+  main conversation and make header, `/resume`'s list, the quit's command,
+  OSC 7501 and the token follow a changing agent.
+- **Choice, pending Q153: the alias.** `/clear`'s entry gets one `alias`,
+  which takes a chord command name everywhere a name does: the collision
+  set (an agent's `new` stays out of the menu), fzf's filter (a second
+  selector key), Tab completion and dispatch. `/new codex` is refused
+  without clearing: `/new starts a new fake session here; for codex, run
+  chord codex in another pane`.
+- **Consequences.** One meaning, Claude Code's; another agent is another
+  pane. Under another answer, U2's `/new` rows change, and under the switch
+  U3 keeps a path that replaces the main conversation.
+
+## 2026-10-23 — CHD-493: old window records are read only to refuse, with each session's command (pending the owner, Q154)
+
+People have `windows/w-<id>.json` from 0.54.0–0.57.0 and printed `chord
+--resume w-…` commands.
+
+- **Options considered.** Refuse and print each session's command; open the
+  recorded front tab's session and list the rest (chord choosing one of
+  several, the guess turned down for `-r` before); forget windows (an old
+  printed command then means nothing).
+- **Choice, pending Q154: refuse.** `windowGone(record)` prints, before the
+  screen, `w-… was a window of N sessions; chord opens one session per run
+  now. Resume each with:` and one `chord <agent> --cwd <dir> --resume <id>`
+  per tab in order, a tab whose session record is gone included (the agent
+  may still have it). The tab's directory goes in `--cwd`, as an id chord
+  has no record of otherwise opens where the command is typed;
+  `resumeCommand` gains an optional `cwd`, quoted by `shellQuote`.
+  `windows.ts` keeps only the reader: id, schema, `parseWindow`,
+  `readWindow`, `windowGone`.
+- **The files are left alone** under every answer: never written, listed,
+  rewritten or deleted again; read only when `--resume` names one.
+
+## 2026-10-23 — CHD-493: `--resume` with several ids is refused in chord's words
+
+- **Options considered.** Drop Cliffy's `collect`, so Cliffy refuses a
+  repeated option with its generic error; keep `collect` and refuse what it
+  hands over; open the first id (a guess).
+- **Choice: keep `collect`, refuse.** Before any terminal or agent:
+  `--resume opens one session; it was given N. Open each in a chord of its
+  own:` and one line per id with its record's agent and directory, so a
+  mixed-agent call gets commands that work; an id chord has no record of
+  takes this command's agent and directory and says so. Cliffy is used as
+  it is; no argv is rewritten.
+
+## 2026-10-23 — CHD-493: a keybinding of a removed `session:` action is ignored with its own words
+
+- **Options considered.** Today's generic `unknown action "session:new",
+  ignored`; words that say why; refusing the file.
+- **Choice: its own words.** `bindings.ts` keeps a `REMOVED` list of the
+  eleven names (`session:new`, `next`, `previous`, `goto1`–`9`, `list`,
+  `close`), read before `isAction`: `session:new went with tabs: chord runs
+  one session, ignored`, where keybinding problems are said today. The rest
+  of the file applies; nothing in it is rewritten; `null` on a key one of
+  them held is no problem.
+
+## 2026-10-23 — CHD-493: `list_sessions` stays, with one row and no `tab`
+
+- **Options considered.** Remove the tool (it changes every session's tool
+  set, and old records' answers must still draw); keep it with one row.
+- **Choice: keep it.** It answers the caller's main session, its id,
+  runtime, model and long-lived agents, which is how an agent finds its
+  children again after a compaction and what chord's refusals point to.
+  `tab` goes from the answer; the transcript row draws the runtime with
+  `(you)` and ignores `tab` in an answer a 0.57.0 record kept.
+
+## 2026-10-23 — CHD-493: a let-go session's MCP calls (pending the owner, Q158)
+
+Found in review, not caused by removing tabs: between `/clear` or a
+`/resume` pick and the let-go session's exit, its token stays admitted
+under the main key, so a late `open_agent`, `spawn_task`, `send_message`,
+`close_agent`, `run_team` or `monitor` acts on the replacement's children
+and permission box. Today it happens inside a tab; without tabs these are
+the only replacements.
+
+- **Options considered.** Fix it in CHD-493's last unit; leave it as today
+  (the owner takes no follow-up tasks).
+- **Choice, pending Q158: fix it.** The caller names its session, not only
+  the slot: a generation carried in `Caller` when the token is minted,
+  checked by `WindowView`, a stale caller refused with `The session that
+  called this has been replaced.`; or the token revoked at `clear()`.
+  Tested on the fake agent.

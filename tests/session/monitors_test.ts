@@ -1,4 +1,4 @@
-import { expect, jest, test } from 'bun:test';
+import { describe, expect, jest, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -1188,3 +1188,199 @@ test("the window hears each monitor's end once, in the order they ended, a stop'
     );
     expect(ended()).toStrictEqual([]);
   }));
+
+test("a monitor keeps its last batch's lines and when it went, the lines its end carried too; none before the first (CHD-481)", async () => {
+  using time = fakeTime();
+  const { line, exit, monitor } = started();
+
+  expect(monitor.running.lastEvent).toStrictEqual(undefined);
+  line('first');
+  line('second');
+  await time.tick(200);
+  await time.settle();
+  expect(monitor.running.lastEvent).toStrictEqual({
+    lines: ['first', 'second'],
+    at: 200,
+  });
+  expect(monitor.running.events).toStrictEqual(1);
+
+  await time.tick(1000);
+  line('third');
+  await time.tick(200);
+  await time.settle();
+  expect(monitor.running.lastEvent).toStrictEqual({
+    lines: ['third'],
+    at: 1400,
+  });
+
+  // Lines still unsent when it ends go with its end, and are the last.
+  line('last words');
+  exit(1);
+  await time.settle();
+  await monitor.ended;
+  expect(monitor.running.lastEvent?.lines).toStrictEqual(['last words']);
+});
+
+test("the person's x keeps the lines its monitor had not sent yet as its last, in the ended monitor the window shows (CHD-481)", () =>
+  withAgent(async (conversation, events, dir) => {
+    const command = fakeCommand();
+    const ended = () =>
+      events
+        .flatMap((event) => (event.type === 'monitors' ? [event.ended] : []))
+        .at(-1)?.[0];
+
+    idOf(
+      conversation.startMonitor(
+        { command: 'watch', description: 'build' },
+        dir,
+        command.run,
+      ),
+    );
+    command.line('first');
+    await until(
+      () => conversation.monitors[0]?.lastEvent?.lines[0] === 'first',
+    );
+    // Not handed on yet when the person stops it: its end carries it.
+    command.line('unsent');
+    conversation.stopMonitor('m1', 'person');
+    expect(ended()?.end).toStrictEqual({ kind: 'stopped' });
+    await until(() => ended()?.lastEvent?.lines[0] === 'unsent');
+    expect(ended()?.end).toStrictEqual({ kind: 'stopped' });
+  }));
+
+describe('CHD-481 U2 tester: last batches stay bounded and belong to their run', () => {
+  for (const ending of ['exit', 'timeout'] as const) {
+    test(`a quiet ${ending} retains the sent batch and its original timestamp`, async () => {
+      using time = fakeTime();
+      const run = started({ ...INFO, timeoutMs: 1000 });
+
+      run.line('already sent');
+      await time.tick(200);
+
+      const sent = run.monitor.running.lastEvent;
+
+      expect(sent).toStrictEqual({ lines: ['already sent'], at: 200 });
+
+      if (ending === 'exit') {
+        await time.tick(300);
+        run.exit(0);
+      } else {
+        await time.tick(800);
+      }
+
+      await time.settle();
+      await run.monitor.ended;
+      expect(run.monitor.running.lastEvent).toStrictEqual(sent);
+      expect(run.monitor.running.events).toBe(1);
+    });
+  }
+
+  test('a person stop keeps final pending lines at the end time without changing the sent snapshot', async () => {
+    using time = fakeTime();
+    const run = started();
+
+    run.line('sent');
+    await time.tick(200);
+
+    const sent = run.monitor.running;
+
+    await time.tick(100);
+    run.line('pending');
+    run.monitor.stop('person');
+    await time.settle();
+    await run.monitor.ended;
+    expect(run.monitor.running.lastEvent).toStrictEqual({
+      lines: ['pending'],
+      at: 300,
+    });
+    expect(sent.lastEvent).toStrictEqual({ lines: ['sent'], at: 200 });
+    expect(run.monitor.running.events).toBe(1);
+    expect(run.events).toStrictEqual([['sent']]);
+  });
+
+  test('an agent stop keeps its last sent batch and does not invent a final delivered batch', async () => {
+    using time = fakeTime();
+    const run = started();
+
+    run.line('sent');
+    await time.tick(200);
+    run.line('unsent');
+    run.monitor.stop('agent');
+    await time.settle();
+    await run.monitor.ended;
+    expect(run.monitor.running.lastEvent).toStrictEqual({
+      lines: ['sent'],
+      at: 200,
+    });
+    expect(run.events).toStrictEqual([['sent']]);
+    expect(run.ends).toStrictEqual([]);
+  });
+
+  test('a latest batch keeps the existing line and byte bounds, and an empty event is still an event', async () => {
+    using time = fakeTime();
+    const run = started();
+
+    try {
+      for (let n = 0; n < 101; n++) {
+        run.line(`line ${n}`);
+      }
+
+      await time.tick(200);
+      expect(run.monitor.running.lastEvent?.lines).toHaveLength(100);
+      expect(run.monitor.running.lastEvent?.lines.at(-1)).toBe('line 99');
+
+      for (let n = 0; n < 30; n++) {
+        run.line('é'.repeat(1001));
+      }
+
+      await time.tick(200);
+
+      const batch = run.monitor.running.lastEvent!;
+
+      expect(batch.lines.length).toBeLessThan(30);
+      expect(
+        batch.lines.every(
+          (line) => line === `${'é'.repeat(1000)}… (+1 characters)`,
+        ),
+      ).toBe(true);
+      expect(
+        new TextEncoder().encode(batch.lines.join('\n')).length,
+      ).toBeLessThanOrEqual(16 * 1024);
+      run.line('');
+      await time.tick(200);
+      expect(run.monitor.running.lastEvent).toStrictEqual({
+        lines: [''],
+        at: 600,
+      });
+    } finally {
+      run.monitor.stop('close');
+      await run.monitor.ended;
+    }
+  });
+
+  test('same local ids in concurrent runs do not share events or timestamps', async () => {
+    using time = fakeTime();
+    const a = started();
+    const b = started();
+
+    try {
+      a.line('only a');
+      await time.tick(200);
+      expect(b.monitor.running.lastEvent).toBeUndefined();
+      b.line('only b');
+      await time.tick(200);
+      expect(a.monitor.running.lastEvent).toStrictEqual({
+        lines: ['only a'],
+        at: 200,
+      });
+      expect(b.monitor.running.lastEvent).toStrictEqual({
+        lines: ['only b'],
+        at: 400,
+      });
+    } finally {
+      a.monitor.stop('close');
+      b.monitor.stop('close');
+      await Promise.all([a.monitor.ended, b.monitor.ended]);
+    }
+  });
+});

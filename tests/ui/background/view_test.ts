@@ -2,11 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import {
+  detailLines,
   focusAfter,
+  stepDetail,
   hintLines,
   laidAt,
   moveView,
   type ViewAt,
+  type ViewCell,
   stateText,
   stopRefused,
   type ViewRow,
@@ -128,8 +131,8 @@ test('each state says its time, an end its words, as the design table has them',
     '✗ killed by SIGKILL after 3m · 1 event',
   );
   expect(
-    ended({ kind: 'timed_out', timeoutMs: 600_000 }, 'failed'),
-  ).toStrictEqual('✗ timed out after 3m · 1 event');
+    ended({ kind: 'timed_out', timeoutMs: 600_000 }, 'stopped'),
+  ).toStrictEqual('■ timed out after 3m · 1 event');
   expect(ended({ kind: 'flooded', by: 'lines' }, 'failed')).toStrictEqual(
     '✗ flooded after 3m · 1 event',
   );
@@ -161,9 +164,9 @@ test('a row is name, kind, state and owner in columns two cells apart, the ❯ o
       viewRows(ITEMS, { width: 116, focus: { key: 1, id: 't1' }, now: NOW }),
     ),
   ).toStrictEqual([
-    '  CI run 4812        monitor                   ✗ exit code 1 after 3m 12s · 3 events  main',
-    '  dev server errors  monitor                   running 4m 2s · 1 event                main',
-    '  parser tests       monitor                   running 2m 3s · 4 events               parser',
+    '  CI run 4812        monitor · m1              ✗ exit code 1 after 3m 12s · 3 events  main',
+    '  dev server errors  monitor · m2              running 4m 2s · 1 event                main',
+    '  parser tests       monitor · m1              running 2m 3s · 4 events               parser',
     '❯ Fix the tokenizer  task · fake · Fake Small  ● permission 13s                       main',
     '  Fix the printer    task · fake · Fake Large  working 32s                            coder',
   ]);
@@ -174,9 +177,9 @@ test("narrower, nothing gives way: a task's kind wraps in its column after a ` �
     text(viewRows(ITEMS, { width, focus: undefined, now: NOW }));
 
   expect(at(85)).toStrictEqual([
-    '❯ CI run 4812        monitor            ✗ exit code 1 after 3m 12s · 3 events  main',
-    '  dev server errors  monitor            running 4m 2s · 1 event                main',
-    '  parser tests       monitor            running 2m 3s · 4 events               parser',
+    '❯ CI run 4812        monitor · m1       ✗ exit code 1 after 3m 12s · 3 events  main',
+    '  dev server errors  monitor · m2       running 4m 2s · 1 event                main',
+    '  parser tests       monitor · m1       running 2m 3s · 4 events               parser',
     '  Fix the tokenizer  task · fake ·      ● permission 13s                       main',
     '                     Fake Small',
     '  Fix the printer    task · fake ·      working 32s                            coder',
@@ -185,24 +188,24 @@ test("narrower, nothing gives way: a task's kind wraps in its column after a ` �
   // Narrower, the state wraps in its column too, after a ` · ` and at its
   // spaces; the columns hold.
   expect(at(76)).toStrictEqual([
-    '❯ CI run 4812        monitor        ✗ exit code 1 after 3m 12s ·      main',
+    '❯ CI run 4812        monitor · m1   ✗ exit code 1 after 3m 12s ·      main',
     '                                    3 events',
-    '  dev server errors  monitor        running 4m 2s · 1 event           main',
-    '  parser tests       monitor        running 2m 3s · 4 events          parser',
+    '  dev server errors  monitor · m2   running 4m 2s · 1 event           main',
+    '  parser tests       monitor · m1   running 2m 3s · 4 events          parser',
     '  Fix the tokenizer  task · fake ·  ● permission 13s                  main',
     '                     Fake Small',
     '  Fix the printer    task · fake ·  working 32s                       coder',
     '                     Fake Large',
   ]);
   expect(at(60).slice(0, 3)).toStrictEqual([
-    '❯ CI run 4812        monitor        ✗ exit code 1     main',
+    '❯ CI run 4812        monitor · m1   ✗ exit code 1     main',
     '                                    after 3m 12s ·',
     '                                    3 events',
   ]);
   // Not even the state's widest word beside the kind's widest part: the
   // state and owner go under the name.
   expect(at(46).slice(0, 3)).toStrictEqual([
-    '❯ CI run 4812        monitor',
+    '❯ CI run 4812        monitor · m1',
     '    ✗ exit code 1 after 3m 12s · 3 events',
     '    main',
   ]);
@@ -213,7 +216,7 @@ test('narrower still, each item takes two lines or more: its name and kind, then
     text(viewRows(ITEMS.slice(2, 4), { width, focus: undefined, now: NOW }));
 
   expect(at(46)).toStrictEqual([
-    '❯ parser tests       monitor',
+    '❯ parser tests       monitor · m1',
     '    running 2m 3s · 4 events  parser',
     '  Fix the tokenizer  task · fake · Fake Small',
     '    ● permission 13s  main',
@@ -222,7 +225,7 @@ test('narrower still, each item takes two lines or more: its name and kind, then
   // whole.
   expect(at(40)).toStrictEqual([
     '❯ parser tests',
-    '    monitor',
+    '    monitor · m1',
     '    running 2m 3s · 4 events  parser',
     '  Fix the tokenizer',
     '    task · fake · Fake Small',
@@ -235,7 +238,7 @@ test('narrower still, each item takes two lines or more: its name and kind, then
 
   expect(narrow).toStrictEqual([
     '❯ parser tests',
-    '    monitor',
+    '    monitor · m1',
     '    running 2m 3s · 4',
     '    events',
     '    parser',
@@ -258,9 +261,9 @@ test('a name past 24 cells wraps two cells short of its column, the rest two cel
       viewRows([long, ITEMS[1]!], { width: 116, focus: undefined, now: NOW }),
     ),
   ).toStrictEqual([
-    '❯ Run the parser suite      monitor  running 4m 2s · 1 event  main',
+    '❯ Run the parser suite      monitor · m9  running 4m 2s · 1 event  main',
     '    in watch mode',
-    '  dev server errors         monitor  running 4m 2s · 1 event  main',
+    '  dev server errors         monitor · m2  running 4m 2s · 1 event  main',
   ]);
 });
 
@@ -570,7 +573,8 @@ test("the gutter says what is out of sight, as the pickers' edges do: ↑ on the
     edgeMarked(
       viewWindow(
         viewRows(many, {
-          width: 76,
+          // Wide enough that each row, its id in its kind, takes one line.
+          width: 116,
           focus: { key: 1, id: `m${focus}` },
           now: NOW,
         }),
@@ -593,7 +597,9 @@ test("the gutter says what is out of sight, as the pickers' edges do: ↑ on the
     '❯ ',
   ]);
   // Every line keeps its width.
-  expect(marked(6)[0]!.slice(2)).toBe(marked(1)[1]!.slice(2).replace('2', '3'));
+  expect(marked(6)[0]!.slice(2)).toBe(
+    marked(1)[1]!.slice(2).replace('2', '3').replace('m2', 'm3'),
+  );
 });
 
 describe('a row taller than the frame scrolls by line inside it (CHD-430)', () => {
@@ -1021,5 +1027,337 @@ describe('the ❯ once its row leaves (CHD-479)', () => {
     expect(focusAfter([a, b, c], [b, c], ref(b))).toStrictEqual(undefined);
     expect(focusAfter([a, b], [], ref(a))).toStrictEqual(undefined);
     expect(focusAfter([a, b], [b], undefined)).toStrictEqual(undefined);
+  });
+});
+
+describe("a monitor row's kind names its id (CHD-481)", () => {
+  const name = '30-min heartbeat while the owner is away';
+  const ended = {
+    group: 'stopped',
+    endedAt: NOW - 7_200_000,
+    end: { kind: 'timed_out', timeoutMs: 3_600_000 },
+  } as const;
+  const items = [
+    ...['m22', 'm23', 'm24'].map((id) =>
+      monitor(id, name, ended, { startedAt: NOW - 10_800_000 }),
+    ),
+    monitor('m25', name, { group: 'running' }, { startedAt: NOW - 2_812_000 }),
+  ];
+  const text = (width: number) =>
+    viewRows(items, { width, focus: { key: 1, id: 'm25' }, now: NOW }).map(
+      (row) =>
+        row.lines.map((line) =>
+          line
+            .map(({ text }) => text)
+            .join('')
+            .trimEnd(),
+        ),
+    );
+
+  test('at 120 columns it fits on the first line beside the name', () => {
+    expect(text(116).at(-1)).toStrictEqual([
+      '❯ 30-min heartbeat while    monitor · m25  running 46m 52s · 1 event       main',
+      '    the owner is away',
+    ]);
+  });
+
+  test('at 80 columns it wraps after the ·, onto the line the name takes already', () => {
+    expect(text(76)).toStrictEqual(
+      ['m22', 'm23', 'm24', 'm25'].map((id) => [
+        id === 'm25'
+          ? '❯ 30-min heartbeat while    monitor ·   running 46m 52s · 1 event       main'
+          : '  30-min heartbeat while    monitor ·   ■ timed out after 1h · 1 event  main',
+        `    the owner is away       ${id}`,
+      ]),
+    );
+  });
+
+  test("a task's and an agent's kinds stay as they were", () => {
+    const rows = viewRows(
+      [
+        task('t1', 'Fix the tokenizer', { group: 'running' }),
+        {
+          kind: 'agent',
+          id: 'a1',
+          key: 1,
+          name: 'Find a',
+          startedAt: NOW - 1000,
+          status: { group: 'running' },
+        },
+      ],
+      { width: 116, focus: undefined, now: NOW },
+    );
+    const kinds = rows.map((row) =>
+      row.lines[0]!.filter(({ role }) => role === 'kind')
+        .map(({ text }) => text.trim())
+        .join(''),
+    );
+
+    expect(kinds[1]).toStrictEqual('agent');
+    expect(kinds[0]).not.toContain('t1');
+  });
+});
+
+describe('CHD-481 U1 tester: monitor ids survive wrapping and shared local ids', () => {
+  const kind = (row: ViewRow) =>
+    row.lines
+      .flatMap((line) => line.filter((cell) => cell.role === 'kind'))
+      .map((cell) => cell.text)
+      .join('')
+      .replace(/\s/g, '');
+
+  for (const width of [20, 42, 76, 116]) {
+    test(`a long multibyte monitor id stays whole at ${width} cells`, () => {
+      const id = `m-${'語é👩‍💻'.repeat(8)}-end`;
+      const rows = viewRows(
+        [monitor(id, 'Same description', { group: 'running' })],
+        { width, focus: { key: 1, id }, now: NOW },
+      );
+
+      // wrap-ansi normalizes combining accents when it wraps text.
+      expect(kind(rows[0]!).normalize()).toBe(`monitor·${id}`.normalize());
+      expect(rows[0]!.item.id).toBe(id);
+      expect(text(rows).every((line) => stringWidth(line) <= width)).toBe(true);
+      expect(text(rows).filter((line) => line.startsWith('❯'))).toHaveLength(1);
+    });
+  }
+
+  test('two owners can have the same monitor id without moving the focus or losing the owner', () => {
+    const items = [
+      monitor('m1', 'Same description', { group: 'running' }),
+      monitor(
+        'm1',
+        'Same description',
+        { group: 'running' },
+        { key: 2, owner: PARSER },
+      ),
+    ];
+    const rows = viewRows(items, {
+      width: 76,
+      focus: { key: 2, id: 'm1' },
+      now: NOW,
+    });
+
+    expect(rows.map(kind)).toStrictEqual(['monitor·m1', 'monitor·m1']);
+    expect(text([rows[0]!]).join('\n')).toContain('main');
+    expect(text([rows[1]!]).join('\n')).toContain('parser');
+    expect(text([rows[0]!]).some((line) => line.startsWith('❯'))).toBe(false);
+    expect(text([rows[1]!]).some((line) => line.startsWith('❯'))).toBe(true);
+  });
+});
+
+describe("a monitor's detail lines (CHD-481)", () => {
+  const text = (item: BackgroundItem, width = 76) =>
+    detailLines(item, { width, now: NOW }).map((line) =>
+      line
+        .map(({ text }) => text)
+        .join('')
+        .trimEnd(),
+    );
+  const ERRORS = monitor(
+    'm2',
+    'dev server errors',
+    { group: 'running' },
+    {
+      command: 'npm run dev 2>&1 | grep --line-buffered ERROR',
+      timeoutMs: 3_600_000,
+      events: 2,
+      lastEvent: {
+        lines: ['ERROR [router] POST /login 500', '    at validate'],
+        at: NOW - 12_000,
+      },
+    },
+  );
+
+  test('a running one: its name, its facts, its command, its last batch with how long ago', () => {
+    expect(text(ERRORS)).toStrictEqual([
+      'dev server errors',
+      'running 4m 2s · 2 events · started 4m ago · timeout 1h · main',
+      '$ npm run dev 2>&1 | grep --line-buffered ERROR',
+      '← ERROR [router] POST /login 500',
+      '      at validate · 12s ago',
+    ]);
+  });
+
+  test('narrow, the facts wrap after a ·, the command and batch two cells in', () => {
+    expect(text(ERRORS, 30)).toStrictEqual([
+      'dev server errors',
+      'running 4m 2s · 2 events ·',
+      'started 4m ago · timeout 1h ·',
+      'main',
+      '$ npm run dev 2>&1 | grep',
+      '  --line-buffered ERROR',
+      '← ERROR [router] POST /login',
+      '  500',
+      '      at validate · 12s ago',
+    ]);
+  });
+
+  test("a word that ends at the width leaves the space it broke at off the next line, a batch line's own indent kept", () => {
+    expect(
+      text(
+        monitor(
+          'm2',
+          'x',
+          { group: 'running' },
+          {
+            command: 'abcdefghijklmn opq',
+            lastEvent: { lines: ['  abcdefghijkl mn'], at: NOW },
+          },
+        ),
+        16,
+      ).slice(-4),
+    ).toStrictEqual([
+      '$ abcdefghijklmn',
+      '  opq',
+      '←   abcdefghijkl',
+      '  mn · 0s ago',
+    ]);
+  });
+
+  test('with no batch yet it says so; ended, its end sentence comes last', () => {
+    expect(
+      text(
+        monitor(
+          'm1',
+          'CI run 4812',
+          {
+            group: 'failed',
+            endedAt: NOW - 30_000,
+            end: { kind: 'exit', code: 1 },
+          },
+          { command: 'sleep 600', events: 0 },
+        ),
+      ),
+    ).toStrictEqual([
+      'CI run 4812',
+      '✗ exit code 1 after 3m 32s · no events · started 4m ago · main',
+      '$ sleep 600',
+      '← no events yet',
+      'Exited with code 1 after 3m 32s.',
+    ]);
+  });
+});
+
+describe('↑ ↓ in a detail (CHD-481)', () => {
+  const ended = {
+    group: 'stopped',
+    endedAt: NOW,
+    end: { kind: 'stopped' },
+  } as const;
+  const tall = monitor('m1', 'a long description '.repeat(8), {
+    group: 'running',
+  });
+  const items = [
+    tall,
+    monitor('m2', 'b', { group: 'running' }),
+    monitor('m3', 'c', { group: 'running' }),
+  ];
+  const ref = (id: string) => ({ key: 1, id });
+
+  test('they step whole items, a tall one too, and stop at the ends while it runs', () => {
+    expect(stepDetail(items, ref('m1'), 1)).toStrictEqual(ref('m2'));
+    expect(stepDetail(items, ref('m2'), -1)).toStrictEqual(ref('m1'));
+    expect(stepDetail(items, ref('m1'), -1)).toBe(undefined);
+    expect(stepDetail(items, ref('m3'), 1)).toBe(undefined);
+  });
+
+  test("an ended one's item leaves on either: past an end to the item that takes its place, the last closing the frame (Q126)", () => {
+    const last = [...items.slice(0, 2), monitor('m3', 'c', ended)];
+    const first = [monitor('m1', 'a', ended), ...items.slice(1)];
+
+    expect(stepDetail(last, ref('m3'), -1)).toStrictEqual(ref('m2'));
+    expect(stepDetail(last, ref('m3'), 1)).toStrictEqual(ref('m2'));
+    expect(stepDetail(first, ref('m1'), -1)).toStrictEqual(ref('m2'));
+    expect(stepDetail([monitor('m1', 'a', ended)], ref('m1'), 1)).toBe(
+      'closed',
+    );
+    expect(stepDetail([monitor('m1', 'a', ended)], ref('m1'), -1)).toBe(
+      'closed',
+    );
+    // A task's end keeps it listed, so an end stays an end.
+    expect(
+      stepDetail(
+        [task('t1', 'x', { group: 'done', endedAt: NOW })],
+        ref('t1'),
+        1,
+      ),
+    ).toBe(undefined);
+  });
+});
+
+describe("no detail line is wider than its width, every part's role kept, at any width (CHD-481)", () => {
+  const withOwner = (name: string) =>
+    monitor(
+      'm2',
+      'dev server errors',
+      { group: 'running' },
+      {
+        command: 'npm run dev 2>&1 | grep --line-buffered ERROR',
+        timeoutMs: 3_600_000,
+        events: 2,
+        owner: { name, colour: 2 },
+        lastEvent: { lines: ['ERROR one', '    at two'], at: NOW - 12_000 },
+      },
+    );
+  const item = withOwner('a-child-with-a-very-long-name-indeed');
+  const text = (line: readonly ViewCell[]) =>
+    line.map(({ text }) => text).join('');
+
+  // An owner whose name wrap-ansi writes in another form (a decomposed é it
+  // composes), or of characters wider than one code unit, keeps its colour.
+  for (const name of [
+    'a-child-with-a-very-long-name-indeed',
+    'rene\u0301e-the-reviewer-of-everything',
+    '👩‍💻-coder-👨‍👩‍👧-family-of-agents',
+  ]) {
+    test(`owned by ${name}`, () => {
+      // Below three cells, a `$ ` or `← ` and one cell of text cannot fit.
+      for (let width = 3; width <= 80; width++) {
+        const lines = detailLines(withOwner(name), { width, now: NOW });
+        const said = lines.map(text);
+
+        expect({
+          width,
+          wide: said.filter((line) => stringWidth(line) > width),
+        }).toStrictEqual({ width, wide: [] });
+
+        const of = (role: string) =>
+          lines
+            .flat()
+            .filter((cell) => cell.role === role)
+            .map(({ text }) => text)
+            .join('')
+            .replace(/\s/g, '');
+
+        expect(of('state')).toBe('running4m2s');
+        expect(of('owner').normalize('NFC')).toBe(name.normalize('NFC'));
+        // Each gap between the five parts is one `·`, wherever it broke.
+        expect(of('kind')).toBe('·2events·started4mago·timeout1h·');
+      }
+    });
+  }
+
+  test('a part wider than its line wraps within itself, in its own role', () => {
+    expect(
+      detailLines(item, { width: 16, now: NOW })
+        .slice(1)
+        .filter((line) => line.some((cell) => cell.role === 'owner'))
+        .map((line) => line.map(({ text, role }) => `${role}:${text}`)),
+    ).toStrictEqual([
+      ['owner:a-child-with-a-v'],
+      ['owner:ery-long-name-in'],
+      ['owner:deed'],
+    ]);
+  });
+
+  test('at 24 cells the facts break between parts', () => {
+    expect(
+      detailLines(item, { width: 24, now: NOW }).slice(1, 4).map(text),
+    ).toStrictEqual([
+      'running 4m 2s · 2 events',
+      '· started 4m ago ·',
+      'timeout 1h ·',
+    ]);
   });
 });

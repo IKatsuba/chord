@@ -615,12 +615,18 @@ function commandSteps(
       return [{ type: 'scroll_background_hint', step: 'page_up' }];
     case 'background_page_down':
       return [{ type: 'scroll_background_hint', step: 'page_down' }];
+    case 'background_top':
+      return [{ type: 'scroll_background_hint', step: 'top' }];
+    case 'background_bottom':
+      return [{ type: 'scroll_background_hint', step: 'bottom' }];
     case 'stop_background':
       return [{ type: 'stop_background' }];
     case 'go_to_call':
       return [{ type: 'go_to_call' }];
     case 'close_background':
       return [dispatch({ type: 'background_closed' })];
+    case 'background_back':
+      return [dispatch({ type: 'background_detail_closed' })];
     case 'list_sessions':
       return [dispatch({ type: 'sessions_picker_opened' })];
     case 'close_sessions_picker':

@@ -6,7 +6,11 @@
  * between its groups and never cut (CHD-424).
  */
 import stringWidth from 'string-width';
-import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
+import type {
+  EndedMonitor,
+  MonitorEvent,
+  RunningMonitor,
+} from '../../session/monitors.ts';
 import {
   agentItemName,
   isAgentItem,
@@ -103,6 +107,10 @@ export interface BackgroundItem {
   readonly status: ItemStatus;
   /** A monitor's batches handed on so far. */
   readonly events?: number;
+  /** A monitor's command, its timeout and its last batch (CHD-481). */
+  readonly command?: string;
+  readonly timeoutMs?: number;
+  readonly lastEvent?: MonitorEvent;
   /** A task's runtime and model, as the agents list names an agent's. */
   readonly runtime?: string;
   readonly model?: string;
@@ -137,13 +145,16 @@ export interface BackgroundAgent {
 /**
  * The tab's items, oldest first, each keeping its place as it changes: the
  * running, asking and untracked ones, and those ended after `clearedAt`,
- * the person's last prompt in the tab, of a kind that stays once ended. Two that started in the same millisecond keep the order of
- * their agents, then of each agent's monitors by id and tasks as its
+ * the person's last prompt in the tab, of a kind that stays once ended; and
+ * `keep`, whose detail is open, ended or not, until the person leaves it
+ * (CHD-481, Q126). Two that started in the same millisecond keep the order
+ * of their agents, then of each agent's monitors by id and tasks as its
  * transcript has them, which no change of state moves.
  */
 export function backgroundItems(
   agents: readonly BackgroundAgent[],
   clearedAt = -Infinity,
+  keep?: { readonly key: number; readonly id: string },
 ): BackgroundItem[] {
   return agents
     .flatMap((agent, at) => [
@@ -153,12 +164,13 @@ export function backgroundItems(
     ])
     .filter(
       (item) =>
-        !leavesList(item) &&
-        // Untracked has not ended, so no prompt clears it (Q110).
-        (item.status.group === 'running' ||
-          item.status.group === 'asking' ||
-          item.status.group === 'untracked' ||
-          item.status.endedAt > clearedAt),
+        (keep !== undefined && item.key === keep.key && item.id === keep.id) ||
+        (!leavesList(item) &&
+          // Untracked has not ended, so no prompt clears it (Q110).
+          (item.status.group === 'running' ||
+            item.status.group === 'asking' ||
+            item.status.group === 'untracked' ||
+            item.status.endedAt > clearedAt)),
     )
     .sort((a, b) => a.startedAt - b.startedAt);
 }
@@ -172,6 +184,11 @@ function monitorItems(agent: BackgroundAgent): BackgroundItem[] {
     name: monitor.description,
     startedAt: monitor.startedAt,
     events: monitor.events,
+    command: monitor.command,
+    timeoutMs: monitor.timeoutMs,
+    ...(monitor.lastEvent === undefined
+      ? {}
+      : { lastEvent: monitor.lastEvent }),
   });
 
   // In id order, which is start order, so two started in the same
@@ -197,9 +214,12 @@ function monitorNumber(id: string): number {
   return Number(id.slice(1)) || 0;
 }
 
-/** A monitor's end as a group: exit 0 is done, a stop stopped, else failed. */
+/**
+ * A monitor's end as a group: exit 0 is done, a stop or its own timeout
+ * stopped (CHD-482's Q85), else failed.
+ */
 function monitorGroup(end: MonitorEnd): 'failed' | 'done' | 'stopped' {
-  return end.kind === 'stopped'
+  return end.kind === 'stopped' || end.kind === 'timed_out'
     ? 'stopped'
     : end.kind === 'exit' && end.code === 0
       ? 'done'

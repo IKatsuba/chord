@@ -1,0 +1,24 @@
+ ← from 30-min heartbeat while the owner is away · monitor
+   ⎿  heartbeat 1: check the ship run for a stall
+
+ ⏺ Received the message from 30-min heartbeat while the owner is away · monitor.
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · 4 in this tab                                                   │
+│                                                                              │
+│ ❯ 30-min heartbeat while    monitor ·   running 46m 52s · 1 event       main │
+│                                                                              │
+│ $ for i in 1 2; do sleep 1800; echo "heartbeat $i: check the ship run for    │
+│   a stall"; done                                                             │
+│ ← heartbeat 1: check the ship run for a stall · 16m ago                      │
+│ m25 · started 46m ago · timeout 1h                                           │
+│                                                                              │
+│ Enter to go to its call · x to stop · Esc to close                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  ✗ 3 monitors failed · 1 monitor running

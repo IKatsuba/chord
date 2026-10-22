@@ -50,13 +50,19 @@ test("a folded member's permission time goes on counting with its lead idle and 
   );
 
   try {
-    expect(stripAnsi(drawn.frame())).toContain('tester: permission 12s');
-    // The clock ticks a second at a time from the mount, so 14s is due a
-    // little after 2s; a fixed sleep just past that read 13s whenever a
-    // loaded run held the tick or its frame back a tenth of a second.
+    // The first frame says 12s, or 13s where a loaded run drew it late.
+    const first = Number(
+      /tester: permission (\d+)s/.exec(stripAnsi(drawn.frame()))?.[1],
+    );
+
+    expect([12, 13]).toContain(first);
+    // The clock ticks a second at a time from the mount, so two more are due
+    // a little after 2s; a fixed sleep just past that read one fewer whenever
+    // a loaded run held the tick or its frame back a tenth of a second.
     await until(
       'two more seconds on the folded wait',
-      () => stripAnsi(drawn.frame()).includes('tester: permission 14s'),
+      () =>
+        stripAnsi(drawn.frame()).includes(`tester: permission ${first + 2}s`),
       4_000,
     );
   } finally {

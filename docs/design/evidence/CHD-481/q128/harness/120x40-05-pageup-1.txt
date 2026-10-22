@@ -1,0 +1,40 @@
+ ⏺ I will hear from the dev server when it errs.
+
+ › claudebackground
+
+ ⏺ The tests run in the background while I look.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(tester (general-purpose)) · 1 tool use
+   │  ⎿  Bash(bun test)
+   └─ Agent(explorer (Explore)) · 1 tool use
+      ⎿  Search(cancelled in src/session)
+
+ ››› Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 of 3                                                                                                  │
+│                                                                                                                      │
+│ Run the test suite  agent  running 0s  main                                                                          │
+│                                                                                                                      │
+│ ── ↑ 6 lines above · pageup to scroll ────────────────────────────────────────────────────────────────────────────── │
+│ refusal line 6                                                                                                       │
+│ refusal line 7                                                                                                       │
+│ refusal line 8                                                                                                       │
+│ refusal line 9                                                                                                       │
+│ refusal line 10                                                                                                      │
+│ refusal line 11                                                                                                      │
+│ refusal line 12                                                                                                      │
+│ refusal line 13                                                                                                      │
+│ refusal line 14                                                                                                      │
+│ refusal line 15                                                                                                      │
+│ refusal line 16                                                                                                      │
+│ refusal line 17                                                                                                      │
+│ ── ↓ 13 lines below · pagedown to scroll ─────────────────────────────────────────────────────────────────────────── │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    background  1 monitor and main's 2 agents running

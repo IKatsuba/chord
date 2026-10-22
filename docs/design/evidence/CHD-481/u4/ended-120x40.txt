@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d481
+ ▀▀     ? for shortcuts · /help
+
+ › monitortimeout
+
+ ⏺ Monitor(heartbeat)
+   ⎿  $ sleep 1; echo "heartbeat 1: check the ship run"; sleep 600
+      m1 · times out after 5s
+
+ ⏺ The heartbeat stops itself in five seconds.
+
+ ← from heartbeat · monitor
+   ⎿  heartbeat 1: check the ship run
+
+ ⏺ Received the message from heartbeat · monitor.
+
+ ← from heartbeat · monitor · timed out
+   ⎿  Timed out after 5s (timeout_ms 5000); chord stopped it.
+
+ ⏺ Received the message from heartbeat · monitor · timed out.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · m1, 1 of 1 · ended                                                                                      │
+│                                                                                                                      │
+│ heartbeat                                                                                                            │
+│ ■ timed out after 5s · 1 event · started 7s ago · timeout 5s · main                                                  │
+│ $ sleep 1; echo "heartbeat 1: check the ship run"; sleep 600                                                         │
+│ ← heartbeat 1: check the ship run · 5s ago                                                                           │
+│ Timed out after 5s (timeout_ms 5000); chord stopped it.                                                              │
+│                                                                                                                      │
+│ Enter to go to its call · ↑ ↓ for the others · Esc ← to go back                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    background  ■ 1 monitor stopped

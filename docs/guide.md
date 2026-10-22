@@ -753,7 +753,8 @@ that agent later as a message: a turn of its own, drawn `← from dev server err
 sentence last. A turn an event starts does not ring the terminal when it
 ends. `stop_monitor` and `list_monitors` are the agent's own. A resumed
 session draws its events again and names monitors left running, without
-restarting them.
+restarting them. A monitor reaching its timeout is a stop:
+`■ timed out after 1h`, dim, including its transcript message.
 
 Monitors, `spawn_task` tasks and subagents that offer an individual stop
 share the `background` summary under the agents list. These subagents,
@@ -767,7 +768,9 @@ agents reaches it; Enter opens the background view above the prompt, full
 width in the pickers' rounded frame in the permission colour. It is as tall
 as its rows, at most half the screen; the prompt, status line and summary
 stay visible. Rows show name, kind, state with time and owner, oldest first.
-The kind and state cells wrap, keeping every part, including monitor events.
+A monitor's kind includes its id, `monitor · m25`, to tell same-named rows
+apart. The kind and state cells wrap, keeping every part, including
+monitor events.
 ↑ ↓ or j k move between rows. A row taller than the frame scrolls one line
 at a time before moving to the next row. Its `❯` stays on its first line;
 a dim `↑` in the gutter stands in when that line is out of sight. Resizing
@@ -775,8 +778,8 @@ or reopening starts it from its first line again.
 
 An agent row reads `running`, `● permission` or `● input`; `● waiting`
 means it needs action but no request reaches you. Ended agents and monitors
-leave at once. `? untracked` stays, even past the next prompt: the agent
-lost sight of the subagent, which may still work. Its summary reads
+leave the list at once. `? untracked` stays, even past the next prompt:
+the agent lost sight of the subagent, which may still work. Its summary reads
 `? main's agent untracked`.
 `x` stops the focused item alone, without confirmation; an agent reads
 `■ stopping` until its agent reports the end. A stop that cannot be sent
@@ -784,16 +787,27 @@ says `could not stop: …` in place of the hint; one no longer offered says
 `this agent offers no stop`. The hint and error wrap under the rows; the
 whole error stays, with its line breaks kept. At the half-screen cap, rows
 give way first, then pgup/pgdn scroll an error taller than its remaining
-room. An ended task or stopping item ignores `x`.
+room. In a detail, a tall error leaves only the description line, and
+pgup/pgdn and home/end page the error alone. Moving to another item clears
+the error and restores the detail. An ended or stopping item ignores `x`.
 Esc in the transcript leaves individually stoppable subagents running.
 
-Enter picks the owner and scrolls to the item's call or subagent block;
-a folded block stays folded, and a missing call leaves the view open.
-Esc returns to the summary, then to the prompt. A new request that takes
-the keys hides the frame until answered, then it returns as it was. Opened
-over a held request, the frame takes that box's place; ctrl+x a closes it
-and gives the request the keys. When a row leaves, `❯` moves to its
-replacement or the row above; the last row leaving closes the view.
+Enter on a monitor row opens its detail in place of the rows, titled
+`Background · m2, 2 of 2`: its description, state and event count,
+`started 3h 46m ago`, timeout and owner, then `$ ` and its command, and
+`← ` and the last event batch with how long ago it came, or `← no events yet`.
+pgup/pgdn and home/end page a tall detail; ↑ ↓ or j k step to the other
+items' details. ← or Esc returns to the list; a second Esc closes it.
+A monitor ending with its detail open stays shown until you leave it:
+the title adds `· ended`, its end state and chord's end sentence appear,
+and `x` does nothing. Enter in a detail, or on a task or agent row, picks
+the owner and scrolls to its call or subagent block; a folded block stays
+folded, and a missing call leaves the view open.
+A new request taking the keys hides the frame until answered, then it
+returns as it was. Over a held request, it takes that box's place;
+ctrl+x a closes it and gives the request the keys. When a list row leaves,
+`❯` moves to its replacement or the row above; the last row leaving closes
+the view.
 An agent ending after the turn that announced it leaves a line in its
 owner's transcript: `✓ Run tests · agent · done in 4s`,
 `✗ Run tests · agent · failed after 22s: tsc exited 2` or

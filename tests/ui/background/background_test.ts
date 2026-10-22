@@ -159,6 +159,28 @@ describe('the items', () => {
     expect(items).toStrictEqual([0, 0, 0, 0, 0, 0]);
   });
 
+  test('an ended monitor whose detail is open stays until it is left, the others leaving as they would (CHD-481, Q126)', () => {
+    const agents = [
+      agent(1, {
+        endedMonitors: [
+          ended(
+            running('m1', 'kept', 0),
+            { kind: 'timed_out', timeoutMs: 1000 },
+            5,
+          ),
+          ended(running('m2', 'gone', 0), { kind: 'stopped' }, 5),
+        ],
+      }),
+    ];
+
+    expect(
+      brief(backgroundItems(agents, -Infinity, { key: 1, id: 'm1' })),
+    ).toStrictEqual(['monitor kept 1 stopped']);
+    expect(
+      brief(backgroundItems(agents, -Infinity, { key: 2, id: 'm1' })),
+    ).toStrictEqual([]);
+  });
+
   test('a task reported is done, a failed or gone one failed, a cancelled one stopped', () => {
     const states = (
       ['completed', 'failed', 'disconnected', 'cancelled'] as const
@@ -1323,5 +1345,44 @@ describe('CHD-479 tester: parent order follows the list through live state chang
           .trim(),
       ).toBe(`background ${expected}`);
     }
+  });
+});
+
+describe('a monitor item keeps what its detail says (CHD-481)', () => {
+  test('its command, start, timeout and last batch with when it went; no batch before the first', () => {
+    const quiet = running('m1', 'dev server', 100);
+    const said = {
+      ...running('m2', 'CI run', 200),
+      command: 'bun test --watch',
+      timeoutMs: 3_600_000,
+      lastEvent: { lines: ['ok 1', 'ok 2'], at: 900 },
+    };
+    const items = backgroundItems([agent(1, { monitors: [quiet, said] })]);
+
+    expect(
+      items.map(({ id, command, startedAt, timeoutMs, lastEvent }) => ({
+        id,
+        command,
+        startedAt,
+        timeoutMs,
+        lastEvent,
+      })),
+    ).toStrictEqual([
+      {
+        id: 'm1',
+        command: 'cmd',
+        startedAt: 100,
+        timeoutMs: 600_000,
+        lastEvent: undefined,
+      },
+      {
+        id: 'm2',
+        command: 'bun test --watch',
+        startedAt: 200,
+        timeoutMs: 3_600_000,
+        lastEvent: { lines: ['ok 1', 'ok 2'], at: 900 },
+      },
+    ]);
+    expect('lastEvent' in items[0]!).toStrictEqual(false);
   });
 });

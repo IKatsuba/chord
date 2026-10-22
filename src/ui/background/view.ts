@@ -8,9 +8,14 @@ import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
-import { endWord, timeoutWords } from '../../session/monitors.ts';
+import { endSentence, endWord, timeoutWords } from '../../session/monitors.ts';
 import { spentParts } from '../transcript/agents/subagents.ts';
-import type { BackgroundGroup, BackgroundItem } from './background.ts';
+import { wrapLine } from '../transcript/message.ts';
+import {
+  type BackgroundGroup,
+  type BackgroundItem,
+  leavesList,
+} from './background.ts';
 
 /** An item by its owner's session and its id there. */
 export interface ItemRef {
@@ -63,6 +68,39 @@ export function focusAfter(
   const next = items[Math.min(above, items.length - 1)]!;
 
   return { key: next.key, id: next.id };
+}
+
+/**
+ * Where ↑ ↓ (`by`) take an open detail on `detail` over `items`: the
+ * item `by` on, whole items, not lines, as a page key scrolls a tall one;
+ * at an end, nowhere, unless its item has ended and leaves once left, when
+ * it goes to the item that takes its place under CHD-479's rule, or, none
+ * left, `closed` (docs/design/CHD-481.md, Q126).
+ */
+export function stepDetail(
+  items: readonly BackgroundItem[],
+  detail: ItemRef,
+  by: 1 | -1,
+): ItemRef | 'closed' | undefined {
+  const at = items.findIndex((item) => sameItem(item, detail));
+  const item = items[at];
+  const next = at === -1 ? undefined : items[at + by];
+
+  if (next !== undefined) {
+    return { key: next.key, id: next.id };
+  }
+
+  if (item === undefined || !leavesList(item)) {
+    return undefined;
+  }
+
+  return (
+    focusAfter(
+      items,
+      items.filter((each) => each !== item),
+      detail,
+    ) ?? 'closed'
+  );
 }
 
 /** The hint line on an agent item whose agent offers no stop of its own. */
@@ -137,8 +175,13 @@ export function stateText(
       const ran = after(status.endedAt - item.startedAt);
 
       if (status.group === 'stopped') {
+        // A monitor's timeout is a stop in its own words (CHD-482's Q85).
+        const word =
+          status.word ??
+          (status.end === undefined ? 'stopped' : endWord(status.end));
+
         return {
-          text: `■ ${status.word ?? 'stopped'} after ${ran}${events}${paid}`,
+          text: `■ ${word} after ${ran}${events}${paid}`,
           group: 'stopped',
         };
       }
@@ -176,11 +219,18 @@ function oneLine(text: string): string {
 }
 
 /**
- * An item's kind as its row says it: a task's with its runtime and model,
- * each on one line, as the row is laid out by the lines it makes itself.
+ * An item's kind as its row says it: a monitor's with its id, which tells
+ * monitors of one description apart and names it as its messages do
+ * (CHD-481); a task's with its runtime and model; each on one line, as the
+ * row is laid out by the lines it makes itself.
  */
 function kindText(item: BackgroundItem): string {
-  return [item.kind, item.runtime, item.model]
+  return [
+    item.kind,
+    item.kind === 'monitor' ? item.id : undefined,
+    item.runtime,
+    item.model,
+  ]
     .filter((part) => part !== undefined)
     .map(oneLine)
     .join(' · ');
@@ -256,7 +306,16 @@ function kindLeast(kinds: readonly string[]): number {
 /** A run of a row's line, by what it is, which its colour follows. */
 export interface ViewCell {
   readonly text: string;
-  readonly role: 'mark' | 'edge' | 'name' | 'kind' | 'state' | 'owner' | 'gap';
+  readonly role:
+    | 'mark'
+    | 'edge'
+    | 'name'
+    | 'kind'
+    | 'state'
+    | 'owner'
+    | 'gap'
+    /** A detail's command or event, in the text's colour (CHD-481). */
+    | 'text';
   /** A state's group, for its colour. */
   readonly group?: BackgroundGroup;
 }
@@ -749,4 +808,156 @@ export function edgeMarked(shown: ViewWindow): ViewLine[] {
   }
 
   return lines;
+}
+
+/**
+ * How long ago, as the agents list says it, to the minute once past one:
+ * `16m`, `3h 46m`, `41s` (CHD-481).
+ */
+function agoWords(ms: number): string {
+  const words = formatElapsed(Math.max(0, ms)).split(' ');
+
+  return (
+    words.length > 1 ? words.filter((word) => !word.endsWith('s')) : words
+  ).join(' ');
+}
+
+/**
+ * `parts` joined by ` · ` in lines of at most `width` cells, as a kind
+ * breaks (`kindIn`): a line broken only between parts, the `·` ending it,
+ * or starting the next where even it does not fit; a part wider than a line
+ * wraps at its spaces. Each part is wrapped alone and placed whole, as the
+ * team list places its parts, so every run keeps its part's role.
+ */
+function dotted(parts: readonly ViewCell[], width: number): ViewCell[][] {
+  const room = Math.max(1, width);
+  const lines: ViewCell[][] = [];
+  const cells = (line: readonly ViewCell[]) =>
+    stringWidth(line.map(({ text }) => text).join(''));
+  const pieces = (part: ViewCell, within: number) =>
+    wrapped(part.text, within).map((text) => ({ ...part, text }));
+
+  for (const part of parts) {
+    const last = lines.at(-1);
+
+    if (last === undefined) {
+      lines.push(...pieces(part, room).map((piece) => [piece]));
+
+      continue;
+    }
+
+    const [head, ...rest] = pieces(part, room);
+
+    if (cells(last) + 3 + stringWidth(head!.text) <= room) {
+      last.push({ text: ' · ', role: 'kind' }, head!);
+      lines.push(...rest.map((piece) => [piece]));
+    } else if (cells(last) + 2 <= room) {
+      last.push({ text: ' ·', role: 'kind' });
+      lines.push(...pieces(part, room).map((piece) => [piece]));
+    } else {
+      const [first, ...after] = pieces(part, Math.max(1, room - 2));
+
+      lines.push(
+        [{ text: '· ', role: 'kind' }, first!],
+        ...after.map((piece) => [piece]),
+      );
+    }
+  }
+
+  return lines;
+}
+
+/**
+ * `text` wrapped after `first`, a two-cell lead such as `$ `, its later
+ * lines two in under it; with no lead, at the whole width.
+ */
+function wrappedIn(
+  first: string,
+  text: string,
+  width: number,
+  role: ViewCell['role'],
+): ViewCell[][] {
+  const indent = first === '' ? '' : '  ';
+
+  // Its own indent on its first line, as an event's is part of what it said,
+  // as a monitor's message wraps it.
+  return wrapLine(text, Math.max(1, width - stringWidth(indent))).map(
+    (line, at) => [{ text: `${at === 0 ? first : indent}${line}`, role }],
+  );
+}
+
+/**
+ * The lines of `item`'s detail in the background frame, in its place of the
+ * rows (docs/design/CHD-481.md): a monitor's description whole, its state
+ * with its events, start, timeout and owner, its command, its last batch
+ * with how long ago it came, and, ended, chord's sentence for its end; a
+ * task's or agent's, its list row alone.
+ */
+export function detailLines(
+  item: BackgroundItem,
+  { width, now }: { readonly width: number; readonly now: number },
+): ViewCell[][] {
+  if (item.kind !== 'monitor') {
+    return viewRows([item], { width, focus: undefined, now })
+      .flatMap((row) => row.lines)
+      .map((line) => line.filter((cell) => cell.role !== 'mark'));
+  }
+
+  const { events: _, ...bare } = item;
+  const state = stateText(bare, now);
+  const name = wrapAnsi(stripAnsi(item.name), Math.max(1, width), {
+    hard: true,
+  })
+    .split('\n')
+    .map((line): ViewCell[] => [{ text: line, role: 'name' }]);
+  const facts = dotted(
+    [
+      // The row's state in its colour, its events after it dim.
+      { text: oneLine(state.text), role: 'state', group: state.group },
+      { text: eventsWords(item.events ?? 0), role: 'kind' },
+      { text: `started ${agoWords(now - item.startedAt)} ago`, role: 'kind' },
+      ...(item.timeoutMs === undefined
+        ? []
+        : [
+            {
+              text: `timeout ${timeoutWords(item.timeoutMs)}`,
+              role: 'kind' as const,
+            },
+          ]),
+      { text: ownerText(item), role: 'owner' },
+    ],
+    width,
+  );
+  const command =
+    item.command === undefined
+      ? []
+      : wrappedIn('$ ', stripAnsi(item.command), width, 'text');
+  const last = item.lastEvent;
+  const event =
+    last === undefined || last.lines.length === 0
+      ? wrappedIn('← ', 'no events yet', width, 'text')
+      : last.lines.flatMap((line, at) =>
+          wrappedIn(
+            at === 0 ? '← ' : '  ',
+            `${stripAnsi(line)}${
+              at === last.lines.length - 1
+                ? ` · ${agoWords(now - last.at)} ago`
+                : ''
+            }`,
+            width,
+            'text',
+          ),
+        );
+  const { status } = item;
+  const end =
+    'end' in status && status.end !== undefined
+      ? wrappedIn(
+          '',
+          endSentence(status.end, status.endedAt - item.startedAt),
+          width,
+          'kind',
+        )
+      : [];
+
+  return [...name, ...facts, ...command, ...event, ...end];
 }

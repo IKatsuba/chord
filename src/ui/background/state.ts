@@ -38,6 +38,11 @@ export interface BackgroundState {
      * comes later, is said.
      */
     readonly stopping?: { readonly focus: ItemRef; readonly token: string };
+    /**
+     * The monitor whose detail is open in place of the rows, which `↑ ↓`
+     * step from item to item (CHD-481).
+     */
+    readonly detail?: ItemRef;
   };
 }
 
@@ -81,7 +86,11 @@ export type BackgroundAction =
       readonly type: 'background_hinted';
       readonly token: string;
       readonly hint: string;
-    };
+    }
+  /** `enter` on a monitor's row opened its detail. */
+  | { readonly type: 'background_detail_opened'; readonly focus: ItemRef }
+  /** `esc` or `←` in the detail went back to the rows, the `❯` where it was. */
+  | { readonly type: 'background_detail_closed' };
 
 export const initialBackground: BackgroundState = { backgroundCleared: {} };
 
@@ -185,8 +194,35 @@ export function reduceBackground(
           same(view.stopping.focus, action.focus)
             ? { stopping: view.stopping }
             : {}),
+          // An open detail follows the `❯` to the item it moved to.
+          ...(view.detail === undefined ? {} : { detail: action.focus }),
         },
       };
+    }
+    case 'background_detail_opened': {
+      const view = state.backgroundView;
+
+      if (view === undefined) {
+        return state;
+      }
+
+      const { hint: _, top: __, laid: ___, ...kept } = view;
+
+      return {
+        ...state,
+        backgroundView: { ...kept, focus: action.focus, detail: action.focus },
+      };
+    }
+    case 'background_detail_closed': {
+      const view = state.backgroundView;
+
+      if (view?.detail === undefined) {
+        return state;
+      }
+
+      const { detail: _, hint: __, ...kept } = view;
+
+      return { ...state, backgroundView: kept };
     }
     case 'background_stop_asked': {
       const view = state.backgroundView;

@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m194.[0m Line 194 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m195.[0m Line 195 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m196.[0m Line 196 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m197.[0m Line 197 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m198.[0m Line 198 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m199.[0m Line 199 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m200.[0m Line 200 of 200, streamed one at a time.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [2m[39mfrom [0;1m30-min heartbeat while the owner is away[0;2m · monitor[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mheartbeat 1: check the ship run for a stall[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from 30-min heartbeat while the owner is away · monitor.[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [2m[39mfrom [0;1m30-min heartbeat while the owner is away[0;2m · monitor[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mheartbeat 1: check the ship run for a stall[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from 30-min heartbeat while the owner is away · monitor.[38;2;255;255;255m
+
+ [2m[39m←[0m[38;2;255;255;255m [2m[39mfrom [0;1m30-min heartbeat while the owner is away[0;2m · monitor · timed out[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mTimed out after 45s (timeout_ms 45000); chord stopped it.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from 30-min heartbeat while the owner is away · monitor · timed out.[38;2;255;255;255m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [1m[38;2;177;185;249mBackground[0;2m · m2, 2 of 2 · ended[0m[38;2;255;255;255m                                                                                      [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                                                                      [38;2;177;185;249m│
+│[38;2;255;255;255m [1m[39m30-min heartbeat while the owner is away[0m[38;2;255;255;255m                                                                             [38;2;177;185;249m│
+│[38;2;255;255;255m [2m[39m■ timed out after 45s · 1 event · started 48s ago · timeout 45s · main[0m[38;2;255;255;255m                                               [38;2;177;185;249m│
+│[38;2;255;255;255m [39m$ for i in 1 2; do sleep 1; echo "heartbeat $i: check the ship run for a stall"; sleep 1800; done[38;2;255;255;255m                    [38;2;177;185;249m│
+│[38;2;255;255;255m [39m← heartbeat 1: check the ship run for a stall · 47s ago[38;2;255;255;255m                                                              [38;2;177;185;249m│
+│[38;2;255;255;255m [2m[39mTimed out after 45s (timeout_ms 45000); chord stopped it.[0m[38;2;255;255;255m                                                            [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                                                                      [38;2;177;185;249m│
+│[38;2;255;255;255m [2m[39mEnter to go to its call · ↑ ↓ for the others · Esc ← to go back[0m[38;2;255;255;255m                                                      [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39mbackground  1 monitor running · ■ 1 monitor stopped[0m[38;2;255;255;255m

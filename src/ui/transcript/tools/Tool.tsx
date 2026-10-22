@@ -648,13 +648,11 @@ export function Arrow({
   /** The other agent's colour, for an arrow that is neither dim nor red. */
   colour?: string | undefined;
 }) {
-  const { error, warning } = useColours();
+  const { error } = useColours();
 
   switch (tone) {
     case 'plain':
       return <Gutter {...paint(colour)}>{glyph}</Gutter>;
-    case 'warning':
-      return <Gutter {...paint(warning)}>{glyph}</Gutter>;
     case 'dim':
       return <Gutter dimColor>{glyph}</Gutter>;
     case 'failed':

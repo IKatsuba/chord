@@ -228,13 +228,14 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: ['close_agent', 'stop_background'],
     actions: ['agents:close'],
   },
-  // Enter on the summary line opens the background view, and on one of its
-  // rows goes to the call that started it; not rebindable, as a picker's
+  // Enter on the summary line opens the background view; on a monitor's
+  // row its details, and in them or on another row the call that started
+  // it (CHD-481); not rebindable, as a picker's
   // Enter is not. The key test presses no bare Enter on the window, so its
   // own test does (`open_background`, `go_to_call`).
   {
     key: 'enter',
-    does: 'to open background or a call',
+    does: 'for background, details, a call',
     commands: [],
   },
   // Again while it is open, the next older match.
@@ -292,7 +293,15 @@ export const SHORTCUTS: readonly Shortcut[] = [
   {
     key: 'home end',
     does: 'for the top and the bottom',
-    commands: ['scroll_top', 'scroll_bottom', 'request_top', 'request_bottom'],
+    commands: [
+      'scroll_top',
+      'scroll_bottom',
+      'request_top',
+      'request_bottom',
+      // A detail and an error in the background frame (CHD-481).
+      'background_top',
+      'background_bottom',
+    ],
     presses: ['home', 'end', 'shift + home', 'shift + end'],
     actions: ['scroll:top', 'scroll:bottom'],
   },
@@ -438,13 +447,15 @@ export const SHORTCUTS: readonly Shortcut[] = [
     actions: ['confirm:no'],
   },
   // One line for both, the background view counting as a picker, so the
-  // panel keeps to 40 lines, 20 rows a column at 80x24.
+  // panel keeps to 40 lines, 20 rows a column at 80x24; ← leaves a
+  // monitor's detail as esc does (CHD-481).
   {
-    key: 'esc',
-    does: 'to close a picker or shortcuts',
+    key: 'esc ←',
+    does: 'to leave a picker or shortcuts',
     commands: [
       'close_help',
       'close_background',
+      'background_back',
       'close_model_picker',
       'close_resume_picker',
       'close_sessions_picker',
@@ -453,6 +464,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'close_mcp',
       'close_teams_picker',
     ],
+    presses: ['esc', '←'],
     actions: ['select:cancel', 'help:dismiss'],
   },
   // Claude Code's key and words in its own /resume.

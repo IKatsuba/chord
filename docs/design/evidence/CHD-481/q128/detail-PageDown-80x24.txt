@@ -1,0 +1,24 @@
+   ⎿  ERROR [router] POST /login 500: Cannot read properties of undefined
+      (reading 'trim')
+          at validate (src/routes/login.tsx:41:22)
+
+ ⏺ Received the message from dev server errors · monitor.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Background · m1, 1 of 2                                                      │
+│                                                                              │
+│ ── ↑ 3 lines above · pageup to scroll ────────────────────────────────────── │
+│   undefined (reading 'trim')"; echo "    at validate                         │
+│   (src/routes/login.tsx:41:22)"; sleep 600                                   │
+│ ← ERROR [router] POST /login 500: Cannot read properties of undefined        │
+│   (reading 'trim')                                                           │
+│       at validate (src/routes/login.tsx:41:22) · 5s ago                      │
+│                                                                              │
+│ Enter to go to its call · ↑ ↓ for the others · x to stop · Esc ← to go back  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  2 monitors running

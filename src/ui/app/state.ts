@@ -502,6 +502,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'background_focused':
     case 'background_stop_asked':
     case 'background_hinted':
+    case 'background_detail_opened':
+    case 'background_detail_closed':
       return reduceBackground(state, action) as AppState;
     case 'expanded_toggled':
       // Rewrapped, its cells would hold other characters.
@@ -1950,14 +1952,33 @@ function backgroundCommand(
     return 'go_to_call';
   }
 
-  // An error taller than its room scrolls by the transcript's page keys,
-  // which the view has no other use for (CHD-473).
+  // An error taller than its room, or a detail, scrolls by the transcript's
+  // page keys and home and end, which the view has no other use for
+  // (CHD-473, CHD-481).
   if (on('scroll:pageUp')) {
     return 'background_page_up';
   }
 
   if (on('scroll:pageDown')) {
     return 'background_page_down';
+  }
+
+  if (on('scroll:top')) {
+    return 'background_top';
+  }
+
+  if (on('scroll:bottom')) {
+    return 'background_bottom';
+  }
+
+  // Out of a monitor's detail, esc and ← go back to the rows; ← on the rows
+  // does nothing (CHD-481).
+  if (state.backgroundView?.detail !== undefined) {
+    if (key.leftArrow || on('select:cancel')) {
+      return 'background_back';
+    }
+  } else if (key.leftArrow) {
+    return undefined;
   }
 
   return on('select:cancel') ? 'close_background' : undefined;

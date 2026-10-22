@@ -50,10 +50,22 @@ export interface MonitorInfo {
   readonly timeoutMs: number;
 }
 
+/** A batch a monitor handed on, as its background detail says it. */
+export interface MonitorEvent {
+  readonly lines: readonly string[];
+  /** When it went, epoch milliseconds. */
+  readonly at: number;
+}
+
 /** A monitor still running, as the screen's list reads it. */
 export interface RunningMonitor extends MonitorInfo {
   /** The batches it has handed on so far. */
   readonly events: number;
+  /**
+   * The last of them, kept as it went, the lines its end carried too; none
+   * before the first (CHD-481).
+   */
+  readonly lastEvent?: MonitorEvent;
 }
 
 /**
@@ -378,6 +390,7 @@ export class MonitorRun {
   readonly #hooks: MonitorHooks;
   readonly #flood = new FloodWatch();
   #events = 0;
+  #last: MonitorEvent | undefined;
   #batch: EventLines | undefined;
   #flush: ReturnType<typeof setTimeout> | undefined;
   readonly #timeout: ReturnType<typeof setTimeout>;
@@ -429,7 +442,11 @@ export class MonitorRun {
   }
 
   get running(): RunningMonitor {
-    return { ...this.info, events: this.#events };
+    return {
+      ...this.info,
+      events: this.#events,
+      ...(this.#last === undefined ? {} : { lastEvent: this.#last }),
+    };
   }
 
   /** Stops it and all it started; the person's stop is told to the agent. */
@@ -477,6 +494,7 @@ export class MonitorRun {
 
       if (batch !== undefined && this.#stopping === undefined) {
         this.#events += 1;
+        this.#last = { lines: batch.lines, at: Date.now() };
 
         this.#hooks.event(batch);
       }
@@ -511,6 +529,11 @@ export class MonitorRun {
 
     if (why === 'silent') {
       return;
+    }
+
+    // What its end carries is the last it said.
+    if (rest.lines.length > 0) {
+      this.#last = { lines: rest.lines, at: Date.now() };
     }
 
     this.#hooks.ended(why ?? endOfShell(end), rest);

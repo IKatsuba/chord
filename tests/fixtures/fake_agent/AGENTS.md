@@ -7,7 +7,7 @@
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
   (`text`, `texttillsteered`, `thought`, `todos`, `mcp`, `opened`, `markdown`,
-  `titled`, `retitled`,
+  `titled`, `retitled`, `titledlook`, `titledfix`,
   `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `longresults`,
@@ -46,7 +46,7 @@
   `scenarios/agents.ts`'s `gateOpened` waits up to 10 s for a gate file.
   The gated scenarios below use `<cwd>/.fake-gate/release`.
   A prompt that is exactly a scenario name (`text`, `texttillsteered`,
-  `titled`, `retitled`,
+  `titled`, `retitled`, `titledlook`, `titledfix`,
   `thought`, `tools`, `steps`, `stepslater`, `calls`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlaptwo`, `overlapfail`, `overlapask`,
@@ -124,7 +124,8 @@
   request's `_meta`, as JSON, to show what chord adds there (CHD-439);
   `titled` names its session `Fix the tokenizer` through
   `session_info_update`; `retitled` names it `Look at the parser`, then
-  renames it `Fix the parser`;
+  renames it `Fix the parser`; `titledlook` and `titledfix` give those last
+  two titles in separate prompts, so a test can observe each;
   `chordtools` connects to chord's own, through the MCP SDK's client, calls
   `list_agents` and `list_sessions` and answers with what came back, as
   JSON; `chordcalls` makes the same calls as tool calls, titled as Claude's

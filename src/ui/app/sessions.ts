@@ -148,6 +148,7 @@ import {
 import {
   focusedItem,
   moveView,
+  stepDetail,
   NO_STOP_HINT,
   stopRefused,
 } from '../background/view.ts';
@@ -1807,11 +1808,28 @@ export function useSessions(
     showFront();
   };
 
-  /** ↑ ↓ in the background view: the `❯` `by` rows on, stopping at the ends. */
+  /**
+   * ↑ ↓ in the background view: the `❯` `by` rows on, stopping at the ends;
+   * in a detail, to the next item's detail (CHD-481).
+   */
   const moveBackground = (
     by: 1 | -1,
     frame: { readonly width: number; readonly height: number },
   ) => {
+    const detail = state.backgroundView?.detail;
+
+    if (detail !== undefined) {
+      const to = stepDetail(background(), detail, by);
+
+      if (to === 'closed') {
+        dispatch({ type: 'background_closed' });
+      } else if (to !== undefined) {
+        dispatch({ type: 'background_focused', focus: to });
+      }
+
+      return;
+    }
+
     const at = moveView(background(), state.backgroundView, by, {
       ...frame,
       now: Date.now(),
@@ -1891,6 +1909,21 @@ export function useSessions(
    */
   const goToCall = () => {
     const item = focusedItem(background(), state.backgroundView?.focus);
+
+    // On a monitor's row, enter opens its detail; in it, to its call
+    // (CHD-481).
+    if (
+      item?.kind === 'monitor' &&
+      state.backgroundView?.detail === undefined
+    ) {
+      dispatch({
+        type: 'background_detail_opened',
+        focus: { key: item.key, id: item.id },
+      });
+
+      return;
+    }
+
     const entries = item && all.sessions[item.key]?.transcript.entries;
     const place = entries && callPlace(entries, item);
 
@@ -2374,6 +2407,9 @@ export function useSessions(
         ),
       ],
       all.window.backgroundCleared[tab.key],
+      // The item whose detail is open stays, ended or not, until the person
+      // leaves it (Q126).
+      state.backgroundView?.detail,
     );
   };
 

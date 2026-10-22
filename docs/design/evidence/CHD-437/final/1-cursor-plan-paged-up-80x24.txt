@@ -1,0 +1,24 @@
+      3. Run the tests.
+
+      Move
+      ◐ Move the routing
+      ☐ Run the tests
+ ── ↓ 5 lines below · end to jump to the bottom ───────────────────────────────
+
+ ››› Waiting for your answer to the plan… (3s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ fake has a plan. Do you want to proceed?                                     │
+│ ❯ 1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│   Note  Tell fake what to change, sent with 2 (optional)                     │
+│                                                                              │
+│ Enter to pick · 1–2 · ↑↓ to move · Esc to keep planning                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

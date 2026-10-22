@@ -1,0 +1,24 @@
+      1. Read src/acp/connection.ts.
+      2. Move the routing into src/session/session.ts.
+      3. Run the tests.
+
+ ››› Waiting for your answer to the plan… (4s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ fake has a plan. Do you want to proceed?                                     │
+│   1. Yes, start implementing                                                 │
+│   2. No, keep planning                                                       │
+│   3. No, and leave plan mode                                                 │
+│                                                                              │
+│ ❯ Note  start with the connection, and keep the old routing until the tests  │
+│         pass                                                                 │
+│                                                                              │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep       │
+│ planning                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

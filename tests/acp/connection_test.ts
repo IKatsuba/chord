@@ -694,6 +694,53 @@ test("the agent's stderr reaches the subscriber, and an agent that exits at star
   );
 });
 
+test("an agent that exits at start after closing its stdout still says why, its stderr's last piece read before the message is made (CHD-495)", async () => {
+  const seen = new Seen();
+
+  const refused = openAgent({
+    // Its stdout ends first, its last words come after, and then the exit.
+    command: [
+      'sh',
+      '-c',
+      'exec 1>&-; sleep 0.1; echo "no credentials" >&2; exit 1',
+    ],
+    cwd: process.cwd(),
+    onTraffic: seen.push,
+    stop: STOP,
+    ...REFUSE,
+  });
+
+  await expect(refused).rejects.toThrow('The agent exited: no credentials');
+});
+
+test('an agent that goes mid-session after closing its stdout fails the request with its last words, and leaves them once exited (CHD-495)', async () => {
+  // Answers `initialize` with the id it was asked under; at the next
+  // request its stdout ends first, its last words come after, then the exit.
+  const script = [
+    'read -r line',
+    String.raw`id=$(printf "%s" "$line" | sed -n "s/.*\"id\":\([0-9]*\).*/\1/p")`,
+    String.raw`printf "{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{},\"authMethods\":[]}}\n" "$id"`,
+    'read -r line',
+    'exec 1>&-',
+    'sleep 0.1',
+    'echo "out of tokens" >&2',
+    'exit 1',
+  ].join('\n');
+  const agent = await openAgent({
+    command: ['sh', '-c', script],
+    cwd: process.cwd(),
+    onTraffic: () => {},
+    stop: STOP,
+    ...REFUSE,
+  });
+
+  await expect(
+    agent.newSession({ cwd: process.cwd(), mcpServers: [] }),
+  ).rejects.toThrow('The agent exited: out of tokens');
+  await agent.exited;
+  expect(agent.gone()).toBe('out of tokens');
+});
+
 test('an agent that cannot be started says so', async () => {
   const refused = openAgent({
     command: 'chord-no-such-agent --acp',

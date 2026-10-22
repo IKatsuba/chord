@@ -1,5 +1,17 @@
-import { TextAttributes } from '@opentui/core';
-import { type RefObject, useCallback, useEffect, useState } from 'react';
+import {
+  type BoxRenderable,
+  type ScrollBoxRenderable,
+  TextAttributes,
+} from '@opentui/core';
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import type { Subagent, TurnState } from '../../session/transcript/types.ts';
+import { AgentWork } from '../transcript/agents/Agents.tsx';
 import {
   hintOf,
   useCloseHint,
@@ -16,14 +28,17 @@ import {
 } from '../dialogs/permission.ts';
 import { borderOf } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
-import { DIM, fg, TEXT } from '../theme/text.ts';
+import { DIM, fg, FILL, TEXT } from '../theme/text.ts';
 import { agentColour, type Palette } from '../theme/theme.ts';
 import type { ScrollStep } from '../transcript/scroll.ts';
 import type { BackgroundGroup, BackgroundItem } from './background.ts';
 import {
   detailLines,
   edgeMarked,
+  FOLLOWING,
   hintLines,
+  logStep,
+  workHead,
   type ItemRef,
   laidAt,
   type ViewAt,
@@ -146,6 +161,7 @@ export function BackgroundView({
   columns,
   rows,
   scroller,
+  work,
 }: {
   items: readonly BackgroundItem[];
   focus: ItemRef | undefined;
@@ -161,6 +177,8 @@ export function BackgroundView({
   rows: number;
   /** Where the window finds how to scroll an error taller than its room. */
   scroller?: RefObject<RequestScroller | undefined>;
+  /** The work of the agent or task whose detail is open (CHD-487). */
+  work?: DetailWork | undefined;
 }) {
   const colours = useColours();
   // Times count a second at a time while the view is drawn.
@@ -228,14 +246,20 @@ export function BackgroundView({
   const hidden = hiddenRows(said.length, shown.top, shown.shown);
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
+  // An agent's or a task's log pages itself (CHD-487).
+  const workScroll = useRef<RequestScroller | undefined>(undefined);
+  const logged =
+    detailed !== undefined && detailed.kind !== 'monitor' && work !== undefined;
   const scroll = useCallback(
     (step: ScrollStep) =>
-      detailRows === undefined || errorTall
-        ? setTop((at) => requestStep(step, said.length, room, at))
-        : setDetailTop((at) =>
-            requestStep(step, detailRows.length, detailRoom, at),
-          ),
-    [said.length, room, detailRows, detailRoom, errorTall],
+      logged && !errorTall && workScroll.current !== undefined
+        ? workScroll.current(step)
+        : detailRows === undefined || errorTall
+          ? setTop((at) => requestStep(step, said.length, room, at))
+          : setDetailTop((at) =>
+              requestStep(step, detailRows.length, detailRoom, at),
+            ),
+    [said.length, room, detailRows, detailRoom, errorTall, logged],
   );
 
   // Another error, or none, starts from its first line.
@@ -304,7 +328,20 @@ export function BackgroundView({
               } of ${items.length}${ended(detailed) ? ' · ended' : ''}`}
         </span>
       </text>
+      {logged && !errorTall && (
+        <WorkDetail
+          key={`${detailed.key}:${detailed.id}`}
+          item={detailed}
+          work={work}
+          width={width}
+          rows={detailRoom}
+          now={now}
+          scroller={workScroll}
+          cell={(piece) => cell(piece, detailed, true)}
+        />
+      )}
       {detailed !== undefined &&
+        !(logged && !errorTall) &&
         detailRows !== undefined &&
         detailShown !== undefined &&
         detailHidden !== undefined && (
@@ -360,6 +397,142 @@ export function BackgroundView({
           </text>
         )}
       </box>
+    </box>
+  );
+}
+
+/** The work an agent's or a task's detail draws, found where its owner keeps it. */
+export interface DetailWork {
+  readonly subagent: Subagent;
+  /** Its owner's turn, which its calls' waiting is read from. */
+  readonly turn: TurnState;
+  /** The agent its owner runs, as the transcript names it. */
+  readonly agent: string;
+}
+
+/**
+ * An agent's or a task's detail (CHD-487): its description and state line
+ * pinned, then, in the room left, its whole task after `› ` and its work
+ * as its open block draws it, read from the end and following it as it
+ * comes while not paged up (Q139, Q140); a dim rule says what is out of
+ * view, under CHD-246's rule.
+ */
+function WorkDetail({
+  item,
+  work,
+  width,
+  rows,
+  now,
+  scroller,
+  cell,
+}: {
+  item: BackgroundItem;
+  work: DetailWork;
+  width: number;
+  /** The frame's rows for the detail, the pinned lines among them. */
+  rows: number;
+  now: number;
+  scroller: RefObject<RequestScroller | undefined>;
+  cell: (piece: ViewCell) => { attributes: number };
+}) {
+  const head = workHead(item, work.subagent, { width, now });
+  const room = Math.max(1, rows - head.length);
+  const content = useRef<BoxRenderable | null>(null);
+  const view = useRef<ScrollBoxRenderable | null>(null);
+  // Its lines as laid out; the room until they are.
+  const [total, setTotal] = useState(room);
+  const [top, setTop] = useState(FOLLOWING);
+  const shown = requestView(total, room, top);
+  const hidden = hiddenRows(total, shown.top, shown.shown);
+  const pageUp = useHintKey('scroll:pageUp');
+  const pageDown = useHintKey('scroll:pageDown');
+  const task = (work.subagent.prompt ?? work.subagent.description)?.trim();
+  // Where the view should stand, which a scroll at React's commit, before
+  // the work that came is laid out, would leave short of the end.
+  const wanted = useRef(shown.top);
+
+  wanted.current = shown.top;
+
+  // Read once laid out, never at React's commit (CHD-437); the view put
+  // where it should stand then too.
+  const measure = () => {
+    const height = content.current?.getLayout().height;
+
+    if (height !== undefined && Number.isFinite(height)) {
+      setTotal(height);
+    }
+
+    const box = view.current;
+
+    if (box !== null && box.scrollTop !== wanted.current) {
+      box.scrollTo(wanted.current);
+    }
+  };
+
+  useEffect(() => {
+    view.current?.scrollTo(shown.top);
+  }, [shown.top, total]);
+
+  useEffect(() => {
+    scroller.current = (step) => setTop((at) => logStep(step, total, room, at));
+
+    return () => {
+      scroller.current = undefined;
+    };
+  }, [scroller, total, room]);
+
+  return (
+    <box marginTop={1} flexShrink={0}>
+      {head.map((cells, index) => (
+        <text key={`head-${index}`} {...TEXT}>
+          {cells.map((piece, at) => (
+            <span key={at} {...cell(piece)}>
+              {piece.text}
+            </span>
+          ))}
+        </text>
+      ))}
+      {shown.above && (
+        <text {...TEXT} attributes={DIM}>
+          {requestRule('↑', hidden.above, pageUp, width)}
+        </text>
+      )}
+      <scrollbox
+        ref={view}
+        height={Math.max(shown.shown, 1)}
+        flexShrink={0}
+        focusable={false}
+        verticalScrollbarOptions={{ visible: false }}
+      >
+        <box
+          ref={content}
+          flexShrink={0}
+          onSizeChange={measure}
+          renderAfter={measure}
+        >
+          {task !== undefined && task !== '' && (
+            <box flexDirection='row' flexShrink={0}>
+              <text {...TEXT} attributes={DIM} flexShrink={0}>
+                {'› '}
+              </text>
+              <text {...FILL}>
+                <Ansi text={task} />
+              </text>
+            </box>
+          )}
+          <AgentWork
+            subagent={work.subagent}
+            turn={work.turn}
+            agent={work.agent}
+            width={width}
+          />
+        </box>
+      </scrollbox>
+      {shown.below && (
+        <text {...TEXT} attributes={DIM}>
+          {requestRule('↓', hidden.below, pageDown, width)}
+        </text>
+      )}
     </box>
   );
 }

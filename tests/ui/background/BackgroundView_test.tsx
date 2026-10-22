@@ -1195,3 +1195,67 @@ describe('CHD-487 U1 tester: detail stop and return keys', () => {
       ));
   }
 });
+
+describe("an agent's detail draws its whole task and its work, following its end (CHD-487 U2)", () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`pinned description and state, the task after ›, the work as its block draws it, kept once ended, at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          const frame = () =>
+            window.frame().slice(window.frame().indexOf('Background · '));
+
+          await send(window, 'claudebackground');
+          await window.shows("background  main's 2 agents running");
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('❯ Run the test suite');
+          await window.press('\r');
+          await window.shows('Background · 1 of 1');
+          expect(frame()).toContain('Run the test suite');
+          expect(frame()).toMatch(/running \d+s · 1 tool use · main/);
+          await window.shows('⏺ Bash(bun test)');
+          // Ended with its detail open: kept, its end in CHD-2's words, at
+          // the end of its work.
+          await window.shows('Background · 1 of 1 · ended');
+          await window.shows('⏺ Every test passed.');
+          expect(frame()).toMatch(/✓ done in \d+s · 1 tool use · main/);
+
+          if (rows === 24) {
+            // Too tall for its room: opened at its end, paged up to the
+            // task, and end follows again.
+            expect(frame()).toContain('── ↑ 2 lines above');
+            await window.press('\x1b[5~');
+            await window.shows(
+              '› Run bun test in the background and report what fails.',
+            );
+            await window.shows('── ↓ 2 lines below');
+            await window.press(END);
+            await window.shows('── ↑ 2 lines above');
+            expect(frame()).toContain('⏺ Every test passed.');
+          } else {
+            expect(frame()).toContain(
+              '› Run bun test in the background and report what fails.',
+            );
+          }
+        },
+        { rows, columns },
+      ));
+  }
+
+  test("a task's detail says its kind among its state, and its work", () =>
+    withBackground(async (window) => {
+      await ready(window);
+      await send(window, 'tasklong');
+      await window.shows('The build is being watched.');
+      await window.press(DOWN);
+      await window.press('\r');
+      await window.shows('❯ Watch the build');
+      await window.press('\r');
+      await window.shows('Background · 1 of 1');
+      await window.shows('· task · fake · main');
+      await window.shows('⏺ Watching the build.');
+    }));
+});

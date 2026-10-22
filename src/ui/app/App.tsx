@@ -30,7 +30,7 @@ import {
   startLine,
 } from '../../agents.ts';
 import type { ChordServer } from '../../server/server.ts';
-import { frontTab, noTabs } from '../../session/tabs.ts';
+import { agentOf, frontTab, noTabs } from '../../session/tabs.ts';
 import { programStatus } from '../../status.ts';
 import { promptLine } from '../../session/record.ts';
 import { type EditorMode, homePath } from '../../settings.ts';
@@ -100,9 +100,11 @@ import { SummaryLine } from '../background/Background.tsx';
 import {
   BackgroundView,
   backgroundRowLimit,
+  type DetailWork,
   hintMode,
   useBackgroundHint,
 } from '../background/BackgroundView.tsx';
+import { itemSubagent } from '../background/background.ts';
 import { focusAfter, hintLines } from '../background/view.ts';
 import { agentsHaveKeys, backgroundShown } from '../background/state.ts';
 import { startingVim } from '../prompt/vim.ts';
@@ -585,6 +587,28 @@ export function App({
   const listFolded = !canFold || folded;
   const transcriptArea = useRef<BoxRenderable | null>(null);
   const backgroundItems = sessions.background();
+  // The work an agent's or a task's open detail draws, from its owner's
+  // transcript, as its block there has it (CHD-487).
+  const detailWork = ((): DetailWork | undefined => {
+    const ref = state.backgroundView?.detail;
+    const item =
+      ref &&
+      backgroundItems.find(
+        (each) => each.key === ref.key && each.id === ref.id,
+      );
+    const owner = item && sessions.stateOf(item.key);
+    const subagent =
+      owner && item && itemSubagent(owner.transcript.entries, item);
+    const found = item && agentOf(sessions.sessions.tabs, item.key);
+
+    return subagent === undefined || owner === undefined
+      ? undefined
+      : {
+          subagent,
+          turn: owner.transcript.turn,
+          agent: found?.child?.runtime ?? found?.tab.agent ?? frontAgent,
+        };
+  })();
   // What the background frame says under its rows, whose lines its rows
   // give way to (CHD-473).
   const backgroundHint = useBackgroundHint(
@@ -1287,6 +1311,7 @@ export function App({
                   items={backgroundItems}
                   focus={state.backgroundView.focus}
                   detail={state.backgroundView.detail}
+                  {...(detailWork === undefined ? {} : { work: detailWork })}
                   at={state.backgroundView}
                   hint={state.backgroundView.hint}
                   columns={columns}

@@ -480,3 +480,10 @@ function Work({
     ),
   );
 }
+
+/**
+ * A subagent's work as its open block draws it, for its detail in the
+ * background view (CHD-487): messages, each tool call with its result, its
+ * plan, a subagent of its own folded to its headline and ending.
+ */
+export const AgentWork = Work;

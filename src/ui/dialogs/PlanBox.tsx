@@ -108,14 +108,17 @@ export function PlanBox({
       <text {...TEXT}> </text>
       <box flexDirection='row' flexShrink={0}>
         {marker(noteRow)}
-        {/* Wrapped, never cut: a long note is read whole as it is typed. */}
+        <text
+          {...TEXT}
+          flexShrink={0}
+          {...(onNote ? fg(colours.permission) : {})}
+          attributes={onNote ? BOLD : 0}
+        >
+          Note{'  '}
+        </text>
+        {/* Wrapped under its own text, never cut, as a form's value is: a
+            long note is read whole as it is typed. */}
         <text {...TEXT} flexGrow={1}>
-          <span
-            {...(onNote ? fg(colours.permission) : {})}
-            attributes={onNote ? BOLD : 0}
-          >
-            Note{'  '}
-          </span>
           <Typed
             text={state.note}
             placeholder={cliTruncate(

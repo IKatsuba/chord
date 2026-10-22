@@ -44,55 +44,38 @@ export interface TimingReport {
   readonly gone: readonly string[];
 }
 
-/** The arguments after which a run is not the whole suite as it stands. */
-const FILTERS = [
-  '-t',
-  '--test-name-pattern',
-  '--changed',
-  '--bail',
-  '--only',
-  '--todo',
-  '--shard',
-  '--rerun-each',
-  '--isolate',
-  '--no-isolate',
-];
-
 /**
- * Whether `args`, as `bun dev test` passes them on, still run the whole
- * suite as the record measured it: no name pattern, no changed files only,
- * no path of their own, nothing that stops early or runs files apart.
+ * The times in timings file `path`, whose text is `text`: a file that is
+ * not there, is not JSON or holds no times is an error that says so, never
+ * no times, as a run measured against nothing would pass.
  */
-export function wholeSuite(args: readonly string[]): boolean {
-  return args.every(
-    (arg) =>
-      arg === '--update-timings' ||
-      (arg.startsWith('-') &&
-        !FILTERS.some(
-          (filter) => arg === filter || arg.startsWith(`${filter}=`),
-        )),
-  );
-}
-
-/** A timings file's text as its times; none in one that is not one. */
-export function readTimings(text: string | undefined): Timings {
+export function readTimings(path: string, text: string | undefined): Timings {
   if (text === undefined) {
-    return {};
+    throw new Error(`timings: ${path} is not there`);
   }
 
-  const parsed: unknown = JSON.parse(text);
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error(`timings: ${path} is not JSON`);
+  }
+
   const files =
     typeof parsed === 'object' && parsed !== null && 'files' in parsed
       ? parsed.files
       : undefined;
 
-  return typeof files === 'object' && files !== null
-    ? Object.fromEntries(
-        Object.entries(files).filter(
-          (entry): entry is [string, number] => typeof entry[1] === 'number',
-        ),
-      )
-    : {};
+  if (
+    typeof files !== 'object' ||
+    files === null ||
+    Object.values(files).some((ms) => typeof ms !== 'number')
+  ) {
+    throw new Error(`timings: ${path} holds no file's time`);
+  }
+
+  return files as Timings;
 }
 
 /** Whether `path` is a file Bun's test runner runs, by its name. */

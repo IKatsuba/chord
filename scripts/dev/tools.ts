@@ -24,7 +24,6 @@ import {
   readTimings,
   RECORD,
   reportLines,
-  wholeSuite,
 } from './timings.ts';
 
 /** Runs one command to its end and answers its exit status. */
@@ -109,21 +108,22 @@ export const suiteFiles: SuiteFiles = {
 
 /**
  * The whole suite, a worker per core, `args` passed on to bun test, placed
- * by the times `tests/timings.json` records. A whole run measures them again
- * into `tests/timings.measured.json` and fails, naming the files, when one
- * is past its budget, moved far from its record, unrecorded or gone; one
- * with `--update-timings` rewrites the record and is held to the budget
- * only. A run of part of the suite is not held to either. The tests' own
- * failure is the status; the timings' report follows it (CHD-501).
+ * by the times `tests/timings.json` records. A run with no arguments, as
+ * `bun dev check` and CI make, measures them again into
+ * `tests/timings.measured.json` and fails, naming the files, when one is
+ * past its budget, moved far from its record, unrecorded or gone, or when
+ * the measurement is missing or unreadable; one with `--update-timings`
+ * rewrites the record and is held to the budget only. Any other argument
+ * leaves the timings unchecked. The tests' own failure is always the
+ * status; the timings' report follows it (CHD-501).
  */
 export function test(
   args: readonly string[],
   run: Run = spawn,
   files: SuiteFiles = suiteFiles,
 ): number {
-  const whole = wholeSuite(args);
   const refreshing = args.includes('--update-timings');
-  const measuring = whole && !refreshing;
+  const measuring = args.length === 0;
 
   if (measuring) {
     files.remove(MEASURED);
@@ -141,22 +141,34 @@ export function test(
     ...args,
   ]);
 
-  if (!whole) {
+  if (!measuring && !refreshing) {
     return status;
   }
 
-  const report = compare(
-    readTimings(files.read(RECORD)),
-    readTimings(files.read(refreshing ? RECORD : MEASURED)),
-    files.list('tests').filter(isTestFile),
-    { refreshing },
-  );
+  let failed: boolean;
 
-  for (const line of reportLines(report)) {
-    files.say(line);
+  try {
+    const report = compare(
+      readTimings(RECORD, files.read(RECORD)),
+      refreshing
+        ? readTimings(RECORD, files.read(RECORD))
+        : readTimings(MEASURED, files.read(MEASURED)),
+      files.list('tests').filter(isTestFile),
+      { refreshing },
+    );
+
+    for (const line of reportLines(report)) {
+      files.say(line);
+    }
+
+    failed = fails(report);
+  } catch (error) {
+    files.say(error instanceof Error ? error.message : String(error));
+
+    failed = true;
   }
 
-  return status !== 0 ? status : fails(report) ? 1 : 0;
+  return status !== 0 ? status : failed ? 1 : 0;
 }
 
 /** ESLint over the tree, `args` passed on. */

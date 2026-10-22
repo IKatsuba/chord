@@ -7,43 +7,26 @@ import {
   MOVED,
   readTimings,
   reportLines,
-  wholeSuite,
 } from '../../../scripts/dev/timings.ts';
 
 const A = 'tests/a_test.ts';
 
-describe('which run is the whole suite', () => {
-  test('none, flags that filter nothing, and a refresh are', () => {
-    expect(wholeSuite([])).toBe(true);
-    expect(wholeSuite(['--update-timings'])).toBe(true);
-    expect(wholeSuite(['--reporter=junit', '--reporter-outfile=x.xml'])).toBe(
-      true,
-    );
-  });
-
-  test('a name pattern, changed files, a path, a bail or a shard are not', () => {
-    for (const args of [
-      ['-t', 'tabs'],
-      ['--test-name-pattern=tabs'],
-      ['--changed'],
-      ['--changed=main'],
-      ['./tests/a_test.ts'],
-      ['--bail'],
-      ['--shard=1/2'],
-      ['--only'],
-      ['--no-isolate'],
-    ]) {
-      expect(wholeSuite(args)).toBe(false);
-    }
-  });
-});
-
-test("a timings file's times; none from none, or from one without files", () => {
+test("a timings file's times; one missing, not JSON or without times is an error naming it", () => {
   expect(
-    readTimings(JSON.stringify({ version: 1, files: { [A]: 1200 } })),
+    readTimings('t.json', JSON.stringify({ version: 1, files: { [A]: 1200 } })),
   ).toStrictEqual({ [A]: 1200 });
-  expect(readTimings(undefined)).toStrictEqual({});
-  expect(readTimings('{"version":1}')).toStrictEqual({});
+  expect(() => readTimings('t.json', undefined)).toThrow(
+    'timings: t.json is not there',
+  );
+  expect(() => readTimings('t.json', '{"version":')).toThrow(
+    'timings: t.json is not JSON',
+  );
+  expect(() => readTimings('t.json', '{"version":1}')).toThrow(
+    "timings: t.json holds no file's time",
+  );
+  expect(() =>
+    readTimings('t.json', JSON.stringify({ files: { [A]: 'slow' } })),
+  ).toThrow("timings: t.json holds no file's time");
 });
 
 test("a test file is named as Bun's runner finds one", () => {

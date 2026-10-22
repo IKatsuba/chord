@@ -33,7 +33,7 @@ const root = join(import.meta.dir, '..', '..', '..');
  */
 function files(
   record: Record<string, number> = {},
-  measured: Record<string, number> = record,
+  measured: Record<string, number> | string | null = record,
   onDisk: string[] = Object.keys(record),
 ): SuiteFiles & { removed: string[]; said: string[] } {
   const removed: string[] = [];
@@ -48,7 +48,12 @@ function files(
       path === 'tests/timings.json'
         ? timings(record)
         : path === 'tests/timings.measured.json'
-          ? timings(measured)
+          ? // None, a text of its own, or times.
+            measured === null
+            ? undefined
+            : typeof measured === 'string'
+              ? measured
+              : timings(measured)
           : undefined,
     remove: (path) => void removed.push(path),
     list: () => onDisk,
@@ -181,8 +186,17 @@ describe("the suite's timings (CHD-501)", () => {
     expect(io.said.join('\n')).toContain(A);
   });
 
-  test('a run of part of the suite is placed by the record and held to nothing', () => {
-    for (const args of [['-t', 'tabs'], ['--changed'], ['./tests/a_test.ts']]) {
+  test('a run with any argument is placed by the record and held to nothing', () => {
+    for (const args of [
+      ['-t', 'tabs'],
+      ['-ttabs'],
+      ['--changed'],
+      ['./tests/a_test.ts'],
+      ['--timeout', '60000'],
+      ['--reporter', 'junit', '--reporter-outfile', 'x.xml'],
+      ['--reporter=junit'],
+      ['--help'],
+    ]) {
       const { run, ran } = faked();
       const io = files({ [A]: 20_000 }, { [A]: 95_000 });
 
@@ -190,6 +204,28 @@ describe("the suite's timings (CHD-501)", () => {
       expect(ran[0]).not.toContain('--timings=tests/timings.measured.json');
       expect(io.removed).toStrictEqual([]);
       expect(io.said).toStrictEqual([]);
+    }
+  });
+
+  test('a measurement missing, not JSON or without times fails the run, named, as no measurement is no pass', () => {
+    for (const [measured, words] of [
+      [null, 'tests/timings.measured.json is not there'],
+      ['{"files":', 'tests/timings.measured.json is not JSON'],
+      ['{"version":1}', "tests/timings.measured.json holds no file's time"],
+    ] as const) {
+      const io = files({ [A]: 20_000 }, measured);
+
+      expect(suite([], faked().run, io)).toBe(1);
+      expect(io.said).toStrictEqual([`timings: ${words}`]);
+    }
+  });
+
+  test("the tests' own failure stays the status when the measurement is bad too", () => {
+    for (const measured of [null, '{"files":']) {
+      const io = files({ [A]: 20_000 }, measured);
+
+      expect(suite([], faked([3]).run, io)).toBe(3);
+      expect(io.said).toHaveLength(1);
     }
   });
 

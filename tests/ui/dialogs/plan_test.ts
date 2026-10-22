@@ -145,10 +145,19 @@ test("the hint names the choices' count, and on the Note row what enter does the
 test("the Note's lines wrap at its spaces, never cut, a cell left for the cursor", () => {
   expect(noteLines('', 10)).toStrictEqual(['']);
   expect(noteLines('one two three four', 10)).toStrictEqual([
-    'one two ',
+    'one two',
     'three four',
     // A full line leaves the cursor's cell to the next.
     '',
   ]);
+  // No line starts with the space it broke at, however narrow (CHD-437).
+  expect(noteLines('test it; step 40 keep it small', 9)).toStrictEqual([
+    'test it;',
+    'step 40',
+    'keep it',
+    'small',
+  ]);
+  // The spaces typed last stay, so the cursor is after them.
+  expect(noteLines('keep it ', 10)).toStrictEqual(['keep it ']);
   expect(noteLines('abcdefghijkl', 5).join('')).toBe('abcdefghijkl');
 });

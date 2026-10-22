@@ -4,6 +4,7 @@
  * what each key does to them, and the hint line.
  */
 import type { PlanAnswer, PlanWait } from '../../session/transcript/types.ts';
+import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { type AskKey, edited } from './questions.ts';
 
@@ -140,16 +141,21 @@ export function planHint(
 }
 
 /**
- * The Note's text in lines of at most `width` cells, wrapped at its spaces,
- * never cut, a cell left on the last for the cursor; one empty line for no
- * note.
+ * The Note's text in lines of at most `width` cells, wrapped at its spaces
+ * with none left at a break, never cut; the spaces typed last stay on the
+ * last line, and a cell is left there for the cursor, a full line handing it
+ * to a line of its own. One empty line for no note.
  */
 export function noteLines(note: string, width: number): string[] {
-  return note === ''
-    ? ['']
-    : wrapAnsi(`${note} `, Math.max(width, 1), { hard: true, trim: false })
-        .split('\n')
-        .map((line, index, all) =>
-          index === all.length - 1 ? line.slice(0, -1) : line,
-        );
+  if (note === '') {
+    return [''];
+  }
+
+  const room = Math.max(width, 1);
+  const lines = wrapAnsi(note, room, { hard: true, trim: true }).split('\n');
+  const last = `${lines.pop() ?? ''}${/\s*$/.exec(note)![0]}`;
+
+  return stringWidth(last) < room
+    ? [...lines, last]
+    : [...lines, last.trimEnd(), ''];
 }

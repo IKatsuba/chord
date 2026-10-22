@@ -1,6 +1,14 @@
 /** The plan box on the fake: cursor's and grok's plans put to the person. */
-import { expect, test } from 'bun:test';
-import { DOWN, ESC, ready, send, withWindow } from '../app/render.tsx';
+import { describe, expect, test } from 'bun:test';
+import {
+  DOWN,
+  ESC,
+  UP,
+  ready,
+  send,
+  until,
+  withWindow,
+} from '../app/render.tsx';
 
 test("cursor's plan: drawn under its call, the box asks, and enter on the Note keeps planning with it (CHD-437)", () =>
   withWindow(
@@ -210,3 +218,185 @@ test('a long Note in a window shrunk under it keeps the box inside its border, a
     },
     { rows: 24, columns: 80 },
   ));
+
+describe('CHD-437 U2 tester: paging ownership and isolated answers', () => {
+  for (const columns of [80, 120]) {
+    const rows = columns === 80 ? 24 : 40;
+
+    for (const rebound of [false, true]) {
+      test(`the choice pages the transcript, the overflowing Note pages alone, at ${columns} columns (${rebound ? 'rebound' : 'default'})`, () =>
+        withWindow(
+          async (window) => {
+            const up = rebound ? '\x10' : '\x1b[5~';
+            const down = rebound ? '\x0e' : '\x1b[6~';
+            const note = Array.from(
+              { length: 160 },
+              (_, i) => `row${i} stays unchanged`,
+            ).join(' ');
+            const box = () =>
+              window.frame().slice(window.frame().indexOf('Approve Plan'));
+
+            await ready(window);
+            await send(window, 'steps');
+            await window.shows('150 steps read.');
+            await until('the long turn is idle', () =>
+              window.frame().includes('? for shortcuts'),
+            );
+            await send(window, 'cursorplan');
+            await window.shows('Approve Plan');
+
+            const before = box();
+
+            await window.press(up);
+            await until('a transcript row is hidden below', () =>
+              window.frame().split('Approve Plan')[0]!.includes('lines below'),
+            );
+            expect(box()).toBe(before);
+            await window.press(down);
+            await until(
+              'the transcript is back at its end',
+              () =>
+                !window
+                  .frame()
+                  .split('Approve Plan')[0]!
+                  .includes('lines below'),
+            );
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.paste(note);
+            await window.shows('row159');
+
+            for (let page = 0; page < 50 && !box().includes('row0 '); page++) {
+              await window.press(up);
+            }
+
+            await window.shows('Note  row0 stays unchanged');
+            expect(window.frame()).toContain(
+              rebound ? 'ctrl+n to scroll' : 'pagedown to scroll',
+            );
+            await window.press(UP);
+            await window.shows('❯ 2. No, keep planning');
+
+            let heard = '';
+            const unsubscribe = window.session()!.subscribe((update) => {
+              if (
+                update.sessionUpdate === 'agent_message_chunk' &&
+                update.content.type === 'text'
+              ) {
+                heard += update.content.text;
+              }
+            });
+
+            try {
+              await window.press('2');
+              await until('the fake heard the entire note', () =>
+                heard.includes(
+                  JSON.stringify({ outcome: 'rejected', reason: note }),
+                ),
+              );
+            } finally {
+              unsubscribe();
+            }
+          },
+          {
+            columns,
+            rows,
+            ...(rebound
+              ? {
+                  keybindings: JSON.stringify({
+                    bindings: [
+                      {
+                        context: 'Scroll',
+                        bindings: {
+                          pageup: null,
+                          'shift+pageup': null,
+                          pagedown: null,
+                          'shift+pagedown': null,
+                          'ctrl+p': 'scroll:pageUp',
+                          'ctrl+n': 'scroll:pageDown',
+                        },
+                      },
+                    ],
+                  }),
+                }
+              : {}),
+          },
+        ));
+    }
+
+    test(`a one-row Note has a count, reaches both ends, and editing restores the tail at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          const note = Array.from(
+            { length: 30 },
+            (_, i) => `word${i} 日本語`,
+          ).join(' ');
+
+          await ready(window);
+          await send(window, 'grokplan');
+          await window.shows('Approve Plan');
+
+          for (let row = 0; row < 3; row++) {
+            await window.press(DOWN);
+          }
+
+          await window.paste(note);
+          await window.resize({ rows: 20 });
+          await window.shows('above');
+          expect(window.frame()).toContain('3. No, and leave plan mode');
+          expect(window.frame()).toContain('Esc to keep');
+          expect(window.frame().split('\n').length).toBeLessThanOrEqual(20);
+
+          for (
+            let page = 0;
+            page < 60 && !window.frame().includes('Note  word0 ');
+            page++
+          ) {
+            await window.press('\x1b[5~');
+          }
+
+          await window.shows('Note  word0 ');
+          expect(window.frame()).toContain('below');
+          await window.type('!');
+          await window.shows('word29 日本語!');
+          await window.resize({ rows });
+          await window.press('\r');
+          await window.shows('Plan answer:');
+          expect(window.frame().replace(/\s+/g, ' ')).toContain(
+            JSON.stringify({ outcome: 'revise', feedback: `${note}!` }),
+          );
+        },
+        { columns, rows },
+      ));
+
+    test(`a Note and its digits cannot answer the waiting form; Esc sends no note at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'planform');
+          await window.shows('Approve Plan');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.type('123jk keep this separate');
+          await window.shows('123jk keep this separate');
+          expect(window.frame()).not.toContain('Name the branch');
+          await window.press(ESC);
+          await window.shows('Name the branch');
+          expect(window.frame()).not.toContain('123jk keep this separate');
+          await window.press(ESC);
+          await window.shows(
+            'Plan answer: {"outcome":"rejected"} · form: cancel',
+          );
+          await until('the form turn is idle', () =>
+            window.frame().includes('? for shortcuts'),
+          );
+          await send(window, 'grokplanempty');
+          await window.shows('has written no plan. Do you want to proceed?');
+          expect(window.frame()).not.toContain('123jk keep this separate');
+          await window.press('1');
+          await window.shows('Plan answer: {"outcome":"approved"}');
+        },
+        { columns, rows },
+      ));
+  }
+});

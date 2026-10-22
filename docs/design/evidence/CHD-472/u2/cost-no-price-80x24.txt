@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   not reported: dirac's provider reports none, and chord has
+                    no price for Fake Large with a 1M context window
+      Tokens in:    2,000
+      Tokens out:   400
+      Cache read:   1,600
+      Session time: 10s
+      dirac reports these as the session's running total; chord shows the last
+      it sent.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

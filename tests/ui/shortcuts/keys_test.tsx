@@ -238,6 +238,10 @@ const STATES: Record<string, AppState> = {
     { type: 'connected', sessionId: 'session-1' },
     { type: 'sessions_picker_opened' },
   ),
+  notice: after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'notice_opened', id: 'dimcode-agents' },
+  ),
   'picker, busy': after({ type: 'connected', sessionId: 'session-1' }, prompt, {
     type: 'model_picker_opened',
   }),

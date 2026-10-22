@@ -2,6 +2,7 @@ import process from 'node:process';
 import { useTerminalDimensions } from '@opentui/react';
 import { useMemo, useState } from 'react';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
+import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
 import type { AgentOption } from '../../session/config.ts';
 import type { AgentModels } from '../../session/models.ts';
 import type { HeldBack } from '../../session/servers.ts';
@@ -537,6 +538,48 @@ export function ThemePicker({
             'Enter to keep',
             back && `${back} to ${themeName(current)}`,
           )}
+        </text>
+      </box>
+    </box>
+  );
+}
+
+/**
+ * dimcode's one-time notice, in the pickers' frame above the prompt
+ * (docs/design/CHD-434.md): what it may start, how to turn that off, and
+ * the two answers. It takes the keys while `active`; Esc is the window's,
+ * and shows it again next time, as 2 does.
+ */
+export function NoticeBox({
+  active,
+  onAnswer,
+}: {
+  active: boolean;
+  /** Whether the person dismissed it for good, or asked to see it again. */
+  onAnswer: (dismissed: boolean) => void;
+}) {
+  const { permission } = useColours();
+  const later = useCloseHint('to show it again next time');
+
+  return (
+    <box {...borderOf(permission)} paddingX={1} flexShrink={0}>
+      <text {...TEXT} {...fg(permission)} attributes={BOLD}>
+        {DIMCODE_WORDS.title}
+      </text>
+      {DIMCODE_WORDS.paragraphs.map((paragraph) => (
+        <box key={paragraph} marginTop={1}>
+          <text {...TEXT}>{paragraph}</text>
+        </box>
+      ))}
+      <PickerList
+        choices={NOTICE_CHOICES}
+        rows={NOTICE_CHOICES.length}
+        active={active}
+        onPick={(value) => onAnswer(value === 'dismiss')}
+      />
+      <box marginTop={1}>
+        <text {...CUT} attributes={DIM}>
+          {hintOf('Enter to pick', '1–2', '↑↓ to move', later)}
         </text>
       </box>
     </box>

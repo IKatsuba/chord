@@ -707,6 +707,8 @@ function commandSteps(
       return [dispatch({ type: 'mcp_closed' })];
     case 'close_teams_picker':
       return [dispatch({ type: 'teams_picker_closed' })];
+    case 'close_notice':
+      return [dispatch({ type: 'notice_closed' })];
     case 'complete_mention':
       return mention(context, false);
     case 'finder_up':

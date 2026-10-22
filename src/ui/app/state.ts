@@ -1408,8 +1408,29 @@ function inputWithKeys(state: AppState) {
     : (askedInput(state.transcript) ?? askedPlan(state.transcript));
 }
 
+/**
+ * Whether dimcode's notice is on screen: open, and not closing. It waits
+ * behind a picker or the background view the person has open, and a
+ * permission or form asked meanwhile hides it, as it hides every picker
+ * (CHD-462), until answered (docs/design/CHD-434.md).
+ */
+export function noticeShown(state: AppState): boolean {
+  return (
+    state.notice !== undefined &&
+    state.connection.status !== 'closing' &&
+    !asksPerson(state.transcript) &&
+    !otherPickerShown(state) &&
+    state.backgroundView === undefined
+  );
+}
+
 /** One of chord's pickers or panels is open over the prompt. */
 function pickerShown(state: AppState): boolean {
+  return otherPickerShown(state) || noticeShown(state);
+}
+
+/** One of chord's pickers or panels but the notice is open over the prompt. */
+function otherPickerShown(state: AppState): boolean {
   return (
     sessionsPickerShown(state) ||
     modelPickerShown(state) ||
@@ -1879,6 +1900,10 @@ function boundCommand(
 
   if (closing && teamsPickerShown(state)) {
     return 'close_teams_picker';
+  }
+
+  if (closing && noticeShown(state)) {
+    return 'close_notice';
   }
 
   // Vim's keys come after every list's Esc, so Esc still closes them, and

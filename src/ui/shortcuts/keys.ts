@@ -463,6 +463,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'close_theme_picker',
       'close_mcp',
       'close_teams_picker',
+      'close_notice',
     ],
     presses: ['esc', '←'],
     actions: ['select:cancel', 'help:dismiss'],

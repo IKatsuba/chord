@@ -31,6 +31,12 @@ export const DIMCODE_WORDS = {
   ],
 } as const;
 
+/** The notice's two answers: dismissed for good on this machine, or later. */
+export const NOTICE_CHOICES = [
+  { key: 'dismiss', label: "Got it, don't show this again", value: 'dismiss' },
+  { key: 'later', label: 'Show it again next time', value: 'later' },
+] as const;
+
 /** dimcode's config option that says what its `agent` tool may do. */
 const PERMISSION = 'permission';
 

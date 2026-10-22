@@ -1027,12 +1027,12 @@ export const SUBAGENTS = {
           // until GATE_RELEASE is in it, or 10 s, so a test that picks it
           // finds it at work however slow the window is (CHD-501).
           const gate = join(cwds.get(turn.sessionId) ?? '.', GATE);
-          const deadline = Date.now() + 10_000;
+          const deadline = performance.now() + 10_000;
 
           while (
             existsSync(gate) &&
             !existsSync(join(gate, GATE_RELEASE)) &&
-            Date.now() < deadline
+            performance.now() < deadline
           ) {
             await new Promise((resolve) => setTimeout(resolve, STEP_MS * 2));
           }

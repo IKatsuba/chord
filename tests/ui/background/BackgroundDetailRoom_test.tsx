@@ -250,54 +250,53 @@ describe('a request asked while the view is open hides it, and it comes back whe
       },
     ));
 
-  test("a monitor's detail paged down", () =>
-    withBackground(
-      async (window) => {
-        const body = () =>
-          window
-            .frame()
-            .split('\n')
-            .filter((line) => line.startsWith('│'))
-            .join('\n');
+  // The detail says its event's age, which a slow answer would move on:
+  // chord's clock held from before the window opens, so every frame says
+  // the age at the held time, and let go after (CHD-501).
+  test("a monitor's detail paged down", async () => {
+    setSystemTime(new Date());
 
-        await ready(window);
-        await send(window, 'monitors');
-        await window.shows(
-          'Received the message from dev server errors · monitor.',
-        );
-        // The request is asked in a turn, as one between turns is held.
-        await send(window, 'slow');
-        await window.shows('esc to interrupt');
-        await window.press(DOWN);
-        await window.press('\r');
-        await window.shows('Background · 2 in this tab');
-        await window.press('\r');
-        await window.shows('Background · m1, 1 of 2');
-        await window.press('\x1b[6~');
-        await until(
-          'the description paged away',
-          () => !body().includes('dev server errors'),
-        );
+    try {
+      await withBackground(
+        async (window) => {
+          const body = () =>
+            window
+              .frame()
+              .split('\n')
+              .filter((line) => line.startsWith('│'))
+              .join('\n');
 
-        // The detail says its event's age, which a slow answer would move
-        // on: chord's clock held from the read to the comparison, after a
-        // tick of its own has drawn the age at the held time (CHD-501).
-        setSystemTime(new Date());
-
-        try {
-          await new Promise((resolve) => setTimeout(resolve, 1_100));
+          await ready(window);
+          await send(window, 'monitors');
+          await window.shows(
+            'Received the message from dev server errors · monitor.',
+          );
+          // The request is asked in a turn, as one between turns is held.
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('Background · 2 in this tab');
+          await window.press('\r');
+          await window.shows('Background · m1, 1 of 2');
+          await window.press('\x1b[6~');
+          await until(
+            'the description paged away',
+            () => !body().includes('dev server errors'),
+          );
 
           const read = body();
 
           await askAndAnswer(window);
           await window.shows('Background · m1, 1 of 2');
           expect(body()).toBe(read);
-        } finally {
-          setSystemTime();
-        }
-      },
-      { rows: 24, columns: 80 },
-    ));
+        },
+        { rows: 24, columns: 80 },
+      );
+    } finally {
+      setSystemTime();
+    }
+  });
 });
 
 describe('CHD-487 U2 tester: live work, metadata and dialog isolation', () => {

@@ -889,26 +889,30 @@ describe('CHD-364 tester: narrow idle time beside reply mark', () => {
             /parser .*◦ idle (\d+)s +✓ new reply/.exec(window.frame())?.[1],
           );
 
-        await until(
-          'the narrow parser reply',
-          () => Number.isFinite(age()),
-          30_000,
-        );
+        try {
+          // The message is old, while the reply is released at the new time.
+          setSystemTime(new Date(Date.now() + 10_000));
+          await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
+          await until('the narrow parser reply', () => Number.isFinite(age()));
 
-        const first = age();
+          const first = age();
 
-        expect(first).toBeLessThanOrEqual(2);
-        await until(
-          'idle age advances beside the reply mark',
-          () => age() > first,
-        );
-        expect(age()).toBeLessThan(10);
+          expect(first).toBeLessThanOrEqual(2);
+          setSystemTime(new Date(Date.now() + 2000));
+          await until(
+            'idle age advances beside the reply mark',
+            () => age() > first,
+          );
+          expect(age()).toBe(first + 2);
+          expect(age()).toBeLessThan(10);
+        } finally {
+          setSystemTime();
+        }
       },
       '--steering',
       'codex',
       '--steer-late',
-      '--step-ms',
-      '30',
+      '--hold-reply',
     ));
 });
 

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { addTurn, tokensOf } from '../../src/session/usage.ts';
 import { sessionTokens } from '../../src/ui/transcript/reports.ts';
 
@@ -95,4 +95,69 @@ test("a running total replaces the session's total and keeps no turn of its own;
       }),
     ),
   ).toStrictEqual({ inputTokens: 35 });
+});
+
+describe('CHD-472 U1 tester: the last total replaces every token field', () => {
+  test('zero is a reported total, omitted fields are not retained, and empty usage preserves the last report', () => {
+    const first = addTurn(
+      undefined,
+      'first',
+      {
+        inputTokens: 100,
+        outputTokens: 20,
+        cachedReadTokens: 50,
+        cachedWriteTokens: 4,
+        thoughtTokens: 7,
+        totalTokens: 120,
+      },
+      {},
+      true,
+    );
+    const zero = addTurn(
+      first,
+      'second',
+      { inputTokens: 0, totalTokens: 0 },
+      {},
+      true,
+    );
+
+    expect(sessionTokens(zero)).toEqual({ inputTokens: 0, totalTokens: 0 });
+    expect(sessionTokens(addTurn(zero, 'third', {}, {}, true))).toEqual({
+      inputTokens: 0,
+      totalTokens: 0,
+    });
+    expect(first.total?.outputTokens).toBe(20);
+    expect(zero.turns).toEqual({});
+  });
+
+  test('a later lower total is used as sent; replacing one cost never deletes another turn cost', () => {
+    const cost = (amount: number) => ({ cost: { amount, currency: 'USD' } });
+    const first = addTurn(undefined, 'a', { totalTokens: 100 }, cost(1), true);
+    const second = addTurn(first, 'b', { totalTokens: 200 }, cost(2), true);
+    const corrected = addTurn(
+      second,
+      'a',
+      { totalTokens: 40 },
+      cost(0.5),
+      true,
+    );
+
+    expect(sessionTokens(corrected)).toEqual({ totalTokens: 40 });
+    expect(corrected.costs).toEqual({ a: cost(0.5), b: cost(2) });
+    expect(sessionTokens(second)).toEqual({ totalTokens: 200 });
+  });
+
+  test('two sessions have independent totals and ordinary agents still sum partial token fields', () => {
+    const a = addTurn(undefined, 'shared-id', { inputTokens: 50 }, {}, true);
+    const b = addTurn(undefined, 'shared-id', { outputTokens: 7 }, {}, true);
+
+    expect(sessionTokens(a)).toEqual({ inputTokens: 50 });
+    expect(sessionTokens(b)).toEqual({ outputTokens: 7 });
+
+    const own = addTurn(addTurn(undefined, 'a', { inputTokens: 2 }), 'b', {
+      outputTokens: 3,
+    });
+
+    expect(sessionTokens(own)).toEqual({ inputTokens: 2, outputTokens: 3 });
+  });
 });

@@ -1808,3 +1808,148 @@ describe('CHD-472: an agent whose answers give the running total', () => {
       ).toBe(6000);
     }));
 });
+
+describe('CHD-472 U1 tester: isolated fake sessions and repeat replay', () => {
+  const command = (...flags: string[]) =>
+    fakeAgentCommand(undefined, '--session-usage', ...flags);
+  const ran = async (
+    place: Place,
+    prompts: Parameters<typeof recordSession>[0]['prompts'],
+    flags: string[] = [],
+    resume?: Resume,
+  ) => {
+    const events: ConversationEvent[] = [];
+    const id = await recordSession({
+      stateDir: place.stateDir,
+      cwd: place.dir,
+      command: command(...flags),
+      prompts,
+      agent: 'dirac',
+      lateCost: flags.includes('--late-cost'),
+      ...(resume ? { resume } : {}),
+      heard: (event) => events.push(event),
+    });
+
+    return { id, events, state: events.reduce(reduceApp, initialAppState) };
+  };
+
+  test('a cancelled fake turn cannot make later answers sum session totals', () =>
+    withPlace(async (place) => {
+      const { events, state } = await ran(place, [
+        'text',
+        { text: 'slow', interrupt: true },
+        'text',
+      ]);
+      const figures = events.filter((event) => event.type === 'usage');
+
+      expect(
+        events.some(
+          (event) =>
+            event.type === 'result' && event.result.status === 'cancelled',
+        ),
+      ).toBe(true);
+      expect(figures.length).toBeGreaterThanOrEqual(2);
+      expect(figures.every((event) => event.total === true)).toBe(true);
+      expect(sessionTokens(state.spent)).toEqual(figures.at(-1)!.usage);
+      expect(state.spent?.turns).toEqual({});
+    }));
+
+  test('late fake costs repeat the same total tokens without adding them again', () =>
+    withPlace(async (place) => {
+      const { state, events } = await ran(
+        place,
+        ['text', 'text'],
+        ['--late-cost'],
+      );
+
+      expect(sessionTokens(state.spent)?.totalTokens).toBe(4000);
+      expect(state.spent?.turns).toEqual({});
+      expect(sessionFigure(state.spent)?.cost?.amount).toBeCloseTo(0.025, 9);
+      expect(
+        events.filter((event) => event.type === 'usage').length,
+      ).toBeGreaterThan(2);
+    }));
+
+  test('two sessions recorded together keep their own total and cost after separate resumes', () =>
+    withPlace(async (place) => {
+      const [a, b] = await Promise.all([
+        ran(place, ['text', 'text', 'text']),
+        ran(place, ['text', 'text']),
+      ]);
+
+      expect(a.id).not.toBe(b.id);
+
+      const records = await readRecords(place.stateDir);
+
+      for (const [live, tokens, amount] of [
+        [a, 6000, 0.0375],
+        [b, 4000, 0.025],
+      ] as const) {
+        const record = records.find((record) => record.sessionId === live.id);
+
+        assert(record);
+
+        const resumed = await ran(place, [], ['--resume-only'], {
+          sessionId: live.id,
+          cwd: place.dir,
+          record: record.path,
+        });
+
+        expect(sessionTokens(resumed.state.spent)?.totalTokens).toBe(tokens);
+        expect(sessionFigure(resumed.state.spent)?.cost?.amount).toBeCloseTo(
+          amount,
+          9,
+        );
+      }
+    }));
+
+  test('an old token-only record replays repeatedly without doubling or rewriting its unmarked usage', () =>
+    withPlace(async (place) => {
+      const live = await ran(place, ['text', 'text'], ['--tokens-only']);
+      const record = (await readRecords(place.stateDir)).find(
+        (record) => record.sessionId === live.id,
+      );
+
+      assert(record);
+
+      const old = (await readFile(record.path, 'utf8'))
+        .split('\n')
+        .map((line) =>
+          line === ''
+            ? line
+            : JSON.stringify({ ...JSON.parse(line), total: undefined }),
+        )
+        .join('\n');
+
+      await writeFile(record.path, old);
+
+      for (let opening = 0; opening < 2; opening++) {
+        const replayed = await ran(
+          place,
+          [],
+          ['--tokens-only', '--resume-only'],
+          { sessionId: live.id, cwd: place.dir, record: record.path },
+        );
+
+        expect(sessionTokens(replayed.state.spent)?.totalTokens).toBe(4000);
+        expect(sessionFigure(replayed.state.spent)?.cost?.amount).toBeCloseTo(
+          sessionFigure(live.state.spent)!.cost!.amount,
+          9,
+        );
+
+        const entries = (await readFile(record.path, 'utf8'))
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line));
+
+        expect(entries.filter((entry) => entry.type === 'usage')).toHaveLength(
+          2,
+        );
+        expect(
+          entries
+            .filter((entry) => entry.type === 'usage')
+            .every((entry) => entry.total === undefined),
+        ).toBe(true);
+      }
+    }));
+});

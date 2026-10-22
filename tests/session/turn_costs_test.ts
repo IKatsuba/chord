@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { FILLED } from '../../src/session/enrich.ts';
 import { turnCost } from '../../src/session/prices.ts';
@@ -326,5 +326,51 @@ test("an opening resumed from a record counts from the record's last cost, as it
   });
   expect(first(new TurnCosts(undefined, true, past))).toMatchObject({
     uncounted: true,
+  });
+});
+
+describe('CHD-472 U1 tester: late costs retain total-token meaning', () => {
+  test('a cost arriving after the answer adds its delta without turning total tokens into another turn', () => {
+    const costs = new TurnCosts('session', false, [], 'session');
+
+    costs.began('a');
+    expect(costs.ended('a', { totalTokens: 100 }, 'model')).toMatchObject({
+      total: true,
+      usage: { totalTokens: 100 },
+    });
+    expect(costs.heard('a', update(0.02))).toMatchObject({
+      total: true,
+      usage: { totalTokens: 100 },
+      cost: { amount: 0.02 },
+    });
+    expect(costs.heard('a', update(0.02))).toBeUndefined();
+    costs.began('b');
+    costs.heard('b', update(0.05));
+    expect(costs.ended('b', { totalTokens: 250 }, 'model')).toMatchObject({
+      total: true,
+      usage: { totalTokens: 250 },
+      cost: { amount: expect.closeTo(0.03, 9) },
+    });
+  });
+
+  test('a resumed total has only the cost added since the record; a fresh session has no earlier baseline', () => {
+    const resumed = new TurnCosts('session', true, [update(0.5)], 'session');
+
+    resumed.began('a');
+    resumed.heard('a', update(0.5));
+    expect(resumed.ended('a', { totalTokens: 0 }, 'model')).toMatchObject({
+      total: true,
+      usage: { totalTokens: 0 },
+      cost: { amount: 0 },
+    });
+
+    const fresh = new TurnCosts('session', false, [], 'session');
+
+    fresh.began('a');
+    fresh.heard('a', update(0.1));
+    expect(fresh.ended('a', { totalTokens: 50 }, 'model')).toMatchObject({
+      total: true,
+      cost: { amount: 0.1 },
+    });
   });
 });

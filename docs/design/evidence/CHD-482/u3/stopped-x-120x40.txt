@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d482
+ ▀▀     ? for shortcuts · /help
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Cancelled (0 tool uses · 3s)
+
+ ⏺ The build is being watched.
+
+ ■ Watch the build · task · stopped with x after 3s
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

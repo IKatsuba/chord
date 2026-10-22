@@ -351,7 +351,8 @@
   `--session-usage` (`CHORD_FAKE_SESSION_USAGE=1`) makes each answer's tokens
   the session's running total, every turn so far, as dirac's are, and
   `--no-cost` (`CHORD_FAKE_NO_COST=1`) leaves the cost out of the update, as
-  an agent whose provider gives none sends it.
+  an agent whose provider gives none sends it; with `--tokens-only`, on its
+  real models.
   `--unpriced-model` (`CHORD_FAKE_UNPRICED_MODEL=1`) adds `fake-unpriced`,
   which chord's price data does not know, to `--tokens-only`'s models.
   `--tester-plays <scenario>` (`CHORD_FAKE_TESTER_PLAYS`) has a team's lead

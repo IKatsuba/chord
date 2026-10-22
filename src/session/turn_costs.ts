@@ -66,6 +66,21 @@ export function costReading(update: SessionUpdate): CostReading | undefined {
     : undefined;
 }
 
+/**
+ * Whether two readings say the same cost: the same amount, currency and
+ * mark, or neither any, however many updates repeated it.
+ */
+function sameReading(
+  one: CostReading | undefined,
+  other: CostReading | undefined,
+): boolean {
+  return (
+    one?.amount === other?.amount &&
+    one?.currency === other?.currency &&
+    one?.estimated === other?.estimated
+  );
+}
+
 /** The last cost among a session's own updates, as its record replays them. */
 export function lastReading(
   updates: readonly SessionUpdate[],
@@ -297,7 +312,7 @@ export class TurnCosts {
       turn.tokens !== undefined &&
       turn.model !== undefined &&
       (seen === undefined || seen.estimated) &&
-      seen === turn.before &&
+      sameReading(seen, turn.before) &&
       turnCost(turn.model, turn.tokens) === undefined
     );
   }

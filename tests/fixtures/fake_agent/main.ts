@@ -723,7 +723,8 @@ async function reportUsage(turn: Turn): Promise<void> {
     totalTokens: TURN_USAGE.totalTokens * times,
   };
 
-  if (TOKENS_ONLY) {
+  // With `--no-cost` as well, the usage update still goes, with no cost.
+  if (TOKENS_ONLY && !NO_COST) {
     turn.usage = usage;
 
     return;

@@ -410,3 +410,26 @@ test("on an agent that gives running totals and no cost, a turn on a model chord
     model: 'fake-unpriced',
   });
 });
+
+test('a costless update given the estimate so far again moves no cost, so a later turn on a model with no price is still not counted (CHD-472)', () => {
+  const estimate = (amount: number): SessionUpdate => ({
+    sessionUpdate: 'usage_update',
+    used: 1,
+    size: 2,
+    cost: { amount, currency: 'USD' },
+    _meta: { 'chord/filled': ['cost'] },
+  });
+  const tokens = { inputTokens: 1000, totalTokens: 1000 };
+  const totals = new TurnCosts('session', false, [], 'session');
+
+  totals.began('t1');
+  totals.heard('t1', estimate(0.004));
+  totals.ended('t1', tokens, 'gpt-5.3-codex');
+  totals.began('t2');
+  // The agent's own update with no cost, which chord fills with the same.
+  totals.heard('t2', estimate(0.004));
+  expect(totals.ended('t2', tokens, 'fake-unpriced')).toMatchObject({
+    uncounted: true,
+    model: 'fake-unpriced',
+  });
+});

@@ -193,6 +193,8 @@ describe('CHD-424 tester: call navigation edges', () => {
 
       await window.shows('❯ parser tests');
       await window.press('\r');
+      await window.shows('Background · m1, 2 of 2');
+      await window.press('\r');
       await window.shows('╭─ parser ');
       await until('parser’s own monitor call at the top', () =>
         window.frame().split('\n')[0]!.includes('⏺ Monitor(parser tests)'),
@@ -741,6 +743,132 @@ describe("a monitor's detail in the window (CHD-481)", () => {
     ));
 });
 
+describe('CHD-481 U3 tester: ended detail keeps identity across keys and resize', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`repeated x leaves its neighbour running and ↑ returns to a whole item's detail at ${columns} columns`, () =>
+      withBackground(
+        async (window) => {
+          await ready(window);
+          await send(window, 'monitors');
+          await window.shows(
+            'Received the message from dev server errors · monitor.',
+          );
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('Background · 2 in this tab');
+          await window.press('\r');
+          await window.shows('Background · m1, 1 of 2');
+          await window.press('j');
+          await window.shows('Background · m2, 2 of 2');
+          await window.press('x');
+          await window.shows('Background · m2, 2 of 2 · ended');
+          await window.press('x');
+          await window.resize(
+            columns === 80
+              ? { columns: 120, rows: 40 }
+              : { columns: 80, rows: 24 },
+          );
+          await window.shows('Background · m2, 2 of 2 · ended');
+          expect(window.frame()).not.toContain('x to stop');
+          await window.press(UP);
+          await window.shows('Background · m1, 1 of 1');
+          expect(window.frame()).not.toContain('· ended');
+          await window.press('\x1b[D');
+          await window.shows('❯ dev server errors');
+          await window.shows('Background · 1 in this tab');
+          expect(window.frame()).not.toMatch(/^│ .*CI run 4812/m);
+          await window.press(ESC);
+          await until(
+            'the background frame closed',
+            () => !window.frame().includes('Background ·'),
+          );
+        },
+        { columns, rows },
+      ));
+  }
+});
+
+describe('CHD-481 U3 tester: a modal input preserves an ended detail', () => {
+  async function inRunningWindow(
+    body: (window: Window) => Promise<void>,
+    size: { columns: number; rows: number },
+  ) {
+    const server = serveChord();
+    const agentCommand = fakeAgentCommand(undefined, '--step-ms', '30');
+
+    try {
+      await withWindow(body, {
+        server,
+        runtimes: ['fake'],
+        agentCommand,
+        startupOf: () => ({ agentCommand }),
+        ...size,
+      });
+    } finally {
+      await server.close();
+    }
+  }
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a cancelled link restores the same ended monitor at ${columns} columns`, () =>
+      inRunningWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'monitors');
+          await window.shows(
+            'Received the message from dev server errors · monitor.',
+          );
+          await send(window, 'slow');
+          await window.shows('Working');
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.press('j');
+          await window.shows('❯ CI run 4812');
+          await window.press('\r');
+          await window.shows('Background · m2, 2 of 2');
+          await window.press('x');
+          await window.shows('Background · m2, 2 of 2 · ended');
+
+          const session = window.session();
+
+          assert(session);
+
+          const controller = new AbortController();
+          const response = session.elicitations.handler(
+            {
+              sessionId: session.id,
+              mode: 'url',
+              message: 'Link while reading an ended monitor',
+              url: 'https://example.com/monitor',
+              elicitationId: 'detail-link',
+            },
+            controller.signal,
+          );
+
+          try {
+            await window.shows('❯ 1. Open in the browser');
+            expect(window.frame()).not.toContain('Background ·');
+            await window.press(ESC);
+            expect(await response).toMatchObject({ action: 'cancel' });
+            await window.shows('Background · m2, 2 of 2 · ended');
+            expect(window.frame()).not.toContain('x to stop');
+            await window.press(UP);
+            await window.shows('Background · m1, 1 of 1');
+          } finally {
+            controller.abort();
+          }
+        },
+        { columns, rows },
+      ));
+  }
+});
+
 describe('a long stop refusal under a detail (CHD-481, Q128)', () => {
   const PAGE_DOWN = '\x1b[6~';
   const HOME = '\x1b[H';
@@ -850,4 +978,73 @@ describe('a long stop refusal under a detail (CHD-481, Q128)', () => {
       },
       { columns: 80, rows: 24 },
     ));
+});
+
+describe('CHD-481 Q128 tester: rebound detail boundaries', () => {
+  test('rebound top and bottom page the detail while unbound Home and End do nothing', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'monitors');
+          await window.shows(
+            'Received the message from dev server errors · monitor.',
+          );
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('Background · 2 in this tab');
+          await window.press('\r');
+          await window.shows('Background · m1, 1 of 2');
+
+          const body = () =>
+            window
+              .frame()
+              .split('\n')
+              .filter((line) => line.startsWith('│'))
+              .join('\n');
+
+          await window.press('\x1b[6~');
+          await until(
+            'the description paged away',
+            () => !body().includes('dev server errors'),
+          );
+          await window.press('\x1b[H');
+          expect(body()).not.toContain('dev server errors');
+          await window.press('\x02');
+          await until('rebound top returns the description', () =>
+            body().includes('dev server errors'),
+          );
+          await window.press(END);
+          expect(body()).toContain('dev server errors');
+          await window.press('\x05');
+          await until('rebound bottom reaches the batch', () =>
+            /^│ +at validate \(src\/routes\/login\.tsx:41:22\)/m.test(body()),
+          );
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          columns: 80,
+          rows: 24,
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'Scroll',
+                bindings: {
+                  home: null,
+                  end: null,
+                  'ctrl+b': 'scroll:top',
+                  'ctrl+e': 'scroll:bottom',
+                },
+              },
+            ],
+          }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });

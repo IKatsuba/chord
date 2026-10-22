@@ -1922,7 +1922,7 @@ describe('CHD-386 tester: movement panel entries', () => {
     expect(lines).toContain('↑ ↓ to pick a command or file');
     expect(lines).toContain('tab to complete a command');
     expect(lines).toContain('tab enter to add a file');
-    expect(lines).toContain('esc to close a picker or shortcuts');
+    expect(lines).toContain('esc ← to leave a picker or shortcuts');
     expect(lines.at(-2)).toStrictEqual('? for shortcuts');
     expect(lines.at(-1)).toStrictEqual('any key to quit the crash screen');
   });
@@ -1990,10 +1990,10 @@ describe('CHD-424 tester: shared background keys', () => {
     expect(lines.slice(at, at + 3)).toStrictEqual([
       '↑ ↓ for prompts, agents, background',
       'x to close an agent, stop background',
-      'enter to open background or a call',
+      'enter for background, details, a call',
     ]);
     expect(
-      lines.filter((line) => line === 'esc to close a picker or shortcuts'),
+      lines.filter((line) => line === 'esc ← to leave a picker or shortcuts'),
     ).toHaveLength(1);
   });
 

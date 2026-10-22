@@ -1279,3 +1279,90 @@ test('a detail taller than its room pages to its last line at 46×24, every line
     await drawn.unmount();
   }
 });
+
+describe('CHD-481 U3 tester: detail and refusal paging', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a tall refusal alone pages while its description stays visible at ${columns} columns`, async () => {
+      const item: BackgroundItem = {
+        kind: 'monitor',
+        id: 'm1',
+        key: 1,
+        name: 'detail remains open',
+        startedAt: Date.now(),
+        status: { group: 'running' },
+        command: 'sleep 600',
+      };
+      const hint =
+        Array.from({ length: 30 }, (_, n) => `refusal line ${n}`).join('\n') +
+        '\nREFUSAL TAIL';
+      const scroller: { current: RequestScroller | undefined } = {
+        current: undefined,
+      };
+      const drawn = await draw(
+        <BackgroundView
+          items={[item]}
+          focus={item}
+          detail={item}
+          hint={hint}
+          columns={columns}
+          rows={rows}
+          scroller={scroller}
+        />,
+        { columns, rows },
+      );
+      const step = async (action: Parameters<RequestScroller>[0]) => {
+        scroller.current?.(action);
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      };
+
+      try {
+        await until('the first refusal line', () =>
+          drawn.frame().includes('refusal line 0'),
+        );
+
+        for (
+          let page = 0;
+          page < 40 && !drawn.frame().includes('REFUSAL TAIL');
+          page++
+        ) {
+          await step('page_down');
+          expect(drawn.frame()).toContain('detail remains open');
+          expect(drawn.frame()).not.toContain('$ sleep 600');
+        }
+
+        expect(drawn.frame()).toContain('REFUSAL TAIL');
+        await step('top');
+        expect(drawn.frame()).toContain('refusal line 0');
+        expect(drawn.frame()).toContain('detail remains open');
+        await step('bottom');
+        expect(drawn.frame()).toContain('REFUSAL TAIL');
+        expect(drawn.frame()).toContain('detail remains open');
+        expect(drawn.frame()).not.toContain('← no events yet');
+
+        for (
+          let page = 0;
+          page < 40 && !drawn.frame().includes('refusal line 0');
+          page++
+        ) {
+          await step('page_up');
+        }
+
+        expect(drawn.frame()).toContain('detail remains open');
+        expect(drawn.frame()).toContain('refusal line 0');
+
+        const frame = drawn
+          .frame()
+          .split('\n')
+          .filter((line) => /^[╭│╰]/.test(line));
+
+        expect(frame.length).toBeLessThanOrEqual(Math.floor(rows / 2));
+        expect(frame.every((line) => /^[╭│╰].*[╮│╯]$/.test(line))).toBe(true);
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});

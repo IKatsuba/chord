@@ -17,7 +17,6 @@ import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CTRL_O,
-  DOWN,
   ESC,
   leader,
   quitAll,
@@ -690,7 +689,7 @@ describe('CHD-373 S2 tester: fake spend reaches both task views', () => {
     [120, 40],
   ] as const) {
     for (const mode of ['tokens-only', 'no-usage'] as const) {
-      test(`${mode}: task block and background row agree at ${columns} columns`, async () => {
+      test(`${mode}: completed task block keeps its spend and its row leaves at ${columns} columns`, async () => {
         const server = serveChord();
         const admit = server.admit.bind(server);
         let main: Parameters<typeof admit>[0] | undefined;
@@ -729,21 +728,12 @@ describe('CHD-373 S2 tester: fake spend reaches both task views', () => {
                 expect(done).not.toContain('$');
               }
 
-              await window.press(DOWN);
-              await window.press('\r');
-              await window.shows('Background · 1 in this tab');
-              await window.shows('Priced reply');
-
-              const row = window
-                .frame()
-                .split('\n')
-                .find((line) => line.includes('❯ Priced reply'))!;
-
-              if (mode === 'tokens-only') {
-                expect(row).toContain('~$');
-              } else {
-                expect(row).not.toContain('$');
-              }
+              await until(
+                'the completed task leaves',
+                () => !window.frame().includes('background  '),
+              );
+              expect(window.frame()).not.toContain('❯ Priced reply');
+              expect(window.frame()).not.toContain('Background ·');
             },
             {
               server,

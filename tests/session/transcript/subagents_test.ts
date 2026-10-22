@@ -974,3 +974,67 @@ describe("a task's end, once its turn has ended (CHD-482)", () => {
     expect(subagent.subagent.task?.stoppedWith).toBe('x');
   });
 });
+
+describe('CHD-482 U3 tester: late and nested task stops stay singular', () => {
+  const started: TranscriptAction = {
+    type: 'update',
+    turnId: TURN,
+    at: 3,
+    update: taskUpdate('task', 'running', {
+      name: 'Watch the build',
+      runtime: 'fake',
+      prompt: 'Watch',
+    }),
+  };
+  const ended: TranscriptAction = {
+    type: 'result',
+    turnId: TURN,
+    result: { status: 'completed', stopReason: 'end_turn' },
+  };
+  const stopped: TranscriptAction = {
+    type: 'update',
+    turnId: TURN,
+    at: 20,
+    update: taskUpdate('task', 'cancelled', undefined, undefined, 'x'),
+  };
+  const ends = (value: Transcript) =>
+    value.entries.filter((entry) => entry.kind === 'item_ended');
+
+  test('a nested task repeats its stop update without duplicating the root end line', () => {
+    const value = fold([
+      PROMPT,
+      spawned('outer', 'Outer'),
+      { ...started, subagentId: 'outer' },
+      ended,
+      { ...stopped, subagentId: 'outer' },
+      { ...stopped, subagentId: 'outer' },
+    ]);
+
+    expect(ends(value)).toMatchObject([
+      {
+        turnId: TURN,
+        item: 'task',
+        name: 'Watch the build',
+        byPerson: true,
+        startedAt: 3,
+        endedAt: 20,
+      },
+    ]);
+    expect(ends(value)).toHaveLength(1);
+  });
+
+  test('a late repeated stop belongs to its announcing turn while a newer turn keeps working', () => {
+    const value = fold([
+      PROMPT,
+      started,
+      ended,
+      { type: 'prompt', turnId: 'later', text: 'slow', at: 10 },
+      stopped,
+      stopped,
+    ]);
+
+    expect(ends(value)).toMatchObject([{ turnId: TURN, byPerson: true }]);
+    expect(ends(value)).toHaveLength(1);
+    expect(value.turn.status).toBe('working');
+  });
+});

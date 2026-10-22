@@ -1071,3 +1071,55 @@ test('a task that ends while its detail is open leaves at once, the detail going
     },
     { rows: 40, columns: 120 },
   ));
+
+describe('CHD-482 U3 tester: a later turn stops its running task with esc', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`the task leaves and its stop line appears once at ${columns} columns`, async () => {
+      const server = serveChord();
+      const command = fakeAgentCommand(undefined, '--step-ms 30');
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'tasklong');
+            await window.shows('The build is being watched.');
+            await until('the announcing turn is idle', () =>
+              /^ {2}\? for shortcuts/m.test(window.frame()),
+            );
+            await send(window, 'slow');
+            await window.shows('esc to interrupt');
+            await window.press(ESC);
+            await window.shows('Interrupted by user');
+
+            const line = '■ Watch the build · task · stopped with esc after';
+
+            await window.shows(line);
+            await until(
+              'the task leaves the summary',
+              () => !window.frame().includes('background  '),
+            );
+            expect(window.frame().split(line)).toHaveLength(2);
+            expect(window.frame()).not.toContain('stopped with x');
+            await send(window, 'hello');
+            await window.shows('came in chunks.');
+            expect(window.frame().split(line)).toHaveLength(2);
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            rows,
+            columns,
+            agentCommand: command,
+            startupOf: () => ({ agentCommand: command }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});

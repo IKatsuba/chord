@@ -672,34 +672,6 @@ describe('a row taller than the frame scrolls by line inside it (CHD-430)', () =
   });
 });
 
-describe('CHD-373 S2 tester: zero and absent money in background states', () => {
-  for (const group of ['done', 'failed', 'stopped'] as const) {
-    test(`${group} retains reported zero money while absent cost stays absent`, () => {
-      const item = task(
-        'zero',
-        'Zero cost',
-        { group, endedAt: NOW },
-        {
-          spent: {
-            cost: { amount: 0, currency: 'USD' },
-            tokens: { totalTokens: 0 },
-          },
-        },
-      );
-
-      expect(stateText(item, NOW).text).toContain('$0.0000');
-      expect(
-        stateText(task('missing', 'No cost', { group, endedAt: NOW }), NOW)
-          .text,
-      ).not.toContain('$');
-      expect(
-        stateText({ ...item, spent: { ...item.spent!, estimated: true } }, NOW)
-          .text,
-      ).toContain('~$0.0000');
-    });
-  }
-});
-
 test("a task's runtime or model with CR, LF or tabs reads as spaces in every layout, no line holding a line break and no word lost (CHD-473)", () => {
   const odd = task(
     't9',
@@ -737,12 +709,11 @@ describe('CHD-473 T3 tester: complete metadata across layouts', () => {
   const item = task(
     'rich',
     'Read 日本語 files and keep every name visible',
-    { group: 'done', endedAt: NOW },
+    { group: 'running' },
     {
       runtime: 'fake\nlocal',
       model: 'Public\t👩🏽‍💻🇯🇵é model',
       owner: { name: '解析器', colour: 0 },
-      spent: { cost: { amount: 0.0125, currency: 'USD' }, estimated: true },
     },
   );
   const compact = (text: string) => text.normalize('NFC').replace(/\s/g, '');
@@ -805,28 +776,6 @@ describe('CHD-473 T3 tester: complete metadata across layouts', () => {
     }
 
     expect(layouts).toEqual(new Set([false, true]));
-  });
-
-  test('zero and missing cost stay distinct while an ended state wraps', () => {
-    for (const width of [24, 36, 46, 60, 76, 116]) {
-      const zero: BackgroundItem = {
-        ...item,
-        spent: { cost: { amount: 0, currency: 'USD' }, estimated: true },
-      };
-      const { spent: _, ...missing } = item;
-      const state = (value: BackgroundItem) =>
-        compact(
-          viewRows([value], { width, focus: undefined, now: NOW })[0]!
-            .lines.flat()
-            .filter((cell) => cell.role === 'state')
-            .map(({ text }) => text)
-            .join(''),
-        );
-
-      expect(state(zero)).toContain('~$0.0000');
-      expect(state(missing)).not.toContain('$');
-      expect(state(zero)).toContain('reportedafter32s');
-    }
   });
 
   test('kind-driven tall rows scroll through every line with stable focus and keep metadata after resizing', () => {

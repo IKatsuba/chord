@@ -501,23 +501,20 @@ describe('CHD-424 tester: background item edges', () => {
     expect(items.map(({ id }) => id)).toStrictEqual(['m1', 'm10', 'm11']);
   });
 
-  test('a prompt clears every ended task state at its cutoff, but keeps later ends and running tasks', () => {
-    const items = backgroundItems(
-      [
-        agent(1, {
-          transcript: withEntries([
-            ...(
-              ['completed', 'failed', 'cancelled', 'disconnected'] as const
-            ).map((state) => task(state, state, 10, { state, endedAt: 50 })),
-            task('later', 'later', 20, { state: 'completed', endedAt: 51 }),
-            task('running', 'running', 30),
-          ]),
-        }),
-      ],
-      50,
-    );
+  test('all ended task states leave immediately, including later ends; running tasks stay', () => {
+    const items = backgroundItems([
+      agent(1, {
+        transcript: withEntries([
+          ...(
+            ['completed', 'failed', 'cancelled', 'disconnected'] as const
+          ).map((state) => task(state, state, 10, { state, endedAt: 50 })),
+          task('later', 'later', 20, { state: 'completed', endedAt: 51 }),
+          task('running', 'running', 30),
+        ]),
+      }),
+    ]);
 
-    expect(items.map(({ id }) => id)).toStrictEqual(['later', 'running']);
+    expect(items.map(({ id }) => id)).toStrictEqual(['running']);
   });
 
   test('resumed historical tasks are excluded even while running; a task started when the session came up remains', () => {
@@ -576,7 +573,7 @@ describe('CHD-424 tester: background item edges', () => {
         ...transcript,
         entries: [task('t', 'task', 10, { state: 'cancelled', endedAt: 50 })],
       }),
-    ).toStrictEqual({ group: 'stopped', endedAt: 50 });
+    ).toBeUndefined();
   });
 
   test('all summary words and separators survive wrapping at every width from 26 through 120', () => {
@@ -1055,20 +1052,17 @@ describe('CHD-2 tester: agent item ownership and terminal precedence', () => {
   test('nested item order and owner remain stable when an untracked item persists and recovers', () => {
     const owner = { name: 'parser', colour: 2 };
     const listed = (state: Subagent['state']) =>
-      backgroundItems(
-        [
-          agent(1, { transcript: withEntries([claude('same', 20)]) }),
-          agent(2, {
-            owner,
-            transcript: withEntries([
-              claude('outer', 10, {
-                entries: [claude('same', 15, { state, endedAt: 30 })],
-              }),
-            ]),
-          }),
-        ],
-        30,
-      );
+      backgroundItems([
+        agent(1, { transcript: withEntries([claude('same', 20)]) }),
+        agent(2, {
+          owner,
+          transcript: withEntries([
+            claude('outer', 10, {
+              entries: [claude('same', 15, { state, endedAt: 30 })],
+            }),
+          ]),
+        }),
+      ]);
 
     expect(listed('untracked').map(({ key, id }) => [key, id])).toStrictEqual([
       [2, 'outer'],
@@ -1305,23 +1299,20 @@ describe('CHD-479 tester: parent identity survives nested and reused adapter ids
 describe('CHD-479 tester: parent order follows the list through live state changes', () => {
   test('interleaved start times cannot reorder parents, and a removed parent returns in its list position', () => {
     const list = (state: Subagent['state']) =>
-      backgroundItems(
-        [
-          agent(1, { transcript: withEntries([claude('main', 40)]) }),
-          agent(2, {
-            owner: { name: 'parser', colour: 1 },
-            transcript: withEntries([claude('parser', 30, { state })]),
-          }),
-          agent(3, {
-            owner: { name: 'tester', colour: 2 },
-            transcript: withEntries([
-              claude('tester-1', 10),
-              claude('tester-2', 20),
-            ]),
-          }),
-        ],
-        100,
-      );
+      backgroundItems([
+        agent(1, { transcript: withEntries([claude('main', 40)]) }),
+        agent(2, {
+          owner: { name: 'parser', colour: 1 },
+          transcript: withEntries([claude('parser', 30, { state })]),
+        }),
+        agent(3, {
+          owner: { name: 'tester', colour: 2 },
+          transcript: withEntries([
+            claude('tester-1', 10),
+            claude('tester-2', 20),
+          ]),
+        }),
+      ]);
 
     expect(list('running').map(({ parent }) => parent)).toStrictEqual([
       'tester',

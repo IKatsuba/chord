@@ -1,27 +1,22 @@
+/**
+ * Every key chord answers is in the shortcuts panel: the panel's own, the
+ * permission prompt's and a form's, and the keys on other layouts, as
+ * escape codes and as copies.
+ */
 import { describe, expect, spyOn, test } from 'bun:test';
 import ru from 'convert-layout/ru.js';
 import * as harness from '../harness.tsx';
-import { type ReactNode, useState } from 'react';
 import type {
   ElicitationPropertySchema,
   ElicitationSchema,
 } from '@agentclientprotocol/sdk';
-import type { Questions } from '../../../src/session/questions.ts';
 import { ElicitationForm } from '../../../src/ui/dialogs/Form.tsx';
-import type { PlanWait } from '../../../src/session/transcript/types.ts';
-import { PlanBox } from '../../../src/ui/dialogs/PlanBox.tsx';
-import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
 import { PermissionPrompt } from '../../../src/ui/dialogs/Permission.tsx';
-import { ModelPicker, NoticeBox } from '../../../src/ui/pickers/Pickers.tsx';
-import { PromptInput } from '../../../src/ui/prompt/Prompt.tsx';
 import {
   type Action,
   DEFAULT_KEYMAP,
-  type Keystroke,
   keystrokeOf,
-  parseSequence,
   readKeybindings,
-  type Sequence,
 } from '../../../src/ui/shortcuts/bindings.ts';
 import {
   columnCount,
@@ -30,7 +25,7 @@ import {
   shortcuts,
   SHORTCUTS,
 } from '../../../src/ui/shortcuts/keys.ts';
-import { type Cursor, textareaDoes } from '../../../src/ui/prompt/prompt.ts';
+import { textareaDoes } from '../../../src/ui/prompt/prompt.ts';
 import { emptySearch } from '../../../src/ui/prompt/search.ts';
 import {
   type AppAction,
@@ -52,6 +47,24 @@ import {
   vimKey,
   vimKeyNames,
 } from '../../../src/ui/prompt/vim.ts';
+import {
+  after,
+  prompt,
+  sequence,
+  LETTERS,
+  PRINTABLE,
+  RAW_PRESSES,
+  NINE,
+  listKeys,
+  FORM_PRESSES,
+  heldPrompt,
+  UNDO,
+  REDO,
+  Press,
+  pressOf,
+  cyrillic,
+  moves,
+} from './keys_presses.tsx';
 
 const MODES: AppAction = {
   type: 'modes',
@@ -64,27 +77,6 @@ const MODES: AppAction = {
     current: 'default',
   },
 };
-
-function after(...actions: AppAction[]): AppState {
-  return actions.reduce(reduceApp, initialAppState);
-}
-
-const prompt: AppAction = {
-  type: 'prompt',
-  turnId: 't1',
-  text: 'hi',
-  at: 0,
-};
-
-function sequence(text: string): Sequence {
-  const parsed = parseSequence(text);
-
-  if ('problem' in parsed) {
-    throw new Error(parsed.problem);
-  }
-
-  return parsed.keys;
-}
 
 /** The sessions' leader pressed, its next key waited for. */
 const LEADER: AppAction = { type: 'keys_pending', keys: sequence('ctrl+x') };
@@ -344,11 +336,6 @@ Object.assign(STATES, {
   'selected, leader': selected(STATES.leader!),
 });
 
-const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
-const PRINTABLE = Array.from({ length: 95 }, (_, i) =>
-  String.fromCharCode(32 + i),
-);
-
 /** Every key press worth trying, and the name the panel would give it. */
 const PRESSES: { name: string; input: string; key: KeyPress }[] = [
   { name: 'esc', input: '', key: { ctrl: false, escape: true } },
@@ -423,116 +410,6 @@ test('every key that does something is in the shortcuts panel', () => {
   }
 });
 
-/**
- * Every key press worth trying on a widget, as the terminal sends it. Ctrl
- * letters that are also Tab, Enter or Backspace are left to those names.
- */
-const RAW_PRESSES: { name: string; sequence: string }[] = [
-  { name: 'esc', sequence: '\x1b' },
-  { name: 'enter', sequence: '\r' },
-  // The kitty keyboard protocol's form, the one Ink reads as shift+return.
-  { name: 'shift + enter', sequence: '\x1b[13;2u' },
-  { name: 'alt + enter', sequence: '\x1b\r' },
-  { name: 'tab', sequence: '\t' },
-  { name: 'backspace', sequence: '\x7f' },
-  { name: '↑', sequence: '\x1b[A' },
-  { name: '↓', sequence: '\x1b[B' },
-  { name: '→', sequence: '\x1b[C' },
-  { name: '←', sequence: '\x1b[D' },
-  // The window's keys, which no widget may act on as well.
-  { name: 'shift + ↑', sequence: '\x1b[1;2A' },
-  { name: 'shift + ↓', sequence: '\x1b[1;2B' },
-  { name: 'pgup', sequence: '\x1b[5~' },
-  { name: 'pgdn', sequence: '\x1b[6~' },
-  { name: 'home', sequence: '\x1b[H' },
-  { name: 'end', sequence: '\x1b[F' },
-  { name: 'shift + tab', sequence: '\x1b[Z' },
-  ...[...LETTERS]
-    .filter((letter) => !'him'.includes(letter))
-    .map((letter) => ({
-      name: `ctrl + ${letter}`,
-      sequence: String.fromCharCode(letter.charCodeAt(0) - 96),
-    })),
-  ...PRINTABLE.map((sequence) => ({ name: sequence, sequence })),
-];
-
-/** Nine choices, so that every digit has one to pick. */
-const NINE = [...'123456789'];
-
-/**
- * Presses every key on a numbered list and checks that each one it answers,
- * by moving its highlight or picking, is in the panel, and that each the
- * panel promises does something: each digit up to its `count` choices.
- * A list too short to open in its middle is tried once from each place
- * `openings` presses it to, as its highlight stops at either end.
- */
-async function listKeys(
-  what: string,
-  draw: (onPick: (value: string) => void) => ReactNode,
-  count = NINE.length,
-  openings = [''],
-) {
-  const answered = new Set<string>();
-
-  for (const opening of openings) {
-    await listPresses(what, draw, opening, answered);
-  }
-
-  for (const shortcut of SHORTCUTS) {
-    for (const name of shortcut.choices ?? []) {
-      if (/^[1-9]$/.test(name) && Number(name) > count) {
-        continue;
-      }
-
-      expect(
-        answered.has(name),
-        `${name} does nothing in the ${what}`,
-      ).toBeTruthy();
-    }
-  }
-}
-
-/** Presses every key on a list opened with `opening`, adding each answered. */
-async function listPresses(
-  what: string,
-  draw: (onPick: (value: string) => void) => ReactNode,
-  opening: string,
-  answered: Set<string>,
-) {
-  const chosen: string[] = [];
-  const app = await harness.draw(draw((value) => chosen.push(value)));
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
-
-  try {
-    await settle();
-
-    if (opening !== '') {
-      await app.write(opening);
-      await settle();
-    }
-
-    for (const { name, sequence } of RAW_PRESSES) {
-      const before = app.frame();
-      const picks = chosen.length;
-
-      await app.write(sequence);
-      await settle();
-
-      if (app.frame() === before && chosen.length === picks) {
-        continue;
-      }
-
-      answered.add(name);
-      expect(
-        SHORTCUTS.some((shortcut) => shortcut.choices?.includes(name)),
-        `${name} in the ${what} is not listed`,
-      ).toBeTruthy();
-    }
-  } finally {
-    await app.unmount();
-  }
-}
-
 test('every key the permission prompt answers is in the panel', () =>
   listKeys('permission prompt', (onPick) => (
     <PermissionPrompt
@@ -578,16 +455,6 @@ const FORM_STATES: [string, ElicitationSchema, string[]][] = [
   ['decline', oneField({ type: 'boolean' }), ['\x1b[B', '\x1b[C']],
   ['text', oneField({ type: 'string' }), []],
 ];
-
-/**
- * The presses worth trying on a form: every one but the printable, which
- * only type, and of those Space, the digits, `j` and `k`, which lists take,
- * and a letter to stand for the rest.
- */
-const FORM_PRESSES = RAW_PRESSES.filter(
-  ({ sequence }) =>
-    !PRINTABLE.includes(sequence) || /^[ \djkx]$/.test(sequence),
-);
 
 /**
  * Presses every key on the form, in each of its states afresh, and checks
@@ -675,431 +542,6 @@ test('every key a form answers is in the panel', async () => {
     }
   }
 });
-
-/** Questions with each kind of row the box has, nine options apiece. */
-const ASKED: Questions = {
-  agent: 'claude',
-  questions: [
-    {
-      id: 'one',
-      text: 'One?',
-      options: NINE.map((digit) => ({ value: digit, title: digit })),
-      multiSelect: false,
-      required: false,
-      own: { field: 'one_note', mode: 'beside' },
-    },
-    {
-      id: 'many',
-      text: 'Many?',
-      options: NINE.map((digit) => ({ value: digit, title: digit })),
-      multiSelect: true,
-      required: false,
-      own: { field: 'many_other', mode: 'withValue', value: 'other' },
-    },
-    {
-      id: 'typed',
-      text: 'Typed?',
-      options: [],
-      multiSelect: false,
-      required: false,
-    },
-  ],
-};
-
-/**
- * The question box's rows, each reached by the presses after its name, and
- * whether text typed there is the row's own.
- */
-const QUESTION_STATES: [string, string[], boolean][] = [
-  ['option', [], false],
-  ['note', Array(9).fill('\x1b[B'), true],
-  ['multi-select', ['\t'], false],
-  ['multi-select own answer', ['\t', ...Array(9).fill('\x1b[B')], true],
-  ['typed answer', ['\t', '\t'], true],
-  ['submit', ['\t', '\t', '\t'], false],
-];
-
-/**
- * Presses every key on the question box, on each kind of row afresh, and
- * checks that each one it answers is in the panel, and that each the panel
- * promises for it does something. Typing and editing a text row are not
- * listed.
- */
-test('every key the question box answers is in the panel', async () => {
-  // A lone ESC waits 20 ms for the rest of a sequence that never comes; the
-  // harness's own wait is for what a key draws, so this one is the ESC's.
-  const escaped = () => new Promise((resolve) => setTimeout(resolve, 40));
-  const answered = new Set<string>();
-
-  for (const [state, prelude, typing] of QUESTION_STATES) {
-    const answers: unknown[] = [];
-    const draw = async () => {
-      const app = await harness.draw(
-        <QuestionBox
-          wait={{
-            id: 'e1',
-            mode: 'form',
-            message: 'Go?',
-            schema: { type: 'object', properties: {} },
-          }}
-          questions={ASKED}
-          agent='fake'
-          windowRows={40}
-          width={120}
-          active
-          onAnswer={(response) => answers.push(response)}
-        />,
-      );
-
-      for (const press of prelude) {
-        await app.write(press);
-      }
-
-      answers.length = 0;
-
-      return app;
-    };
-
-    let app = await draw();
-
-    try {
-      for (const { name, sequence } of FORM_PRESSES) {
-        const before = app.frame();
-
-        await app.write(sequence);
-
-        if (sequence === '\x1b') {
-          await escaped();
-        }
-
-        if (app.frame() === before && answers.length === 0) {
-          continue;
-        }
-
-        await app.unmount();
-
-        app = await draw();
-
-        if (
-          typing &&
-          (name.length === 1 ||
-            name.startsWith('ctrl + ') ||
-            name === 'backspace')
-        ) {
-          continue;
-        }
-
-        answered.add(name);
-        expect(
-          SHORTCUTS.some(
-            (shortcut) =>
-              shortcut.questions?.includes(name) ||
-              shortcut.choices?.includes(name),
-          ),
-          `${name} on the question box's ${state} is not listed`,
-        ).toBeTruthy();
-      }
-    } finally {
-      await app.unmount();
-    }
-  }
-
-  for (const shortcut of SHORTCUTS) {
-    for (const name of shortcut.questions ?? []) {
-      expect(
-        answered.has(name),
-        `${name} does nothing on the question box`,
-      ).toBeTruthy();
-    }
-  }
-});
-
-/**
- * The plan box's rows for each agent's plan, each reached by the presses
- * after its name, and whether text typed there is the row's own (CHD-437).
- */
-const PLAN_STATES: [PlanWait['agent'], string, string[], boolean][] = [
-  ['cursor', 'choice', [], false],
-  ['cursor', 'note', ['\x1b[B', '\x1b[B'], true],
-  ['grok', 'choice', [], false],
-  ['grok', 'note', ['\x1b[B', '\x1b[B', '\x1b[B'], true],
-];
-
-/**
- * Presses every key on the plan box, on each kind of row afresh, and checks
- * that each one it answers is in the panel: its keys are the permission
- * prompt's and the question box's, nothing new. Typing on the Note row is
- * not listed.
- */
-test('every key the plan box answers is in the panel', async () => {
-  const escaped = () => new Promise((resolve) => setTimeout(resolve, 40));
-
-  for (const [agent, state, prelude, typing] of PLAN_STATES) {
-    const answers: unknown[] = [];
-    const draw = async () => {
-      const app = await harness.draw(
-        <PlanBox
-          wait={{ id: 'p1', agent, toolCallId: 'c1', plan: '# Plan' }}
-          agent={agent}
-          width={120}
-          active
-          onAnswer={(answer) => answers.push(answer)}
-        />,
-      );
-
-      for (const press of prelude) {
-        await app.write(press);
-      }
-
-      answers.length = 0;
-
-      return app;
-    };
-
-    let app = await draw();
-
-    try {
-      for (const { name, sequence } of FORM_PRESSES) {
-        const before = app.frame();
-
-        await app.write(sequence);
-
-        if (sequence === '\x1b') {
-          await escaped();
-        }
-
-        if (app.frame() === before && answers.length === 0) {
-          continue;
-        }
-
-        await app.unmount();
-
-        app = await draw();
-
-        if (
-          typing &&
-          (name.length === 1 ||
-            name.startsWith('ctrl + ') ||
-            name === 'backspace')
-        ) {
-          continue;
-        }
-
-        expect(
-          SHORTCUTS.some(
-            (shortcut) =>
-              shortcut.questions?.includes(name) ||
-              shortcut.choices?.includes(name),
-          ),
-          `${name} on ${agent}'s plan box's ${state} is not listed`,
-        ).toBeTruthy();
-      }
-    } finally {
-      await app.unmount();
-    }
-  }
-});
-
-// The session picker's list is the model picker's, so this covers both.
-test('every key the model picker answers is in the panel', () =>
-  listKeys('model picker', (onPick) => (
-    <ModelPicker
-      models={{
-        available: NINE.map((digit) => ({
-          id: digit,
-          name: `Model ${digit}`,
-        })),
-        // In the middle, so that its highlight can move either way: it stops
-        // at the ends.
-        current: '5',
-      }}
-      rows={9}
-      agent='fake'
-      active
-      onPick={onPick}
-    />
-  )));
-
-test("every key dimcode's notice answers is in the panel (CHD-434)", () =>
-  listKeys(
-    'notice',
-    (onPick) => (
-      <NoticeBox
-        columns={80}
-        active
-        onAnswer={(dismissed) => onPick(dismissed ? 'dismiss' : 'later')}
-      />
-    ),
-    2,
-    // Opened on 1, and on 2.
-    ['', '\x1b[B'],
-  ));
-
-/** The prompt box with a draft, counting what each press did to it. */
-async function promptBox(walking: boolean) {
-  const did = { sends: 0, newlines: 0, walks: 0 };
-  const app = await harness.draw(
-    <PromptInput
-      // A draft, so that a send has something to send.
-      value='draft'
-      cursor={[0, 5]}
-      rows={5}
-      walking={walking}
-      focus
-      onChange={(value) => value.includes('\n') && did.newlines++}
-      onCursorChange={() => {}}
-      onSubmit={() => did.sends++}
-      onOlder={() => did.walks++}
-      onNewer={() => did.walks++}
-    />,
-  );
-
-  return { app, did };
-}
-
-/**
- * option and cmd with ← and →, in the forms terminals send them, which the
- * prompt's textarea moves its cursor on (CHD-386). ← and → alone, ctrl+a and
- * ctrl+e move it too, and the panel leaves them out, as Claude Code does.
- */
-const MOVES: { name: string; sequence: string }[] = [
-  { name: 'alt + ←', sequence: '\x1b[1;3D' },
-  { name: 'alt + →', sequence: '\x1b[1;3C' },
-  { name: 'alt + b', sequence: '\x1bb' },
-  { name: 'alt + f', sequence: '\x1bf' },
-  { name: 'cmd + ←', sequence: '\x1b[1;9D' },
-  { name: 'cmd + →', sequence: '\x1b[1;9C' },
-];
-
-test('every key the prompt sends, breaks, walks or moves by word or line on is in the panel', async () => {
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
-  const answered = new Set<string>();
-
-  for (const walking of [false, true]) {
-    // The box's value and cursor are held, so no press changes what the next
-    // one does.
-    const { app, did } = await promptBox(walking);
-
-    try {
-      await settle();
-
-      for (const { name, sequence } of RAW_PRESSES) {
-        const before = JSON.stringify(did);
-
-        await app.write(sequence);
-        await settle();
-
-        if (JSON.stringify(did) === before) {
-          continue;
-        }
-
-        answered.add(name);
-        expect(
-          SHORTCUTS.some((shortcut) => shortcut.prompt?.includes(name)),
-          `${name} in the prompt is not listed`,
-        ).toBeTruthy();
-      }
-    } finally {
-      await app.unmount();
-    }
-  }
-
-  // Each from the middle of a draft of words, in a box of its own, so that
-  // every move has somewhere to go.
-  for (const { name, sequence } of MOVES) {
-    const moves: Cursor[] = [];
-    const app = await harness.draw(
-      <PromptInput
-        value='one two three'
-        cursor={[0, 5]}
-        rows={5}
-        walking={false}
-        focus
-        onChange={() => {}}
-        onCursorChange={(cursor) => moves.push(cursor)}
-        onSubmit={() => {}}
-        onOlder={() => {}}
-        onNewer={() => {}}
-      />,
-    );
-
-    try {
-      await settle();
-
-      moves.length = 0;
-
-      await app.write(sequence);
-      await settle();
-
-      if (moves.every(([, column]) => column === 5)) {
-        continue;
-      }
-
-      answered.add(name);
-      expect(
-        SHORTCUTS.some((shortcut) => shortcut.prompt?.includes(name)),
-        `${name} in the prompt is not listed`,
-      ).toBeTruthy();
-    } finally {
-      await app.unmount();
-    }
-  }
-
-  for (const shortcut of SHORTCUTS) {
-    for (const name of shortcut.prompt ?? []) {
-      expect(
-        answered.has(name),
-        `${name} does nothing in the prompt`,
-      ).toBeTruthy();
-    }
-  }
-});
-
-/** The prompt box as the window holds it: its draft and cursor in state. */
-function HeldPrompt({
-  start,
-  seen,
-}: {
-  start: { value: string; cursor: Cursor };
-  seen: { value: string; cursor: Cursor; walks: number };
-}) {
-  const [value, setValue] = useState(start.value);
-  const [cursor, setCursor] = useState(start.cursor);
-
-  seen.value = value;
-  seen.cursor = cursor;
-
-  return (
-    <PromptInput
-      value={value}
-      cursor={cursor}
-      rows={5}
-      walking={false}
-      focus
-      onChange={setValue}
-      onCursorChange={setCursor}
-      onSubmit={() => {}}
-      onOlder={() => seen.walks++}
-      onNewer={() => seen.walks++}
-    />
-  );
-}
-
-async function heldPrompt(value: string, cursor: Cursor) {
-  const seen = { value, cursor, walks: 0 };
-  const app = await harness.draw(
-    <HeldPrompt start={{ value, cursor }} seen={seen} />,
-  );
-  const press = async (sequence: string) => {
-    await app.write(sequence);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  };
-
-  return { app, seen, press };
-}
-
-const UNDO = '\x1a';
-const REDO = '\x19';
 
 for (const [name, sequence] of [
   ['↑', '\x1b[1;2A'],
@@ -1407,44 +849,6 @@ test("the editor's failure stays in the state until the draft is touched", () =>
     false,
   );
 });
-
-/** A press as Ink reports it. */
-interface Press {
-  readonly input: string;
-  readonly key: KeyPress;
-}
-
-/** The press of `stroke` on a US layout, or on a Russian one. */
-function pressOf(stroke: Keystroke, russian: boolean): Press {
-  const character =
-    stroke.shift && stroke.key.length === 1
-      ? stroke.key.toUpperCase()
-      : stroke.key;
-
-  return {
-    input: russian ? ru.fromEn(character) : character,
-    key: {
-      ctrl: stroke.ctrl,
-      meta: stroke.alt,
-      shift: stroke.shift,
-      super: stroke.cmd,
-      escape: false,
-    },
-  };
-}
-
-/**
- * Whether a Russian layout types a character of its own where `stroke`'s key
- * is, one a US layout has none of: punctuation it moves, such as `,` where
- * `?` is on Russian – PC, is a US key too and stays as typed.
- */
-function moves(stroke: Keystroke): boolean {
-  return stroke.key.length === 1 && cyrillic(pressOf(stroke, true).input);
-}
-
-function cyrillic(character: string): boolean {
-  return character.codePointAt(0)! >= 0x80;
-}
 
 /**
  * What the last of `presses` asks for, each one before it played as the

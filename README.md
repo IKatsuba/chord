@@ -76,11 +76,11 @@ mark for unseen news. `ctrl+x a` takes you to what waits.
 ### Subagents, folded
 
 When the agent fans out, its subagents run as one tree; ctrl+o shows their
-whole task, work and later messages. Stoppable subagents join monitors and
-spawned tasks in the `background` summary under the agents list. From an
-empty prompt, ↓ past the agents reaches it; Enter opens a frame above the
-prompt, at most half the screen. Enter on a monitor shows its command and
-latest output; `x` stops the picked item alone.
+whole task, work and later messages. Claude, Codex and Cursor subagents
+join monitors and spawned tasks in the `background` summary under the
+agents list. From an empty prompt, ↓ past the agents reaches it; Enter opens
+a frame above the prompt, at most half the screen. Enter shows the item's
+work or a monitor's command and latest output; `x` stops where offered.
 
 <img src="docs/images/subagents.png" alt="Two subagents running in parallel under one block" width="900">
 

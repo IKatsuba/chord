@@ -6,7 +6,6 @@ import {
   type RefObject,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -22,6 +21,7 @@ import type { RequestScroller } from './Permission.tsx';
 import {
   countRoom,
   hiddenRows,
+  laidRoom,
   requestCount,
   requestRule,
   requestStep,
@@ -118,14 +118,10 @@ export function PlanBox({
 
   // The room as laid out, after each draw too: a window that shrinks the box
   // leaves the area no size change to hear when its height was already at
-  // its floor, and a stale room draws past the box (CHD-437).
-  useLayoutEffect(() => {
-    const height = area.current?.getLayout().height;
-
-    if (height !== undefined && height !== room) {
-      setRoom(height);
-    }
-  });
+  // its floor, and a stale room draws past the box (CHD-437). Read once the
+  // frame is laid out, never at React's commit, where the area is not yet.
+  const measure = () =>
+    setRoom((at) => laidRoom(area.current?.getLayout().height, at));
 
   useEffect(() => {
     onOverflow?.(onNote && overflows);
@@ -231,7 +227,8 @@ export function PlanBox({
         minHeight={0}
         overflow='hidden'
         ref={area}
-        onSizeChange={() => setRoom(area.current?.getLayout().height ?? total)}
+        onSizeChange={measure}
+        renderAfter={measure}
       >
         {[
           ...(shown.above

@@ -179,13 +179,22 @@ export function requestRows(
 }
 
 /**
+ * The room a box was laid out to: its height once laid out, else `room`,
+ * as read before. Yoga gives a box not laid out yet a height of `NaN`.
+ */
+export function laidRoom(height: number | undefined, room: number): number {
+  return height !== undefined && Number.isFinite(height) ? height : room;
+}
+
+/**
  * What the request's room shows from row `top` of `total`: the rows it
  * shows and whether the `↑` and `↓` rules are drawn, each taking a row of
  * the room. The top view shows its first `room − 1` rows over the `↓`
  * rule, the end view the `↑` rule over its last `room − 1`, and a view
  * between them both rules round `room − 2`. A room of two rows has one
  * rule, `↓` while rows are below, else `↑`; a room of one row, none.
- * `top` is clamped to the views there are.
+ * `top` is clamped to the views there are. A room not yet laid out, `NaN`
+ * as Yoga gives it, shows it all, as a room not yet read does.
  */
 export function requestView(
   total: number,
@@ -197,7 +206,7 @@ export function requestView(
   readonly above: boolean;
   readonly below: boolean;
 } {
-  if (total <= room) {
+  if (total <= room || Number.isNaN(room)) {
     return { top: 0, shown: total, above: false, below: false };
   }
 

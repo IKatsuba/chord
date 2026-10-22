@@ -1313,9 +1313,18 @@ describe('CHD-481 U3 tester: detail and refusal paging', () => {
         />,
         { columns, rows },
       );
+      const firstVisibleRefusal = () =>
+        /^│ refusal line (\d+)/m.exec(drawn.frame())?.[1];
       const step = async (action: Parameters<RequestScroller>[0]) => {
-        scroller.current?.(action);
-        await new Promise((resolve) => setTimeout(resolve, 30));
+        const before = firstVisibleRefusal();
+
+        assert(before !== undefined);
+        assert(scroller.current !== undefined);
+        scroller.current(action);
+        await until(
+          `the refusal page after ${action}`,
+          () => firstVisibleRefusal() !== before,
+        );
       };
 
       try {

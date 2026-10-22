@@ -5,6 +5,7 @@ import type { ResourceLink } from '../files.ts';
 import { type AgentOption, sameOptions, valueName } from './config.ts';
 import { type AgentModels, sameModels } from './models.ts';
 import type { ElicitationReply, PendingElicitation } from './elicitations.ts';
+import type { PendingPlan } from './plan_asks.ts';
 import { type AgentModes, sameModes } from './modes.ts';
 import {
   DEFAULT_TIMEOUT_MS,
@@ -52,6 +53,7 @@ import type {
   MessageFrom,
   MonitorEnd,
   PermissionAnswer,
+  PlanAnswer,
   PermissionWait,
   TeamPart,
   TranscriptAction,
@@ -487,6 +489,11 @@ export class Conversation {
       readonly between?: true;
     }
   >();
+  /** Plans on screen, by id, waiting on the person (CHD-437, CHD-457). */
+  readonly #plans = new Map<
+    string,
+    { readonly request: PendingPlan; readonly turnId: string }
+  >();
   #closing: Promise<void> | undefined;
   /**
    * Sessions let go by `clear`, closing; `close` waits for them too. Each
@@ -801,6 +808,7 @@ export class Conversation {
     this.#withdrawAsks();
     this.#permissions.clear();
     this.#elicitations.clear();
+    this.#plans.clear();
 
     // Its task agents go with it, let go first so that nothing they say as
     // they close reaches the new session; so do the messages and lines they
@@ -1032,7 +1040,11 @@ export class Conversation {
    * agent's requests are the task's to wait on.
    */
   #waitsOnPerson(): boolean {
-    return this.#permissions.size > 0 || this.#elicitations.size > 0;
+    return (
+      this.#permissions.size > 0 ||
+      this.#elicitations.size > 0 ||
+      this.#plans.size > 0
+    );
   }
 
   /**
@@ -2043,6 +2055,11 @@ export class Conversation {
       this.#sealed = turn.id;
     }
 
+    // A plan goes with it, never taken: cursor's names no session, so the
+    // transport cannot tie it to the cancel as it does a permission. Once
+    // sealed, as answering one releases what waited on it.
+    this.#cancelPlans();
+
     this.#unhold();
     this.#withdrawAsks();
 
@@ -2206,6 +2223,23 @@ export class Conversation {
       answer: answerOf(response),
     });
     asked.request.answer(response);
+    this.#release();
+  }
+
+  /**
+   * Answers a plan with the person's choice; `cancelled` when it was not
+   * theirs. The agent hears it in its own words, never a yes but theirs.
+   */
+  answerPlan(id: string, answer: PlanAnswer): void {
+    const asked = this.#plans.get(id);
+
+    if (!asked) {
+      return;
+    }
+
+    this.#plans.delete(id);
+    this.#emit({ type: 'plan_settled', turnId: asked.turnId, id, answer });
+    asked.request.answer(answer);
     this.#release();
   }
 
@@ -2426,6 +2460,7 @@ export class Conversation {
     session.elicitations.subscribe((request) =>
       this.#elicited(session, request),
     );
+    session.plans.subscribe((request) => this.#planned(session, request));
 
     // The window's alone: the record knows what it was opened from.
     if (session.resumed !== undefined) {
@@ -2934,6 +2969,54 @@ export class Conversation {
     }
   }
 
+  /** Answers every plan on screen `cancelled`, never taken. */
+  #cancelPlans(): void {
+    for (const id of [...this.#plans.keys()]) {
+      this.answerPlan(id, { type: 'cancelled' });
+    }
+  }
+
+  /**
+   * Puts a plan on screen to wait on the person. One from a session `clear`
+   * let go or another than the session's own, with no turn running or one
+   * the person interrupted, or out of a call the turn never announced, is
+   * answered `cancelled` at once, never shown and never taken (Q95).
+   */
+  #planned(session: Session, request: PendingPlan): void {
+    const { id, toolCallId } = request.wait;
+
+    if (
+      !this.#current(session) ||
+      (request.sessionId !== undefined && request.sessionId !== session.id) ||
+      this.#turn === undefined ||
+      this.#sealed === this.#turn.id ||
+      !this.#madeAt.has(toolCallId)
+    ) {
+      return request.answer({ type: 'cancelled' });
+    }
+
+    const turnId = this.#stamp();
+    const withdrawn = () => {
+      if (this.#plans.delete(id)) {
+        this.#emit({
+          type: 'plan_settled',
+          turnId,
+          id,
+          answer: { type: 'withdrawn' },
+        });
+        this.#release();
+      }
+    };
+
+    this.#plans.set(id, { request, turnId });
+    this.#emit({ type: 'plan_requested', turnId, plan: request.wait });
+    request.signal.addEventListener('abort', withdrawn, { once: true });
+
+    if (request.signal.aborted) {
+      withdrawn();
+    }
+  }
+
   /**
    * Waits for the agent to go quiet after an answer before the turn ends on
    * screen and the next queued prompt is sent: some agents send their last chunks or usage after
@@ -3089,6 +3172,8 @@ export class Conversation {
     if (this.#current(session)) {
       this.#sealed = turnId;
 
+      // A plan its agent left open has nothing left to wait on.
+      this.#cancelPlans();
       this.#unhold();
     }
 

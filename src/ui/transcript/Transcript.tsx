@@ -1,6 +1,5 @@
 import { TextAttributes } from '@opentui/core';
-import { memo, useMemo } from 'react';
-import stripAnsi from 'strip-ansi';
+import { memo } from 'react';
 import type {
   Compaction,
   Entry,
@@ -26,10 +25,10 @@ import { shellView } from '../prompt/bash.ts';
 import { Agents } from './agents/Agents.tsx';
 import { TeamEntry } from '../teams/Teams.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
-import { CUT, DIM, DIM_BORDER, fg, FILL, ROWS, TEXT } from '../theme/text.ts';
+import { CUT, DIM, fg, FILL, ROWS, TEXT } from '../theme/text.ts';
 import { compactionLine, inSpinner } from './compaction.ts';
 import { endedLine } from './ended.ts';
-import { markdown, QUOTE_INSET } from './markdown.ts';
+import { Reply } from './Reply.tsx';
 import {
   inArrow,
   messageHeader,
@@ -186,6 +185,7 @@ export const TranscriptEntry = memo(function TranscriptEntry({
           // in: one left open by its turn's end too (the owner's Q44).
           ended={turnEnded(turn, entry.turnId) && !asksFor(turn, entry.call.id)}
           asked={asksFor(turn, entry.call.id)}
+          agent={agent}
           width={width}
         />
       );
@@ -537,46 +537,6 @@ function Shell({ run, width }: { run: ShellRun; width: number }) {
             {note.text}
           </text>
         </Under>
-      )}
-    </box>
-  );
-}
-
-/**
- * A reply as markdown, laid out by markdansi to the width it is drawn in;
- * rendered again only when the text or the width changes. It takes the rest
- * of its row, so its texts are measured whole (`FILL`).
- */
-function Reply({ text, width }: { text: string; width: number }) {
-  const colours = useColours();
-  const blocks = useMemo(
-    // An agent's own escapes are text, not styling chord answers for.
-    () => markdown(stripAnsi(text), width, undefined, colours),
-    [text, width, colours],
-  );
-  const selectable = useSelectable();
-
-  return (
-    <box gap={1} flexGrow={1}>
-      {blocks.map((block, index) =>
-        block.quote ? (
-          <box
-            key={index}
-            flexDirection='row'
-            border={['left']}
-            borderStyle='single'
-            borderColor={DIM_BORDER}
-            paddingLeft={QUOTE_INSET - 1}
-          >
-            <text {...FILL} {...selectable}>
-              <Ansi text={block.text} />
-            </text>
-          </box>
-        ) : (
-          <text key={index} {...TEXT} {...selectable}>
-            <Ansi text={block.text} />
-          </text>
-        ),
       )}
     </box>
   );

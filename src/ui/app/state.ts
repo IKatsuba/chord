@@ -53,6 +53,7 @@ import {
 } from '../background/state.ts';
 import {
   askedInput,
+  askedPlan,
   asksPerson,
   asksWithKeys,
   heldBack,
@@ -1386,9 +1387,11 @@ function listHasKeys(state: AppState): boolean {
   return asksWithKeys(state) || pickerShown(state);
 }
 
-/** The form or link on screen, when it has the keys. */
+/** The form, link or plan on screen, when it has the keys. */
 function inputWithKeys(state: AppState) {
-  return heldBack(state) ? undefined : askedInput(state.transcript);
+  return heldBack(state)
+    ? undefined
+    : (askedInput(state.transcript) ?? askedPlan(state.transcript));
 }
 
 /** One of chord's pickers or panels is open over the prompt. */
@@ -1694,8 +1697,14 @@ function boundCommand(
 
     // home and end move in the field being typed in, not the transcript.
     const step = key.home || key.end ? undefined : scrollStep(on);
+    // A plan's Note taller than its room takes the page keys while the `❯`
+    // is on it (docs/design/CHD-437.md).
+    const paged =
+      (step === 'page_up' || step === 'page_down') &&
+      state.overflowing !== undefined &&
+      state.overflowing === askedPlan(state.transcript)?.wait.id;
 
-    return step && `scroll_${step}`;
+    return step && (paged ? `request_${step}` : `scroll_${step}`);
   }
 
   // The search line takes typing, so only these keys and the window's below

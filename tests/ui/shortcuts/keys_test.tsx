@@ -8,6 +8,8 @@ import type {
 } from '@agentclientprotocol/sdk';
 import type { Questions } from '../../../src/session/questions.ts';
 import { ElicitationForm } from '../../../src/ui/dialogs/Form.tsx';
+import type { PlanWait } from '../../../src/session/transcript/types.ts';
+import { PlanBox } from '../../../src/ui/dialogs/PlanBox.tsx';
 import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
 import { PermissionPrompt } from '../../../src/ui/dialogs/Permission.tsx';
 import { ModelPicker } from '../../../src/ui/pickers/Pickers.tsx';
@@ -778,6 +780,92 @@ test('every key the question box answers is in the panel', async () => {
         answered.has(name),
         `${name} does nothing on the question box`,
       ).toBeTruthy();
+    }
+  }
+});
+
+/**
+ * The plan box's rows for each agent's plan, each reached by the presses
+ * after its name, and whether text typed there is the row's own (CHD-437).
+ */
+const PLAN_STATES: [PlanWait['agent'], string, string[], boolean][] = [
+  ['cursor', 'choice', [], false],
+  ['cursor', 'note', ['\x1b[B', '\x1b[B'], true],
+  ['grok', 'choice', [], false],
+  ['grok', 'note', ['\x1b[B', '\x1b[B', '\x1b[B'], true],
+];
+
+/**
+ * Presses every key on the plan box, on each kind of row afresh, and checks
+ * that each one it answers is in the panel: its keys are the permission
+ * prompt's and the question box's, nothing new. Typing on the Note row is
+ * not listed.
+ */
+test('every key the plan box answers is in the panel', async () => {
+  const escaped = () => new Promise((resolve) => setTimeout(resolve, 40));
+
+  for (const [agent, state, prelude, typing] of PLAN_STATES) {
+    const answers: unknown[] = [];
+    const draw = async () => {
+      const app = await harness.draw(
+        <PlanBox
+          wait={{ id: 'p1', agent, toolCallId: 'c1', plan: '# Plan' }}
+          agent={agent}
+          width={120}
+          active
+          onAnswer={(answer) => answers.push(answer)}
+        />,
+      );
+
+      for (const press of prelude) {
+        await app.write(press);
+      }
+
+      answers.length = 0;
+
+      return app;
+    };
+
+    let app = await draw();
+
+    try {
+      for (const { name, sequence } of FORM_PRESSES) {
+        const before = app.frame();
+
+        await app.write(sequence);
+
+        if (sequence === '\x1b') {
+          await escaped();
+        }
+
+        if (app.frame() === before && answers.length === 0) {
+          continue;
+        }
+
+        await app.unmount();
+
+        app = await draw();
+
+        if (
+          typing &&
+          (name.length === 1 ||
+            name.startsWith('ctrl + ') ||
+            name === 'backspace')
+        ) {
+          continue;
+        }
+
+        expect(
+          SHORTCUTS.some(
+            (shortcut) =>
+              shortcut.questions?.includes(name) ||
+              shortcut.choices?.includes(name),
+          ),
+          `${name} on ${agent}'s plan box's ${state} is not listed`,
+        ).toBeTruthy();
+      }
+    } finally {
+      await app.unmount();
     }
   }
 });

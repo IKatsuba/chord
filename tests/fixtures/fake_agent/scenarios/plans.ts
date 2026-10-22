@@ -1,4 +1,7 @@
-/** Plans: one that moves a step at a time, and Codex's proposed plan. */
+/**
+ * Plans: one that moves a step at a time, Codex's proposed plan, and the
+ * plans cursor and grok put to the client to approve (CHD-437, CHD-457).
+ */
 import * as acp from '@agentclientprotocol/sdk';
 import { clientTakesPlans } from '../client.ts';
 import { PLAN_CAPABILITY_ONLY, STEP_MS } from '../options.ts';
@@ -39,6 +42,67 @@ async function planShrink(turn: Turn, gated: boolean) {
   await pause(turn.signal, STEP_MS * 200);
 
   return 'end_turn' as const;
+}
+
+/** The plan cursor's and grok's scenarios put to the person. */
+export const ASKED_PLAN =
+  '# Route updates by session\n\n1. Read src/acp/connection.ts.\n' +
+  '2. Move the routing into src/session/session.ts.\n3. Run the tests.';
+
+/** cursor's todos for `ASKED_PLAN`. */
+const CURSOR_TODOS = [
+  { id: 'read', content: 'Read the connection', status: 'completed' },
+  { id: 'move', content: 'Move the routing', status: 'in_progress' },
+  { id: 'test', content: 'Run the tests', status: 'pending' },
+] as const;
+
+/** The answer each session's last plan got, which `planheard` says. */
+const planAnswers = new Map<string, string>();
+
+/**
+ * Puts a plan to the client with `method` under a `Plan` call, announced
+ * first unless `early`, and says the answer it got back whole, so a test
+ * reads what the agent heard.
+ */
+async function askPlan(
+  turn: Turn,
+  method: string,
+  params: (toolCallId: string) => Record<string, unknown>,
+  early = false,
+): Promise<acp.StopReason> {
+  const toolCallId = turn.callId('plan');
+  const announce = () =>
+    turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: 'Plan',
+      kind: 'switch_mode',
+      status: 'pending',
+    });
+
+  if (!early) {
+    await announce();
+  }
+
+  const asked = turn.client.request(method, params(toolCallId));
+
+  if (early) {
+    await announce();
+  }
+
+  const answer: unknown = await asked;
+
+  // Kept before the turn goes on, which an interrupt may have ended.
+  planAnswers.set(turn.sessionId, JSON.stringify(answer));
+
+  await turn.send({
+    sessionUpdate: 'tool_call_update',
+    toolCallId,
+    status: 'completed',
+  });
+  await turn.say(`Plan answer: ${planAnswers.get(turn.sessionId)}`);
+
+  return 'end_turn';
 }
 
 export const PLANS = {
@@ -141,4 +205,122 @@ export const PLANS = {
 
     return 'end_turn';
   },
+  // cursor's cursor/create_plan, its todos and a phase of them.
+  cursorplan: (turn) =>
+    askPlan(turn, 'cursor/create_plan', (toolCallId) => ({
+      toolCallId,
+      name: 'Route updates by session',
+      overview: 'Split the session routing out of the connection.',
+      plan: ASKED_PLAN,
+      todos: CURSOR_TODOS,
+      phases: [{ name: 'Move', todos: CURSOR_TODOS.slice(1) }],
+    })),
+
+  // The same, asked before the call it names is announced.
+  cursorplanearly: (turn) =>
+    askPlan(
+      turn,
+      'cursor/create_plan',
+      (toolCallId) => ({ toolCallId, plan: ASKED_PLAN, todos: [] }),
+      true,
+    ),
+
+  // A plan request that does not read: its todos are no list.
+  cursorplanbad: (turn) =>
+    askPlan(turn, 'cursor/create_plan', (toolCallId) => ({
+      toolCallId,
+      plan: ASKED_PLAN,
+      todos: 'three',
+    })),
+
+  // grok's x.ai/exit_plan_mode, with its plan, and with none written.
+  grokplan: (turn) =>
+    askPlan(turn, 'x.ai/exit_plan_mode', (toolCallId) => ({
+      sessionId: turn.sessionId,
+      toolCallId,
+      planContent: ASKED_PLAN,
+    })),
+  // grok's request naming a session other than its own.
+  grokplanwrong: (turn) =>
+    askPlan(turn, 'x.ai/exit_plan_mode', (toolCallId) => ({
+      sessionId: 'another-session',
+      toolCallId,
+      planContent: ASKED_PLAN,
+    })),
+
+  // cursor's request sent only once the turn has been cancelled, before the
+  // turn ends: it waits for its answer, which only chord can give.
+  async cursorplanlate(turn) {
+    const toolCallId = turn.callId('plan');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: 'Plan',
+      kind: 'switch_mode',
+      status: 'pending',
+    });
+    await new Promise((resolve) =>
+      turn.signal.addEventListener('abort', resolve, { once: true }),
+    );
+
+    const answer: unknown = await turn.client.request('cursor/create_plan', {
+      toolCallId,
+      plan: ASKED_PLAN,
+      todos: [],
+    });
+
+    planAnswers.set(turn.sessionId, JSON.stringify(answer));
+
+    return 'cancelled';
+  },
+
+  // cursor's plan and a form asked at once, each waiting on its own answer;
+  // says both, the plan's first.
+  async planform(turn) {
+    const toolCallId = turn.callId('plan');
+
+    await turn.send({
+      sessionUpdate: 'tool_call',
+      toolCallId,
+      title: 'Plan',
+      kind: 'switch_mode',
+      status: 'pending',
+    });
+
+    const plan = turn.client.request('cursor/create_plan', {
+      toolCallId,
+      plan: ASKED_PLAN,
+      todos: [],
+    });
+    const form = turn.client.request('elicitation/create', {
+      sessionId: turn.sessionId,
+      mode: 'form',
+      message: 'Name the branch',
+      requestedSchema: {
+        type: 'object',
+        properties: { branch: { type: 'string', title: 'Branch' } },
+      },
+    });
+    const [planned, formed] = await Promise.all([plan, form]);
+
+    await turn.say(
+      `Plan answer: ${JSON.stringify(planned)} · form: ${formed.action}`,
+    );
+
+    return 'end_turn';
+  },
+
+  // Says the answer the session's last plan got, which a turn cut short
+  // by an interrupt could not.
+  async planheard(turn) {
+    await turn.say(`Plan answer: ${planAnswers.get(turn.sessionId) ?? 'none'}`);
+
+    return 'end_turn';
+  },
+  grokplanempty: (turn) =>
+    askPlan(turn, 'x.ai/exit_plan_mode', (toolCallId) => ({
+      sessionId: turn.sessionId,
+      toolCallId,
+    })),
 } satisfies Record<string, Play>;

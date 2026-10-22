@@ -14,6 +14,7 @@ import type {
   ToolCallLocation,
   ToolKind,
 } from '@agentclientprotocol/sdk';
+import type { PlanPhase, PlanTodo } from '../../acp/plans.ts';
 import type { Questions } from '../questions.ts';
 import type { OpenEscape, TerminalCursor } from '../terminal_text.ts';
 import type { TokenUsage } from '../usage.ts';
@@ -32,6 +33,11 @@ export interface ToolCall {
   readonly content?: readonly ToolCallContent[];
   readonly rawInput?: unknown;
   readonly rawOutput?: unknown;
+  /**
+   * The plan its agent put to the person out of it, and their answer once
+   * given (CHD-437, CHD-457): drawn under it in place of its content.
+   */
+  readonly plan?: PlanAsk;
   /**
    * An MCP call's server, tool and arguments where the agent wrapped them in its
    * `rawInput`, as chord's enrichers file them; a request chord served is
@@ -745,6 +751,49 @@ export type ElicitationAnswer =
   | { readonly type: 'withdrawn' }
   | { readonly type: 'timed_out' };
 
+/**
+ * A plan an agent asks the person to take or leave (docs/design/CHD-437.md):
+ * cursor's `cursor/create_plan` or grok's `x.ai/exit_plan_mode`, under
+ * the tool call it names.
+ */
+export interface PlanWait {
+  readonly id: string;
+  /** Whose request, which says what it takes as an answer. */
+  readonly agent: 'cursor' | 'grok';
+  readonly toolCallId: string;
+  /** The plan's markdown; none from grok when it wrote no plan. */
+  readonly plan?: string;
+  readonly name?: string;
+  readonly overview?: string;
+  readonly todos?: readonly PlanTodo[];
+  /** cursor's phases, each its name over todos of its own. */
+  readonly phases?: readonly PlanPhase[];
+}
+
+/**
+ * The person's answer to a plan: take it, keep planning with a note, or,
+ * grok's alone, leave plan mode; `cancelled` or `withdrawn` when it was not
+ * theirs, which the agent hears as `cancelled`, never a yes.
+ */
+export type PlanAnswer =
+  | { readonly type: 'accepted' }
+  | { readonly type: 'kept'; readonly note?: string }
+  | { readonly type: 'left' }
+  | { readonly type: 'cancelled' }
+  | { readonly type: 'withdrawn' };
+
+/** A plan put to the person, and their answer once there is one. */
+export interface PlanAsk {
+  readonly turnId: string;
+  readonly wait: PlanWait;
+  readonly answer?: PlanAnswer;
+  /**
+   * The permissions already waiting when it came, which go before it: a
+   * plan ranks with them, the oldest first (docs/design/CHD-437.md).
+   */
+  readonly after?: readonly string[];
+}
+
 /** What the turn in flight is doing; times are epoch milliseconds. */
 export type TurnState =
   | { readonly status: 'idle' }
@@ -837,6 +886,8 @@ export interface Transcript {
    * while one is open.
    */
   readonly asking: readonly ElicitationWait[];
+  /** The plans agents put to the person, waiting or answered (CHD-437). */
+  readonly planAsks?: readonly PlanAsk[];
   /**
    * Requests chord served whose tool call has not come yet, so the call is
    * tied to its request when it does.
@@ -913,6 +964,17 @@ export type TranscriptAction =
       readonly turnId: string;
       readonly id: string;
       readonly answer: ElicitationAnswer;
+    }
+  | {
+      readonly type: 'plan_requested';
+      readonly turnId: string;
+      readonly plan: PlanWait;
+    }
+  | {
+      readonly type: 'plan_settled';
+      readonly turnId: string;
+      readonly id: string;
+      readonly answer: PlanAnswer;
     }
   | { readonly type: 'cancel'; readonly turnId: string; readonly at: number }
   /**

@@ -73,6 +73,14 @@ const VERB_FIRST = /^([A-Z][A-Za-z]*) (.+)$/;
  * same way by what chord's enrichers filed from the wrapper, not its title.
  */
 export function headline(call: ToolCall, chordServer?: string): Headline {
+  // A plan put to the person reads as one, whatever its agent titled the
+  // call: `Plan(<name>)`, cursor's name when it gave one (CHD-437).
+  if (call.plan !== undefined) {
+    const { name } = call.plan.wait;
+
+    return { name: 'Plan', ...(name === undefined ? {} : { arg: name }) };
+  }
+
   if (call.chord !== undefined) {
     return chordHeadline(call.chord);
   }

@@ -37,7 +37,7 @@ first prompt to commit without opening `claude`.
 | Interrupt the turn                        | Esc                                 | ACP `session/cancel`                         |
 | Multiline input                           | `\`+Enter, shift+Enter, paste        | client                                       |
 | Prompt history                            | ↑ / ↓                               | client                                       |
-| Plan / todo list                          | `☐ ☒` list above the prompt         | ACP `plan`, and `plan_update`'s entries      |
+| Plan / todo list                          | `☐ ☒` list above the prompt         | ACP `plan`, and `plan_update`'s entries; `cursor/create_plan` and `x.ai/exit_plan_mode` show the plan and ask the person before approving |
 | Status line                               | model, effort, mode, context used   | ACP `usage_update`, `current_mode_update`, `config_option_update` |
 | Spinner with elapsed time while working   | `✻ Working… (12s · esc to interrupt)` | client                                     |
 | Errors shown, not swallowed               | red line in the transcript          | ACP error answer to `session/prompt`         |

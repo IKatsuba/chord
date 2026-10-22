@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   cursor · composer-2
+ ▄▀▀▀   /tmp/chord-qa.plan
+ ▀▀     ? for shortcuts · /help
+
+ › plan how to route updates by session
+
+ ⏺ Plan(Route updates by session)
+   ⎿  Waiting…
+
+
+
+
+
+
+ ››› Waiting for your answer to the plan… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan · Route updates by session                                                                              │
+│                                                                                                                      │
+│ Split the session routing out of the connection.                                                                     │
+│                                                                                                                      │
+│ # Route updates by session                                                                                           │
+│                                                                                                                      │
+│ 1. Read src/acp/connection.ts.                                                                                       │
+│ 2. Move the routing into src/session/session.ts.                                                                     │
+│ 3. Run the tests.                                                                                                    │
+│                                                                                                                      │
+│ ❯ 1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│   Note  Tell cursor what to change, sent with 2 (optional)                                                           │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · Esc to keep planning                                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                                                                cursor · composer-2

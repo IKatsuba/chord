@@ -73,6 +73,7 @@ function heldSession() {
     heldBack: [],
     permissions: { subscribe: () => () => {} },
     elicitations: { subscribe: () => () => {} },
+    plans: { subscribe: () => () => {} },
     subscribe: () => () => {},
     history: () => [],
     // Its agent never goes on its own.
@@ -1219,6 +1220,26 @@ test('a message held for an answer goes as the next turn when Esc interrupts the
     ).not.toHaveProperty('afterAnswer');
   }));
 
+test('a message held for a plan goes as the next turn when Esc interrupts the turn, never into it (CHD-437)', () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('grokplan');
+    await until(() => events.some((event) => event.type === 'plan_requested'));
+    conversation.tell(MAIN, 'Then the docs.');
+    conversation.interrupt();
+    await until(
+      () => events.filter((event) => event.type === 'result').length === 2,
+    );
+
+    expect(
+      events.flatMap((event) =>
+        event.type === 'prompt' ? [[event.text, event.into]] : [],
+      ),
+    ).toStrictEqual([
+      ['grokplan', undefined],
+      ['Then the docs.', undefined],
+    ]);
+  }));
+
 /**
  * The order of a call's end, the messages that went into the turn and the
  * turn's end among `events`.
@@ -1771,6 +1792,7 @@ async function steeringStub() {
         return () => {};
       },
     },
+    plans: { subscribe: () => () => {} },
     subscribe: (listener: (update: SessionUpdate) => void) => {
       updates.push(listener);
 

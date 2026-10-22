@@ -42,7 +42,7 @@ import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
-import { askedPermission } from '../dialogs/permission.ts';
+import { PlanBox } from '../dialogs/PlanBox.tsx';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import { placeholderBefore } from '../prompt/images.ts';
 import { matchFiles, mentionAt } from '../prompt/mentions.ts';
@@ -61,7 +61,13 @@ import {
   resumableSession,
   windowed,
 } from './state.ts';
-import { askedInput, betweenAsked, heldBack } from '../dialogs/state.ts';
+import {
+  askedInput,
+  askedPlan,
+  betweenAsked,
+  shownPermission,
+  heldBack,
+} from '../dialogs/state.ts';
 import { askerParts } from '../dialogs/asker.ts';
 import {
   configOption,
@@ -504,7 +510,7 @@ export function App({
 
   useTimers(state, dispatch);
 
-  const asked = askedPermission(state.transcript.turn);
+  const asked = shownPermission(state.transcript);
   // A request between turns waits without the keys until `ctrl+x a`.
   const held = heldBack(state);
   const between = betweenAsked(state.transcript) !== undefined;
@@ -513,6 +519,7 @@ export function App({
   const listening =
     state.connection.status !== 'closing' && state.pendingKeys === undefined;
   const inputAsked = askedInput(state.transcript);
+  const planAsked = askedPlan(state.transcript);
   const picking = modelPickerShown(state);
   const resumingShown = resumePickerShown(state);
   const listingSessions = sessionsPickerShown(state);
@@ -929,6 +936,8 @@ export function App({
   const boxKeys =
     state.connection.status !== 'closing' &&
     (!asked || held) &&
+    // A plan's box has the keys, its Note's text too (CHD-437).
+    planAsked === undefined &&
     !choosing &&
     state.pendingKeys === undefined &&
     !state.search &&
@@ -1197,7 +1206,10 @@ export function App({
               </Clip>
               <Working
                 turn={state.transcript.turn}
-                asking={inputAsked}
+                asking={
+                  inputAsked ??
+                  (planAsked === undefined ? undefined : { plan: true })
+                }
                 compacting={state.transcript.entries.some((entry) =>
                   inSpinner(entry, state.transcript.turn),
                 )}
@@ -1241,6 +1253,27 @@ export function App({
                       id: asked.id,
                       overflows,
                     })
+                  }
+                />
+              )}
+              {!asked && planAsked && !listingSessions && (
+                <PlanBox
+                  key={planAsked.wait.id}
+                  wait={planAsked.wait}
+                  agent={shownAgent}
+                  width={columns}
+                  hidden={viewing}
+                  active={listening && !listFocus && !viewing}
+                  scroller={requestScroller}
+                  onOverflow={(overflows) =>
+                    dispatch({
+                      type: 'request_overflowed',
+                      id: planAsked.wait.id,
+                      overflows,
+                    })
+                  }
+                  onAnswer={(answer) =>
+                    conversation()?.answerPlan(planAsked.wait.id, answer)
                   }
                 />
               )}
@@ -1385,6 +1418,7 @@ export function App({
                   // draft's either.
                   onChange={(value) =>
                     (!asked || held) &&
+                    planAsked === undefined &&
                     !choosing &&
                     !chordKey.current &&
                     play(changeSteps(value, context()))

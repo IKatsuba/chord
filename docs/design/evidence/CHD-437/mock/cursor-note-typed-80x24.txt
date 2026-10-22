@@ -1,0 +1,24 @@
+      Todos
+      ☐ Read the connection
+      ☐ Move the routing
+      ☐ Run the tests
+
+ ››› Waiting for your answer to the plan… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ cursor has a plan. Do you want to proceed?                                   │
+│   1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│ ❯ Note    Keep the routing in connection.ts; only add a test for it.▌        │
+│                                                                              │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep       │
+│ planning                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                        cursor · composer-2

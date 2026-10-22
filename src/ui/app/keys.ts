@@ -1,5 +1,9 @@
-import { askedPermission } from '../dialogs/permission.ts';
-import { askedIds, betweenAsked, heldBack } from '../dialogs/state.ts';
+import {
+  askedIds,
+  betweenAsked,
+  heldBack,
+  shownPermission,
+} from '../dialogs/state.ts';
 import { bashCommand, entersBash, typedText } from '../prompt/bash.ts';
 import {
   type ChordCommand,
@@ -644,7 +648,7 @@ function commandSteps(
       ];
     }
     case 'reject_permission': {
-      const asked = askedPermission(state.transcript.turn);
+      const asked = shownPermission(state.transcript);
 
       return asked ? [{ type: 'reject_permission', id: asked.id }] : [];
     }

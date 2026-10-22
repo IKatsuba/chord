@@ -7,6 +7,14 @@ import {
   spawnAgent,
   type StopBounds,
 } from './process.ts';
+import {
+  cursorPlan,
+  grokPlan,
+  PLAN_CANCELLED,
+  PLAN_METHODS,
+  type PlanRequest,
+  type PlanResponse,
+} from './plans.ts';
 import { type Relay, relayStream, tapStream, type Traffic } from './traffic.ts';
 
 /**
@@ -50,6 +58,15 @@ export interface OpenAgentOptions {
     request: acp.CreateElicitationRequest,
     signal: AbortSignal,
   ) => Promise<acp.CreateElicitationResponse>;
+  /**
+   * Answers a plan cursor or grok puts to the person, or one that did not
+   * read, `undefined`, which is answered `cancelled`; the signal as above
+   * (CHD-437, CHD-457). None: every plan is answered `cancelled`.
+   */
+  readonly onPlan?: (
+    request: PlanRequest | undefined,
+    signal: AbortSignal,
+  ) => Promise<PlanResponse>;
   /** Gives up on a start: the agent is stopped and the open rejects. */
   readonly signal?: AbortSignal;
   /** How long `close()` waits at each step; chord's own bounds by default. */
@@ -290,6 +307,25 @@ export async function openAgent(options: OpenAgentOptions): Promise<Agent> {
         options.onElicitation(params, signal),
       );
     });
+
+  // A plan is the person's to take: one that does not read, or that nobody
+  // answers, is `cancelled`, never method-not-found, which cursor reads as
+  // accepted (CHD-437, CHD-457).
+  for (const [method, read] of [
+    [PLAN_METHODS.cursor, cursorPlan],
+    [PLAN_METHODS.grok, grokPlan],
+  ] as const) {
+    app.onRequest<PlanRequest | undefined, PlanResponse>(
+      method,
+      (params) => read(params),
+      ({ params, signal }) =>
+        options.onPlan === undefined
+          ? PLAN_CANCELLED
+          : answer(params?.sessionId, signal, PLAN_CANCELLED, (signal) =>
+              options.onPlan!(params, signal),
+            ),
+    );
+  }
 
   const wire = acp.ndJsonStream(process.stdin, process.stdout);
   const connection = app.connect(

@@ -6,6 +6,7 @@ import {
   choicesFor,
   hiddenRows,
   inputLines,
+  laidRoom,
   locationsShown,
   countRoom,
   permissionOutcome,
@@ -394,4 +395,32 @@ test('a one-row room keeps the title beside the widest count it can say, however
   }
 
   expect(room).toStrictEqual('↑ 99 above · ↓ 99 below'.length);
+});
+
+test("a room not laid out yet, Yoga's NaN, shows the request whole, and is never taken for a height (CHD-437)", () => {
+  // Read at React's commit, a plan's Note area had not been laid out: its
+  // NaN room drew `↑ Infinity lines above` until the next commit.
+  for (const top of [0, 3, Number.POSITIVE_INFINITY]) {
+    expect(requestView(1, Number.NaN, top)).toStrictEqual({
+      top: 0,
+      shown: 1,
+      above: false,
+      below: false,
+    });
+    expect(requestView(42, Number.NaN, top)).toStrictEqual({
+      top: 0,
+      shown: 42,
+      above: false,
+      below: false,
+    });
+  }
+
+  expect(laidRoom(Number.NaN, Number.POSITIVE_INFINITY)).toBe(
+    Number.POSITIVE_INFINITY,
+  );
+  expect(laidRoom(Number.NaN, 4)).toBe(4);
+  expect(laidRoom(undefined, 4)).toBe(4);
+  expect(laidRoom(Number.POSITIVE_INFINITY, 4)).toBe(4);
+  expect(laidRoom(0, 4)).toBe(0);
+  expect(laidRoom(7, 4)).toBe(7);
 });

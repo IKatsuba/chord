@@ -1912,3 +1912,252 @@ describe('CHD-479 U4 tester: persisted stop ordering and isolation', () => {
     ).toStrictEqual(['■ Check inner · agent · stopped after 4s']);
   });
 });
+
+describe('a plan put to the person, in the record (CHD-437, CHD-457)', () => {
+  const wait = {
+    id: 'plan-1',
+    agent: 'grok',
+    toolCallId: 'c1',
+    plan: '# Route',
+  } as const;
+  const asked: RecordEntry[] = [
+    { type: 'prompt', turnId: 't1', prompt: 'plan it', images: 0, at: 1 },
+    { type: 'plan_asked', turnId: 't1', wait },
+  ];
+  /** The plans a resumed transcript holds, and their answers. */
+  const resumed = (entries: readonly RecordEntry[]) =>
+    recordActions(entries)
+      .reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      )
+      .planAsks?.map(({ wait, answer }) => [wait.id, answer]);
+
+  test('its request and answer are written as lines of their own', () => {
+    const state = { type: 'state' } as never;
+
+    expect(
+      entryOf({ type: 'plan_requested', turnId: 't1', plan: wait }, state),
+    ).toStrictEqual({ type: 'plan_asked', turnId: 't1', wait });
+    expect(
+      entryOf(
+        {
+          type: 'plan_settled',
+          turnId: 't1',
+          id: 'plan-1',
+          answer: { type: 'kept', note: 'More tests.' },
+        },
+        state,
+      ),
+    ).toStrictEqual({
+      type: 'plan_answered',
+      turnId: 't1',
+      id: 'plan-1',
+      answer: { type: 'kept', note: 'More tests.' },
+    });
+  });
+
+  test('a settled one reopens with its answer', () => {
+    expect(
+      resumed([
+        ...asked,
+        {
+          type: 'plan_answered',
+          turnId: 't1',
+          id: 'plan-1',
+          answer: { type: 'accepted' },
+        },
+      ]),
+    ).toStrictEqual([['plan-1', { type: 'accepted' }]]);
+  });
+
+  test('one chord was stopped waiting on reopens withdrawn, never waiting and never accepted', () => {
+    expect(resumed(asked)).toStrictEqual([['plan-1', { type: 'withdrawn' }]]);
+  });
+
+  test('a record written before plans were kept reads as it did', () => {
+    expect(resumed([asked[0]!])).toBe(undefined);
+  });
+});
+
+describe('CHD-437 U1 tester: plans replay without granting fresh acceptance', () => {
+  const replay = (entries: readonly RecordEntry[]) =>
+    recordActions(entries).reduce(
+      (state, action) =>
+        action.type === 'usage' ? state : reduceTranscript(state, action),
+      emptyTranscript,
+    );
+
+  test('reusing the call id in a later turn does not copy the earlier accepted answer', () => {
+    const state = replay([
+      { type: 'prompt', turnId: 'one', prompt: 'plan', images: 0, at: 1 },
+      {
+        type: 'plan_asked',
+        turnId: 'one',
+        wait: {
+          id: 'first',
+          agent: 'cursor',
+          toolCallId: 'same',
+          plan: '# First',
+        },
+      },
+      {
+        type: 'plan_answered',
+        turnId: 'one',
+        id: 'first',
+        answer: { type: 'accepted' },
+      },
+      { type: 'prompt', turnId: 'two', prompt: 'again', images: 0, at: 2 },
+      {
+        type: 'plan_asked',
+        turnId: 'two',
+        wait: {
+          id: 'second',
+          agent: 'grok',
+          toolCallId: 'same',
+          plan: '# Second',
+        },
+      },
+    ]);
+
+    expect(
+      state.planAsks?.map(({ wait, answer }) => [wait.id, answer]),
+    ).toEqual([
+      ['first', { type: 'accepted' }],
+      ['second', { type: 'withdrawn' }],
+    ]);
+  });
+
+  test('legacy tool plans and ACP lists stay history without becoming approval asks', () => {
+    const state = replay([
+      { type: 'prompt', turnId: 'old', prompt: 'plan it', images: 0, at: 1 },
+      {
+        type: 'update',
+        turnId: 'old',
+        at: 2,
+        update: {
+          sessionUpdate: 'plan',
+          entries: [
+            {
+              content: 'Keep the original list',
+              priority: 'high',
+              status: 'pending',
+            },
+          ],
+        },
+      },
+      {
+        type: 'update',
+        turnId: 'old',
+        at: 3,
+        update: {
+          sessionUpdate: 'tool_call',
+          toolCallId: 'old-plan',
+          title: 'ExitPlanMode',
+          kind: 'switch_mode',
+          status: 'completed',
+          content: [
+            {
+              type: 'content',
+              content: { type: 'text', text: '# Original plan' },
+            },
+          ],
+        },
+      },
+      {
+        type: 'result',
+        turnId: 'old',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+    ]);
+
+    expect(state.planAsks).toBeUndefined();
+    expect(state.plan).toEqual([
+      {
+        content: 'Keep the original list',
+        priority: 'high',
+        status: 'pending',
+      },
+    ]);
+    expect(JSON.stringify(state.entries)).toContain('# Original plan');
+  });
+
+  test('actual fake cursor acceptance and grok feedback retain their distinct answers on disk', () =>
+    withDir(async (dir) => {
+      const events: ConversationEvent[] = [];
+      const conversation = new Conversation(
+        (signal) =>
+          openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(),
+            signal,
+          }),
+        (event) => events.push(event),
+        Date.now,
+        {},
+        new FileRecording(join(dir, 'state'), () => {}),
+      );
+
+      const waitFor = async (check: () => boolean) => {
+        const by = Date.now() + 10_000;
+
+        while (!check()) {
+          assert(Date.now() < by, 'timed out waiting for recorded plan');
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      };
+
+      try {
+        conversation.start();
+        await waitFor(() => events.some((event) => event.type === 'connected'));
+
+        for (const [index, [scenario, answer]] of (
+          [
+            ['cursorplan', { type: 'accepted' }],
+            ['grokplan', { type: 'kept', note: 'More 日本語 tests.' }],
+          ] as const
+        ).entries()) {
+          conversation.send(scenario);
+          await waitFor(
+            () =>
+              events.filter((event) => event.type === 'plan_requested')
+                .length ===
+              index + 1,
+          );
+
+          const wait = events.flatMap((event) =>
+            event.type === 'plan_requested' ? [event.plan] : [],
+          )[index]!;
+
+          conversation.answerPlan(wait.id, answer);
+          await waitFor(
+            () =>
+              events.filter((event) => event.type === 'result').length ===
+              index + 1,
+          );
+        }
+      } finally {
+        await conversation.close();
+      }
+
+      const entries = await readPast((await theRecord(dir)).path);
+
+      expect(
+        entries.filter((entry) => entry.type === 'plan_asked'),
+      ).toHaveLength(2);
+      expect(
+        entries.filter((entry) => entry.type === 'plan_answered'),
+      ).toHaveLength(2);
+      expect(
+        replay(entries).planAsks?.map(({ wait, answer }) => ({
+          agent: wait.agent,
+          answer,
+        })),
+      ).toEqual([
+        { agent: 'cursor', answer: { type: 'accepted' } },
+        { agent: 'grok', answer: { type: 'kept', note: 'More 日本語 tests.' } },
+      ]);
+    }));
+});

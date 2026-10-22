@@ -1,0 +1,161 @@
+/**
+ * The plan box, kept out of the component (docs/design/CHD-437.md): the
+ * choices each agent's plan takes, the Note row sent with keep planning,
+ * what each key does to them, and the hint line.
+ */
+import type { PlanAnswer, PlanWait } from '../../session/transcript/types.ts';
+import stringWidth from 'string-width';
+import wrapAnsi from 'wrap-ansi';
+import { type AskKey, edited } from './questions.ts';
+
+/** One choice: its words, and the answer it sends. */
+export interface PlanChoice {
+  readonly label: string;
+  readonly answer: 'accepted' | 'kept' | 'left';
+}
+
+/** cursor's yes and no; grok's, and its way out of plan mode (3A). */
+export function planChoices(agent: PlanWait['agent']): PlanChoice[] {
+  return agent === 'cursor'
+    ? [
+        { label: 'Yes, accept the plan', answer: 'accepted' },
+        { label: 'No, keep planning', answer: 'kept' },
+      ]
+    : [
+        { label: 'Yes, start implementing', answer: 'accepted' },
+        { label: 'No, keep planning', answer: 'kept' },
+        { label: 'No, and leave plan mode', answer: 'left' },
+      ];
+}
+
+/**
+ * The box's question, `agent` named as the agents list names it: whether
+ * it has a plan, or wrote none, which grok may ask about all the same.
+ */
+export function planQuestion(agent: string, wait: PlanWait): string {
+  const written = [wait.overview, wait.plan].some(
+    (part) => part !== undefined && part.trim() !== '',
+  );
+
+  return `${agent} ${written ? 'has a plan' : 'has written no plan'}. Do you want to proceed?`;
+}
+
+/** The box as the person has it: the `❯`'s row, the Note row last. */
+export interface PlanBoxState {
+  readonly row: number;
+  readonly note: string;
+}
+
+export const OPEN_PLAN_BOX: PlanBoxState = { row: 0, note: '' };
+
+/** What a press did: the box as it now is, and the answer if one was given. */
+export interface PlanStep {
+  readonly state: PlanBoxState;
+  readonly answer?: PlanAnswer;
+}
+
+/** The answer `choice` sends, the note going with keep planning alone. */
+function answerOf(choice: PlanChoice, note: string): PlanAnswer {
+  const said = note.trim();
+
+  return choice.answer === 'kept'
+    ? { type: 'kept', ...(said === '' ? {} : { note: said }) }
+    : { type: choice.answer };
+}
+
+/**
+ * A press in the box: ↑ ↓ or j k move, the Note row past the last choice;
+ * a digit picks that choice; enter picks the one under the `❯`, or on the
+ * Note row keeps planning with the note; esc keeps planning with none. On
+ * the Note row, digits and j k type.
+ */
+export function planKey(
+  agent: PlanWait['agent'],
+  state: PlanBoxState,
+  input: string,
+  key: AskKey,
+): PlanStep {
+  const choices = planChoices(agent);
+  const noteRow = choices.length;
+  const kept = choices.find((choice) => choice.answer === 'kept')!;
+
+  if (key.escape) {
+    return { state, answer: { type: 'kept' } };
+  }
+
+  if (state.row === noteRow) {
+    if (key.return) {
+      return { state, answer: answerOf(kept, state.note) };
+    }
+
+    if (key.upArrow && !key.shift) {
+      return { state: { ...state, row: noteRow - 1 } };
+    }
+
+    const note = edited(state.note, input, key);
+
+    return note === undefined ? { state } : { state: { ...state, note } };
+  }
+
+  if (key.return) {
+    return { state, answer: answerOf(choices[state.row]!, state.note) };
+  }
+
+  // shift with an arrow scrolls the transcript: the window's, not the box's.
+  if ((key.upArrow && !key.shift) || input === 'k') {
+    return { state: { ...state, row: Math.max(0, state.row - 1) } };
+  }
+
+  if ((key.downArrow && !key.shift) || input === 'j') {
+    return { state: { ...state, row: Math.min(noteRow, state.row + 1) } };
+  }
+
+  const picked = /^[1-9]$/.test(input) ? choices[Number(input) - 1] : undefined;
+
+  return picked === undefined
+    ? { state }
+    : { state, answer: answerOf(picked, state.note) };
+}
+
+/** Text pasted onto the Note row goes into the note; elsewhere it is dropped. */
+export function planPaste(
+  agent: PlanWait['agent'],
+  state: PlanBoxState,
+  text: string,
+): PlanBoxState {
+  return state.row === planChoices(agent).length
+    ? { ...state, note: `${state.note}${text.replace(/\s+/g, ' ')}` }
+    : state;
+}
+
+/** The hint under the box, on a choice or on the Note row. */
+export function planHint(
+  agent: PlanWait['agent'],
+  state: PlanBoxState,
+): string {
+  const count = planChoices(agent).length;
+
+  return state.row === count
+    ? 'Enter to keep planning with this note · ↑ to the options · Esc to keep planning'
+    : `Enter to pick · 1–${count} · ↑↓ to move · Esc to keep planning`;
+}
+
+/**
+ * The Note's text in lines of at most `width` cells, wrapped at its spaces
+ * with none left at a break, never cut; the spaces typed last stay on the
+ * last line, and a cell is left there for the cursor, a full line handing it
+ * to a line of its own. One empty line for no note.
+ */
+export function noteLines(note: string, width: number): string[] {
+  if (note === '') {
+    return [''];
+  }
+
+  const room = Math.max(width, 1);
+  const lines = wrapAnsi(note, room, { hard: true, trim: true }).split('\n');
+  const last = `${lines.pop() ?? ''}${/\s*$/.exec(note)![0]}`;
+
+  return stringWidth(last) < room
+    ? [...lines, last]
+    : [...lines, last.trimEnd(), ''];
+}

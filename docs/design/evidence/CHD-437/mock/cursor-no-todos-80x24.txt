@@ -1,0 +1,24 @@
+      # Route updates by session
+
+      1. Read src/acp/connection.ts.
+      2. Move the routing into src/session/session.ts.
+      3. Run the tests.
+
+ ››› Waiting for your answer to the plan… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ cursor has a plan. Do you want to proceed?                                   │
+│ ❯ 1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│   Note  Tell cursor what to change, sent with 2 (optional)                   │
+│                                                                              │
+│ Enter to pick · 1–2 · ↑↓ to move · Esc to keep planning                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)                        cursor · composer-2

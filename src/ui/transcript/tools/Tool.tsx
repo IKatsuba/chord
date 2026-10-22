@@ -1,3 +1,4 @@
+import { TextAttributes } from '@opentui/core';
 import { useTerminalDimensions } from '@opentui/react';
 import {
   Fragment,
@@ -8,7 +9,7 @@ import {
   useState,
 } from 'react';
 import stripAnsi from 'strip-ansi';
-import type { ToolCall } from '../../../session/transcript/types.ts';
+import type { PlanAsk, ToolCall } from '../../../session/transcript/types.ts';
 import {
   ChordServerName,
   paint,
@@ -21,6 +22,7 @@ import { Ansi } from '../../theme/Ansi.tsx';
 import { colour, CUT, DIM, fg, FILL, ROWS, TEXT } from '../../theme/text.ts';
 import type { Palette } from '../../theme/theme.ts';
 import { markdown } from '../markdown.ts';
+import { Reply } from '../Reply.tsx';
 import {
   type ArrowTone,
   outArrow,
@@ -43,6 +45,7 @@ import {
   skipsAsking,
   type TableLine,
 } from './proposal.ts';
+import { planStatus, planText, todoRows } from './plan_ask.ts';
 import type { TerminalView } from './terminal.ts';
 import { callTarget } from '../targets.ts';
 import {
@@ -81,6 +84,7 @@ export function Tool({
   expanded,
   ended = false,
   asked = false,
+  agent,
   width,
 }: {
   call: ToolCall;
@@ -88,6 +92,8 @@ export function Tool({
   ended?: boolean;
   /** A permission box is open for it. */
   asked?: boolean;
+  /** The agent as the window names it, for a plan's words (CHD-437). */
+  agent?: string | undefined;
   /** Cells beside the marker. */
   width: number;
 }) {
@@ -140,8 +146,16 @@ export function Tool({
       {sent !== undefined && (
         <MessageBody text={sent.text} width={width} ending={sent.ending} />
       )}
+      {call.plan !== undefined && (
+        <PlanAskBody
+          ask={call.plan}
+          agent={agent}
+          width={Math.max(width - 5, 1)}
+        />
+      )}
       {proposal === undefined &&
         sent === undefined &&
+        call.plan === undefined &&
         lines.map((line, index) => (
           <Under key={index} first={index === 0}>
             <text
@@ -470,6 +484,77 @@ function TerminalOutput({
 }
 
 /** A line hung off a call, behind `⎿` when it is the first. */
+/**
+ * A plan put to the person, under its call: where it stands, dim, then the
+ * plan as any message is drawn, then cursor's todos as the plan list draws
+ * its steps, a cancelled one dim and struck through (CHD-437, CHD-457).
+ */
+export function PlanAskBody({
+  ask,
+  agent,
+  width,
+}: {
+  ask: PlanAsk;
+  /** The agent as the window names it, as the plan box does. */
+  agent: string | undefined;
+  width: number;
+}) {
+  const selectable = useSelectable();
+  const text = planText(ask);
+  const rows = todoRows(ask);
+
+  return (
+    <>
+      <Under first>
+        <text {...ROWS} attributes={DIM}>
+          {planStatus(ask)}
+        </text>
+      </Under>
+      <Under first={false}>
+        <box flexDirection='column' flexGrow={1} gap={1}>
+          {text === undefined ? (
+            <text {...TEXT} {...selectable}>
+              {agent ?? ask.wait.agent} has written no plan.
+            </text>
+          ) : (
+            <Reply text={text} width={width} />
+          )}
+          {rows.length > 0 && (
+            <box flexDirection='column'>
+              {rows.map((row, index) =>
+                row.kind === 'heading' ? (
+                  <text
+                    key={index}
+                    {...TEXT}
+                    {...selectable}
+                    // A blank line sets each group apart.
+                    marginTop={index === 0 ? 0 : 1}
+                  >
+                    {row.text}
+                  </text>
+                ) : (
+                  <text
+                    key={index}
+                    {...TEXT}
+                    {...selectable}
+                    attributes={
+                      row.todo.status === 'cancelled'
+                        ? DIM | TextAttributes.STRIKETHROUGH
+                        : 0
+                    }
+                  >
+                    {`${row.mark} ${row.todo.content}`}
+                  </text>
+                ),
+              )}
+            </box>
+          )}
+        </box>
+      </Under>
+    </>
+  );
+}
+
 export function Under({
   first,
   children,

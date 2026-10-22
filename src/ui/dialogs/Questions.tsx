@@ -266,7 +266,7 @@ function Steps({
 }
 
 /** A text row's value: the cursor at its end while the `❯` is on it. */
-function Typed({
+export function Typed({
   text,
   placeholder,
   focused,

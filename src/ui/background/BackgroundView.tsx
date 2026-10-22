@@ -38,6 +38,7 @@ import {
   FOLLOWING,
   hintLines,
   logStep,
+  pinnedName,
   workHead,
   type ItemRef,
   laidAt,
@@ -447,11 +448,12 @@ function WorkDetail({
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
   const whole = (work.subagent.prompt ?? work.subagent.description)?.trim();
-  // Its task, unless the pinned name already says it, as when it gave no
-  // short description of its own.
+  // Its task, unless the pinned name already says it whole, as when it
+  // gave no short description of its own; a name cut to its line keeps it.
   const task =
     whole === undefined ||
-    whole.replace(/\s+/g, ' ') === item.name.replace(/\s+/g, ' ').trim()
+    (!pinnedName(item, width).cut &&
+      whole.replace(/\s+/g, ' ') === item.name.replace(/\s+/g, ' ').trim())
       ? undefined
       : whole;
   // Where the view should stand, which a scroll at React's commit, before

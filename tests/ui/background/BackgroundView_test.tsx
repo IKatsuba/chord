@@ -1260,14 +1260,12 @@ describe("an agent's detail draws its whole task and its work, following its end
     }));
 });
 
-test('a detail whose name is its whole task, given no short description, says it once, not again after › (CHD-487)', () =>
+test('a detail pins its name on one line, cut with … when longer, and its whole task after › only when cut (CHD-487)', () =>
   withWindow(async (window) => {
     await send(window, 'subagent');
     await window.shows('Do you want to proceed?');
     await window.press('1');
     await window.shows('background ');
-
-    // Every row's detail says its name once.
     await window.press(DOWN);
     await window.press('\r');
     await window.shows('❯ ');
@@ -1275,11 +1273,16 @@ test('a detail whose name is its whole task, given no short description, says it
     await window.shows('Background · ');
 
     const frame = window.frame().slice(window.frame().indexOf('Background · '));
-    const name = frame
-      .split('\n')[2]!
-      .replace(/^│ ?/, '')
-      .replace(/ *│$/, '')
-      .trim();
+    const inside = (line: string) =>
+      line.replace(/^│ ?/, '').replace(/ *│$/, '').trim();
+    const [, , name, state] = frame.split('\n').map(inside);
 
-    expect(frame).not.toContain(`› ${name}`);
+    // One line for the name, the state line right under it.
+    expect(state).toMatch(/^(running|✓|✗|■|●)/);
+
+    if (name!.endsWith('…')) {
+      expect(frame).toContain('› ');
+    } else {
+      expect(frame).not.toContain(`› ${name}`);
+    }
   }));

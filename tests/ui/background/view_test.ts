@@ -6,6 +6,7 @@ import {
   focusAfter,
   FOLLOWING,
   logStep,
+  pinnedName,
   stepDetail,
   workHead,
   hintLines,
@@ -1385,4 +1386,20 @@ describe("an agent's or a task's detail: reviewer's edges (CHD-487)", () => {
       ).text,
     ).toBe('✗ exit code 1 after 3m 12s · 3 events');
   });
+});
+
+test("a detail's pinned name takes one line, cut at its end with … when longer, saying whether it was (CHD-487)", () => {
+  expect(pinnedName({ name: 'Run the test suite' }, 40)).toStrictEqual({
+    text: 'Run the test suite',
+    cut: false,
+  });
+
+  const long = pinnedName(
+    { name: 'Find where chord hands each session/update to its listeners' },
+    30,
+  );
+
+  expect(long.cut).toBe(true);
+  expect(long.text.endsWith('…')).toBe(true);
+  expect(stringWidth(long.text)).toBe(30);
 });

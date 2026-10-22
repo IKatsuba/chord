@@ -4,6 +4,7 @@
  * the columns giving way at a narrow width and nothing cut; which rows are in
  * sight around the `❯`; and where ↑ ↓ move it (CHD-424).
  */
+import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
@@ -138,8 +139,9 @@ export function logStep(
 /**
  * The two lines pinned on top of an agent's or a task's detail, which the
  * title, naming no item, leaves to say whose log it is (CHD-487, Q139):
- * its description, then its state in its colour, its tool uses, a task's
- * kind and its owner, dotted, at `width`.
+ * its description on one line, then its state in its colour, its tool
+ * uses, a task's kind and its owner, dotted, at `width`, wrapping after a
+ * ` · `.
  */
 export function workHead(
   item: BackgroundItem,
@@ -150,9 +152,7 @@ export function workHead(
   const uses = toolUses(subagent);
 
   return [
-    ...wrapped(oneLine(stripAnsi(item.name)), Math.max(1, width)).map(
-      (text): ViewCell[] => [{ text, role: 'name' }],
-    ),
+    [{ text: pinnedName(item, width).text, role: 'name' }],
     ...dotted(
       [
         { text: oneLine(state.text), role: 'state', group: state.group },
@@ -175,6 +175,21 @@ export function workHead(
       width,
     ),
   ];
+}
+
+/**
+ * An agent's or a task's name as its detail pins it: one line, cut at its
+ * end with `…` when longer, so the work keeps its room; whether it was cut,
+ * as its whole task is then said under it (CHD-487).
+ */
+export function pinnedName(
+  item: Pick<BackgroundItem, 'name'>,
+  width: number,
+): { readonly text: string; readonly cut: boolean } {
+  const whole = oneLine(stripAnsi(item.name));
+  const text = cliTruncate(whole, Math.max(1, width));
+
+  return { text, cut: text !== whole };
 }
 
 /** The hint line on an agent item whose agent offers no stop of its own. */

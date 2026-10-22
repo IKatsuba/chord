@@ -46,17 +46,34 @@ function costText(cost: Cost, estimated: boolean): string {
   return `${estimated ? '~' : ''}${formatCost(cost)}`;
 }
 
-/** What a figure says beside itself: whose estimate, older sums, turns left out. */
-function figureNotes(figure: Figure | undefined): string[] {
+/**
+ * What a figure says beside itself: whose estimate, older sums, turns left
+ * out; for an agent that gives running totals and no cost, that its
+ * provider gives none, said of `runtime` (CHD-472).
+ */
+function figureNotes(figure: Figure | undefined, runtime?: string): string[] {
   const notes: string[] = [];
+  const none =
+    figure?.totals !== undefined
+      ? `${runtime ?? 'its agent'}'s provider reports no cost; `
+      : '';
+
+  const unpriced = figure?.totals?.unpriced ?? [];
 
   if (figure?.estimated === 'all') {
     const [model, ...more] = figure.models ?? [];
 
     notes.push(
-      model !== undefined && more.length === 0
-        ? `chord's estimate from ${model}'s price`
-        : "chord's estimate from its models' prices",
+      none +
+        (unpriced.length > 0
+          ? `chord's estimate from its models' prices; no price for ${unpriced.join(' and ')}`
+          : model !== undefined && more.length === 0
+            ? `chord's estimate from ${model}'s price`
+            : "chord's estimate from its models' prices"),
+    );
+  } else if (figure?.totals !== undefined && figure.cost === undefined) {
+    notes.push(
+      `${none}no price for ${figure.totals.unpriced?.join(' and ') ?? figure.totals.model ?? 'its model'}`,
     );
   } else if (figure?.estimated === 'part') {
     notes.push("part chord's estimate");
@@ -72,7 +89,13 @@ function figureNotes(figure: Figure | undefined): string[] {
     );
   }
 
-  if (figure?.uncounted !== undefined && figure.uncounted > 0) {
+  // An agent that gives running totals says what it left out by the
+  // models chord has no price for (CHD-472).
+  if (
+    figure?.uncounted !== undefined &&
+    figure.uncounted > 0 &&
+    figure.totals === undefined
+  ) {
     notes.push(
       `${figure.uncounted} ${figure.uncounted === 1 ? 'turn' : 'turns'} not counted`,
     );
@@ -87,6 +110,7 @@ function ownRow(
   depth: number,
   figure: Figure | undefined,
   kind: readonly string[] = [],
+  runtime?: string,
 ): Row {
   return {
     name,
@@ -96,7 +120,7 @@ function ownRow(
         ? 'not reported'
         : costText(figure.cost, figure.estimated !== undefined),
     tokens: figure?.tokens === undefined ? NONE : TOKENS.format(figure.tokens),
-    notes: [...kind, ...figureNotes(figure)],
+    notes: [...kind, ...figureNotes(figure, runtime)],
   };
 }
 
@@ -158,7 +182,7 @@ function sessionRows(
   kind: readonly string[] = [],
 ): Row[] {
   return [
-    ownRow(name, depth, part.figure, kind),
+    ownRow(name, depth, part.figure, kind, part.runtime ?? part.agent),
     ...(part.parts ?? []).flatMap((task) => taskRows(task, depth + 1)),
   ];
 }
@@ -229,7 +253,7 @@ function tabRows(tab: SpendPart): Row[] {
   const mark = closed ? ['closed'] : [];
 
   if (cleared.length === 0 && rest.length === 0 && own?.parts === undefined) {
-    return [ownRow(tab.name, 0, own?.figure, mark)];
+    return [ownRow(tab.name, 0, own?.figure, mark, own?.agent)];
   }
 
   return [
@@ -286,6 +310,9 @@ function totalRow(parts: readonly SpendPart[]): Row {
           `${summed.uncounted} ${summed.uncounted === 1 ? 'turn' : 'turns'} not counted`,
         ]),
     ...summed.missing.map((name) => `${name} not reported`),
+    ...(summed.providers ?? []).map(
+      (name) => `${name}'s provider reports no cost`,
+    ),
     ...(tasks === 0 ? [] : [`${tasks} running`]),
   ];
 

@@ -16,7 +16,7 @@ import {
 import type { AppState } from '../app/state.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { contextEstimated, contextUsed } from '../status/status.ts';
-import { sessionFigure, type SpendPart } from './spend.ts';
+import { type Figure, sessionFigure, type SpendPart } from './spend.ts';
 import { manySessions, spendTable } from './spend_table.ts';
 
 /** Said after a figure chord worked out itself, never the agent's. */
@@ -143,13 +143,17 @@ function aligned(
 }
 
 /**
- * The session's tokens, each turn's added up. A field no turn reported stays
- * out rather than reading as zero.
+ * The session's tokens, each turn's added up, or the running total its agent
+ * last gave (CHD-472). A field no turn reported stays out rather than reading
+ * as zero.
  */
 export function sessionTokens(
   spent: Spent | undefined,
 ): TokenUsage | undefined {
-  const each = Object.values(spent?.turns ?? {});
+  const each =
+    spent?.total === undefined
+      ? Object.values(spent?.turns ?? {})
+      : [spent.total];
   const sum: Record<string, number> = {};
 
   for (const field of TOKEN_FIELDS) {
@@ -212,10 +216,66 @@ export function costReport(facts: ReportFacts): ReportRow[] {
     : [...own, { text: '' }, ...spendTable(window.spend, window.width)];
 }
 
+/** A model by the name its agent gives it, else by its id. */
+function modelNamed(facts: ReportFacts, id: string | undefined): string {
+  return id === undefined
+    ? 'its model'
+    : (facts.models?.available.find((model) => model.id === id)?.name ?? id);
+}
+
+/**
+ * What `/cost` says after the rows of an agent that gives running totals
+ * (CHD-472): how its figures were read, and, where it gave no cost and chord
+ * priced its tokens, why.
+ */
+function totalsLines(
+  facts: ReportFacts,
+  figure: Figure | undefined,
+): ReportRow[] {
+  if (figure?.totals === undefined) {
+    return [];
+  }
+
+  const { agent } = facts;
+  const [model, ...more] = figure.models ?? [];
+  const unpriced = figure.totals.unpriced ?? [];
+  // One model: its price. Several, or some unpriced: each answer at its
+  // own, as Q133 prices them.
+  const one = model !== undefined && more.length === 0 && unpriced.length === 0;
+  const price = one
+    ? `these tokens at ${modelNamed(facts, model)}'s price`
+    : `each answer's tokens at the price of the model that gave it${
+        unpriced.length === 0
+          ? ''
+          : `; it has no price for ${unpriced
+              .map((each) => modelNamed(facts, each))
+              .join(' and ')}`
+      }`;
+
+  return [
+    {
+      text: `${agent} reports these as the session's running total; chord shows the last it sent.`,
+    },
+    ...(figure.estimated === 'all'
+      ? [
+          {
+            text: `${agent}'s provider reports no cost, so chord priced ${price}.`,
+          },
+        ]
+      : []),
+  ];
+}
+
 /** The session's own rows of `/cost`. */
 function sessionReport(facts: ReportFacts): ReportRow[] {
   const spent = sessionTokens(facts.spent);
   const figure = sessionFigure(facts.spent);
+  // An agent that gives running totals and no cost, whose model chord has no
+  // price for: both reasons, in the cost's cell (CHD-472).
+  const unpriced =
+    figure?.totals !== undefined && figure.cost === undefined
+      ? `not reported: ${facts.agent}'s provider reports none, and chord has no price for ${(figure.totals.unpriced ?? [figure.totals.model ?? facts.models?.current]).map((each) => modelNamed(facts, each)).join(' and ')}`
+      : undefined;
   const cost =
     figure?.cost === undefined
       ? undefined
@@ -236,7 +296,9 @@ function sessionReport(facts: ReportFacts): ReportRow[] {
             `${formatCost(figure.before.cost)} as last reported`,
           ] as [string, string],
         ]),
-    ...(figure?.uncounted === undefined
+    // Turns no model's price counted, on an agent that gives running totals
+    // and no cost at all, are said in the cost's cell instead (CHD-472).
+    ...(figure?.uncounted === undefined || unpriced !== undefined
       ? []
       : [
           [
@@ -281,15 +343,18 @@ function sessionReport(facts: ReportFacts): ReportRow[] {
     counts.push(['Tokens', tokens(spent.totalTokens)]);
   }
 
-  return aligned([
-    ['Total cost', cost ?? `not reported by ${facts.agent}`],
-    ...marks,
-    ...running,
-    ...(spent === undefined
-      ? [['Tokens', `not reported by ${facts.agent}`] as [string, string]]
-      : counts),
-    ...time,
-  ]);
+  return [
+    ...aligned([
+      ['Total cost', unpriced ?? cost ?? `not reported by ${facts.agent}`],
+      ...marks,
+      ...running,
+      ...(spent === undefined
+        ? [['Tokens', `not reported by ${facts.agent}`] as [string, string]]
+        : counts),
+      ...time,
+    ]),
+    ...totalsLines(facts, figure),
+  ];
 }
 
 /**

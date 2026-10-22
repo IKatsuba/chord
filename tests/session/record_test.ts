@@ -17,6 +17,7 @@ import {
 import {
   entryOf,
   FileRecording,
+  lastTotal,
   readPast,
   recordActions,
   type RecordEntry,
@@ -2329,4 +2330,15 @@ describe('CHD-440 tester: every fallback agrees live, replayed and in -p', () =>
       expect(snapshot(fold(headless))).toEqual(expected);
       expect(outcome.result).toMatchObject({ status: 'completed' });
     }));
+});
+
+test("the last turn a record kept with tokens gives the running total a resumed agent's estimate goes on from (CHD-472)", () => {
+  expect(
+    lastTotal([
+      { type: 'usage', turnId: 'a', usage: { totalTokens: 2000 } },
+      { type: 'usage', turnId: 'b', usage: { totalTokens: 4000 } },
+      { type: 'usage', turnId: 'c', usage: {} },
+    ]),
+  ).toStrictEqual({ totalTokens: 4000 });
+  expect(lastTotal([])).toBe(undefined);
 });

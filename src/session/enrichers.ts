@@ -44,7 +44,7 @@ import {
   PRICE_CURRENCY,
   turnCost,
 } from './prices.ts';
-import { tokensOf } from './usage.ts';
+import { grownBy, tokensOf } from './usage.ts';
 
 /**
  * Prices a turn whose answer carries its tokens, for an agent that has given
@@ -52,7 +52,9 @@ import { tokensOf } from './usage.ts';
  * cost so far goes ahead of the answer, as Claude's adapter sends its own,
  * with the context as the agent last gave it, or else as the turn's tokens
  * make it. An agent's own `usage_update` without a cost gets the estimate so
- * far.
+ * far. An answer that gives the session's running total has what it grew by
+ * since the last priced, never less than nothing, at the model that answered
+ * (CHD-472, the owner's Q133).
  */
 export const costFromTokens: Enricher = (message, wire) => {
   const notification = notificationOf(message);
@@ -94,7 +96,10 @@ export const costFromTokens: Enricher = (message, wire) => {
   }
 
   const tokens = tokensOf(usage);
-  const cost = turnCost(model, tokens);
+  const cost = turnCost(
+    model,
+    wire.totals === true ? grownBy(session.total, tokens) : tokens,
+  );
 
   if (cost === undefined) {
     return [message];

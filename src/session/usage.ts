@@ -37,12 +37,39 @@ export function tokensOf(usage: Usage): TokenUsage {
   );
 }
 
+/**
+ * What a running total grew by since `last`: each field's increase, never
+ * less than none, as a total that fell, as after a reset, adds nothing
+ * (CHD-472, the owner's Q133).
+ */
+export function grownBy(
+  last: TokenUsage | undefined,
+  now: TokenUsage,
+): TokenUsage {
+  return Object.fromEntries(
+    TOKEN_FIELDS.flatMap((field) => {
+      const count = now[field];
+
+      return count === undefined
+        ? []
+        : [[field, Math.max(0, count - (last?.[field] ?? 0))]];
+    }),
+  );
+}
+
 /** A turn's own cost as a session keeps it, with the model it ended on. */
 export type SpentTurn = TurnCost & { readonly model?: string };
 
 export interface Spent {
   /** Each turn's tokens by the turn's id, every one the agent reported. */
   readonly turns: Readonly<Record<string, TokenUsage>>;
+  /**
+   * The session's tokens as an agent whose answers give its running total
+   * last gave them, in place of each turn's (CHD-472).
+   */
+  readonly total?: TokenUsage;
+  /** The model the session's last running total came on. */
+  readonly totalModel?: string;
   /**
    * Each turn's own cost by the turn's id, the agent's own cycles' among
    * them, where it had one or was left uncounted (CHD-373).
@@ -52,21 +79,30 @@ export interface Spent {
 
 /**
  * `spent` with a turn's tokens, where it has any, and its cost; a turn
- * reported again replaces its own.
+ * reported again replaces its own. Tokens that are the session's running
+ * `total` replace the total it had, and no turn keeps them.
  */
 export function addTurn(
   spent: Spent | undefined,
   turnId: string,
   tokens: TokenUsage,
   cost: SpentTurn = {},
+  total = false,
 ): Spent {
   const { [turnId]: _, ...costs } = spent?.costs ?? {};
   const counted = cost.cost !== undefined || cost.uncounted === true;
+  const some = Object.keys(tokens).length > 0;
 
   return {
     ...spent,
+    ...(total && some
+      ? {
+          total: tokens,
+          ...(cost.model === undefined ? {} : { totalModel: cost.model }),
+        }
+      : {}),
     turns:
-      Object.keys(tokens).length === 0
+      !some || total
         ? (spent?.turns ?? {})
         : { ...spent?.turns, [turnId]: tokens },
     ...(counted || spent?.costs !== undefined

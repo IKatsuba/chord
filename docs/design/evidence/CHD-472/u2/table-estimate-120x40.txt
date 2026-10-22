@@ -1,0 +1,40 @@
+ chord   1 dirac    2 dirac                                                                     /tmp/chord-qa.d472t-120
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   dirac · GPT-5.3 Codex
+ ▄▀▀▀   /tmp/chord-qa.d472t-120
+ ▀▀     ? for shortcuts · /help
+
+ › hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0047 (chord's estimate)
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 6s
+      dirac reports these as the session's running total; chord shows the last it sent.
+      dirac's provider reports no cost, so chord priced these tokens at GPT-5.3 Codex's price.
+
+      This window      Cost  Tokens
+      1 dirac      ~$0.0047   2,000  dirac's provider reports no cost; chord's estimate from gpt-5.3-codex's price
+      2 dirac      ~$0.0047   2,000  dirac's provider reports no cost; chord's estimate from gpt-5.3-codex's price
+      Total        ~$0.0094   4,000  chord's estimate
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                     GPT-5.3 Codex · medium effort · ~1% context used

@@ -617,9 +617,12 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'retired_update':
       return state;
     case 'usage': {
-      const { type: _, turnId, usage, ...cost } = action;
+      const { type: _, turnId, usage, total, ...cost } = action;
 
-      return { ...state, spent: addTurn(state.spent, turnId, usage, cost) };
+      return {
+        ...state,
+        spent: addTurn(state.spent, turnId, usage, cost, total === true),
+      };
     }
     case 'options':
       return { ...state, options: action.options };
@@ -1033,6 +1036,8 @@ export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
   readonly kind: SpendKind;
   /** The agent a tab's own session is. */
   readonly agent?: string | undefined;
+  /** The agent a child runs on, as chord starts it. */
+  readonly runtime?: string | undefined;
 };
 
 /** A closing session, and where what it spent is kept. */
@@ -1060,8 +1065,8 @@ export function keptSpend(
   session: SessionState | undefined,
   place: KeptPlace,
 ): KeptSpend {
-  const { name, kind, agent, ...where } = place;
-  const [own, ...tasks] = sessionParts(name, kind, session, agent);
+  const { name, kind, agent, runtime, ...where } = place;
+  const [own, ...tasks] = sessionParts(name, kind, session, agent, runtime);
 
   return {
     ...where,

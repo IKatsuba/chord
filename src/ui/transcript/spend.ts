@@ -38,6 +38,18 @@ export interface Figure {
   readonly before?: { readonly cost: Cost; readonly until?: number };
   /** The models whose prices chord's estimate came from, where it says. */
   readonly models?: readonly string[];
+  /**
+   * Its figures are the running totals its agent last gave, not turns added
+   * up (CHD-472); the model the last came on, where it said.
+   */
+  readonly totals?: {
+    readonly model?: string;
+    /**
+     * The models chord had no price for, whose turns its estimate left out,
+     * in the order they first answered.
+     */
+    readonly unpriced?: readonly string[];
+  };
 }
 
 /** A turn's tokens, or a session's, in all: the total, else each kind. */
@@ -55,6 +67,22 @@ export function tokensIn(tokens: TokenUsage | undefined): number | undefined {
   );
 
   return each.length === 0 ? undefined : each.reduce((a, b) => a + b, 0);
+}
+
+/** What a session of an agent that gives running totals says of its figures. */
+function totalsOf(spent: Spent): NonNullable<Figure['totals']> {
+  const unpriced = [
+    ...new Set(
+      Object.values(spent.costs ?? {}).flatMap((each) =>
+        each.uncounted === true && each.model !== undefined ? [each.model] : [],
+      ),
+    ),
+  ];
+
+  return {
+    ...(spent.totalModel === undefined ? {} : { model: spent.totalModel }),
+    ...(unpriced.length === 0 ? {} : { unpriced }),
+  };
 }
 
 /** `estimated` of `some` out of `of` costs. */
@@ -84,10 +112,12 @@ export function sessionFigure(spent: Spent | undefined): Figure | undefined {
     ),
   ];
   // Each turn's in all first: one that gave a total and one that gave
-  // only its kinds each count whole.
-  const each = Object.values(spent?.turns ?? {}).flatMap(
-    (turn) => tokensIn(turn) ?? [],
-  );
+  // only its kinds each count whole. A running total is the whole session's.
+  const each = (
+    spent?.total === undefined
+      ? Object.values(spent?.turns ?? {})
+      : [spent.total]
+  ).flatMap((turn) => tokensIn(turn) ?? []);
   const tokens =
     each.length === 0 ? undefined : each.reduce((a, b) => a + b, 0);
   const figure: Figure = {
@@ -103,6 +133,7 @@ export function sessionFigure(spent: Spent | undefined): Figure | undefined {
     ...(tokens === undefined ? {} : { tokens }),
     ...(uncounted === 0 ? {} : { uncounted }),
     ...(models.length === 0 ? {} : { models }),
+    ...(spent?.total === undefined ? {} : { totals: totalsOf(spent) }),
     ...(before?.cost === undefined
       ? {}
       : {
@@ -146,6 +177,11 @@ export interface SpendPart {
   readonly kind: SpendKind;
   /** The agent a tab's own session is, which says what reported nothing. */
   readonly agent?: string;
+  /**
+   * The agent a long-lived agent or team member runs on, as chord starts it,
+   * which its notes name, as `agent` is a tab's own (CHD-472).
+   */
+  readonly runtime?: string;
   /** Its own figure; none when it reported nothing. */
   readonly figure?: Figure;
   readonly parts?: readonly SpendPart[];
@@ -172,6 +208,11 @@ export interface Summed {
    * tab's own session by its agent.
    */
   readonly missing: readonly string[];
+  /**
+   * The agents, each once, whose running totals came with no cost, as their
+   * provider gives none: said apart from `missing` (CHD-472).
+   */
+  readonly providers?: readonly string[];
   /** Turns left out of the cost of the parts that had one (Q61). */
   readonly uncounted: number;
 }
@@ -189,6 +230,7 @@ export function sum(parts: readonly SpendPart[]): Summed {
   let partly = false;
   let uncounted = 0;
   const missing: string[] = [];
+  const providers = new Set<string>();
 
   const add = (part: SpendPart) => {
     const own = part.figure;
@@ -199,6 +241,8 @@ export function sum(parts: readonly SpendPart[]): Summed {
         costed += 1;
         estimated += own.estimated === 'all' ? 1 : 0;
         partly ||= own.estimated === 'part';
+      } else if (own?.totals !== undefined) {
+        providers.add(part.runtime ?? part.agent ?? part.name);
       } else {
         missing.push(part.agent ?? part.name);
       }
@@ -224,6 +268,7 @@ export function sum(parts: readonly SpendPart[]): Summed {
     estimated: partly && estimated < costed ? 'part' : share(estimated, costed),
     ...(tokens === undefined ? {} : { tokens }),
     missing,
+    ...(providers.size === 0 ? {} : { providers: [...providers] }),
     uncounted,
   };
 }
@@ -299,6 +344,7 @@ export function sessionParts(
   kind: SpendKind,
   session: SpendSession | undefined,
   agent?: string,
+  runtime?: string,
 ): SpendPart[] {
   const figure = sessionFigure(session?.spent);
   const tasks = (session?.transcript.entries ?? []).flatMap(
@@ -327,6 +373,7 @@ export function sessionParts(
       name,
       kind,
       ...(agent === undefined ? {} : { agent }),
+      ...(runtime === undefined ? {} : { runtime }),
       ...(figure === undefined ? {} : { figure }),
     },
     ...tasks,
@@ -342,8 +389,9 @@ function ownPart(
   kind: SpendKind,
   session: SpendSession | undefined,
   agent?: string,
+  runtime?: string,
 ): SpendPart {
-  const [own, ...tasks] = sessionParts(name, kind, session, agent);
+  const [own, ...tasks] = sessionParts(name, kind, session, agent, runtime);
 
   return tasks.length === 0 ? own! : { ...own!, parts: tasks };
 }
@@ -384,9 +432,15 @@ export function windowSpend<C>(
       kind: 'team',
       parts: [
         // Its row is named by the team; its lead is `lead` under it.
-        ownPart('lead', 'member', sessions[lead.key]),
+        ownPart('lead', 'member', sessions[lead.key], undefined, lead.runtime),
         ...membersOf(tab, lead.id).map((member) =>
-          ownPart(member.name, 'member', sessions[member.key]),
+          ownPart(
+            member.name,
+            'member',
+            sessions[member.key],
+            undefined,
+            member.runtime,
+          ),
         ),
         ...keptHere
           .filter((each) => each.lead === lead.id)
@@ -395,7 +449,15 @@ export function windowSpend<C>(
     }));
     const agents = tab.children
       .filter((child) => child.team === undefined)
-      .map((child) => ownPart(child.name, 'agent', sessions[child.key]));
+      .map((child) =>
+        ownPart(
+          child.name,
+          'agent',
+          sessions[child.key],
+          undefined,
+          child.runtime,
+        ),
+      );
 
     return {
       name: `${index + 1} ${tab.agent}`,

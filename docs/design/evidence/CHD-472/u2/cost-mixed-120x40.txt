@@ -1,0 +1,40 @@
+ ▀▄     chord v0.56.0
+ ▀▀▀▄   dirac · GPT-5.3 Codex
+ ▄▀▀▀   /tmp/chord-qa.d472m-120
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0047 (chord's estimate)
+      Not counted:  2 turns
+      Tokens in:    3,000
+      Tokens out:   600
+      Cache read:   2,400
+      Session time: 15s
+      dirac reports these as the session's running total; chord shows the last it sent.
+      dirac's provider reports no cost, so chord priced each answer's tokens at the price of the model that gave it; it
+      has no price for Fake Unpriced.
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                     Fake Unpriced · medium effort · ~1% context used

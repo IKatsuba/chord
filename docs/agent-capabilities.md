@@ -2067,8 +2067,16 @@ resume go through load.
   (`taskMessageBridge.ts:255-298`; CHD-432).
 - **di20.** `usage_update {used, size, cost?}`, `cost` cumulative and only
   when the provider gives one. `PromptResponse.usage` is the session's
-  running total since it was opened or loaded, not the turn's as the spec
-  says (`taskMessageBridge.ts:115-232`).
+  running total, not the turn's as the spec says: both sum one snapshot per
+  model request and subagent kept for the session (`taskMessageBridge.ts:115-116`,
+  `:158-161`, `:174-222`). Both count from the session's start, not from
+  the opening: on load, and on `unstable_resumeSession`, which is load
+  (`DiracAgent.ts:1460-1466`), the snapshots are cleared and rebuilt from
+  every message the stored task saved (`taskMessageBridge.ts:163-172`,
+  `DiracAgent.ts:2134-2207`, `AcpAgent.ts:357-364`). Only a task whose saved
+  messages do not read is left unrestored, counting from the opening
+  (`DiracAgent.ts:2144-2150`). Read in the published `dirac-cli` 0.5.21
+  package's sources (`dist/source/cli/src/`), nothing run (CHD-472).
 - **di21.** After new, load and resume, and before every prompt
   (`DiracAgent.ts:2257-2299`).
 - **di22.** Once, on the first prompt with text: a summary title and

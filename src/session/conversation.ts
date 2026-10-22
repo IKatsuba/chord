@@ -60,7 +60,7 @@ import type {
   TranscriptAction,
   TurnResult,
 } from './transcript/types.ts';
-import { costCountOf } from '../cost_counts.ts';
+import { costCountOf, usageCountOf } from '../cost_counts.ts';
 import { costReading, type TurnFigures, TurnCosts } from './turn_costs.ts';
 import { type CutCall, cutNote } from './cut_off.ts';
 import { chordCallOf, servedFor } from './transcript/chord.ts';
@@ -2511,9 +2511,17 @@ export class Conversation {
     // Before `connected`, so a resumed session's past is on screen before a
     // prompt can follow it.
     const past = session.history();
+    const usage = usageCountOf(session.agent);
 
     for (const action of past) {
-      this.#emit(action);
+      // A turn's tokens a record kept of an agent whose answers give the
+      // session's running total are that total, a record from before chord
+      // knew it too (CHD-472).
+      this.#emit(
+        action.type === 'usage' && usage === 'session'
+          ? { ...action, total: true }
+          : action,
+      );
     }
 
     // Ids go on from the past's, which `stop_monitor` refuses by how they
@@ -2533,6 +2541,7 @@ export class Conversation {
           ? [action.update]
           : [],
       ),
+      usage,
     );
 
     // After the past, which the record holds already or takes from the

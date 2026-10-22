@@ -1,0 +1,24 @@
+ chord   1 dirac    2 dirac                              /tmp/chord-qa.d472t-80
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   not reported: dirac's provider reports none, and chord has
+                    no price for Fake Large with a 1M context window
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 6s
+      dirac reports these as the session's running total; chord shows the last
+      it sent.
+
+      This window          Cost  Tokens
+      1 dirac      not reported   2,000  dirac's provider reports no cost;
+                                         no price for fake-large
+      2 dirac      not reported   2,000  dirac's provider reports no cost;
+                                         no price for fake-large
+      Total        not reported   4,000  dirac's provider reports no cost
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

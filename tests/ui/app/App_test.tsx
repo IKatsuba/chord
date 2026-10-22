@@ -3844,3 +3844,221 @@ describe('CHD-491 U2 tester: agent titles on the actual wire', () => {
     }
   });
 });
+
+describe('CHD-472 U2 tester: model changes price only the growth (Q133)', () => {
+  for (const columns of [80, 120]) {
+    for (const [model, moves, expected] of [
+      ['claude-haiku-4-5', 1, '$0.0068'],
+      ['claude-opus-5-5', 2, '$0.0129'],
+    ] as const) {
+      test(`${model} after Codex keeps both prices at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, '/new dirac');
+            await until(
+              'dirac session opened',
+              () => window.session()?.agent === 'dirac',
+            );
+
+            const connected = () =>
+              until(
+                'dirac prompt ready',
+                () =>
+                  !window.frame().includes('Starting dirac') &&
+                  window
+                    .frame()
+                    .split('\n')
+                    .some(
+                      (line) =>
+                        line.includes('? for shortcuts') &&
+                        !line.includes('/help'),
+                    ),
+              );
+
+            await connected();
+
+            let readings = 0;
+            const unsubscribe = window.session()!.subscribe((update) => {
+              if (update.sessionUpdate === 'usage_update') {
+                readings++;
+              }
+            });
+
+            try {
+              await send(window, 'text');
+              await until('first cost reading', () => readings === 1);
+              await connected();
+              await send(window, '/model');
+              await window.shows("Switch dirac's model");
+
+              for (let move = 0; move < moves; move++) {
+                await window.press(DOWN);
+              }
+
+              await window.press('\r');
+              await until(
+                'new model selected',
+                () =>
+                  window.session()!.models()?.current === model &&
+                  !window.frame().includes("Switch dirac's model"),
+              );
+              await send(window, 'text');
+              await until('second cost reading', () => readings === 2);
+              await connected();
+              await send(window, '/cost');
+              await window.shows('Tokens in:    2,000');
+
+              const words = window.frame().replace(/\s+/g, ' ');
+
+              expect(words).toContain(
+                `Total cost: ${expected} (chord's estimate)`,
+              );
+              expect(words).toContain(
+                "dirac's provider reports no cost, so chord priced each answer's tokens at the price of the model that gave it.",
+              );
+              expect(words).not.toContain('Not counted:');
+            } finally {
+              unsubscribe();
+            }
+          },
+          {
+            columns,
+            rows: 40,
+            runtimes: ['fake', 'dirac'],
+            startupOf: (agent) => ({
+              agentCommand:
+                agent === 'dirac'
+                  ? fakeAgentCommand(
+                      undefined,
+                      '--session-usage',
+                      '--tokens-only',
+                    )
+                  : fakeAgentCommand(),
+            }),
+          },
+        ));
+    }
+  }
+});
+
+describe('CHD-472 mixed tester: unpriced turns stay counted through further model changes', () => {
+  for (const columns of [80, 120]) {
+    for (const [models, cost, missing] of [
+      [
+        ['gpt-5.3-codex', 'fake-unpriced', 'claude-haiku-4-5'],
+        '$0.0068',
+        '1 turn',
+      ],
+      [
+        ['fake-unpriced', 'gpt-5.3-codex', 'fake-unpriced'],
+        '$0.0047',
+        '2 turns',
+      ],
+    ] as const) {
+      test(`${models.join(' → ')} at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, '/new dirac');
+            await until(
+              'dirac opened',
+              () => window.session()?.agent === 'dirac',
+            );
+
+            const connected = () =>
+              until(
+                'prompt ready',
+                () =>
+                  !window.frame().includes('Starting dirac') &&
+                  window
+                    .frame()
+                    .split('\n')
+                    .some(
+                      (line) =>
+                        line.includes('? for shortcuts') &&
+                        !line.includes('/help'),
+                    ),
+              );
+
+            await connected();
+
+            let reply = '';
+            const unsubscribe = window.session()!.subscribe((update) => {
+              if (
+                update.sessionUpdate === 'agent_message_chunk' &&
+                update.content.type === 'text'
+              ) {
+                reply += update.content.text;
+              }
+            });
+
+            try {
+              for (const [index, model] of models.entries()) {
+                if (window.session()!.models()?.current !== model) {
+                  await send(window, '/model');
+                  await window.shows("Switch dirac's model");
+                  await window.press(
+                    model === 'fake-unpriced'
+                      ? '5'
+                      : model === 'gpt-5.3-codex'
+                        ? '1'
+                        : '2',
+                  );
+                  await until(
+                    'model chosen',
+                    () =>
+                      window.session()!.models()?.current === model &&
+                      !window.frame().includes("Switch dirac's model"),
+                  );
+                }
+
+                await send(window, 'text');
+                await until(
+                  'reply complete',
+                  () =>
+                    (reply.match(/This reply came in chunks\./g) ?? [])
+                      .length ===
+                    index + 1,
+                );
+                await connected();
+              }
+
+              await send(window, '/cost');
+              await until('last total on screen', () =>
+                /Tokens in:\s+3,000/.test(window.frame()),
+              );
+
+              const words = window.frame().replace(/\s+/g, ' ');
+
+              expect(words).toContain(`Total cost: ${cost} (chord's estimate)`);
+              expect(words).toContain(`Not counted: ${missing}`);
+              expect(words).toContain(
+                "dirac's provider reports no cost, so chord priced each answer's tokens at the price of the model that gave it; it has no price for Fake Unpriced.",
+              );
+              expect(words).not.toContain("(part chord's estimate)");
+            } finally {
+              unsubscribe();
+            }
+          },
+          {
+            columns,
+            rows: 40,
+            runtimes: ['fake', 'dirac'],
+            startupOf: (agent) => ({
+              agentCommand:
+                agent === 'dirac'
+                  ? fakeAgentCommand(
+                      undefined,
+                      '--session-usage',
+                      '--tokens-only',
+                      '--no-cost',
+                      '--unpriced-model',
+                    )
+                  : fakeAgentCommand(),
+            }),
+          },
+        ));
+    }
+  }
+});

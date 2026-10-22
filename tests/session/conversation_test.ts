@@ -40,6 +40,8 @@ import {
   type TurnResult,
 } from '../../src/session/transcript/types.ts';
 import { initialAppState, reduceApp } from '../../src/ui/app/state.ts';
+import { sessionFigure } from '../../src/ui/transcript/spend.ts';
+import { turnCost } from '../../src/session/prices.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { Turn } from '../fixtures/fake_agent/turn.ts';
@@ -5000,6 +5002,67 @@ test("recorded settles only once the first prompt's line is flushed, and at once
     await until(() => again);
   } finally {
     await resumed.close();
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('on dirac with no cost of its own, an answer priced and then one on a model with no price, each with a costless usage update: the second is not counted, by its model (CHD-472)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(
+    () =>
+      openSession({
+        agent: 'dirac',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--session-usage',
+          '--tokens-only',
+          '--no-cost',
+          '--unpriced-model',
+        ),
+      }),
+    (event) => events.push(event),
+  );
+  const usages = () => events.filter((event) => event.type === 'usage').length;
+
+  try {
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connected'));
+    conversation.send('text');
+    await until(() => usages() === 1);
+    conversation.setModel('fake-unpriced');
+    await until(() =>
+      events.some(
+        (event) =>
+          event.type === 'model' && event.models?.current === 'fake-unpriced',
+      ),
+    );
+    conversation.send('text');
+    await until(() => usages() === 2);
+
+    const figure = sessionFigure(
+      events.reduce(reduceApp, initialAppState).spent,
+    );
+
+    expect(figure).toMatchObject({
+      cost: {
+        amount: expect.closeTo(
+          turnCost('gpt-5.3-codex', {
+            inputTokens: 1000,
+            outputTokens: 200,
+            cachedReadTokens: 800,
+            totalTokens: 2000,
+          })!,
+          12,
+        ),
+      },
+      estimated: 'all',
+      uncounted: 1,
+      totals: { unpriced: ['fake-unpriced'] },
+    });
+  } finally {
+    await conversation.close();
     await rm(dir, { recursive: true });
   }
 });

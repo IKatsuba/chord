@@ -389,3 +389,249 @@ test("/cost adds the window's table once it holds more than one session, and lea
     'Total        $0.0500       —',
   ]);
 });
+
+describe('CHD-472: /cost on an agent that gives running totals', () => {
+  const usd = (amount: number) => ({ amount, currency: 'USD' });
+  const DIRAC: ReportFacts = {
+    ...FACTS,
+    agent: 'dirac',
+    models: {
+      available: [{ id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' }],
+      current: 'gpt-5.3-codex',
+    },
+  };
+
+  test("its own cost: the rows as for any agent, its last total's tokens, and one line on how they were read", () => {
+    const rows = costReport({
+      ...DIRAC,
+      spent: {
+        turns: {},
+        total: { inputTokens: 2000, outputTokens: 400, cachedReadTokens: 1600 },
+        costs: { a: { cost: usd(0.0125) }, b: { cost: usd(0.0125) } },
+      },
+    });
+
+    expect(text(rows)).toStrictEqual([
+      'Total cost:   $0.0250',
+      'Tokens in:    2,000',
+      'Tokens out:   400',
+      'Cache read:   1,600',
+      'Session time: 1m 5s',
+      "dirac reports these as the session's running total; chord shows the last it sent.",
+    ]);
+  });
+
+  test("no cost of its own, the model priced: chord's estimate, and why", () => {
+    const rows = costReport({
+      ...DIRAC,
+      since: undefined,
+      spent: {
+        turns: {},
+        total: { totalTokens: 6000 },
+        totalModel: 'gpt-5.3-codex',
+        costs: {
+          a: { cost: usd(0.0094), estimated: true, model: 'gpt-5.3-codex' },
+        },
+      },
+    });
+
+    expect(text(rows)).toStrictEqual([
+      "Total cost: $0.0094 (chord's estimate)",
+      'Tokens:     6,000',
+      "dirac reports these as the session's running total; chord shows the last it sent.",
+      "dirac's provider reports no cost, so chord priced these tokens at GPT-5.3 Codex's price.",
+    ]);
+  });
+
+  test('no cost, and no price for its model: both reasons in the cost cell, and no second line', () => {
+    const rows = costReport({
+      ...DIRAC,
+      since: undefined,
+      models: { available: [{ id: 'fake-large', name: 'Fake Large' }] },
+      spent: {
+        turns: {},
+        total: { totalTokens: 6000 },
+        totalModel: 'fake-large',
+      },
+    });
+
+    expect(text(rows)).toStrictEqual([
+      "Total cost: not reported: dirac's provider reports none, and chord has no price for Fake Large",
+      'Tokens:     6,000',
+      "dirac reports these as the session's running total; chord shows the last it sent.",
+    ]);
+  });
+
+  test('an agent that adds its turns up reads as it did, with no line', () => {
+    const rows = costReport({
+      ...FACTS,
+      since: undefined,
+      spent: { turns: { a: { totalTokens: 2000 } } },
+    });
+
+    expect(text(rows)).toStrictEqual([
+      'Total cost: not reported by fake',
+      'Tokens:     2,000',
+    ]);
+  });
+});
+
+describe("CHD-472: /cost when some of dirac's answering models have no price", () => {
+  const usd = (amount: number) => ({ amount, currency: 'USD' });
+  const MIXED: ReportFacts = {
+    ...FACTS,
+    agent: 'dirac',
+    since: undefined,
+    models: {
+      available: [
+        { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' },
+        { id: 'fake-large', name: 'Fake Large' },
+        { id: 'fake-small', name: 'Fake Small' },
+      ],
+    },
+  };
+
+  test("what was priced is chord's estimate, the turns left out are not counted, and the line names the model with no price", () => {
+    expect(
+      text(
+        costReport({
+          ...MIXED,
+          spent: {
+            turns: {},
+            total: { totalTokens: 6000 },
+            totalModel: 'fake-large',
+            costs: {
+              a: { cost: usd(0.0047), estimated: true, model: 'gpt-5.3-codex' },
+              b: { uncounted: true, model: 'fake-large' },
+              c: { uncounted: true, model: 'fake-large' },
+            },
+          },
+        }),
+      ),
+    ).toStrictEqual([
+      "Total cost:  $0.0047 (chord's estimate)",
+      'Not counted: 2 turns',
+      'Tokens:      6,000',
+      "dirac reports these as the session's running total; chord shows the last it sent.",
+      "dirac's provider reports no cost, so chord priced each answer's tokens at the price of the model that gave it; it has no price for Fake Large.",
+    ]);
+  });
+
+  test('several models with no price are named in the order they first answered', () => {
+    const [, , , , line] = text(
+      costReport({
+        ...MIXED,
+        spent: {
+          turns: {},
+          total: { totalTokens: 6000 },
+          costs: {
+            a: { uncounted: true, model: 'fake-small' },
+            b: { cost: usd(0.0047), estimated: true, model: 'gpt-5.3-codex' },
+            c: { uncounted: true, model: 'fake-large' },
+            d: { uncounted: true, model: 'fake-small' },
+          },
+        },
+      }),
+    );
+
+    expect(line).toEndWith('it has no price for Fake Small and Fake Large.');
+  });
+
+  test('with no model priced at all, the cell says so and no turn is said not counted', () => {
+    expect(
+      text(
+        costReport({
+          ...MIXED,
+          spent: {
+            turns: {},
+            total: { totalTokens: 6000 },
+            totalModel: 'fake-large',
+            costs: {
+              a: { uncounted: true, model: 'fake-large' },
+              b: { uncounted: true, model: 'fake-large' },
+            },
+          },
+        }),
+      ),
+    ).toStrictEqual([
+      "Total cost: not reported: dirac's provider reports none, and chord has no price for Fake Large",
+      'Tokens:     6,000',
+      "dirac reports these as the session's running total; chord shows the last it sent.",
+    ]);
+  });
+});
+
+test('with no dirac cost and several models all priced, the line says each answer was priced at the model that gave it (CHD-472)', () => {
+  const usd = (amount: number) => ({ amount, currency: 'USD' });
+  const [, , line] = text(
+    costReport({
+      ...FACTS,
+      agent: 'dirac',
+      since: undefined,
+      spent: {
+        turns: {},
+        total: { totalTokens: 4000 },
+        costs: {
+          a: { cost: usd(0.004), estimated: true, model: 'gpt-5.3-codex' },
+          b: { cost: usd(0.001), estimated: true, model: 'claude-haiku-4-5' },
+        },
+      },
+    }),
+  ).slice(1);
+
+  expect(line).toBe(
+    "dirac's provider reports no cost, so chord priced each answer's tokens at the price of the model that gave it.",
+  );
+});
+
+describe('CHD-472 U2 tester: report metadata stays tied to the last total', () => {
+  test('changing the selected model without a new total does not rename the model whose tokens had no price', () => {
+    const rows = costReport({
+      ...FACTS,
+      agent: 'dirac',
+      since: undefined,
+      models: {
+        current: 'gpt-5.3-codex',
+        available: [
+          { id: 'unpriced', name: 'Old unpriced model' },
+          { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' },
+        ],
+      },
+      spent: {
+        turns: {},
+        total: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        totalModel: 'unpriced',
+      },
+    });
+    const words = text(rows).join('\n');
+
+    expect(words).toContain('chord has no price for Old unpriced model');
+    expect(words).not.toContain('no price for GPT-5.3');
+    expect(words).toContain('Tokens in:  0');
+    expect(words).not.toContain('Not counted');
+    expect(words).not.toContain('Before');
+  });
+
+  test('a reported zero cost is not a missing provider cost or an estimate', () => {
+    const words = text(
+      costReport({
+        ...FACTS,
+        agent: 'dirac',
+        since: undefined,
+        spent: {
+          turns: {},
+          total: { totalTokens: 0 },
+          costs: { a: { cost: { amount: 0, currency: 'USD' } } },
+        },
+      }),
+    ).join('\n');
+
+    expect(words).toContain('Total cost: $0.0000');
+    expect(words).toContain('Tokens:     0');
+    expect(words).toContain(
+      "dirac reports these as the session's running total",
+    );
+    expect(words).not.toContain('provider');
+    expect(words).not.toContain('estimate');
+  });
+});

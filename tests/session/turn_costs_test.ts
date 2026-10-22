@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { FILLED } from '../../src/session/enrich.ts';
 import { turnCost } from '../../src/session/prices.ts';
@@ -237,6 +237,30 @@ test("a turn's figures as it ends: its tokens, its own cost and the model it end
   });
 });
 
+test("an agent whose answers give the session's running total has each turn's figures marked so; another's are not (CHD-472)", () => {
+  const totals = new TurnCosts('session', false, [], 'session');
+
+  totals.began('t1');
+  totals.heard('t1', update(0.01));
+  expect(totals.ended('t1', { totalTokens: 5 }, 'm')).toStrictEqual({
+    turnId: 't1',
+    usage: { totalTokens: 5 },
+    total: true,
+    model: 'm',
+    cost: { amount: 0.01, currency: 'USD' },
+  });
+  expect(totals.ended('t0', { totalTokens: 1 }, 'm')).toStrictEqual({
+    turnId: 't0',
+    usage: { totalTokens: 1 },
+    total: true,
+  });
+
+  const own = new TurnCosts('session', false, []);
+
+  own.began('t1');
+  expect(own.ended('t1', { totalTokens: 5 }, 'm')).not.toHaveProperty('total');
+});
+
 test("a cost that comes after its turn's end is still that turn's, said again; after the next began, the next's", () => {
   const costs = new TurnCosts('opening', false, []);
 
@@ -302,5 +326,110 @@ test("an opening resumed from a record counts from the record's last cost, as it
   });
   expect(first(new TurnCosts(undefined, true, past))).toMatchObject({
     uncounted: true,
+  });
+});
+
+describe('CHD-472 U1 tester: late costs retain total-token meaning', () => {
+  test('a cost arriving after the answer adds its delta without turning total tokens into another turn', () => {
+    const costs = new TurnCosts('session', false, [], 'session');
+
+    costs.began('a');
+    expect(costs.ended('a', { totalTokens: 100 }, 'model')).toMatchObject({
+      total: true,
+      usage: { totalTokens: 100 },
+    });
+    expect(costs.heard('a', update(0.02))).toMatchObject({
+      total: true,
+      usage: { totalTokens: 100 },
+      cost: { amount: 0.02 },
+    });
+    expect(costs.heard('a', update(0.02))).toBeUndefined();
+    costs.began('b');
+    costs.heard('b', update(0.05));
+    expect(costs.ended('b', { totalTokens: 250 }, 'model')).toMatchObject({
+      total: true,
+      usage: { totalTokens: 250 },
+      cost: { amount: expect.closeTo(0.03, 9) },
+    });
+  });
+
+  test('a resumed total has only the cost added since the record; a fresh session has no earlier baseline', () => {
+    const resumed = new TurnCosts('session', true, [update(0.5)], 'session');
+
+    resumed.began('a');
+    resumed.heard('a', update(0.5));
+    expect(resumed.ended('a', { totalTokens: 0 }, 'model')).toMatchObject({
+      total: true,
+      usage: { totalTokens: 0 },
+      cost: { amount: 0 },
+    });
+
+    const fresh = new TurnCosts('session', false, [], 'session');
+
+    fresh.began('a');
+    fresh.heard('a', update(0.1));
+    expect(fresh.ended('a', { totalTokens: 50 }, 'model')).toMatchObject({
+      total: true,
+      cost: { amount: 0.1 },
+    });
+  });
+});
+
+test("on an agent that gives running totals and no cost, a turn on a model chord has no price for is not counted, with its model; another agent's is a turn of nothing, as before (CHD-472)", () => {
+  const estimate = (amount: number): SessionUpdate => ({
+    sessionUpdate: 'usage_update',
+    used: 1,
+    size: 2,
+    cost: { amount, currency: 'USD' },
+    _meta: { 'chord/filled': ['cost'] },
+  });
+  const tokens = { inputTokens: 1000, outputTokens: 200, totalTokens: 1200 };
+  const totals = new TurnCosts('session', false, [], 'session');
+
+  totals.began('t1');
+  totals.heard('t1', estimate(0.004));
+  expect(totals.ended('t1', tokens, 'gpt-5.3-codex')).toMatchObject({
+    cost: { amount: 0.004 },
+    estimated: true,
+  });
+  totals.began('t2');
+  expect(totals.ended('t2', tokens, 'fake-unpriced')).toStrictEqual({
+    turnId: 't2',
+    usage: tokens,
+    total: true,
+    model: 'fake-unpriced',
+    uncounted: true,
+  });
+
+  const own = new TurnCosts('session', false, []);
+
+  own.began('t1');
+  expect(own.ended('t1', tokens, 'fake-unpriced')).toStrictEqual({
+    turnId: 't1',
+    usage: tokens,
+    model: 'fake-unpriced',
+  });
+});
+
+test('a costless update given the estimate so far again moves no cost, so a later turn on a model with no price is still not counted (CHD-472)', () => {
+  const estimate = (amount: number): SessionUpdate => ({
+    sessionUpdate: 'usage_update',
+    used: 1,
+    size: 2,
+    cost: { amount, currency: 'USD' },
+    _meta: { 'chord/filled': ['cost'] },
+  });
+  const tokens = { inputTokens: 1000, totalTokens: 1000 };
+  const totals = new TurnCosts('session', false, [], 'session');
+
+  totals.began('t1');
+  totals.heard('t1', estimate(0.004));
+  totals.ended('t1', tokens, 'gpt-5.3-codex');
+  totals.began('t2');
+  // The agent's own update with no cost, which chord fills with the same.
+  totals.heard('t2', estimate(0.004));
+  expect(totals.ended('t2', tokens, 'fake-unpriced')).toMatchObject({
+    uncounted: true,
+    model: 'fake-unpriced',
   });
 });

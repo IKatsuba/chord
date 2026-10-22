@@ -1,0 +1,24 @@
+[38;2;255;255;255m [1m[39mchord[0m   [2m1 dirac[0m   [1;7m 2 dirac [0m[38;2;255;255;255m                             [2m[39m/tmp/chord-qa.d472t-80[0m[38;2;255;255;255m
+ [39m⏺[38;2;255;255;255m [39mHello, world. This reply came in chunks.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/cost[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mTotal cost:   [0mnot reported: dirac's provider reports none, and chord has [38;2;255;255;255m
+                    [39mno price for Fake Large with a 1M context window[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mTokens in:    [0m1,000[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mTokens out:   [0m200[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mCache read:   [0m800[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSession time: [0m6s[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mdirac reports these as the session's running total; chord shows the last [38;2;255;255;255m
+      [39mit sent.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mThis window          Cost  Tokens[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m1 dirac      not reported   2,000  dirac's provider reports no cost;[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m                                   no price for fake-large[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m2 dirac      not reported   2,000  dirac's provider reports no cost;[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m                                   no price for fake-large[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mTotal        not reported   4,000  dirac's provider reports no cost[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m

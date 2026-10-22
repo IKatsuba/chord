@@ -830,3 +830,184 @@ describe('CHD-473 tester: full cells at the note floor and nested accounting', (
     }
   });
 });
+
+test('an agent that gives running totals reads as any row; only with no cost of its own do its notes say its provider gives none (CHD-472)', () => {
+  const dirac = (name: string, figure: SpendPart['figure']): SpendPart => ({
+    name,
+    ...(name === 'main'
+      ? { kind: 'main', agent: 'dirac' }
+      : { kind: 'agent', runtime: 'dirac' }),
+    ...(figure === undefined ? {} : { figure }),
+  });
+  const table = lines(
+    [
+      {
+        name: '1 dirac',
+        kind: 'tab',
+        parts: [
+          dirac('main', { cost: USD(0.025), tokens: 4000, totals: {} }),
+          dirac('scout', {
+            cost: USD(0.0094),
+            estimated: 'all',
+            models: ['gpt-5.3-codex'],
+            tokens: 6000,
+            totals: { model: 'gpt-5.3-codex' },
+          }),
+          dirac('docs', { tokens: 6000, totals: { model: 'fake-large' } }),
+        ],
+      },
+    ],
+    200,
+  );
+  const row = (name: string) =>
+    table.find((line) => line.trimStart().startsWith(name)) ?? '';
+
+  expect(row('main').trimEnd()).toMatch(/\$0\.0250\s+4,000$/);
+  expect(row('scout')).toMatch(
+    /~\$0\.0094\s+6,000 {2}agent; dirac's provider reports no cost; chord's estimate from gpt-5\.3-codex's price$/,
+  );
+  expect(row('docs')).toMatch(
+    /not reported\s+6,000 {2}agent; dirac's provider reports no cost; no price for fake-large$/,
+  );
+});
+
+test("the Total says once that dirac's provider reports no cost, however many dirac rows lack one, and still names any other agent that reported nothing (CHD-472)", () => {
+  const unpriced = { tokens: 2000, totals: { model: 'fake-large' } };
+  const total = lines(
+    [
+      {
+        name: '1 dirac',
+        kind: 'tab',
+        parts: [
+          { name: 'main', kind: 'main', agent: 'dirac', figure: unpriced },
+        ],
+      },
+      {
+        name: '2 dirac',
+        kind: 'tab',
+        parts: [
+          { name: 'main', kind: 'main', agent: 'dirac', figure: unpriced },
+          { name: 'scout', kind: 'agent', runtime: 'dirac', figure: unpriced },
+        ],
+      },
+      {
+        name: '3 gemini',
+        kind: 'tab',
+        parts: [{ name: 'main', kind: 'main', agent: 'gemini' }],
+      },
+    ],
+    200,
+  ).find((line) => line.startsWith('Total'));
+
+  expect(total).toMatch(
+    /^Total\s+not reported\s+6,000 {2}gemini not reported; dirac's provider reports no cost$/,
+  );
+});
+
+test('a dirac row with some answering models unpriced: the estimate of the rest, its note naming the models with no price (CHD-472)', () => {
+  const row = lines(
+    [
+      {
+        name: '1 dirac',
+        kind: 'tab',
+        parts: [
+          {
+            name: 'main',
+            kind: 'main',
+            agent: 'dirac',
+            figure: {
+              cost: USD(0.0047),
+              estimated: 'all',
+              models: ['gpt-5.3-codex'],
+              tokens: 6000,
+              uncounted: 2,
+              totals: { model: 'fake-large', unpriced: ['fake-large'] },
+            },
+          },
+        ],
+      },
+    ],
+    200,
+  ).find((line) => line.startsWith('1 dirac'));
+
+  expect(row).toMatch(
+    /~\$0\.0047\s+6,000 {2}dirac's provider reports no cost; chord's estimate from its models' prices; no price for fake-large$/,
+  );
+});
+
+describe('CHD-472 U2 tester: provider identity in mixed window totals', () => {
+  for (const width of [72, 114]) {
+    test(`dirac's missing provider is named once in Total with both priced and unpriced rows at ${width} cells`, () => {
+      const parts: SpendPart[] = [
+        {
+          name: '1 ordinary',
+          kind: 'tab',
+          parts: [
+            {
+              name: 'main',
+              kind: 'main',
+              agent: 'fake',
+              figure: { cost: USD(0.01), tokens: 100 },
+            },
+          ],
+        },
+        {
+          name: '2 dirac',
+          kind: 'tab',
+          parts: [
+            {
+              name: 'main',
+              kind: 'main',
+              agent: 'dirac',
+              figure: { tokens: 4000, totals: { model: 'unpriced' } },
+            },
+          ],
+        },
+        {
+          name: '3 dirac',
+          kind: 'tab',
+          parts: [
+            {
+              name: 'main',
+              kind: 'main',
+              agent: 'dirac',
+              figure: {
+                tokens: 2000,
+                totals: { model: 'gpt-5.3-codex' },
+                cost: USD(0.00469),
+                estimated: 'all',
+                models: ['gpt-5.3-codex'],
+              },
+            },
+          ],
+        },
+        {
+          name: '4 other',
+          kind: 'tab',
+          parts: [
+            {
+              name: 'main',
+              kind: 'main',
+              agent: 'fake',
+              figure: { tokens: 20 },
+            },
+          ],
+        },
+      ];
+      const output = lines(parts, width);
+      const total = output
+        .slice(output.findIndex((row) => row.startsWith('Total')))
+        .join(' ')
+        .replace(/\s+/g, ' ');
+
+      expect(total.match(/dirac's provider reports no cost/g)).toHaveLength(1);
+      expect(total).toContain('fake not reported');
+      expect(total).not.toContain('dirac not reported');
+      expect(total).toContain('6,120');
+      expect(output.every((row) => stringWidth(row) <= width)).toBe(true);
+      expect(output.join(' ').replace(/\s+/g, ' ')).toContain(
+        'no price for unpriced',
+      );
+    });
+  }
+});

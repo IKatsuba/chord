@@ -38,6 +38,8 @@ import {
   type TranscriptAction,
 } from '../../src/session/transcript/types.ts';
 import { sessionTokens } from '../../src/ui/transcript/reports.ts';
+import { sessionFigure } from '../../src/ui/transcript/spend.ts';
+import { turnCost } from '../../src/session/prices.ts';
 import {
   type AppState,
   initialAppState,
@@ -1701,6 +1703,330 @@ describe('CHD-451 tester: steering gate lifetime', () => {
           unasked();
           await session.close();
         }
+      }));
+  }
+});
+
+describe('CHD-472: an agent whose answers give the running total', () => {
+  const usage = (...flags: string[]) =>
+    fakeAgentCommand(undefined, '--session-usage', ...flags);
+
+  /** The window's state once `prompts` ran on `agent`, its events reduced. */
+  const ran = async (
+    place: Place,
+    agent: string,
+    command: string[],
+    prompts: readonly string[],
+    resume?: Resume,
+  ) => {
+    const events: ConversationEvent[] = [];
+
+    await recordSession({
+      stateDir: place.stateDir,
+      cwd: place.dir,
+      command,
+      prompts,
+      agent,
+      ...(resume === undefined ? {} : { resume }),
+      heard: (event) => events.push(event),
+    });
+
+    return events.reduce(reduceApp, initialAppState);
+  };
+
+  test("dirac's tokens are its last answer's, the session's total; an agent not known to count so still adds its answers up", () =>
+    withPlace(async (place) => {
+      const prompts = ['text', 'text', 'text'];
+      const dirac = await ran(place, 'dirac', usage(), prompts);
+      const fake = await ran(place, 'fake', usage(), prompts);
+
+      expect(sessionTokens(dirac.spent)?.totalTokens).toBe(6000);
+      expect(dirac.spent?.turns).toStrictEqual({});
+      // Its own cost is counted as before: $0.0125 a turn.
+      expect(sessionFigure(dirac.spent)?.cost?.amount).toBeCloseTo(0.0375, 9);
+      expect(sessionTokens(fake.spent)?.totalTokens).toBe(12_000);
+    }));
+
+  test("with no cost of dirac's, chord's estimate is priced once from the session's total, not added up", () =>
+    withPlace(async (place) => {
+      const prompts = ['text', 'text', 'text'];
+      const dirac = await ran(place, 'dirac', usage('--tokens-only'), prompts);
+      const fake = await ran(place, 'fake', usage('--tokens-only'), prompts);
+      const at = (count: number) =>
+        turnCost('gpt-5.3-codex', {
+          inputTokens: 1000 * count,
+          outputTokens: 200 * count,
+          cachedReadTokens: 800 * count,
+          totalTokens: 2000 * count,
+        })!;
+
+      expect(sessionFigure(dirac.spent)).toMatchObject({
+        cost: { amount: expect.closeTo(at(3), 9) },
+        estimated: 'all',
+        tokens: 6000,
+      });
+      expect(sessionFigure(fake.spent)?.cost?.amount).toBeCloseTo(
+        at(1) + at(2) + at(3),
+        9,
+      );
+    }));
+
+  test("a dirac record from before chord knew it reopens to its last answer's total, not their sum; as another agent's, still the sum", () =>
+    withPlace(async (place) => {
+      const id = await recordSession({
+        stateDir: place.stateDir,
+        cwd: place.dir,
+        command: usage(),
+        prompts: ['text', 'text'],
+        agent: 'dirac',
+      });
+      const [record] = await readRecords(place.stateDir);
+
+      assert(record !== undefined);
+
+      // As chord wrote it before CHD-472: no line says its tokens are a total.
+      const lines = (await readFile(record.path, 'utf8'))
+        .split('\n')
+        .map((line) =>
+          line === ''
+            ? line
+            : JSON.stringify({ ...JSON.parse(line), total: undefined }),
+        );
+
+      await writeFile(record.path, lines.join('\n'));
+
+      const resume = { sessionId: id, cwd: place.dir, record: record.path };
+      const resuming = usage('--resume-only');
+
+      expect(
+        sessionTokens((await ran(place, 'dirac', resuming, [], resume)).spent)
+          ?.totalTokens,
+      ).toBe(4000);
+      expect(
+        sessionTokens((await ran(place, 'fake', resuming, [], resume)).spent)
+          ?.totalTokens,
+      ).toBe(6000);
+    }));
+});
+
+describe('CHD-472 U1 tester: isolated fake sessions and repeat replay', () => {
+  const command = (...flags: string[]) =>
+    fakeAgentCommand(undefined, '--session-usage', ...flags);
+  const ran = async (
+    place: Place,
+    prompts: Parameters<typeof recordSession>[0]['prompts'],
+    flags: string[] = [],
+    resume?: Resume,
+  ) => {
+    const events: ConversationEvent[] = [];
+    const id = await recordSession({
+      stateDir: place.stateDir,
+      cwd: place.dir,
+      command: command(...flags),
+      prompts,
+      agent: 'dirac',
+      lateCost: flags.includes('--late-cost'),
+      ...(resume ? { resume } : {}),
+      heard: (event) => events.push(event),
+    });
+
+    return { id, events, state: events.reduce(reduceApp, initialAppState) };
+  };
+
+  test('a cancelled fake turn cannot make later answers sum session totals', () =>
+    withPlace(async (place) => {
+      const { events, state } = await ran(place, [
+        'text',
+        { text: 'slow', interrupt: true },
+        'text',
+      ]);
+      const figures = events.filter((event) => event.type === 'usage');
+
+      expect(
+        events.some(
+          (event) =>
+            event.type === 'result' && event.result.status === 'cancelled',
+        ),
+      ).toBe(true);
+      expect(figures.length).toBeGreaterThanOrEqual(2);
+      expect(figures.every((event) => event.total === true)).toBe(true);
+      expect(sessionTokens(state.spent)).toEqual(figures.at(-1)!.usage);
+      expect(state.spent?.turns).toEqual({});
+    }));
+
+  test('late fake costs repeat the same total tokens without adding them again', () =>
+    withPlace(async (place) => {
+      const { state, events } = await ran(
+        place,
+        ['text', 'text'],
+        ['--late-cost'],
+      );
+
+      expect(sessionTokens(state.spent)?.totalTokens).toBe(4000);
+      expect(state.spent?.turns).toEqual({});
+      expect(sessionFigure(state.spent)?.cost?.amount).toBeCloseTo(0.025, 9);
+      expect(
+        events.filter((event) => event.type === 'usage').length,
+      ).toBeGreaterThan(2);
+    }));
+
+  test('two sessions recorded together keep their own total and cost after separate resumes', () =>
+    withPlace(async (place) => {
+      const [a, b] = await Promise.all([
+        ran(place, ['text', 'text', 'text']),
+        ran(place, ['text', 'text']),
+      ]);
+
+      expect(a.id).not.toBe(b.id);
+
+      const records = await readRecords(place.stateDir);
+
+      for (const [live, tokens, amount] of [
+        [a, 6000, 0.0375],
+        [b, 4000, 0.025],
+      ] as const) {
+        const record = records.find((record) => record.sessionId === live.id);
+
+        assert(record);
+
+        const resumed = await ran(place, [], ['--resume-only'], {
+          sessionId: live.id,
+          cwd: place.dir,
+          record: record.path,
+        });
+
+        expect(sessionTokens(resumed.state.spent)?.totalTokens).toBe(tokens);
+        expect(sessionFigure(resumed.state.spent)?.cost?.amount).toBeCloseTo(
+          amount,
+          9,
+        );
+      }
+    }));
+
+  test('an old token-only record replays repeatedly without doubling or rewriting its unmarked usage', () =>
+    withPlace(async (place) => {
+      const live = await ran(place, ['text', 'text'], ['--tokens-only']);
+      const record = (await readRecords(place.stateDir)).find(
+        (record) => record.sessionId === live.id,
+      );
+
+      assert(record);
+
+      const old = (await readFile(record.path, 'utf8'))
+        .split('\n')
+        .map((line) =>
+          line === ''
+            ? line
+            : JSON.stringify({ ...JSON.parse(line), total: undefined }),
+        )
+        .join('\n');
+
+      await writeFile(record.path, old);
+
+      for (let opening = 0; opening < 2; opening++) {
+        const replayed = await ran(
+          place,
+          [],
+          ['--tokens-only', '--resume-only'],
+          { sessionId: live.id, cwd: place.dir, record: record.path },
+        );
+
+        expect(sessionTokens(replayed.state.spent)?.totalTokens).toBe(4000);
+        expect(sessionFigure(replayed.state.spent)?.cost?.amount).toBeCloseTo(
+          sessionFigure(live.state.spent)!.cost!.amount,
+          9,
+        );
+
+        const entries = (await readFile(record.path, 'utf8'))
+          .trim()
+          .split('\n')
+          .map((line) => JSON.parse(line));
+
+        expect(entries.filter((entry) => entry.type === 'usage')).toHaveLength(
+          2,
+        );
+        expect(
+          entries
+            .filter((entry) => entry.type === 'usage')
+            .every((entry) => entry.total === undefined),
+        ).toBe(true);
+      }
+    }));
+});
+
+describe('CHD-472 Q133 tester: the resumed fake counter resets and grows again', () => {
+  for (const legacy of [false, true]) {
+    test(`${legacy ? 'old unmarked' : 'new marked'} record keeps its estimate across reset, then adds only new growth`, () =>
+      withPlace(async (place) => {
+        const command = fakeAgentCommand(
+          undefined,
+          '--session-usage',
+          '--tokens-only',
+        );
+        const id = await recordSession({
+          stateDir: place.stateDir,
+          cwd: place.dir,
+          command,
+          agent: 'dirac',
+          prompts: ['text', 'text'],
+        });
+        const record = (await readRecords(place.stateDir)).find(
+          (record) => record.sessionId === id,
+        );
+
+        assert(record);
+
+        if (legacy) {
+          const old = (await readFile(record.path, 'utf8'))
+            .split('\n')
+            .map((line) =>
+              line === ''
+                ? line
+                : JSON.stringify({ ...JSON.parse(line), total: undefined }),
+            )
+            .join('\n');
+
+          await writeFile(record.path, old);
+        }
+
+        let state = initialAppState;
+        let connected = false;
+        const readings: {
+          tokens: number | undefined;
+          amount: number | undefined;
+        }[] = [];
+
+        await recordSession({
+          stateDir: place.stateDir,
+          cwd: place.dir,
+          command: [...command, '--resume-only'],
+          agent: 'dirac',
+          prompts: ['text', 'text'],
+          resume: { sessionId: id, cwd: place.dir, record: record.path },
+          heard: (event) => {
+            state = reduceApp(state, event);
+
+            if (event.type === 'connected') {
+              connected = true;
+            }
+
+            if (connected && event.type === 'usage') {
+              readings.push({
+                tokens: sessionTokens(state.spent)?.totalTokens,
+                amount: sessionFigure(state.spent)?.cost?.amount,
+              });
+            }
+          },
+        });
+        expect(readings).toHaveLength(2);
+        expect(readings[0]).toEqual({
+          tokens: 2000,
+          amount: expect.closeTo(0.00938, 9),
+        });
+        expect(readings[1]).toEqual({
+          tokens: 4000,
+          amount: expect.closeTo(0.01407, 9),
+        });
       }));
   }
 });

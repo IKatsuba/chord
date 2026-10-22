@@ -1435,6 +1435,7 @@ export function useSessions(
       // A run's lead is `lead` under its team's row, as when it is open.
       name: isLead(child) ? 'lead' : child.name,
       kind: child.team === undefined ? 'agent' : 'member',
+      runtime: child.runtime,
       ...(child.team === undefined ? {} : { team: child.team }),
       ...(isLead(child)
         ? { lead: child.id }

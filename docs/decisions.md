@@ -7041,3 +7041,21 @@ designs are in `docs/design/evidence/CHD-492/drafts/`.
   cannot resume session <id>: …`. Several chords in one tmux share the
   outer terminal's variable, the last write winning. Nothing on screen
   changes; no key is added; no dependency.
+
+## 2026-10-22 — CHD-487: a detail's log in OpenTUI's scrollbox, scrolled after layout
+
+The agent's or task's log in its background detail sits in OpenTUI's
+`scrollbox` with `stickyScroll` and `stickyStart: 'bottom'`, which follows
+the log's end as work comes, leaves it when the person pages up, and
+follows again once scrolled back to the end: the owner's Q140, as the
+scrollbox does it, not as chord counts it.
+
+A finding worth keeping: an imperative `scrollTo` issued at React's commit
+is clamped against the scrollbox's layout of the frame before, and is not
+applied again once the new content is laid out. Plain OpenTUI shows it
+(a one-row scrollbox over growing lines, `scrollTo(last)` in an effect,
+stays on the old last line); the same call from `renderAfter`, or on a
+key, when the frame is laid out, lands. A first try (823babbe) read that as
+the scrollbox not fitting and drew the log in a clipped box of chord's own;
+it was chord's timing, and the scrollbox stays. Scroll it on the key, or
+let `stickyScroll` follow, never from an effect.

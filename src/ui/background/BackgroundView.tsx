@@ -1,8 +1,14 @@
-import { type BoxRenderable, TextAttributes } from '@opentui/core';
+import {
+  type BoxRenderable,
+  type ScrollBoxRenderable,
+  TextAttributes,
+} from '@opentui/core';
+import stringWidth from 'string-width';
 import {
   type RefObject,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -442,33 +448,51 @@ function WorkDetail({
   const workRows = Math.max(0, rows - (short ? 2 : full.length));
   // With no row, it still pages, as a row of one would.
   const room = Math.max(1, workRows);
+  const view = useRef<ScrollBoxRenderable | null>(null);
   const content = useRef<BoxRenderable | null>(null);
-  // Its lines as laid out; the room until they are.
-  const [total, setTotal] = useState(room);
-  const [top, setTop] = useState(FOLLOWING);
-  const shown = requestView(total, room, top);
-  const hidden = hiddenRows(total, shown.top, shown.shown);
-  const lines = short
+  // Its lines as laid out, none until they are; where OpenTUI's scrollbox
+  // stands in them, which follows their end itself while it is at it.
+  const [total, setTotal] = useState<number | undefined>(undefined);
+  const [at, setAt] = useState(0);
+  // Where it is paged to with no row to draw it in.
+  const [parked, setParked] = useState(FOLLOWING);
+  // Following its end, as it opens and once paged back to it (Q140): kept
+  // so a room that changes, which the scrollbox's own following does not
+  // always see through, still leaves it at its end.
+  const following = useRef(true);
+  const lines = total ?? 0;
+  const shown = requestView(
+    lines,
+    room,
+    following.current ? FOLLOWING : workRows === 0 ? parked : at,
+  );
+  // Where the scrollbox is to stand, which it is put at once laid out.
+  const wanted = useRef(shown.top);
+
+  wanted.current = shown.top;
+  const hidden = hiddenRows(lines, shown.top, shown.shown);
+  // A room of one row, or of none, has no row for a rule: what is hidden is
+  // said beside the row, or at the state line's end (CHD-464).
+  const count =
+    workRows <= 1 && total !== undefined && lines > 1
+      ? requestCount(hidden)
+      : undefined;
+  const workWidth =
+    workRows === 1 && count !== undefined
+      ? Math.max(1, width - countRoom(lines) - 1)
+      : width;
+  const lineCells = short
     ? workHead(item, work.subagent, {
         width,
         now,
         short,
-        ...(workRows === 0 && total > 0
-          ? {
-              count: requestCount({
-                above: shown.top,
-                below: Math.max(0, total - shown.top - 1),
-              }),
-            }
+        ...(workRows === 0 && count !== undefined
+          ? { reserve: stringWidth(count) + 1 }
           : {}),
       })
     : full;
   // Not even its name and state: its state line alone.
-  const head = rows < 2 ? lines.slice(-1) : lines;
-  // A room of one row has none for a rule: what is hidden is said beside
-  // the row, which the work leaves the cells for (CHD-464).
-  const counted = workRows === 1 && total > 1;
-  const workWidth = counted ? Math.max(1, width - countRoom(total) - 1) : width;
+  const head = rows < 2 ? lineCells.slice(-1) : lineCells;
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
   const whole = (work.subagent.prompt ?? work.subagent.description)?.trim();
@@ -480,52 +504,121 @@ function WorkDetail({
       whole.replace(/\s+/g, ' ') === item.name.replace(/\s+/g, ' ').trim())
       ? undefined
       : whole;
-  // Read once laid out, never at React's commit (CHD-437).
+
+  // Read once laid out, never at React's commit, where a scroll is clamped
+  // to the layout before it (CHD-437, CHD-487): its lines, and where the
+  // scrollbox stands now that it has followed them or not.
   const measure = () => {
     const height = content.current?.getLayout().height;
+    const box = view.current;
 
-    if (height !== undefined && Number.isFinite(height)) {
+    if (
+      workRows > 0 &&
+      height !== undefined &&
+      Number.isFinite(height) &&
+      height > 0
+    ) {
       setTotal(height);
+    }
+
+    if (box !== null && workRows > 0) {
+      // Following, at the end view as this frame lays it out. A scroll the
+      // scrollbox clamps to limits it has yet to lay out lands a frame
+      // later, which is asked for, as nothing else may draw one.
+      if (following.current && box.scrollTop !== wanted.current) {
+        box.scrollTo(wanted.current);
+
+        if (box.scrollTop !== wanted.current) {
+          box.requestRender();
+        }
+      }
+
+      setAt(box.scrollTop);
     }
   };
 
+  // The scrollbox moves by itself as it follows; its scrollbar says where.
+  useLayoutEffect(() => {
+    const bar = view.current?.verticalScrollBar;
+    const moved = ({ position }: { position: number }) => setAt(position);
+
+    bar?.on('change', moved);
+
+    return () => {
+      bar?.off('change', moved);
+    };
+  }, []);
+
   useEffect(() => {
-    scroller.current = (step) => setTop((at) => logStep(step, total, room, at));
+    // On the key, when the frame is laid out: the page keys move the
+    // scrollbox, and its end gives the following back to it.
+    scroller.current = (step) => {
+      const box = view.current;
+
+      if (workRows === 0 || box === null) {
+        setParked((top) => {
+          const next = logStep(step, lines, 1, top);
+
+          following.current = next === FOLLOWING;
+
+          return next;
+        });
+
+        return;
+      }
+
+      const next =
+        step === 'bottom'
+          ? FOLLOWING
+          : logStep(step, lines, room, box.scrollTop);
+
+      following.current = next === FOLLOWING;
+      box.scrollTo(next === FOLLOWING ? box.scrollHeight : next);
+    };
 
     return () => {
       scroller.current = undefined;
     };
-  }, [scroller, total, room]);
+  }, [scroller, lines, room, workRows]);
 
   return (
     <box marginTop={1} flexShrink={0}>
       {head.map((cells, index) => (
-        <text key={`head-${index}`} {...TEXT}>
-          {cells.map((piece, at) => (
-            <span key={at} {...cell(piece)}>
-              {piece.text}
-            </span>
-          ))}
-        </text>
+        <box key={`head-${index}`} flexDirection='row' flexShrink={0}>
+          <text {...TEXT} flexGrow={1}>
+            {cells.map((piece, place) => (
+              <span key={place} {...cell(piece)}>
+                {piece.text}
+              </span>
+            ))}
+          </text>
+          {workRows === 0 &&
+            count !== undefined &&
+            index === head.length - 1 && (
+              <text {...TEXT} attributes={DIM} flexShrink={0}>
+                {count}
+              </text>
+            )}
+        </box>
       ))}
-      {shown.above && (
+      {shown.above && workRows > 0 && (
         <text {...TEXT} attributes={DIM}>
           {requestRule('↑', hidden.above, pageUp, width)}
         </text>
       )}
       <box flexDirection='row' flexShrink={0} visible={workRows > 0}>
-        {/* Its rows in view: the work drawn whole, moved up by the rows
-            above them and cut to the room, where it is laid out as it is
-            drawn, so no scroll waits on a layout to land (CHD-487). */}
-        <box
+        <scrollbox
+          ref={view}
           height={Math.max(shown.shown, 1)}
           width={workWidth}
           flexShrink={0}
-          overflow='hidden'
+          focusable={false}
+          stickyScroll
+          stickyStart='bottom'
+          verticalScrollbarOptions={{ visible: false }}
         >
           <box
             ref={content}
-            marginTop={-shown.top}
             flexShrink={0}
             onSizeChange={measure}
             renderAfter={measure}
@@ -547,14 +640,16 @@ function WorkDetail({
               width={workWidth}
             />
           </box>
-        </box>
-        {counted && (
-          <text {...TEXT} attributes={DIM} flexShrink={0}>
-            {` ${requestCount(hidden)}`}
-          </text>
+        </scrollbox>
+        {workRows === 1 && count !== undefined && (
+          <box flexGrow={1} flexDirection='row' justifyContent='flex-end'>
+            <text {...TEXT} attributes={DIM} flexShrink={0}>
+              {count}
+            </text>
+          </box>
         )}
       </box>
-      {shown.below && (
+      {shown.below && workRows > 0 && (
         <text {...TEXT} attributes={DIM}>
           {requestRule('↓', hidden.below, pageDown, width)}
         </text>

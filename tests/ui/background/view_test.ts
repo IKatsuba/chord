@@ -1404,7 +1404,7 @@ test("a detail's pinned name takes one line, cut at its end with … when longer
   expect(stringWidth(long.text)).toBe(30);
 });
 
-test("in a short room the state line takes one line, cut with …, the work's count at its end (CHD-487)", () => {
+test("in a short room the state line takes one line, cut with …, leaving the work's count its cells (CHD-487)", () => {
   const item = task(
     't',
     'Fix the tokenizer',
@@ -1428,11 +1428,12 @@ test("in a short room the state line takes one line, cut with …, the work's co
     width: 40,
     now: NOW,
     short: true,
-    count: '↑ 3 lines above',
+    reserve: 16,
   });
 
   expect(wrapped.length).toBeGreaterThan(2);
   expect(short).toHaveLength(2);
-  expect(stringWidth(text(short[1]!))).toBeLessThanOrEqual(40);
-  expect(text(short[1]!)).toMatch(/^working 32s · .*… ↑ 3 lines above$/);
+  // The work's count, `↑ 3 lines above`, takes 16 cells at its end.
+  expect(stringWidth(text(short[1]!))).toBeLessThanOrEqual(24);
+  expect(text(short[1]!)).toMatch(/^working 32s · .*…$/);
 });

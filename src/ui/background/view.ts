@@ -150,16 +150,17 @@ export function workHead(
     width,
     now,
     short = false,
-    count,
+    reserve = 0,
   }: {
     readonly width: number;
     readonly now: number;
     /**
      * A room too short for the state line's wrapping: it takes one line,
-     * cut with `…`, and `count`, the work's, at its end (CHD-487).
+     * cut with `…`, leaving `reserve` cells at its end for the work's
+     * count, which the detail sets there (CHD-487).
      */
     readonly short?: boolean;
-    readonly count?: string;
+    readonly reserve?: number;
   },
 ): ViewCell[][] {
   const state = stateText(item, now);
@@ -190,13 +191,8 @@ export function workHead(
     return [name, ...dotted(parts, width)];
   }
 
-  // On one line, cut where the count, said at its end, leaves it.
-  const tail =
-    count === undefined ? [] : [{ text: ` ${count}`, role: 'kind' as const }];
-  const room = Math.max(
-    1,
-    width - (count === undefined ? 0 : stringWidth(count) + 1),
-  );
+  // On one line, cut where the count, set at its end, leaves it.
+  const room = Math.max(1, width - reserve);
   const line: ViewCell[] = [];
   let used = 0;
 
@@ -216,7 +212,7 @@ export function workHead(
     break;
   }
 
-  return [name, [...line, ...tail]];
+  return [name, line];
 }
 
 /**

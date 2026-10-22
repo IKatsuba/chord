@@ -11,6 +11,7 @@ import {
   costFromTokens,
   ENRICHERS,
   modeReadBack,
+  rawOutputContent,
   SUBAGENT_DRAFT,
   subagentShape,
   toolCallFacts,
@@ -1387,5 +1388,110 @@ describe('CHD-419 tester: optional wrapper arguments and replay', () => {
 
       expect(updates(update(sent))).toEqual([sent]);
     }
+  });
+});
+
+describe("a result sent only as rawOutput is filled in as the call's content (CHD-440)", () => {
+  const { update } = relayOn([rawOutputContent]);
+  const done = (
+    rawOutput: unknown,
+    more: Partial<
+      Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>
+    > = {},
+  ) =>
+    updates(
+      update({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call-1',
+        status: 'completed',
+        rawOutput,
+        ...more,
+      }),
+    )[0] as
+      Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }> | undefined;
+  const text = (said: string) => [
+    {
+      type: 'content' as const,
+      content: { type: 'text' as const, text: said },
+    },
+  ];
+
+  test('a string is its text', () => {
+    expect(done('built in 3s\n')).toStrictEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'completed',
+      rawOutput: 'built in 3s\n',
+      content: text('built in 3s\n'),
+      _meta: { [FILLED]: ['content'] },
+    });
+  });
+
+  test("cursor's shell: stdout then stderr; a non-zero exitCode fails the call", () => {
+    const shell = { exitCode: 0, stdout: 'ok 1\nok 2\n', stderr: 'warn\n' };
+
+    expect(done(shell)).toMatchObject({
+      status: 'completed',
+      content: text('ok 1\nok 2\nwarn'),
+      _meta: { [FILLED]: ['content'] },
+    });
+    expect(done({ ...shell, exitCode: 2 })).toMatchObject({
+      status: 'failed',
+      content: text('ok 1\nok 2\nwarn'),
+      _meta: { [FILLED]: ['content', 'status'] },
+    });
+    // Nothing printed, yet failed: the status alone.
+    expect(done({ exitCode: 1, stdout: '', stderr: '' })).toStrictEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'failed',
+      rawOutput: { exitCode: 1, stdout: '', stderr: '' },
+      _meta: { [FILLED]: ['status'] },
+    });
+  });
+
+  test("auggie's output and bob's result are their text; any other object its JSON", () => {
+    expect(done({ output: 'file text' })?.content).toStrictEqual(
+      text('file text'),
+    );
+    expect(done({ result: 'done' })?.content).toStrictEqual(text('done'));
+    expect(done({ files: ['a.ts'], count: 1 })?.content).toStrictEqual(
+      text('{\n  "files": [\n    "a.ts"\n  ],\n  "count": 1\n}'),
+    );
+    expect(done([1, 2])?.content).toStrictEqual(text('[\n  1,\n  2\n]'));
+  });
+
+  test('a running call is filled too, so its output shows as it comes', () => {
+    expect(done('line 1', { status: 'in_progress' })?.content).toStrictEqual(
+      text('line 1'),
+    );
+  });
+
+  test('content the agent sent stays, and a call with no rawOutput passes as it came', () => {
+    const own: SessionUpdate = {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'completed',
+      content: text('its own'),
+      rawOutput: { stdout: 'other' },
+    } as SessionUpdate;
+    const bare: SessionUpdate = {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'completed',
+    };
+
+    expect(updates(update(own))).toStrictEqual([own]);
+    expect(updates(update(bare))).toStrictEqual([bare]);
+    expect(done('')).toStrictEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-1',
+      status: 'completed',
+      rawOutput: '',
+    });
+  });
+
+  test('it runs in the chain every session gets', () => {
+    expect(ENRICHERS).toContain(rawOutputContent);
   });
 });

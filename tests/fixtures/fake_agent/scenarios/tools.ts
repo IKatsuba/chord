@@ -211,6 +211,46 @@ export const TOOLS = {
     return 'end_turn';
   },
 
+  // Results sent only as rawOutput, with no content, one call per shape the
+  // agents send (CHD-440): a string, cursor's shell ending 0 and 1,
+  // auggie's {output}, bob's {result}, and an object of no known shape.
+  async rawoutputs(turn) {
+    const calls: readonly [string, unknown][] = [
+      ['Run date', 'Thu Oct 22 12:00:00 UTC 2026\n'],
+      ['Run npm test', { exitCode: 0, stdout: 'ok 1\nok 2\n', stderr: '' }],
+      [
+        'Run npm run lint',
+        { exitCode: 1, stdout: '', stderr: 'src/a.ts:3 unused x\n' },
+      ],
+      ['View src/a.ts', { output: 'const x = 1;' }],
+      ['Run make', { result: 'built 3 targets' }],
+      ['Search TODO', { matches: 2, files: ['a.ts', 'b.ts'] }],
+    ];
+
+    for (const [title, rawOutput] of calls) {
+      const id = turn.callId('raw');
+
+      await turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId: id,
+        title,
+        kind: 'execute',
+        status: 'in_progress',
+        rawInput: { command: title },
+      });
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: id,
+        status: 'completed',
+        rawOutput,
+      });
+    }
+
+    await turn.say('Ran them.');
+
+    return 'end_turn';
+  },
+
   // Calls as a screen shows them: long output, a long command that stays in
   // progress long enough to look at, and one that fails.
   async calls(turn) {

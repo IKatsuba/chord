@@ -290,3 +290,55 @@ describe('CHD-434 U1 tester: agent exit after eligibility', () => {
     }
   });
 });
+
+test("-p reads a result sent only as rawOutput as the call's content, its reply still the agent's words alone (CHD-440)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-oneshot-raw-'));
+  const updates: SessionUpdate[] = [];
+
+  try {
+    const outcome = await runOneshot({
+      agent: 'fake',
+      cwd: dir,
+      prompt: 'rawoutputs',
+      agentCommand: fakeAgentCommand(),
+      onUpdate: (update) => {
+        updates.push(update);
+      },
+      onRefused: () => {},
+      onDeclined: () => {},
+    });
+    const ended = updates.flatMap((update) =>
+      update.sessionUpdate === 'tool_call_update' &&
+      update.status !== 'in_progress'
+        ? [
+            {
+              status: update.status,
+              text: update.content?.map((each) =>
+                each.type === 'content' && each.content.type === 'text'
+                  ? each.content.text
+                  : '',
+              ),
+            },
+          ]
+        : [],
+    );
+
+    expect(outcome.result).toMatchObject({ status: 'completed' });
+    expect(ended).toStrictEqual([
+      { status: 'completed', text: ['Thu Oct 22 12:00:00 UTC 2026\n'] },
+      { status: 'completed', text: ['ok 1\nok 2'] },
+      { status: 'failed', text: ['src/a.ts:3 unused x'] },
+      { status: 'completed', text: ['const x = 1;'] },
+      { status: 'completed', text: ['built 3 targets'] },
+      {
+        status: 'completed',
+        text: [
+          '{\n  "matches": 2,\n  "files": [\n    "a.ts",\n    "b.ts"\n  ]\n}',
+        ],
+      },
+    ]);
+    expect(said(updates).join('')).toBe('Ran them.');
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});

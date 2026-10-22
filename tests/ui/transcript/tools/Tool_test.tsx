@@ -28,6 +28,27 @@ import { readFile } from 'node:fs/promises';
 import { serveChord } from '../../../../src/server/server.ts';
 import { join } from 'node:path';
 
+test("a call whose result came only as rawOutput draws it: a string, a shell's output and its failure, an object's JSON (CHD-440)", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'rawoutputs');
+      await window.shows('Ran them.');
+
+      const frame = window.frame();
+
+      expect(frame).toContain('⎿  Thu Oct 22 12:00:00 UTC 2026');
+      expect(frame).toContain('⎿  ok 1');
+      expect(frame).toContain('   ok 2');
+      // Failed, by its exit code, in words as any failed call is.
+      expect(frame).toContain('⎿  Error: src/a.ts:3 unused x');
+      expect(frame).toContain('⎿  const x = 1;');
+      expect(frame).toContain('⎿  built 3 targets');
+      expect(frame).toContain('⎿  {');
+      expect(frame).toContain('"files": [');
+    },
+    { rows: 60 },
+  ));
+
 test('tool calls draw their status, their output and a failure', () =>
   withWindow(async (window) => {
     await send(window, 'calls');

@@ -2161,3 +2161,95 @@ describe('CHD-437 U1 tester: plans replay without granting fresh acceptance', ()
       ]);
     }));
 });
+
+describe('a result sent only as rawOutput in the record (CHD-440)', () => {
+  /** Each tool call's content text, as `entries` replay into a transcript. */
+  const drawn = (entries: readonly RecordEntry[]) =>
+    recordActions(entries)
+      .reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      )
+      .entries.flatMap((entry) =>
+        entry.kind === 'tool'
+          ? [
+              (entry.call.content ?? []).map((each) =>
+                each.type === 'content' && each.content.type === 'text'
+                  ? each.content.text
+                  : each.type,
+              ),
+            ]
+          : [],
+      );
+
+  test('the record keeps it as content, filled in, and draws it again', () =>
+    withDir(async (dir) => {
+      await recordSession({
+        stateDir: join(dir, 'state'),
+        cwd: dir,
+        command: fakeAgentCommand(),
+        prompts: ['rawoutputs'],
+      });
+
+      const entries = await readPast((await theRecord(dir)).path);
+      const filled = entries.flatMap((entry) =>
+        entry.type === 'update' &&
+        entry.update.sessionUpdate === 'tool_call_update' &&
+        entry.update.status !== 'in_progress'
+          ? [
+              // Beside the title and kind `toolCallFacts` carries over.
+              (entry.update._meta?.['chord/filled'] as string[]).filter(
+                (field) => field === 'content' || field === 'status',
+              ),
+            ]
+          : [],
+      );
+
+      expect(filled).toStrictEqual([
+        ['content'],
+        ['content'],
+        ['content', 'status'],
+        ['content'],
+        ['content'],
+        ['content'],
+      ]);
+      expect(drawn(entries)[2]).toStrictEqual(['src/a.ts:3 unused x']);
+    }));
+
+  test('an older record, written before it was filled in, draws as it did', () => {
+    const entries: RecordEntry[] = [
+      { type: 'prompt', turnId: 't1', prompt: 'run', images: 0, at: 1 },
+      {
+        type: 'update',
+        turnId: 't1',
+        at: 2,
+        update: {
+          sessionUpdate: 'tool_call',
+          toolCallId: 'c1',
+          title: 'Run npm test',
+          kind: 'execute',
+          status: 'in_progress',
+        },
+      },
+      {
+        type: 'update',
+        turnId: 't1',
+        at: 3,
+        update: {
+          sessionUpdate: 'tool_call_update',
+          toolCallId: 'c1',
+          status: 'completed',
+          rawOutput: { exitCode: 0, stdout: 'ok 1\n' },
+        },
+      },
+      {
+        type: 'result',
+        turnId: 't1',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+    ];
+
+    expect(drawn(entries)).toStrictEqual([[]]);
+  });
+});

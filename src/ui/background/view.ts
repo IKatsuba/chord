@@ -10,7 +10,7 @@ import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
 import { endSentence, endWord, timeoutWords } from '../../session/monitors.ts';
 import type { Subagent } from '../../session/transcript/types.ts';
-import { requestStep, requestView } from '../dialogs/permission.ts';
+import { hiddenRows, requestStep, requestView } from '../dialogs/permission.ts';
 import { toolUses } from '../transcript/agents/subagents.ts';
 import type { ScrollStep } from '../transcript/scroll.ts';
 import { wrapLine } from '../transcript/message.ts';
@@ -128,8 +128,11 @@ export function logStep(
   }
 
   const next = requestStep(step, total, room, top);
+  const view = requestView(total, room, next);
 
-  return requestView(total, room, next).below ? next : FOLLOWING;
+  // The rows still below, not whether a rule says so: a room of one row has
+  // none to draw it in (CHD-464), as CHD-481's detail found.
+  return hiddenRows(total, view.top, view.shown).below > 0 ? next : FOLLOWING;
 }
 
 /**
@@ -241,8 +244,24 @@ export function stateText(
       };
     default: {
       // An item is drawn once ended only in its detail, until the person
-      // leaves it (Q126, Q136); a row leaves as it ends (CHD-482).
+      // leaves it (Q126, Q136); a row leaves as it ends (CHD-482). An
+      // agent's and a task's end in CHD-2's and CHD-424's words (CHD-487).
       const ran = after(status.endedAt - item.startedAt);
+
+      if (item.kind !== 'monitor') {
+        return {
+          text:
+            status.group === 'stopped'
+              ? `■ ${status.word ?? 'stopped'} after ${ran}`
+              : status.group === 'done'
+                ? item.kind === 'agent'
+                  ? `✓ done in ${ran}`
+                  : `✓ reported after ${ran}`
+                : `✗ ${status.word ?? 'failed'} after ${ran}`,
+          group: status.group,
+        };
+      }
+
       const word =
         status.end === undefined ? status.group : endWord(status.end);
 

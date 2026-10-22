@@ -78,6 +78,11 @@ export type ItemStatus =
       readonly endedAt: number;
       /** A monitor's end, which its row words. */
       readonly end?: MonitorEnd;
+      /**
+       * An agent's end that its group does not word: no cause seen, or its
+       * agent gone (CHD-2), said in its detail (CHD-487).
+       */
+      readonly word?: 'ended' | 'disconnected';
     };
 
 /** Whose an item is: a child's or member's name and colour; none for `main`. */
@@ -433,11 +438,11 @@ function agentStatus(
     case 'failed':
       return { group: 'failed', endedAt };
     case 'disconnected':
-      return { group: 'failed', endedAt };
+      return { group: 'failed', endedAt, word: 'disconnected' };
     case 'cancelled':
       return { group: 'stopped', endedAt };
     case 'ended':
-      return { group: 'stopped', endedAt };
+      return { group: 'stopped', endedAt, word: 'ended' };
     case 'untracked':
       return { group: 'untracked', endedAt };
   }

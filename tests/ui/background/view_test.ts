@@ -1317,3 +1317,72 @@ describe("an agent's or a task's detail (CHD-487)", () => {
     ).toBe(true);
   });
 });
+
+describe("an agent's or a task's detail: reviewer's edges (CHD-487)", () => {
+  test('in a room of one row or two, the log still pages away from its end, home goes to its top, and end or reaching the end follows again', () => {
+    for (const room of [1, 2]) {
+      const up = logStep('page_up', 30, room, FOLLOWING);
+
+      expect(up).not.toBe(FOLLOWING);
+      expect(logStep('top', 30, room, FOLLOWING)).toBe(0);
+      expect(logStep('bottom', 30, room, 0)).toBe(FOLLOWING);
+
+      // Paged down one row at a time, it follows again on its last.
+      let at = 0;
+
+      while (at !== FOLLOWING) {
+        at = logStep('line_down', 30, room, at);
+      }
+
+      expect(at).toBe(FOLLOWING);
+    }
+  });
+
+  const ended = (
+    kind: 'agent' | 'task',
+    group: 'done' | 'failed' | 'stopped',
+    word?: 'ended' | 'disconnected',
+  ): BackgroundItem => ({
+    kind,
+    id: 'a',
+    key: 1,
+    name: 'x',
+    startedAt: NOW - 124_000,
+    status: { group, endedAt: NOW, ...(word === undefined ? {} : { word }) },
+  });
+
+  test("an agent's end reads as CHD-2's table, a task's as CHD-424's; a monitor's as it did", () => {
+    expect(
+      [
+        ended('agent', 'done'),
+        ended('agent', 'failed'),
+        ended('agent', 'failed', 'disconnected'),
+        ended('agent', 'stopped'),
+        ended('agent', 'stopped', 'ended'),
+        ended('task', 'done'),
+        ended('task', 'failed'),
+        ended('task', 'stopped'),
+      ].map((item) => stateText(item, NOW).text),
+    ).toStrictEqual([
+      '✓ done in 2m 4s',
+      '✗ failed after 2m 4s',
+      '✗ disconnected after 2m 4s',
+      '■ stopped after 2m 4s',
+      '■ ended after 2m 4s',
+      '✓ reported after 2m 4s',
+      '✗ failed after 2m 4s',
+      '■ stopped after 2m 4s',
+    ]);
+    expect(
+      stateText(
+        monitor(
+          'm1',
+          'CI',
+          { group: 'failed', endedAt: NOW, end: { kind: 'exit', code: 1 } },
+          { startedAt: NOW - 192_000, events: 3 },
+        ),
+        NOW,
+      ).text,
+    ).toBe('✗ exit code 1 after 3m 12s · 3 events');
+  });
+});

@@ -374,3 +374,39 @@ describe('CHD-472 U1 tester: late costs retain total-token meaning', () => {
     });
   });
 });
+
+test("on an agent that gives running totals and no cost, a turn on a model chord has no price for is not counted, with its model; another agent's is a turn of nothing, as before (CHD-472)", () => {
+  const estimate = (amount: number): SessionUpdate => ({
+    sessionUpdate: 'usage_update',
+    used: 1,
+    size: 2,
+    cost: { amount, currency: 'USD' },
+    _meta: { 'chord/filled': ['cost'] },
+  });
+  const tokens = { inputTokens: 1000, outputTokens: 200, totalTokens: 1200 };
+  const totals = new TurnCosts('session', false, [], 'session');
+
+  totals.began('t1');
+  totals.heard('t1', estimate(0.004));
+  expect(totals.ended('t1', tokens, 'gpt-5.3-codex')).toMatchObject({
+    cost: { amount: 0.004 },
+    estimated: true,
+  });
+  totals.began('t2');
+  expect(totals.ended('t2', tokens, 'fake-unpriced')).toStrictEqual({
+    turnId: 't2',
+    usage: tokens,
+    total: true,
+    model: 'fake-unpriced',
+    uncounted: true,
+  });
+
+  const own = new TurnCosts('session', false, []);
+
+  own.began('t1');
+  expect(own.ended('t1', tokens, 'fake-unpriced')).toStrictEqual({
+    turnId: 't1',
+    usage: tokens,
+    model: 'fake-unpriced',
+  });
+});

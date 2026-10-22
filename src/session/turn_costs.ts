@@ -264,12 +264,9 @@ export class TurnCosts {
   }
 
   #figures(turn: CostTurn, always: boolean): TurnFigures | undefined {
-    const cost = costOfTurn(
-      this.#opening,
-      turn.before,
-      turn.tokens,
-      turn.model,
-    );
+    const cost = this.#unpriced(turn)
+      ? { uncounted: true as const }
+      : costOfTurn(this.#opening, turn.before, turn.tokens, turn.model);
     const said = JSON.stringify(cost);
 
     if (!always && said === (turn.reported ?? JSON.stringify({}))) {
@@ -285,6 +282,24 @@ export class TurnCosts {
       ...(turn.model === undefined ? {} : { model: turn.model }),
       ...cost,
     };
+  }
+
+  /**
+   * A turn of an agent that gives running totals and no cost of its own,
+   * on a model chord has no price for: chord's estimate leaves it out, so it
+   * is a turn not counted (CHD-472).
+   */
+  #unpriced(turn: CostTurn): boolean {
+    const seen = this.#opening.seen;
+
+    return (
+      this.#total &&
+      turn.tokens !== undefined &&
+      turn.model !== undefined &&
+      (seen === undefined || seen.estimated) &&
+      seen === turn.before &&
+      turnCost(turn.model, turn.tokens) === undefined
+    );
   }
 
   #totalMark(): { total?: true } {

@@ -903,3 +903,34 @@ test("the Total says once that dirac's provider reports no cost, however many di
     /^Total\s+not reported\s+6,000 {2}gemini not reported; dirac's provider reports no cost$/,
   );
 });
+
+test('a dirac row with some answering models unpriced: the estimate of the rest, its note naming the models with no price (CHD-472)', () => {
+  const row = lines(
+    [
+      {
+        name: '1 dirac',
+        kind: 'tab',
+        parts: [
+          {
+            name: 'main',
+            kind: 'main',
+            agent: 'dirac',
+            figure: {
+              cost: USD(0.0047),
+              estimated: 'all',
+              models: ['gpt-5.3-codex'],
+              tokens: 6000,
+              uncounted: 2,
+              totals: { model: 'fake-large', unpriced: ['fake-large'] },
+            },
+          },
+        ],
+      },
+    ],
+    200,
+  ).find((line) => line.startsWith('1 dirac'));
+
+  expect(row).toMatch(
+    /~\$0\.0047\s+6,000 {2}dirac's provider reports no cost; chord's estimate from its models' prices; no price for fake-large$/,
+  );
+});

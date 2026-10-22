@@ -475,3 +475,88 @@ describe('CHD-472: /cost on an agent that gives running totals', () => {
     ]);
   });
 });
+
+describe("CHD-472: /cost when some of dirac's answering models have no price", () => {
+  const usd = (amount: number) => ({ amount, currency: 'USD' });
+  const MIXED: ReportFacts = {
+    ...FACTS,
+    agent: 'dirac',
+    since: undefined,
+    models: {
+      available: [
+        { id: 'gpt-5.3-codex', name: 'GPT-5.3 Codex' },
+        { id: 'fake-large', name: 'Fake Large' },
+        { id: 'fake-small', name: 'Fake Small' },
+      ],
+    },
+  };
+
+  test("what was priced is chord's estimate, the turns left out are not counted, and the line names the model with no price", () => {
+    expect(
+      text(
+        costReport({
+          ...MIXED,
+          spent: {
+            turns: {},
+            total: { totalTokens: 6000 },
+            totalModel: 'fake-large',
+            costs: {
+              a: { cost: usd(0.0047), estimated: true, model: 'gpt-5.3-codex' },
+              b: { uncounted: true, model: 'fake-large' },
+              c: { uncounted: true, model: 'fake-large' },
+            },
+          },
+        }),
+      ),
+    ).toStrictEqual([
+      "Total cost:  $0.0047 (chord's estimate)",
+      'Not counted: 2 turns',
+      'Tokens:      6,000',
+      "dirac reports these as the session's running total; chord shows the last it sent.",
+      "dirac's provider reports no cost, so chord priced each answer's tokens at the price of the model that gave it; it has no price for Fake Large.",
+    ]);
+  });
+
+  test('several models with no price are named in the order they first answered', () => {
+    const [, , , , line] = text(
+      costReport({
+        ...MIXED,
+        spent: {
+          turns: {},
+          total: { totalTokens: 6000 },
+          costs: {
+            a: { uncounted: true, model: 'fake-small' },
+            b: { cost: usd(0.0047), estimated: true, model: 'gpt-5.3-codex' },
+            c: { uncounted: true, model: 'fake-large' },
+            d: { uncounted: true, model: 'fake-small' },
+          },
+        },
+      }),
+    );
+
+    expect(line).toEndWith('it has no price for Fake Small and Fake Large.');
+  });
+
+  test('with no model priced at all, the cell says so and no turn is said not counted', () => {
+    expect(
+      text(
+        costReport({
+          ...MIXED,
+          spent: {
+            turns: {},
+            total: { totalTokens: 6000 },
+            totalModel: 'fake-large',
+            costs: {
+              a: { uncounted: true, model: 'fake-large' },
+              b: { uncounted: true, model: 'fake-large' },
+            },
+          },
+        }),
+      ),
+    ).toStrictEqual([
+      "Total cost: not reported: dirac's provider reports none, and chord has no price for Fake Large",
+      'Tokens:     6,000',
+      "dirac reports these as the session's running total; chord shows the last it sent.",
+    ]);
+  });
+});

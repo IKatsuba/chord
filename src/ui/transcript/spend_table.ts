@@ -58,17 +58,23 @@ function figureNotes(figure: Figure | undefined, runtime?: string): string[] {
       ? `${runtime ?? 'its agent'}'s provider reports no cost; `
       : '';
 
+  const unpriced = figure?.totals?.unpriced ?? [];
+
   if (figure?.estimated === 'all') {
     const [model, ...more] = figure.models ?? [];
 
     notes.push(
       none +
-        (model !== undefined && more.length === 0
-          ? `chord's estimate from ${model}'s price`
-          : "chord's estimate from its models' prices"),
+        (unpriced.length > 0
+          ? `chord's estimate from its models' prices; no price for ${unpriced.join(' and ')}`
+          : model !== undefined && more.length === 0
+            ? `chord's estimate from ${model}'s price`
+            : "chord's estimate from its models' prices"),
     );
   } else if (figure?.totals !== undefined && figure.cost === undefined) {
-    notes.push(`${none}no price for ${figure.totals.model ?? 'its model'}`);
+    notes.push(
+      `${none}no price for ${figure.totals.unpriced?.join(' and ') ?? figure.totals.model ?? 'its model'}`,
+    );
   } else if (figure?.estimated === 'part') {
     notes.push("part chord's estimate");
   }
@@ -83,7 +89,13 @@ function figureNotes(figure: Figure | undefined, runtime?: string): string[] {
     );
   }
 
-  if (figure?.uncounted !== undefined && figure.uncounted > 0) {
+  // An agent that gives running totals says what it left out by the
+  // models chord has no price for (CHD-472).
+  if (
+    figure?.uncounted !== undefined &&
+    figure.uncounted > 0 &&
+    figure.totals === undefined
+  ) {
     notes.push(
       `${figure.uncounted} ${figure.uncounted === 1 ? 'turn' : 'turns'} not counted`,
     );

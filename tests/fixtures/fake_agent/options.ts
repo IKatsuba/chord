@@ -39,6 +39,15 @@ export const SESSION_USAGE =
 export const NO_COST =
   ARGS.includes('--no-cost') || process.env.CHORD_FAKE_NO_COST === '1';
 
+/**
+ * `--unpriced-model`, or `CHORD_FAKE_UNPRICED_MODEL=1`: with
+ * `--tokens-only`'s real models, one more chord's price data does not know,
+ * `fake-unpriced`, to switch to mid-session (CHD-472).
+ */
+export const UNPRICED_MODEL =
+  ARGS.includes('--unpriced-model') ||
+  process.env.CHORD_FAKE_UNPRICED_MODEL === '1';
+
 export const NO_IMAGES =
   ARGS.includes('--no-images') || process.env.CHORD_FAKE_NO_IMAGES === '1';
 

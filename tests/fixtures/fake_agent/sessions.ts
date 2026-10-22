@@ -11,6 +11,7 @@ import {
   NO_CONFIG,
   NO_MODES,
   TOKENS_ONLY,
+  UNPRICED_MODEL,
 } from './options.ts';
 
 /** Each session's working directory, which its commands run in. */
@@ -68,6 +69,9 @@ export const AVAILABLE_MODELS = TOKENS_ONLY
       { value: 'claude-haiku-4-5', name: 'Claude Haiku 4.5' },
       { value: 'claude-opus-5-5', name: 'Claude Opus 5.5' },
       { value: 'gpt-6.1-sol', name: 'GPT-6.1 Sol' },
+      ...(UNPRICED_MODEL
+        ? [{ value: 'fake-unpriced', name: 'Fake Unpriced' }]
+        : []),
     ]
   : [
       { value: 'fake-large', name: 'Fake Large with a 1M context window' },

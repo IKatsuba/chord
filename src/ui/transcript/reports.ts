@@ -238,10 +238,16 @@ function totalsLines(
 
   const { agent } = facts;
   const [model, ...more] = figure.models ?? [];
+  const unpriced = figure.totals.unpriced ?? [];
   const price =
-    model !== undefined && more.length === 0
-      ? `${modelNamed(facts, model)}'s price`
-      : "its models' prices";
+    unpriced.length > 0
+      ? `the price of the model that gave it; it has no price for ${unpriced
+          .map((each) => modelNamed(facts, each))
+          .join(' and ')}`
+      : model !== undefined && more.length === 0
+        ? `${modelNamed(facts, model)}'s price`
+        : "its models' prices";
+  const tokens = unpriced.length > 0 ? "each answer's tokens" : 'these tokens';
 
   return [
     {
@@ -250,7 +256,7 @@ function totalsLines(
     ...(figure.estimated === 'all'
       ? [
           {
-            text: `${agent}'s provider reports no cost, so chord priced these tokens at ${price}.`,
+            text: `${agent}'s provider reports no cost, so chord priced ${tokens} at ${price}.`,
           },
         ]
       : []),
@@ -265,7 +271,7 @@ function sessionReport(facts: ReportFacts): ReportRow[] {
   // price for: both reasons, in the cost's cell (CHD-472).
   const unpriced =
     figure?.totals !== undefined && figure.cost === undefined
-      ? `not reported: ${facts.agent}'s provider reports none, and chord has no price for ${modelNamed(facts, figure.totals.model ?? facts.models?.current)}`
+      ? `not reported: ${facts.agent}'s provider reports none, and chord has no price for ${(figure.totals.unpriced ?? [figure.totals.model ?? facts.models?.current]).map((each) => modelNamed(facts, each)).join(' and ')}`
       : undefined;
   const cost =
     figure?.cost === undefined
@@ -287,7 +293,9 @@ function sessionReport(facts: ReportFacts): ReportRow[] {
             `${formatCost(figure.before.cost)} as last reported`,
           ] as [string, string],
         ]),
-    ...(figure?.uncounted === undefined
+    // Turns no model's price counted, on an agent that gives running totals
+    // and no cost at all, are said in the cost's cell instead (CHD-472).
+    ...(figure?.uncounted === undefined || unpriced !== undefined
       ? []
       : [
           [

@@ -42,7 +42,14 @@ export interface Figure {
    * Its figures are the running totals its agent last gave, not turns added
    * up (CHD-472); the model the last came on, where it said.
    */
-  readonly totals?: { readonly model?: string };
+  readonly totals?: {
+    readonly model?: string;
+    /**
+     * The models chord had no price for, whose turns its estimate left out,
+     * in the order they first answered.
+     */
+    readonly unpriced?: readonly string[];
+  };
 }
 
 /** A turn's tokens, or a session's, in all: the total, else each kind. */
@@ -60,6 +67,22 @@ export function tokensIn(tokens: TokenUsage | undefined): number | undefined {
   );
 
   return each.length === 0 ? undefined : each.reduce((a, b) => a + b, 0);
+}
+
+/** What a session of an agent that gives running totals says of its figures. */
+function totalsOf(spent: Spent): NonNullable<Figure['totals']> {
+  const unpriced = [
+    ...new Set(
+      Object.values(spent.costs ?? {}).flatMap((each) =>
+        each.uncounted === true && each.model !== undefined ? [each.model] : [],
+      ),
+    ),
+  ];
+
+  return {
+    ...(spent.totalModel === undefined ? {} : { model: spent.totalModel }),
+    ...(unpriced.length === 0 ? {} : { unpriced }),
+  };
 }
 
 /** `estimated` of `some` out of `of` costs. */
@@ -110,12 +133,7 @@ export function sessionFigure(spent: Spent | undefined): Figure | undefined {
     ...(tokens === undefined ? {} : { tokens }),
     ...(uncounted === 0 ? {} : { uncounted }),
     ...(models.length === 0 ? {} : { models }),
-    ...(spent?.total === undefined
-      ? {}
-      : {
-          totals:
-            spent.totalModel === undefined ? {} : { model: spent.totalModel },
-        }),
+    ...(spent?.total === undefined ? {} : { totals: totalsOf(spent) }),
     ...(before?.cost === undefined
       ? {}
       : {

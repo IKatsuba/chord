@@ -19,9 +19,13 @@ export const BUDGET_MS = 90_000;
 
 /**
  * How far a file's time may move from its record before the record is
- * stale (Q149): by this share of it and by this many ms, both.
+ * stale (Q149): by this share of it and by this many ms, both. Three
+ * whole runs of one commit, here on 12 workers, moved a file by up to
+ * 14.8 s (headless_test, 20.7 to 35.5 s) and by 3.3 s at the median of
+ * the files of 5 s or more: 10 s failed two of the three on that alone,
+ * so the ms is 20 s, past the widest with room (CHD-501).
  */
-export const MOVED = { share: 0.35, ms: 10_000 } as const;
+export const MOVED = { share: 0.35, ms: 20_000 } as const;
 
 /** Each test file's time, in ms, by its path from the repository's root. */
 export type Timings = Readonly<Record<string, number>>;

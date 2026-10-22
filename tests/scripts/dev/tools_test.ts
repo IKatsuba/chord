@@ -161,6 +161,22 @@ describe("the suite's timings (CHD-501)", () => {
     expect(io.said.join('\n')).toContain(`${A}  91.0 s`);
   });
 
+  test('a run whose tests pass and whose timings fail says it is the timings, last', () => {
+    const io = files({ [A]: 85_000 }, { [A]: 91_000 });
+
+    expect(suite([], faked().run, io)).toBe(1);
+    expect(io.said.at(-1)).toBe(
+      'timings: the tests passed; their timings fail the check',
+    );
+
+    const failing = files({ [A]: 85_000 }, { [A]: 91_000 });
+
+    expect(suite([], faked([2]).run, failing)).toBe(2);
+    expect(failing.said).not.toContain(
+      'timings: the tests passed; their timings fail the check',
+    );
+  });
+
   test('a file moved far from its record, one unrecorded and one gone fail it, with the way to refresh', () => {
     const { run } = faked();
     const io = files(
@@ -223,7 +239,10 @@ describe("the suite's timings (CHD-501)", () => {
       const io = files({ [A]: 20_000 }, measured);
 
       expect(suite([], faked().run, io)).toBe(1);
-      expect(io.said).toStrictEqual([`timings: ${words}`]);
+      expect(io.said).toStrictEqual([
+        `timings: ${words}`,
+        'timings: the tests passed; their timings fail the check',
+      ]);
     }
   });
 

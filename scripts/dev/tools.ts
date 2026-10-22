@@ -168,7 +168,16 @@ export function test(
     failed = true;
   }
 
-  return status !== 0 ? status : failed ? 1 : 0;
+  if (status !== 0) {
+    return status;
+  }
+
+  // Said apart, as a check that fails here has passing tests (CHD-501).
+  if (failed) {
+    files.say('timings: the tests passed; their timings fail the check');
+  }
+
+  return failed ? 1 : 0;
 }
 
 /** ESLint over the tree, `args` passed on. */
@@ -204,7 +213,7 @@ export function check(
     ["lint/'s tests", () => run([process.execPath, 'test', 'lint/'])],
     ...(only.static === true
       ? []
-      : [['the tests', () => test([], run, files)] as [string, () => number]]),
+      : [['the suite', () => test([], run, files)] as [string, () => number]]),
   ];
 
   for (const [name, step] of steps) {

@@ -81,8 +81,9 @@ function relayOn(
   enrichers: Parameters<typeof enricherRelay>[0],
   configOptions: SessionConfigOption[] = [modelOption('gpt-5.3-codex')],
   extra: Record<string, unknown> = {},
+  totals = false,
 ) {
-  const relay = enricherRelay(enrichers);
+  const relay = enricherRelay(enrichers, totals);
   let id = 0;
 
   const ask = (method: string, params: unknown, result: unknown) => {
@@ -149,6 +150,25 @@ test("a turn priced from its tokens goes ahead of its answer, marked as chord's"
       _meta: { [FILLED]: ['used', 'cost', 'size'] },
     },
   ]);
+});
+
+test("an agent whose answers give the session's running total is priced whole from the last, never added up (CHD-472)", () => {
+  const { prompt } = relayOn([costFromTokens], undefined, {}, true);
+  const twice = Object.fromEntries(
+    Object.entries(TOKENS).map(([field, count]) => [field, count * 2]),
+  );
+  const amount = (out: readonly AnyMessage[]) => {
+    const [update] = updates(out);
+
+    return update?.sessionUpdate === 'usage_update'
+      ? update.cost?.amount
+      : undefined;
+  };
+
+  expect(amount(prompt(TOKENS))).toStrictEqual(
+    turnCost('gpt-5.3-codex', TOKENS),
+  );
+  expect(amount(prompt(twice))).toStrictEqual(turnCost('gpt-5.3-codex', twice));
 });
 
 test("each turn adds to the estimate, and an agent's own cost stops it", () => {

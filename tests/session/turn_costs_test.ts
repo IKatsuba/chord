@@ -237,6 +237,30 @@ test("a turn's figures as it ends: its tokens, its own cost and the model it end
   });
 });
 
+test("an agent whose answers give the session's running total has each turn's figures marked so; another's are not (CHD-472)", () => {
+  const totals = new TurnCosts('session', false, [], 'session');
+
+  totals.began('t1');
+  totals.heard('t1', update(0.01));
+  expect(totals.ended('t1', { totalTokens: 5 }, 'm')).toStrictEqual({
+    turnId: 't1',
+    usage: { totalTokens: 5 },
+    total: true,
+    model: 'm',
+    cost: { amount: 0.01, currency: 'USD' },
+  });
+  expect(totals.ended('t0', { totalTokens: 1 }, 'm')).toStrictEqual({
+    turnId: 't0',
+    usage: { totalTokens: 1 },
+    total: true,
+  });
+
+  const own = new TurnCosts('session', false, []);
+
+  own.began('t1');
+  expect(own.ended('t1', { totalTokens: 5 }, 'm')).not.toHaveProperty('total');
+});
+
 test("a cost that comes after its turn's end is still that turn's, said again; after the next began, the next's", () => {
   const costs = new TurnCosts('opening', false, []);
 

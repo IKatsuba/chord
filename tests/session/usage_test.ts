@@ -68,3 +68,31 @@ test("a turn's own cost is kept by its turn, replaced when said again, and a tur
     turns: { a: { inputTokens: 5 } },
   });
 });
+
+test("a running total replaces the session's total and keeps no turn of its own; the turn's cost is kept as any is (CHD-472)", () => {
+  const usd = (amount: number) => ({ amount, currency: 'USD' });
+  let spent = addTurn(
+    undefined,
+    't1',
+    { inputTokens: 10 },
+    { cost: usd(1) },
+    true,
+  );
+
+  spent = addTurn(spent, 't2', { inputTokens: 25 }, { cost: usd(2) }, true);
+  // An answer with no tokens leaves the total as it was.
+  spent = addTurn(spent, 't3', {}, {}, true);
+
+  expect(spent.total).toStrictEqual({ inputTokens: 25 });
+  expect(spent.turns).toStrictEqual({});
+  expect(Object.keys(spent.costs ?? {})).toStrictEqual(['t1', 't2']);
+  expect(sessionTokens(spent)).toStrictEqual({ inputTokens: 25 });
+  // Another agent's turns still add up.
+  expect(
+    sessionTokens(
+      addTurn(addTurn(undefined, 't1', { inputTokens: 10 }), 't2', {
+        inputTokens: 25,
+      }),
+    ),
+  ).toStrictEqual({ inputTokens: 35 });
+});

@@ -41,6 +41,8 @@
  * `CHORD_FAKE_LATE_COST=1`, the `usage_update` comes after the answer, as
  * Claude's adapter can send it.
  * `--cost-at-next` holds it for the session's next prompt instead.
+ * `--session-usage` makes each answer's tokens the session's running total,
+ * as dirac's are, and `--no-cost` leaves the cost out of the update.
  * `--cycle-cost <usd>` adds that to the session's cost on the usage update
  * that ends a Claude cycle, and `--cycle-on-resume` runs one in a session
  * resumed (CHD-373).
@@ -257,7 +259,9 @@ import {
   MCP_TRANSPORTS,
   NO_IMAGES,
   NO_MODES,
+  NO_COST,
   NO_USAGE,
+  SESSION_USAGE,
   REFUSE_CONFIG,
   RESUME_ONLY,
   NO_LOAD,
@@ -706,15 +710,24 @@ const reported = new Map<string, number>();
  * totals so far in a `usage_update`, the turn's own tokens in the answer.
  */
 async function reportUsage(turn: Turn): Promise<void> {
-  if (TOKENS_ONLY) {
-    turn.usage = TURN_USAGE;
-
-    return;
-  }
-
   const count = (reported.get(turn.sessionId) ?? 0) + 1;
 
   reported.set(turn.sessionId, count);
+
+  // The session's running total, every turn so far, with `--session-usage`.
+  const times = SESSION_USAGE ? count : 1;
+  const usage = {
+    inputTokens: TURN_USAGE.inputTokens * times,
+    outputTokens: TURN_USAGE.outputTokens * times,
+    cachedReadTokens: TURN_USAGE.cachedReadTokens * times,
+    totalTokens: TURN_USAGE.totalTokens * times,
+  };
+
+  if (TOKENS_ONLY) {
+    turn.usage = usage;
+
+    return;
+  }
 
   const cost = (costs.get(turn.sessionId) ?? COST_FROM) + TURN_COST;
 
@@ -724,10 +737,10 @@ async function reportUsage(turn: Turn): Promise<void> {
     sessionUpdate: 'usage_update',
     used: TURN_USAGE.totalTokens * count,
     size: WINDOWS[models.get(turn.sessionId) ?? FIRST_MODEL] ?? 0,
-    cost: { amount: cost, currency: 'USD' },
+    ...(NO_COST ? {} : { cost: { amount: cost, currency: 'USD' } }),
   };
 
-  turn.usage = TURN_USAGE;
+  turn.usage = usage;
 
   if (COST_AT_NEXT) {
     heldCosts.set(turn.sessionId, update);

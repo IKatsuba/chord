@@ -7,7 +7,7 @@
  * first figure of an opening needs to know which.
  */
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
-import type { CostCount } from '../cost_counts.ts';
+import type { CostCount, UsageCount } from '../cost_counts.ts';
 import { filledIn } from './enrich.ts';
 import { PRICE_CURRENCY, turnCost } from './prices.ts';
 import { COST } from './transcript/subagents.ts';
@@ -149,6 +149,11 @@ export function costOfTurn(
 export type TurnFigures = {
   readonly turnId: string;
   readonly usage: TokenUsage;
+  /**
+   * `usage` is the session's running total, as its agent's answers give it,
+   * not the turn's own (CHD-472).
+   */
+  readonly total?: true;
   /** The model the turn ended on. */
   readonly model?: string;
 } & TurnCost;
@@ -172,6 +177,8 @@ interface CostTurn {
  */
 export class TurnCosts {
   #opening: OpeningCosts;
+  // The answers give the session's running total, not each turn's.
+  readonly #total: boolean;
   /**
    * The turn or cycle that began last, until the next begins: a cost that
    * comes after its end is still its.
@@ -181,14 +188,16 @@ export class TurnCosts {
   /**
    * An opening of a session on an agent whose cost counts as `counts`
    * says, going on in a record chord kept when `resumed`, whose own updates
-   * are `past`.
+   * are `past`; its answers' usage counts as `usage` says.
    */
   constructor(
     counts: CostCount | undefined,
     resumed: boolean,
     past: readonly SessionUpdate[],
+    usage?: UsageCount,
   ) {
     this.#opening = { counts, resumed, past: lastReading(past) };
+    this.#total = usage === 'session';
   }
 
   /** A turn or the agent's own cycle began, from the cost there is now. */
@@ -242,7 +251,9 @@ export class TurnCosts {
     const turn = this.#turn;
 
     if (turn?.id !== turnId) {
-      return tokens === undefined ? undefined : { turnId, usage: tokens };
+      return tokens === undefined
+        ? undefined
+        : { turnId, usage: tokens, ...this.#totalMark() };
     }
 
     turn.over = true;
@@ -270,8 +281,13 @@ export class TurnCosts {
     return {
       turnId: turn.id,
       usage: turn.tokens ?? {},
+      ...this.#totalMark(),
       ...(turn.model === undefined ? {} : { model: turn.model }),
       ...cost,
     };
+  }
+
+  #totalMark(): { total?: true } {
+    return this.#total ? { total: true } : {};
   }
 }

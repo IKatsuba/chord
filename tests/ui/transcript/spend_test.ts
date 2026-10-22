@@ -436,3 +436,26 @@ describe('CHD-373 S3b tester: retained session identity and partial figures', ()
     });
   });
 });
+
+test("a session whose agent gives running totals has its last total as its tokens, its turns' costs added as any (CHD-472)", () => {
+  const spent = [
+    ['a', 2000, 0.01],
+    ['b', 4000, 0.01],
+    ['c', 6000, 0.01],
+  ].reduce<Spent | undefined>(
+    (sum, [id, tokens, amount]) =>
+      addTurn(
+        sum,
+        id as string,
+        { totalTokens: tokens as number },
+        { cost: USD(amount as number) },
+        true,
+      ),
+    undefined,
+  );
+
+  expect(sessionFigure(spent)).toStrictEqual({
+    cost: { amount: expect.closeTo(0.03, 9), currency: 'USD' },
+    tokens: 6000,
+  });
+});

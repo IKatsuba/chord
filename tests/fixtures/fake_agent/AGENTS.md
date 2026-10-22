@@ -348,6 +348,10 @@
   and `--tokens-only` or `CHORD_FAKE_TOKENS_ONLY=1` only the tokens, no cost
   and no window, on two real models chord's price data knows,
   `gpt-5.3-codex` (in use until switched) and `claude-haiku-4-5`.
+  `--session-usage` (`CHORD_FAKE_SESSION_USAGE=1`) makes each answer's tokens
+  the session's running total, every turn so far, as dirac's are, and
+  `--no-cost` (`CHORD_FAKE_NO_COST=1`) leaves the cost out of the update, as
+  an agent whose provider gives none sends it.
   `--tester-plays <scenario>` (`CHORD_FAKE_TESTER_PLAYS`) has a team's lead
   open `tester` on that scenario rather than its role, so with `taskcost` a
   member starts a task agent of its own.

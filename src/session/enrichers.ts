@@ -52,7 +52,8 @@ import { tokensOf } from './usage.ts';
  * cost so far goes ahead of the answer, as Claude's adapter sends its own,
  * with the context as the agent last gave it, or else as the turn's tokens
  * make it. An agent's own `usage_update` without a cost gets the estimate so
- * far.
+ * far. An answer that gives the session's running total is priced whole, as
+ * the estimate so far, never added to it (CHD-472).
  */
 export const costFromTokens: Enricher = (message, wire) => {
   const notification = notificationOf(message);
@@ -108,7 +109,7 @@ export const costFromTokens: Enricher = (message, wire) => {
       used: known?.used ?? contextFrom(tokens),
       size: known?.size ?? 0,
       cost: {
-        amount: (session.estimate ?? 0) + cost,
+        amount: wire.totals === true ? cost : (session.estimate ?? 0) + cost,
         currency: PRICE_CURRENCY,
       },
       _meta: markFilled(undefined, known ? ['cost'] : ['used', 'cost']),

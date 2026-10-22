@@ -25,6 +25,7 @@ import type { AgentOption } from './config.ts';
 import type { AgentEfforts } from './efforts.ts';
 import { ElicitationBridge } from './elicitations.ts';
 import { enricherRelay } from './enrich.ts';
+import { usageCountOf } from '../cost_counts.ts';
 import { ENRICHERS } from './enrichers.ts';
 import { type AgentModels, isModelState, modelConfigId } from './models.ts';
 import { type AgentModes, modeConfigId } from './modes.ts';
@@ -394,7 +395,7 @@ export async function openSession(
     }
   };
 
-  const relay = enricherRelay(ENRICHERS);
+  const relay = enricherRelay(ENRICHERS, usageCountOf(agent) === 'session');
   const connection = await openAgent({
     command: start.command,
     relay,

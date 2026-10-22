@@ -84,10 +84,12 @@ export function sessionFigure(spent: Spent | undefined): Figure | undefined {
     ),
   ];
   // Each turn's in all first: one that gave a total and one that gave
-  // only its kinds each count whole.
-  const each = Object.values(spent?.turns ?? {}).flatMap(
-    (turn) => tokensIn(turn) ?? [],
-  );
+  // only its kinds each count whole. A running total is the whole session's.
+  const each = (
+    spent?.total === undefined
+      ? Object.values(spent?.turns ?? {})
+      : [spent.total]
+  ).flatMap((turn) => tokensIn(turn) ?? []);
   const tokens =
     each.length === 0 ? undefined : each.reduce((a, b) => a + b, 0);
   const figure: Figure = {

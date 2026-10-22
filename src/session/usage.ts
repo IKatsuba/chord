@@ -44,6 +44,11 @@ export interface Spent {
   /** Each turn's tokens by the turn's id, every one the agent reported. */
   readonly turns: Readonly<Record<string, TokenUsage>>;
   /**
+   * The session's tokens as an agent whose answers give its running total
+   * last gave them, in place of each turn's (CHD-472).
+   */
+  readonly total?: TokenUsage;
+  /**
    * Each turn's own cost by the turn's id, the agent's own cycles' among
    * them, where it had one or was left uncounted (CHD-373).
    */
@@ -52,21 +57,25 @@ export interface Spent {
 
 /**
  * `spent` with a turn's tokens, where it has any, and its cost; a turn
- * reported again replaces its own.
+ * reported again replaces its own. Tokens that are the session's running
+ * `total` replace the total it had, and no turn keeps them.
  */
 export function addTurn(
   spent: Spent | undefined,
   turnId: string,
   tokens: TokenUsage,
   cost: SpentTurn = {},
+  total = false,
 ): Spent {
   const { [turnId]: _, ...costs } = spent?.costs ?? {};
   const counted = cost.cost !== undefined || cost.uncounted === true;
+  const some = Object.keys(tokens).length > 0;
 
   return {
     ...spent,
+    ...(total && some ? { total: tokens } : {}),
     turns:
-      Object.keys(tokens).length === 0
+      !some || total
         ? (spent?.turns ?? {})
         : { ...spent?.turns, [turnId]: tokens },
     ...(counted || spent?.costs !== undefined

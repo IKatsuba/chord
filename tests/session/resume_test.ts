@@ -38,6 +38,8 @@ import {
   type TranscriptAction,
 } from '../../src/session/transcript/types.ts';
 import { sessionTokens } from '../../src/ui/transcript/reports.ts';
+import { sessionFigure } from '../../src/ui/transcript/spend.ts';
+import { turnCost } from '../../src/session/prices.ts';
 import {
   type AppState,
   initialAppState,
@@ -1703,4 +1705,106 @@ describe('CHD-451 tester: steering gate lifetime', () => {
         }
       }));
   }
+});
+
+describe('CHD-472: an agent whose answers give the running total', () => {
+  const usage = (...flags: string[]) =>
+    fakeAgentCommand(undefined, '--session-usage', ...flags);
+
+  /** The window's state once `prompts` ran on `agent`, its events reduced. */
+  const ran = async (
+    place: Place,
+    agent: string,
+    command: string[],
+    prompts: readonly string[],
+    resume?: Resume,
+  ) => {
+    const events: ConversationEvent[] = [];
+
+    await recordSession({
+      stateDir: place.stateDir,
+      cwd: place.dir,
+      command,
+      prompts,
+      agent,
+      ...(resume === undefined ? {} : { resume }),
+      heard: (event) => events.push(event),
+    });
+
+    return events.reduce(reduceApp, initialAppState);
+  };
+
+  test("dirac's tokens are its last answer's, the session's total; an agent not known to count so still adds its answers up", () =>
+    withPlace(async (place) => {
+      const prompts = ['text', 'text', 'text'];
+      const dirac = await ran(place, 'dirac', usage(), prompts);
+      const fake = await ran(place, 'fake', usage(), prompts);
+
+      expect(sessionTokens(dirac.spent)?.totalTokens).toBe(6000);
+      expect(dirac.spent?.turns).toStrictEqual({});
+      // Its own cost is counted as before: $0.0125 a turn.
+      expect(sessionFigure(dirac.spent)?.cost?.amount).toBeCloseTo(0.0375, 9);
+      expect(sessionTokens(fake.spent)?.totalTokens).toBe(12_000);
+    }));
+
+  test("with no cost of dirac's, chord's estimate is priced once from the session's total, not added up", () =>
+    withPlace(async (place) => {
+      const prompts = ['text', 'text', 'text'];
+      const dirac = await ran(place, 'dirac', usage('--tokens-only'), prompts);
+      const fake = await ran(place, 'fake', usage('--tokens-only'), prompts);
+      const at = (count: number) =>
+        turnCost('gpt-5.3-codex', {
+          inputTokens: 1000 * count,
+          outputTokens: 200 * count,
+          cachedReadTokens: 800 * count,
+          totalTokens: 2000 * count,
+        })!;
+
+      expect(sessionFigure(dirac.spent)).toMatchObject({
+        cost: { amount: expect.closeTo(at(3), 9) },
+        estimated: 'all',
+        tokens: 6000,
+      });
+      expect(sessionFigure(fake.spent)?.cost?.amount).toBeCloseTo(
+        at(1) + at(2) + at(3),
+        9,
+      );
+    }));
+
+  test("a dirac record from before chord knew it reopens to its last answer's total, not their sum; as another agent's, still the sum", () =>
+    withPlace(async (place) => {
+      const id = await recordSession({
+        stateDir: place.stateDir,
+        cwd: place.dir,
+        command: usage(),
+        prompts: ['text', 'text'],
+        agent: 'dirac',
+      });
+      const [record] = await readRecords(place.stateDir);
+
+      assert(record !== undefined);
+
+      // As chord wrote it before CHD-472: no line says its tokens are a total.
+      const lines = (await readFile(record.path, 'utf8'))
+        .split('\n')
+        .map((line) =>
+          line === ''
+            ? line
+            : JSON.stringify({ ...JSON.parse(line), total: undefined }),
+        );
+
+      await writeFile(record.path, lines.join('\n'));
+
+      const resume = { sessionId: id, cwd: place.dir, record: record.path };
+      const resuming = usage('--resume-only');
+
+      expect(
+        sessionTokens((await ran(place, 'dirac', resuming, [], resume)).spent)
+          ?.totalTokens,
+      ).toBe(4000);
+      expect(
+        sessionTokens((await ran(place, 'fake', resuming, [], resume)).spent)
+          ?.totalTokens,
+      ).toBe(6000);
+    }));
 });

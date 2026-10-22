@@ -23,6 +23,22 @@ export const NO_USAGE =
 export const TOKENS_ONLY =
   ARGS.includes('--tokens-only') || process.env.CHORD_FAKE_TOKENS_ONLY === '1';
 
+/**
+ * `--session-usage`, or `CHORD_FAKE_SESSION_USAGE=1`: a turn's answer gives
+ * the session's running total of tokens, every turn so far, as dirac's does
+ * (CHD-472), not the turn's own.
+ */
+export const SESSION_USAGE =
+  ARGS.includes('--session-usage') ||
+  process.env.CHORD_FAKE_SESSION_USAGE === '1';
+
+/**
+ * `--no-cost`, or `CHORD_FAKE_NO_COST=1`: the turn's `usage_update` carries
+ * the context and no cost, as an agent whose provider gives none sends it.
+ */
+export const NO_COST =
+  ARGS.includes('--no-cost') || process.env.CHORD_FAKE_NO_COST === '1';
+
 export const NO_IMAGES =
   ARGS.includes('--no-images') || process.env.CHORD_FAKE_NO_IMAGES === '1';
 

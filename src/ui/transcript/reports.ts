@@ -143,13 +143,17 @@ function aligned(
 }
 
 /**
- * The session's tokens, each turn's added up. A field no turn reported stays
- * out rather than reading as zero.
+ * The session's tokens, each turn's added up, or the running total its agent
+ * last gave (CHD-472). A field no turn reported stays out rather than reading
+ * as zero.
  */
 export function sessionTokens(
   spent: Spent | undefined,
 ): TokenUsage | undefined {
-  const each = Object.values(spent?.turns ?? {});
+  const each =
+    spent?.total === undefined
+      ? Object.values(spent?.turns ?? {})
+      : [spent.total];
   const sum: Record<string, number> = {};
 
   for (const field of TOKEN_FIELDS) {

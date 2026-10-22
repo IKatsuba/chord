@@ -77,6 +77,11 @@ export interface Asked {
 export interface Wire {
   readonly asked: Readonly<Record<string, Asked>>;
   readonly sessions: Readonly<Record<string, SessionWire>>;
+  /**
+   * The agent's answers give each session's running total as their usage,
+   * not the turn's (CHD-472): a fact of the agent, not of what it sent.
+   */
+  readonly totals?: boolean;
 }
 
 /**
@@ -223,12 +228,19 @@ export function recalled(
   );
 }
 
-/** A relay that runs `chain` over everything the agent sends. */
-export function enricherRelay(chain: readonly Enricher[]): Relay & {
+/**
+ * A relay that runs `chain` over everything the agent sends, on an agent
+ * whose answers give the session's running total as their usage when
+ * `totals`.
+ */
+export function enricherRelay(
+  chain: readonly Enricher[],
+  totals = false,
+): Relay & {
   /** Folds in a session's recorded past before it is reopened. */
   recall(sessionId: string, past: readonly SessionUpdate[]): void;
 } {
-  let wire = EMPTY_WIRE;
+  let wire: Wire = totals ? { ...EMPTY_WIRE, totals } : EMPTY_WIRE;
 
   return {
     fromChord: (message) => {

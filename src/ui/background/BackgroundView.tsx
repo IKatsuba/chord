@@ -446,7 +446,14 @@ function WorkDetail({
   const hidden = hiddenRows(total, shown.top, shown.shown);
   const pageUp = useHintKey('scroll:pageUp');
   const pageDown = useHintKey('scroll:pageDown');
-  const task = (work.subagent.prompt ?? work.subagent.description)?.trim();
+  const whole = (work.subagent.prompt ?? work.subagent.description)?.trim();
+  // Its task, unless the pinned name already says it, as when it gave no
+  // short description of its own.
+  const task =
+    whole === undefined ||
+    whole.replace(/\s+/g, ' ') === item.name.replace(/\s+/g, ' ').trim()
+      ? undefined
+      : whole;
   // Where the view should stand, which a scroll at React's commit, before
   // the work that came is laid out, would leave short of the end.
   const wanted = useRef(shown.top);

@@ -1259,3 +1259,27 @@ describe("an agent's detail draws its whole task and its work, following its end
       await window.shows('⏺ Watching the build.');
     }));
 });
+
+test('a detail whose name is its whole task, given no short description, says it once, not again after › (CHD-487)', () =>
+  withWindow(async (window) => {
+    await send(window, 'subagent');
+    await window.shows('Do you want to proceed?');
+    await window.press('1');
+    await window.shows('background ');
+
+    // Every row's detail says its name once.
+    await window.press(DOWN);
+    await window.press('\r');
+    await window.shows('❯ ');
+    await window.press('\r');
+    await window.shows('Background · ');
+
+    const frame = window.frame().slice(window.frame().indexOf('Background · '));
+    const name = frame
+      .split('\n')[2]!
+      .replace(/^│ ?/, '')
+      .replace(/ *│$/, '')
+      .trim();
+
+    expect(frame).not.toContain(`› ${name}`);
+  }));

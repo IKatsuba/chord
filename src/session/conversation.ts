@@ -2939,7 +2939,10 @@ export class Conversation {
       type: 'permission_requested',
       turnId,
       permission: waitFor(request, session.id),
-      ...(between && { at: this.#now(), between }),
+      // When it came, which a subagent's asking counts from in the turn
+      // too, not only between turns (CHD-487).
+      at: this.#now(),
+      ...(between && { between }),
     });
     request.signal.addEventListener('abort', withdrawn, { once: true });
 

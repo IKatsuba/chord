@@ -5,6 +5,11 @@
  */
 import { describe, expect, spyOn, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { useState } from 'react';
+import type { Subagent } from '../../../src/session/transcript/types.ts';
+import type { RequestScroller } from '../../../src/ui/dialogs/Permission.tsx';
+import { BackgroundView } from '../../../src/ui/background/BackgroundView.tsx';
+import { draw } from '../harness.tsx';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -1551,4 +1556,279 @@ describe('a request asked while the view is open hides it, and it comes back whe
       },
       { rows: 24, columns: 80 },
     ));
+});
+
+describe('CHD-487 U2 tester: live work, metadata and dialog isolation', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`rebound top survives a permission and form, then rebound End finds the live tail at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          const body = () =>
+            window.frame().slice(window.frame().indexOf('Background · '));
+
+          await send(window, 'claudebackground');
+          await window.shows("background  main's 2 agents running");
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('❯ Run the test suite');
+          await window.press('\r');
+          await window.shows('⏺ Bash(bun test)');
+          await window.resize({ columns: 80, rows: 18 });
+          await window.press('\x02');
+          await until('task at the top', () =>
+            body().includes('› Run bun test'),
+          );
+          expect(window.frame()).toContain('esc to interrupt');
+          expect(body()).toContain('› Run bun test');
+          expect(body()).not.toContain('⏺ Every test passed.');
+
+          const session = window.session();
+
+          assert(session);
+
+          const abort = new AbortController();
+          let answered = false;
+          const answer = session.permissions
+            .handler(
+              {
+                sessionId: session.id,
+                toolCall: {
+                  toolCallId: 'detail-attendance',
+                  title: 'Write attendance.md',
+                },
+                options: [
+                  { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+                ],
+              },
+              abort.signal,
+            )
+            .then((result) => {
+              answered = true;
+
+              return result;
+            });
+
+          try {
+            await window.shows('Do you want to proceed?');
+            expect(window.frame()).not.toContain('Background ·');
+            await window.press('1');
+            await until('the permission answered', () => answered);
+            expect(await answer).toEqual({
+              outcome: { outcome: 'selected', optionId: 'allow' },
+            });
+            await until('same detail page restored', () =>
+              body().includes('› Run bun test'),
+            );
+
+            const formAbort = new AbortController();
+            const form = session.elicitations.handler(
+              {
+                sessionId: session.id,
+                mode: 'form',
+                message: 'Incoming detail form',
+                requestedSchema: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', title: 'Project name' },
+                  },
+                  required: ['name'],
+                },
+              },
+              formAbort.signal,
+            );
+
+            try {
+              await window.shows('❯ * Project name');
+              expect(window.frame()).not.toContain('Background ·');
+              await window.press(ESC);
+              expect(await form).toMatchObject({ action: 'cancel' });
+              await until('same page after form', () =>
+                body().includes('› Run bun test'),
+              );
+            } finally {
+              formAbort.abort();
+              await form;
+            }
+
+            expect(body()).not.toContain('⏺ Every test passed.');
+            await window.press('\x05');
+            await until('rebound End reaches newest work', () =>
+              /⎿ +Running…/.test(body()),
+            );
+            await window.press(ESC);
+            await window.shows('Enter for details');
+            await window.press(ESC);
+            await until(
+              'view closed after returning to the list',
+              () => !window.frame().includes('Background ·'),
+            );
+            await window.press(ESC);
+            await until(
+              'summary releases the keys',
+              () => !window.frame().includes('❯ background'),
+            );
+            await window.type('draft after detail');
+            await until(
+              'draft typed after detail',
+              () => promptRow(window)?.includes('draft after detail') === true,
+            );
+          } finally {
+            abort.abort();
+            await answer;
+          }
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--step-ms', '20'),
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'Scroll',
+                bindings: {
+                  home: null,
+                  end: null,
+                  'ctrl+b': 'scroll:top',
+                  'ctrl+e': 'scroll:bottom',
+                },
+              },
+            ],
+          }),
+        },
+      ));
+  }
+
+  for (const [columns, rows] of [
+    [80, 20],
+    [120, 40],
+  ] as const) {
+    test(`a long-model task follows growth, pauses at its top and keeps nested work folded at ${columns}x${rows}`, async () => {
+      const scroller: { current: RequestScroller | undefined } = {
+        current: undefined,
+      };
+      const item = {
+        kind: 'task' as const,
+        id: 'task',
+        key: 1,
+        name: 'Analyse 日本語 ' + 'long task '.repeat(15),
+        runtime: 'runtime-' + 'long'.repeat(10),
+        model: 'model-' + '日本語'.repeat(20),
+        startedAt: Date.now(),
+        status: { group: 'running' as const },
+      };
+      const initial: Subagent = {
+        id: 'task',
+        state: 'running',
+        plan: [],
+        prompt: 'Whole task 日本語: preserve every line.',
+        entries: Array.from({ length: 12 }, (_, n) => ({
+          kind: 'assistant' as const,
+          turnId: 't',
+          text: `Work row ${n} 日本語`,
+        })),
+      };
+      let update: ((value: Subagent) => void) | undefined;
+
+      function View() {
+        const [subagent, set] = useState(initial);
+
+        update = set;
+
+        return (
+          <BackgroundView
+            items={[item]}
+            focus={item}
+            detail={item}
+            columns={columns}
+            rows={rows}
+            scroller={scroller}
+            work={{ subagent, turn: { status: 'idle' }, agent: 'fake' }}
+          />
+        );
+      }
+
+      const drawn = await draw(<View />, { columns, rows });
+
+      try {
+        await until('initial newest work', () =>
+          drawn.frame().includes('Work row 11'),
+        );
+        assert(update);
+
+        const grown: Subagent = {
+          ...initial,
+          entries: [
+            ...initial.entries,
+            {
+              kind: 'subagent',
+              turnId: 't',
+              subagent: {
+                id: 'nested',
+                title: 'Nested helper',
+                state: 'completed',
+                entries: [
+                  {
+                    kind: 'assistant',
+                    turnId: 'n',
+                    text: 'HIDDEN NESTED INTERNAL',
+                  },
+                ],
+                plan: [],
+              },
+            },
+            { kind: 'assistant', turnId: 't', text: 'First live tail 日本語' },
+          ],
+        };
+
+        update(grown);
+        await until('following appended work', () =>
+          drawn.frame().includes('First live tail'),
+        );
+        scroller.current?.('top');
+        await until('whole task at top', () =>
+          drawn.frame().includes('Whole task 日本語'),
+        );
+        update({
+          ...grown,
+          entries: [
+            ...grown.entries,
+            { kind: 'assistant', turnId: 't', text: 'Second live tail 日本語' },
+          ],
+        });
+        await until('update laid out without leaving top', () =>
+          drawn.mounted('Second live tail 日本語'),
+        );
+        expect(drawn.frame()).toContain('Whole task 日本語');
+        expect(drawn.frame()).not.toContain('Second live tail');
+
+        let seen = drawn.frame();
+
+        for (
+          let n = 0;
+          n < 100 && !drawn.frame().includes('Second live tail');
+          n++
+        ) {
+          const before = drawn.frame();
+
+          scroller.current?.('line_down');
+          await until(
+            'the next work line drawn',
+            () => drawn.frame() !== before,
+          );
+
+          seen += drawn.frame();
+        }
+
+        expect(seen).toContain('Nested helper');
+        expect(seen).not.toContain('HIDDEN NESTED INTERNAL');
+        expect(drawn.frame()).toContain('Second live tail');
+        expect(drawn.frame()).toContain('Enter to go to its call');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
 });

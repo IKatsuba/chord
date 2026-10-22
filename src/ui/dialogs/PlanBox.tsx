@@ -6,6 +6,7 @@ import {
   type RefObject,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -115,6 +116,17 @@ export function PlanBox({
     [total, room],
   );
 
+  // The room as laid out, after each draw too: a window that shrinks the box
+  // leaves the area no size change to hear when its height was already at
+  // its floor, and a stale room draws past the box (CHD-437).
+  useLayoutEffect(() => {
+    const height = area.current?.getLayout().height;
+
+    if (height !== undefined && height !== room) {
+      setRoom(height);
+    }
+  });
+
   useEffect(() => {
     onOverflow?.(onNote && overflows);
   }, [onOverflow, onNote, overflows]);
@@ -206,87 +218,93 @@ export function PlanBox({
       <text {...TEXT} flexShrink={0}>
         {' '}
       </text>
+      {/* The Note: its lines up to half the window, as the permission
+          box's request, giving way to the rest, at least one; wrapped under
+          its own text, never cut, as a form's value is, the lines round the
+          cursor shown under CHD-246's rules (docs/design/CHD-437.md). */}
       <box
-        flexDirection='row'
-        // Its height, in the box's column: the Note's lines up to half the
-        // window, as the permission box's request, giving way to the rest.
         flexBasis={Math.min(total, Math.max(Math.floor(windowRows / 2), 1))}
         flexShrink={1}
-        minHeight={1}
+        // Not 1: Yoga leaves an item at its basis rather than shrink it to
+        // exactly its minimum, as the permission box's request finds; the
+        // box's own floor keeps a line for it.
+        minHeight={0}
+        overflow='hidden'
+        ref={area}
+        onSizeChange={() => setRoom(area.current?.getLayout().height ?? total)}
       >
-        {marker(noteRow)}
-        <text
-          {...TEXT}
-          flexShrink={0}
-          {...(onNote ? fg(colours.permission) : {})}
-          attributes={onNote ? BOLD : 0}
-        >
-          Note{'  '}
-        </text>
-        {/* Wrapped under its own text, never cut, as a form's value is; a
-            Note taller than the box's room shows the lines round the cursor
-            and pages under CHD-246's rules. */}
-        <box
-          flexGrow={1}
-          minHeight={1}
-          overflow='hidden'
-          ref={area}
-          onSizeChange={() =>
-            setRoom(area.current?.getLayout().height ?? total)
-          }
-        >
-          {shown.above && (
-            <text {...CUT} attributes={DIM} flexShrink={0}>
-              {requestRule(
-                '↑',
-                out.above,
-                onNote ? pageUp : undefined,
-                noteWidth,
-              )}
-            </text>
-          )}
-          {state.note === '' ? (
-            <text {...CUT} flexShrink={0}>
-              {onNote && active && (
-                <span attributes={TextAttributes.INVERSE}>{BLOCK}</span>
-              )}
-              <span attributes={DIM}>
-                {`${onNote && active ? ' ' : ''}${cliTruncate(
-                  `Tell ${agent} what to change, sent with 2 (optional)`,
-                  Math.max(noteWidth - 1, 1),
-                )}`}
-              </span>
-            </text>
-          ) : (
-            lines
-              .slice(shown.top, shown.top + shown.shown)
-              .map((line, index) => (
-                <box key={shown.top + index} flexDirection='row' flexShrink={0}>
-                  <text {...CUT} flexGrow={1}>
-                    {line}
-                    {onNote && active && shown.top + index === total - 1 && (
-                      <span attributes={TextAttributes.INVERSE}>{BLOCK}</span>
-                    )}
-                  </text>
-                  {counted && (
-                    <text {...CUT} attributes={DIM} flexShrink={0}>
-                      {requestCount(out)}
-                    </text>
+        {[
+          ...(shown.above
+            ? [
+                <text key='above' {...CUT} attributes={DIM}>
+                  {requestRule(
+                    '↑',
+                    out.above,
+                    onNote ? pageUp : undefined,
+                    noteWidth,
                   )}
-                </box>
-              ))
-          )}
-          {shown.below && (
-            <text {...CUT} attributes={DIM} flexShrink={0}>
-              {requestRule(
-                '↓',
-                out.below,
-                onNote ? pageDown : undefined,
-                noteWidth,
-              )}
+                </text>,
+              ]
+            : []),
+          ...(state.note === ''
+            ? [
+                <text key='empty' {...CUT}>
+                  {onNote && active && (
+                    <span attributes={TextAttributes.INVERSE}>{BLOCK}</span>
+                  )}
+                  <span attributes={DIM}>
+                    {`${onNote && active ? ' ' : ''}${cliTruncate(
+                      `Tell ${agent} what to change, sent with 2 (optional)`,
+                      Math.max(noteWidth - 1, 1),
+                    )}`}
+                  </span>
+                </text>,
+              ]
+            : lines
+                .slice(shown.top, shown.top + shown.shown)
+                .map((line, index) => (
+                  <box key={shown.top + index} flexDirection='row' flexGrow={1}>
+                    <text {...CUT} flexGrow={1}>
+                      {line}
+                      {onNote && active && shown.top + index === total - 1 && (
+                        <span attributes={TextAttributes.INVERSE}>{BLOCK}</span>
+                      )}
+                    </text>
+                    {counted && (
+                      <text {...CUT} attributes={DIM} flexShrink={0}>
+                        {requestCount(out)}
+                      </text>
+                    )}
+                  </box>
+                ))),
+          ...(shown.below
+            ? [
+                <text key='below' {...CUT} attributes={DIM}>
+                  {requestRule(
+                    '↓',
+                    out.below,
+                    onNote ? pageDown : undefined,
+                    noteWidth,
+                  )}
+                </text>,
+              ]
+            : []),
+        ].map((row, index) => (
+          // The `❯` and the label beside the first row; the rest under the
+          // note's own text.
+          <box key={index} flexDirection='row' flexShrink={0}>
+            {index === 0 ? marker(noteRow) : <Gutter> </Gutter>}
+            <text
+              {...TEXT}
+              flexShrink={0}
+              {...(onNote && index === 0 ? fg(colours.permission) : {})}
+              attributes={onNote && index === 0 ? BOLD : 0}
+            >
+              {index === 0 ? 'Note  ' : '      '}
             </text>
-          )}
-        </box>
+            {row}
+          </box>
+        ))}
       </box>
       <text {...TEXT} flexShrink={0}>
         {' '}

@@ -178,3 +178,35 @@ test('a note taller than its room at 80x24: the box stays on screen whole, the n
     },
     { rows: 24, columns: 80 },
   ));
+
+test('a long Note in a window shrunk under it keeps the box inside its border, a lone row saying what it hides (CHD-437)', () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'grokplan');
+      await window.shows('Approve Plan');
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.paste(
+        Array.from({ length: 30 }, (_, at) => `word${at} 日本語`).join(' '),
+      );
+      await window.resize({ columns: 80, rows: 20 });
+      await window.shows('lines above');
+
+      const lines = window.frame().split('\n');
+      const top = lines.findIndex((line) => line.includes('Approve Plan'));
+      const bottom = lines.findIndex(
+        (line, at) => at > top && line.startsWith('╰'),
+      );
+      const box = lines.slice(top, bottom).join('\n');
+
+      // Nothing drawn past the box: its hint inside, the prompt whole below.
+      expect(box).toContain('3. No, and leave plan mode');
+      expect(box).toContain('Enter to keep planning with this note');
+      expect(box).toContain('word29 日本語');
+      expect(lines.slice(bottom + 1).join('\n')).not.toContain('word');
+      expect(lines.slice(bottom + 1).join('\n')).toContain('│ ›');
+    },
+    { rows: 24, columns: 80 },
+  ));

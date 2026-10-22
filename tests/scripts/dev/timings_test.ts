@@ -128,3 +128,73 @@ describe('a run against the record', () => {
     expect(lines.join('\n')).not.toContain('--update-timings');
   });
 });
+
+describe('CHD-501 tester: timing record edges', () => {
+  test('zero and fractional times survive reading; malformed roots and entries name the artifact', () => {
+    expect(
+      readTimings(
+        'measured.json',
+        '{"files":{"zero_test.ts":0,"part_test.ts":0.5}}',
+      ),
+    ).toStrictEqual({ 'zero_test.ts': 0, 'part_test.ts': 0.5 });
+
+    for (const text of ['null', '[]', 'false', '{"files":null}']) {
+      expect(() => readTimings('measured.json', text)).toThrow(
+        "timings: measured.json holds no file's time",
+      );
+    }
+
+    for (const value of ['true', '"12"', '{}', '[]', '-1e999']) {
+      expect(() =>
+        readTimings('measured.json', `{"files":{"bad_test.ts":${value}}}`),
+      ).toThrow(/measured\.json.*bad_test\.ts/);
+    }
+  });
+
+  test('a zero baseline still needs ten seconds of change and refresh keeps the exact budget', () => {
+    expect(compare({ [A]: 0 }, { [A]: 9_999 }, [A]).moved).toStrictEqual([]);
+    expect(compare({ [A]: 0 }, { [A]: 10_000 }, [A]).moved).toStrictEqual([
+      { file: A, recorded: 0, measured: 10_000 },
+    ]);
+    expect(
+      fails(compare({}, { [A]: BUDGET_MS }, [A], { refreshing: true })),
+    ).toBe(false);
+    expect(
+      fails(compare({}, { [A]: BUDGET_MS + 1 }, [A], { refreshing: true })),
+    ).toBe(true);
+  });
+
+  test('reports are path ordered without changing the recorded, measured or disk inputs', () => {
+    const recorded = Object.freeze({
+      'z_test.ts': 30_000,
+      'a_test.ts': 30_000,
+    });
+    const measured = Object.freeze({
+      'z_test.ts': 100_000,
+      'a_test.ts': 100_000,
+    });
+    const disk = Object.freeze([
+      'z_test.ts',
+      'new-z_test.ts',
+      'a_test.ts',
+      'new-a_test.ts',
+    ]);
+    const report = compare(recorded, measured, disk);
+
+    expect(report.over.map(({ file }) => file)).toStrictEqual([
+      'a_test.ts',
+      'z_test.ts',
+    ]);
+    expect(report.moved.map(({ file }) => file)).toStrictEqual([
+      'a_test.ts',
+      'z_test.ts',
+    ]);
+    expect(report.unrecorded).toStrictEqual(['new-a_test.ts', 'new-z_test.ts']);
+    expect(disk).toStrictEqual([
+      'z_test.ts',
+      'new-z_test.ts',
+      'a_test.ts',
+      'new-a_test.ts',
+    ]);
+  });
+});

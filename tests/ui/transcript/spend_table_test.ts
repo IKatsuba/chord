@@ -870,3 +870,36 @@ test('an agent that gives running totals reads as any row; only with no cost of 
     /not reported\s+6,000 {2}agent; dirac's provider reports no cost; no price for fake-large$/,
   );
 });
+
+test("the Total says once that dirac's provider reports no cost, however many dirac rows lack one, and still names any other agent that reported nothing (CHD-472)", () => {
+  const unpriced = { tokens: 2000, totals: { model: 'fake-large' } };
+  const total = lines(
+    [
+      {
+        name: '1 dirac',
+        kind: 'tab',
+        parts: [
+          { name: 'main', kind: 'main', agent: 'dirac', figure: unpriced },
+        ],
+      },
+      {
+        name: '2 dirac',
+        kind: 'tab',
+        parts: [
+          { name: 'main', kind: 'main', agent: 'dirac', figure: unpriced },
+          { name: 'scout', kind: 'agent', runtime: 'dirac', figure: unpriced },
+        ],
+      },
+      {
+        name: '3 gemini',
+        kind: 'tab',
+        parts: [{ name: 'main', kind: 'main', agent: 'gemini' }],
+      },
+    ],
+    200,
+  ).find((line) => line.startsWith('Total'));
+
+  expect(total).toMatch(
+    /^Total\s+not reported\s+6,000 {2}gemini not reported; dirac's provider reports no cost$/,
+  );
+});

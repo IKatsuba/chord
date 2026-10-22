@@ -190,6 +190,11 @@ export interface Summed {
    * tab's own session by its agent.
    */
   readonly missing: readonly string[];
+  /**
+   * The agents, each once, whose running totals came with no cost, as their
+   * provider gives none: said apart from `missing` (CHD-472).
+   */
+  readonly providers?: readonly string[];
   /** Turns left out of the cost of the parts that had one (Q61). */
   readonly uncounted: number;
 }
@@ -207,6 +212,7 @@ export function sum(parts: readonly SpendPart[]): Summed {
   let partly = false;
   let uncounted = 0;
   const missing: string[] = [];
+  const providers = new Set<string>();
 
   const add = (part: SpendPart) => {
     const own = part.figure;
@@ -217,6 +223,8 @@ export function sum(parts: readonly SpendPart[]): Summed {
         costed += 1;
         estimated += own.estimated === 'all' ? 1 : 0;
         partly ||= own.estimated === 'part';
+      } else if (own?.totals !== undefined) {
+        providers.add(part.runtime ?? part.agent ?? part.name);
       } else {
         missing.push(part.agent ?? part.name);
       }
@@ -242,6 +250,7 @@ export function sum(parts: readonly SpendPart[]): Summed {
     estimated: partly && estimated < costed ? 'part' : share(estimated, costed),
     ...(tokens === undefined ? {} : { tokens }),
     missing,
+    ...(providers.size === 0 ? {} : { providers: [...providers] }),
     uncounted,
   };
 }

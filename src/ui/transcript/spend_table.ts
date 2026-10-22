@@ -298,6 +298,9 @@ function totalRow(parts: readonly SpendPart[]): Row {
           `${summed.uncounted} ${summed.uncounted === 1 ? 'turn' : 'turns'} not counted`,
         ]),
     ...summed.missing.map((name) => `${name} not reported`),
+    ...(summed.providers ?? []).map(
+      (name) => `${name}'s provider reports no cost`,
+    ),
     ...(tasks === 0 ? [] : [`${tasks} running`]),
   ];
 

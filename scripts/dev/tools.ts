@@ -10,12 +10,22 @@
  * directly (the release) as much as through `bun dev`.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { constants } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { quote } from 'shell-quote';
+import {
+  compare,
+  fails,
+  isTestFile,
+  MEASURED,
+  readTimings,
+  RECORD,
+  reportLines,
+  wholeSuite,
+} from './timings.ts';
 
 /** Runs one command to its end and answers its exit status. */
 export type Run = (argv: readonly string[]) => number;
@@ -66,17 +76,87 @@ export function qaPlace(dir: string): void {
   mkdirSync(dir, { recursive: true });
 }
 
-/** The whole suite, a worker per core, `args` passed on to bun test. */
-export function test(args: readonly string[], run: Run = spawn): number {
-  return run([
+/** What `test` reads and writes besides the run, so a test can stand in for it. */
+export interface SuiteFiles {
+  /** A file's text from the root; none when it is not there. */
+  read(path: string): string | undefined;
+  remove(path: string): void;
+  /** Every file under `dir`, by its path from the root. */
+  list(dir: string): string[];
+  say(line: string): void;
+}
+
+/** The repository's files, and stderr. */
+export const suiteFiles: SuiteFiles = {
+  read: (path) => {
+    try {
+      return readFileSync(join(root, path), 'utf8');
+    } catch {
+      return undefined;
+    }
+  },
+  remove: (path) => rmSync(join(root, path), { force: true }),
+  list: (dir) =>
+    readdirSync(join(root, dir), { recursive: true, withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) =>
+        join(entry.parentPath, entry.name)
+          .slice(root.length)
+          .replace(/^\//, ''),
+      ),
+  say: (line) => void process.stderr.write(`${line}\n`),
+};
+
+/**
+ * The whole suite, a worker per core, `args` passed on to bun test, placed
+ * by the times `tests/timings.json` records. A whole run measures them again
+ * into `tests/timings.measured.json` and fails, naming the files, when one
+ * is past its budget, moved far from its record, unrecorded or gone; one
+ * with `--update-timings` rewrites the record and is held to the budget
+ * only. A run of part of the suite is not held to either. The tests' own
+ * failure is the status; the timings' report follows it (CHD-501).
+ */
+export function test(
+  args: readonly string[],
+  run: Run = spawn,
+  files: SuiteFiles = suiteFiles,
+): number {
+  const whole = wholeSuite(args);
+  const refreshing = args.includes('--update-timings');
+  const measuring = whole && !refreshing;
+
+  if (measuring) {
+    files.remove(MEASURED);
+  }
+
+  const status = run([
     process.execPath,
     'test',
     '--parallel',
     '--timeout=60000',
-    '--timings=tests/timings.json',
+    ...(measuring
+      ? [`--timings=${MEASURED}`, `--timings=${RECORD}`, '--update-timings']
+      : [`--timings=${RECORD}`]),
     './tests/',
     ...args,
   ]);
+
+  if (!whole) {
+    return status;
+  }
+
+  const report = compare(
+    readTimings(files.read(RECORD)),
+    readTimings(files.read(refreshing ? RECORD : MEASURED)),
+    files.list('tests').filter(isTestFile),
+    { refreshing },
+  );
+
+  for (const line of reportLines(report)) {
+    files.say(line);
+  }
+
+  return status !== 0 ? status : fails(report) ? 1 : 0;
 }
 
 /** ESLint over the tree, `args` passed on. */
@@ -99,6 +179,7 @@ export function check(
   only: { static?: boolean },
   run: Run = spawn,
   say: (line: string) => void = (line) => void process.stderr.write(line),
+  files: SuiteFiles = suiteFiles,
 ): number {
   const steps: [string, () => number][] = [
     ['tsc', () => run([process.execPath, 'run', 'tsc'])],
@@ -111,7 +192,7 @@ export function check(
     ["lint/'s tests", () => run([process.execPath, 'test', 'lint/'])],
     ...(only.static === true
       ? []
-      : [['the tests', () => test([], run)] as [string, () => number]]),
+      : [['the tests', () => test([], run, files)] as [string, () => number]]),
   ];
 
   for (const [name, step] of steps) {

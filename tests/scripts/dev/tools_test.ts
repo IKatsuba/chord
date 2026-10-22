@@ -20,11 +20,41 @@ import {
   qaPlace,
   type Run,
   spawn,
+  type SuiteFiles,
   test as suite,
 } from '../../../scripts/dev/tools.ts';
 
 const bun = process.execPath;
 const root = join(import.meta.dir, '..', '..', '..');
+
+/**
+ * The files `test` reads, as given: the record, what a run measured and
+ * the test files on disk; what it removed and said, kept to be read.
+ */
+function files(
+  record: Record<string, number> = {},
+  measured: Record<string, number> = record,
+  onDisk: string[] = Object.keys(record),
+): SuiteFiles & { removed: string[]; said: string[] } {
+  const removed: string[] = [];
+  const said: string[] = [];
+  const timings = (times: Record<string, number>) =>
+    JSON.stringify({ version: 1, files: times });
+
+  return {
+    removed,
+    said,
+    read: (path) =>
+      path === 'tests/timings.json'
+        ? timings(record)
+        : path === 'tests/timings.measured.json'
+          ? timings(measured)
+          : undefined,
+    remove: (path) => void removed.push(path),
+    list: () => onDisk,
+    say: (line) => void said.push(line),
+  };
+}
 
 /** A `Run` that records each argv and answers `statuses` in turn, then 0. */
 function faked(statuses: number[] = []): { run: Run; ran: string[][] } {
@@ -82,7 +112,7 @@ describe('chord', () => {
 test('test runs the whole suite on the timings, its arguments after', () => {
   const { run, ran } = faked();
 
-  suite(['--update-timings'], run);
+  suite(['--update-timings'], run, files());
 
   expect(ran).toStrictEqual([
     [
@@ -95,6 +125,87 @@ test('test runs the whole suite on the timings, its arguments after', () => {
       '--update-timings',
     ],
   ]);
+});
+
+describe("the suite's timings (CHD-501)", () => {
+  const A = 'tests/a_test.ts';
+  const B = 'tests/ui/b_test.tsx';
+
+  test('a whole run measures into the scratch file beside the record, removed first, and passes when they agree', () => {
+    const { run, ran } = faked();
+    const io = files(
+      { [A]: 20_000, [B]: 40_000 },
+      { [A]: 21_000, [B]: 38_000 },
+    );
+
+    expect(suite([], run, io)).toBe(0);
+    expect(io.removed).toStrictEqual(['tests/timings.measured.json']);
+    expect(ran[0]).toContain('--timings=tests/timings.measured.json');
+    expect(
+      ran[0]?.indexOf('--timings=tests/timings.measured.json'),
+    ).toBeLessThan(ran[0]?.indexOf('--timings=tests/timings.json') ?? -1);
+    expect(io.said).toStrictEqual([]);
+  });
+
+  test('a file over its budget fails the run, named with its time', () => {
+    const { run } = faked();
+    const io = files({ [A]: 85_000 }, { [A]: 91_000 });
+
+    expect(suite([], run, io)).toBe(1);
+    expect(io.said.join('\n')).toContain(`${A}  91.0 s`);
+  });
+
+  test('a file moved far from its record, one unrecorded and one gone fail it, with the way to refresh', () => {
+    const { run } = faked();
+    const io = files(
+      { [A]: 20_000, 'tests/gone_test.ts': 5_000 },
+      { [A]: 40_000, [B]: 3_000, 'tests/gone_test.ts': 5_000 },
+      [A, B],
+    );
+
+    expect(suite([], run, io)).toBe(1);
+
+    const said = io.said.join('\n');
+
+    expect(said).toContain(`${A}  20.0 s recorded, 40.0 s now`);
+    expect(said).toContain(`run but not in tests/timings.json:\n  ${B}`);
+    expect(said).toContain('no longer a test file:\n  tests/gone_test.ts');
+    expect(said).toContain('bun dev test --update-timings');
+  });
+
+  test("the tests' own failure is the status, the timings' report after it", () => {
+    const { run } = faked([3]);
+    const io = files({ [A]: 20_000 }, { [A]: 95_000 });
+
+    expect(suite([], run, io)).toBe(3);
+    expect(io.said.join('\n')).toContain(A);
+  });
+
+  test('a run of part of the suite is placed by the record and held to nothing', () => {
+    for (const args of [['-t', 'tabs'], ['--changed'], ['./tests/a_test.ts']]) {
+      const { run, ran } = faked();
+      const io = files({ [A]: 20_000 }, { [A]: 95_000 });
+
+      expect(suite(args, run, io)).toBe(0);
+      expect(ran[0]).not.toContain('--timings=tests/timings.measured.json');
+      expect(io.removed).toStrictEqual([]);
+      expect(io.said).toStrictEqual([]);
+    }
+  });
+
+  test('a refresh rewrites the record and is held to the budget only', () => {
+    const { run, ran } = faked();
+    const moved = files({ [A]: 80_000 }, undefined, [A, B]);
+
+    expect(suite(['--update-timings'], run, moved)).toBe(0);
+    expect(ran[0]).not.toContain('--timings=tests/timings.measured.json');
+    expect(moved.removed).toStrictEqual([]);
+
+    const over = files({ [A]: 92_000 });
+
+    expect(suite(['--update-timings'], faked().run, over)).toBe(1);
+    expect(over.said.join('\n')).toContain(`${A}  92.0 s`);
+  });
 });
 
 test('lint and fmt run ESLint and Prettier over the tree', () => {
@@ -121,7 +232,7 @@ describe('check', () => {
   test('runs the static steps, then the suite', () => {
     const { run, ran } = faked();
 
-    expect(check({ static: false }, run)).toBe(0);
+    expect(check({ static: false }, run, () => {}, files())).toBe(0);
     expect(ran).toStrictEqual([
       ...STATIC,
       [
@@ -129,7 +240,9 @@ describe('check', () => {
         'test',
         '--parallel',
         '--timeout=60000',
+        '--timings=tests/timings.measured.json',
         '--timings=tests/timings.json',
+        '--update-timings',
         './tests/',
       ],
     ]);
@@ -152,7 +265,7 @@ describe('check', () => {
   test("a failing suite is the check's status", () => {
     const { run } = faked([0, 0, 0, 0, 0, 1]);
 
-    expect(check({ static: false }, run, () => {})).toBe(1);
+    expect(check({ static: false }, run, () => {}, files())).toBe(1);
   });
 
   test('a failing step is named with its status, as one may say nothing (CHD-467)', () => {
@@ -191,10 +304,14 @@ describe('spawn', () => {
     const checkout = join(dir, 'chord checkout');
 
     try {
-      await cp(
-        join(root, 'scripts', 'dev', 'tools.ts'),
-        join(checkout, 'scripts', 'dev', 'tools.ts'),
-      );
+      // tools.ts and the module it imports, as a checkout holds them.
+      for (const file of ['tools.ts', 'timings.ts']) {
+        await cp(
+          join(root, 'scripts', 'dev', file),
+          join(checkout, 'scripts', 'dev', file),
+        );
+      }
+
       await symlink(join(root, 'node_modules'), join(checkout, 'node_modules'));
 
       const moved = (await import(

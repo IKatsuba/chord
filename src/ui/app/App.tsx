@@ -1260,6 +1260,14 @@ export function App({
                   width={columns}
                   hidden={viewing}
                   active={listening && !listFocus && !viewing}
+                  scroller={requestScroller}
+                  onOverflow={(overflows) =>
+                    dispatch({
+                      type: 'request_overflowed',
+                      id: planAsked.wait.id,
+                      overflows,
+                    })
+                  }
                   onAnswer={(answer) =>
                     conversation()?.answerPlan(planAsked.wait.id, answer)
                   }

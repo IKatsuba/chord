@@ -4,6 +4,7 @@
  * what each key does to them, and the hint line.
  */
 import type { PlanAnswer, PlanWait } from '../../session/transcript/types.ts';
+import wrapAnsi from 'wrap-ansi';
 import { type AskKey, edited } from './questions.ts';
 
 /** One choice: its words, and the answer it sends. */
@@ -136,4 +137,19 @@ export function planHint(
   return state.row === count
     ? 'Enter to keep planning with this note · ↑ to the options · Esc to keep planning'
     : `Enter to pick · 1–${count} · ↑↓ to move · Esc to keep planning`;
+}
+
+/**
+ * The Note's text in lines of at most `width` cells, wrapped at its spaces,
+ * never cut, a cell left on the last for the cursor; one empty line for no
+ * note.
+ */
+export function noteLines(note: string, width: number): string[] {
+  return note === ''
+    ? ['']
+    : wrapAnsi(`${note} `, Math.max(width, 1), { hard: true, trim: false })
+        .split('\n')
+        .map((line, index, all) =>
+          index === all.length - 1 ? line.slice(0, -1) : line,
+        );
 }

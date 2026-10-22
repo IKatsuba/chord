@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  noteLines,
   OPEN_PLAN_BOX,
   planChoices,
   planHint,
@@ -139,4 +140,15 @@ test("the hint names the choices' count, and on the Note row what enter does the
   expect(planHint('grok', { row: 3, note: '' })).toBe(
     'Enter to keep planning with this note · ↑ to the options · Esc to keep planning',
   );
+});
+
+test("the Note's lines wrap at its spaces, never cut, a cell left for the cursor", () => {
+  expect(noteLines('', 10)).toStrictEqual(['']);
+  expect(noteLines('one two three four', 10)).toStrictEqual([
+    'one two ',
+    'three four',
+    // A full line leaves the cursor's cell to the next.
+    '',
+  ]);
+  expect(noteLines('abcdefghijkl', 5).join('')).toBe('abcdefghijkl');
 });

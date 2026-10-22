@@ -118,3 +118,63 @@ test('a long note at 80x24 wraps in the box, read whole as typed, and goes whole
     },
     { rows: 24, columns: 80 },
   ));
+
+test('a note taller than its room at 80x24: the box stays on screen whole, the note pages from the Note, and goes whole (CHD-437)', () =>
+  withWindow(
+    async (window) => {
+      const note = Array.from(
+        { length: 40 },
+        (_, at) => `step${at} keeps the routing`,
+      ).join(' ');
+      const box = () => {
+        const lines = window.frame().split('\n');
+        const top = lines.findIndex((line) => line.includes('Approve Plan'));
+
+        return lines.slice(
+          top - 1,
+          lines.indexOf(
+            lines.find((line, at) => at > top && line.startsWith('╰'))!,
+          ) + 1,
+        );
+      };
+
+      await ready(window);
+      await send(window, 'cursorplan');
+      await window.shows('Approve Plan');
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.paste(note);
+      await window.shows('lines above · pageup to scroll');
+
+      // The frame fits the window: its top border, title, choices and hint.
+      expect(box()[0]!.startsWith('╭')).toBe(true);
+      expect(window.frame().split('\n').length).toBeLessThanOrEqual(24);
+      expect(box().join('\n')).toContain('2. No, keep planning');
+      expect(box().join('\n')).toContain(
+        'Enter to keep planning with this note',
+      );
+      // The cursor is at the note's end, on its last line.
+      expect(box().join('\n')).toContain('step39 keeps the routing');
+
+      // Page by page, up to the note's first line.
+      for (
+        let page = 0;
+        page < 6 && !box().join('\n').includes('step0 ');
+        page++
+      ) {
+        await window.press('\x1b[5~');
+      }
+
+      expect(box().join('\n')).toContain('Note  step0 keeps the routing');
+      expect(box().join('\n')).toContain('lines below · pagedown to scroll');
+      // Typing brings the view back to the cursor.
+      await window.type('!');
+      await window.shows('step39 keeps the routing!');
+      await window.press('\r');
+      await window.shows('Plan answer:');
+      expect(window.frame().replace(/\s+/g, ' ')).toContain(
+        JSON.stringify({ outcome: 'rejected', reason: `${note}!` }),
+      );
+    },
+    { rows: 24, columns: 80 },
+  ));

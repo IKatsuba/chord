@@ -1695,8 +1695,14 @@ function boundCommand(
 
     // home and end move in the field being typed in, not the transcript.
     const step = key.home || key.end ? undefined : scrollStep(on);
+    // A plan's Note taller than its room takes the page keys while the `❯`
+    // is on it (docs/design/CHD-437.md).
+    const paged =
+      (step === 'page_up' || step === 'page_down') &&
+      state.overflowing !== undefined &&
+      state.overflowing === askedPlan(state.transcript)?.wait.id;
 
-    return step && `scroll_${step}`;
+    return step && (paged ? `request_${step}` : `scroll_${step}`);
   }
 
   // The search line takes typing, so only these keys and the window's below

@@ -342,3 +342,41 @@ test("-p reads a result sent only as rawOutput as the call's content, its reply 
     await rm(dir, { recursive: true });
   }
 });
+
+describe('CHD-495 tester: headless exits retain their diagnostics', () => {
+  test('a failed start and a fake mid-turn exit report their final stderr', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-exit-diagnostic-'));
+
+    try {
+      await expect(
+        runOneshot({
+          agent: 'fake',
+          cwd: dir,
+          prompt: 'text',
+          agentCommand: ['sh', '-c', 'echo "no credentials" >&2; exit 1'],
+          onUpdate: () => {},
+          onRefused: () => {},
+        }),
+      ).rejects.toThrow('The agent exited: no credentials');
+
+      const outcome = await runOneshot({
+        agent: 'fake',
+        cwd: dir,
+        prompt: 'crash',
+        agentCommand: fakeAgentCommand(),
+        onUpdate: () => {},
+        onRefused: () => {},
+      });
+
+      expect(outcome.result).toMatchObject({
+        status: 'failed',
+        error: {
+          message:
+            'The agent exited: fatal: out of memory reading tests/parse/fixtures/huge.json',
+        },
+      });
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});

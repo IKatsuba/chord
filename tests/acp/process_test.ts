@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import process from 'node:process';
 import { spawnAgent, STDERR_SETTLE_MS } from '../../src/acp/process.ts';
 
@@ -48,4 +48,49 @@ test('a stderr that stays open past the cap: the last words so far come at the c
   }
 
   expect(await isAlive(agent.pid)).toBe(false);
+});
+
+describe('CHD-495 tester: inherited stderr has a bounded lifetime', () => {
+  test('an exited shell leaves a grandchild holding stderr, but draining and stopping remain bounded', async () => {
+    const agent = await spawnAgent({
+      command: [
+        'sh',
+        '-c',
+        'sleep 30 >/dev/null & echo $!; echo "last diagnostic" >&2; exit 1',
+      ],
+      cwd: process.cwd(),
+    });
+    let descendant: number | undefined;
+
+    try {
+      descendant = Number(await new Response(agent.stdout).text());
+
+      expect(descendant).toBeGreaterThan(0);
+      await agent.status;
+      expect(await isAlive(agent.pid)).toBe(false);
+      expect(await isAlive(descendant)).toBe(true);
+
+      const started = performance.now();
+
+      expect(await agent.lastWords()).toBe('last diagnostic\n');
+      expect(performance.now() - started).toBeGreaterThanOrEqual(
+        STDERR_SETTLE_MS - 50,
+      );
+      expect(performance.now() - started).toBeLessThan(2500);
+    } finally {
+      await agent.stop(STOP);
+    }
+
+    expect(await isAlive(agent.pid)).toBe(false);
+
+    if (descendant !== undefined) {
+      const deadline = Date.now() + 2000;
+
+      while ((await isAlive(descendant)) && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+
+      expect(await isAlive(descendant)).toBe(false);
+    }
+  });
 });

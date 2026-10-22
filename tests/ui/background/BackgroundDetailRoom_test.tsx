@@ -2,7 +2,7 @@
  * An agent's detail in a short window, one row tall, under a request, and
  * as its work goes on (CHD-487).
  */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, setSystemTime, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { useState } from 'react';
 import type { Subagent } from '../../../src/session/transcript/types.ts';
@@ -279,11 +279,22 @@ describe('a request asked while the view is open hides it, and it comes back whe
           () => !body().includes('dev server errors'),
         );
 
-        const read = body();
+        // The detail says its event's age, which a slow answer would move
+        // on: chord's clock held from the read to the comparison, after a
+        // tick of its own has drawn the age at the held time (CHD-501).
+        setSystemTime(new Date());
 
-        await askAndAnswer(window);
-        await window.shows('Background · m1, 1 of 2');
-        expect(body()).toBe(read);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 1_100));
+
+          const read = body();
+
+          await askAndAnswer(window);
+          await window.shows('Background · m1, 1 of 2');
+          expect(body()).toBe(read);
+        } finally {
+          setSystemTime();
+        }
       },
       { rows: 24, columns: 80 },
     ));

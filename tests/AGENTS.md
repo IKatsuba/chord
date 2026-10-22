@@ -16,6 +16,16 @@
   `src/acp/connection.ts`'s `connectAgent`, controlling stdout and stderr
   independently.
 - Helpers sit beside the tests that share them.
+- Keep each test file within 90 s; split independent blocks into files
+  before a file grows past the budget, sharing helpers beside them.
+  Bare whole runs check measured times against `tests/timings.json`.
+  After a justified timing change or adding, removing or splitting files,
+  run `bun dev test --update-timings` and commit that record. Refreshing
+  still enforces the budget; targeted runs do not compare timings.
+- Use fake-agent gates and observed conditions instead of fixed pauses to
+  order events. Waits must be bounded and use a monotonic clock, so fake
+  system time cannot stop their deadline. Reuse `until` from
+  `ui/app/render.tsx` or `session/conversation_fake.ts` (10 s by default).
 - Add a new test to `tsconfig.json`'s `files` when its path differs from
   another file only by case, so tsc checks both on a case-blind file system.
 - Never reach a real model or a real agent.

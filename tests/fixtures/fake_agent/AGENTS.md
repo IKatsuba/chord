@@ -169,7 +169,8 @@
   asks within it however slow it is, and `tasktillsteered` until a
   message is steered into it, as the task's is, with `--steering`;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
-  long-lived on the fake runtime, and messages `parser` twice;
+  long-lived on the fake runtime, and messages `parser` twice, waiting on
+  receipt marks in the gate before each next step;
   `agentcall` opens `parser` on `callchild` and messages it during its
   running call; `agentcalltwice` sends two messages during that call, to
   check their queue order. `callchild` runs one call for about three
@@ -178,6 +179,10 @@
   `agentcallgated` sends two messages to `parser` on `callchildgated` only
   after its call opens (`<cwd>/.fake-gate/open`); the call stays open until
   the test writes `<cwd>/.fake-gate/release`;
+  `--hold-reply` (`CHORD_FAKE_HOLD_REPLY=1`) holds a message turn's answer
+  until `<cwd>/.fake-gate/release` exists, at most 10 s. Incoming messages,
+  including steered ones, leave `toldMark(text)` files in an existing gate;
+  use `toldMark` from `scenarios/agents.ts` to wait for receipt;
   `agentsend` and `codexagentsend` open `parser` on `agentchild` and send
   it a short message and a long markdown one, as Claude and Codex do;
   `agentsendrefused` sends the long one to `parser` without opening it,

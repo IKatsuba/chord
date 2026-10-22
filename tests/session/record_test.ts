@@ -2342,3 +2342,93 @@ test("the last turn a record kept with tokens gives the running total a resumed 
   ).toStrictEqual({ totalTokens: 4000 });
   expect(lastTotal([])).toBe(undefined);
 });
+
+describe("a subagent left running when its agent's process went is said ended where that process's part of the record ends (the owner's Q144)", () => {
+  /** One opening's turn, which starts a subagent and leaves it running. */
+  const run = (turnId: string, subagent: string, at: number): RecordEntry[] => [
+    { type: 'opened', at },
+    { type: 'prompt', turnId, prompt: `start ${subagent}`, images: 0, at },
+    {
+      type: 'update',
+      turnId,
+      at: at + 1,
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: subagent,
+        description: `Check ${subagent}`,
+        state: { state: 'running' },
+      },
+    },
+    {
+      type: 'result',
+      turnId,
+      result: { status: 'completed', stopReason: 'end_turn' },
+    },
+  ];
+  /** The prompts and end lines a record's past draws, in order. */
+  const outline = (entries: readonly RecordEntry[]) =>
+    recordActions(entries)
+      .reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      )
+      .entries.flatMap((entry) =>
+        entry.kind === 'user'
+          ? [`user: ${entry.text}`]
+          : entry.kind === 'item_ended'
+            ? [`ended: ${entry.name} (${entry.end})`]
+            : [],
+      );
+
+  test('one run: at the end of the record', () => {
+    expect(outline(run('t1', 'a', 1))).toStrictEqual([
+      'user: start a',
+      'ended: Check a (disconnected)',
+    ]);
+  });
+
+  test('a resume and a second run: each where its own process left off', () => {
+    expect(
+      outline([...run('t1', 'a', 1), ...run('t2', 'b', 1000)]),
+    ).toStrictEqual([
+      'user: start a',
+      'ended: Check a (disconnected)',
+      'user: start b',
+      'ended: Check b (disconnected)',
+    ]);
+  });
+
+  test('one its process saw end, or said gone, is not said again at the next opening', () => {
+    const [opened, prompt, started, result] = run('t1', 'a', 1);
+
+    expect(
+      outline([
+        opened!,
+        prompt!,
+        started!,
+        result!,
+        { type: 'disconnected', at: 500 },
+        ...run('t2', 'b', 1000),
+      ]),
+    ).toStrictEqual([
+      'user: start a',
+      'ended: Check a (disconnected)',
+      'user: start b',
+      'ended: Check b (disconnected)',
+    ]);
+  });
+
+  test('a record written before openings were: at its end, as it was', () => {
+    const old = [...run('t1', 'a', 1), ...run('t2', 'b', 1000)].filter(
+      (entry) => entry.type !== 'opened',
+    );
+
+    expect(outline(old)).toStrictEqual([
+      'user: start a',
+      'user: start b',
+      'ended: Check a (disconnected)',
+      'ended: Check b (disconnected)',
+    ]);
+  });
+});

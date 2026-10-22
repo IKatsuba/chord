@@ -524,7 +524,11 @@ function leftOpen(
  * A turn the record has no end for, as when chord was stopped mid-turn, is
  * ended with nothing drawn for its end, as how it ended is not known; it is
  * only not left working. A subagent the record never saw end is
- * disconnected, with no time, as the agent that ran it is gone. The
+ * disconnected, with no time, as the agent that ran it is gone: where that
+ * agent's part of the record ends, at the session's next opening, else at
+ * the record's end, so a session resumed and worked on again reads in order
+ * (the owner's Q144). A record written before openings were has its ends
+ * at its end. The
  * long-lived agents open when the session was left are named last, as they
  * are not reopened with it, a team's runs counted from their leads' records
  * in `runs`, by chord's id for each lead.
@@ -725,6 +729,12 @@ export function recordActions(
           turnId: open ?? 'history',
           at: entry.at,
         });
+
+        break;
+      // Another agent opened the session: the one before it, and the
+      // subagents still running with it, are gone.
+      case 'opened':
+        actions.push({ type: 'disconnected', turnId: open ?? 'history' });
 
         break;
       case 'result':

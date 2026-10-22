@@ -1347,6 +1347,12 @@ describe("an agent's detail in a short window keeps the frame within its cap (CH
         await until('paged with no row', () =>
           /↓ \d+ (lines? )?below/.test(frame()),
         );
+        // Given a row, it draws its work in it, its count beside it.
+        await window.resize({ columns: 80, rows: 18 });
+        await window.press(END);
+        await until('the last line in the one row', () =>
+          /⏺ Every test passed\.\s+↑ \d+ lines? above/.test(frame()),
+        );
       },
       { rows: 16, columns: 80 },
     ));

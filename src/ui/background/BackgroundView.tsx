@@ -607,13 +607,13 @@ function WorkDetail({
       )}
       {/* With no row, still laid out at the frame's width, so its lines are
           counted, but out of the flow and drawn clear: hidden, OpenTUI
-          would not lay it out (docs/design/CHD-487.md). */}
+          would not lay it out (docs/design/CHD-487.md). Both said each
+          time: a prop left out keeps what it was set to. */}
       <box
         flexDirection='row'
         flexShrink={0}
-        {...(workRows === 0
-          ? { position: 'absolute' as const, opacity: 0 }
-          : {})}
+        position={workRows === 0 ? 'absolute' : 'relative'}
+        opacity={workRows === 0 ? 0 : 1}
       >
         <scrollbox
           ref={view}

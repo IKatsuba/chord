@@ -1088,7 +1088,7 @@ describe('CHD-482 U3 tester: a later turn stops its running task with esc', () =
             await send(window, 'tasklong');
             await window.shows('The build is being watched.');
             await until('the announcing turn is idle', () =>
-              /^ {2}\? for shortcuts/m.test(window.frame()),
+              /^ {2}1 agent still running/m.test(window.frame()),
             );
             await send(window, 'slow');
             await window.shows('esc to interrupt');

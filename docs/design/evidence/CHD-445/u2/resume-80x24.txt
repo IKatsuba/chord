@@ -1,0 +1,24 @@
+
+ › titled
+
+ ⏺ Named.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │
+│                                                                              │
+│ ❯   1. just now  Find out why the tokenizer drops the closing quote of a     │
+│                  string at the end of a line, write a test in                │
+│                  tests/parse/tokenize_test.ts that fails for that reason,    │
+│                  fix src/parse/tokenize.ts and have the diff reviewed before │
+│                  anything else in the parser changes                         │
+│   ↓ 2. just now  docs · Fix the parser                                       │
+│     … +2 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

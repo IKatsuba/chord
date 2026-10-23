@@ -1,0 +1,40 @@
+ chord                                                                                    fake · /tmp/chord-qa.des445u2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ Pick one of fake's earlier sessions to open.                                                                         │
+│                                                                                                                      │
+│ ❯   1.    1 minute ago    /tmp/chord-qa.des445u2          Fix the tokenizer                                          │
+│     2.    1 minute ago    /tmp/chord-qa.des445u2          Find out why the tokenizer drops the closing quote of a    │
+│                                                           string at the end of a line, write a test in               │
+│                                                           tests/parse/tokenize_test.ts that fails for that reason,   │
+│                                                           fix src/parse/tokenize.ts and have the diff reviewed       │
+│                                                           before anything else in the parser changes                 │
+│     3.    1 minute ago    /tmp/chord-qa.des445u2          docs · Fix the parser                                      │
+│     4.    1 minute ago    /tmp/chord-qa.des445u2          parser · Fix the tokenizer                                 │
+│     5.    1 minute ago    /tmp/chord-qa.des445u2          agentstitled                                               │
+│   ↓ 6.    5 minutes ago   /tmp/chord-qa.chd445u2          Fix the tokenizer                                          │
+│     … +3029 more                                                                                                     │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for this directory · Esc to quit                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

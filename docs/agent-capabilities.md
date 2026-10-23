@@ -5490,7 +5490,7 @@ agent's Custom or In chord paragraph instead, the item says so.
   agent's list, or close and delete, is open.
 - **Login and `authenticate`.** chord never calls `authenticate`, as CHD-432
   found.
-  Terminal methods: auggie (au14), minimax (mm23), dimcode (dm23) and kilo (ki1)
+  Terminal methods: auggie (au15), minimax (mm23), dimcode (dm23) and kilo (ki1)
   list one only behind `auth.terminal` or `_meta["terminal-auth"]`, and pi
   always (pi17), so chord running such a method in a terminal of its own would
   reach pi without that key; kilo's tells the person to run `opencode auth

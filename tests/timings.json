@@ -2,6 +2,7 @@
   "version": 1,
   "files": {
     "tests/ui/transcript/agents/Agents_test.tsx": 48623,
+    "tests/headless_test.ts": 48300,
     "tests/ui/agents/AgentsTasks_test.tsx": 45961,
     "tests/ui/app/AppStart_test.tsx": 42806,
     "tests/ui/app/AppSpend_test.tsx": 42218,
@@ -47,7 +48,6 @@
     "tests/ui/app/Selection_test.tsx": 23176,
     "tests/session/monitors_test.ts": 22495,
     "tests/ui/app/AppCommands_test.tsx": 22400,
-    "tests/headless_test.ts": 22279,
     "tests/ui/app/AppNew_test.tsx": 21020,
     "tests/ui/background/BackgroundDetail_test.tsx": 20701,
     "tests/scripts/dev/release/stages_test.ts": 20607,

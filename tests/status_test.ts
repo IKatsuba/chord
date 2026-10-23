@@ -79,7 +79,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
     });
   });
 
-  test('a failed front turn clears on a key, leaving another tab working', () => {
+  test('a failed child turn clears on a key, leaving main working', () => {
     const running = heard(opened('first', 'second'), 1, [up, prompt('a')]);
     const failure = heard(running, 2, [up, prompt('b'), failed('b')]);
 
@@ -90,7 +90,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
     });
   });
 
-  test('equal-age requests choose the leftmost tab and expose the next after settlement', () => {
+  test('equal-age requests choose main before its child and expose the next after settlement', () => {
     const first = heard(opened('first', 'second'), 1, [
       up,
       prompt('a'),
@@ -102,7 +102,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
       state: 'blocked',
       app: 'chord',
       kind: 'permission',
-      message: 'first (1) needs your permission: Write notes.txt',
+      message: 'first needs your permission: Write notes.txt',
     });
 
     const answered = heard(both, 1, [
@@ -118,7 +118,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
       state: 'blocked',
       app: 'chord',
       kind: 'auth',
-      message: 'second (2) asks for input: Sign in',
+      message: 'second asks for input: Sign in',
     });
   });
 

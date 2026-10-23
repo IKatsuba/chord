@@ -190,6 +190,8 @@ test('typing filters by the letters in order, best match first', () => {
   expect(names(matchCommands(items, 'cl'))[0]).toStrictEqual('clear');
   // Another name matches as the command's own does.
   expect(names(matchCommands(items, 'ne'))[0]).toStrictEqual('clear');
+  // Each name on its own: letters from both never make a match.
+  expect(names(matchCommands(items, 'clw'))).not.toContain('clear');
   expect(names(matchCommands(items, 'HE'))).toStrictEqual(['help', 'theme']);
   expect(matchCommands(items, 'zz')).toStrictEqual([]);
 });

@@ -28,6 +28,7 @@ import {
   readKeybindings,
 } from '../../../src/ui/shortcuts/bindings.ts';
 import type { Copy } from '../../../src/ui/app/selection.ts';
+import type { WindowedState } from '../../../src/ui/app/state.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { draw } from '../harness.tsx';
@@ -150,6 +151,7 @@ export async function withWindow(
     log,
     copy = copiedStub,
     copyOnSelect,
+    onState,
     mouse = true,
   }: {
     /** The agent the window runs, as `chord <agent>` names it, on the fake. */
@@ -231,6 +233,8 @@ export async function withWindow(
      */
     copy?: Copy;
     copyOnSelect?: boolean;
+    /** Told the window's state after each change, as App's `onState` is. */
+    onState?: (all: WindowedState) => void;
     /** `"mouse": false`: the terminal is not asked for it, and nothing copies. */
     mouse?: boolean;
   } = {},
@@ -292,6 +296,7 @@ export async function withWindow(
       splash={splash}
       {...(mouse ? { copy } : {})}
       {...(copyOnSelect === undefined ? {} : { copyOnSelect })}
+      {...(onState === undefined ? {} : { onState })}
       open={async (options) => {
         const opening = openWith(options);
 

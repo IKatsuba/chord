@@ -215,14 +215,30 @@ export function matchCommands(
     return [...items];
   }
 
-  return new Fzf(items, {
-    // Another name matches as the command's own does.
-    selector: ({ name, alias }) =>
-      alias === undefined ? name : `${name} ${alias}`,
-    casing: 'case-insensitive',
-  })
-    .find(query)
-    .map(({ item }) => item);
+  // Another name matches as the command's own does, each scored by fzf
+  // alone, and an item matched by both takes its better score.
+  const found = [
+    ...new Fzf(items, {
+      selector: ({ name }) => name,
+      casing: 'case-insensitive',
+    }).find(query),
+    ...new Fzf(
+      items.filter(({ alias }) => alias !== undefined),
+      { selector: ({ alias }) => alias!, casing: 'case-insensitive' },
+    ).find(query),
+  ];
+  const best = new Map<CommandItem, number>();
+
+  for (const { item, score } of found) {
+    best.set(item, Math.max(score, best.get(item) ?? -Infinity));
+  }
+
+  return [...best].sort((a, b) => b[1] - a[1]).map(([item]) => item);
+}
+
+/** Whether fzf matches `query` in `name`, as the list matches it. */
+function matches(query: string, name: string): boolean {
+  return new Fzf([name], { casing: 'case-insensitive' }).find(query).length > 0;
 }
 
 /** The highlight one step up or down, wrapping round at either end. */
@@ -275,19 +291,6 @@ export function itemLabel(item: CommandItem): string {
       : `/${item.name} (${item.alias})`;
 }
 
-/** Whether `name` holds `query`'s letters in order, whatever the case. */
-function inOrder(query: string, name: string): boolean {
-  let at = 0;
-
-  for (const letter of name.toLowerCase()) {
-    if (letter === query[at]?.toLowerCase()) {
-      at += 1;
-    }
-  }
-
-  return at === query.length;
-}
-
 /**
  * What Tab puts in the prompt: the name, and a space for what follows; for a
  * name a command takes, the command with it. A command matched by its other
@@ -299,7 +302,7 @@ export function completion(item: CommandItem, query = ''): string {
     return `/${[item.of, item.verb, item.name].filter(Boolean).join(' ')} `;
   }
 
-  return item.alias !== undefined && !inOrder(query, item.name)
+  return item.alias !== undefined && query !== '' && !matches(query, item.name)
     ? `/${item.alias} `
     : `/${item.name} `;
 }

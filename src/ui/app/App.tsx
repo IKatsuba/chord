@@ -56,6 +56,7 @@ import {
   reduceWindowed,
   resumableSession,
   windowed,
+  type WindowedState,
 } from './state.ts';
 import {
   askedInput,
@@ -299,6 +300,12 @@ export interface AppProps {
   /** Release copies a selection; `false` leaves it to the copy key. */
   copyOnSelect?: boolean | undefined;
   /**
+   * For tests only, and nothing in production passes it: told the window's
+   * state after each change, so a test can wait on what the screen does not
+   * show, such as a read landing in a session not shown (CHD-493).
+   */
+  onState?: ((all: WindowedState) => void) | undefined;
+  /**
    * Whether the startup splash holds the screen until the first session is
    * up; `main.tsx` asks for it on a terminal, and tests leave it off.
    */
@@ -361,6 +368,7 @@ export function App({
   copy,
   copyOnSelect = true,
   splash = false,
+  onState,
 }: AppProps) {
   const { width: columns, height: rows } = useTerminalDimensions();
   // In the first frame, so they come before anything the session says.
@@ -385,6 +393,9 @@ export function App({
     ),
   );
   const state = useMemo(() => frontState(all), [all]);
+
+  useEffect(() => onState?.(all), [all, onState]);
+
   const { draft, cursor } = state;
   const setCursor = (at: Cursor) => dispatch({ type: 'draft_set', cursor: at });
   const [history, setHistory] = useState(emptyHistory);

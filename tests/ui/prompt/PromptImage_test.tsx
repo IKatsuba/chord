@@ -28,6 +28,7 @@ import {
 } from '../app/render.tsx';
 
 import { openOther, pickAgent, withChild } from '../app/child_window.tsx';
+import type { WindowedState } from '../../../src/ui/app/state.ts';
 import {
   LEFT,
   BACKSPACE,
@@ -35,6 +36,31 @@ import {
   connected,
   RECEIVED,
 } from './prompt_window.tsx';
+
+/**
+ * The window's state as App last told it, and a wait until main's draft
+ * holds `text` while a child is shown: a read that lands in main is seen
+ * there, not on screen (CHD-493).
+ */
+function stateProbe() {
+  let all: WindowedState | undefined;
+
+  return {
+    onState: (next: WindowedState) => {
+      all = next;
+    },
+    /** The drafts of main, the window's first session, and the one shown. */
+    drafts: () => {
+      const main = Math.min(...Object.keys(all?.sessions ?? {}).map(Number));
+
+      return {
+        main: all?.sessions[main]?.draft ?? '',
+        shown: all === undefined ? '' : (all.sessions[all.front]?.draft ?? ''),
+        mainShown: all?.front === main,
+      };
+    },
+  };
+}
 
 const CTRL_V = '\x16';
 const CTRL_W = '\x17';
@@ -524,6 +550,8 @@ test('a clipboard image read while a child is shown goes into the draft it began
       ),
     );
 
+  const probe = stateProbe();
+
   return withChild(
     async (window) => {
       await connected(window);
@@ -534,8 +562,14 @@ test('a clipboard image read while a child is shown goes into the draft it began
       await leader(window, 'a');
       await window.shows('╭─ other ');
       waiting[0]?.();
-      // The finish has no mark of its own on other; a pause lets it land.
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Landed in main's draft while other is shown, and not in other's.
+      await until(
+        "the image in main's draft",
+        () =>
+          !probe.drafts().mainShown &&
+          probe.drafts().main.includes('[Image #1]'),
+      );
+      expect(probe.drafts().shown).not.toContain('[Image #');
       expect(
         !window.frame().includes('[Image #1]'),
         'the image went to other',
@@ -550,12 +584,13 @@ test('a clipboard image read while a child is shown goes into the draft it began
       );
       await quitAll(window);
     },
-    { columns: 120, rows: 40, clipboard },
+    { columns: 120, rows: 40, clipboard, onState: probe.onState },
   );
 });
 
 test('a pasted image path read while a child is shown goes into the draft it began in (CHD-128)', () => {
   const reader = heldReader();
+  const probe = stateProbe();
 
   return withChild(
     async (window) => {
@@ -566,8 +601,14 @@ test('a pasted image path read while a child is shown goes into the draft it beg
       await leader(window, 'a');
       await window.shows('╭─ other ');
       reader.waiting[0]?.();
-      // The finish has no mark of its own on other; a pause lets it land.
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Landed in main's draft while other is shown, and not in other's.
+      await until(
+        "the image in main's draft",
+        () =>
+          !probe.drafts().mainShown &&
+          probe.drafts().main.includes('[Image #1]'),
+      );
+      expect(probe.drafts().shown).not.toContain('[Image #');
       expect(window.frame()).not.toContain('[Image #');
       await pickAgent(window, 'main');
       await window.shows('› [Image #1]');
@@ -576,7 +617,12 @@ test('a pasted image path read while a child is shown goes into the draft it beg
       await window.shows(RECEIVED);
       await quitAll(window);
     },
-    { columns: 120, rows: 40, readImage: reader.readImage },
+    {
+      columns: 120,
+      rows: 40,
+      readImage: reader.readImage,
+      onState: probe.onState,
+    },
   );
 });
 

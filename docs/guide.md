@@ -967,13 +967,25 @@ registry's, `own CLI · found` or `own CLI · not on PATH` for those that need
 their own CLI, and `settings` where a settings file's command starts it, then
 what starts it, that command in the table's or the registry's place, wrapped
 within its column on a terminal and one line per agent when piped.
+If an agent does not start, chord says which request it refused or was
+answering when it exited or closed its connection, with its exit code or
+signal when known. A Registry agent's failure also names the `package@version`
+chord ran, including on a sign-in failure; an old Registry pin may be the
+cause. Below it, when available, are stderr's last six non-empty lines,
+with `… +N lines` for omitted lines and `…` on cut long lines. Plain stdout
+messages are not shown. `-p` reports the same details on stderr; a lead's
+failed-child note keeps the step, pin and stderr's last line.
+A session request refused with `Method not found` means the program does not
+serve ACP sessions: it is not an ACP agent, or not at this version. If
+zeroclaw needs an agent alias, set `[acp] default_agent = "<alias>"` in
+ZeroClaw's config, or start it with `zeroclaw acp --agent <alias>`.
+
 chord does not sign agents in. If a new or resumed session needs a login,
 its `did not start` row keeps the agent's words and lists any sign-in methods
 it offers, each as `name · description`. Sign in with the agent's own CLI in
 a terminal, or set its API key where it offers one, then start chord again.
 The same guidance goes to `-p`'s stderr and to a lead whose child failed to
-start. It appears only when the agent reports ACP's `authRequired` error;
-other start failures keep their usual message.
+start. Sign-in guidance appears only for ACP's `authRequired` error.
 For sigit, sign in from its own CLI: `/login <email> <password>` typed in
 chord goes to the agent as prompt text and lands in chord's session record.
 

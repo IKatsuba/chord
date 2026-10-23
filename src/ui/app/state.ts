@@ -460,6 +460,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'pick_settled':
     case 'draft_set':
     case 'bash_mode':
+    case 'draft_kept':
+    case 'kept_taken':
     case 'context_sent':
     case 'editor_failed':
     case 'images_sent':
@@ -676,7 +678,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       };
     case 'cleared':
       // A new session: only what is the window's own stays, and the draft
-      // with its images.
+      // with its images and the drafts set aside (Q191).
       return {
         ...initialAppState,
         // What closed agents and let-go sessions spent, which still counts.
@@ -686,6 +688,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         expanded: state.expanded,
         theme: state.theme,
         draft: state.draft,
+        ...(state.kept === undefined ? {} : { kept: state.kept }),
         cursor: state.cursor,
         images: state.images,
         imageCount: state.imageCount,
@@ -966,6 +969,7 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   bash: true,
   held: true,
   draft: true,
+  kept: true,
   cursor: true,
   images: true,
   imageCount: true,

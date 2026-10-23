@@ -72,16 +72,58 @@ export function left(history: History): History {
 }
 
 /**
- * One prompt older, with what the box should show; undefined at the oldest.
+ * A step of the walk: the box shows `text`, which is the agent's kept draft
+ * `kept` when it is one, else a prompt sent or the draft the walk began on.
+ */
+export interface Walked {
+  readonly history: History;
+  readonly text: string;
+  readonly kept?: number;
+}
+
+/**
+ * Where the walk stands among the prompts and then `kept`, the agent's own
+ * drafts set aside, oldest first (U10): past them is the box's draft. The
+ * walk is the window's and the drafts an agent's, so a walk begun on an
+ * agent with more of them stands at the draft on one with fewer.
+ */
+function standing(history: History, kept: number): number {
+  const end = history.prompts.length + kept;
+
+  return Math.min(history.index ?? end, end);
+}
+
+/** What the walk shows at `index`, among the prompts and `kept`. */
+function at(
+  history: History,
+  index: number,
+  kept: readonly string[],
+): { text: string; kept?: number } | undefined {
+  const prompt = history.prompts[index];
+
+  if (prompt !== undefined) {
+    return { text: prompt };
+  }
+
+  const own = index - history.prompts.length;
+  const text = kept[own];
+
+  return text === undefined ? undefined : { text, kept: own };
+}
+
+/**
+ * One step older, the agent's newest kept draft first, with what the box
+ * should show; undefined at the oldest prompt.
  */
 export function older(
   history: History,
   draft: string,
-): { history: History; text: string } | undefined {
-  const index = (history.index ?? history.prompts.length) - 1;
-  const text = history.prompts[index];
+  kept: readonly string[] = [],
+): Walked | undefined {
+  const index = standing(history, kept.length) - 1;
+  const shown = at(history, index, kept);
 
-  if (text === undefined) {
+  if (shown === undefined) {
     return undefined;
   }
 
@@ -91,31 +133,33 @@ export function older(
       index,
       draft: history.index === undefined ? draft : history.draft,
     },
-    text,
+    ...shown,
   };
 }
 
 /**
- * One prompt newer, the kept draft after the newest; undefined off the walk.
+ * One step newer: a newer prompt, or the agent's next kept draft, or after
+ * them the draft the walk began on; undefined off the walk.
  */
 export function newer(
   history: History,
-): { history: History; text: string } | undefined {
+  kept: readonly string[] = [],
+): Walked | undefined {
   if (history.index === undefined) {
     return undefined;
   }
 
-  const index = history.index + 1;
-  const text = history.prompts[index];
+  const index = standing(history, kept.length) + 1;
+  const shown = at(history, index, kept);
 
-  if (text === undefined) {
+  if (shown === undefined) {
     return {
       history: { ...history, index: undefined, draft: '' },
       text: history.draft,
     };
   }
 
-  return { history: { ...history, index }, text };
+  return { history: { ...history, index }, ...shown };
 }
 
 /**

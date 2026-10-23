@@ -1014,6 +1014,10 @@ export function App({
           dispatch({ type: 'form_filled', id: inputAsked.id, form })
         }
         onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
+        // Into the agents list, the form kept with its agent (Q192).
+        {...(listRows.length > 0 && {
+          onLeave: () => dispatch({ type: 'agents_focused', focused: true }),
+        })}
       />
     ) : inputAsked?.mode === 'url' ? (
       <LinkPrompt

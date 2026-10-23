@@ -225,6 +225,7 @@ export function ElicitationForm({
   between = false,
   onFill,
   onAnswer,
+  onLeave,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -256,6 +257,8 @@ export function ElicitationForm({
   active: boolean;
   onFill?: (form: FormState) => void;
   onAnswer: (response: ElicitationReply) => void;
+  /** ↓ past the buttons, where there is a list of agents to go to. */
+  onLeave?: () => void;
 }) {
   const [form, setForm] = useState(() => filled ?? openForm(wait.schema));
   // Keys that land in one tick each see the one before.
@@ -274,6 +277,10 @@ export function ElicitationForm({
 
       if (step.response) {
         onAnswer(step.response);
+      }
+
+      if (step.leave) {
+        onLeave?.();
       }
     },
     { isActive: active },

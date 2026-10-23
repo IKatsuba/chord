@@ -167,7 +167,7 @@ test('↑ recalls the last prompt sent', () => {
   ]);
 });
 
-test('↓ on an empty draft goes into the list of agents only while there is one and history is not walked', () => {
+test('↓ on an empty draft goes into the list of agents only while there is one and history is not walked, and on a draft sets it aside', () => {
   const into: Step[] = [
     {
       type: 'dispatch',
@@ -178,19 +178,117 @@ test('↓ on an empty draft goes into the list of agents only while there is one
 
   expect(newerSteps(context(ready, { agents: true }))).toStrictEqual(into);
   expect(newerSteps(context(ready))).toStrictEqual([]);
-  expect(
-    newerSteps(
-      context(reduceApp(ready, { type: 'draft_set', text: 'hi' }), {
-        agents: true,
-      }),
-    ),
-  ).toStrictEqual([]);
+  // A draft goes aside first, list or none (Q183).
+  for (const agents of [true, false]) {
+    expect(newerSteps(context(typing('hi'), { agents }))).toStrictEqual([
+      dispatched({ type: 'draft_kept' }),
+      { type: 'show_draft', text: '', cursor: START },
+    ]);
+  }
+
+  // A list on screen keeps its ↓.
+  expect(newerSteps(context(typing('/'), { agents: true }))).toStrictEqual([]);
   // ↓ walks back to the empty draft first; only the next one goes in.
   expect(
     newerSteps(context(ready, { agents: true, history: walked })).some(
       (step) => step.type === 'history',
     ),
   ).toStrictEqual(true);
+});
+
+describe('drafts set aside (U10, Q183)', () => {
+  const image = { id: 1, mediaType: 'image/png', data: 'AA==', bytes: 1 };
+  const kept = reduceApp(
+    reduceApp(
+      reduceApp(typing('one [Image #1] two'), {
+        type: 'images_added',
+        images: [image],
+      }),
+      { type: 'bash_mode', on: true },
+    ),
+    { type: 'draft_set', cursor: [0, 3] as const },
+  );
+  const aside = reduceApp(kept, { type: 'draft_kept' });
+
+  test('↓ keeps the whole draft with the agent and empties the box', () => {
+    expect(aside.kept).toStrictEqual([
+      {
+        text: 'one [Image #1] two',
+        cursor: [0, 3] as const,
+        images: [image],
+        bash: true,
+      },
+    ]);
+    expect(aside.draft).toStrictEqual('');
+    expect(aside.images).toStrictEqual([]);
+    expect(aside.bash).toStrictEqual(false);
+    // A new session keeps them, as it keeps the draft (Q191).
+    expect(reduceApp(aside, { type: 'cleared' }).kept).toStrictEqual(
+      aside.kept,
+    );
+  });
+
+  test('↑ from the empty box brings the newest back whole, its cursor where it was, then the prompts sent', () => {
+    const history = recorded(emptyHistory, 'sent before');
+    const up = olderSteps(context(aside, { history }));
+
+    expect(up).toStrictEqual([
+      { type: 'history', history: { ...history, index: 1, draft: '' } },
+      dispatched({ type: 'menu_dismissed' }),
+      dispatched({ type: 'bash_mode', on: true }),
+      dispatched({ type: 'images_added', images: [image] }),
+      {
+        type: 'show_draft',
+        text: 'one [Image #1] two',
+        cursor: [0, 3] as const,
+      },
+    ]);
+
+    const shown = { ...history, index: 1, draft: '' };
+
+    expect(olderSteps(context(aside, { history: shown })).at(-1)).toStrictEqual(
+      {
+        type: 'show_draft',
+        text: 'sent before',
+        cursor: endOf('sent before'),
+      },
+    );
+    // From a kept draft ↓ walks on to the box; it sets nothing aside.
+    expect(
+      newerSteps(context(aside, { history: shown })).some(
+        (step) => step.type === 'dispatch' && step.action.type === 'draft_kept',
+      ),
+    ).toStrictEqual(false);
+  });
+
+  test('a kept draft sent, or emptied by ctrl+c, leaves the stack and the walk', () => {
+    const history = { ...emptyHistory, index: 0 };
+    const showing = reduceApp(aside, {
+      type: 'draft_set',
+      text: 'one two',
+      cursor: endOf('one two'),
+    });
+    const taken: Step[] = [
+      dispatched({ type: 'kept_taken', index: 0 }),
+      { type: 'history', history: { ...history, index: undefined, draft: '' } },
+    ];
+
+    expect(
+      submitSteps('one two', context(showing, { history })).slice(0, 2),
+    ).toStrictEqual(taken);
+    expect(
+      keySteps('c', ctrl, context(showing, { history })).slice(0, 2),
+    ).toStrictEqual(taken);
+    expect(
+      reduceApp(aside, { type: 'kept_taken', index: 0 }).kept,
+    ).toStrictEqual([]);
+    // A prompt sent from the box leaves the stack be.
+    expect(
+      submitSteps('fresh', context(typing('fresh', aside))).some(
+        (step) => step.type === 'dispatch' && step.action.type === 'kept_taken',
+      ),
+    ).toStrictEqual(false);
+  });
 });
 
 test('in the list ↑ ↓ and j k move the pick, enter and esc go back, x closes, and other letters do nothing', () => {

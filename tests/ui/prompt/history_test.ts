@@ -47,6 +47,32 @@ test('↓ walks forward and then gives back the draft ↑ left', () => {
   expect(newer(sent)).toStrictEqual(undefined);
 });
 
+test("↑ walks an agent's kept drafts, newest first, before the prompts sent, and ↓ back to the box (U10)", () => {
+  const kept = ['set aside first', 'set aside last'];
+  const one = older(sent, 'typing', kept)!;
+  const two = older(one.history, one.text, kept)!;
+  const three = older(two.history, two.text, kept)!;
+
+  expect([one, two, three].map(({ text, kept }) => [text, kept])).toStrictEqual(
+    [
+      ['set aside last', 1],
+      ['set aside first', 0],
+      ['second', undefined],
+    ],
+  );
+
+  const back = newer(three.history, kept)!;
+  const home = newer(newer(back.history, kept)!.history, kept)!;
+
+  expect([back.text, back.kept]).toStrictEqual(['set aside first', 0]);
+  expect(home.text).toStrictEqual('typing');
+  expect(home.history.index).toStrictEqual(undefined);
+  // A walk begun among one agent's drafts stands at the box on an agent
+  // with fewer.
+  expect(older(one.history, '', [])?.text).toStrictEqual('second');
+  expect(newer(one.history, [])?.history.index).toStrictEqual(undefined);
+});
+
 test('sending ends the walk', () => {
   const back = older(sent, 'draft')!;
   const after: History = recorded(back.history, 'third');

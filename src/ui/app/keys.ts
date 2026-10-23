@@ -19,6 +19,7 @@ import {
   older,
   recalledImages,
   recorded,
+  type Walked,
 } from '../prompt/history.ts';
 import { cutPlaceholder, namesImage, pastedText } from '../prompt/images.ts';
 import { insertMention, mentionAt } from '../prompt/mentions.ts';
@@ -209,6 +210,50 @@ function recall(history: History, text: string): Step[] {
   ];
 }
 
+/** The texts of the front agent's kept drafts, oldest first. */
+function keptTexts(state: AppState): string[] {
+  return (state.kept ?? []).map(({ text }) => text);
+}
+
+/**
+ * A step of the walk into the box: a kept draft whole, as it was set aside,
+ * its cursor too; else a prompt or the walk's own draft, as `recall` puts it.
+ */
+function walkedTo(context: KeyContext, step: Walked): Step[] {
+  const draft =
+    step.kept === undefined ? undefined : context.state.kept?.[step.kept];
+
+  return [
+    { type: 'history', history: step.history },
+    dispatch({ type: 'menu_dismissed' }),
+    ...(draft === undefined
+      ? recall(context.history, step.text)
+      : [
+          dispatch({ type: 'bash_mode', on: draft.bash }),
+          dispatch({ type: 'images_added', images: draft.images }),
+          show(draft.text, draft.cursor),
+        ]),
+  ];
+}
+
+/**
+ * The kept draft the box shows, leaving it: sent, or emptied by hand; it
+ * goes off the stack, and the walk ends.
+ */
+function keptLeft({ state, history }: KeyContext): Step[] {
+  const index =
+    history.index === undefined
+      ? undefined
+      : history.index - history.prompts.length;
+
+  return index === undefined || state.kept?.[index] === undefined
+    ? []
+    : [
+        dispatch({ type: 'kept_taken', index }),
+        { type: 'history', history: left(history) },
+      ];
+}
+
 /**
  * The highlighted file into the draft in place of the `@` being typed. A
  * highlight not moved since the list came, while the mention's own match
@@ -282,42 +327,43 @@ export function awaitedSteps(context: KeyContext): Step[] {
   return [settled, show(next.text, next.cursor)];
 }
 
-/** ↑ on the first line, or `k` there in normal mode: an older prompt. */
+/**
+ * ↑ on the first line, or `k` there in normal mode: the agent's newest kept
+ * draft, then older ones, then an older prompt.
+ */
 export function olderSteps(context: KeyContext): Step[] {
   const { state, history } = context;
   const { draft, cursor } = state;
   const step =
     !commandMenu(state, draft) &&
     !fileFinder(state, draft, cursor) &&
-    older(history, typedText(state.bash, draft));
+    older(history, typedText(state.bash, draft), keptTexts(state));
 
   // A recalled `/command` is history's, not the list's.
-  return step
-    ? [
-        { type: 'history', history: step.history },
-        dispatch({ type: 'menu_dismissed' }),
-        ...recall(history, step.text),
-      ]
-    : [];
+  return step ? walkedTo(context, step) : [];
 }
 
 /**
- * ↓ on the last line, or `j` there in normal mode: a newer one; or, on an
- * empty draft that is not walking history, into the list of the session's
- * agents, where ↓ did nothing before there was one.
+ * ↓ on the last line, or `j` there in normal mode: a newer one; or, from a
+ * draft that is not walking history, the draft set aside, as if the history
+ * ended in an empty prompt (Q183); or, from an empty one, into the list of
+ * the session's agents, where ↓ did nothing before there was one.
  */
 export function newerSteps(context: KeyContext): Step[] {
   const { state, history } = context;
   const { draft, cursor } = state;
   const listed =
     !commandMenu(state, draft) && !fileFinder(state, draft, cursor);
-  const step = listed && newer(history);
+  const step = listed && newer(history, keptTexts(state));
 
   if (step) {
+    return walkedTo(context, step);
+  }
+
+  if (listed && draft !== '' && history.index === undefined) {
     return [
-      { type: 'history', history: step.history },
-      dispatch({ type: 'menu_dismissed' }),
-      ...recall(history, step.text),
+      dispatch({ type: 'draft_kept' }),
+      show('', START),
     ];
   }
 
@@ -364,6 +410,7 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
 
     // As in Claude Code, the box is a prompt again once it has run.
     return [
+      ...keptLeft(context),
       { type: 'history', history: recorded(history, typedText(true, value)) },
       dispatch({ type: 'bash_mode', on: false }),
       show('', START),
@@ -385,6 +432,7 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
 
   if (action.type === 'chord') {
     return [
+      ...keptLeft(context),
       {
         type: 'history',
         history: recorded(
@@ -403,15 +451,18 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
     ];
   }
 
+  // A kept draft sent leaves the stack as it leaves the box.
+  const leaving = canSend(state, action.text) ? keptLeft(context) : [];
+
   if (
     state.takesImages === true &&
     canSend(state, action.text) &&
     namesImage(action.text, home)
   ) {
-    return [{ type: 'send_with_paths', text: action.text }];
+    return [...leaving, { type: 'send_with_paths', text: action.text }];
   }
 
-  return [{ type: 'send', text: action.text }];
+  return [...leaving, { type: 'send', text: action.text }];
 }
 
 /**
@@ -625,7 +676,11 @@ function commandSteps(
     case 'arm_quit':
       return [dispatch({ type: 'quit_armed' })];
     case 'clear_draft':
-      return [dispatch({ type: 'draft_cleared' }), show('', START)];
+      return [
+        ...keptLeft(context),
+        dispatch({ type: 'draft_cleared' }),
+        show('', START),
+      ];
     case 'cycle_mode': {
       const mode = modeAfter(state);
 

@@ -23,6 +23,7 @@ export function LinkPrompt({
   asker,
   active,
   held = false,
+  away = false,
   between = false,
   onAnswer,
   kept,
@@ -47,6 +48,11 @@ export function LinkPrompt({
   active: boolean;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
   held?: boolean;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
   /** `open` when the person chose to open it. */
   onAnswer: (answer: 'open' | 'decline' | 'cancel') => void;
   /** Its choice kept with its agent, and the way out to the agents list. */
@@ -106,7 +112,7 @@ export function LinkPrompt({
           <ChoiceList
             choices={choices}
             active={active}
-            marked={!held}
+            marked={!held && !away}
             onSelect={(value) =>
               onAnswer(value === 'open' ? 'open' : 'decline')
             }
@@ -116,7 +122,7 @@ export function LinkPrompt({
       </Fold>
       {held ? (
         <AttendHint />
-      ) : (
+      ) : away ? undefined : (
         <box marginTop={1}>
           <text {...TEXT} attributes={DIM}>
             Enter to choose · Esc to cancel

@@ -63,6 +63,7 @@ export function QuestionBox({
   width,
   active,
   held = false,
+  away = false,
   between = false,
   now = Date.now,
   onFill,
@@ -77,6 +78,11 @@ export function QuestionBox({
   wait: Extract<ElicitationWait, { mode: 'form' }>;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
   held?: boolean;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
   /**
    * Asked with no turn running: its heading names `agent` as who asks and
    * says so, dim, wrapping rather than cut (CHD-158).
@@ -156,8 +162,9 @@ export function QuestionBox({
 
   const left = expiresIn(questions, wait.at ?? shownAt, time);
   const problems = blockers(questions, wait.schema, state);
-  // Held, no row reads as where the keys are, as they are not here.
-  const shown = held ? { ...state, row: -1 } : state;
+  // Held, or the list's, no row reads as where the keys are, as they are
+  // not here.
+  const shown = held || away ? { ...state, row: -1 } : state;
   const countdown =
     left === undefined ? undefined : `answers itself in ${clock(left)}`;
   const body =
@@ -212,7 +219,7 @@ export function QuestionBox({
       </Fold>
       {held ? (
         <AttendHint />
-      ) : (
+      ) : away ? undefined : (
         <box marginTop={1}>
           <text {...CUT} attributes={DIM}>
             {askHint(questions, state, inner)}

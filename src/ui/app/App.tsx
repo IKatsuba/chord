@@ -1017,6 +1017,7 @@ export function App({
         width={columns}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        away={listFocus}
         hidden={viewing}
         onFill={(answering) =>
           dispatch({
@@ -1042,6 +1043,7 @@ export function App({
         width={columns}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        away={listFocus}
         hidden={viewing}
         onFill={(form) =>
           dispatch({ type: 'form_filled', id: inputAsked.id, form })
@@ -1058,6 +1060,7 @@ export function App({
         between={inputBetween}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        away={listFocus}
         hidden={viewing}
         onAnswer={(answer) =>
           answerLink(openUrl, conversation(), inputAsked, answer)
@@ -1267,6 +1270,7 @@ export function App({
                   {...(childShown === undefined ? {} : { child: childShown })}
                   between={between}
                   held={held}
+                  away={listFocus}
                   width={columns - 4}
                   active={listening && !listFocus && !viewing}
                   onChoose={(optionId) =>
@@ -1291,6 +1295,7 @@ export function App({
                   agent={shownAgent}
                   width={columns}
                   hidden={viewing}
+                  away={listFocus}
                   active={listening && !listFocus && !viewing}
                   scroller={requestScroller}
                   onOverflow={(overflows) =>

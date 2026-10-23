@@ -55,6 +55,7 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
       active={active}
       onChoose={onChoose}
       hidden={props.hidden ?? false}
+      away={props.away ?? false}
       {...(kept && { kept })}
     />
   );
@@ -70,6 +71,7 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
  */
 function AgentPermission({
   hidden = false,
+  away = false,
   wait,
   asker = [],
   child,
@@ -110,6 +112,11 @@ function AgentPermission({
   between?: boolean;
   /** Asked between turns, the keys not taken into it yet. */
   held?: boolean;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
   /** Cells inside the box's border and padding, for the asker's row. */
   width?: number;
   active: boolean;
@@ -174,12 +181,12 @@ function AgentPermission({
           <ChoiceList
             choices={choicesFor(wait)}
             active={active && !held}
-            marked={!held}
+            marked={!held && !away}
             onSelect={onChoose}
             {...kept}
           />
         </box>
-        {held ? <AttendHint /> : <PermissionHint />}
+        {held ? <AttendHint /> : away ? undefined : <PermissionHint />}
       </box>
     </box>
   );
@@ -393,12 +400,18 @@ function SaveBox({
   active,
   onChoose,
   kept,
+  away = false,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
    * place (CHD-462).
    */
   hidden?: boolean;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
   wait: PermissionWait;
   save: SaveBoxQuestion;
   active: boolean;
@@ -423,11 +436,12 @@ function SaveBox({
         <ChoiceList
           choices={saveChoices(wait)}
           active={active}
+          marked={!away}
           onSelect={onChoose}
           {...kept}
         />
       </box>
-      {key !== undefined && (
+      {key !== undefined && !away && (
         <box marginTop={1}>
           <text {...TEXT} attributes={DIM}>
             {`${capital(key)} to ${save.escape}`}

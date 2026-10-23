@@ -812,7 +812,9 @@ test('↓ on the last choice goes into the agents list rather than round, and �
       await window.shows('❯ 3. Deny');
       await window.press(DOWN);
       await window.shows('  ❯ main ');
-      expect(window.frame()).not.toContain('❯ 1. Allow');
+      // The keys are the list's: the box promises none of them.
+      expect(window.frame()).not.toContain('❯ 3. Deny');
+      expect(window.frame()).not.toContain('to reject');
       await window.press(UP);
       await until(
         'the list let go',

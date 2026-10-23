@@ -626,6 +626,9 @@ test('↓ past the buttons goes into the agents list, and ↑ straight back puts
 
       await window.press(DOWN);
       await window.shows('  ❯ main ');
+      // The keys are the list's: the form promises none of them.
+      expect(window.frame()).not.toMatch(/❯ ?Accept/);
+      expect(window.frame()).not.toContain('Enter to accept');
       // Main is the list's first row: ↑ leaves it, back into the form.
       await window.press(UP);
       await until(

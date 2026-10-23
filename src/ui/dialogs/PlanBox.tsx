@@ -57,6 +57,7 @@ export function PlanBox({
   kept,
   onChange,
   onLeave,
+  away = false,
 }: {
   wait: PlanWait;
   /** The agent as the agents list names it. */
@@ -83,6 +84,11 @@ export function PlanBox({
   onChange?: (box: PlanBoxState) => void;
   /** ↓ on the Note row, where there is a list of agents to go to. */
   onLeave?: (() => void) | undefined;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
 }) {
   const colours = useColours();
   const [state, setState] = useState(kept ?? OPEN_PLAN_BOX);
@@ -188,7 +194,7 @@ export function PlanBox({
 
   const marker = (row: number) => (
     <Gutter {...paint(colours.permission)}>
-      {row === state.row ? '❯' : ' '}
+      {row === state.row && !away ? '❯' : ' '}
     </Gutter>
   );
 
@@ -328,12 +334,16 @@ export function PlanBox({
           </box>
         ))}
       </box>
-      <text {...TEXT} flexShrink={0}>
-        {' '}
-      </text>
-      <text {...TEXT} attributes={DIM} flexShrink={0}>
-        {hint}
-      </text>
+      {!away && (
+        <>
+          <text {...TEXT} flexShrink={0}>
+            {' '}
+          </text>
+          <text {...TEXT} attributes={DIM} flexShrink={0}>
+            {hint}
+          </text>
+        </>
+      )}
     </box>
   );
 }

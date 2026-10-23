@@ -429,6 +429,9 @@ test('↓ on the Note goes into the agents list, and the note is kept with its a
       await window.shows('❯ Note  two tests');
       await window.press(DOWN);
       await window.shows('  ❯ main ');
+      // The keys are the list's: the box promises none of them.
+      expect(window.frame()).not.toContain('❯ Note');
+      expect(window.frame()).not.toContain('Enter to keep planning');
       // To other, where the box is not, and back to main's.
       await window.press(DOWN);
       await window.shows('  ❯ other ');

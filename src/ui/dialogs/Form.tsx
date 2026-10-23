@@ -222,6 +222,7 @@ export function ElicitationForm({
   width,
   active,
   held = false,
+  away = false,
   between = false,
   onFill,
   onAnswer,
@@ -240,6 +241,11 @@ export function ElicitationForm({
   between?: boolean;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
   held?: boolean;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
   /**
    * The form as it was left, when it was on screen before: switching to
    * another session draws this one anew.
@@ -298,9 +304,10 @@ export function ElicitationForm({
   );
   const valueAt = FORM_MARKS + labelWidth + FORM_GAP;
   const keys = rowKeys(rows);
-  // Held, nothing reads as where the keys are, as they are not here.
-  const shown = held ? rows.map(unmarked) : rows;
-  const on = held ? undefined : form.focus.on;
+  // Held, or the list's, nothing reads as where the keys are, as they are
+  // not here.
+  const shown = held || away ? rows.map(unmarked) : rows;
+  const on = held || away ? undefined : form.focus.on;
   const fix = toFix(form);
 
   return (
@@ -364,7 +371,7 @@ export function ElicitationForm({
       </Fold>
       {held ? (
         <AttendHint />
-      ) : (
+      ) : away ? undefined : (
         <box marginTop={1}>
           <text {...CUT} attributes={DIM}>
             {formHint(form, inner)}

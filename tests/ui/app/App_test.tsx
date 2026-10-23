@@ -911,7 +911,7 @@ describe('CHD-493 U2 tester: aliases retire live per-agent work', () => {
       ));
 
     test(`/exit stops a hung child without arming at ${columns} columns`, async () => {
-      let quit: readonly ResumableTab[] | undefined;
+      let quit: Resumable | undefined;
 
       let quits = 0;
 
@@ -924,7 +924,7 @@ describe('CHD-493 U2 tester: aliases retire live per-agent work', () => {
           await send(window, '/exit');
           await until('quit was called', () => quit !== undefined);
           expect(quits).toBe(1);
-          expect(quit?.map(({ agent }) => agent)).toStrictEqual(['fake']);
+          expect(quit?.agent).toStrictEqual('fake');
           await until('main and its hung child stopped', () =>
             Promise.all(window.pids.map(isAlive)).then((alive) =>
               alive.every((each) => !each),

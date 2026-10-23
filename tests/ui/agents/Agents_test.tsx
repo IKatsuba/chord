@@ -9,7 +9,6 @@ import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
-  CHILD_MESSAGES,
   CRASH_WORDS,
   GATE,
   GATE_RELEASE,
@@ -467,7 +466,7 @@ describe('CHD-364 tester: narrow idle time beside reply mark', () => {
       async (window) => {
         await window.resize({ columns: 80, rows: 24 });
         await ready(window);
-        await send(window, 'agents');
+        await send(window, 'agentsquiet');
         await window.shows('← new message');
 
         const age = () =>
@@ -479,13 +478,8 @@ describe('CHD-364 tester: narrow idle time beside reply mark', () => {
           // The message is old, while the reply is released at the new time.
           setSystemTime(new Date(Date.now() + 10_000));
           await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
-          // The last turn sends this; parser is idle for good only after it.
-          await until(
-            'the narrow parser reply after its last turn',
-            () =>
-              window.frame().includes(CHILD_MESSAGES[1]) &&
-              Number.isFinite(age()),
-          );
+          // agentsquiet sends parser no later messages, so this idle is final.
+          await until('the narrow parser reply', () => Number.isFinite(age()));
 
           const first = age();
 

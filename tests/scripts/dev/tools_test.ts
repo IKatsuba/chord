@@ -1,8 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import {
   cp,
   mkdtemp,
   readdir,
+  readFile,
+  mkdir,
   realpath,
   rm,
   symlink,
@@ -227,5 +230,89 @@ test('qaPlace makes a capture directory afresh, emptying one left from before (C
     expect(await readdir(dir)).toStrictEqual([]);
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+});
+
+describe('CHD-513 U1 tester: command status without timing gates', () => {
+  for (const command of ['test', 'check']) {
+    for (const failing of [false, true]) {
+      test(`${command} keeps timing files untouched when its tests ${failing ? 'fail' : 'pass'}`, async () => {
+        const checkout = await mkdtemp(join(tmpdir(), 'chord-status-'));
+        const record = JSON.stringify({
+          version: 1,
+          files: { 'tests/example_test.ts': 1, 'tests/gone_test.ts': 95000 },
+        });
+        const measured = 'a measurement left by an earlier run\n';
+
+        try {
+          await cp(join(root, 'scripts'), join(checkout, 'scripts'), {
+            recursive: true,
+          });
+          await symlink(
+            join(root, 'node_modules'),
+            join(checkout, 'node_modules'),
+          );
+          await mkdir(join(checkout, 'tests'));
+          await mkdir(join(checkout, 'lint'));
+          await writeFile(
+            join(checkout, 'package.json'),
+            JSON.stringify({
+              type: 'module',
+              version: '0.0.0',
+              scripts: {
+                dev: 'bun scripts/dev.ts',
+                tsc: 'bun -e "0"',
+                eslint: 'bun -e "0"',
+                prettier: 'bun -e "0"',
+              },
+            }),
+          );
+          // Isolate the suite's status from unrelated static tooling.
+          await writeFile(
+            join(checkout, 'scripts', 'dev', 'covered.ts'),
+            'process.exit(0);\n',
+          );
+          await writeFile(
+            join(checkout, 'lint', 'static_test.ts'),
+            "import { test } from 'bun:test'; test('static fixture', () => {});\n",
+          );
+          await writeFile(
+            join(checkout, 'tests', 'example_test.ts'),
+            `import { expect, test } from 'bun:test'; test('suite fixture', () => expect(${failing}).toBe(false));\n`,
+          );
+          await writeFile(join(checkout, 'tests', 'timings.json'), record);
+          await writeFile(
+            join(checkout, 'tests', 'timings.measured.json'),
+            measured,
+          );
+
+          const result = spawnSync(bun, ['dev', command], {
+            cwd: checkout,
+            encoding: 'utf8',
+            timeout: 20_000,
+          });
+
+          expect(result.error).toBeUndefined();
+          expect(result.status, result.stdout + result.stderr).toBe(
+            failing ? 1 : 0,
+          );
+          expect(result.stdout + result.stderr).not.toContain('timings:');
+          expect(
+            await readFile(join(checkout, 'tests', 'timings.json'), 'utf8'),
+          ).toBe(record);
+          expect(
+            await readFile(
+              join(checkout, 'tests', 'timings.measured.json'),
+              'utf8',
+            ),
+          ).toBe(measured);
+          expect((await readdir(join(checkout, 'tests'))).sort()).toStrictEqual(
+            ['example_test.ts', 'timings.json', 'timings.measured.json'],
+          );
+        } finally {
+          await rm(checkout, { recursive: true, force: true });
+        }
+      });
+    }
   }
 });

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake
+ ▄▀▀▀   /tmp/chord-qa.designer-w
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ fake did not start: it cannot resume session w-1a2b3c4d: Resource not found:
+   w-1a2b3c4d
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

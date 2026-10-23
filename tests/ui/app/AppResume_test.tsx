@@ -1,6 +1,6 @@
 /**
- * The window resumed: past sessions drawn and answered in, a window record's
- * tabs, models read where a session works, and what a click gives the keys.
+ * The window resumed: past sessions drawn and answered in, models read where
+ * a session works, and what a click gives the keys.
  */
 import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
@@ -118,49 +118,34 @@ test("a runtime's models are read where the resumed session works: never started
     startupOf: (agent: string) => typeof start | { refused: string },
     answer: string,
   ) => {
-    const sessions: Session[] = [];
     const server = serveChord();
-    const app = await draw(
-      <App
-        agent='fake'
-        cwd={cwd}
-        home={undefined}
-        stateDir={join(dir, 'state')}
-        agentCommand={fakeAgentCommand()}
-        startupOf={startupOf}
-        server={server}
-        runtimes={['fake', 'codex']}
-        resume={{ sessionId: crypto.randomUUID(), cwd }}
-        open={async (options) => {
-          const session = await openSession(options);
-
-          sessions.push(session);
-
-          return session;
-        }}
-      />,
-      { rows: 80, columns: 160 },
-    );
+    let frame = '';
 
     try {
-      await until('the session', () => sessions.length === 1);
-      await until('the past', () => app.frame().includes('Read it.'));
-      await app.write('codexmodels');
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      await app.write('\r');
-      await until('the answer', () => app.frame().includes('Codex read:'));
-      await until(`"${answer}"`, () => app.frame().includes(answer));
+      await withWindow(
+        async (window) => {
+          await until('the past', () => window.frame().includes('Read it.'));
+          await window.type('codexmodels');
+          await window.press('\r');
+          await window.shows('Codex read:');
+          await window.shows(answer);
 
-      return app.frame();
+          frame = window.frame();
+        },
+        {
+          resume: { sessionId: crypto.randomUUID(), cwd },
+          startupOf,
+          server,
+          runtimes: ['fake', 'codex'],
+          rows: 80,
+          columns: 160,
+        },
+      );
     } finally {
-      await app.unmount();
-
-      for (const session of sessions) {
-        await session.close();
-      }
-
       await server.close();
     }
+
+    return frame;
   };
 
   try {

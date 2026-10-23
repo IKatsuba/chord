@@ -269,7 +269,7 @@ test('--resume with one id is as it was: another agent refused, an unknown one t
   );
 });
 
-test('the resume command carries an --agent-command, quoted for a shell', () => {
+test('the resume command carries an --agent-command, and every word of it is quoted for a shell', () => {
   expect(resumeCommand('claude', 'abc')).toStrictEqual(
     'chord claude --resume abc',
   );
@@ -280,6 +280,13 @@ test('the resume command carries an --agent-command, quoted for a shell', () => 
   expect(
     resumeCommand('codex', 'abc', undefined, '/work/my app'),
   ).toStrictEqual("chord codex --cwd '/work/my app' --resume abc");
+  // An id or agent is opaque: it pastes as one word, and nothing in it runs.
+  expect(resumeCommand('my agent', 'a b')).toStrictEqual(
+    "chord 'my agent' --resume 'a b'",
+  );
+  expect(resumeCommand('claude', "$(touch x)'; ls")).toStrictEqual(
+    `chord claude --resume '$(touch x)'\\''; ls'`,
+  );
 });
 
 test("/resume offers this directory's sessions newest first, once each, but the open one", () => {

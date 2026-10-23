@@ -371,7 +371,7 @@ export function resumeCommand(
    */
   cwd?: string,
 ): string {
-  const words = ['chord', agent];
+  const words = ['chord', shellQuote(agent)];
 
   if (cwd !== undefined) {
     words.push('--cwd', shellQuote(cwd));
@@ -381,7 +381,7 @@ export function resumeCommand(
     words.push('--agent-command', shellQuote(agentCommand));
   }
 
-  return [...words, '--resume', sessionId].join(' ');
+  return [...words, '--resume', shellQuote(sessionId)].join(' ');
 }
 
 /**

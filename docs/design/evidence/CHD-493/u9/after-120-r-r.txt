@@ -1,0 +1,40 @@
+                                               it.
+
+  -c, --continue                             - Open the agent's latest session in this directory again.         (Conflic
+ts: --resume)
+  -r, --resume                    [id]       - Open a session by the id chord prints on quit; with no id, pick
+
+                                               one.
+
+  -p, --print                     <prompt>   - Send this prompt, print the reply and exit; piped input joins    (Conflic
+ts: --continue, --resume)
+                                               it.
+
+  --dangerously-skip-permissions             - Allow every permission the agent asks for. Only with -p.
+
+  --output-format                 <format>   - How -p prints: the reply as it streams, or one JSON object at    (Depends
+: --print, Values: "text",
+                                               the end.                                                         "json")
+
+
+Commands:
+
+  agents   - List the agents chord can start: name, title, command, and for those started by their own CLI whether PATH
+has it.
+  upgrade  - Upgrade chord executable to latest or given version.
+
+
+Examples:
+
+  Claude Code                  chord claude
+  Pick up where you left off   chord claude --continue
+  Pick an earlier session      chord --resume
+  Codex in another directory   chord codex -C ~/src/app
+  One question, for a script   chord -p "What does this do?"
+  Piped input with the prompt  git diff | chord -p "Review this" --output-format json
+  An agent chord does not know chord my-agent --agent-command "my-agent --acp"
+
+  error: Option "-r" can only occur once, but was found several times.
+
+EXIT=
+

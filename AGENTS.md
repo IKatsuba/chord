@@ -42,10 +42,9 @@ owner's consent.
 bun install                    # the dependencies, as bun.lock pins them
 bun dev chord [agent]           # run from source
 bun dev chord --fake            # run against the scripted test agent
-bun dev check                   # types, lint, fmt, all tests and timing check
+bun dev check                   # types, lint, fmt and all tests
 bun dev check --static          # tsc, ESLint, Prettier and lint/'s own test
 bun dev test [args…]            # tests, a worker per core; Bun's test arguments
-bun dev test --update-timings   # refresh recorded file times; enforce 90 s budget
 bun dev test -t '…'             # matching tests
 bun dev test --changed          # uncommitted changes
 bun dev test --changed=<commit> # since a commit
@@ -58,16 +57,11 @@ Arguments after `chord`, `test` and `lint` pass on as written. An empty
 argument needs `--` (`bun dev test -- -t ''`); the tool's own help does too
 (`bun dev chord -- --help`).
 
-Whole runs with no extra arguments (`bun dev test`, `bun dev check`, CI)
-measure each file into gitignored `tests/timings.measured.json` and compare
-with `tests/timings.json`. A file fails if it takes over 90 s, is slower
-than its record by at least 35% and 20 s, is unrecorded or is no longer
-present. The report names the files.
-Speedups do not fail the comparison. Test failures keep their exit status;
-timing failures are reported separately. The record is never refreshed
-automatically. If the change is right, run `bun dev test --update-timings`
-and commit `tests/timings.json`; files over 90 s still fail and must be
-split. Any other extra argument skips the comparison.
+`bun dev test` reports the tests' status. `tests/timings.json` only places
+files: Bun uses it to balance shards and start each worker's slowest files
+first; an unlisted file takes the median. No refresh is required.
+CI runs `static`, three `tests` shards (`--shard=1/3`, `2/3`, `3/3`) and
+`compile`. The required `check` job passes only when all of them succeed.
 
 The binary is built by Bun's compile API, Bun 1.4.2 or newer. Build,
 release and maintenance commands share `bun dev <command>` (Cliffy):

@@ -16,13 +16,9 @@
   `src/acp/connection.ts`'s `connectAgent`, controlling stdout and stderr
   independently.
 - Helpers sit beside the tests that share them.
-- Keep each test file within 90 s; split independent blocks into files
-  before a file grows past the budget, sharing helpers beside them.
-  Bare whole runs fail growth of at least 35% and 20 s over
-  `tests/timings.json`; speedups do not fail the comparison.
-  After a justified timing change or adding, removing or splitting files,
-  run `bun dev test --update-timings` and commit that record. Refreshing
-  still enforces the budget; targeted runs do not compare timings.
+- `tests/timings.json` only places files: Bun balances shards and starts
+  each worker's slowest files first by it; unlisted files take the median.
+  No refresh is required.
 - Use fake-agent gates and observed conditions instead of fixed pauses to
   order events. Waits must be bounded and use a monotonic clock, so fake
   system time cannot stop their deadline. Reuse `until` from

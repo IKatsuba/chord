@@ -400,7 +400,7 @@ describe('CHD-466 U2 tester: initial agent on resume', () => {
         );
 
         expect(await readFile(marker, 'utf8').catch(() => '')).toBe('');
-        expect(result.status).toBe(1);
+        expect(result.status).toBe(window ? 2 : 1);
         if (window) {
           expect(result.stderr).toContain(
             `${windowId} was a window of 1 session; chord opens one session per run now. Resume it with:\nchord fake --cwd ${there} --resume ${sessionId}`,

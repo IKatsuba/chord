@@ -74,9 +74,15 @@ to open a session from another directory where it works. For another agent's ses
 as `claude --resume` does; Enter opens what it picks, from any directory,
 as its own `--resume` would, and Esc quits with nothing started.
 
-`/clear` starts a new session with an empty transcript; `/new` is its alias,
-shown as `/clear (new)` in the command menu. `/new <agent>` is refused
-without clearing anything: run `chord <agent>` in another pane instead.
+`/clear` starts a new main session with an empty transcript. `/new` opens
+an idle child of main on main's runtime and goes to it; `/new <agent>`
+uses the named runtime. It starts as `open_agent` would with no model,
+effort or mode named: the runtime's own model and effort, the settings'
+mode. Its first turn is your first prompt to it. Main hears of the child
+ahead of its next prompt; its running turn continues. `/new` followed by
+a space lists the agents chord can start; Tab completes one. The child
+belongs to main even when opened from another child's view, and closes
+with `x`, main's `close_agent` or `/clear`.
 
 An agent asking for permission or a form, or ending its turn, never takes
 the view by itself. The status line names what waits, and ctrl+x a goes to
@@ -165,7 +171,7 @@ cmd+arrows work only where the terminal passes them to chord:
 
 ctrl+g opens the prompt in your editor (`$VISUAL`, then `$EDITOR`, then
 `vi`), run through your shell; what it saves comes back as the prompt with
-the cursor at its end, as when recalling history with ↑/↓ or ctrl+r.
+the cursor at its end, as when recalling a sent prompt with ↑/↓ or ctrl+r.
 Control characters from the editor, history or a paste stay in the prompt
 and are sent as held. The box shows them as `^L`, `^?` or `<85>`; the
 transcript's prompt echo and ctrl+r's match show no notation. A paste
@@ -313,7 +319,13 @@ request waits until answered; closing the session or quitting rejects it.
 A request still open when its turn ends, including a task's, is held
 the same way: the keys return to the prompt and the box stays between turns.
 It keeps its asking mark in the status line and agents list, reachable by
-ctrl+x a until answered or withdrawn.
+ctrl+x a until answered or withdrawn. With children open, ↓ from a box's
+last active row moves into the agents list: a form's buttons, a question
+step's last row or Submit's Skip, a permission's last choice, a plan's
+Note, or a link's Decline. Answers, selections, notes and focus stay with
+the asking agent; returning gives its box the keys where you left it.
+While the list has the keys, the box keeps its height but hides its
+highlight and key hints; a held box keeps `ctrl+x a to answer`.
 A prompt sent while it waits queues as `› after your answer: …`; messages
 from other agents wait too. After the answer, they wait for one second
 without an agent update, up to five seconds, before going to the agent.
@@ -673,10 +685,19 @@ counted toward the list's limit. In a short window, the list folds down to
 one agent row and `… +N more`, staying there until the transcript has rows
 again. The background summary stays whole. ↑ ↓ scroll a row taller than
 the list by line before moving on. ↓ on an empty prompt that is not walking
-history moves into the list, where ↑ ↓ or j k pick; Enter or Esc goes back
-to the box with the pick kept. The picked agent's chat fills the window,
-the box takes its colour and its name on the top border, and the status line
-its model, effort and context: what you type goes to it as your own prompt.
+history moves into the list, where ↑ ↓ or j k pick; Enter, Esc or ↑ from
+the first row returns the keys to the picked agent. Its chat fills the
+window, the box takes its colour and name, and the status line its model,
+effort and context: what you type goes to it as your own prompt.
+↓ on the last line of a draft sets it aside with that agent: the field
+empties, and ↑ brings back its text, images, bash mode and cursor. One more
+↓ enters the list, so ↓ ↓ leaves an agent with its draft kept. On return
+the field stays empty; ↑ shows the newest kept draft, then older ones,
+then sent prompts. While walking history, ↓ steps toward the field before
+it can set a draft aside. Editing a kept draft keeps the edit in its place;
+sending it or clearing it with ctrl+c removes it. Sending another prompt
+or using `/clear` leaves the kept drafts. In vim normal mode, j and k do
+the same as ↓ and ↑ at the last and first lines.
 The chat, status line, model and config pickers, image-paste refusals and
 command reports name the picked agent's runtime, including while it starts,
 stops or fails to start.
@@ -712,6 +733,10 @@ again.`, or that its turn failed and why, so a parent waiting on a report
 does not wait for ever. A session holds eight children at most, a team's
 lead counting as one and its members as none. `/clear` with a child
 picked is refused; on `main` it closes the children with the session.
+`/clear` and a `/resume` pick forget which children were closed, so a
+message to a resumed session's former child is refused as closed when the
+session was left. Team run numbers stay taken for this process, including
+across `/clear` and `/resume`.
 
 A team saved in `.chord/teams/<name>.md`, or in `teams/` beside your
 settings file for every project, takes a job from the session you talk to:
@@ -719,7 +744,7 @@ say "hand it to bugfix" and the agent calls `run_team`, which chord draws
 as `Team(bugfix) · claude · opus` with the job under it. `list_teams` names
 the saved teams and their runs open. The team's lead is a long-lived child
 named after the team, on the lead's runtime, model, effort and mode; a second run
-of a running team is `bugfix 2`. Its first prompt is the team's
+is `bugfix 2`, even if the first was closed. Its first prompt is the team's
 instructions, drawn as one line (`bugfix's instructions for the lead · 58
 lines`, ctrl+o for all of them), then the job as a message from `@main`.
 The lead's `open_agent` takes a member's name and opens only the file's

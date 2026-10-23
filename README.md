@@ -68,8 +68,8 @@ ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
 
 ### Agents beside the main one
 
-Long-lived agents, teams and tasks work beside the main session. The list
-under the prompt shows who is working or waiting and who has unseen news.
+`/new [agent]` opens an idle agent beside main and goes to it. The list
+under the prompt shows agents and teams, their state and unseen news.
 `ctrl+x a` takes you to what waits.
 
 <img src="docs/images/agents.png" alt="The agents list, with docs waiting on a permission" width="900">

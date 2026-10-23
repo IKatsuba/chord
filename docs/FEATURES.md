@@ -53,7 +53,7 @@ Done when chord is the interface its authors open by default.
 | Permission modes, cycled                  | shift+tab: default → accept edits → plan | ACP `session/set_config_option` on the agent's `mode` config option, else `session/set_mode` |
 | Model picker                              | `/model`                            | ACP `model` config option, else `session/set_model` |
 | Agent slash commands with completion      | `/` opens the list                  | ACP `available_commands_update`              |
-| Client slash commands                     | `/clear` (`/new`) `/resume` `/help` `/exit` `/status` `/cost` | client               |
+| Client slash commands                     | `/clear` `/new` `/resume` `/help` `/exit` `/status` `/cost` | client               |
 | `@` file mentions with fuzzy finder       | `@` opens files                     | client (the path in the prompt text), ACP `resource_link` beside it |
 | Bash mode                                 | `!` prefix runs a command           | client, output sent as context               |
 | Resume a session                          | `--continue`, `--resume`, `/resume` | chord's own session records, ACP `session/load` / `session/resume` |

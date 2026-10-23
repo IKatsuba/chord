@@ -11,6 +11,7 @@ import { fakeAgentCommand } from './fixtures/fake.ts';
 import { recordSession } from './fixtures/records.ts';
 import {
   ResumeError,
+  resumeCommand,
   sessionById,
   type SessionRecord,
   severalRefusal,
@@ -429,4 +430,101 @@ describe('CHD-466 U2 tester: initial agent on resume', () => {
       }
     });
   }
+});
+
+describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries', () => {
+  for (const sessionId of [
+    'ordinary',
+    '-opaque',
+    "two words'$(touch injected)",
+  ]) {
+    test(`a suggested command roundtrips opaque id ${JSON.stringify(sessionId)}`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-command-'));
+
+      try {
+        const command = resumeCommand('fake', sessionId, undefined, cwd);
+        const shell = spawnSync(
+          'sh',
+          ['-c', `chord() { printf '%s\\0' "$@"; }\n${command}`],
+          { cwd, encoding: 'utf8' },
+        );
+
+        expect(shell.status).toBe(0);
+
+        const argv = shell.stdout.split('\0').slice(0, -1);
+        const options = await parsed(argv);
+
+        expect(options?.resume).toEqual([sessionId]);
+        expect(options?.cwd).toBe(cwd);
+        expect(
+          await readFile(join(cwd, 'injected')).catch(() => undefined),
+        ).toBeUndefined();
+      } finally {
+        await rm(cwd, { recursive: true });
+      }
+    });
+  }
+
+  test('an old mixed window is refused without starting a runtime or changing its record', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-old-window-'));
+    const stateHome = join(cwd, 'state');
+    const directory = join(cwd, "another ' directory");
+    const path = join(stateHome, 'chord', 'windows', 'w-migration.json');
+    const text = `${JSON.stringify(
+      {
+        id: 'w-migration',
+        at: 1,
+        front: 1,
+        tabs: [
+          { agent: 'fake', sessionId: 'not-recorded', cwd: directory },
+          { agent: 'codex', sessionId: 'also-missing', cwd },
+        ],
+      },
+      null,
+      2,
+    )}\n`;
+
+    try {
+      await mkdir(join(stateHome, 'chord', 'windows'), { recursive: true });
+      await writeFile(path, text);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+          '--cwd',
+          cwd,
+          '--resume',
+          'w-migration',
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: cwd,
+            XDG_CONFIG_HOME: join(cwd, 'config'),
+            XDG_STATE_HOME: stateHome,
+            PATH: join(cwd, 'no-programs'),
+            NO_COLOR: '1',
+          },
+          encoding: 'utf8',
+          timeout: 10000,
+        },
+      );
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain(
+        'w-migration was a window of 2 sessions;',
+      );
+      expect(result.stderr).toContain(
+        resumeCommand('fake', 'not-recorded', undefined, directory),
+      );
+      expect(result.stderr).toContain(
+        resumeCommand('codex', 'also-missing', undefined, cwd),
+      );
+      expect(result.stderr).not.toContain('not found on PATH');
+      expect(await readFile(path, 'utf8')).toBe(text);
+    } finally {
+      await rm(cwd, { recursive: true });
+    }
+  });
 });

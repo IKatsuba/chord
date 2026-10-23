@@ -21,6 +21,7 @@ import {
   withWindow,
 } from './render.tsx';
 import type { ClipboardWriteResult } from '@opentui/core';
+import type { WindowedState } from '../../../src/ui/app/state.ts';
 import stripAnsi from 'strip-ansi';
 import {
   answered,
@@ -232,8 +233,11 @@ describe('a selection (CHD-172)', () => {
     );
   });
 
-  test('a press stops the view following, and release brings it back unless the wheel moved it', () =>
-    withWindow(
+  test('a press stops the view following, and release brings it back unless the wheel moved it', () => {
+    let state: WindowedState | undefined;
+    const scroll = () => state?.sessions[state.front]?.scroll;
+
+    return withWindow(
       async (window) => {
         /**
          * The text of the last of the reply's items on screen, which the
@@ -246,6 +250,22 @@ describe('a selection (CHD-172)', () => {
 
           return lines.at(-1)!;
         };
+
+        const rows = () => stripAnsi(window.frame()).split('\n');
+        // Each step's time from the second press's read, and a wait that
+        // times out with what the window held, as CI keeps nothing else of
+        // a run (CHD-515).
+        const steps: string[] = [];
+        let since = 0;
+        let before = '';
+        const step = (name: string) =>
+          steps.push(`${name} at ${Math.round(performance.now() - since)} ms`);
+        const awaiting = (what: string, check: () => boolean) =>
+          until(what, check).catch((error: Error) => {
+            throw new Error(
+              `${error.message}; before ${JSON.stringify(before)}, selected ${JSON.stringify(window.selected())}, selection ${JSON.stringify(state?.window.selection)}, scroll ${JSON.stringify(scroll())}; ${steps.join(', ')}; the screen:\n${window.frame()}`,
+            );
+          });
 
         await send(window, 'long');
         await window.shows('20. Line 20');
@@ -264,26 +284,60 @@ describe('a selection (CHD-172)', () => {
 
         const next = cellsOf(window, lastLine());
 
+        since = performance.now();
+
         await window.press(left(next.x, next.y, 'down'));
-        await window.press(left(next.end, next.y, 'drag'));
-
-        const before = window.selected();
-
-        // A wheel step during the drag moves the text under the pointer,
-        // and the selection reaches the cell it is over now.
-        await window.press(`\x1b[<64;${next.end + 1};${next.y + 1}M`);
-        await until(
-          'the selection to grow',
-          () => window.selected() !== before,
+        // Each step waits for what the one before it did, as the stream
+        // keeps the window busy and a fixed settle may not cover it.
+        await awaiting(
+          'the press to hold the view',
+          () =>
+            state?.window.selection?.kind === 'dragging' &&
+            scroll()?.held === true,
         );
+        step('held');
+        await window.press(left(next.end, next.y, 'drag'));
+        await awaiting('the drag to select its line', () =>
+          /^Line \d+ of$/.test(window.selected()),
+        );
+        step('dragged');
+
+        before = window.selected();
+
+        const line = Number(/\d+/.exec(before)![0]);
+        // The line above the dragged one, which a step of the wheel moves
+        // under the pointer.
+        const above = rows()[next.y - 1]!;
+
+        expect(above).toContain(`${line - 1}. Line ${line - 1} of`);
+        await window.press(`\x1b[<64;${next.end + 1};${next.y + 1}M`);
+        await awaiting(
+          'the view to scroll',
+          () => rows()[next.y - 1] !== above,
+        );
+        step('scrolled');
+        // The anchor stays with its text and the focus reads the pointer's
+        // cell again (CHD-172): the selection runs from that line's cell
+        // under the pointer to its end.
+        await awaiting(
+          'the selection to reach the cell under the pointer',
+          () => window.selected() === above.slice(next.end).trimEnd(),
+        );
+        step('reselected');
         await window.press(left(next.end, next.y, 'up'));
+        await awaiting('the release', () => scroll()?.held === undefined);
         // The person moved the view, so it stays where they left it.
-        await window.shows('lines below');
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        expect(scroll()?.following).toBe(false);
         expect(window.frame()).toContain('lines below');
       },
-      { copyOnSelect: false },
-    ));
+      {
+        copyOnSelect: false,
+        onState: (all) => {
+          state = all;
+        },
+      },
+    );
+  });
 
   test('a press with no output under it draws no rule, held or released (CHD-397)', () =>
     withWindow(async (window) => {

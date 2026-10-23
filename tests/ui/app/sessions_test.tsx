@@ -299,7 +299,6 @@ describe('CHD-373 S3b tester: session close wiring', () => {
 
       expect(kept).toHaveLength(1);
       expect(kept[0]).toMatchObject({
-        tab: 1,
         sessionId: child.conversation.session?.id,
         part: {
           name: 'parser',

@@ -20,6 +20,7 @@ import {
   earlierSessions,
   elsewhereRefusal,
   latestSession,
+  recordedAgent,
   resumeCommand,
   ResumeError,
   sessionById,
@@ -251,6 +252,20 @@ test('--resume with several ids is refused, each said back as a command on its o
     'chord claude --cwd /work --resume id-a',
     'chord codex --cwd /other --resume id-b',
   ]);
+});
+
+test("one id's agent is its latest record's, and none for an id chord has no record of (Q180)", () => {
+  const records = [
+    record('old', {
+      sessionId: 'id-a',
+      agent: 'codex',
+      lastUsedAt: Date.parse('2026-09-01T00:00:00.000Z'),
+    }),
+    record('a', { agent: 'cursor' }),
+  ];
+
+  expect(recordedAgent(records, 'id-a')).toStrictEqual('cursor');
+  expect(recordedAgent(records, 'xyz')).toBeUndefined();
 });
 
 test('--resume with one id is as it was: another agent refused, an unknown one to the agent', () => {

@@ -41,6 +41,7 @@ import {
   earlierSessions,
   latestSession,
   readRecords,
+  recordedAgent,
   type Resumable,
   type Resume,
   ResumeError,
@@ -139,8 +140,20 @@ const cli = chordCommand().action(async (options, named) => {
 
   await report(problems);
 
+  // One id and no agent named on the command line: the session's own
+  // agent, as its record says (Q180). An --agent-command still goes with
+  // the default agent alone (Q56), so it leaves the id to be refused there.
+  const [one, ...more] =
+    options.resume?.filter((id) => typeof id === 'string') ?? [];
+  const recorded =
+    named === undefined &&
+    options.agentCommand === undefined &&
+    one !== undefined &&
+    more.length === 0
+      ? recordedAgent(await readRecords(chordStateDir()), one)
+      : undefined;
   const flags = {
-    agent: named,
+    agent: named ?? recorded,
     agentCommand: options.agentCommand,
     model: options.model,
     effort: options.effort,

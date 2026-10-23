@@ -793,18 +793,33 @@ test('a settings command overrides a table agent, PATH or not', async () => {
   });
 });
 
-test("one -r on its record's agent asks PATH for that agent, not the default one", async () => {
-  // Were the default asked for, the line would name claude and npx. One id
-  // runs on the agent named, as it always has (Q180).
-  expect(
-    await onPath(['cursor', '-r', RECORDED[0]!], [], undefined, 'cursor'),
-  ).toStrictEqual({
-    code: 1,
-    stdout: '',
-    stderr:
-      'chord: cursor runs "agent", which is not on PATH; ' +
-      'install it from https://cursor.com/docs/cli/installation\n',
-  });
+test("one -r, its agent named or not, asks PATH for its record's agent, not the default one (Q180)", async () => {
+  // Were the default asked for, the line would name claude and npx.
+  for (const named of [['cursor'], []]) {
+    expect(
+      await onPath([...named, '-r', RECORDED[0]!], [], undefined, 'cursor'),
+    ).toStrictEqual({
+      code: 1,
+      stdout: '',
+      stderr:
+        'chord: cursor runs "agent", which is not on PATH; ' +
+        'install it from https://cursor.com/docs/cli/installation\n',
+    });
+  }
+});
+
+test('one -r is refused on another agent named, or on an --agent-command, which goes with the default agent alone (Q180, Q56)', async () => {
+  for (const args of [
+    ['claude', '-r', RECORDED[0]!],
+    ['--agent-command', 'my-acp', '-r', RECORDED[0]!],
+  ]) {
+    const { code, stderr } = await onPath(args, [], undefined, 'cursor');
+
+    expect(code).toBe(2);
+    expect(refusal(stderr)).toEqual([
+      `Session ${RECORDED[0]} belongs to another agent (cursor).`,
+    ]);
+  }
 });
 
 /**

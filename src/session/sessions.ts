@@ -275,6 +275,18 @@ export function elsewhereRefusal(
 }
 
 /**
+ * The agent chord's latest record of session `id` ran on; none for an id
+ * chord has no record of. `chord -r <id>` with no agent on the command line
+ * opens on it (Q180).
+ */
+export function recordedAgent(
+  records: readonly SessionRecord[],
+  id: string,
+): string | undefined {
+  return latest(records.filter((record) => record.sessionId === id))?.agent;
+}
+
+/**
  * The session `--resume <id>` opens. chord need not have seen it: an id it has
  * no record of goes to the agent as it is, and the agent says whether it
  * knows it.

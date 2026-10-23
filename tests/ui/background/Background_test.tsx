@@ -5,7 +5,12 @@
  * with its stops.
  */
 import { describe, expect, test } from 'bun:test';
-import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from '../app/child_window.tsx';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import { draw } from '../harness.tsx';
@@ -93,7 +98,7 @@ test('the summary line is the stop after the agents: ↓ from the last agent, th
 describe('CHD-424 tester: standing background edges', () => {
   test('ended monitors stay absent across prompts in main and a child', () =>
     withChild(async (window) => {
-      await ready(window);
+      await readyAgent(window);
       await openOther(window);
       await send(window, 'monitors');
       await window.shows('background  2 monitors running');
@@ -102,7 +107,7 @@ describe('CHD-424 tester: standing background edges', () => {
       await window.shows('Received the message from CI run 4812');
 
       await pickAgent(window, 'other');
-      await ready(window);
+      await readyAgent(window);
       await send(window, 'monitor');
       await window.shows('background  3 monitors running');
       expect(window.frame()).not.toContain('1 monitor failed');
@@ -121,7 +126,7 @@ describe('CHD-424 tester: standing background edges', () => {
   test('a child prompt keeps running monitors; closing that child removes its items without adding an ended row', () =>
     withBackground(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'monitorchild');
         await window.shows('background  2 monitors running');
         await send(window, 'monitorexit');
@@ -159,7 +164,7 @@ describe('CHD-424 tester: standing background edges', () => {
 
   test('a task asks without creating an agent row; its report replaces the ended row', () =>
     withBackground(async (window) => {
-      await ready(window);
+      await readyAgent(window);
       await send(window, 'task');
       await window.shows('background  ● 1 task asking');
       expect(window.frame()).not.toMatch(/^ {4}main\s/m);

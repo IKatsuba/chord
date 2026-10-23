@@ -3,7 +3,7 @@
  * closes or quits (CHD-489).
  */
 import { describe, expect, test } from 'bun:test';
-import { withChild, pickAgent } from './child_window.tsx';
+import { withChild, pickAgent, readyAgent } from './child_window.tsx';
 import { execFile } from 'node:child_process';
 import { AgentExitError } from '../../../src/acp/process.ts';
 import { openSession } from '../../../src/session/session.ts';
@@ -189,7 +189,7 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
         try {
           await withWindow(
             async (window) => {
-              await ready(window);
+              await readyAgent(window);
               {
                 if (main === undefined) {
                   throw new Error('main was not admitted');
@@ -293,7 +293,7 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
       const command = fakeAgentCommand();
       const result = withChild(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'agentother');
           await pickAgent(window, 'other');
           await window.shows('codex did not start:');
@@ -326,7 +326,7 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
 
     await withChild(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'agentother');
         await pickAgent(window, 'other');
         await until(

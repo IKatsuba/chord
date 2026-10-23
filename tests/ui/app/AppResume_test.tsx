@@ -3,7 +3,12 @@
  * a session works, and what a click gives the keys.
  */
 import { describe, expect, test } from 'bun:test';
-import { withChild, openOther, pickAgent } from './child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from './child_window.tsx';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -287,7 +292,7 @@ describe('CHD-429 tester: mouse focus boundaries', () => {
       test(`repeated prompt clicks leave ${outcome} exclusively with the permission at ${columns}x${rows}`, () =>
         withWindow(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             await send(window, 'permission');
             await asked(window);
             await clickBox(window);
@@ -309,7 +314,7 @@ describe('CHD-429 tester: mouse focus boundaries', () => {
       withChild(
         async (window) => {
           await openOther(window);
-          await ready(window);
+          await readyAgent(window);
           await window.type('abcdef');
           await pickAgent(window, 'other');
           await clickBox(window);
@@ -325,7 +330,7 @@ describe('CHD-429 tester: mouse focus boundaries', () => {
     test(`search after a click owns its query and restores the previous draft at ${columns}x${rows}`, () =>
       withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'fix auth');
           await until(
             'the turn ended',
@@ -360,7 +365,7 @@ describe('CHD-493 U1 tester: sessions-only resume with legacy windows', () => {
       await mkdir(join(stateDir, 'windows'));
       await withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'text');
           await window.shows('came in chunks.');
 

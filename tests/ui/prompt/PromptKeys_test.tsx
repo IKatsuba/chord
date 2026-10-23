@@ -3,7 +3,12 @@
  * headers, selection, option and cmd with the arrows, and held matches.
  */
 import { describe, expect, test } from 'bun:test';
-import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from '../app/child_window.tsx';
 import { matchFiles } from '../../../src/ui/prompt/mentions.ts';
 import stripAnsi from 'strip-ansi';
 import stringWidth from 'string-width';
@@ -299,7 +304,7 @@ test("a keybinding on option+← takes it from the textarea's word move (CHD-386
   ));
 
 describe('CHD-386 tester: cursor move boundaries', () => {
-  test('a cancelled turn and another session keep independent editable drafts', () =>
+  test('a cancelled main draft survives visiting an empty child and remains editable', () =>
     withChild(
       async (window) => {
         await openOther(window);
@@ -313,15 +318,13 @@ describe('CHD-386 tester: cursor move boundaries', () => {
         await window.shows('› one Xtwo');
         await pickAgent(window, 'other');
         await until('the second agent', () => window.pids.length === 2);
-        await ready(window);
-        await window.type('other draft');
-        await window.press('\x1b[1;9D');
-        await window.type('Y');
-        await window.shows('› Yother draft');
+        await readyAgent(window);
+        // Q183: keep the child empty so the existing list keys can return.
+        expect(promptRow(window)).toMatch(/^│ ›\s*│$/);
         await pickAgent(window, 'main');
         await window.shows('› one Xtwo');
-        await pickAgent(window, 'other');
-        await window.shows('› Yother draft');
+        await window.type('Y');
+        expect(promptRow(window)).toContain('› one XYtwo');
       },
       { columns: 80, rows: 24 },
     ));
@@ -331,7 +334,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
 
     return withWindow(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await window.paste('first line\nsecond line\nthird line');
         await window.press(UP);
         await window.press('\x1b[1;9D');
@@ -355,7 +358,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
 
   test('shift with alt arrows leaves selection and the cursor alone', () =>
     withWindow(async (window) => {
-      await ready(window);
+      await readyAgent(window);
       await window.type('one two');
       await window.press('\x1b[1;4D');
       await window.press('\x1b[1;4C');
@@ -371,7 +374,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
     test(`${context} chord prefix takes alt+left before the word move`, () =>
       withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await window.type('one two');
           await window.press('\x1b[1;3D');
           // A wrong continuation drops the chord without moving the cursor.
@@ -390,7 +393,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
   test('a Global single binding takes cmd+left before the line move', () =>
     withWindow(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await window.type('one two');
         await window.press('\x1b[1;9D');
         await window.type('X');
@@ -431,7 +434,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
 
     return withWindow(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await window.type(`${'a'.repeat(74)} tail`);
         await window.press('\x1b[1;9D');
         await window.type('X');
@@ -547,7 +550,7 @@ describe('CHD-398 tester: held match lifecycle', () => {
 
           await window.press('\x18');
           await window.press('c');
-          await ready(window);
+          await readyAgent(window);
           await window.type('@target');
 
           if (action === 'close') {

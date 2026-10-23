@@ -4,7 +4,7 @@
  * picker, and rows taller than the list.
  */
 import { describe, expect, test } from 'bun:test';
-import { pickAgent } from '../app/child_window.tsx';
+import { pickAgent, readyAgent } from '../app/child_window.tsx';
 import assert from 'node:assert/strict';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -107,7 +107,7 @@ describe('CHD-405 tester: reports follow the picked runtime', () => {
         try {
           await withWindow(
             async (window) => {
-              await ready(window);
+              await readyAgent(window);
               assert(main);
               await main.window.open(main.key, {
                 agent: 'codex',
@@ -166,7 +166,7 @@ describe('CHD-405 tester: reports follow the picked runtime', () => {
                 prompt: 'text',
               });
               await pickAgent(window, 'other');
-              await ready(window);
+              await readyAgent(window);
               await report(window, '/status', /Agent: +other/);
               await report(
                 window,
@@ -239,7 +239,7 @@ describe('CHD-405 N2 tester: standalone child spend is independent', () => {
       try {
         await withWindow(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             assert(main);
             await main.window.open(main.key, {
               agent: 'codex',
@@ -294,7 +294,7 @@ describe('CHD-471 L2 tester: child messages in the agents list', () => {
       try {
         await withWindow(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             await send(window, 'agentcallgated');
             await window.shows('← new message');
 
@@ -425,7 +425,7 @@ describe('CHD-471 L1b tester: tall row actions and summary boundary', () => {
     test(`reading a tall row reaches the summary then returns to its first line at ${columns} columns`, () =>
       withAgents(async (window) => {
         await window.resize({ columns, rows });
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'agenttitled');
         await window.shows('Waiting on it.');
         await until('main turn finished', async () => {
@@ -485,7 +485,7 @@ describe('CHD-471 L1b tester: tall row actions and summary boundary', () => {
     test(`Enter and x still address the tall child while its first line is out of sight at ${columns} columns`, () =>
       withAgents(async (window) => {
         await window.resize({ columns, rows });
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'agenttitled');
         await window.shows('Waiting on it.');
         await window.press(DOWN);

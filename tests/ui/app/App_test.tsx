@@ -3,7 +3,12 @@
  * keys that quit, clear and edit, the slash commands, and sessions in tabs.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
-import { withChild, openOther, pickAgent } from './child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from './child_window.tsx';
 import { draw } from '../harness.tsx';
 import { type ResumableTab } from '../../../src/session/sessions.ts';
 import { App } from '../../../src/ui/app/App.tsx';
@@ -42,10 +47,10 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
     return withChild(
       async (window) => {
         await openOther(window);
-        await ready(window);
+        await readyAgent(window);
         await pickAgent(window, 'other');
         await until('the second agent', () => window.pids.length === 2);
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'permission');
         await asked(window);
         await pickAgent(window, 'main');
@@ -73,7 +78,7 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
 
       return withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'slow');
           await until(
             'working report',
@@ -101,7 +106,7 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
 
       return withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'error');
           await until(
             'failed turn report',

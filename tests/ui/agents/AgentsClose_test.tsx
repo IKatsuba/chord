@@ -3,7 +3,7 @@
  * key, held messages, a parent's close, records and `/resume`.
  */
 import { describe, expect, setSystemTime, test } from 'bun:test';
-import { pickAgent } from '../app/child_window.tsx';
+import { pickAgent, readyAgent } from '../app/child_window.tsx';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -344,7 +344,7 @@ describe('CHD-264 tester: failure surfaces in the window', () => {
       try {
         await withWindow(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             assert(main);
             await main.window.open(main.key, {
               agent: 'fake',

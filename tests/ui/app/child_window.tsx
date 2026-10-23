@@ -1,14 +1,14 @@
 /**
  * Tester steps that keep per-agent guarantees after tabs go: a fake child
- * beside main, selected by the agents list without discarding either draft
- * or taking a form's keys (CHD-493 U2).
+ * beside main, selected by the agents list on the routes existing keys reach, preserving drafts
+ * and forms when attention can reach the other agent (CHD-493 U2).
  */
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   DOWN,
   UP,
-  left,
+  leader,
   promptRow,
   send,
   until,
@@ -53,8 +53,9 @@ export async function openOther(window: Window) {
 }
 
 /**
- * Empty prompts use the list's keyboard route. A draft or a widget keeps
- * its state while the existing pointer route selects the other agent.
+ * Empty prompts use the list. With a draft or widget active, only the
+ * existing attention action can reach an agent; its news or request must
+ * still be waiting (Q183). No pointer selection is invented.
  */
 export async function pickAgent(window: Window, name: 'main' | 'other') {
   const rows = () => window.frame().split('\n');
@@ -79,17 +80,35 @@ export async function pickAgent(window: Window, name: 'main' | 'other') {
       return false;
     });
   } else {
-    const y = target();
+    const picked = () =>
+      name === 'other'
+        ? window.frame().includes('╭─ other ')
+        : !window.frame().includes('╭─ other ');
 
-    if (y === -1) {
-      throw new Error(`${name} is not in the agents list:\n${window.frame()}`);
-    }
+    await until(`attention reaches ${name}`, async () => {
+      if (picked()) {
+        return true;
+      }
 
-    const x = rows()[y]!.indexOf(name);
+      await leader(window, 'a');
 
-    await window.press(left(x, y, 'down'));
-    await window.press(left(x, y, 'up'));
+      return picked();
+    });
+
+    return;
   }
 
   await window.press('\r');
+}
+
+/** The status hint sits above any agents, rather than on the last row. */
+export async function readyAgent(window: Window) {
+  await until('the shown agent is ready for a prompt', () =>
+    window
+      .frame()
+      .split('\n')
+      .some(
+        (line) => line.includes('? for shortcuts') && !line.includes('/help'),
+      ),
+  );
 }

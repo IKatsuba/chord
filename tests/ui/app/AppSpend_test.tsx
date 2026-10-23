@@ -3,7 +3,12 @@
  * requests and cycles, whole-spend reports and turns on changed models.
  */
 import { describe, expect, test } from 'bun:test';
-import { withChild, openOther, pickAgent } from './child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from './child_window.tsx';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readRecords } from '../../../src/session/sessions.ts';
@@ -16,7 +21,6 @@ import {
   ESC,
   isAlive,
   leader,
-  ready,
   send,
   until,
   type Window,
@@ -63,7 +67,7 @@ describe('CHD-405 N2 tester: held requests do not imply running spend', () => {
     test(`cost has no current-turn row while a between-turn permission remains open at ${columns} columns`, () =>
       withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'leftask');
           await window.shows('main asks · between turns');
 
@@ -91,7 +95,7 @@ describe('CHD-405 N2 tester: cycle-held permission cost', () => {
     test(`a held cycle has a current-turn row until its end, while a plain held request does not at ${columns} columns`, () =>
       withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'claudecycleask');
           await window.shows('main asks · between turns');
           expect(await reported(window, '/cost')).toContain(
@@ -208,7 +212,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
   for (const columns of [80, 120]) {
     test(`closed child and clear history remain in /cost at ${columns} columns`, () =>
       onWindow(async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'agentcost');
         await window.shows('Waiting on parser.');
         await rootTurns(window, 'agentcost', 1);
@@ -230,7 +234,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
         expect(row(window, 'Total')).toContain('$0.0350');
 
         await send(window, '/clear');
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'text');
         await rootTurns(window, 'text', 1);
         await showCost(window, '$0.0475');
@@ -241,7 +245,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
 
     test(`a closed child's ended task stays under its owner and is added once at ${columns} columns`, () =>
       onWindow(async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'agenttask');
         await window.shows('Waiting on parser.');
         await rootTurns(window, 'agenttask', 1);
@@ -321,7 +325,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
 
     test(`an agent that exits without usage stays not reported rather than zero at ${columns} columns`, () =>
       onWindow(async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'agentexit');
         await window.shows('Received the message from chord.');
         await window.shows('parser exited');
@@ -354,7 +358,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
 
       await onWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'team');
           await window.shows('Team(bugfix)');
           await window.shows('1 task running');
@@ -493,12 +497,12 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
     test(`an estimated session beside a silent agent keeps the estimate and missing note at ${columns} columns`, () =>
       onWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'text');
           await rootTurns(window, 'text', 1);
           await send(window, 'agentother');
           await pickAgent(window, 'other');
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'text');
           await window.shows('This reply came in chunks.');
           await until(
@@ -547,12 +551,12 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
 
     await onWindow(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await send(window, '/resume');
         await window.shows('legacy seed');
         await window.press('\r');
         await window.shows('› legacy seed');
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'text');
         await rootTurns(window, 'legacy seed', 2);
         await send(window, '/cost');
@@ -636,7 +640,7 @@ describe('CHD-472 U2 tester: model changes price only the growth (Q133)', () => 
 
         return withChild(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             await openOther(window);
             await pickAgent(window, 'other');
             await until(
@@ -756,7 +760,7 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
 
         return withChild(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             await openOther(window);
             await pickAgent(window, 'other');
             await until(

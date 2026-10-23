@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { serveChord } from '../../../src/server/server.ts';
-import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from '../app/child_window.tsx';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -26,7 +31,6 @@ import {
   inputAsked,
   leader,
   quitAll,
-  ready,
   send,
   TAB,
   until,
@@ -348,7 +352,7 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
     try {
       await withChild(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
 
           if (main === undefined) {
             throw new Error('main was not admitted');

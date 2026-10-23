@@ -418,7 +418,8 @@ describe('CHD-1 tester: question box lifecycle', () => {
     withChild(
       async (window) => {
         await openOther(window);
-        await window.shows('? for shortcuts');
+        await send(window, 'mainbetween');
+        await window.shows('ctrl+x a to answer');
         await pickAgent(window, 'other');
         await until('the second fake agent', () => window.pids.length === 2);
 
@@ -438,6 +439,7 @@ describe('CHD-1 tester: question box lifecycle', () => {
             'the background request to withdraw',
             () => request?.signal.aborted === true,
           );
+          await window.press(ESC);
           await pickAgent(window, 'other');
           await window.shows('Elicitation answer: timed out');
           expect(window.frame()).not.toContain('fake asks you 2 questions');

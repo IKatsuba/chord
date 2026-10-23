@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { withChild, openOther, pickAgent } from './child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from './child_window.tsx';
 import assert from 'node:assert/strict';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -508,10 +513,10 @@ describe('CHD-377 tester: Codex call session isolation', () => {
           await send(window, 'codexchordcalls');
           await window.shows('Listed as Codex.');
           await window.shows('1 open · 1 fake (you)');
-          await ready(window);
+          await readyAgent(window);
           await openOther(window);
           await pickAgent(window, 'other');
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'codexchordcalls');
           await window.shows('Listed as Codex.');
           await window.shows('1 open · 1 fake');
@@ -537,7 +542,7 @@ describe('CHD-387 tester: sent messages in the window', () => {
     try {
       await withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'agentsendrefused');
           await window.shows('parser is not open, so I will review it myself.');
           await window.shows("check passes and I'll look again.");
@@ -593,7 +598,7 @@ describe('CHD-158 tester: taskstays closes with its waiting parent', () => {
         try {
           await withWindow(
             async (window) => {
-              await ready(window);
+              await readyAgent(window);
               await send(window, 'taskstays');
               await window.shows('Agent(Fix the tokenizer) · fake asks');
               expect(window.frame()).not.toContain('between turns');
@@ -627,7 +632,7 @@ describe('CHD-470 tester: a steering-gated task parent closes before any steer',
       try {
         await withWindow(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             await send(window, 'tasktillsteered');
             await window.shows('Agent(Fix the tokenizer) · fake asks');
             expect(window.frame()).not.toContain('between turns');
@@ -709,7 +714,7 @@ describe('CHD-373 S2 tester: fake spend reaches both task views', () => {
         try {
           await withWindow(
             async (window) => {
-              await ready(window);
+              await readyAgent(window);
               assert(main);
               await main.window.spawn(main, {
                 agent: 'fake',

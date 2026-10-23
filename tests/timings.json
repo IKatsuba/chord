@@ -114,6 +114,7 @@
     "tests/ui/app/render_test.ts": 189,
     "tests/platform/heap_test.ts": 174,
     "tests/session/transcript/tools_test.ts": 173,
+    "tests/session/start_failure_test.ts": 169,
     "tests/ui/shortcuts/state_test.ts": 161,
     "tests/status_test.ts": 160,
     "tests/scripts/dev_test.ts": 147,

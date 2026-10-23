@@ -26,6 +26,26 @@ test("an agent's last words are its stderr's tail once stderr has ended (CHD-495
   }
 });
 
+test('every non-empty line it writes to stderr is counted, past the tail it keeps (CHD-454)', async () => {
+  const agent = await spawnAgent({
+    command: [
+      'sh',
+      '-c',
+      'printf "a\\n\\n  b" >&2; printf " still b\\n" >&2; i=0; while [ $i -lt 300 ]; do echo "line $i of a long trace" >&2; i=$((i+1)); done; exit 1',
+    ],
+    cwd: process.cwd(),
+  });
+
+  try {
+    await agent.status;
+    await agent.lastWords();
+    expect(agent.stderrLines()).toBe(302);
+    expect(agent.stderrTail().length).toBeLessThan(302 * 20);
+  } finally {
+    await agent.stop(STOP);
+  }
+});
+
 test('a stderr that stays open past the cap: the last words so far come at the cap, and the agent stops whole (CHD-495)', async () => {
   // The process it leaves holds stderr open well past the cap.
   const agent = await spawnAgent({

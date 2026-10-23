@@ -360,9 +360,9 @@ export async function connectAgent(
       const aborted = () => resolve(signal?.reason);
 
       signal?.addEventListener('abort', aborted, { once: true });
-      void exitMessage(process).then((message) => {
+      void goneError(process).then((gone) => {
         signal?.removeEventListener('abort', aborted);
-        resolve(new Error(message));
+        resolve(gone);
       });
     });
 
@@ -574,11 +574,34 @@ function steeringOf(init: acp.InitializeResponse): boolean {
 }
 
 /**
- * The agent went, with the end of its stderr when it left any, once that
- * has all come (CHD-495).
+ * The agent's process ended before it answered: how, and what it wrote to
+ * stderr last, for a start failure to say (CHD-454).
  */
-async function exitMessage(process: AgentProcess): Promise<string> {
+export class AgentGone extends Error {
+  constructor(
+    message: string,
+    readonly exit: Exit,
+    readonly stderr: string,
+    /** How many non-empty lines it wrote to stderr in all. */
+    readonly stderrLines: number,
+  ) {
+    super(message);
+
+    this.name = 'AgentGone';
+  }
+}
+
+/**
+ * The agent went, with the end of its stderr when it left any, once that
+ * has all come (CHD-495), and how its process ended.
+ */
+async function goneError(process: AgentProcess): Promise<AgentGone> {
   const tail = (await process.lastWords()).trim();
 
-  return tail === '' ? 'The agent exited.' : `The agent exited: ${tail}`;
+  return new AgentGone(
+    tail === '' ? 'The agent exited.' : `The agent exited: ${tail}`,
+    await process.status,
+    tail,
+    process.stderrLines(),
+  );
 }

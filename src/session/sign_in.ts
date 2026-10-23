@@ -57,17 +57,22 @@ export function waysOf(
 
 /**
  * `error`, a failed session request of the start, as a `SignInNeeded` when
- * its code is `authRequired`, the protocol's word that the agent needs a
- * login; otherwise `error` as it is.
+ * its code, or the code of the refusal it wraps, is `authRequired`, the
+ * protocol's word that the agent needs a login; otherwise `error` as it is.
  */
 export function asSignIn(
   error: unknown,
   methods: readonly AuthMethod[] | null | undefined,
 ): unknown {
-  const code =
-    typeof error === 'object' && error !== null && 'code' in error
-      ? error.code
-      : undefined;
+  let code: unknown;
+
+  for (
+    let each: unknown = error;
+    code === undefined && typeof each === 'object' && each !== null;
+    each = each instanceof Error ? each.cause : undefined
+  ) {
+    code = 'code' in each ? each.code : undefined;
+  }
 
   if (code !== AUTH_REQUIRED) {
     return error;

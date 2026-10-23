@@ -35,6 +35,8 @@ export interface KnownAgent {
   readonly install: string | undefined;
   /** `false` where chord's own table gives the agent no MCP servers. */
   readonly mcpServers?: false;
+  /** The registry's package and version, `package@version`, that npx or uvx runs. */
+  readonly pinned?: string;
 }
 
 /** How an agent's process is started. */
@@ -67,6 +69,7 @@ function fromRegistry(agent: RegistryAgent): KnownAgent {
     },
     runner: agent.runner,
     install: agent.website ?? agent.repository,
+    pinned,
   };
 }
 

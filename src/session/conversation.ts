@@ -40,6 +40,7 @@ import type {
 } from './session.ts';
 import { historyEntries } from './record.ts';
 import { type SignIn, signInOf } from './sign_in.ts';
+import { type StartFailure, startFailureOf } from './start_failure.ts';
 import { heldBackLine } from './servers.ts';
 import {
   type TaskAgent,
@@ -88,6 +89,8 @@ export type ConversationEvent =
       readonly message: string;
       /** The login the agent needs, when that is why it did not start. */
       readonly signIn?: SignIn;
+      /** Why it did not start, as chord knows it (CHD-454). */
+      readonly failure?: StartFailure;
     }
   /**
    * The session opened is an earlier one, last used at `lastUsedAt`, first
@@ -315,11 +318,13 @@ function messageOf(error: unknown): string {
 /** The event of a start `error` ended, with the login it needs, if one. */
 function failedStart(error: unknown): ConversationEvent {
   const signIn = signInOf(error);
+  const failure = startFailureOf(error);
 
   return {
     type: 'connect_failed',
     message: messageOf(error),
     ...(signIn === undefined ? {} : { signIn }),
+    ...(failure === undefined ? {} : { failure }),
   };
 }
 

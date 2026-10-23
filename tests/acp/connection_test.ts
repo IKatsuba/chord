@@ -839,6 +839,8 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
         }),
         status: exit.promise,
         stderrTail: () => tail,
+        stderrLines: () =>
+          tail.split('\n').filter((line) => line.trim() !== '').length,
         lastWords: async () => {
           await stderrEnded.promise;
 

@@ -41,6 +41,11 @@ export interface AgentProcess {
   /** The end of what it wrote to stderr, for a start that failed. */
   stderrTail(): string;
   /**
+   * How many non-empty lines it has written to stderr in all, of which the
+   * tail keeps only the last few thousand characters (CHD-454).
+   */
+  stderrLines(): number;
+  /**
    * `stderrTail` once stderr has ended, or once `STDERR_SETTLE_MS` pass
    * without its end: what an agent that goes says last, as its exit and the
    * end of its stdout can be heard before its stderr's last piece (CHD-495).
@@ -142,9 +147,21 @@ export async function spawnAgent(
   });
 
   let tail = '';
+  // Lines ended so far that held something, and whether the open one does.
+  let ended = 0;
+  let open = false;
 
   child.stderr?.setEncoding('utf8').on('data', (text: string) => {
     tail = (tail + text).slice(-STDERR_TAIL);
+
+    for (const [index, part] of text.split('\n').entries()) {
+      if (index > 0) {
+        ended += open ? 1 : 0;
+        open = false;
+      }
+
+      open ||= part.trim() !== '';
+    }
 
     options.onStderr?.(text);
   });
@@ -215,6 +232,7 @@ export async function spawnAgent(
     stdout,
     status,
     stderrTail: () => tail,
+    stderrLines: () => ended + (open ? 1 : 0),
     lastWords: async () => {
       await settledWithin(stderrEnded, STDERR_SETTLE_MS);
 

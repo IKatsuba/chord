@@ -5,9 +5,11 @@
 import { once } from 'node:events';
 import process from 'node:process';
 import {
+  MARKDOWN_CODE,
   MARKDOWN_LINES,
   MARKDOWN_OPEN_FENCE,
   MARKDOWN_OPEN_NESTED_FENCE,
+  MARKDOWN_WRAP,
 } from '../../markdown.ts';
 import { STEP_MS } from '../options.ts';
 import { mcpServers, openedWith, steeredInto } from '../sessions.ts';
@@ -129,6 +131,22 @@ export const TEXT = {
     );
     await pause(turn.signal, STEP_MS * 300);
     await turn.say(...chunks.slice(MARKDOWN_OPEN_NESTED_FENCE));
+
+    return 'end_turn';
+  },
+
+  // Paragraphs, items and a quote long enough to wrap, to look at where
+  // OpenTUI breaks them and what a copy over them joins (CHD-396).
+  async markdownwrap(turn) {
+    await turn.say(MARKDOWN_WRAP);
+
+    return 'end_turn';
+  },
+
+  // Code boxes a copy reads bare: a label wider than its code, a line too
+  // long for the box, a blank line in code, and a loose list (CHD-396).
+  async markdowncode(turn) {
+    await turn.say(MARKDOWN_CODE);
 
     return 'end_turn';
   },

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-u3
+ ▀▀     ? for shortcuts · /help
+
+ › markdowncode
+
+ ⏺ A paragraph before the code.
+
+   ┌─ typescript ─┐
+   │ x            │
+   └──────────────┘
+
+   ┌─ sh ─────────────────────────────────────────────────────────────────────┐
+   │ bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p >  │
+   │ /tmp/screen.txt                                                          │
+   │                                                                          │
+   │ echo done                                                                │
+ ── ↓ 65 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

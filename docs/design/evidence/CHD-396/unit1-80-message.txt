@@ -1,0 +1,24 @@
+      большого объёма текста.
+
+      Представим небольшую обсерваторию на вершине холма. Каждое утро
+      смотритель открывает деревянные ставни, проверяет журнал наблюдений и
+      ставит чайник на старую плиту. За окном медленно расходится туман, на
+      дорожке появляются первые солнечные пятна, а в саду перекликаются птицы.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  The printer is fixed, and every case in tests/parse/printer_test.ts
+      passes now. The tokenizer still drops a closing quote when a string ends
+      the line, so I left a failing case for it beside the others and wrote
+      down what I found in the notes, with the input that shows it and the line
+      in src/parse/tokenize.ts where the quote is lost.
+
+ ⏺ Received the message from parser · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main    fake · Fake Large with a 1M context window  ◦ idle 4s
+    parser  fake · Fake Small                           ◦ idle 4s  ✓ new reply

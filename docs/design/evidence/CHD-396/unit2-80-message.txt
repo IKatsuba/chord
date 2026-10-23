@@ -1,0 +1,24 @@
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  agentchild
+
+ → to @parser · queued
+   ⎿  Start on the tokenizer; the printer can wait.
+
+ → to @parser · queued
+   ⎿  CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:
+
+      1. The fold counts the blank line after the list; drop it, as foldMessage
+         already does for a received message.
+      2. foldMessage runs on every render; keep its lines in the same useMemo
+         as the markdown.
+      3. The hint names ctrl+o even when the person has rebound it; take the
+         key from useHintKey.
+      4. The refusal goes after the body, in the error colour, never folded.
+ ── ↓ 16 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main    fake · Fake Large with a 1M context window  ◦ idle 6s
+    parser  fake · Fake Small                           ◦ idle 6s  ✓ new reply

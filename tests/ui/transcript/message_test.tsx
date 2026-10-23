@@ -1,6 +1,7 @@
 /** Messages between agents on screen: `←` for what came in, `→` for what went. */
 import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
+import { left } from '../app/render.tsx';
 import { draw } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
 import type {
@@ -160,7 +161,7 @@ test('a message sent is drawn as one received is: markdown, wrapped to the row, 
     'CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:',
     '',
     '1. The fold counts the blank line after the list; drop it, as foldMessage',
-    '  already does for a received message.',
+    '   already does for a received message.',
     '2. The hint names ctrl+o even when the person has rebound it.',
     '3. The refusal goes after the body, never folded.',
     '',
@@ -185,8 +186,11 @@ for (const width of [80, 120]) {
         const shown = await frame(entry, false, width);
         const rows = body(shown);
 
-        expect(rows.join(' ').split(/\s+/).filter(Boolean)).toStrictEqual(
-          words(text),
+        // OpenTUI wraps at spaces and after `/ - . , : (` too, so a row may
+        // end inside a word: the rows read as the words with no space lost
+        // or added between them.
+        expect(rows.join('').replace(/\s+/g, '')).toStrictEqual(
+          words(text).join(''),
         );
         expect(!shown.includes('...')).toBeTruthy();
         expect(!shown.includes('to expand')).toBeTruthy();
@@ -651,4 +655,122 @@ describe('CHD-387 tester: sent body boundaries', () => {
     expect(compact.join('\n')).not.toContain('to expand');
     expect(compact.join('\n')).not.toContain('… +');
   });
+});
+
+test("a message's code box is OpenTUI's, and a copy over the message keeps its code bare and the blank rows around it, as a reply's does (CHD-396)", async () => {
+  const drawn = await draw(
+    <TranscriptEntry
+      entry={came(
+        { name: 'main', reachable: true },
+        'First.\n\n```sh\nls -la\n```\n\nSecond.',
+      )}
+      turn={{ status: 'idle' }}
+      agent='fake'
+      expanded={false}
+      width={80}
+    />,
+    { columns: 80, rows: 12 },
+  );
+
+  try {
+    const rows = stripAnsi(drawn.frame()).split('\n');
+    const from = rows.findIndex((row) => row.includes('First.'));
+    const to = rows.findIndex((row) => row.includes('Second.'));
+    const end = rows[to]!.indexOf('Second.') + 'Second.'.length;
+
+    expect(rows.join('\n')).toContain('┌─ sh ───┐\n     │ ls -la │');
+    await drawn.write(left(rows[from]!.indexOf('First.'), from, 'down'));
+
+    for (let y = from + 1; y <= to; y++) {
+      await drawn.write(left(end, y, 'drag'));
+    }
+
+    await drawn.write(left(end, to, 'up'));
+    // The box's border does not copy; each blank row holds one space, which
+    // the copy keeps (Q186).
+    expect(drawn.selected()).toStrictEqual('First.\n \nls -la\n \nSecond.');
+  } finally {
+    await drawn.unmount();
+  }
+});
+
+describe('CHD-396 U4 tester: message gaps preserve their source blocks', () => {
+  for (const columns of [80, 120]) {
+    test(`sent and received messages keep exactly one-space gap rows at ${columns} columns`, async () => {
+      for (const [text, expected] of [
+        ['First.\n\nSecond.', 'First.\n \nSecond.'],
+        [
+          'First.\n\n```txt\ncode\n```\n\nSecond.',
+          'First.\n \ncode\n \nSecond.',
+        ],
+      ] as const) {
+        for (const entry of [
+          came({ name: 'parser', reachable: true }, text),
+          sent({ input: { to: 'parser', text } }),
+        ]) {
+          const drawn = await draw(
+            <TranscriptEntry
+              entry={entry}
+              turn={{ status: 'idle' }}
+              agent='fake'
+              expanded={false}
+              width={columns}
+            />,
+            { columns, rows: 24 },
+          );
+
+          try {
+            const rows = stripAnsi(drawn.frame()).split('\n');
+            const first = rows.findIndex((row) => row.includes('First.'));
+            const last = rows.findIndex((row) => row.includes('Second.'));
+            const end = rows[last]!.indexOf('Second.') + 6;
+
+            await drawn.write(
+              left(rows[first]!.indexOf('First.'), first, 'down'),
+            );
+
+            for (let row = first + 1; row <= last; row++) {
+              await drawn.write(left(end, row, 'drag'));
+            }
+
+            await drawn.write(left(end, last, 'up'));
+            expect(drawn.selected()).toBe(expected);
+          } finally {
+            await drawn.unmount();
+          }
+        }
+      }
+    });
+
+    test(`message selections can begin on their blank body row at ${columns} columns`, async () => {
+      for (const entry of [
+        came({ name: 'main', reachable: true }, 'First.\n\nSecond.'),
+        sent({ input: { to: 'parser', text: 'First.\n\nSecond.' } }),
+      ]) {
+        const drawn = await draw(
+          <TranscriptEntry
+            entry={entry}
+            turn={{ status: 'idle' }}
+            agent='fake'
+            expanded={false}
+            width={columns}
+          />,
+          { columns, rows: 24 },
+        );
+
+        try {
+          const rows = stripAnsi(drawn.frame()).split('\n');
+          const last = rows.findIndex((row) => row.includes('Second.'));
+          const start = rows[last]!.indexOf('Second.');
+
+          await drawn.write(left(start, last - 1, 'down'));
+          await drawn.write(left(start + 6, last, 'drag'));
+          await drawn.write(left(start + 6, last, 'up'));
+          expect(drawn.selected()).toBe(' \nSecond.');
+        } finally {
+          await drawn.unmount();
+        }
+      }
+    });
+  }
 });

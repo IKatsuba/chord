@@ -17,7 +17,7 @@ describe('tester: held rule on a tall transcript (CHD-397)', () => {
         await send(window, 'longheld');
         await window.shows('20. Line 20');
 
-        const { x, y } = cellsOf(window, '20. Line 20');
+        const { x, y } = cellsOf(window, 'Line 20 of');
 
         await window.press(left(x, y, 'down'));
         expect(window.frame()).not.toContain('below');
@@ -61,7 +61,7 @@ describe('tester: held rule on a tall transcript (CHD-397)', () => {
             () => !window.frame().includes('Working'),
           );
 
-          const { x, y } = cellsOf(window, '200. Line 200');
+          const { x, y } = cellsOf(window, 'Line 200 of');
 
           await window.press(left(x, y, 'down'));
           expect(window.frame()).not.toContain('below');

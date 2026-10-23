@@ -235,9 +235,12 @@ describe('a selection (CHD-172)', () => {
   test('a press stops the view following, and release brings it back unless the wheel moved it', () =>
     withWindow(
       async (window) => {
-        /** The last of the reply's lines on screen, which the stream moves. */
+        /**
+         * The text of the last of the reply's items on screen, which the
+         * stream moves; its marker is no place to start a selection.
+         */
         const lastLine = () => {
-          const lines = stripAnsi(window.frame()).match(/\d+\. Line \d+ of/g);
+          const lines = stripAnsi(window.frame()).match(/Line \d+ of/g);
 
           assert(lines !== null, 'no line of the reply on screen');
 
@@ -410,7 +413,8 @@ test('a resize mid-drag lets go of the view, which follows again (CHD-172)', () 
       await send(window, 'long');
       await window.shows('20. Line 20');
 
-      const lines = stripAnsi(window.frame()).match(/\d+\. Line \d+ of/g)!;
+      // An item's text, past its marker, where a press starts a selection.
+      const lines = stripAnsi(window.frame()).match(/Line \d+ of/g)!;
 
       await pressOn(window, lines.at(-1)!);
       await window.shows('new output');

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des396
+ ▀▀     ? for shortcuts · /help
+
+ › markdown
+
+ ⏺ Reading the session layer
+
+   The session layer wraps the SDK so the interface never touches a process. Start with src/session/session.ts, then
+   see the ACP spec (https://agentclientprotocol.com) for the wire format.
+
+   What it does
+
+   - opens one persistent session per chord session
+   - starts turns with startTurn and cancels them
+     1. a cancel stops the turn at once
+     2. the agent is told with session/cancel
+   - closes the agent and waits until its exit is seen
+
+   │ A closed agent counts as gone only once its exit is seen:
+   │ ┌ ts ──────────────────────────────────────────────────────┐
+   │ │ await session.close(); // resolves once the exit is seen │
+   │ └──────────────────────────────────────────────────────────┘
+
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                                  │ Tested by          │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │
+   │               │ a session                              │                    │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │               │ gone                                   │                    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │               │ drawn                                  │                    │
+ ── ↓ 23 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

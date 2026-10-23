@@ -4,7 +4,11 @@ import process from 'node:process';
 import { promisify } from 'node:util';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
-import { markdown, QUOTE_INSET } from '../../../src/ui/transcript/markdown.ts';
+import {
+  markdown,
+  QUOTE_INSET,
+  softMarkdown,
+} from '../../../src/ui/transcript/markdown.ts';
 import { PALETTES } from '../../../src/ui/theme/theme.ts';
 import {
   MARKDOWN_LINES,
@@ -501,4 +505,129 @@ test("inline code and links take the palette's colours", () => {
     'inline code',
   ).toBeTruthy();
   expect(shown!.text.includes('\x1b[38;2;11;92;173m'), 'link').toBeTruthy();
+});
+
+test('soft, a paragraph, a heading and a quote are a line each (CHD-396)', () => {
+  const blocks = softMarkdown(
+    [
+      '## A heading long enough to wrap',
+      '',
+      'A paragraph long enough to wrap,',
+      'with a soft break and a hard  ',
+      'one.',
+      '',
+      '> A quote long enough to wrap at this width.',
+    ].join('\n'),
+    20,
+    false,
+  );
+
+  expect(blocks).toStrictEqual([
+    { kind: 'text', text: 'A heading long enough to wrap' },
+    // A soft break joins with a space; a hard break stays a line break.
+    {
+      kind: 'text',
+      text: 'A paragraph long enough to wrap, with a soft break and a hard\none.',
+    },
+    { kind: 'quote', text: 'A quote long enough to wrap at this width.' },
+  ]);
+});
+
+test('soft, a code block is its code for a box as wide as it or its label, within the width (CHD-396)', () => {
+  const code = (text: string) => softMarkdown(text, 30, false);
+
+  expect(code('```sh\ndeno task check\n```')).toStrictEqual([
+    { kind: 'code', label: 'sh', code: 'deno task check', width: 19 },
+  ]);
+  // A label wider than its code widens the box so OpenTUI draws it.
+  expect(code('```typescript\nx\n```')).toStrictEqual([
+    { kind: 'code', label: 'typescript', code: 'x', width: 16 },
+  ]);
+  // A long line stays whole for OpenTUI to cut; the box keeps to the width.
+  // Blank lines in the code are the agent's.
+  expect(code('```\n\n' + 'y'.repeat(40) + '\n\nz\n```')).toStrictEqual([
+    { kind: 'code', label: '', code: `\n${'y'.repeat(40)}\n\nz`, width: 30 },
+  ]);
+  // The rows path keeps its drawn box.
+  expect(markdown('```sh\nls\n```', 30, false)[0]?.text).toStrictEqual(
+    '┌ sh ──┐\n│ ls   │\n└──────┘',
+  );
+});
+
+test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
+  const [bullets, numbers, tasks] = softMarkdown(
+    [
+      '- an item long enough to wrap',
+      '  1. nested, and long enough too',
+      '     ```sh',
+      '     abcdefghijklmnopqrstu',
+      '     ```',
+      '',
+      '9. nine',
+      '10. ten',
+      '',
+      '- [ ] open',
+      '- [x] done',
+    ].join('\n'),
+    20,
+    false,
+  );
+
+  expect(bullets).toStrictEqual({
+    kind: 'list',
+    loose: false,
+    items: [
+      {
+        marker: '- ',
+        blocks: [
+          { kind: 'text', text: 'an item long enough to wrap' },
+          {
+            kind: 'list',
+            loose: false,
+            items: [
+              {
+                marker: '1. ',
+                // The box takes the 15 cells beside both markers.
+                blocks: [
+                  { kind: 'text', text: 'nested, and long enough too' },
+                  {
+                    kind: 'code',
+                    label: 'sh',
+                    code: 'abcdefghijklmnopqrstu',
+                    width: 15,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  // Numbered on from the first as written, each marker its own width.
+  expect(
+    numbers?.kind === 'list' && numbers.items.map((item) => item.marker),
+  ).toStrictEqual(['9. ', '10. ']);
+  expect(
+    tasks?.kind === 'list' && tasks.items.map((item) => item.marker),
+  ).toStrictEqual(['[ ] ', '[x] ']);
+});
+
+test('soft, a loose list says so (CHD-396)', () => {
+  const [list] = softMarkdown('- a\n\n  more\n- b', 20, false);
+
+  expect(list).toStrictEqual({
+    kind: 'list',
+    loose: true,
+    items: [
+      {
+        marker: '- ',
+        blocks: [
+          { kind: 'text', text: 'a' },
+          { kind: 'text', text: 'more' },
+        ],
+      },
+      { marker: '- ', blocks: [{ kind: 'text', text: 'b' }] },
+    ],
+  });
 });

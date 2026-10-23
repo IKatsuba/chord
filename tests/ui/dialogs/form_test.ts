@@ -482,3 +482,15 @@ test('a link names its host, and only a web link has one', () => {
   expect(linkHost('file:///etc/passwd')).toStrictEqual(undefined);
   expect(linkHost('not a url')).toStrictEqual(undefined);
 });
+
+test("↓ on the buttons leaves for the agents list, the form as it was; a choice's open list keeps its ↓ (Q192)", () => {
+  const buttons = press(open(), ...open().fields.map(() => '↓'));
+
+  expect(buttons.focus.on).toStrictEqual('accept');
+  expect(formKey(buttons, '', KEYS['↓']!)).toStrictEqual({
+    form: buttons,
+    leave: true,
+  });
+  // Above the buttons ↓ moves on, as before.
+  expect(formKey(open(), '', KEYS['↓']!).leave).toBeUndefined();
+});

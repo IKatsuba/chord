@@ -1,0 +1,24 @@
+$ bun scripts/dev.ts chord --qa designer-r -r "060ac025-dfe5-446f-9a38-f3681f60f
+39c"
+chord: cursor runs "agent", which is not on PATH; install it from https://cursor
+.com/docs/cli/installation
+error: script "dev" exited with code 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

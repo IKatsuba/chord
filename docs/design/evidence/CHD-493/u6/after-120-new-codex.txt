@@ -1,0 +1,40 @@
+ codex · codex · opened by main 3s ago
+
+ ⏺ codex did not start: cannot start npx: Executable not found in $PATH: "npx"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ codex ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main   fake · Fake Large with a 1M context window · medium  ◦ idle 2s          ✓ new reply
+    codex  codex                                                ✗ failed to start

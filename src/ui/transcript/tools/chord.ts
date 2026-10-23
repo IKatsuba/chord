@@ -211,20 +211,30 @@ export function chordLines(call: ChordCall): string[] {
         ? answer.sessions.map(record)
         : [];
 
+      // By runtime, and its agents counted: an answer from 0.57.0 has a
+      // `tab` too, which says nothing now (CHD-493).
       return [
         `${sessions.length} open · ${sessions
-          .map(
-            (session) =>
-              `${session.tab} ${session.runtime}${session.you ? ' (you)' : ''}`,
-          )
+          .map((session) => {
+            const agents = Array.isArray(session.agents)
+              ? session.agents.length
+              : 0;
+
+            return `${String(session.runtime)}${session.you ? ' (you)' : ''}${
+              agents === 0 ? '' : `, ${plural(agents, 'agent', 'agents')}`
+            }`;
+          })
           .join(', ')}`,
       ];
     }
     case 'spawn_task':
       return (text(input.prompt) ?? '').split('\n').slice(0, MESSAGE_LINES);
-    // Whole, as ctrl+o shows what was handed over; the row folds it.
+    // Whole, as ctrl+o shows what was handed over; the row folds it. One
+    // the person opened with /new was handed nothing (Q187).
     case 'open_agent':
-      return (text(input.prompt) ?? '').split('\n');
+      return text(input.typed) === undefined
+        ? (text(input.prompt) ?? '').split('\n')
+        : [`opened with ${text(input.typed)}`];
     case 'run_team':
       return (text(input.job) ?? '').split('\n');
     case 'list_teams': {

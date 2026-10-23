@@ -77,7 +77,7 @@ export interface Measured {
  */
 export function useMeasured(
   state: AppState,
-  /** The session in front, whose transcript is drawn: a tab or a child. */
+  /** The session in front, whose transcript is drawn: main or a child. */
   front: number,
   /** The first of its entries mounted (`mount.ts`). */
   first: number,

@@ -1,8 +1,7 @@
 /**
  * `/cost`'s table of what the window has spent, once it holds more than one
- * session: a row for each tab with its subtotal, then its own agent and
- * each agent under it, closed ones too, and the window's total, each with a
- * note (CHD-373 S4, CHD-378's C as settled for the build); a cell that does
+ * session: a row for the main session, then each agent beside it, closed
+ * ones too, and the window's total, each with a note (CHD-373 S4, CHD-378's C as settled for the build); a cell that does
  * not fit wraps inside itself, and nothing is cut (CHD-473).
  */
 import type { Cost } from '@agentclientprotocol/sdk';
@@ -35,7 +34,7 @@ const DAY = new Intl.DateTimeFormat('en-US', {
 /** Whether the window holds more than one session, closed ones counted. */
 export function manySessions(parts: readonly SpendPart[]): boolean {
   const count = (part: SpendPart): number =>
-    (part.kind === 'tab' || part.kind === 'team' ? 0 : 1) +
+    (part.kind === 'team' ? 0 : 1) +
     (part.parts ?? []).reduce((all, under) => all + count(under), 0);
 
   return parts.reduce((all, part) => all + count(part), 0) > 1;
@@ -235,44 +234,32 @@ function childRows(part: SpendPart, depth: number): Row[] {
 }
 
 /**
- * A tab's rows: one when its own session is all it holds, else its row
- * with the subtotal of everything under it, then its own session, the
- * sessions `/clear` let go in it as one row, `before /clear`, and each
- * agent and team run, every row its own spend, task agents under the
- * session that started them.
+ * The window's rows: the main session open now, the sessions `/clear` let
+ * go as one row, `before /clear`, and each agent and team run, every row
+ * its own spend, task agents under the session that started them.
  */
-function tabRows(tab: SpendPart): Row[] {
-  const parts = tab.parts ?? [];
-  const closed = tab.ended === true;
+function windowRows(parts: readonly SpendPart[]): Row[] {
   const mains = parts.filter((part) => part.kind === 'main');
-  // An open tab's main is open; a closed tab's is the one it closed with,
-  // after any `/clear` let go before it.
-  const own = closed ? mains.at(-1) : mains.find((part) => part.ended !== true);
+  const own = mains.find((part) => part.ended !== true);
   const cleared = mains.filter((part) => part !== own);
   const rest = parts.filter((part) => part.kind !== 'main');
-  const mark = closed ? ['closed'] : [];
-
-  if (cleared.length === 0 && rest.length === 0 && own?.parts === undefined) {
-    return [ownRow(tab.name, 0, own?.figure, mark, own?.agent)];
-  }
 
   return [
-    sumRow(tab.name, 0, sum(parts), mark),
-    ...(own === undefined ? [] : sessionRows(own, 'main', 1)),
+    ...(own === undefined ? [] : sessionRows(own, 'main', 0)),
     ...(cleared.length === 0
       ? []
       : [
           sumRow(
             'before /clear',
-            1,
+            0,
             sum(cleared.map(alone)),
             cleared.length > 1 ? [`${cleared.length} sessions`] : [],
           ),
           ...cleared.flatMap((session) =>
-            (session.parts ?? []).flatMap((task) => taskRows(task, 2)),
+            (session.parts ?? []).flatMap((task) => taskRows(task, 1)),
           ),
         ]),
-    ...rest.flatMap((part) => childRows(part, 1)),
+    ...rest.flatMap((part) => childRows(part, 0)),
   ];
 }
 
@@ -369,8 +356,11 @@ function pad(text: string, cells: number, start = false): string {
  */
 const NOTE_LEAST = 20;
 
+/** The name column's heading (the owner's Q182). */
+const HEADING = 'This session';
+
 /** The header's name, which the name column is never narrower than. */
-const NAME_LEAST = 'This window'.length;
+const NAME_LEAST = HEADING.length;
 
 /**
  * The table's lines for the window's spend in `width` cells: the cost and
@@ -384,7 +374,7 @@ export function spendTable(
   parts: readonly SpendPart[],
   width: number,
 ): ReportRow[] {
-  const rows = [...parts.flatMap(tabRows), totalRow(parts)];
+  const rows = [...windowRows(parts), totalRow(parts)];
   const costWidth = Math.max(
     stringWidth('Cost'),
     ...rows.map((row) => stringWidth(row.cost)),
@@ -414,7 +404,7 @@ export function spendTable(
     )}`;
 
   return [
-    { text: line('This window', 'Cost', 'Tokens') },
+    { text: line(HEADING, 'Cost', 'Tokens') },
     ...rows.flatMap((row) => {
       // The name's next lines under its first letter, the indent held.
       const names = wrapped(

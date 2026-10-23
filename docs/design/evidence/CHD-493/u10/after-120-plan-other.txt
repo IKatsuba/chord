@@ -1,0 +1,40 @@
+ other · codex · 6.1 Sol · opened by main 7s ago
+
+ ← from @main
+   ⎿  text
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (1s · esc to interrupt)
+
+╭─ other ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto review mode on (shift+tab to cycle)                                                  6.1 Sol · medium effort
+    main   fake · Fake Large with a 1M context window · medium  ✻ working 3s
+  ❯ other  codex · 6.1 Sol · medium                             ✻ working 0s

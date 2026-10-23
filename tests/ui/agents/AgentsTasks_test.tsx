@@ -386,9 +386,7 @@ describe('CHD-466 U2 tester: refusal before cached offers and child starts', () 
                 prompt: 'text',
               }),
             ).toEqual({ error: reason });
-            await send(window, '/new codex');
-            await window.shows('codex not started:');
-            expect(window.frame()).not.toContain('2 codex');
+            expect(window.frame()).not.toContain('╭─ other ');
           },
           {
             server,

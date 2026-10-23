@@ -1,0 +1,40 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-u
+ ▀▀     ? for shortcuts · /help
+
+ › agentother
+
+ ⏺ Open(other) · codex
+   ⎿  text
+
+ ⏺ Opened other on codex.
+
+ › form
+
+
+
+
+
+
+ ››› Waiting for your input… (10s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                                                                  │
+│ Set up the deploy target                                                                                             │
+│                                                                                                                      │
+│   * Project name   not set                                                                                           │
+│     Contact email  not set                                                                                           │
+│   ✔ Replicas       2                                                                                                 │
+│     Traffic share  not set                                                                                           │
+│   ✔ Public         ☐ No                                                                                              │
+│ ❯ * Region         not set                                                                                           │
+│     Tags           not set                                                                                           │
+│                                                                                                                      │
+│   Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ → or Space to choose · ↑↓ to move · Esc to cancel                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main   fake · Fake Large with a 1M context window · medium  ● input 10s
+    other  codex · 6.1 Sol · medium                             ◦ idle 1s    ✓ new reply

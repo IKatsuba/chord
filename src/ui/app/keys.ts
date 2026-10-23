@@ -18,6 +18,7 @@ import {
   older,
   recalledImages,
   recorded,
+  type Walked,
 } from '../prompt/history.ts';
 import { cutPlaceholder, namesImage, pastedText } from '../prompt/images.ts';
 import { insertMention, mentionAt } from '../prompt/mentions.ts';
@@ -87,11 +88,6 @@ export type Step =
   | { readonly type: 'chord_key' }
   /** The box is cut back to a whole placeholder and redrawn. */
   | { readonly type: 'cutting' }
-  | { readonly type: 'open_session' }
-  | { readonly type: 'next_session' }
-  | { readonly type: 'previous_session' }
-  | { readonly type: 'goto_session'; readonly number: number }
-  | { readonly type: 'close_session' }
   | { readonly type: 'attend_session' }
   /** The pick in the list of agents moves `by` rows. */
   | { readonly type: 'move_agent'; readonly by: number }
@@ -211,6 +207,65 @@ function recall(history: History, text: string): Step[] {
   ];
 }
 
+/** The texts of the front agent's kept drafts, oldest first. */
+function keptTexts(state: AppState): string[] {
+  return (state.kept ?? []).map(({ text }) => text);
+}
+
+/**
+ * A step of the walk into the box: a kept draft whole, as it was set aside,
+ * its cursor too; else a prompt or the walk's own draft, as `recall` puts it.
+ */
+function walkedTo(context: KeyContext, step: Walked): Step[] {
+  const draft =
+    step.kept === undefined ? undefined : context.state.kept?.[step.kept];
+  const shown = shownKept(context);
+
+  return [
+    // A kept draft walked off stays as it was left, edits and all (Q195).
+    ...(shown === undefined
+      ? []
+      : [dispatch({ type: 'kept_edited', index: shown })]),
+    { type: 'history', history: step.history },
+    dispatch({ type: 'menu_dismissed' }),
+    ...(draft === undefined
+      ? recall(context.history, step.text)
+      : [
+          dispatch({ type: 'bash_mode', on: draft.bash }),
+          dispatch({ type: 'images_added', images: draft.images }),
+          show(draft.text, draft.cursor),
+        ]),
+  ];
+}
+
+/** Which of the agent's kept drafts the walk shows; none off them. */
+function shownKept({ state, history }: KeyContext): number | undefined {
+  const index =
+    history.index === undefined
+      ? undefined
+      : history.index - history.prompts.length;
+
+  return index === undefined || state.kept?.[index] === undefined
+    ? undefined
+    : index;
+}
+
+/**
+ * The kept draft the box shows, leaving it: sent, or emptied by hand; it
+ * goes off the stack, and the walk ends.
+ */
+function keptLeft(context: KeyContext): Step[] {
+  const { history } = context;
+  const index = shownKept(context);
+
+  return index === undefined
+    ? []
+    : [
+        dispatch({ type: 'kept_taken', index }),
+        { type: 'history', history: left(history) },
+      ];
+}
+
 /**
  * The highlighted file into the draft in place of the `@` being typed. A
  * highlight not moved since the list came, while the mention's own match
@@ -284,43 +339,41 @@ export function awaitedSteps(context: KeyContext): Step[] {
   return [settled, show(next.text, next.cursor)];
 }
 
-/** ↑ on the first line, or `k` there in normal mode: an older prompt. */
+/**
+ * ↑ on the first line, or `k` there in normal mode: the agent's newest kept
+ * draft, then older ones, then an older prompt.
+ */
 export function olderSteps(context: KeyContext): Step[] {
   const { state, history } = context;
   const { draft, cursor } = state;
   const step =
     !commandMenu(state, draft) &&
     !fileFinder(state, draft, cursor) &&
-    older(history, typedText(state.bash, draft));
+    older(history, typedText(state.bash, draft), keptTexts(state));
 
   // A recalled `/command` is history's, not the list's.
-  return step
-    ? [
-        { type: 'history', history: step.history },
-        dispatch({ type: 'menu_dismissed' }),
-        ...recall(history, step.text),
-      ]
-    : [];
+  return step ? walkedTo(context, step) : [];
 }
 
 /**
- * ↓ on the last line, or `j` there in normal mode: a newer one; or, on an
- * empty draft that is not walking history, into the list of the session's
- * agents, where ↓ did nothing before there was one.
+ * ↓ on the last line, or `j` there in normal mode: a newer one; or, from a
+ * draft that is not walking history, the draft set aside, as if the history
+ * ended in an empty prompt (Q183); or, from an empty one, into the list of
+ * the session's agents, where ↓ did nothing before there was one.
  */
 export function newerSteps(context: KeyContext): Step[] {
   const { state, history } = context;
   const { draft, cursor } = state;
   const listed =
     !commandMenu(state, draft) && !fileFinder(state, draft, cursor);
-  const step = listed && newer(history);
+  const step = listed && newer(history, keptTexts(state));
 
   if (step) {
-    return [
-      { type: 'history', history: step.history },
-      dispatch({ type: 'menu_dismissed' }),
-      ...recall(history, step.text),
-    ];
+    return walkedTo(context, step);
+  }
+
+  if (listed && draft !== '' && history.index === undefined) {
+    return [dispatch({ type: 'draft_kept' }), show('', START)];
   }
 
   return listed && context.agents && draft === '' && history.index === undefined
@@ -366,6 +419,7 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
 
     // As in Claude Code, the box is a prompt again once it has run.
     return [
+      ...keptLeft(context),
       { type: 'history', history: recorded(history, typedText(true, value)) },
       dispatch({ type: 'bash_mode', on: false }),
       show('', START),
@@ -387,6 +441,7 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
 
   if (action.type === 'chord') {
     return [
+      ...keptLeft(context),
       {
         type: 'history',
         history: recorded(
@@ -396,19 +451,26 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
       },
       show('', START),
       ...vimEmptied(state),
-      { type: 'run_command', command: action.name, args: action.args },
+      {
+        type: 'run_command',
+        command: action.name,
+        args: action.args,
+      },
     ];
   }
+
+  // A kept draft sent leaves the stack as it leaves the box.
+  const leaving = canSend(state, action.text) ? keptLeft(context) : [];
 
   if (
     state.takesImages === true &&
     canSend(state, action.text) &&
     namesImage(action.text, home)
   ) {
-    return [{ type: 'send_with_paths', text: action.text }];
+    return [...leaving, { type: 'send_with_paths', text: action.text }];
   }
 
-  return [{ type: 'send', text: action.text }];
+  return [...leaving, { type: 'send', text: action.text }];
 }
 
 /**
@@ -527,12 +589,6 @@ export function keySteps(
     steps.push(dispatch({ type: 'keys_pending' }));
   }
 
-  // An armed close is taken back by any key but its own, its chord's
-  // first keys aside.
-  if (state.closeArmed !== undefined && command !== 'close_session') {
-    steps.push(dispatch({ type: 'close_disarmed' }));
-  }
-
   if (state.agentCloseArmed !== undefined && command !== 'close_agent') {
     steps.push(dispatch({ type: 'agent_close_disarmed' }));
   }
@@ -556,29 +612,6 @@ function commandSteps(
   switch (command) {
     case 'copy_selection':
       return [{ type: 'copy_selection' }];
-    case 'new_session':
-      return [{ type: 'open_session' }];
-    case 'next_session':
-      return [{ type: 'next_session' }];
-    case 'previous_session':
-      return [{ type: 'previous_session' }];
-    case 'goto_session_1':
-    case 'goto_session_2':
-    case 'goto_session_3':
-    case 'goto_session_4':
-    case 'goto_session_5':
-    case 'goto_session_6':
-    case 'goto_session_7':
-    case 'goto_session_8':
-    case 'goto_session_9':
-      return [
-        {
-          type: 'goto_session',
-          number: Number(command.slice('goto_session_'.length)),
-        },
-      ];
-    case 'close_session':
-      return [{ type: 'close_session' }];
     case 'attend_session': {
       // The front session's own request between turns is what needs the
       // person first: the keys go into its box (CHD-158).
@@ -631,10 +664,6 @@ function commandSteps(
       return [dispatch({ type: 'background_closed' })];
     case 'background_back':
       return [dispatch({ type: 'background_detail_closed' })];
-    case 'list_sessions':
-      return [dispatch({ type: 'sessions_picker_opened' })];
-    case 'close_sessions_picker':
-      return [dispatch({ type: 'sessions_picker_closed' })];
     case 'interrupt': {
       // The queued prompts back into the box, ahead of what is typed there.
       const text =
@@ -655,7 +684,11 @@ function commandSteps(
     case 'arm_quit':
       return [dispatch({ type: 'quit_armed' })];
     case 'clear_draft':
-      return [dispatch({ type: 'draft_cleared' }), show('', START)];
+      return [
+        ...keptLeft(context),
+        dispatch({ type: 'draft_cleared' }),
+        show('', START),
+      ];
     case 'cycle_mode': {
       const mode = modeAfter(state);
 

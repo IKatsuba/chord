@@ -3,13 +3,12 @@ import type { ConversationEvent } from '../src/session/conversation.ts';
 import {
   hear,
   keyed,
-  noTabs,
+  noAgents,
   openChild,
-  openTab,
+  openMain,
   pick,
-  show,
-  type Tabs,
-} from '../src/session/tabs.ts';
+  type WindowAgents,
+} from '../src/session/window_agents.ts';
 import { openSessionLabel } from '../src/session/sessions.ts';
 import { shellContext, withContext } from '../src/session/context.ts';
 import { wrapMessage } from '../src/session/tasks.ts';
@@ -21,23 +20,31 @@ import {
   TITLE_BYTES,
 } from '../src/status.ts';
 
-/** Tabs for `agents`, opened in order, the last in front. */
-function opened(...agents: string[]): Tabs<string> {
-  return agents.reduce(
-    (tabs, agent) => openTab(tabs, agent, agent)!.tabs,
-    noTabs<string>(),
+/**
+ * The window for `agents`: main on the first, a child on each other, by
+ * that name, the last opened picked.
+ */
+function opened(...agents: string[]): WindowAgents<string> {
+  const [first, ...rest] = agents;
+  const all = rest.reduce(
+    (window, name) =>
+      openChild(window, { id: name, name, runtime: name, openedAt: 0 }, name)!
+        .agents,
+    openMain(noAgents<string>(), first!, first!),
   );
+
+  return pick(all, all.nextKey - 1);
 }
 
 /** Plays events into agent `key`, each a second after the last from `at`. */
 function heard(
-  tabs: Tabs<string>,
+  tabs: WindowAgents<string>,
   key: number,
   events: readonly ConversationEvent[],
   at = 0,
-): Tabs<string> {
+): WindowAgents<string> {
   return events.reduce(
-    (tabs, event, index) => hear(tabs, key, event, at + index * 1000).tabs,
+    (tabs, event, index) => hear(tabs, key, event, at + index * 1000).agents,
     tabs,
   );
 }
@@ -62,11 +69,10 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
   test('keys on the parent leave a completed child done until it is picked', () => {
     const child = openChild(
       heard(opened('fake'), 1, [up]),
-      1,
       { id: 'child', name: 'tester', runtime: 'fake', openedAt: 0 },
       'tester',
     )!;
-    const done = heard(child.tabs, child.key, [up, prompt('c'), ended('c')]);
+    const done = heard(child.agents, child.key, [up, prompt('c'), ended('c')]);
 
     expect(programStatus(keyed(done))).toStrictEqual({
       state: 'done',
@@ -79,7 +85,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
     });
   });
 
-  test('a failed front turn clears on a key, leaving another tab working', () => {
+  test('a failed child turn clears on a key, leaving main working', () => {
     const running = heard(opened('first', 'second'), 1, [up, prompt('a')]);
     const failure = heard(running, 2, [up, prompt('b'), failed('b')]);
 
@@ -90,7 +96,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
     });
   });
 
-  test('equal-age requests choose the leftmost tab and expose the next after settlement', () => {
+  test('equal-age requests choose main first, then its child', () => {
     const first = heard(opened('first', 'second'), 1, [
       up,
       prompt('a'),
@@ -102,7 +108,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
       state: 'blocked',
       app: 'chord',
       kind: 'permission',
-      message: 'first (1) needs your permission: Write notes.txt',
+      message: 'first needs your permission: Write notes.txt',
     });
 
     const answered = heard(both, 1, [
@@ -118,7 +124,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
       state: 'blocked',
       app: 'chord',
       kind: 'auth',
-      message: 'second (2) asks for input: Sign in',
+      message: 'second asks for input: Sign in',
     });
   });
 
@@ -188,7 +194,7 @@ function form(turnId: string, id: string): ConversationEvent {
 }
 
 test('no agent doing anything is idle, and every report names chord', () => {
-  expect(programStatus(noTabs())).toStrictEqual({
+  expect(programStatus(noAgents())).toStrictEqual({
     state: 'idle',
     app: 'chord',
   });
@@ -247,7 +253,7 @@ test("a turn that ended in front is done until the person's next key or the next
   ).toStrictEqual('working');
 });
 
-test('a tab behind stays done through keys until it is visited', () => {
+test('an agent not shown stays done through keys until it is picked', () => {
   // Tab 1 is behind tab 2.
   const behind = heard(opened('fake', 'claude'), 1, [
     up,
@@ -258,9 +264,9 @@ test('a tab behind stays done through keys until it is visited', () => {
   expect(programStatus(keyed(behind))).toStrictEqual({
     state: 'done',
     app: 'chord',
-    message: 'fake (1) is waiting for your input',
+    message: 'fake is waiting for your input',
   });
-  expect(programStatus(show(behind, 1)).state).toStrictEqual('idle');
+  expect(programStatus(pick(behind, 1)).state).toStrictEqual('idle');
 });
 
 test('an Esc-cancelled turn and a monitor-started turn are idle when they end', () => {
@@ -337,7 +343,7 @@ test('every agent folds as blocked, then error, then working, then done, then id
   expect(programStatus(failing)).toStrictEqual({
     state: 'error',
     app: 'chord',
-    message: "c (3)'s turn failed",
+    message: "c's turn failed",
   });
   expect(
     programStatus(heard(failing, 2, [permission('t2', 'p1')], 9000)),
@@ -345,26 +351,30 @@ test('every agent folds as blocked, then error, then working, then done, then id
     state: 'blocked',
     app: 'chord',
     kind: 'permission',
-    message: 'b (2) needs your permission: Write notes.txt',
+    message: 'b needs your permission: Write notes.txt',
   });
 
   // With nothing working, the reply behind shows.
   expect(programStatus(heard(base, 2, [ended('t2')], 9000))).toStrictEqual({
     state: 'done',
     app: 'chord',
-    message: 'a (1) is waiting for your input',
+    message: 'a is waiting for your input',
   });
 });
 
 test('of several agents in one state, the record names the one waiting longest, a child as its notification does', () => {
   const tabs = openChild(
     heard(opened('fake'), 1, [up, prompt('t1')]),
-    1,
     { id: 'c1', name: 'tester', runtime: 'codex', openedAt: 0 },
     'tester',
   )!;
   const both = heard(
-    heard(tabs.tabs, tabs.key, [up, prompt('c'), permission('c', 'p2')], 1000),
+    heard(
+      tabs.agents,
+      tabs.key,
+      [up, prompt('c'), permission('c', 'p2')],
+      1000,
+    ),
     1,
     [permission('t1', 'p1')],
     9000,
@@ -425,7 +435,7 @@ describe("the record's title names the main session (CHD-491)", () => {
   const working = heard(opened('fake'), 1, [up, prompt('t1')]);
 
   test('it goes with every state while the session has a name, and is left out while it has none', () => {
-    expect(programStatus(noTabs(), 'Fix the tokenizer')).toStrictEqual({
+    expect(programStatus(noAgents(), 'Fix the tokenizer')).toStrictEqual({
       state: 'idle',
       app: 'chord',
       title: 'Fix the tokenizer',
@@ -450,7 +460,7 @@ describe("the record's title names the main session (CHD-491)", () => {
   test('it is one line, cut to 192 UTF-8 bytes, 256 once base64-encoded, on a character’s edge', () => {
     const bytes = (text: string) => new TextEncoder().encode(text).length;
     const title = (text: string) => {
-      const status = programStatus(noTabs(), text);
+      const status = programStatus(noAgents(), text);
 
       return 'title' in status ? (status.title ?? '') : '';
     };

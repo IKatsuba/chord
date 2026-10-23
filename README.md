@@ -66,13 +66,13 @@ ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
 
 <img src="docs/images/permission.png" alt="The permission prompt: Allow, Always allow, Deny" width="900">
 
-### Many agents in one window
+### Agents beside the main one
 
-Up to nine sessions as tabs, each with its own agent, transcript and draft.
-A tab shows whether its agents are working or waiting, with a separate
-mark for unseen news. `ctrl+x a` takes you to what waits.
+`/new [agent]` opens an idle agent beside main and goes to it. The list
+under the prompt shows agents and teams, their state and unseen news.
+`ctrl+x a` takes you to what waits.
 
-<img src="docs/images/tabs.png" alt="Two tabs, claude waiting on a permission behind, codex in front" width="900">
+<img src="docs/images/agents.png" alt="The agents list, with docs waiting on a permission" width="900">
 
 ### Subagents, folded
 
@@ -95,9 +95,8 @@ job with `/team run bugfix <job>`.
 
 ### Pick up where you left off
 
-`/resume` lists this directory's earlier sessions and saved windows; quit a
-window of several tabs and chord prints the one command that brings them all
-back.
+`/resume` lists this directory's earlier sessions. When you quit, chord
+prints the command that brings your main session back.
 
 <img src="docs/images/resume.png" alt="The resume picker listing earlier sessions" width="900">
 
@@ -130,7 +129,8 @@ chord                  # your default agent in this directory
 chord gemini -C ~/src/app
 chord agents           # every agent chord can start, and whether it is installed
 chord --continue       # the latest session here, again
-chord --resume         # pick an earlier session or window
+chord --resume <id>     # a recorded session, on its own agent
+chord --resume         # pick an earlier session
 chord -p "Explain src/main.tsx"          # one reply on stdout, for scripts
 git diff | chord -p "Review this" --output-format json
 ```
@@ -147,8 +147,7 @@ Inside the window:
 | `cmd+←` / `cmd+→` | line start/end, where the terminal passes it  |
 | `shift+tab`       | cycle the permission mode                    |
 | `ctrl+o`          | expand Read output and subagents             |
-| `ctrl+x c` / `/new codex` | open another session as a tab        |
-| `ctrl+x 1`…`9`    | go to a tab                                  |
+| `ctrl+x a`        | go to what waits on you                       |
 | `esc`             | interrupt the turn                           |
 
 Settings live in `~/.config/chord/settings.json` and the project's

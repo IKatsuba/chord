@@ -33,7 +33,7 @@ describe("a monitor's detail in the window (CHD-481)", () => {
     );
     await window.press(DOWN);
     await window.press('\r');
-    await window.shows('Background · 2 in this tab');
+    await window.shows('Background · 2 in this session');
   }
 
   test('enter opens it in place of the rows; ↓ ↑ step to the others, ← and esc go back to the rows, the ❯ on its item', () =>
@@ -54,7 +54,7 @@ describe("a monitor's detail in the window (CHD-481)", () => {
       await window.shows('← no events yet');
       await window.press(LEFT);
       await window.shows('❯ CI run 4812');
-      await window.shows('Background · 2 in this tab');
+      await window.shows('Background · 2 in this session');
 
       // ← on the rows does nothing; esc there closes the view.
       await window.press(LEFT);
@@ -63,11 +63,11 @@ describe("a monitor's detail in the window (CHD-481)", () => {
       await window.press('\r');
       await window.shows('Background · m1, 1 of 2');
       await window.press(ESC);
-      await window.shows('Background · 2 in this tab');
+      await window.shows('Background · 2 in this session');
       await window.press(ESC);
       await until(
         'the view closed',
-        () => !window.frame().includes('in this tab'),
+        () => !window.frame().includes('in this session'),
       );
     }));
 
@@ -83,7 +83,7 @@ describe("a monitor's detail in the window (CHD-481)", () => {
         'Enter to go to its call · ↑ ↓ for the others · Esc ← to go back',
       );
       await window.press(ESC);
-      await window.shows('Background · 1 in this tab');
+      await window.shows('Background · 1 in this session');
       await window.shows('❯ CI run 4812');
       expect(window.frame()).not.toContain('dev server errors   ');
     }));
@@ -112,7 +112,7 @@ describe("a monitor's detail in the window (CHD-481)", () => {
       await window.shows('The heartbeat stops itself in five seconds.');
       await window.press(DOWN);
       await window.press('\r');
-      await window.shows('Background · 1 in this tab');
+      await window.shows('Background · 1 in this session');
       await window.press('\r');
       await window.shows('Background · m1, 1 of 1 · ended');
       await window.shows('■ timed out after 5s · 1 event');
@@ -151,7 +151,7 @@ describe('CHD-481 U3 tester: ended detail keeps identity across keys and resize'
           );
           await window.press(DOWN);
           await window.press('\r');
-          await window.shows('Background · 2 in this tab');
+          await window.shows('Background · 2 in this session');
           await window.press('\r');
           await window.shows('Background · m1, 1 of 2');
           await window.press('j');
@@ -171,7 +171,7 @@ describe('CHD-481 U3 tester: ended detail keeps identity across keys and resize'
           expect(window.frame()).not.toContain('· ended');
           await window.press('\x1b[D');
           await window.shows('❯ dev server errors');
-          await window.shows('Background · 1 in this tab');
+          await window.shows('Background · 1 in this session');
           expect(window.frame()).not.toMatch(/^│ .*CI run 4812/m);
           await window.press(ESC);
           await until(
@@ -282,7 +282,7 @@ describe('a long stop refusal under a detail (CHD-481, Q128)', () => {
         );
         await window.press(DOWN);
         await window.press('\r');
-        await window.shows('Background · 2 in this tab');
+        await window.shows('Background · 2 in this session');
         await window.press('\r');
         await window.shows('Background · m1, 1 of 2');
         await window.press(PAGE_DOWN);
@@ -331,7 +331,7 @@ describe('a long stop refusal under a detail (CHD-481, Q128)', () => {
         try {
           await window.press(DOWN);
           await window.press('\r');
-          await window.shows('Background · 3 in this tab');
+          await window.shows('Background · 3 in this session');
           await window.press('\r');
           await window.shows('Background · m1, 1 of 3');
           await window.press(DOWN);
@@ -387,7 +387,7 @@ describe('CHD-481 Q128 tester: rebound detail boundaries', () => {
           );
           await window.press(DOWN);
           await window.press('\r');
-          await window.shows('Background · 2 in this tab');
+          await window.shows('Background · 2 in this session');
           await window.press('\r');
           await window.shows('Background · m1, 1 of 2');
 
@@ -452,7 +452,7 @@ test('a task that ends while its detail is open stays in it until left, then lea
       await window.shows('The build is being watched.');
       await window.press(DOWN);
       await window.press('\r');
-      await window.shows('Background · 2 in this tab');
+      await window.shows('Background · 2 in this session');
       await window.press('\r');
       await window.shows('Background · m1, 1 of 2');
       await window.press(DOWN);
@@ -460,7 +460,7 @@ test('a task that ends while its detail is open stays in it until left, then lea
       await window.press('x');
       await window.shows('Background · 2 of 2 · ended');
       await window.press(ESC);
-      await window.shows('Background · 1 in this tab');
+      await window.shows('Background · 1 in this session');
       await window.shows('■ Watch the build · task · stopped with x after');
     },
     { rows: 40, columns: 120 },

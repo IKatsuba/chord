@@ -20,11 +20,11 @@ import {
   earlierSessions,
   elsewhereRefusal,
   latestSession,
+  recordedAgent,
   resumeCommand,
   ResumeError,
   sessionById,
   type SessionRecord,
-  sessionsByIds,
   summaryOf,
 } from '../../src/session/sessions.ts';
 import { pastActions } from '../../src/session/replay.ts';
@@ -217,103 +217,53 @@ test("--resume names the agent a session belongs to when it is another's", () =>
   });
 });
 
-test('--resume with several ids opens each in its tab, in order, on its own agent where it works', () => {
+test("one id's agent is its latest record's, and none for an id chord has no record of (Q180)", () => {
   const records = [
-    record('a'),
-    record('b', { agent: 'codex', cwd: '/other' }),
-    record('c', { cwd: '/other' }),
-    // An older record of the same session: its latest speaks for it.
-    record('old-b', {
-      sessionId: 'id-b',
+    record('old', {
+      sessionId: 'id-a',
       agent: 'codex',
-      cwd: '/gone',
       lastUsedAt: Date.parse('2026-09-01T00:00:00.000Z'),
     }),
+    record('a', { agent: 'cursor' }),
   ];
-  const tabs = sessionsByIds(records, ['id-c', 'id-a', 'id-b'], {
-    ...CLAUDE,
-    named: false,
-  });
 
-  expect(
-    tabs.map(({ agent, resume }) => [resume.sessionId, agent, resume.cwd]),
-  ).toStrictEqual([
-    ['id-c', 'claude', '/other'],
-    ['id-a', 'claude', '/work'],
-    ['id-b', 'codex', '/other'],
-  ]);
-  expect(tabs[0]?.resume.record).toStrictEqual('/state/records/c.jsonl');
-
-  // An agent named on the command line is every one's, as with one id.
-  const named = () =>
-    sessionsByIds(records, ['id-a', 'id-b'], { ...CLAUDE, named: true });
-
-  expect(named).toThrow(ResumeError);
-  expect(named).toThrow('Session id-b belongs to another agent (codex).');
-});
-
-test('--resume refuses more ids than a window has tabs, an id named twice, and an unknown id among several', () => {
-  const ten = Array.from({ length: 10 }, (_, index) => `id-${index}`);
-  const records = ten.map((id) => record(id.slice(3)));
-  const refused = (ids: string[]) => {
-    try {
-      sessionsByIds(records, ids, { ...CLAUDE, named: false });
-    } catch (error) {
-      assert(error instanceof ResumeError);
-
-      return error.message;
-    }
-
-    throw new Error(`${ids.join(' ')} opened`);
-  };
-
-  expect(
-    sessionsByIds(records, ten.slice(0, 9), {
-      ...CLAUDE,
-      named: false,
-    }).length,
-  ).toStrictEqual(9);
-  expect(refused(ten)).toStrictEqual(
-    'A window opens at most 9 sessions; --resume named 10.',
-  );
-  expect(refused(['id-1', 'id-2', 'id-1'])).toStrictEqual(
-    'Session id-1 is named twice.',
-  );
-  expect(refused(['id-1', 'id-x', 'id-2'])).toStrictEqual(
-    "No session id-x among chord's records; one it never saw opens only on " +
-      'its own.',
-  );
+  expect(recordedAgent(records, 'id-a')).toStrictEqual('cursor');
+  expect(recordedAgent(records, 'xyz')).toBeUndefined();
 });
 
 test('--resume with one id is as it was: another agent refused, an unknown one to the agent', () => {
   const records = [record('a'), record('b', { agent: 'codex' })];
-  const one = (id: string) =>
-    sessionsByIds(records, [id], { ...CLAUDE, named: false });
 
-  expect(one('id-a')).toStrictEqual([
-    {
-      agent: 'claude',
-      resume: sessionById(records, 'id-a', CLAUDE),
-    },
-  ]);
-  expect(one('xyz')).toStrictEqual([
-    {
-      agent: 'claude',
-      resume: { sessionId: 'xyz', cwd: '/work' },
-    },
-  ]);
-  expect(() => one('id-b')).toThrow(ResumeError);
-  expect(() => one('id-b')).toThrow(
+  expect(sessionById(records, 'id-a', CLAUDE).record).toStrictEqual(
+    '/state/records/a.jsonl',
+  );
+  expect(sessionById(records, 'xyz', CLAUDE)).toStrictEqual({
+    sessionId: 'xyz',
+    cwd: '/work',
+  });
+  expect(() => sessionById(records, 'id-b', CLAUDE)).toThrow(ResumeError);
+  expect(() => sessionById(records, 'id-b', CLAUDE)).toThrow(
     'Session id-b belongs to another agent (codex).',
   );
 });
 
-test('the resume command carries an --agent-command, quoted for a shell', () => {
+test('the resume command carries an --agent-command, and every word of it is quoted for a shell', () => {
   expect(resumeCommand('claude', 'abc')).toStrictEqual(
     'chord claude --resume abc',
   );
   expect(resumeCommand('fake', 'abc', "deno run 'x y.ts'")).toStrictEqual(
     `chord fake --agent-command 'deno run '\\''x y.ts'\\''' --resume abc`,
+  );
+  // An id or agent is opaque: it pastes as one word, and nothing in it runs.
+  expect(resumeCommand('my agent', 'a b')).toStrictEqual(
+    "chord 'my agent' --resume 'a b'",
+  );
+  expect(resumeCommand('claude', "$(touch x)'; ls")).toStrictEqual(
+    `chord claude --resume '$(touch x)'\\''; ls'`,
+  );
+  // One that starts with a dash is joined to its flag, or it reads as one.
+  expect(resumeCommand('fake', '-opaque')).toStrictEqual(
+    'chord fake --resume=-opaque',
   );
 });
 

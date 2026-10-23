@@ -1,0 +1,24 @@
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (10s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │
+│   2. Always allow                                                            │
+│ ❯ 3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ❯ main   fake · Fake Large with a 1M context window  ● permission 10s
+    other  codex · 6.1 Sol                             ◦ idle 10s

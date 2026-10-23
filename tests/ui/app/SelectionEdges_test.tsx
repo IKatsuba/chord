@@ -5,7 +5,6 @@ import {
   ESC,
   inputAsked,
   isAlive,
-  leader,
   promptRow,
   quitAll,
   ready,
@@ -72,7 +71,7 @@ describe('tester: selection window boundaries', () => {
     );
   });
 
-  test('a late copy from a cleared tab leaves the next session untouched', () => {
+  test('a late copy from a cleared main leaves the next session untouched', () => {
     const pending = Promise.withResolvers<ClipboardWriteResult>();
     const { copies, copy } = clipboard(() => pending.promise);
 
@@ -82,7 +81,7 @@ describe('tester: selection window boundaries', () => {
         await window.shows(REPLY);
         await dragOver(window, REPLY);
         await until('the pending copy', () => copies.length === 1);
-        await leader(window, 'c');
+        await send(window, '/clear');
         await ready(window);
         expect(window.selected()).toBe('');
         pending.resolve({
@@ -91,7 +90,7 @@ describe('tester: selection window boundaries', () => {
         });
         await window.press('\x1b[F');
         expect(statusRow(window)).not.toContain('copied');
-        await leader(window, '1');
+        await send(window, 'text');
         await window.shows(REPLY);
         expect(window.selected()).toBe('');
         expect(statusRow(window)).not.toContain('copied');

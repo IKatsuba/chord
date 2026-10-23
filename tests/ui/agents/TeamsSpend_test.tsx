@@ -19,7 +19,7 @@ import {
 } from '../app/render.tsx';
 import { BUGFIX, withTeams, started } from './teams_window.tsx';
 
-test("/cost, /context and /status on a picked member name its runtime, not the tab's (CHD-405)", async () => {
+test("/cost, /context and /status on a picked member name its runtime, not main's (CHD-405)", async () => {
   const server = serveChord();
   // tester on another runtime than main's, its agent still the fake.
   const team = BUGFIX.replace(
@@ -167,15 +167,19 @@ describe('a runtime whose command was refused (CHD-466)', () => {
         : { agentCommand: fakeAgentCommand() },
   });
 
-  test('/new codex is refused with the cause, and no tab opens', async () => {
+  test("/new codex, its command refused, is refused in open_agent's words where it was typed; nothing opens or is cleared (U6)", async () => {
     const opened = options(BUGFIX);
 
     try {
       await withWindow(async (window) => {
         await ready(window);
+        await send(window, 'hello');
+        await window.shows('› hello');
         await send(window, '/new codex');
-        await window.shows(REFUSED);
-        expect(window.frame()).not.toContain('2 codex');
+        await window.shows(REFUSED.slice(0, 60));
+        expect(window.frame()).toContain('› hello');
+        expect(window.frame()).not.toContain('╭─ codex');
+        expect(window.frame()).not.toContain('    codex ');
       }, opened);
     } finally {
       await opened.server.close();
@@ -237,7 +241,7 @@ describe('CHD-405 N2 tester: member spend follows the picked session', () => {
             line.includes(`${agent} has not reported`),
           );
           const table = lines.findIndex(
-            (line, index) => index > at && line.includes('This window'),
+            (line, index) => index > at && line.includes('This session'),
           );
 
           if (at >= 0 && table > at) {
@@ -333,7 +337,7 @@ describe('CHD-373 S4: a team member that starts a task agent', () => {
           await window.shows('Team(bugfix) · fake · fake-large');
           await window.shows('1 task running');
           await send(window, '/cost');
-          await window.shows('This window');
+          await window.shows('This session');
           await window.shows('task agent of tester, running');
 
           const run = window

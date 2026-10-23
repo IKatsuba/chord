@@ -1,4 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import { serveChord } from '../../../src/server/server.ts';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from '../app/child_window.tsx';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -288,8 +295,9 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
   }
 
   test('two sessions keep separate form values and open lists when switched', () =>
-    withWindow(
+    withChild(
       async (window) => {
+        await openOther(window);
         await send(window, 'form');
         await inputAsked(window);
         await window.type('alpha');
@@ -300,23 +308,23 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
 
         await window.press(' ');
         await window.shows('1. Europe');
-        await leader(window, 'c');
+        await pickAgent(window, 'other');
         await until('the second agent', () => window.pids.length === 2);
-        await window.shows('● 1 fake asks for input · ctrl+x a');
+        await window.shows('asks for input · ctrl+x a');
         await send(window, 'form');
-        await inputAsked(window, '│ fake asks for input');
+        await inputAsked(window, '│ other asks for input');
         await window.type('beta');
         await window.press(DOWN);
         await window.type('beta@example.com');
-        await leader(window, '1');
+        await pickAgent(window, 'main');
         await inputAsked(window, '│ fake asks for input');
         await window.shows('1. Europe');
         aligned(window.frame());
         await window.press('2');
         await window.press(ESC);
         await window.shows('Elicitation answer: cancel');
-        await leader(window, '2');
-        await inputAsked(window, '│ fake asks for input');
+        await pickAgent(window, 'other');
+        await inputAsked(window, '│ other asks for input');
         await window.shows('Project name   beta');
         await window.shows('Contact email  beta@example.com');
         aligned(window.frame());
@@ -328,36 +336,64 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
       { columns: 80, rows: 24 },
     ));
 
-  test('a form cancels independently of a hung turn in another session', () =>
-    withWindow(
-      async (window) => {
-        await window.shows('? for shortcuts');
-        await window.type('/new wedged');
-        await window.press('\r');
-        await until('the second agent', () => window.pids.length === 2);
-        await send(window, 'never');
-        await window.shows('Working…');
-        await leader(window, '1');
-        await send(window, 'form');
-        await inputAsked(window);
-        await window.press(DOWN);
-        aligned(window.frame());
-        await window.press(CTRL_C);
-        await window.shows('⎿  Cancelled');
-        expect(window.frame()).not.toContain('fake asks for input');
-        await quitAll(window);
-      },
-      {
-        columns: 80,
-        rows: 24,
-        startupOf: (agent) => ({
-          agentCommand:
-            agent === 'wedged'
-              ? fakeAgentCommand(undefined, '--hang', 'turn')
-              : fakeAgentCommand(),
-        }),
-      },
-    ));
+  test('a child form cancels independently of a hung main turn', async () => {
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withChild(
+        async (window) => {
+          await readyAgent(window);
+
+          if (main === undefined) {
+            throw new Error('main was not admitted');
+          }
+
+          await main.window.open(main.key, {
+            agent: 'codex',
+            name: 'other',
+            prompt: 'form',
+          });
+          await until('the child is started', () => window.pids.length === 2);
+          await send(window, 'never');
+          await window.shows('Working…');
+          await pickAgent(window, 'other');
+          await inputAsked(window, 'other asks for input');
+          await window.press(DOWN);
+          aligned(window.frame());
+          await window.press(CTRL_C);
+          await window.shows('⎿  Cancelled');
+          expect(window.frame()).not.toContain('fake asks for input');
+          await pickAgent(window, 'main');
+          await window.shows('Working…');
+          await quitAll(window);
+        },
+        {
+          server,
+          columns: 80,
+          rows: 24,
+          agentCommand: fakeAgentCommand(undefined, '--hang', 'turn'),
+          startupOf: (agent) => ({
+            agentCommand:
+              agent === 'fake'
+                ? fakeAgentCommand(undefined, '--hang', 'turn')
+                : fakeAgentCommand(),
+          }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 
   test('an agent exiting with a dropdown open withdraws the form', () =>
     withWindow(
@@ -574,3 +610,46 @@ describe('CHD-462 B1 tester: hidden form contents', () => {
     });
   }
 });
+
+test('↓ past the buttons goes into the agents list, and ↑ straight back puts the keys in the form where they were (Q192)', () =>
+  withChild(
+    async (window) => {
+      await openOther(window);
+      await readyAgent(window);
+      await send(window, 'form');
+      await inputAsked(window);
+
+      for (let step = 0; !/❯ ?Accept/.test(window.frame()); step++) {
+        expect(step).toBeLessThan(12);
+        await window.press(DOWN);
+      }
+
+      const at = boxTop(window.frame());
+
+      await window.press(DOWN);
+      await window.shows('  ❯ main ');
+      // Its height kept, so nothing above it moves.
+      expect(boxTop(window.frame())).toBe(at);
+      // The keys are the list's: the form promises none of them.
+      expect(window.frame()).not.toMatch(/❯ ?Accept/);
+      expect(window.frame()).not.toContain('Enter to accept');
+      // Main is the list's first row: ↑ leaves it, back into the form.
+      await window.press(UP);
+      await until(
+        'the list let go',
+        () => !window.frame().includes('  ❯ main '),
+      );
+      expect(window.frame()).toMatch(/❯ ?Accept/);
+      await window.press('\x1b[C');
+      await until('the keys move the form again', () =>
+        /❯ ?Decline/.test(window.frame()),
+      );
+      await window.press(ESC);
+      await window.shows('Elicitation answer: cancel');
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+/** The row the box above the prompt starts on: the first border drawn. */
+const boxTop = (frame: string) =>
+  frame.split('\n').findIndex((row) => row.startsWith('╭'));

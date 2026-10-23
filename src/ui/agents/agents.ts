@@ -8,15 +8,19 @@
  */
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
-import { type Failure, failureOf, type TabWait } from '../../session/tabs.ts';
-import { GLYPHS } from '../app/strip.ts';
+import {
+  type AgentWait,
+  type Failure,
+  failureOf,
+} from '../../session/waits.ts';
+import { GLYPHS } from './glyphs.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
 import type { LeftOpen } from '../../session/transcript/types.ts';
 
 /** One agent of the front session, as the list is asked to draw it. */
 export interface AgentRow {
-  /** Its session's key: the tab's own for `main`, the child's for a child. */
+  /** Its session's key: the main session's for `main`, the child's for a child. */
   readonly key: number;
   /** `main`, or the child's name. */
   readonly name: string;
@@ -27,7 +31,7 @@ export interface AgentRow {
   readonly effort?: string | undefined;
   /** Its place among the theme's agent colours; none for `main`. */
   readonly colour?: number;
-  readonly wait: TabWait;
+  readonly wait: AgentWait;
   /** The prompt goes to it. */
   readonly picked: boolean;
   /** Its agent never came up. */
@@ -193,8 +197,8 @@ function urgency(row: AgentRow): readonly [number, number] | undefined {
 }
 
 /**
- * A folded team's state: the most urgent among its lead and members, as the
- * sessions picker gives a tab's children's, naming the member whose it is,
+ * A folded team's state: the most urgent among its lead and members,
+ * naming the member whose it is,
  * `● tester: permission 12s`; idle from the one that stopped last when all
  * of them are.
  */

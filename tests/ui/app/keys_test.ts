@@ -167,7 +167,7 @@ test('↑ recalls the last prompt sent', () => {
   ]);
 });
 
-test('↓ on an empty draft goes into the list of agents only while there is one and history is not walked', () => {
+test('↓ on an empty draft goes into the list of agents only while there is one and history is not walked, and on a draft sets it aside', () => {
   const into: Step[] = [
     {
       type: 'dispatch',
@@ -178,19 +178,171 @@ test('↓ on an empty draft goes into the list of agents only while there is one
 
   expect(newerSteps(context(ready, { agents: true }))).toStrictEqual(into);
   expect(newerSteps(context(ready))).toStrictEqual([]);
-  expect(
-    newerSteps(
-      context(reduceApp(ready, { type: 'draft_set', text: 'hi' }), {
-        agents: true,
-      }),
-    ),
-  ).toStrictEqual([]);
+
+  // A draft goes aside first, list or none (Q183).
+  for (const agents of [true, false]) {
+    expect(newerSteps(context(typing('hi'), { agents }))).toStrictEqual([
+      dispatched({ type: 'draft_kept' }),
+      { type: 'show_draft', text: '', cursor: START },
+    ]);
+  }
+
+  // A list on screen keeps its ↓.
+  expect(newerSteps(context(typing('/'), { agents: true }))).toStrictEqual([]);
   // ↓ walks back to the empty draft first; only the next one goes in.
   expect(
     newerSteps(context(ready, { agents: true, history: walked })).some(
       (step) => step.type === 'history',
     ),
   ).toStrictEqual(true);
+});
+
+describe('drafts set aside (U10, Q183)', () => {
+  const image = { id: 1, mediaType: 'image/png', data: 'AA==', bytes: 1 };
+  const kept = reduceApp(
+    reduceApp(
+      reduceApp(typing('one [Image #1] two'), {
+        type: 'images_added',
+        images: [image],
+      }),
+      { type: 'bash_mode', on: true },
+    ),
+    { type: 'draft_set', cursor: [0, 3] as const },
+  );
+  const aside = reduceApp(kept, { type: 'draft_kept' });
+
+  test('↓ keeps the whole draft with the agent and empties the box', () => {
+    expect(aside.kept).toStrictEqual([
+      {
+        text: 'one [Image #1] two',
+        cursor: [0, 3] as const,
+        images: [image],
+        bash: true,
+      },
+    ]);
+    expect(aside.draft).toStrictEqual('');
+    expect(aside.images).toStrictEqual([]);
+    expect(aside.bash).toStrictEqual(false);
+    // A new session keeps them, as it keeps the draft (Q191).
+    expect(reduceApp(aside, { type: 'cleared' }).kept).toStrictEqual(
+      aside.kept,
+    );
+  });
+
+  test('↑ from the empty box brings the newest back whole, its cursor where it was, then the prompts sent', () => {
+    const history = recorded(emptyHistory, 'sent before');
+    const up = olderSteps(context(aside, { history }));
+
+    expect(up).toStrictEqual([
+      { type: 'history', history: { ...history, index: 1, draft: '' } },
+      dispatched({ type: 'menu_dismissed' }),
+      dispatched({ type: 'bash_mode', on: true }),
+      dispatched({ type: 'images_added', images: [image] }),
+      {
+        type: 'show_draft',
+        text: 'one [Image #1] two',
+        cursor: [0, 3] as const,
+      },
+    ]);
+
+    const shown = { ...history, index: 1, draft: '' };
+
+    expect(olderSteps(context(aside, { history: shown })).at(-1)).toStrictEqual(
+      {
+        type: 'show_draft',
+        text: 'sent before',
+        cursor: endOf('sent before'),
+      },
+    );
+    // From a kept draft ↓ walks on to the box; it sets nothing aside.
+    expect(
+      newerSteps(context(aside, { history: shown })).some(
+        (step) => step.type === 'dispatch' && step.action.type === 'draft_kept',
+      ),
+    ).toStrictEqual(false);
+  });
+
+  test('a kept draft sent, or emptied by ctrl+c, leaves the stack and the walk', () => {
+    const history = { ...emptyHistory, index: 0 };
+    const showing = reduceApp(aside, {
+      type: 'draft_set',
+      text: 'one two',
+      cursor: endOf('one two'),
+    });
+    const taken: Step[] = [
+      dispatched({ type: 'kept_taken', index: 0 }),
+      { type: 'history', history: { ...history, index: undefined, draft: '' } },
+    ];
+
+    expect(
+      submitSteps('one two', context(showing, { history })).slice(0, 2),
+    ).toStrictEqual(taken);
+    expect(
+      keySteps('c', ctrl, context(showing, { history })).slice(0, 2),
+    ).toStrictEqual(taken);
+    expect(
+      reduceApp(aside, { type: 'kept_taken', index: 0 }).kept,
+    ).toStrictEqual([]);
+    // A prompt sent from the box leaves the stack be.
+    expect(
+      submitSteps('fresh', context(typing('fresh', aside))).some(
+        (step) => step.type === 'dispatch' && step.action.type === 'kept_taken',
+      ),
+    ).toStrictEqual(false);
+  });
+
+  test('a kept draft shown and edited stays edited in its place as the walk moves on (Q195)', () => {
+    // A prompt sent before it, so ↑ has somewhere to go.
+    const history = { ...recorded(emptyHistory, 'sent'), index: 1 };
+    const edited = reduceApp(aside, {
+      type: 'draft_set',
+      text: 'one [Image #1] three',
+      cursor: [0, 5],
+    });
+
+    // Walked off it either way, it is written back first.
+    for (const steps of [
+      olderSteps(context(edited, { history })),
+      newerSteps(context(edited, { history })),
+    ]) {
+      expect(steps[0]).toStrictEqual(
+        dispatched({ type: 'kept_edited', index: 0 }),
+      );
+    }
+
+    expect(
+      reduceApp(reduceApp(edited, { type: 'images_added', images: [image] }), {
+        type: 'kept_edited',
+        index: 0,
+      }).kept,
+    ).toStrictEqual([
+      {
+        text: 'one [Image #1] three',
+        cursor: [0, 5],
+        images: [image],
+        bash: false,
+      },
+    ]);
+  });
+});
+
+test("a box's highlight and the plan box are kept with the session by the request they answer (Q194)", () => {
+  const chosen = reduceApp(ready, {
+    type: 'choice_moved',
+    id: 'p1',
+    highlighted: 2,
+  });
+  const planned = reduceApp(chosen, {
+    type: 'plan_box_changed',
+    id: 'plan',
+    box: { row: 2, note: 'smaller' },
+  });
+
+  expect(planned.choosing).toStrictEqual({ id: 'p1', highlighted: 2 });
+  expect(planned.planning).toStrictEqual({
+    id: 'plan',
+    box: { row: 2, note: 'smaller' },
+  });
 });
 
 test('in the list ↑ ↓ and j k move the pick, enter and esc go back, x closes, and other letters do nothing', () => {
@@ -295,7 +447,6 @@ describe('tester: selection dispatch precedence', () => {
       text: 'keep this draft',
       cursor: endOf('keep this draft'),
     });
-    expect(suffix.some((step) => step.type === 'open_session')).toBe(false);
     expect(suffix.some((step) => step.type === 'clear_selection')).toBe(false);
   });
 
@@ -499,11 +650,10 @@ describe('a request between turns (CHD-158)', () => {
     expect(leaderA(attended)).toContainEqual({ type: 'attend_session' });
   });
 
-  test('ctrl+x a takes the keys from the list of agents, a search or the sessions picker', () => {
+  test('ctrl+x a takes the keys from the list of agents or a search', () => {
     for (const from of [
       { type: 'agents_focused', focused: true },
       { type: 'searched', search: emptySearch },
-      { type: 'sessions_picker_opened' },
     ] as AppAction[]) {
       const elsewhere = reduceApp(typing('draft', asked), from);
       const attended = reduceApp(elsewhere, {
@@ -513,7 +663,6 @@ describe('a request between turns (CHD-158)', () => {
 
       expect(attended.agentsFocus).toStrictEqual(undefined);
       expect(attended.search).toStrictEqual(undefined);
-      expect(attended.sessionsPicker).toBeFalsy();
       expect(attended.draft).toStrictEqual('draft');
       // Esc is the box's now: it rejects.
       expect(keyCommand('', escape, attended, 'draft')).toStrictEqual(
@@ -533,5 +682,47 @@ describe('a request between turns (CHD-158)', () => {
       'reject_permission',
     );
     expect(leaderA(inTurn)).toContainEqual({ type: 'attend_session' });
+  });
+});
+
+describe('CHD-493 U10 tester: independent draft payloads', () => {
+  test('editing and taking a middle draft preserves its neighbours through clear', () => {
+    const image = { id: 9, mediaType: 'image/png', data: 'AA==', bytes: 1 };
+    let state = ready;
+
+    for (const text of ['old', 'middle [Image #9]', 'new']) {
+      state = reduceApp(typing(text, state), { type: 'draft_kept' });
+    }
+
+    state = reduceApp(typing('edited [Image #9]', state), {
+      type: 'images_added',
+      images: [image],
+    });
+    state = reduceApp(state, { type: 'bash_mode', on: true });
+    state = reduceApp(state, { type: 'draft_set', cursor: [0, 2] });
+    state = reduceApp(state, { type: 'kept_edited', index: 1 });
+    state = reduceApp(state, { type: 'cleared' });
+
+    expect(state.kept?.map((draft) => draft.text)).toStrictEqual([
+      'old',
+      'edited [Image #9]',
+      'new',
+    ]);
+    expect(state.kept?.[1]).toStrictEqual({
+      text: 'edited [Image #9]',
+      images: [image],
+      cursor: [0, 2],
+      bash: true,
+    });
+
+    state = reduceApp(state, { type: 'kept_taken', index: 1 });
+
+    expect(state.kept?.map((draft) => draft.text)).toStrictEqual([
+      'old',
+      'new',
+    ]);
+    expect(
+      state.kept?.every((draft) => draft.images.length === 0 && !draft.bash),
+    ).toBe(true);
   });
 });

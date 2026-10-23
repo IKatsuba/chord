@@ -3,6 +3,13 @@
  * headers, selection, option and cmd with the arrows, and held matches.
  */
 import { describe, expect, test } from 'bun:test';
+import { serveChord } from '../../../src/server/server.ts';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from '../app/child_window.tsx';
 import { matchFiles } from '../../../src/ui/prompt/mentions.ts';
 import stripAnsi from 'strip-ansi';
 import stringWidth from 'string-width';
@@ -10,6 +17,7 @@ import { FileList, Queue } from '../../../src/ui/prompt/Prompt.tsx';
 import { draw } from '../harness.tsx';
 import type { EditorMode } from '../../../src/settings.ts';
 import {
+  asked,
   CTRL_G,
   ESC,
   leader,
@@ -19,6 +27,7 @@ import {
   TAB,
   until,
   UP,
+  DOWN,
   type Window,
   withWindow,
 } from '../app/render.tsx';
@@ -299,9 +308,10 @@ test("a keybinding on option+← takes it from the textarea's word move (CHD-386
   ));
 
 describe('CHD-386 tester: cursor move boundaries', () => {
-  test('a cancelled turn and another session keep independent editable drafts', () =>
-    withWindow(
+  test('a cancelled main draft survives visiting an empty child and remains editable', () =>
+    withChild(
       async (window) => {
+        await openOther(window);
         await send(window, 'slow');
         await window.shows('esc to interrupt');
         await window.type('one two');
@@ -310,17 +320,17 @@ describe('CHD-386 tester: cursor move boundaries', () => {
         await window.press('\x1b[1;3D');
         await window.type('X');
         await window.shows('› one Xtwo');
-        await leader(window, 'c');
+        await pickAgent(window, 'other');
         await until('the second agent', () => window.pids.length === 2);
-        await ready(window);
-        await window.type('other draft');
-        await window.press('\x1b[1;9D');
-        await window.type('Y');
-        await window.shows('› Yother draft');
-        await leader(window, '1');
+        await readyAgent(window);
+        // The kept main draft stays with main; other starts empty.
+        expect(promptRow(window)).toMatch(/^│ ›\s*│$/);
+        await pickAgent(window, 'main');
+        expect(promptRow(window)).toMatch(/^│ ›\s*│$/);
+        await window.press(UP);
         await window.shows('› one Xtwo');
-        await leader(window, '2');
-        await window.shows('› Yother draft');
+        await window.type('Y');
+        expect(promptRow(window)).toContain('› one XYtwo');
       },
       { columns: 80, rows: 24 },
     ));
@@ -330,7 +340,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
 
     return withWindow(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await window.paste('first line\nsecond line\nthird line');
         await window.press(UP);
         await window.press('\x1b[1;9D');
@@ -354,7 +364,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
 
   test('shift with alt arrows leaves selection and the cursor alone', () =>
     withWindow(async (window) => {
-      await ready(window);
+      await readyAgent(window);
       await window.type('one two');
       await window.press('\x1b[1;4D');
       await window.press('\x1b[1;4C');
@@ -370,7 +380,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
     test(`${context} chord prefix takes alt+left before the word move`, () =>
       withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await window.type('one two');
           await window.press('\x1b[1;3D');
           // A wrong continuation drops the chord without moving the cursor.
@@ -389,7 +399,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
   test('a Global single binding takes cmd+left before the line move', () =>
     withWindow(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await window.type('one two');
         await window.press('\x1b[1;9D');
         await window.type('X');
@@ -430,7 +440,7 @@ describe('CHD-386 tester: cursor move boundaries', () => {
 
     return withWindow(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await window.type(`${'a'.repeat(74)} tail`);
         await window.press('\x1b[1;9D');
         await window.type('X');
@@ -525,7 +535,7 @@ describe('CHD-398 tester: held match lifecycle', () => {
   });
 
   for (const action of ['switch', 'close'] as const) {
-    test(`a pending pick is dropped on session ${action}, even for the same mention`, async () => {
+    test(`a pending pick is dropped on child ${action}, even for the same mention`, async () => {
       const releases: ((found: readonly string[]) => void)[] = [];
       const match = (paths: readonly string[], query: string) =>
         query === 'target'
@@ -533,39 +543,50 @@ describe('CHD-398 tester: held match lifecycle', () => {
               releases.push(resolve);
             })
           : matchFiles(paths, query);
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
 
-      await withWindow(
-        async (window) => {
-          await files(window, 'src/target.ts');
-          await window.type('@target');
-          await until('the first session match', () => releases.length > 0);
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
 
-          if (action === 'switch') {
-            await window.press('\r');
-          }
+        return admit(caller);
+      };
 
-          await window.press('\x18');
-          await window.press('c');
-          await ready(window);
-          await window.type('@target');
+      try {
+        await withChild(
+          async (window) => {
+            await openOther(window);
+            await files(window, 'src/target.ts');
+            await window.type('@target');
+            await until('the main match is held', () => releases.length > 0);
 
-          if (action === 'close') {
-            await window.press(TAB);
-            await window.press('\x18');
-            await window.press('k');
-          }
+            if (action === 'switch') {
+              await window.press('\r');
+            }
 
-          for (const release of releases) {
-            release(['src/target.ts']);
-          }
+            // The pending file choice owns ↓ until switching drops it.
+            await pickAgent(window, 'other', true);
+            await window.type('@target');
+            await until('the child match is held', () => releases.length >= 2);
 
-          await window.press('');
-          expect(promptRow(window)).toContain('› @target');
-          expect(promptRow(window)).not.toContain('@src/target.ts');
+            if (action === 'close') {
+              await window.press(TAB);
 
-          if (action === 'switch') {
-            await window.press('\x18');
-            await window.press('1');
+              if (main === undefined) {
+                throw new Error('main was not admitted');
+              }
+
+              // The parent's close_agent path remains reachable while the child
+              // keeps a draft and its pending file choice.
+              await main.window.close(main, 'other');
+              await until(
+                'the child closed',
+                () => !/^ {4}other /m.test(window.frame()),
+              );
+            }
 
             for (const release of releases) {
               release(['src/target.ts']);
@@ -574,10 +595,26 @@ describe('CHD-398 tester: held match lifecycle', () => {
             await window.press('');
             expect(promptRow(window)).toContain('› @target');
             expect(promptRow(window)).not.toContain('@src/target.ts');
-          }
-        },
-        { match },
-      );
+
+            if (action === 'switch') {
+              // Dismiss the child's file list, then keep its draft via ↓ ↓.
+              await window.press(ESC);
+              await pickAgent(window, 'main');
+
+              for (const release of releases) {
+                release(['src/target.ts']);
+              }
+
+              await window.press('');
+              expect(promptRow(window)).toContain('› @target');
+              expect(promptRow(window)).not.toContain('@src/target.ts');
+            }
+          },
+          { match, server },
+        );
+      } finally {
+        await server.close();
+      }
     });
   }
 
@@ -642,4 +679,237 @@ describe('CHD-398 tester: held match lifecycle', () => {
       }
     });
   }
+});
+
+for (const columns of [80, 120]) {
+  test(`↓ ↓ leaves main with its draft set aside, ↑ there brings it back with its cursor, and another agent's ↑ never does (U10) at ${columns} columns`, () =>
+    withChild(
+      async (window) => {
+        await openOther(window);
+        await readyAgent(window);
+        await window.type('one two');
+        await window.press('\x1b[1;3D');
+        await window.type('X');
+        await window.shows('› one Xtwo');
+        // The first ↓ sets it aside; pickAgent's ↓ from the empty box goes
+        // into the list.
+        await window.press(DOWN);
+        await until('the box empty', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await pickAgent(window, 'other');
+        await readyAgent(window);
+        await window.press(UP);
+        await until('a prompt sent in its place', () =>
+          (promptRow(window) ?? '').includes('agentother'),
+        );
+        expect(window.frame()).not.toContain('Xtwo');
+        await window.press(DOWN);
+        await until('the box empty again', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await pickAgent(window, 'main');
+        await until('main empty, as it was left', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await window.press(UP);
+        await window.shows('› one Xtwo');
+        await window.type('Y');
+        expect(promptRow(window)).toContain('› one XYtwo');
+      },
+      { columns, rows: 30 },
+    ));
+}
+
+test("each agent's walk is its own: going to another while a kept draft is shown neither drops nor overwrites either agent's (U10)", () =>
+  withChild(
+    async (window) => {
+      const empty = () => /^│ ›\s*│$/.test(promptRow(window) ?? '');
+
+      await openOther(window);
+      await readyAgent(window);
+      await window.type('main draft');
+      await window.press(DOWN);
+      await until('main set aside', empty);
+      await pickAgent(window, 'other');
+      await readyAgent(window);
+      await window.type('other draft');
+      await window.press(DOWN);
+      await until('other set aside', empty);
+      await send(window, 'permission');
+      await asked(window);
+
+      // From the box's last choice into the list, and up to main.
+      await until('the list has the keys', async () => {
+        if (window.frame().includes('  ❯ other ')) {
+          return true;
+        }
+
+        await window.press(DOWN);
+
+        return false;
+      });
+
+      await window.press(UP);
+      await window.shows('  ❯ main ');
+      await window.press('\r');
+      await until('main has the keys', () => !window.frame().includes('  ❯ '));
+      // Main's walk on its kept draft, edited, the keys go to other's
+      // request.
+      await window.press(UP);
+      await window.shows('› main draft');
+      await window.type('X');
+      await window.shows('› main draftX');
+      await leader(window, 'a');
+      await asked(window);
+      await window.press('1');
+      await until(
+        'the request answered',
+        () => !window.frame().includes('Do you want to proceed?'),
+      );
+      // Other's own walk: its kept draft, not a place in main's.
+      await window.press(UP);
+      await window.shows('› other draft');
+      // Other sends a prompt of its own, one more in the shared history.
+      await window.press(DOWN);
+      await until('other empty again', empty);
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await pickAgent(window, 'main');
+      await window.shows('› main draftX');
+      // Walked off and back, main's edit stays in its kept draft's place.
+      await window.press(DOWN);
+      await until('main empty', empty);
+      await window.press(UP);
+      await window.shows('› main draftX');
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+describe('CHD-493 U10 tester: kept drafts across agents and turns', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`several drafts survive clear, a cancelled turn and sending one at ${columns} columns`, () =>
+      withChild(
+        async (window) => {
+          const empty = () => /^│ ›\s*│$/.test(promptRow(window) ?? '');
+
+          await openOther(window);
+          await readyAgent(window);
+
+          for (const text of ['old kept', 'new kept']) {
+            await window.type(text);
+            await window.press(DOWN);
+            await until('draft set aside', empty);
+          }
+
+          await send(window, '/clear');
+          await readyAgent(window);
+          await send(window, 'slow');
+          await window.shows('Working.');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await window.press(UP);
+          await window.shows('› new kept');
+          await window.press(UP);
+          await window.shows('› old kept');
+          await window.type(' edited');
+          await window.press(DOWN);
+          await window.shows('› new kept');
+          await window.press('\r');
+          await readyAgent(window);
+          await window.press(UP);
+          await window.shows('› old kept edited');
+          await window.press('\x03');
+          await until('removed kept draft', empty);
+          await window.press(UP);
+          expect(promptRow(window)).not.toContain('old kept');
+        },
+        { columns, rows },
+      ));
+
+    test(`attention and another agent's send preserve an edited middle draft and cursor at ${columns} columns`, () =>
+      withChild(
+        async (window) => {
+          const empty = () => /^│ ›\s*│$/.test(promptRow(window) ?? '');
+
+          await openOther(window);
+          await readyAgent(window);
+
+          for (const text of ['first draft', 'one two', 'last draft']) {
+            await window.type(text);
+            await window.press(DOWN);
+            await until('draft set aside', empty);
+          }
+
+          await pickAgent(window, 'other');
+          await send(window, 'permission');
+          await asked(window);
+          await until('other leaves its permission for the list', async () => {
+            if (window.frame().includes('  ❯ other ')) {
+              return true;
+            }
+
+            await window.press(DOWN);
+
+            return false;
+          });
+
+          await window.press(UP);
+          await window.shows('  ❯ main ');
+          await window.press('\r');
+          await window.press(UP);
+          await window.shows('› last draft');
+          await window.press(UP);
+          await window.shows('› one two');
+          await window.press('\x1b[1;3D');
+          await window.type('X');
+          await window.shows('› one Xtwo');
+          await leader(window, 'a');
+          await asked(window);
+          await window.press('1');
+          await readyAgent(window);
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+          await pickAgent(window, 'main');
+          await window.shows('› one Xtwo');
+          await window.press(DOWN);
+          await window.shows('› last draft');
+          await window.press(UP);
+          await window.shows('› one Xtwo');
+          await window.type('Y');
+          await window.shows('› one XYtwo');
+          await window.press(UP);
+          await window.shows('› first draft');
+          await window.press(DOWN);
+          await window.shows('› one XYtwo');
+        },
+        { columns, rows },
+      ));
+  }
+
+  test('vim j sets aside only at the last line and k returns the draft', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('first');
+        await window.press('\x0a');
+        await window.type('second');
+        await window.press(ESC);
+        await window.shows('-- NORMAL --');
+        await window.press('k');
+        await window.press('j');
+        expect(window.frame()).toContain('› first');
+        await window.press('j');
+        await until('vim draft set aside', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await window.press('k');
+        await window.shows('› first');
+        expect(window.frame()).toContain('second');
+      },
+      { vim: true, columns: 80, rows: 24 },
+    ));
 });

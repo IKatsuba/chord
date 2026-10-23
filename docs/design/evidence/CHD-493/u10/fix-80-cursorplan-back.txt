@@ -1,0 +1,24 @@
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ ››› Waiting for your answer to the plan… (8s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ fake has a plan. Do you want to proceed?                                     │
+│   1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│ ❯ Note    Tell fake what to change, sent with 2 (optional)                   │
+│                                                                              │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep       │
+│ planning                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main   fake   ✻ working 8s
+    other  codex  ◦ idle 0s     ✓ new reply

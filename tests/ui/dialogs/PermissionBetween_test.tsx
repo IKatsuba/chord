@@ -161,7 +161,7 @@ describe('CHD-158 tester: attendance in the window', () => {
     [80, 24],
     [120, 40],
   ] as const) {
-    for (const focus of ['search', 'sessions'] as const) {
+    for (const focus of ['search'] as const) {
       test(`attention answers from ${focus} and preserves the draft at ${columns} columns`, () =>
         withWindow(
           async (window) => {
@@ -172,9 +172,6 @@ describe('CHD-158 tester: attendance in the window', () => {
             if (focus === 'search') {
               await window.press('\x12');
               await window.shows('search prompts:');
-            } else {
-              await leader(window, 'w');
-              await window.shows('Enter to go');
             }
 
             await window.press('\x18');

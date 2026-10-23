@@ -240,18 +240,8 @@ describe("the terminal is told the main session's id to resume (CHD-492)", () =>
         },
         {
           stateDir,
-          resumes: [
-            {
-              agent: 'fake',
-              resume: { sessionId: resumed, cwd, record: record.path },
-              place: {
-                cwd,
-                startupOf: () => start,
-                mcpServers: [],
-                mcpIgnored: [],
-              },
-            },
-          ],
+          resume: { sessionId: resumed, cwd, record: record.path },
+          startupOf: () => start,
         },
       );
     } finally {
@@ -388,18 +378,8 @@ describe("the terminal is told the main session's id to resume (CHD-492)", () =>
           await until('the id', () => last(window) === id);
         },
         {
-          resumes: [
-            {
-              agent: 'fake',
-              resume: { sessionId: id, cwd },
-              place: {
-                cwd,
-                startupOf: () => start,
-                mcpServers: [],
-                mcpIgnored: [],
-              },
-            },
-          ],
+          resume: { sessionId: id, cwd },
+          startupOf: () => start,
         },
       );
     } finally {

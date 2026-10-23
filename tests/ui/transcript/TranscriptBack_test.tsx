@@ -2,10 +2,10 @@
  * A transcript scrolled back keeps the entry on top in view: across ctrl+o,
  * a resize, and two sessions scrolled to the same row.
  */
+import { openOther, pickAgent, withChild } from '../app/child_window.tsx';
 import { expect, test } from 'bun:test';
 import {
   CTRL_O,
-  leader,
   ready,
   send,
   until,
@@ -95,8 +95,8 @@ test('a resize while scrolled back keeps the entry on top in view', () =>
     { rows: 24 },
   ));
 
-test('two sessions scrolled back to the same row each keep their own entry on top', () =>
-  withWindow(
+test('main and a child scrolled back to the same row each keep their own entry on top', () =>
+  withChild(
     async (window) => {
       // Stopped, so nothing more comes in while the view moves.
       const stopped = async () => {
@@ -118,9 +118,10 @@ test('two sessions scrolled back to the same row each keep their own entry on to
 
       const top = () => window.frame().split('\n').slice(1, 4).join('\n');
 
-      await stopped();
-      await leader(window, 'c');
       await ready(window);
+      await openOther(window);
+      await stopped();
+      await pickAgent(window, 'other');
       await send(window, 'calls');
       await window.shows('Two calls worked, one failed.');
       await stopped();
@@ -128,17 +129,16 @@ test('two sessions scrolled back to the same row each keep their own entry on to
 
       const second = top();
 
-      // With both open, so the strip of sessions is drawn for both.
-      await leader(window, '1');
+      await pickAgent(window, 'main');
       await back();
 
       const first = top();
 
       expect(first).not.toStrictEqual(second);
-      await leader(window, '2');
-      await until('the second session', () => top() === second);
-      await leader(window, '1');
-      await until('the first session', () => top() === first);
+      await pickAgent(window, 'other');
+      await until('the child', () => top() === second);
+      await pickAgent(window, 'main');
+      await until('main', () => top() === first);
     },
     { rows: 24, columns: 100 },
   ));

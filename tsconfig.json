@@ -24,7 +24,6 @@
     "tests/ui/agents/Agents_test.tsx",
     "tests/ui/app/Crash_test.tsx",
     "tests/ui/app/Selection_test.tsx",
-    "tests/ui/app/Strip_test.tsx",
     "tests/ui/app/Tasks_test.tsx",
     "tests/ui/background/Background_test.tsx",
     "tests/ui/dialogs/Asker_test.tsx",

@@ -13,17 +13,11 @@ import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
 import { fakeAgentCommand, gatedCommand } from '../../fixtures/fake.ts';
 import { recordSession } from '../../fixtures/records.ts';
 import { readPast } from '../../../src/session/record.ts';
-import { writeWindow } from '../../../src/session/windows.ts';
-import {
-  readRecords,
-  type ResumableTab,
-} from '../../../src/session/sessions.ts';
+import { readRecords } from '../../../src/session/sessions.ts';
 import {
   DOWN,
   ESC,
-  leader,
   promptRow,
-  quitAll,
   ready,
   send,
   until,
@@ -229,9 +223,7 @@ test('/resume with no earlier session says so', () =>
   withWindow(async (window) => {
     await ready(window);
     await send(window, '/resume');
-    await window.shows(
-      'No earlier fake session or window to resume, here or in any',
-    );
+    await window.shows('No earlier fake session to resume, here or in any');
     expect(
       !window.frame().includes('Resume a session'),
       'the picker opened',
@@ -315,7 +307,7 @@ test('/resume opens on an empty list here when only another directory has sessio
     await window.type('/resume');
     await window.press('\r');
     await resuming(window);
-    await window.shows('No earlier sessions or windows in this directory.');
+    await window.shows('No earlier sessions in this directory.');
     expect(
       !window.frame().includes('Enter to resume'),
       'Enter offered',
@@ -845,188 +837,6 @@ test('/mcp with every server ignored says so, not that none are defined', () =>
       ).toBeTruthy();
     },
     { mcpIgnored: [{ from: '.mcp.json', servers: 'all' }] },
-  ));
-
-/** A saved window of `ids`, each a fake session in the window's directory. */
-async function savedWindow(
-  window: Window,
-  id: string,
-  ids: readonly string[],
-  front: number,
-): Promise<void> {
-  await writeWindow(join(window.dir, 'state'), {
-    id,
-    at: Date.now(),
-    tabs: ids.map((sessionId) => ({
-      sessionId,
-      agent: 'fake',
-      cwd: window.dir,
-    })),
-    front,
-  });
-}
-
-/** The strip's tabs, as the window's top row names them. */
-function strip(window: Window): string {
-  return window.frame().split('\n')[0] ?? '';
-}
-
-test('Enter on a saved window from a fresh chord opens its tabs in order, its front in front, and no empty tab', () => {
-  let quit: readonly ResumableTab[] = [];
-
-  return withWindow(
-    async (window) => {
-      const ids = await earlierSessions(
-        window,
-        '/echo one',
-        '/echo two',
-        '/echo three',
-      );
-      const first = window.session();
-
-      await savedWindow(window, 'w-0a1b2c3d', ids, 1);
-      await ready(window);
-      await window.type('/resume');
-      await window.press('\r');
-      await resuming(window);
-      await window.shows('❯ 1. just now');
-      await window.shows('▣ 3 sessions · fake, fake, fake · /echo two');
-      await window.press('\r');
-      // Only the front tab's past is drawn: the recorded front's.
-      await window.shows('› /echo two');
-      expect(
-        !window.frame().includes('› /echo one'),
-        window.frame(),
-      ).toBeTruthy();
-      expect(strip(window)).toContain('1 fake');
-      expect(strip(window)).toContain('3 fake');
-      expect(!strip(window).includes('4 fake'), strip(window)).toBeTruthy();
-      // The empty tab gave its place, and its agent went.
-      await until('the empty tab to close', () => first?.agentPids.size === 0);
-      await until('three agents beside it', () => window.pids.length === 4);
-      await quitAll(window);
-      expect(quit.map(({ sessionId }) => sessionId)).toStrictEqual(ids);
-    },
-    {
-      agentCommand: fakeAgentCommand(undefined, '--resume-only'),
-      columns: 120,
-      onQuit: (tabs) => {
-        quit = tabs;
-      },
-    },
-  );
-});
-
-test('Enter on a saved window beside a session in use adds its tabs at the end, and opens none that is open', () => {
-  let quit: readonly ResumableTab[] = [];
-
-  return withWindow(
-    async (window) => {
-      const ids = await earlierSessions(window, '/echo one', '/echo two');
-
-      await savedWindow(window, 'w-0a1b2c3d', ids, 0);
-      await ready(window);
-      await send(window, '/echo here');
-      await window.shows('⏺ here');
-
-      const here = window.session()?.id;
-
-      await window.type('/resume');
-      await window.press('\r');
-      await resuming(window);
-      await window.press('1');
-      await window.shows('› /echo one');
-      await window.shows('3 fake');
-      expect(
-        !window.frame().includes('› /echo here'),
-        window.frame(),
-      ).toBeTruthy();
-      await until('two agents beside it', () => window.pids.length === 3);
-      // Again: every tab of it is open, so Enter goes to its front tab.
-      await leader(window, '1');
-      await window.shows('› /echo here');
-      await window.type('/resume');
-      await window.press('\r');
-      await resuming(window);
-      await window.shows('▣ 2 sessions, all open · fake, fake · /echo one');
-      await window.press('1');
-      await window.shows('› /echo one');
-      expect(
-        !window.frame().includes('› /echo here'),
-        window.frame(),
-      ).toBeTruthy();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      expect(window.pids.length).toStrictEqual(3);
-      await quitAll(window);
-      expect(quit.map(({ sessionId }) => sessionId)).toStrictEqual([
-        here!,
-        ...ids,
-      ]);
-    },
-    {
-      agentCommand: fakeAgentCommand(undefined, '--resume-only'),
-      columns: 120,
-      onQuit: (tabs) => {
-        quit = tabs;
-      },
-    },
-  );
-});
-
-test('a saved window past the cap of nine opens none of its tabs, and the status line says how many to close', () =>
-  withWindow(
-    async (window) => {
-      const records = join(window.dir, 'state', 'records');
-      const ids = Array.from({ length: 9 }, () => crypto.randomUUID());
-
-      await mkdir(records, { recursive: true });
-
-      // Records written as chord writes them; none is opened.
-      for (const [index, sessionId] of ids.entries()) {
-        await writeFile(
-          join(records, `${sessionId}.jsonl`),
-          [
-            {
-              type: 'session',
-              version: 1,
-              sessionId,
-              agent: 'fake',
-              cwd: window.dir,
-              at: 1,
-            },
-            {
-              type: 'prompt',
-              turnId: 't',
-              at: 2,
-              prompt: `part ${index}`,
-              images: 0,
-            },
-          ]
-            .map((line) => JSON.stringify(line))
-            .join('\n') + '\n',
-        );
-      }
-
-      await savedWindow(window, 'w-0a1b2c3d', ids, 0);
-      await ready(window);
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-
-      const here = window.session();
-
-      await window.type('/resume');
-      await window.press('\r');
-      await resuming(window);
-      await window.shows('▣ 9 sessions · fake ×9 · part 0');
-      await window.press('1');
-      await window.shows(
-        'That window needs 9 tabs and 8 are free · close 1 with ctrl+x k, then /resume again',
-      );
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      expect(window.pids.length).toStrictEqual(1);
-      expect(window.session()).toStrictEqual(here);
-    },
-    { columns: 120 },
   ));
 
 test("a setting's name keeps the agent's colours in its heading and explanation", async () => {

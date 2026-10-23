@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   emptyHistory,
   type History,
@@ -8,7 +8,9 @@ import {
   recalledImages,
   recorded,
   recordedWith,
+  walkedIn,
   walking,
+  walkOf,
 } from '../../../src/ui/prompt/history.ts';
 
 const sent = ['first', 'second'].reduce(recorded, emptyHistory);
@@ -45,6 +47,32 @@ test('↓ walks forward and then gives back the draft ↑ left', () => {
   // Off the walk ↓ has nowhere to go.
   expect(newer(home.history)).toStrictEqual(undefined);
   expect(newer(sent)).toStrictEqual(undefined);
+});
+
+test("↑ walks an agent's kept drafts, newest first, before the prompts sent, and ↓ back to the box (U10)", () => {
+  const kept = ['set aside first', 'set aside last'];
+  const one = older(sent, 'typing', kept)!;
+  const two = older(one.history, one.text, kept)!;
+  const three = older(two.history, two.text, kept)!;
+
+  expect([one, two, three].map(({ text, kept }) => [text, kept])).toStrictEqual(
+    [
+      ['set aside last', 1],
+      ['set aside first', 0],
+      ['second', undefined],
+    ],
+  );
+
+  const back = newer(three.history, kept)!;
+  const home = newer(newer(back.history, kept)!.history, kept)!;
+
+  expect([back.text, back.kept]).toStrictEqual(['set aside first', 0]);
+  expect(home.text).toStrictEqual('typing');
+  expect(home.history.index).toStrictEqual(undefined);
+  // A walk begun among one agent's drafts stands at the box on an agent
+  // with fewer.
+  expect(older(one.history, '', [])?.text).toStrictEqual('second');
+  expect(newer(one.history, [])?.history.index).toStrictEqual(undefined);
 });
 
 test('sending ends the walk', () => {
@@ -97,4 +125,57 @@ test('↑ and ↓ bring back a prompt with a control character as it was sent', 
   expect(middle.text).toStrictEqual('with\u000cform feed');
   expect(older(middle.history, middle.text)?.text).toStrictEqual('first');
   expect(newer(middle.history)?.text).toStrictEqual('last');
+});
+
+test("an agent's place in the walk stays on its kept draft, or its prompt, as other agents send prompts (U10)", () => {
+  const kept = ['set aside'];
+  const onKept = older(sent, 'typing', kept)!.history;
+  const onPrompt = older(onKept, '', kept)!.history;
+  // Another agent sends one more prompt; the shared prompts grow.
+  const more = recorded(sent, 'from another agent');
+
+  for (const [place, shown] of [
+    [onKept, 'set aside'],
+    [onPrompt, 'second'],
+  ] as const) {
+    const again = walkedIn(more, walkOf(place));
+
+    expect(newer(again, kept)?.text).not.toBe(undefined);
+    expect(
+      again.index! < more.prompts.length
+        ? more.prompts[again.index!]
+        : kept[again.index! - more.prompts.length],
+    ).toBe(shown);
+    expect(again.draft).toBe('typing');
+  }
+
+  expect(walkOf(sent)).toBe(undefined);
+  expect(walkedIn(more, undefined).index).toBe(undefined);
+});
+
+describe('CHD-493 U10 tester: separate walks while shared history grows', () => {
+  test('two stacks keep their middle positions, edits and unshelved drafts across repeated sends', () => {
+    const main = ['main oldest', 'main middle edited', 'main newest'];
+    const other = ['other oldest', 'other newest'];
+    const mainWalk = older(
+      older(sent, 'main field', main)!.history,
+      '',
+      main,
+    )!.history;
+    const otherWalk = older(sent, 'other field', other)!.history;
+    let shared = sent;
+
+    for (const text of ['other sends', 'main sends', 'other sends again']) {
+      shared = recorded(shared, text);
+
+      const m = walkedIn(shared, walkOf(mainWalk));
+      const o = walkedIn(shared, walkOf(otherWalk));
+
+      expect(newer(m, main)?.text).toBe('main newest');
+      expect(older(m, '', main)?.text).toBe('main oldest');
+      expect(newer(o, other)?.text).toBe('other field');
+      expect(older(o, '', other)?.text).toBe('other oldest');
+      expect(newer(newer(m, main)!.history, main)?.text).toBe('main field');
+    }
+  });
 });

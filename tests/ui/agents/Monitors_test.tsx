@@ -5,14 +5,7 @@
  */
 import { expect, test } from 'bun:test';
 import { serveChord } from '../../../src/server/server.ts';
-import {
-  DOWN,
-  leader,
-  ready,
-  send,
-  type Window,
-  withWindow,
-} from '../app/render.tsx';
+import { DOWN, ready, send, type Window, withWindow } from '../app/render.tsx';
 
 /** Runs `body` in a window with chord's server, the fake its one runtime. */
 async function withMonitors(body: (window: Window) => Promise<void>) {
@@ -60,11 +53,9 @@ test("a monitor's event is a message row of its lines as printed, and the runnin
 test("a resumed session draws its monitors' event rows again and names those it left running", () =>
   withMonitors(async (window) => {
     await started(window);
-    await leader(window, 'c');
-    await window.shows(' 2 fake ');
+    // Left for a new session, which then resumes it.
+    await send(window, '/clear');
     await ready(window);
-    await leader(window, '1');
-    await leader(window, 'k');
     await window.type('/resume');
     await window.press('\r');
     await window.shows('just now  monitors');

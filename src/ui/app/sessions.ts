@@ -1,7 +1,8 @@
 /**
- * The window's sessions, driven through `OpenSessions`: each opened with a
- * conversation of its own whose events go into the reducer under its key,
- * switched, closed, resumed and quit, and the prompts sent to them.
+ * The window's agents, driven through `OpenAgents`: main and each child
+ * opened with a conversation of its own whose events go into the reducer
+ * under its key, picked, closed, resumed and quit, and the prompts sent to
+ * them.
  */
 import { type Dispatch, useEffect, useRef, useState } from 'react';
 import { closeOnForcedExit, useApp } from './renderer.tsx';
@@ -15,7 +16,7 @@ import {
   type OpenSession,
   type Starting,
 } from '../../session/conversation.ts';
-import { OpenSessions } from '../../session/open_sessions.ts';
+import { OpenAgents } from '../../session/open_agents.ts';
 import type { Session } from '../../session/session.ts';
 import { signInNote } from '../../session/sign_in.ts';
 import {
@@ -57,9 +58,10 @@ import type {
 } from '../../session/transcript/types.ts';
 import { FileRecording } from '../../session/record.ts';
 import {
+  type EarlierSession,
   earlierSessions,
   elsewhereRefusal,
-  type ResumableTab,
+  type Resumable,
   type Resume,
   type SessionRecord,
 } from '../../session/sessions.ts';
@@ -69,42 +71,25 @@ import {
   startMonitorIn,
   stopMonitorIn,
 } from '../../session/window_monitors.ts';
-import {
-  capNote,
-  type EarlierWindow,
-  earlierWindows,
-  readWindows,
-  type ResumeEntry,
-  windowElsewhereRefusal,
-  windowRoom,
-} from '../../session/windows.ts';
+import type { AgentWait } from '../../session/waits.ts';
 import {
   agentOf,
-  askingChild,
-  waitingChild,
   type Child,
   childEnded,
   type ChildInfo,
   childName,
-  frontTab,
-  full,
   isLead,
-  listStart,
   MAX_CHILDREN,
   membersOf,
-  mergedWait,
   namedChild,
   notifiedName,
   ownChildren,
   pickedChild,
-  position,
   runName,
+  ownedBy,
   shownKey,
-  shownWait,
-  type Tab,
-  tabOf,
-  type TabWait,
-} from '../../session/tabs.ts';
+  type StartedAgents,
+} from '../../session/window_agents.ts';
 import { subagentPath } from '../../session/subagents.ts';
 import { askerParts } from '../dialogs/asker.ts';
 import { homePath } from '../../settings.ts';
@@ -118,7 +103,7 @@ import {
   noticesFile,
 } from '../../notices.ts';
 import { modelName } from '../../session/models.ts';
-import { modelToAsk, type TabRow, valueToAsk } from '../pickers/picker.ts';
+import { modelToAsk, valueToAsk } from '../pickers/picker.ts';
 import { attachmentsOf, imagesIn, type PastedImage } from '../prompt/images.ts';
 import { mentionsIn } from '../prompt/mentions.ts';
 import { type Cursor, endOf, START } from '../prompt/prompt.ts';
@@ -132,11 +117,7 @@ import { heldBack } from '../dialogs/state.ts';
 import {
   agentCloseArmedLine,
   busyOf,
-  type BusyTab,
-  closeArmedLine,
   ctrlCArmedLine,
-  quitArmedLine,
-  tabBusy,
   teamCloseArmedLine,
 } from './closing.ts';
 import {
@@ -166,7 +147,6 @@ import {
   NO_STOP_HINT,
   stopRefused,
 } from '../background/view.ts';
-import { stripLayout, tabGlyphs } from './strip.ts';
 import {
   headlineText,
   type ListedTeam,
@@ -214,7 +194,7 @@ export interface SessionStart {
 }
 
 /**
- * Where a tab's sessions work, and what that directory's files give them:
+ * Where the window's sessions work, and what that directory's files give them:
  * a session resumed from another directory takes that directory's project
  * settings and MCP servers, as had chord been started there.
  */
@@ -231,13 +211,6 @@ export interface Place {
   readonly mcpIgnored: readonly Ignored[];
 }
 
-/** A tab the window opens with: its agent, the session it resumes, where. */
-export interface OpeningTab {
-  readonly agent: string;
-  readonly resume: Resume;
-  readonly place: Place;
-}
-
 export interface SessionsOptions {
   agent: string;
   /** The `--agent-command` the person typed, which a resume line repeats. */
@@ -248,15 +221,6 @@ export interface SessionsOptions {
   readRecords: (stateDir: string) => Promise<SessionRecord[]>;
   open: OpenSession;
   resume: Resume | undefined;
-  /**
-   * The tabs the window opens with in place of `agent`'s one, in order, the
-   * first in front, each where its session works.
-   */
-  resumes: readonly OpeningTab[] | undefined;
-  /** Which of `resumes` comes to the front, by its index; the first if none. */
-  resumedFront: number | undefined;
-  /** What the status line says once `resumes` are open. */
-  resumedNote: string | undefined;
   /**
    * chord's own MCP server, which every session gets beside `mcpServers`
    * where its agent takes HTTP; none in tests that do not ask for it.
@@ -270,8 +234,7 @@ export interface SessionsOptions {
    * every project; none reads only the project's.
    */
   configHome: string | undefined;
-  onQuit:
-    ((sessions: readonly ResumableTab[], front: number) => void) | undefined;
+  onQuit: ((session: Resumable | undefined) => void) | undefined;
 }
 
 /** What the sessions read of the window and do to it. */
@@ -283,7 +246,7 @@ export interface SessionsWindow {
   /** Starts the box afresh on the draft and cursor the state has. */
   redraw: () => void;
   showDraft: (text: string, at: Cursor) => void;
-  /** Tells the terminal chord waits on the person, for the tab named. */
+  /** Tells the terminal chord waits on the person, for the agent named. */
   notify: (wait: Wait | undefined, name: string) => void;
   /** Keeps a prompt sent, with its images, in history. */
   remember: (text: string, images: readonly PastedImage[]) => void;
@@ -300,9 +263,6 @@ export function useSessions(
     readRecords,
     open,
     resume,
-    resumes,
-    resumedFront,
-    resumedNote,
     server,
     runtimes: runtimeNames,
     home,
@@ -313,26 +273,20 @@ export function useSessions(
 ) {
   const { all, state, dispatch, redraw, showDraft, stopCommand } = host;
   const { exit } = useApp();
-  // The session each tab opens next resumes, by its key: those `--resume`
-  // asks for, and each `/resume` picks; the one `/clear` opens is new.
-  const resuming = useRef(new Map<number, Resume>());
-  // Where each tab's sessions work, by its key; the window's by default.
-  const places = useRef(new Map<number, Place>());
-  const placeOf = (key: number | undefined): Place =>
-    (key === undefined ? undefined : places.current.get(key)) ?? place;
-  /** Where the session in front works. */
-  const frontPlace = () => placeOf(sessions.tabs.front);
+  // The session main opens next resumes: the one `--resume` asks for, and
+  // each `/resume` picks; the one `/clear` opens is new.
+  const resuming = useRef<Resume | undefined>(resume);
   const heard = (key: number, event: ConversationEvent, wait?: Wait) => {
     if (retiredHeard(key, event)) {
       return;
     }
 
     dispatch({ type: 'in_session', key, action: event });
-    host.notify(wait, notifiedName(sessions.tabs, key) ?? agent);
+    host.notify(wait, notifiedName(sessions.agents, key) ?? agent);
   };
 
   /**
-   * What a session tab `key` let go said of a turn of its, from the tab
+   * What a session main, `key`, let go said of a turn of its, from main
    * open or closed since: kept where that session is held (CHD-373 S3c).
    * Whether `event` was one.
    */
@@ -424,7 +378,7 @@ export function useSessions(
     emit: (event: ConversationEvent) => void,
     key: number,
   ) => {
-    const { cwd, mcpServers, startupOf } = placeOf(key);
+    const { cwd, mcpServers, startupOf } = place;
     const {
       agentCommand,
       starting,
@@ -438,8 +392,8 @@ export function useSessions(
           throw new Error(refused);
         }
 
-        const next = resuming.current.get(key);
-        // A token for each session the tab opens, `/clear`'s included, good
+        const next = resuming.current;
+        // A token for each session main opens, `/clear`'s included, good
         // until that session's agent has gone.
         const admitted = server?.admit({ role: 'person', key, window: view });
         const options = {
@@ -455,7 +409,7 @@ export function useSessions(
           ...(takes === false ? { noMcpServers: true } : {}),
         };
 
-        resuming.current.delete(key);
+        resuming.current = undefined;
 
         if (admitted === undefined) {
           return open(options);
@@ -496,7 +450,7 @@ export function useSessions(
   const children = useRef(new Map<string, Conversation>());
 
   /**
-   * Why a child of `args.agent` cannot start from `parent` in tab `key`, with
+   * Why a child of `args.agent` cannot start from `parent` of main, `key`, with
    * what is offered; none when it may: a parent closing, a runtime chord
    * cannot start there, or a model it is known to lack.
    */
@@ -507,7 +461,7 @@ export function useSessions(
     kind: string,
   ): Promise<string | undefined> => {
     const startup = runtimeNames.includes(args.agent)
-      ? placeOf(key).startupOf(args.agent)
+      ? place.startupOf(args.agent)
       : undefined;
 
     if (parent?.session === undefined) {
@@ -554,7 +508,7 @@ export function useSessions(
   };
 
   /**
-   * A child's own conversation, a session of `args.agent` where tab `key`
+   * A child's own conversation, a session of `args.agent` where main, `key`,
    * works, on the model asked for or not at all, with chord's server given
    * it as `caller`, whose tools its role gives. Its record names
    * `parent`, it as `name`, a task's id, which its parent's record keeps
@@ -571,7 +525,7 @@ export function useSessions(
     emit: (event: ConversationEvent) => void,
     team?: string,
   ) => {
-    const { cwd, mcpServers, startupOf } = placeOf(key);
+    const { cwd, mcpServers, startupOf } = place;
     const startup = startupOf(args.agent) ?? {};
 
     return new Conversation(
@@ -619,7 +573,7 @@ export function useSessions(
       },
       Date.now,
       // The model asked for, which the child runs on or not at all, and the
-      // mode a team file set, likewise, or else the tab's settings' one.
+      // mode a team file set, likewise, or else the settings' one.
       {
         ...(args.mode !== undefined
           ? { mode: { id: args.mode, from: asked, required: true } }
@@ -648,7 +602,7 @@ export function useSessions(
 
   /**
    * The conversation a caller's own work runs in: a long-lived child's, or
-   * the tab's session's; none once it has closed.
+   * main's; none once it has closed.
    */
   const callerConversation = (key: number, agent: string | undefined) =>
     agent === undefined
@@ -699,8 +653,8 @@ export function useSessions(
   };
 
   /**
-   * Starts a task agent for the caller, the tab's session or a long-lived
-   * child of it: a session of `agent` where that tab works, with no tab of
+   * Starts a task agent for the caller, main or a long-lived child of it: a
+   * session of `agent` where main works, with no row of
    * its own, drawn in the caller's turn and closed with it. Refused as
    * `startRefusal` says.
    */
@@ -806,7 +760,7 @@ export function useSessions(
   /** How a long-lived child opens, besides its runtime, model and prompt. */
   interface Opening {
     readonly name: string;
-    /** The conversation it answers to: the tab's session's, or its lead's. */
+    /** The conversation it answers to: main's, or its lead's. */
     readonly parent: () => Conversation | undefined;
     /** Who its first prompt is a message from. */
     readonly from: MessageFrom;
@@ -816,11 +770,16 @@ export function useSessions(
     readonly part?: TeamPart;
     /** Where its model and mode were asked for, as a refusal says it. */
     readonly asked: string;
+    /**
+     * Opened by the person's `/new`: no first prompt, the person's own in
+     * its view being its first (Q187).
+     */
+    readonly idle?: true;
   }
 
   /**
-   * Opens a long-lived agent in tab `key`, in its list of agents under the
-   * prompt rather than a tab of its own, its first prompt `opening.from`'s
+   * Opens a long-lived agent of main, `key`, in the list of agents under
+   * the prompt, its first prompt `opening.from`'s
    * message; chord's id for it, which its parent quotes, as answered, and
    * where an effort asked for left it, once it has started.
    */
@@ -844,15 +803,17 @@ export function useSessions(
         : { team: team.lead === undefined ? 'lead' : 'member' }),
       window: view,
     };
-    const childKey = sessions.tabs.nextKey;
+    const childKey = sessions.agents.nextKey;
 
-    early.current.set(childKey, [[opening.from, args.prompt, opening.part]]);
+    early.current.set(
+      childKey,
+      opening.idle ? [] : [[opening.from, args.prompt, opening.part]],
+    );
     // Its state is there before its first event, which may come at once.
     dispatch({ type: 'agent_opened', key: childKey });
 
     const effort = effortStart(args, () => conversationAt(childKey));
     const placed = sessions.openChild(
-      key,
       {
         id,
         name,
@@ -883,7 +844,7 @@ export function useSessions(
 
               // After the event is drawn, so the first turn comes after it.
               queueMicrotask(() => {
-                const child = agentOf(sessions.tabs, own)?.child;
+                const child = agentOf(sessions.agents, own)?.child;
 
                 if (event.type === 'connected') {
                   // The first prompt starts its first turn; the messages
@@ -932,20 +893,20 @@ export function useSessions(
     };
   };
 
-  /** Why tab `key` cannot open another child of its own, if it cannot. */
+  /** Why main, `key`, cannot open another child of its own, if it cannot. */
   const fullRefusal = (key: number): string | undefined => {
-    const tab = tabOf(sessions.tabs, key);
+    const agents = ownedBy(sessions.agents, key);
 
-    return tab === undefined
+    return agents === undefined
       ? 'This session has closed'
-      : ownChildren(tab).length >= MAX_CHILDREN
+      : ownChildren(agents).length >= MAX_CHILDREN
         ? `This session has ${MAX_CHILDREN} agents open; close_agent one first`
         : undefined;
   };
 
   /**
-   * Opens a long-lived agent for the session in tab `key`: a session of
-   * `agent` where that tab works, its first prompt the parent's message.
+   * Opens a long-lived agent for main, `key`: a session of `agent` where
+   * main works, its first prompt the parent's message.
    * Refused as `startRefusal` says, and past `MAX_CHILDREN`.
    */
   const openAgent = async (
@@ -955,14 +916,14 @@ export function useSessions(
     const refused =
       (await startRefusal(key, conversationAt(key), args, 'agent')) ??
       fullRefusal(key);
-    const tab = tabOf(sessions.tabs, key);
+    const agents = ownedBy(sessions.agents, key);
 
-    if (tab === undefined || refused !== undefined) {
+    if (agents === undefined || refused !== undefined) {
       return { error: refused ?? 'This session has closed' };
     }
 
     const { opened, started } = startChild(key, args, {
-      name: childName(tab, args.name, args.agent),
+      name: childName(agents, args.name, args.agent),
       parent: () => conversationAt(key),
       from: MAIN,
       asked: 'asked by open_agent',
@@ -983,28 +944,28 @@ export function useSessions(
     >(),
   );
 
-  /** The team files where tab `key` works, read now, each path as shown. */
+  /** The team files where main, `key`, works, read now, each path as shown. */
   const teamsAt = async (key: number): Promise<ListedTeam[]> =>
-    (await findTeams({ configHome, cwd: placeOf(key).cwd }, runtimeNames)).map(
+    (await findTeams({ configHome, cwd: place.cwd }, runtimeNames)).map(
       (found) => ({ ...found, shown: shownTeamFile(key, found) }),
     );
 
   /**
-   * A team file as the window shows it to tab `key`: a project's from the
-   * directory the tab works in, the user's from `~`.
+   * A team file as the window shows it to main, `key`: a project's from the
+   * directory main works in, the user's from `~`.
    */
   const shownTeamFile = (key: number, found: FoundTeam) =>
     found.place === 'project'
-      ? relative(placeOf(key).cwd, found.file)
+      ? relative(place.cwd, found.file)
       : homePath(found.file, home);
 
   /**
-   * Where a team named `name` goes for tab `key`, a project's file shown
-   * from the directory the tab works in and the user's from `~`, and the
+   * Where a team named `name` goes for main, `key`, a project's file shown
+   * from the directory main works in and the user's from `~`, and the
    * team saved under the name now.
    */
   const teamPlaces = async (key: number, name: string) => {
-    const { cwd } = placeOf(key);
+    const { cwd } = place;
     const dirs = teamDirs({ configHome, cwd });
     const project = teamFile(dirs.project, name);
     const user =
@@ -1019,7 +980,7 @@ export function useSessions(
     });
 
     return {
-      agent: tabOf(sessions.tabs, key)?.agent ?? 'the agent',
+      agent: ownedBy(sessions.agents, key)?.main.agent ?? 'the agent',
       project: shown(project),
       ...(user === undefined ? {} : { user: shown(user) }),
       ...(saved === undefined
@@ -1034,7 +995,7 @@ export function useSessions(
   };
 
   /**
-   * `run_team`, and `/team run`: the team's lead opened as a child of tab
+   * `run_team`, and `/team run`: the team's lead opened as a child of main,
    * `key`'s session, named after the team and numbered past its first run,
    * on the lead's runtime, model, effort and mode, with the team part and
    * the job as main's message. Refused for a team not found, `lists` saying
@@ -1075,14 +1036,14 @@ export function useSessions(
     const refused =
       (await startRefusal(key, conversationAt(key), args, 'agent')) ??
       fullRefusal(key);
-    const tab = tabOf(sessions.tabs, key);
+    const agents = ownedBy(sessions.agents, key);
 
-    if (tab === undefined || refused !== undefined) {
+    if (agents === undefined || refused !== undefined) {
       return { error: refused ?? 'This session has closed' };
     }
 
-    const name = runName(tab, team);
-    const others = ownChildren(tab)
+    const name = runName(agents, team);
+    const others = ownChildren(agents)
       .filter(isLead)
       .map((each) => each.name);
     const { opened, started } = startChild(key, args, {
@@ -1090,12 +1051,7 @@ export function useSessions(
       parent: () => conversationAt(key),
       from: MAIN,
       team: { name: team },
-      part: teamPart(
-        team,
-        found.team,
-        { lead: name, others },
-        placeOf(key).cwd,
-      ),
+      part: teamPart(team, found.team, { lead: name, others }, place.cwd),
       asked: `set by team ${team}`,
     });
 
@@ -1134,16 +1090,16 @@ export function useSessions(
 
     /** Why `member` cannot open now: its lead closed, or it is open. */
     const occupied = () => {
-      const tab = tabOf(sessions.tabs, key);
+      const agents = ownedBy(sessions.agents, key);
 
       if (
-        tab === undefined ||
-        !tab.children.some((each) => each.id === lead.id)
+        agents === undefined ||
+        !agents.children.some((each) => each.id === lead.id)
       ) {
         return 'You are closed; you open no members';
       }
 
-      return membersOf(tab, lead.id).some((each) => each.name === member)
+      return membersOf(agents, lead.id).some((each) => each.name === member)
         ? `${member} is open; send_message reaches it`
         : undefined;
     };
@@ -1179,7 +1135,7 @@ export function useSessions(
         run.name,
         run.team,
         { member: defined, lead: lead.name },
-        placeOf(key).cwd,
+        place.cwd,
       ),
       asked: `set by team ${run.name}`,
     });
@@ -1187,40 +1143,40 @@ export function useSessions(
     return { ...opened, ...(await started) };
   };
 
-  /** Tab `key`'s open child `to`, by chord's id or its name. */
+  /** Session `key`'s open child `to`, by chord's id or its name. */
   const childOf = (key: number, to: string) =>
-    tabOf(sessions.tabs, key)?.children.find(
+    ownedBy(sessions.agents, key)?.children.find(
       (child) => child.id === to || child.name === to,
     );
 
   /**
-   * Tab `key`'s own open child `to`, by chord's id or its name: one the
+   * Session `key`'s own open child `to`, by chord's id or its name: one the
    * session opened, a team's lead among them, and no member.
    */
   const ownChild = (key: number, to: string) =>
-    tabOf(sessions.tabs, key)?.children.find(
+    ownedBy(sessions.agents, key)?.children.find(
       (child) =>
         child.lead === undefined && (child.id === to || child.name === to),
     );
 
   /**
-   * The conversation a child answers to: its lead's for a member, the tab's
+   * The conversation a child answers to: its lead's for a member, main's
    * session's for any other.
    */
   const parentOf = (child: Child<Conversation>): Conversation | undefined => {
-    const tab = agentOf(sessions.tabs, child.key)?.tab;
+    const agents = front();
 
     return child.lead === undefined
-      ? tab && conversationAt(tab.key)
-      : tab?.children.find((each) => each.id === child.lead)?.conversation;
+      ? agents && conversationAt(agents.main.key)
+      : agents?.children.find((each) => each.id === child.lead)?.conversation;
   };
 
   /**
-   * Why tab `key` has no open child `to`: closed in it, or open when the
+   * Why main, `key`, has no open child `to`: closed, or open when the
    * session was left, as a resumed past's closing note names it.
    */
   const noChild = (key: number, to: string): string => {
-    const closed = tabOf(sessions.tabs, key)?.closed.findLast(
+    const closed = ownedBy(sessions.agents, key)?.closed.findLast(
       (child) =>
         child.lead === undefined && (child.id === to || child.name === to),
     );
@@ -1282,13 +1238,13 @@ export function useSessions(
     text: string,
     queued?: () => void,
   ): MessageAnswer => {
-    const tab = tabOf(sessions.tabs, caller.key);
+    const agents = ownedBy(sessions.agents, caller.key);
     const self =
       caller.agent === undefined
         ? undefined
         : childOf(caller.key, caller.agent);
 
-    if (tab === undefined || self === undefined) {
+    if (agents === undefined || self === undefined) {
       return { error: 'You are closed; nothing more reaches anyone' };
     }
 
@@ -1300,20 +1256,24 @@ export function useSessions(
     const named = (child: ChildInfo) => child.id === to || child.name === to;
     const lead = isLead(self)
       ? self
-      : tab.children.find((each) => each.id === self.lead);
+      : agents.children.find((each) => each.id === self.lead);
 
     if (lead === undefined) {
       return { error: 'Your lead has closed; nothing more reaches it' };
     }
 
-    const members = membersOf(tab, lead.id).filter((each) => each !== self);
+    const members = membersOf(agents, lead.id).filter((each) => each !== self);
     const leads =
       self === lead
-        ? ownChildren(tab).filter((each) => isLead(each) && each !== self)
+        ? ownChildren(agents).filter((each) => isLead(each) && each !== self)
         : [];
 
     if (self === lead && to === 'main') {
-      const delivered = conversationAt(tab.key)?.tell(from, text, queued);
+      const delivered = conversationAt(agents.main.key)?.tell(
+        from,
+        text,
+        queued,
+      );
 
       return delivered === undefined
         ? { error: 'main has closed' }
@@ -1344,7 +1304,7 @@ export function useSessions(
       };
     }
 
-    const closed = tab.closed.findLast(
+    const closed = agents.closed.findLast(
       (each) =>
         named(each) &&
         (each.lead === lead.id || (self === lead && isLead(each))),
@@ -1371,7 +1331,7 @@ export function useSessions(
   };
 
   /**
-   * Tells tab `key`'s session, with `← chord`, of an `event` that ends its
+   * Tells main, `key`, with `← chord`, of an `event` that ends its
    * child `own`'s work on its own, as `childEnded` words it; a child the
    * window has let go is no news.
    */
@@ -1380,7 +1340,7 @@ export function useSessions(
       return;
     }
 
-    const child = agentOf(sessions.tabs, own)?.child;
+    const child = agentOf(sessions.agents, own)?.child;
     const lead = child !== undefined && isLead(child);
     const text =
       child &&
@@ -1392,9 +1352,11 @@ export function useSessions(
 
     // A lead gone leaves its members nobody to answer to.
     if (lead && event.type === 'disconnected') {
-      const tab = tabOf(sessions.tabs, key);
+      const agents = ownedBy(sessions.agents, key);
 
-      for (const member of tab === undefined ? [] : membersOf(tab, child.id)) {
+      for (const member of agents === undefined
+        ? []
+        : membersOf(agents, child.id)) {
         dropChild(member.key);
       }
     }
@@ -1432,18 +1394,14 @@ export function useSessions(
     };
   };
 
-  // Keys of the sessions a tab let go, held as they close, apart from every
+  // Keys of the sessions main let go, held as they close, apart from every
   // session's own, which count up from one.
   const retiredKeys = useRef(0);
   const retiredKey = () => --retiredKeys.current;
 
-  /** Holds what a child of tab `tab` spent, by its team, as it closes. */
-  const keepChild = (
-    tab: number,
-    child: ChildInfo & { readonly key: number },
-  ) =>
+  /** Holds what a child spent, by its team, as it closes. */
+  const keepChild = (child: ChildInfo & { readonly key: number }) =>
     keepSpend(child.key, {
-      tab,
       // A run's lead is `lead` under its team's row, as when it is open.
       name: isLead(child) ? 'lead' : child.name,
       kind: child.team === undefined ? 'agent' : 'member',
@@ -1457,14 +1415,14 @@ export function useSessions(
     });
 
   const dropChild = (key: number) => {
-    const found = agentOf(sessions.tabs, key);
+    const found = agentOf(sessions.agents, key);
     const child = found?.child;
 
     if (found === undefined || child === undefined) {
       return;
     }
 
-    for (const member of membersOf(found.tab, child.id)) {
+    for (const member of membersOf(sessions.agents, child.id)) {
       dropChild(member.key);
     }
 
@@ -1478,7 +1436,7 @@ export function useSessions(
 
     stopCommand(key);
 
-    const kept = keepChild(found.tab.key, child);
+    const kept = keepChild(child);
     const closed = sessions.closeChild(key);
 
     kept(closed);
@@ -1487,12 +1445,12 @@ export function useSessions(
     dispatch({
       type: 'session_closed',
       key,
-      front: shownKey(sessions.tabs) ?? all.front,
+      front: shownKey(sessions.agents) ?? all.front,
     });
 
     // The list goes with the last child, and the keys go back to the box.
     if (
-      agentOf(sessions.tabs, key) === undefined &&
+      agentOf(sessions.agents, key) === undefined &&
       front()?.children.length === 0
     ) {
       dispatch({ type: 'agents_focused', focused: false });
@@ -1508,12 +1466,12 @@ export function useSessions(
       caller.team === 'lead' && caller.agent !== undefined
         ? childOf(caller.key, caller.agent)
         : undefined;
-    const tab = tabOf(sessions.tabs, caller.key);
+    const agents = ownedBy(sessions.agents, caller.key);
     const child =
       lead === undefined
         ? ownChild(caller.key, to)
-        : tab &&
-          membersOf(tab, lead.id).find(
+        : agents &&
+          membersOf(agents, lead.id).find(
             (each) => each.id === to || each.name === to,
           );
 
@@ -1584,7 +1542,7 @@ export function useSessions(
 
   const [sessions] = useState(
     () =>
-      new OpenSessions({
+      new OpenAgents({
         conversation: conversationOf,
         heard: (key, event, wait) => hear.current(key, event, wait),
         closingHeard: (key, event) => {
@@ -1594,57 +1552,42 @@ export function useSessions(
         },
       }),
   );
-  // What each runtime offers, read in each directory's place apart: its
-  // files say how a runtime starts there, or that it does not (CHD-466).
-  const runtimesAt = useRef(new Map<Place, Runtimes>());
-  const runtimesOf = (at: Place): Runtimes => {
-    const known = runtimesAt.current.get(at);
-
-    if (known !== undefined) {
-      return known;
-    }
-
-    const made = new Runtimes({
-      probe: sessionProbe(at.cwd, (runtime) => at.startupOf(runtime)),
-    });
-
-    runtimesAt.current.set(at, made);
-
-    return made;
-  };
-
-  /** The place of the session `key`, a child's its tab's. */
-  const placeOfSession = (key: number | undefined) =>
-    placeOf(
-      key === undefined
-        ? undefined
-        : (agentOf(sessions.tabs, key)?.tab.key ?? key),
-    );
+  // What each runtime offers, read in the window's place: its files say how
+  // a runtime starts there, or that it does not (CHD-466). Made at the
+  // first ask.
+  const runtimesMade = useRef<Runtimes | undefined>(undefined);
+  const runtimes = (): Runtimes =>
+    (runtimesMade.current ??= new Runtimes({
+      probe: sessionProbe(place.cwd, (runtime) => place.startupOf(runtime)),
+    }));
 
   /** What chord's MCP server reads of the window, when a session calls. */
   const view: WindowView = {
-    sessions: () =>
-      sessions.tabs.tabs.map((tab, index) => {
-        const session = tab.conversation.session;
+    sessions: () => {
+      const agents = front();
+      const session = agents?.main.conversation.session;
 
-        return {
-          key: tab.key,
-          tab: index + 1,
-          runtime: tab.agent,
-          id: session?.id,
-          model: session?.models()?.current,
-          children: tab.children.map((child) => ({
-            id: child.id,
-            name: child.name,
-            runtime: child.runtime,
-            model: child.conversation.session?.models()?.current ?? child.model,
-          })),
-        };
-      }),
+      return agents === undefined
+        ? []
+        : [
+            {
+              key: agents.main.key,
+              runtime: agents.main.agent,
+              id: session?.id,
+              model: session?.models()?.current,
+              children: agents.children.map((child) => ({
+                id: child.id,
+                name: child.name,
+                runtime: child.runtime,
+                model:
+                  child.conversation.session?.models()?.current ?? child.model,
+              })),
+            },
+          ];
+    },
     runtimes: () => runtimeNames,
-    offer: (runtime, probe, key) => {
-      const at = placeOfSession(key);
-      const refused = at.startupOf(runtime)?.refused;
+    offer: (runtime, probe) => {
+      const refused = place.startupOf(runtime)?.refused;
 
       // Refused where the asking session works: nothing is read, nor
       // started to be.
@@ -1652,41 +1595,37 @@ export function useSessions(
         return Promise.resolve({ error: refused });
       }
 
-      const runtimes = runtimesOf(at);
-      const tab = sessions.tabs.tabs.find(
-        (each) =>
-          each.agent === runtime &&
-          each.conversation.session !== undefined &&
-          placeOf(each.key) === at,
-      );
-      const session = tab?.conversation.session;
+      const main = sessions.agents.main;
+      const session =
+        main?.agent === runtime ? main.conversation.session : undefined;
 
       if (session !== undefined) {
-        runtimes.heard(runtime, {
+        runtimes().heard(runtime, {
           models: session.models(),
           modes: session.modes(),
           efforts: session.efforts(),
         });
       }
 
-      return runtimes.read(runtime, probe);
+      return runtimes().read(runtime, probe);
     },
     spawn: (caller, args) => spawn(caller, args),
     open: (key, args) => openAgent(key, args),
     teams: async (caller) => {
-      const tab = tabOf(sessions.tabs, caller.key);
+      const agents = ownedBy(sessions.agents, caller.key);
 
       return {
         found: await teamsAt(caller.key),
-        runs: (tab === undefined ? [] : ownChildren(tab)).flatMap((child) =>
-          child.team === undefined
-            ? []
-            : [
-                {
-                  team: child.team,
-                  name: child.name,
-                },
-              ],
+        runs: (agents === undefined ? [] : ownChildren(agents)).flatMap(
+          (child) =>
+            child.team === undefined
+              ? []
+              : [
+                  {
+                    team: child.team,
+                    name: child.name,
+                  },
+                ],
         ),
       };
     },
@@ -1707,9 +1646,9 @@ export function useSessions(
     tell: (caller, to, text, queued) => tell(caller, to, text, queued),
     close: (caller, to) => closeAgent(caller, to),
     monitor: (caller, args) =>
-      startMonitorIn(sessions.tabs, caller, args, placeOf(caller.key).cwd),
-    stopMonitor: (caller, id) => stopMonitorIn(sessions.tabs, caller, id),
-    monitors: (caller) => monitorsIn(sessions.tabs, caller),
+      startMonitorIn(sessions.agents, caller, args, place.cwd),
+    stopMonitor: (caller, id) => stopMonitorIn(sessions.agents, caller, id),
+    monitors: (caller) => monitorsIn(sessions.agents, caller),
     served: (caller, call) =>
       caller.task !== undefined
         ? children.current.get(caller.task)?.served(call)
@@ -1742,34 +1681,9 @@ export function useSessions(
   };
 
   useEffect(() => {
-    const opening = resumes ?? [{ agent, resume, place }];
-
-    for (const [index, tab] of opening.entries()) {
-      const key = sessions.tabs.nextKey;
-
-      places.current.set(key, tab.place);
-
-      if (tab.resume !== undefined) {
-        resuming.current.set(key, tab.resume);
-      }
-
-      // The first's state is the window's from its first frame.
-      if (index > 0) {
-        dispatch({ type: 'session_opened', key });
-      }
-
-      sessions.open(tab.agent);
-    }
-
-    if (opening.length > 1 && sessions.goTo((resumedFront ?? 0) + 1)) {
-      dispatch({ type: 'session_shown', key: sessions.tabs.front ?? 0 });
-      redraw();
-    }
-
-    // After the front is shown, which takes a note of the sessions away.
-    if (resumedNote !== undefined) {
-      dispatch({ type: 'sessions_noted', message: resumedNote });
-    }
+    // The window's one session, its state the window's from its first
+    // frame; it resumes `resume`, which `resuming` holds from the start.
+    sessions.start(agent);
 
     // A crash or a signal closes and reaps them too before chord exits.
     const forget = closeOnForcedExit(() => sessions.closeAll());
@@ -1777,9 +1691,7 @@ export function useSessions(
     return () => {
       forget();
 
-      for (const runtimes of runtimesAt.current.values()) {
-        runtimes.close();
-      }
+      runtimesMade.current?.close();
 
       void sessions.closeAll().catch(() => {});
     };
@@ -1791,7 +1703,7 @@ export function useSessions(
    */
   const conversation = () => sessions.front;
 
-  /** The conversation of tab or child `key`; none once it has closed. */
+  /** The conversation of main or child `key`; none once it has closed. */
   const conversationAt = (key: number) => sessions.conversationOf(key);
 
   /**
@@ -1799,7 +1711,7 @@ export function useSessions(
    * it was left; the box starts afresh on its draft and cursor.
    */
   const showFront = () => {
-    const front = shownKey(sessions.tabs);
+    const front = shownKey(sessions.agents);
 
     if (front === undefined || front === all.front) {
       return;
@@ -1809,8 +1721,9 @@ export function useSessions(
     redraw();
   };
 
-  /** The front tab, as `sessions` has it now. */
-  const front = (): Tab<Conversation> | undefined => frontTab(sessions.tabs);
+  /** The window's agents, as `sessions` has them now, once main has started. */
+  const front = (): StartedAgents<Conversation> | undefined =>
+    ownedBy(sessions.agents, sessions.agents.main?.key);
 
   /**
    * Moves the pick in the list under the prompt `by` rows, as it is drawn
@@ -2027,23 +1940,18 @@ export function useSessions(
    * waiting on a child that will never answer. On `main` it closes nothing.
    */
   const closePicked = () => {
-    const tab = front();
-    const child = tab && pickedChild(tab);
+    const agents = front();
+    const child = agents && pickedChild(agents);
 
-    if (tab === undefined || child === undefined) {
-      const close = hintKey(state.keys, 'session:close');
-
+    if (agents === undefined || child === undefined) {
       return dispatch({
         type: 'sessions_noted',
-        message:
-          close === undefined
-            ? 'main is the session'
-            : `main is the session · ${close} closes it`,
+        message: 'main is the session · ctrl+d quits',
       });
     }
 
     // A lead closes with its members, so their work counts as its own.
-    const members = isLead(child) ? membersOf(tab, child.id) : [];
+    const members = isLead(child) ? membersOf(agents, child.id) : [];
     const busy = [child, ...members].some(
       (each) =>
         stateOf(each.key) !== undefined &&
@@ -2063,9 +1971,9 @@ export function useSessions(
    * answer; the members closed with it, by name.
    */
   const closeByPerson = (child: Child<Conversation>): string[] => {
-    const tab = agentOf(sessions.tabs, child.key)?.tab;
+    const agents = front();
     const members =
-      tab !== undefined && isLead(child) ? membersOf(tab, child.id) : [];
+      agents !== undefined && isLead(child) ? membersOf(agents, child.id) : [];
     const parent = parentOf(child);
 
     dropChild(child.key);
@@ -2095,32 +2003,32 @@ export function useSessions(
     return members.map((each) => each.name);
   };
 
-  /** The runs open in `tab`, a lead each, in the order they started. */
-  const runsIn = (tab: Tab<Conversation>): TeamRun[] =>
-    ownChildren(tab).flatMap((child) =>
+  /** The runs open in `agents`, a lead each, in the order they started. */
+  const runsIn = (agents: StartedAgents<Conversation>): TeamRun[] =>
+    ownChildren(agents).flatMap((child) =>
       isLead(child) && child.team !== undefined
         ? [{ team: child.team, name: child.name, since: child.openedAt }]
         : [],
     );
 
   /**
-   * `/team`'s picker and its names: the team files where the front tab
+   * `/team`'s picker and its names: the team files where the window
    * works, read now, the runs open in it, and the two directories as the
-   * window shows them; none once the window has no tab.
+   * window shows them; none once main has closed.
    */
   const listTeams = async (): Promise<TeamListing | undefined> => {
-    const tab = front();
+    const agents = front();
 
-    if (tab === undefined) {
+    if (agents === undefined) {
       return undefined;
     }
 
-    const { cwd } = placeOf(tab.key);
+    const { cwd } = place;
     const dirs = teamDirs({ configHome, cwd });
 
     return {
-      teams: await teamsAt(tab.key),
-      runs: runsIn(tab),
+      teams: await teamsAt(agents.main.key),
+      runs: runsIn(agents),
       dirs: {
         project: relative(cwd, dirs.project),
         ...(dirs.user === undefined ? {} : { user: homePath(dirs.user, home) }),
@@ -2128,25 +2036,25 @@ export function useSessions(
     };
   };
 
-  /** The team file `name` where the front tab works, read now. */
+  /** The team file `name` where the window works, read now. */
   const teamNamed = async (name: string): Promise<ListedTeam | undefined> => {
-    const tab = front();
+    const agents = front();
 
-    return tab === undefined
+    return agents === undefined
       ? undefined
-      : (await teamsAt(tab.key)).find((each) => each.name === name);
+      : (await teamsAt(agents.main.key)).find((each) => each.name === name);
   };
 
   /**
-   * `/team run`: the run `run_team` starts, for the front tab's `main`, with
+   * `/team run`: the run `run_team` starts, for `main`, with
    * the person's words as the job, drawn as its call is; main, which took
    * no part, hears of it ahead of its next prompt.
    */
   const runTyped = async (name: string, job: string): Promise<TeamShown> => {
-    const tab = front();
+    const agents = front();
     const refused = teamRefusal(name, await teamNamed(name));
 
-    if (tab === undefined || refused !== undefined) {
+    if (agents === undefined || refused !== undefined) {
       return {
         kind: 'said',
         text: refused ?? 'This session has closed',
@@ -2155,7 +2063,7 @@ export function useSessions(
     }
 
     const answer = await runTeamAt(
-      tab.key,
+      agents.main.key,
       { team: name, job },
       '/team lists them',
     );
@@ -2172,30 +2080,92 @@ export function useSessions(
       answer: answer.ran,
     };
 
-    conversationAt(tab.key)?.aside(
+    conversationAt(agents.main.key)?.aside(
       { name: 'chord' },
       ranNote(name, answer.ran.name, job),
     );
-    conversationAt(tab.key)?.ranTyped(call);
+    conversationAt(agents.main.key)?.ranTyped(call);
 
     return { kind: 'ran', call };
   };
 
   /**
-   * `/team stop`: the front tab's run `name` closed with its members, at
+   * `/new`: an agent opened for main as `open_agent` opens one, of `named`
+   * or of main's runtime (Q188), on what `open_agent` gives with none named
+   * (Q189), and idle until the person's first prompt in its view (Q187). The
+   * view goes to it at once; main hears of it ahead of its next prompt, the
+   * call drawn as its own; or why not, if it was refused as `open_agent` is.
+   */
+  const newTyped = async (named: string): Promise<TeamShown> => {
+    const main = sessions.agents.main;
+    const said = (text: string): TeamShown => ({
+      kind: 'said',
+      text,
+      failed: true,
+    });
+
+    if (main === undefined) {
+      return said('This session has closed');
+    }
+
+    const args = { agent: named === '' ? main.agent : named, prompt: '' };
+    const refused =
+      (await startRefusal(main.key, conversationAt(main.key), args, 'agent')) ??
+      fullRefusal(main.key);
+    const agents = ownedBy(sessions.agents, main.key);
+
+    if (agents === undefined || refused !== undefined) {
+      return said(refused ?? 'This session has closed');
+    }
+
+    const { opened, started } = startChild(main.key, args, {
+      name: childName(agents, undefined, args.agent),
+      parent: () => conversationAt(main.key),
+      from: MAIN,
+      asked: 'asked by /new',
+      idle: true,
+    });
+    const child = sessions.agents.children.find(
+      (each) => each.id === opened.id,
+    );
+
+    if (child !== undefined) {
+      sessions.pick(child.key);
+      showFront();
+    }
+
+    conversationAt(main.key)?.aside(
+      { name: 'chord' },
+      `The person opened @${opened.name} (${opened.agent}) with /new; it ` +
+        'has no prompt yet. It reports to you, and send_message reaches it.',
+    );
+
+    const call: ChordCall = {
+      tool: 'open_agent',
+      input: { agent: args.agent, typed: '/new' },
+      answer: { ...opened, ...(await started) },
+    };
+
+    conversationAt(main.key)?.ranTyped(call);
+
+    return { kind: 'ran', call };
+  };
+
+  /**
+   * `/team stop`: the run `name` closed with its members, at
    * once, as the person typed it on purpose; `show` hears what it did
    * before main is told, as for `x`, so the command's line comes first.
    */
   const stopTyped = (name: string, show: (shown: TeamShown) => void) => {
-    const tab = front();
+    const agents = front();
     const lead =
-      tab === undefined
+      agents === undefined
         ? undefined
-        : ownChildren(tab).find(
+        : ownChildren(agents).find(
             (child) => isLead(child) && child.name === name,
           );
 
-    if (tab === undefined || lead === undefined) {
+    if (agents === undefined || lead === undefined) {
       return show({
         kind: 'said',
         text:
@@ -2209,7 +2179,7 @@ export function useSessions(
       kind: 'said',
       text: stoppedLine(
         lead.name,
-        membersOf(tab, lead.id).map((each) => each.name),
+        membersOf(agents, lead.id).map((each) => each.name),
       ),
       failed: false,
     });
@@ -2218,15 +2188,15 @@ export function useSessions(
 
   /**
    * `/team show`: team `name` as its file has it; while it runs in the
-   * front tab, its first run as it stands now, each of the file's agents
+   * window, its first run as it stands now, each of the file's agents
    * with its state and latest headline, the file as the run read it.
    */
   const showTyped = async (name: string): Promise<TeamShown> => {
-    const tab = front();
+    const agents = front();
     const found = await teamNamed(name);
     const refused = teamRefusal(name, found);
 
-    if (tab === undefined || found === undefined || !('team' in found)) {
+    if (agents === undefined || found === undefined || !('team' in found)) {
       return {
         kind: 'said',
         text: refused ?? 'This session has closed',
@@ -2234,7 +2204,7 @@ export function useSessions(
       };
     }
 
-    const lead = ownChildren(tab).find(
+    const lead = ownChildren(agents).find(
       (child) => isLead(child) && child.team === name,
     );
     const run = lead === undefined ? undefined : runs.current.get(lead.id);
@@ -2244,7 +2214,7 @@ export function useSessions(
     }
 
     const now = Date.now();
-    const members = membersOf(tab, lead.id);
+    const members = membersOf(agents, lead.id);
     const shownAgent = (
       agent: string,
       child: Child<Conversation> | undefined,
@@ -2317,11 +2287,11 @@ export function useSessions(
 
   /**
    * `/team new`: `typed` drawn as the person's
-   * prompt in the front tab's `main`, `prompt` what its agent gets, with
+   * prompt in `main`, `prompt` what its agent gets, with
    * the shell output held there ahead of it.
    */
   const sendToMain = (typed: string, prompt: string) => {
-    const key = front()?.key;
+    const key = front()?.main.key;
     const now = key === undefined ? undefined : stateOf(key);
 
     if (
@@ -2345,26 +2315,29 @@ export function useSessions(
    * it lets go, as its task agents do. The refusal, if any.
    */
   const clearFront = (before: () => void): string | undefined => {
-    const tab = front();
+    const agents = front();
 
-    if (tab !== undefined && pickedChild(tab) !== undefined) {
+    if (agents !== undefined && pickedChild(agents) !== undefined) {
       return '/clear clears main; pick main first';
     }
 
     before();
 
-    for (const child of tab?.children ?? []) {
+    for (const child of agents?.children ?? []) {
       dropChild(child.key);
     }
 
+    // The new session's record says what it closed, from none (Q184).
+    sessions.forgetClosed();
+
     // Its session goes; what it spent still counts, its turn running too,
     // to that turn's end.
-    if (tab !== undefined) {
+    if (agents !== undefined) {
       keepSpend(
         retiredKey(),
-        { tab: tab.key, name: 'main', kind: 'main', agent: tab.agent },
-        tab.key,
-      )(conversationAt(tab.key)?.clear());
+        { name: 'main', kind: 'main', agent: agents.main.agent },
+        agents.main.key,
+      )(conversationAt(agents.main.key)?.clear());
     } else {
       void conversation()?.clear();
     }
@@ -2373,13 +2346,13 @@ export function useSessions(
   };
 
   /**
-   * The front tab's agents as the list under the prompt draws them, `main`
+   * The window's agents as the list under the prompt draws them, `main`
    * first; none while it has no child, and the list is not drawn.
    */
   const agentRows = (): AgentRow[] => {
-    const tab = front();
+    const agents = front();
 
-    if (tab === undefined || tab.children.length === 0) {
+    if (agents === undefined || agents.children.length === 0) {
       return [];
     }
 
@@ -2396,18 +2369,18 @@ export function useSessions(
 
     return [
       {
-        key: tab.key,
+        key: agents.main.key,
         name: 'main',
-        runtime: tab.agent,
-        wait: tab.wait,
-        picked: tab.picked === tab.key,
-        ...describe(tab.key),
+        runtime: agents.main.agent,
+        wait: agents.main.wait,
+        picked: agents.picked === agents.main.key,
+        ...describe(agents.main.key),
       },
-      ...tab.children.map((child) => {
+      ...agents.children.map((child) => {
         const described = describe(child.key);
         const team = isLead(child)
           ? child.key
-          : tab.children.find((each) => each.id === child.lead)?.key;
+          : agents.children.find((each) => each.id === child.lead)?.key;
 
         return {
           key: child.key,
@@ -2417,7 +2390,7 @@ export function useSessions(
           colour: child.colour,
           ...(team === undefined ? {} : { team }),
           wait: child.wait,
-          picked: tab.picked === child.key,
+          picked: agents.picked === child.key,
           ...described,
           model: described.model ?? child.model,
         };
@@ -2427,7 +2400,7 @@ export function useSessions(
 
   /**
    * The list under the prompt as it is drawn in `limit` lines at `width`:
-   * the front tab's agents while it has a child, a team folded where their
+   * the window's agents while it has a child, a team folded where their
    * lines do not fit, so a resize may fold or unfold one.
    */
   const listed = (limit: number, width: number): AgentRow[] =>
@@ -2436,13 +2409,13 @@ export function useSessions(
     );
 
   /**
-   * The front tab's background: every monitor and task of its `main` and
+   * The window's background: every monitor and task of `main` and
    * its children, those ended since the person's last prompt there kept.
    */
   const background = (): BackgroundItem[] => {
-    const tab = front();
+    const agents = front();
 
-    if (tab === undefined) {
+    if (agents === undefined) {
       return [];
     }
 
@@ -2466,8 +2439,8 @@ export function useSessions(
 
     return backgroundItems(
       [
-        ...agentIn(tab.key),
-        ...tab.children.flatMap((child) =>
+        ...agentIn(agents.main.key),
+        ...agents.children.flatMap((child) =>
           agentIn(child.key, { name: child.name, colour: child.colour }),
         ),
       ],
@@ -2477,14 +2450,14 @@ export function useSessions(
     );
   };
 
-  /** The child picked in the front tab, as the box and the header name it. */
+  /** The child picked, as the box and the header name it. */
   const picked = () => {
-    const tab = front();
-    const child = tab && pickedChild(tab);
+    const agents = front();
+    const child = agents && pickedChild(agents);
     const lead =
       child?.lead === undefined
         ? undefined
-        : tab?.children.find((each) => each.id === child.lead);
+        : agents?.children.find((each) => each.id === child.lead);
 
     return (
       child && {
@@ -2494,86 +2467,20 @@ export function useSessions(
     );
   };
 
-  /**
-   * Why tab `tab` is busy, its children's work counted with its own; none
-   * when closing it cuts nothing short.
-   */
-  const busyOfTab = (tab: Tab<Conversation>) => {
-    const main = all.sessions[tab.key];
-
-    return (
-      main &&
-      tabBusy(
-        main,
-        tab.children.flatMap((child) => {
-          const session = all.sessions[child.key];
-
-          return session ? [session] : [];
-        }),
-      )
-    );
-  };
-
-  /**
-   * A new session of `named`, or of the front one's agent, where the front
-   * one works, at the end of the strip and in front; none past nine, and
-   * none of an agent chord cannot start, which the front session is told.
-   */
-  const openBeside = (named?: string) => {
-    const { tabs } = sessions;
-    const here = frontPlace();
-
-    const refused = here.startupOf(
-      named ?? frontTab(sessions.tabs)?.agent ?? agent,
-    )?.refused;
-
-    if (
-      (named !== undefined && here.startupOf(named) === undefined) ||
-      refused !== undefined
-    ) {
-      return dispatch({
-        type: 'noted',
-        turnId: `new-${crypto.randomUUID()}`,
-        // As typed, so the refusal stands under the name it refuses.
-        command: named === undefined ? 'new' : `new ${named}`,
-        text: refused ?? `No agent named ${named} · chord agents lists them`,
-        failed: true,
-      });
-    }
-
-    if (full(tabs)) {
-      const close = hintKey(state.keys, 'session:close');
-
-      return dispatch({
-        type: 'sessions_noted',
-        message:
-          close === undefined
-            ? 'Nine sessions are open; close one first'
-            : `Nine sessions are open; close one with ${close} first`,
-      });
-    }
-
-    const opening =
-      named ?? tabs.tabs.find((tab) => tab.key === tabs.front)?.agent ?? agent;
-
-    places.current.set(tabs.nextKey, here);
-    // Its state is there before its first event, which may come at once.
-    dispatch({ type: 'session_opened', key: tabs.nextKey });
-    sessions.open(opening);
-    redraw();
-  };
-
-  /** ctrl+x ↓: the session that waits longest on the person, if one does. */
+  /** ctrl+x a: the agent that waits longest on the person, if one does. */
   const attend = () => {
     if (!sessions.attend()) {
-      return dispatch({ type: 'sessions_noted', message: 'No session waits' });
+      return dispatch({
+        type: 'sessions_noted',
+        message: 'Nothing waits on you',
+      });
     }
 
     return showFront();
   };
 
   // Every session's state, for a read that finishes after the person has
-  // gone to another tab: what it finishes into is the session it began in.
+  // picked another agent: what it finishes into is the session it began in.
   const allNow = useRef(all);
 
   allNow.current = all;
@@ -2593,7 +2500,7 @@ export function useSessions(
       action: { type: 'draft_set', text, cursor: at },
     });
 
-    if (key === sessions.tabs.front) {
+    if (key === sessions.agents.main?.key) {
       redraw();
     }
   };
@@ -2612,7 +2519,7 @@ export function useSessions(
     left = '',
   ) => {
     // Read through the refs, as a prompt sent after its files were read is
-    // sent from a render that has gone by, maybe with another tab in front.
+    // sent from a render that has gone by, maybe with another agent picked.
     const now = stateOf(key);
     const sending = images ?? now?.images ?? [];
     const inSession = (action: AppAction) =>
@@ -2636,44 +2543,25 @@ export function useSessions(
         showDraftIn(key, '', START);
 
         // Vim mode is the window's, so only the box in front starts again.
-        if (key === sessions.tabs.front && now.vim) {
+        if (key === sessions.agents.main?.key && now.vim) {
           dispatch({ type: 'vim_changed', vim: vimReset(now.vim) });
         }
       }
     }
   };
 
-  /** The open sessions that are busy, in tab order; none while one is open. */
-  const busyTabs = (): BusyTab[] =>
-    sessions.tabs.tabs.length < 2
-      ? []
-      : sessions.tabs.tabs.flatMap((tab, index) => {
-          const busy = busyOfTab(tab);
-
-          return busy ? [{ number: index + 1, agent: tab.agent, busy }] : [];
-        });
-
   const quit = () => {
-    const { tabs, front } = sessions.tabs;
-    const resumable = tabs.flatMap((tab) => {
-      const session = all.sessions[tab.key];
-      const sessionId = session && resumableSession(session);
-
-      return sessionId === undefined
-        ? []
-        : [{ agent: tab.agent, sessionId, cwd: placeOf(tab.key).cwd, tab }];
-    });
-
-    const at = tabs.findIndex((tab) => tab.key === front);
-    // The one in front, or the nearest to its left that a prompt went to.
-    const shown = resumable.findLastIndex(({ tab }) => tabs.indexOf(tab) <= at);
+    const { main } = sessions.agents;
+    const session = main && all.sessions[main.key];
+    const sessionId = session && resumableSession(session);
 
     onQuit?.(
-      resumable.map(({ tab: _, ...kept }) => kept),
-      Math.max(shown, 0),
+      main === undefined || sessionId === undefined
+        ? undefined
+        : { agent: main.agent, sessionId },
     );
 
-    // The window closes itself: `closeAll` takes the tabs out first, so the
+    // The window closes itself: `closeAll` takes the agents out first, so the
     // `closing` their conversations report is no longer heard, and keys
     // would go on starting work while the agents shut down.
     dispatch({ type: 'closing' });
@@ -2681,132 +2569,13 @@ export function useSessions(
   };
 
   /**
-   * ctrl+d or `/exit`: quits, or with several sessions open and any busy,
-   * asks for a second press first, as ctrl+c always does.
-   */
-  const askQuit = () =>
-    state.quitArmed || busyTabs().length === 0
-      ? quit()
-      : dispatch({ type: 'quit_armed', by: 'ctrl+d' });
-
-  /**
-   * `ctrl+x k`: closes the session in front, the one to its left coming
-   * forward, once a second press confirms cutting a busy one short; the
-   * last one is a quit. Its agent is waited for in the background.
-   */
-  const closeFront = () => {
-    const { tabs, front } = sessions.tabs;
-    const tab = front === undefined ? undefined : tabOf(sessions.tabs, front);
-    const session = front === undefined ? undefined : all.sessions[front];
-
-    if (front === undefined || tab === undefined || session === undefined) {
-      return;
-    }
-
-    if (tabs.length === 1) {
-      return askQuit();
-    }
-
-    const busy = busyOfTab(tab);
-
-    if (busy !== undefined && state.closeArmed !== front) {
-      return dispatch({ type: 'close_armed', key: front });
-    }
-
-    const named = `${position(sessions.tabs, front)} ${tab.agent}`;
-
-    // Its turn is cancelled before its agent goes, so the agent can end it
-    // as it would any cancel; the close withdraws what it still asks. Its
-    // long-lived children close with it: with no tab of their own, left
-    // running they would be out of sight.
-    if (session && busyOf(session) !== undefined) {
-      conversationAt(front)?.interrupt();
-    }
-
-    for (const child of tab.children) {
-      dropChild(child.key);
-    }
-
-    const kept = keepSpend(front, {
-      tab: front,
-      tabName: named,
-      name: 'main',
-      kind: 'main',
-      agent: tab.agent,
-    });
-
-    // Its command stops with it: nothing would be left to show or stop it.
-    stopCommand(front);
-
-    const closed = sessions.close(front);
-
-    kept(closed);
-    void closed.catch(() => {});
-
-    places.current.delete(front);
-
-    dispatch({
-      type: 'session_closed',
-      key: front,
-      front: shownKey(sessions.tabs) ?? front,
-    });
-    redraw();
-
-    const count = tab.children.length;
-
-    if (resumableSession(session) !== undefined) {
-      dispatch({
-        type: 'sessions_noted',
-        message:
-          count === 0
-            ? `Closed ${named} · /resume opens it again`
-            : `Closed ${named} and its ${
-                count === 1 ? 'agent' : `${count} agents`
-              } · /resume opens them again`,
-      });
-    }
-  };
-
-  /** The sessions picker's rows, in tab order. */
-  const tabRows = (): TabRow[] =>
-    sessions.tabs.tabs.map((tab) => {
-      const first = all.sessions[tab.key]?.transcript.entries.find(
-        (entry) => entry.kind === 'user',
-      );
-      const waiter = waitingChild(tab)?.name;
-
-      return {
-        agent: tab.agent,
-        wait: shownWait(tab),
-        front: tab.key === sessions.tabs.front,
-        prompt:
-          first?.kind === 'user'
-            ? first.text.replace(/\s+/g, ' ').trim()
-            : undefined,
-        agents: tab.children.length,
-        ...(waiter === undefined ? {} : { waiter }),
-      };
-    });
-
-  /**
-   * How many sessions are open, and how many wait on the person for a
-   * permission, a form or a link, as `/status` counts them.
-   */
-  const counted = () => ({
-    open: sessions.tabs.tabs.length,
-    waits: sessions.tabs.tabs.filter(
-      (tab) => mergedWait(tab).asking !== undefined,
-    ).length,
-  });
-
-  /**
-   * What the whole window has spent, for `/cost`: each tab, closed agents
-   * and tabs, and the sessions still closing as they stand (CHD-373 S4).
+   * What the whole window has spent, for `/cost`: main, its agents, closed
+   * ones too, and the sessions still closing as they stand (CHD-373 S4).
    */
   const spend = () => {
     const now = allNow.current;
 
-    return windowSpend(sessions.tabs.tabs, now.sessions, [
+    return windowSpend(sessions.agents, now.sessions, [
       ...(now.window.keptSpend ?? []),
       ...Object.values(now.closing ?? {}).map((closing) =>
         keptSpend(closing.session, closing.place),
@@ -2814,39 +2583,17 @@ export function useSessions(
     ]);
   };
 
-  /** The tab the sessions picker opens on. */
-  const listFrom = () => listStart(sessions.tabs);
-
   /**
-   * Enter or a digit on the sessions picker: that tab in front, on the
-   * child that waits there, if one does.
+   * The ids of the sessions open as long-lived children of this one: one of
+   * them `/resume` picks rather than loading it twice.
    */
-  const pickTab = (number: number) => {
-    dispatch({ type: 'sessions_picker_closed' });
-    sessions.goTo(number);
+  const openChildren = (): ReadonlySet<string> =>
+    new Set(
+      (front()?.children ?? []).flatMap((child) => {
+        const id = all.sessions[child.key]?.sessionId;
 
-    const waiter = front() && askingChild(front()!);
-
-    if (waiter !== undefined) {
-      sessions.pick(waiter.key);
-    }
-
-    showFront();
-  };
-
-  /**
-   * The tab each session open in the window is in, by its id: a tab's own
-   * and its long-lived children's, which are open there too.
-   */
-  const openTabs = (): Map<string, number> =>
-    new Map(
-      sessions.tabs.tabs.flatMap((tab, index) =>
-        [tab.key, ...tab.children.map((child) => child.key)].flatMap((key) => {
-          const id = all.sessions[key]?.sessionId;
-
-          return id === undefined ? [] : [[id, index + 1] as const];
-        }),
-      ),
+        return id === undefined ? [] : [id];
+      }),
     );
 
   /** The queued prompts back into the box, ahead of what is typed there. */
@@ -2868,8 +2615,8 @@ export function useSessions(
     });
 
   /**
-   * `/resume`: reads chord's session and window records afresh, so a session
-   * another window used since is there, and opens the picker on this
+   * `/resume`: reads chord's session records afresh, so a session another
+   * chord used since is there, and opens the picker on this
    * directory's, with every other directory's a key away.
    * What the read finds goes through the reducer, which drops it if a
    * `/clear` or quitting came first and refuses it if a turn started.
@@ -2882,24 +2629,23 @@ export function useSessions(
     }
 
     const asked = crypto.randomUUID();
-    // The front session's agent, whose sessions it can load.
-    const front = frontTab(sessions.tabs)?.agent ?? agent;
+    // Main's agent, whose sessions it can load.
+    const front = sessions.agents.main?.agent ?? agent;
     const find = { agent: front };
-    const here = resolve(frontPlace().cwd);
+    const here = resolve(place.cwd);
     const dir = stateDir ?? chordStateDir();
 
     dispatch({ type: 'resume_asked', asked });
 
-    Promise.all([readRecords(dir), readWindows(dir)]).then(
-      ([records, windows]) =>
+    readRecords(dir).then(
+      (records) =>
         dispatch({
           type: 'resume_listed',
           asked,
           sessions: earlierSessions(records, find, state.sessionId),
-          windows: earlierWindows(windows, records),
           cwd: here,
           otherwise:
-            `No earlier ${front} session or window to resume, ` +
+            `No earlier ${front} session to resume, ` +
             'here or in any other directory.',
         }),
       (error: unknown) =>
@@ -2907,7 +2653,6 @@ export function useSessions(
           type: 'resume_listed',
           asked,
           sessions: [],
-          windows: [],
           cwd: here,
           otherwise: `Could not read the earlier sessions: ${
             error instanceof Error ? error.message : String(error)
@@ -2919,28 +2664,21 @@ export function useSessions(
   /**
    * Enter on `/resume`'s list: leaves the session on screen for `chosen`,
    * the way `/clear` leaves it for a new one: the transcript empties and the
-   * chosen session's past plays into it, as `--resume` plays it. One open in
-   * another tab is gone to instead: two conversations on one session would
-   * each write its record over the other's.
+   * chosen session's past plays into it, as `--resume` plays it. One open
+   * as a child of this session is picked instead: two conversations on one
+   * session would each write its record over the other's.
    */
   const pickSession = (chosen: Resume) => {
     const refusal = resumeRefusal(state);
-    const open = openTabs().get(chosen.sessionId);
+    const agents = front();
+    const open = agents?.children.find(
+      (each) => all.sessions[each.key]?.sessionId === chosen.sessionId,
+    );
 
     dispatch({ type: 'resume_picker_closed' });
 
     if (open !== undefined) {
-      sessions.goTo(open);
-
-      // The agent in that tab whose session it is, the tab's own or a child.
-      const tab = front();
-      const child = tab?.children.find(
-        (each) => all.sessions[each.key]?.sessionId === chosen.sessionId,
-      );
-
-      if (tab !== undefined) {
-        sessions.pick(child?.key ?? tab.key);
-      }
+      sessions.pick(open.key);
 
       return showFront();
     }
@@ -2949,12 +2687,12 @@ export function useSessions(
       return sayResume(refusal);
     }
 
-    if (chosen.cwd !== resolve(frontPlace().cwd)) {
-      // The tab's directory, its settings, MCP servers, files and shell
+    if (chosen.cwd !== resolve(place.cwd)) {
+      // The window's directory, its settings, MCP servers, files and shell
       // were all read for this one; `--resume` starts in the session's own.
-      // Its agent is the front session's, whose command is overridden only
-      // when it is the one the window was started on, as on quit.
-      const front = frontTab(sessions.tabs)?.agent ?? agent;
+      // Its agent is main's, whose command is overridden only when it is the
+      // one the window was started on, as on quit.
+      const front = sessions.agents.main?.agent ?? agent;
 
       return sayResume(
         elsewhereRefusal(chosen, {
@@ -2968,169 +2706,32 @@ export function useSessions(
     takeBackQueue('');
     stopCommand(all.front);
 
-    // The tab's own session goes, and its children with it, as on `/clear`.
-    const tab = front();
-
-    for (const child of tab?.children ?? []) {
+    // The main session goes, and its children with it, as on `/clear`;
+    // the resumed one's record says what it closed (Q184).
+    for (const child of agents?.children ?? []) {
       dropChild(child.key);
     }
 
-    if (tab !== undefined) {
+    sessions.forgetClosed();
+
+    if (agents !== undefined) {
       const kept = keepSpend(
         retiredKey(),
-        { tab: tab.key, name: 'main', kind: 'main', agent: tab.agent },
-        tab.key,
+        { name: 'main', kind: 'main', agent: agents.main.agent },
+        agents.main.key,
       );
 
-      sessions.pick(tab.key);
+      sessions.pick(agents.main.key);
       showFront();
-      resuming.current.set(tab.key, chosen);
-      kept(conversationAt(tab.key)?.clear());
+
+      resuming.current = chosen;
+
+      kept(conversationAt(agents.main.key)?.clear());
     }
   };
 
-  /**
-   * Enter on a saved window in `/resume`'s list: its tabs open beside those
-   * open, in its order at the end of the strip, and its front tab comes to
-   * the front. A tab whose session is open already is not opened twice, and
-   * a front tab never prompted gives its place, so plain `chord` and then
-   * `/resume` leaves just the window. Refused whole, never opened in part,
-   * when the cap has no room for it, and, as a session from elsewhere is,
-   * when any tab works in another directory. `columns` is the status line's
-   * width, which words the cap's refusal.
-   */
-  const pickWindow = (chosen: EarlierWindow, columns: number) => {
-    dispatch({ type: 'resume_picker_closed' });
-
-    const here = frontPlace();
-    const elsewhere = chosen.tabs.find((tab) => tab.cwd !== resolve(here.cwd));
-
-    if (elsewhere !== undefined) {
-      return sayResume(
-        windowElsewhereRefusal(chosen.id, homePath(elsewhere.cwd, home)),
-      );
-    }
-
-    const refused = chosen.opening.tabs
-      .map((tab) => here.startupOf(tab.agent)?.refused)
-      .find((line) => line !== undefined);
-
-    if (refused !== undefined) {
-      return sayResume(refused);
-    }
-
-    const unknown = chosen.opening.tabs.find(
-      (tab) => here.startupOf(tab.agent) === undefined,
-    );
-
-    if (unknown !== undefined) {
-      return sayResume(
-        `That window has a ${unknown.agent} tab, which chord cannot start here.`,
-      );
-    }
-
-    const open = openTabs();
-    // By key, read now, as closing a reused tab moves the numbers after it.
-    const openKeys = new Map(
-      [...open].map(([id, number]) => [
-        id,
-        sessions.tabs.tabs[number - 1]?.key,
-      ]),
-    );
-    const opening = chosen.opening.tabs.filter(
-      (tab) => !open.has(tab.resume.sessionId),
-    );
-    const tab = front();
-    const session = tab && all.sessions[tab.key];
-    // Never prompted, with nothing of its own open: a place, not a session.
-    const empty =
-      tab !== undefined &&
-      session !== undefined &&
-      tab.children.length === 0 &&
-      session.resumed === undefined &&
-      resumableSession(session) === undefined &&
-      !resuming.current.has(tab.key);
-    const reused = empty && opening.length > 0;
-    const room = windowRoom({
-      open: sessions.tabs.tabs.length,
-      reused,
-      needed: opening.length,
-    });
-
-    if (!room.fits) {
-      return dispatch({
-        type: 'sessions_noted',
-        message: capNote(room, hintKey(state.keys, 'session:close'), columns),
-      });
-    }
-
-    // Out first, so the window's tabs have its place under the cap.
-    if (reused) {
-      const named = `${position(sessions.tabs, tab.key)} ${tab.agent}`;
-
-      const kept = [
-        ...tab.children.map((child) => keepChild(tab.key, child)),
-        keepSpend(tab.key, {
-          tab: tab.key,
-          tabName: named,
-          name: 'main',
-          kind: 'main',
-          agent: tab.agent,
-        }),
-      ];
-      const closed = sessions.close(tab.key);
-
-      kept.forEach((each) => each(closed));
-      void closed.catch(() => {});
-
-      places.current.delete(tab.key);
-    }
-
-    const keys = new Map<string, number>();
-
-    for (const each of opening) {
-      const key = sessions.tabs.nextKey;
-
-      places.current.set(key, here);
-      resuming.current.set(key, each.resume);
-      dispatch({ type: 'session_opened', key });
-      sessions.open(each.agent);
-      keys.set(each.resume.sessionId, key);
-    }
-
-    if (reused) {
-      dispatch({
-        type: 'session_closed',
-        key: tab.key,
-        front: shownKey(sessions.tabs) ?? tab.key,
-      });
-    }
-
-    const frontId = chosen.opening.tabs[chosen.opening.front]?.resume.sessionId;
-    const frontKey =
-      frontId === undefined
-        ? undefined
-        : (keys.get(frontId) ?? openKeys.get(frontId));
-    const number =
-      frontKey === undefined ? undefined : position(sessions.tabs, frontKey);
-
-    if (number !== undefined) {
-      sessions.goTo(number);
-    }
-
-    showFront();
-    redraw();
-
-    if (chosen.opening.note !== undefined && opening.length > 0) {
-      dispatch({ type: 'sessions_noted', message: chosen.opening.note });
-    }
-  };
-
-  /** Enter on `/resume`'s list: a session, or a saved window. */
-  const pickResume = (chosen: ResumeEntry, columns: number) =>
-    chosen.kind === 'window'
-      ? pickWindow(chosen.window, columns)
-      : pickSession(chosen.session.resume);
+  /** Enter on `/resume`'s list. */
+  const pickResume = (chosen: EarlierSession) => pickSession(chosen.resume);
 
   /** Enter on `/model`'s list. */
   const pickModel = (id: string) => {
@@ -3155,15 +2756,14 @@ export function useSessions(
   };
 
   /**
-   * The header's strip of tabs, and what the status line says of the tabs
-   * behind that wait and of a close or quit armed, at `columns` wide.
+   * What the status line says of the session's agents that wait and of a
+   * close or quit armed.
    */
-  const lines = (columns: number) => {
-    const { tabs } = sessions;
+  const lines = () => {
     // The task of session `key`'s whose request `wait` is, by the name its
     // box gives it; none when the session's agent or a subagent of its own,
     // not a task, asks (CHD-431).
-    const taskOf = (key: number, wait: TabWait) => {
+    const taskOf = (key: number, wait: AgentWait) => {
       const id = wait.asking?.on.subagentId;
       const entries = id === undefined ? [] : stateOf(key)?.transcript.entries;
 
@@ -3182,14 +2782,14 @@ export function useSessions(
           };
     };
 
-    const frontTab = tabs.tabs.find((tab) => tab.key === tabs.front);
-    // The front tab's agents but the one picked, by their names: `main`
+    const frontTab = ownedBy(sessions.agents, sessions.agents.main?.key);
+    // The session's agents but the one picked, by their names: `main`
     // too, while a child is picked.
     const others =
       frontTab === undefined || frontTab.children.length === 0
         ? []
         : [
-            { key: frontTab.key, name: 'main', wait: frontTab.wait },
+            { key: frontTab.main.key, name: 'main', wait: frontTab.main.wait },
             ...frontTab.children,
           ]
             .filter(({ key }) => key !== frontTab.picked)
@@ -3198,47 +2798,18 @@ export function useSessions(
                 'id' in other ? namedChild(frontTab, other) : other.name;
 
               return {
-                number: 0,
-                agent: name,
                 name,
                 wait: other.wait,
                 ...taskOf(other.key, other.wait),
               };
             });
 
-    const waits = waitsNotice(
-      [
-        ...others,
-        ...tabs.tabs.flatMap((tab, index) => {
-          if (tab.key === tabs.front) {
-            return [];
-          }
-
-          const waiter = waitingChild(tab);
-          const wait = mergedWait(tab);
-
-          return [
-            {
-              number: index + 1,
-              agent: tab.agent,
-              wait,
-              ...taskOf(waiter?.key ?? tab.key, wait),
-              ...(waiter === undefined
-                ? {}
-                : { waiter: namedChild(tab, waiter) }),
-            },
-          ];
-        }),
-      ],
-      hintKey(state.keys, 'session:attention'),
-    );
-    const frontBusy = frontTab && busyOfTab(frontTab);
-    const closeKey = hintKey(state.keys, 'session:close');
+    const waits = waitsNotice(others, hintKey(state.keys, 'session:attention'));
     const closeAgentKey = hintKey(state.keys, 'agents:close');
     const armedChild =
       state.agentCloseArmed === undefined
         ? undefined
-        : agentOf(tabs, state.agentCloseArmed)?.child;
+        : agentOf(sessions.agents, state.agentCloseArmed)?.child;
     const busyAt = (key: number) => stateOf(key) && busyOf(stateOf(key)!);
     const childBusy = armedChild && busyAt(armedChild.key);
     // A lead closes with its members, so it is armed while any of them works.
@@ -3254,38 +2825,13 @@ export function useSessions(
         ? teamCloseArmedLine(armedChild.name, members.length, closeAgentKey)
         : armedChild && childBusy && closeAgentKey !== undefined
           ? agentCloseArmedLine(armedChild.name, childBusy, closeAgentKey)
-          : state.closeArmed !== undefined &&
-              frontTab &&
-              frontBusy &&
-              closeKey !== undefined
-            ? closeArmedLine(
-                {
-                  number: position(tabs, frontTab.key) ?? 1,
-                  agent: frontTab.agent,
-                  busy: frontBusy,
-                },
-                closeKey,
-              )
-            : state.quitArmed === 'ctrl+d'
-              ? quitArmedLine(busyTabs(), columns - 4)
-              : state.quitArmed
-                ? ctrlCArmedLine(busyTabs().length)
-                : undefined;
-    const strip = stripLayout(
-      tabs.tabs.map((tab, index) => ({
-        number: index + 1,
-        agent: tab.agent,
-        front: tab.key === tabs.front,
-        glyphs: tabGlyphs(shownWait(tab)),
-      })),
-      homePath(frontPlace().cwd, home),
-      // Inside the header's padding.
-      columns - 2,
-    );
+          : state.quitArmed
+            ? ctrlCArmedLine()
+            : undefined;
 
     // The front session's own request between turns comes first: it is
     // on screen, waiting for the keys.
-    const front = heldBack(state)
+    const between = heldBack(state)
       ? betweenNotice(
           askedPermission(state.transcript.turn) === undefined
             ? 'input'
@@ -3294,31 +2840,23 @@ export function useSessions(
         )
       : undefined;
 
-    return { waits: front ?? waits, armed, strip };
+    return { waits: between ?? waits, armed };
   };
 
   return {
     sessions,
-    placeOf,
-    frontPlace,
+    place,
     lines,
     conversation,
     showFront,
-    openBeside,
     attend,
     stateOf,
     showDraftIn,
     send,
-    busyTabs,
-    askQuit,
-    closeFront,
+    quit,
     takeBackQueue,
-    tabRows,
-    counted,
     spend,
-    listFrom,
-    pickTab,
-    openTabs,
+    openChildren,
     openResume,
     pickResume,
     pickModel,
@@ -3328,9 +2866,10 @@ export function useSessions(
     moveBackground,
     stopBackground,
     goToCall,
-    frontKey: () => front()?.key,
+    frontKey: () => front()?.main.key,
     listTeams,
     runTyped,
+    newTyped,
     stopTyped,
     showTyped,
     sendToMain,

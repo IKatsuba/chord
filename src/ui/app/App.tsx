@@ -19,7 +19,7 @@ import { openSession } from '../../session/session.ts';
 import {
   openSessionLabel,
   readRecords as readSessionRecords,
-  type ResumableTab,
+  type Resumable,
   type Resume,
   type SessionRecord,
 } from '../../session/sessions.ts';
@@ -30,7 +30,7 @@ import {
   startLine,
 } from '../../agents.ts';
 import type { ChordServer } from '../../server/server.ts';
-import { agentOf, frontTab, noTabs } from '../../session/tabs.ts';
+import { agentOf, noAgents } from '../../session/window_agents.ts';
 import { programStatus } from '../../status.ts';
 import { promptLine } from '../../session/record.ts';
 import { type EditorMode, homePath } from '../../settings.ts';
@@ -41,7 +41,15 @@ import { bashCommand, typedText } from '../prompt/bash.ts';
 import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
-import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
+import {
+  emptyHistory,
+  type History,
+  recordedWith,
+  type Walk,
+  walkedIn,
+  walking,
+  walkOf,
+} from '../prompt/history.ts';
 import { PlanBox } from '../dialogs/PlanBox.tsx';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import { placeholderBefore } from '../prompt/images.ts';
@@ -61,6 +69,7 @@ import {
   reduceWindowed,
   resumableSession,
   windowed,
+  type WindowedState,
 } from './state.ts';
 import {
   askedInput,
@@ -76,7 +85,6 @@ import {
   mcpShown,
   modelPickerShown,
   resumePickerShown,
-  sessionsPickerShown,
   shownTheme,
   teamsPickerShown,
   themePickerShown,
@@ -120,7 +128,7 @@ import {
   type Step,
   submitSteps,
 } from './keys.ts';
-import { type OpeningTab, type SessionStart, useSessions } from './sessions.ts';
+import { type SessionStart, useSessions } from './sessions.ts';
 import {
   answerLink,
   useEditor,
@@ -155,11 +163,11 @@ import {
 } from '../dialogs/Permission.tsx';
 import {
   ConfigPicker,
+  type KeptChoice,
   McpPanel,
   ModelPicker,
   NoticeBox,
   ResumePicker,
-  SessionsPicker,
   TeamsPicker,
   ThemePicker,
 } from '../pickers/Pickers.tsx';
@@ -173,7 +181,6 @@ import {
 } from '../prompt/Prompt.tsx';
 import { Shortcuts } from '../shortcuts/Shortcuts.tsx';
 import { LeaderLine, StatusLine, Working } from '../status/Status.tsx';
-import { Strip } from './Strip.tsx';
 import { Plan } from '../plan/Plan.tsx';
 import { Agents } from '../transcript/agents/Agents.tsx';
 import { firstMounted } from '../transcript/mount.ts';
@@ -221,22 +228,6 @@ export interface AppProps {
    * and `/resume` another earlier one.
    */
   resume?: Resume | undefined;
-  /**
-   * Earlier sessions to open again in place of `agent`'s one, each in a tab
-   * of its own, in order, the first in front, each on its own agent where it
-   * works; `cwd` and the settings above are the first's.
-   */
-  resumes?: readonly OpeningTab[] | undefined;
-  /**
-   * Which of `resumes` comes to the front, by its index: the tab a window
-   * record had in front; the first when not said.
-   */
-  resumedFront?: number | undefined;
-  /**
-   * What the status line says once `resumes` are open, such as a window
-   * record's tab left out as its session is gone.
-   */
-  resumedNote?: string | undefined;
   /** The files `@` offers; the working directory's, walked, by default. */
   files?: (cwd: string) => Promise<readonly string[]>;
   /** How the files are matched against what follows `@`; fzf's, by default. */
@@ -260,11 +251,10 @@ export interface AppProps {
   /** The home directory a `~/` path starts in; `$HOME`, by default. */
   home?: string | undefined;
   /**
-   * Hears, as the window quits, the sessions to resume: each open one a
-   * prompt went to, in tab order, and which of them was in front, by its
-   * index; the nearest to its left when the one in front had no prompt.
+   * Hears, as the window quits, its session to resume, or none when no
+   * prompt went to it.
    */
-  onQuit?: (sessions: readonly ResumableTab[], front: number) => void;
+  onQuit?: (session: Resumable | undefined) => void;
   /**
    * Hears that the window has its first session up and takes a prompt,
    * which comes a render after the session opens.
@@ -328,6 +318,12 @@ export interface AppProps {
   /** Release copies a selection; `false` leaves it to the copy key. */
   copyOnSelect?: boolean | undefined;
   /**
+   * For tests only, and nothing in production passes it: told the window's
+   * state after each change, so a test can wait on what the screen does not
+   * show, such as a read landing in a session not shown (CHD-493).
+   */
+  onState?: ((all: WindowedState) => void) | undefined;
+  /**
    * Whether the startup splash holds the screen until the first session is
    * up; `main.tsx` asks for it on a terminal, and tests leave it off.
    */
@@ -337,7 +333,7 @@ export interface AppProps {
 const NO_BACKGROUND: Background = { tone: 'dark', from: 'default' };
 
 /** The key the window's first session opens under. */
-const FIRST_SESSION = noTabs().nextKey;
+const FIRST_SESSION = noAgents().nextKey;
 
 /**
  * The whole window. chord owns the full terminal (alternate screen) rather than
@@ -363,9 +359,6 @@ export function App({
   readRecords = readSessionRecords,
   open = openSession,
   resume,
-  resumes,
-  resumedFront,
-  resumedNote,
   files = listFiles,
   match = matchFiles,
   shell = runShell,
@@ -399,6 +392,7 @@ export function App({
   copy,
   copyOnSelect = true,
   splash = false,
+  onState,
 }: AppProps) {
   const { width: columns, height: rows } = useTerminalDimensions();
   // In the first frame, so they come before anything the session says.
@@ -424,9 +418,26 @@ export function App({
     ),
   );
   const state = useMemo(() => frontState(all), [all]);
+
+  useEffect(() => onState?.(all), [all, onState]);
+
   const { draft, cursor } = state;
   const setCursor = (at: Cursor) => dispatch({ type: 'draft_set', cursor: at });
-  const [history, setHistory] = useState(emptyHistory);
+  // The prompts sent are the window's; the walk through them, ↑ and ↓'s
+  // place and the draft it began on, is each agent's, as its kept drafts
+  // are: another agent's place must never name one of them (U10).
+  const [shared, setShared] = useState(emptyHistory);
+  const [walks, setWalks] = useState<
+    Readonly<Record<number, Walk | undefined>>
+  >({});
+  const history = walkedIn(shared, walks[all.front]);
+  const setHistory = (next: History) => {
+    const front = all.front;
+
+    setShared({ ...next, index: undefined, draft: '' });
+    setWalks((walked) => ({ ...walked, [front]: walkOf(next) }));
+  };
+
   // The textarea skips telling us a cursor it reported last, so a cursor set
   // from here starts a fresh textarea, or a move back to that spot is lost.
   const [inputKey, setInputKey] = useState(0);
@@ -470,9 +481,6 @@ export function App({
       readRecords,
       open,
       resume,
-      resumes,
-      resumedFront,
-      resumedNote,
       server,
       runtimes,
       home,
@@ -492,13 +500,12 @@ export function App({
     },
   );
   const { conversation } = sessions;
-  // Every tab may run another agent, and work in another directory; what is
-  // drawn and run is the front's.
-  const frontAgent = frontTab(sessions.sessions.tabs)?.agent ?? agent;
-  const here = sessions.frontPlace();
+  // Main's agent, in the window's one place.
+  const frontAgent = sessions.sessions.agents.main?.agent ?? agent;
+  const here = sessions.place;
 
   // Once it has given way, the splash never comes back: not for /clear's
-  // session, nor another tab's start.
+  // session.
   const [splashLeft, setSplashLeft] = useState(false);
   const splashing = splashShown(splash, splashLeft, state.connection);
 
@@ -529,7 +536,6 @@ export function App({
   const planAsked = askedPlan(state.transcript);
   const picking = modelPickerShown(state);
   const resumingShown = resumePickerShown(state);
-  const listingSessions = sessionsPickerShown(state);
   const configuring = configPickerShown(state);
   const theming = themePickerShown(state);
   const listingMcp = mcpShown(state);
@@ -547,7 +553,6 @@ export function App({
     configuring ||
     theming ||
     listingMcp ||
-    listingSessions ||
     listingTeams ||
     noticing;
   const colours = paletteOf(
@@ -602,14 +607,14 @@ export function App({
     const owner = item && sessions.stateOf(item.key);
     const subagent =
       owner && item && itemSubagent(owner.transcript.entries, item);
-    const found = item && agentOf(sessions.sessions.tabs, item.key);
+    const found = item && agentOf(sessions.sessions.agents, item.key);
 
     return subagent === undefined || owner === undefined
       ? undefined
       : {
           subagent,
           turn: owner.transcript.turn,
-          agent: found?.child?.runtime ?? found?.tab.agent ?? frontAgent,
+          agent: found?.child?.runtime ?? found?.main?.agent ?? frontAgent,
         };
   })();
   // What the background frame says under its rows, whose lines its rows
@@ -630,7 +635,7 @@ export function App({
     ...(child.leadName === undefined ? {} : { team: child.leadName }),
   };
   // The agent of the session shown, a picked child's runtime rather than
-  // the tab's: what draws or acts on that session names it (CHD-488).
+  // main's: what draws or acts on that session names it (CHD-488).
   const shownAgent = child?.runtime ?? frontAgent;
   const agentColours = useMemo(
     () =>
@@ -743,7 +748,7 @@ export function App({
     );
   }, [namingTeam]);
 
-  const bash = useShell(shell, (key) => sessions.placeOf(key).cwd, dispatch);
+  const bash = useShell(shell, () => sessions.place.cwd, dispatch);
   const images = useImages({
     clipboard,
     readImage,
@@ -769,7 +774,7 @@ export function App({
   const commands = useCommands(
     {
       // The reports speak of the session shown: a picked child's runtime,
-      // not the tab's (CHD-405).
+      // not main's (CHD-405).
       agent: shownAgent,
       cwd: here.cwd,
       saveTheme,
@@ -825,22 +830,6 @@ export function App({
         cutting.current = true;
 
         return;
-      case 'open_session':
-        return sessions.openBeside();
-      case 'next_session':
-        sessions.sessions.next();
-
-        return sessions.showFront();
-      case 'previous_session':
-        sessions.sessions.previous();
-
-        return sessions.showFront();
-      case 'goto_session':
-        sessions.sessions.goTo(step.number);
-
-        return sessions.showFront();
-      case 'close_session':
-        return sessions.closeFront();
       case 'attend_session':
         return sessions.attend();
       case 'move_agent':
@@ -892,7 +881,7 @@ export function App({
       case 'clear_selection':
         return selection.clear();
       case 'quit':
-        return sessions.askQuit();
+        return sessions.quit();
     }
   };
 
@@ -915,11 +904,10 @@ export function App({
   // The record names the main session: by the agent's own title for it
   // once it gave one, else as /resume will (the owner's Q119, CHD-491).
   const status = () => {
-    const { tabs, front } = sessions.sessions.tabs;
-    const main = tabs.find((tab) => tab.key === front)?.conversation;
+    const main = sessions.sessions.agents.main?.conversation;
 
     return programStatus(
-      sessions.sessions.tabs,
+      sessions.sessions.agents,
       main?.title ?? openSessionLabel(main?.firstPrompt),
     );
   };
@@ -928,11 +916,10 @@ export function App({
 
   // The terminal hears which session `--resume` would open (CHD-492):
   // one opened again once it is up, else one a prompt went to. With no main
-  // session, as a quit takes the tabs away while the agents stop, it keeps
+  // session, as a quit takes it away while the agents stop, it keeps
   // what it was told.
   useEffect(() => {
-    const { tabs, front } = sessions.sessions.tabs;
-    const main = tabs.find((tab) => tab.key === front);
+    const { main } = sessions.sessions.agents;
     const state = main && sessions.stateOf(main.key);
 
     if (main === undefined || state === undefined) {
@@ -994,7 +981,7 @@ export function App({
     onPress: () => selection.pressed(),
   });
 
-  const { waits, armed, strip } = sessions.lines(columns);
+  const { waits, armed } = sessions.lines();
   const directory = homePath(here.cwd, home);
   const firstPrompt = state.transcript.entries.find(
     (entry) => entry.kind === 'user',
@@ -1020,10 +1007,22 @@ export function App({
         });
   // The asker's words where a sentence names it: `… needs one`.
   const inputAgent = inputAsker.map((part) => part.text).join('') || frontAgent;
+  // ↓ from a box's last active element: into the agents list, what it holds
+  // kept with its agent (Q192–Q194).
+  const leaving = listRows.length > 0 && {
+    onLeave: () => dispatch({ type: 'agents_focused', focused: true }),
+  };
+  /** A choice box's highlight, kept with its agent by request `id`. */
+  const keptChoice = (id: string): KeptChoice => ({
+    ...(state.choosing?.id === id && {
+      highlighted: state.choosing.highlighted,
+    }),
+    onHighlight: (highlighted) =>
+      dispatch({ type: 'choice_moved', id, highlighted }),
+    ...leaving,
+  });
   const inputDialog =
-    inputAsked?.mode === 'form' &&
-    inputAsked.questions !== undefined &&
-    !listingSessions ? (
+    inputAsked?.mode === 'form' && inputAsked.questions !== undefined ? (
       <QuestionBox
         key={inputAsked.id}
         wait={inputAsked}
@@ -1040,6 +1039,7 @@ export function App({
         width={columns}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        away={listFocus}
         hidden={viewing}
         onFill={(answering) =>
           dispatch({
@@ -1049,8 +1049,9 @@ export function App({
           })
         }
         onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
+        {...leaving}
       />
-    ) : inputAsked?.mode === 'form' && !listingSessions ? (
+    ) : inputAsked?.mode === 'form' ? (
       <ElicitationForm
         key={inputAsked.id}
         wait={inputAsked}
@@ -1064,13 +1065,15 @@ export function App({
         width={columns}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        away={listFocus}
         hidden={viewing}
         onFill={(form) =>
           dispatch({ type: 'form_filled', id: inputAsked.id, form })
         }
         onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
+        {...leaving}
       />
-    ) : inputAsked?.mode === 'url' && !listingSessions ? (
+    ) : inputAsked?.mode === 'url' ? (
       <LinkPrompt
         key={inputAsked.id}
         wait={inputAsked}
@@ -1079,10 +1082,12 @@ export function App({
         between={inputBetween}
         active={listening && !listFocus && !viewing && !held}
         held={held}
+        away={listFocus}
         hidden={viewing}
         onAnswer={(answer) =>
           answerLink(openUrl, conversation(), inputAsked, answer)
         }
+        kept={keptChoice(inputAsked.id)}
       />
     ) : undefined;
 
@@ -1111,9 +1116,6 @@ export function App({
               height={rows}
               {...mouse}
             >
-              {/* One session has no row above the header: the header already
-        names chord, the agent and the directory. */}
-              {strip && <Strip view={strip} />}
               {/* Only this box gives way when the window is full. Everything else and
         every entry is pinned with flexShrink={0}, because OpenTUI boxes shrink by
         default and Yoga would squeeze entries and the prompt box instead of
@@ -1138,8 +1140,7 @@ export function App({
                 }}
               >
                 {/* Following, the transcript hangs from the top while it fits,
-          the header on the window's first row, or under the tab strip, and
-          once it overflows it sits on the bottom and new rows push the old
+          the header on the window's first row, and once it overflows it sits on the bottom and new rows push the old
           ones up; scrolled back, it hangs from the row on top, so new rows
           land below the view and nothing on screen moves. */}
                 <Clip
@@ -1278,7 +1279,7 @@ export function App({
               {/* One box above the prompt at a time: the background view
         opened over a request waiting takes its place until it closes
         (CHD-462). */}
-              {asked && !listingSessions && (
+              {asked && (
                 <PermissionPrompt
                   key={asked.id}
                   wait={asked}
@@ -1291,11 +1292,13 @@ export function App({
                   {...(childShown === undefined ? {} : { child: childShown })}
                   between={between}
                   held={held}
+                  away={listFocus}
                   width={columns - 4}
                   active={listening && !listFocus && !viewing}
                   onChoose={(optionId) =>
                     conversation()?.choose(asked.id, optionId)
                   }
+                  kept={keptChoice(asked.id)}
                   scroller={requestScroller}
                   givesWay={listFolded}
                   onOverflow={(overflows) =>
@@ -1307,13 +1310,14 @@ export function App({
                   }
                 />
               )}
-              {!asked && planAsked && !listingSessions && (
+              {!asked && planAsked && (
                 <PlanBox
                   key={planAsked.wait.id}
                   wait={planAsked.wait}
                   agent={shownAgent}
                   width={columns}
                   hidden={viewing}
+                  away={listFocus}
                   active={listening && !listFocus && !viewing}
                   scroller={requestScroller}
                   onOverflow={(overflows) =>
@@ -1326,6 +1330,23 @@ export function App({
                   onAnswer={(answer) =>
                     conversation()?.answerPlan(planAsked.wait.id, answer)
                   }
+                  kept={
+                    state.planning?.id === planAsked.wait.id
+                      ? state.planning.box
+                      : undefined
+                  }
+                  onChange={(box) =>
+                    dispatch({
+                      type: 'in_session',
+                      key: all.front,
+                      action: {
+                        type: 'plan_box_changed',
+                        id: planAsked.wait.id,
+                        box,
+                      },
+                    })
+                  }
+                  {...leaving}
                 />
               )}
               {state.backgroundView && (
@@ -1365,27 +1386,17 @@ export function App({
                   onPick={sessions.pickOption}
                 />
               )}
-              {listingSessions && (
-                <SessionsPicker
-                  tabs={sessions.tabRows()}
-                  start={sessions.listFrom()}
-                  directory={directory}
-                  rows={menuRows}
-                  active={listening}
-                  onPick={sessions.pickTab}
-                />
-              )}
               {resumingShown && state.resumePicker && (
                 <ResumePicker
                   // A fresh list for each scope, its highlight on the first row.
                   key={String(state.resumePicker.everywhere)}
                   picker={state.resumePicker}
-                  open={sessions.openTabs()}
+                  open={sessions.openChildren()}
                   rows={menuRows}
                   agent={frontAgent}
                   home={home}
                   active={listening}
-                  onPick={(chosen) => sessions.pickResume(chosen, columns)}
+                  onPick={(chosen) => sessions.pickResume(chosen)}
                 />
               )}
               {theming && (

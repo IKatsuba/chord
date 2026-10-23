@@ -27,6 +27,18 @@ import type { Queued } from './queue.ts';
 import type { Search } from './search.ts';
 import { startingVim, type Vim } from './vim.ts';
 
+/**
+ * A draft ↓ set aside (U10, Q183): the whole of it as it stood, for ↑ to put
+ * back as it was.
+ */
+export interface KeptDraft {
+  readonly text: string;
+  readonly cursor: Cursor;
+  /** The images its placeholders name. */
+  readonly images: readonly PastedImage[];
+  readonly bash: boolean;
+}
+
 /** The session's part of the prompt: switching sessions swaps all of it. */
 export interface PromptSession {
   /** Prompts sent while a turn ran, oldest first, until each one's starts. */
@@ -40,6 +52,12 @@ export interface PromptSession {
   readonly held: readonly string[];
   /** What the prompt box holds, kept across `/clear`. */
   readonly draft: string;
+  /**
+   * The drafts ↓ set aside, oldest first, which ↑ walks before the history
+   * of prompts sent; the agent's own, so another agent's ↑ never brings one,
+   * and kept across sending and `/clear` (Q191).
+   */
+  readonly kept?: readonly KeptDraft[];
   /** Where the box's cursor is in the draft. */
   readonly cursor: Cursor;
   /**
@@ -63,6 +81,8 @@ export interface PromptSession {
 export interface PromptWindow {
   /** The slash command list's highlight and scroll, and whether Esc shut it. */
   readonly menu: MenuState;
+  /** The agents `/new` offers by name, as the window can start them. */
+  readonly agents?: readonly CommandItem[];
   /**
    * The working directory's files as `@` last found them; none until it has
    * looked.
@@ -90,8 +110,6 @@ export interface PromptWindow {
    * mention is still the same, and whether it was Enter.
    */
   readonly awaitedPick?: { readonly mention: Mention; readonly enter: boolean };
-  /** The agents `/new` offers by name, as the window can start them. */
-  readonly agents?: readonly CommandItem[];
   /**
    * The names `/team show`, `edit`, `run` and `stop` offer, as they were
    * read when the draft last came to one; none until then.
@@ -203,6 +221,15 @@ export type PromptAction =
     }
   /** `!` on an empty prompt, or a recalled command, turns bash mode on. */
   | { readonly type: 'bash_mode'; readonly on: boolean }
+  /** ↓ set the draft aside: it is kept whole, and the box empties. */
+  | { readonly type: 'draft_kept' }
+  /** Kept draft `index` left the stack: sent, or emptied while shown. */
+  | { readonly type: 'kept_taken'; readonly index: number }
+  /**
+   * The walk moves off kept draft `index`, shown: it keeps the box as it
+   * stands, edited or not, in its place on the stack (Q195).
+   */
+  | { readonly type: 'kept_edited'; readonly index: number }
   /** A prompt took the output of the `held` runs to the agent. */
   | { readonly type: 'context_sent'; readonly held: readonly string[] }
   /** The editor exited with an error, and the draft is as it was. */
@@ -417,6 +444,51 @@ export function reducePrompt(
       return { ...state, editorFailed: action.message };
     case 'bash_mode':
       return state.bash === action.on ? state : { ...state, bash: action.on };
+    case 'draft_kept':
+      return state.draft === ''
+        ? state
+        : {
+            ...state,
+            kept: [
+              ...(state.kept ?? []),
+              {
+                text: state.draft,
+                cursor: state.cursor,
+                images: imagesIn(state.draft, state.images),
+                bash: state.bash,
+              },
+            ],
+            draft: '',
+            cursor: START,
+            images: [],
+            bash: false,
+          };
+    case 'kept_edited': {
+      const kept = state.kept ?? [];
+
+      if (kept[action.index] === undefined) {
+        return state;
+      }
+
+      return {
+        ...state,
+        kept: kept.with(action.index, {
+          text: state.draft,
+          cursor: state.cursor,
+          images: imagesIn(state.draft, state.images),
+          bash: state.bash,
+        }),
+      };
+    }
+    case 'kept_taken': {
+      const kept = (state.kept ?? []).filter(
+        (_, index) => index !== action.index,
+      );
+
+      return kept.length === (state.kept ?? []).length
+        ? state
+        : { ...state, kept };
+    }
     case 'context_sent': {
       // Only what went: a run that ended since stays for the next prompt.
       const held = state.held.filter((id) => !action.held.includes(id));

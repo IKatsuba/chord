@@ -35,27 +35,28 @@ export interface CommandsSessions {
   /** Stops the command running in the session in front, if one runs. */
   stopCommand(): void;
   openResume(): void;
-  /** A session of `named`, or of the front one's agent, beside the rest. */
-  openBeside(named?: string): void;
-  askQuit(): void;
-  /** How many sessions are open, and how many of them wait on the person. */
-  counted(): { readonly open: number; readonly waits: number };
-  /** What the whole window has spent, closed agents and tabs too. */
+  quit(): void;
+  /** What the whole window has spent, closed agents and sessions too. */
   spend(): readonly SpendPart[];
   /**
    * `/clear` on the session in front, `before` done first; why it was
    * refused, if it was, and then nothing is done.
    */
   clearFront(before: () => void): string | undefined;
-  /** The front tab's key, whose `main` `/team` talks to. */
+  /** Main's key, which `/team` talks to. */
   frontKey(): number | undefined;
-  /** A child, not `main`, is picked in the front tab. */
+  /** A child, not `main`, is picked. */
   picked(): unknown;
   listTeams(): Promise<TeamListing | undefined>;
   runTyped(name: string, job: string): Promise<TeamShown>;
   stopTyped(name: string, show: (shown: TeamShown) => void): void;
   showTyped(name: string): Promise<TeamShown>;
   sendToMain(typed: string, prompt: string): void;
+  /**
+   * `/new`: an agent of `named`, or of main's runtime, opened for main and
+   * gone to, its call to draw; or why not, if it was refused.
+   */
+  newTyped(named: string): Promise<TeamShown>;
 }
 
 export function useCommands(
@@ -81,6 +82,35 @@ export function useCommands(
   /** Runs one of chord's own slash commands. */
   const run = (command: ChordCommand, args = '') => {
     switch (command) {
+      case 'new': {
+        const typed = ['new', args].filter(Boolean).join(' ');
+        const key = sessions.frontKey();
+
+        return void sessions.newTyped(args).then((shown) => {
+          // Opened, the call is main's, drawn as `/team run` draws its own;
+          // refused, it is said where it was typed, in open_agent's words.
+          if (shown.kind === 'ran' && key !== undefined) {
+            dispatch({
+              type: 'in_session',
+              key,
+              action: {
+                type: 'team_shown',
+                turnId: `new-${crypto.randomUUID()}`,
+                command: typed,
+                shown,
+              },
+            });
+          } else if (shown.kind === 'said') {
+            dispatch({
+              type: 'noted',
+              turnId: `new-${crypto.randomUUID()}`,
+              command: typed,
+              text: shown.text,
+              failed: true,
+            });
+          }
+        });
+      }
       case 'clear': {
         const refused = sessions.clearFront(() => {
           // The session they were queued in goes; what they said stays.
@@ -110,9 +140,6 @@ export function useCommands(
         return dispatch({ type: 'config_picker_opened' });
       case 'resume':
         return sessions.openResume();
-      case 'new':
-        // `/new` alone is `ctrl+x c`: the front session's agent again.
-        return sessions.openBeside(args === '' ? undefined : args);
       case 'theme':
         return dispatch({ type: 'theme_picker_opened' });
       case 'mcp':
@@ -128,7 +155,7 @@ export function useCommands(
           command,
           rows: report(
             command,
-            reportFacts(state, agent, cwd, Date.now(), sessions.counted(), {
+            reportFacts(state, agent, cwd, Date.now(), {
               spend: sessions.spend(),
               // Under the report's `⎿`, six columns in, inside the
               // transcript's margins: a note never wraps.
@@ -137,14 +164,14 @@ export function useCommands(
           ),
         });
       case 'exit':
-        return sessions.askQuit();
+        return sessions.quit();
       case 'team':
         return team(args);
     }
   };
 
   /**
-   * `/team` and its forms, for the front tab's `main` whatever is picked,
+   * `/team` and its forms, for `main` whatever is picked,
    * as teams belong to the session the person opened; what each does is
    * drawn in main's transcript under the command as typed.
    */

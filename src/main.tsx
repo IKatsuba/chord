@@ -37,34 +37,22 @@ import {
   serviceCopy,
 } from './ui/app/selection.ts';
 import {
+  type EarlierSession,
   earlierSessions,
   latestSession,
   readRecords,
-  type ResumableTab,
-  type ResumedTab,
+  recordedAgent,
+  type Resumable,
+  type Resume,
   ResumeError,
   resumeMessage,
-  sessionsByIds,
+  sessionById,
 } from './session/sessions.ts';
 import { snapshotOnSignal } from './platform/heap.ts';
 import { execPath } from './platform/process.ts';
 import { serveChord } from './server/server.ts';
 import { upgradeCommand } from './upgrade.ts';
 import { chordStateDir } from './session/state_dir.ts';
-import {
-  earlierWindows,
-  isWindowId,
-  mixedRefusal,
-  newWindowId,
-  readWindow,
-  readWindows,
-  type ResumeEntry,
-  windowMessage,
-  windowOnQuit,
-  type WindowTabs,
-  windowTabs,
-  writeWindow,
-} from './session/windows.ts';
 import {
   agentCommands,
   keybindingsFile,
@@ -151,8 +139,19 @@ const cli = chordCommand().action(async (options, named) => {
 
   await report(problems);
 
+  // One id and no agent named on the command line: the session's own
+  // agent, as its record says (Q180). An --agent-command still goes with
+  // the default agent alone (Q56), so it leaves the id to be refused there.
+  // `-r` with no id is Cliffy's `true`: the picker, in place of an id.
+  const given = typeof options.resume === 'string' ? options.resume : undefined;
+  const recorded =
+    named === undefined &&
+    options.agentCommand === undefined &&
+    given !== undefined
+      ? recordedAgent(await readRecords(chordStateDir()), given)
+      : undefined;
   const flags = {
-    agent: named,
+    agent: named ?? recorded,
     agentCommand: options.agentCommand,
     model: options.model,
     effort: options.effort,
@@ -182,9 +181,9 @@ const cli = chordCommand().action(async (options, named) => {
   }
 
   // A plain line rather than Cliffy's refusal, which prints the help
-  // first: nothing is wrong with how chord was called. Only the agents
-  // that start are asked for, so a restore whose tabs are all of other
-  // agents does not need the one the command line would have started.
+  // first: nothing is wrong with how chord was called. Only the agent that
+  // starts is asked for, so resuming another agent's session does not need
+  // the one the command line would have started.
   const refuseMissing = async (
     starts: readonly {
       agent: string;
@@ -266,12 +265,9 @@ const cli = chordCommand().action(async (options, named) => {
   // without stopping it (docs/memory.md).
   snapshotOnSignal(() => join(chordStateDir(), 'heaps'));
 
-  // `-r` with no id is Cliffy's `true`: the picker, in place of an id.
-  const picking = options.resume?.some((id) => id === true) === true;
-  let ids = options.resume?.filter((id) => typeof id === 'string');
-  let resumed: readonly ResumedTab[] = [];
-  // The window record `--resume w-…` opened, which quitting rewrites.
-  let fromWindow: (WindowTabs & { readonly id: string }) | undefined;
+  const picking = options.resume === true;
+  let id = given;
+  let resume: Resume | undefined;
   const find = { agent, cwd: resolve(options.cwd) };
 
   // Opened once for the start picker and the window both, unless the picker
@@ -296,12 +292,6 @@ const cli = chordCommand().action(async (options, named) => {
   const keys = await loadKeybindings(keybindingsFile(xdgConfig));
 
   if (picking) {
-    if (ids !== undefined && ids.length > 0) {
-      throw new ValidationError(
-        '--resume picks with no id, or opens the ids it is given; not both.',
-      );
-    }
-
     // A picker needs a person at a terminal to pick.
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
       throw new ValidationError('--resume needs an id when not in a terminal');
@@ -310,18 +300,15 @@ const cli = chordCommand().action(async (options, named) => {
     const stateDir = chordStateDir();
     const records = await readRecords(stateDir);
     const sessions = earlierSessions(records, { agent });
-    const windows = earlierWindows(await readWindows(stateDir), records);
 
-    if (sessions.length === 0 && windows.length === 0) {
-      throw new ValidationError(
-        `No earlier ${agent} session or window to resume.`,
-      );
+    if (sessions.length === 0) {
+      throw new ValidationError(`No earlier ${agent} session to resume.`);
     }
 
     terminal = await terminalSetup();
 
     const { promise, resolve: picked } = Promise.withResolvers<
-      ResumeEntry | undefined
+      EarlierSession | undefined
     >();
 
     start = render(
@@ -334,7 +321,6 @@ const cli = chordCommand().action(async (options, named) => {
         home={home}
         cwd={resolve(options.cwd)}
         sessions={sessions}
-        windows={windows}
         colours={paletteOf(
           resolveTheme(loaded.settings.theme ?? 'auto', terminal.found),
           COLOUR,
@@ -354,41 +340,20 @@ const cli = chordCommand().action(async (options, named) => {
       return;
     }
 
-    ids = [
-      chosen.kind === 'window'
-        ? chosen.window.id
-        : chosen.session.resume.sessionId,
-    ];
+    id = chosen.resume.sessionId;
   }
 
-  if (options.continue || ids !== undefined) {
+  if (options.continue || id !== undefined) {
     const stateDir = chordStateDir();
     const records = await readRecords(stateDir);
-    const windowId = ids?.find(isWindowId);
 
     try {
-      if (windowId !== undefined) {
-        if (ids!.length > 1) {
-          throw mixedRefusal(windowId);
-        }
-
-        fromWindow = {
-          id: windowId,
-          ...windowTabs(records, await readWindow(stateDir, windowId), {
-            agent,
-            named: named !== undefined,
-          }),
-        };
-        resumed = fromWindow.tabs;
-      } else {
-        resumed =
-          ids === undefined
-            ? [{ agent, resume: latestSession(records, find) }]
-            : sessionsByIds(records, ids, {
-                ...find,
-                named: named !== undefined,
-              });
-      }
+      // A w-… id of an old window is an id like any other, for the agent to
+      // answer (Q179).
+      resume =
+        id === undefined
+          ? latestSession(records, find)
+          : sessionById(records, id, find);
     } catch (error) {
       await leaveStart();
 
@@ -400,7 +365,6 @@ const cli = chordCommand().action(async (options, named) => {
     }
   }
 
-  const resume = resumed.at(0)?.resume;
   const cwd = resolve(resume?.cwd ?? options.cwd);
   const invokedAs = {
     agent,
@@ -440,17 +404,8 @@ const cli = chordCommand().action(async (options, named) => {
     };
   };
 
-  const read = new Map([[cwd, await readPlace(cwd)]]);
-
-  // Several sessions may work in several directories, each read once, and
-  // all before the window, so their problems are said in it.
-  for (const { resume } of resumed) {
-    const dir = resolve(resume.cwd);
-
-    if (!read.has(dir)) {
-      read.set(dir, await readPlace(dir));
-    }
-  }
+  // The one place the window reads: the directory its session works in.
+  const read = await readPlace(cwd);
 
   /** A directory read, as the window takes it: paths as it shows them. */
   const placeOf = ({
@@ -517,49 +472,14 @@ const cli = chordCommand().action(async (options, named) => {
     };
   };
 
-  const places = new Map(
-    [...read].map(([dir, found]) => [dir, placeOf(found)]),
-  );
-  const { model, effort, permissionMode, channel, layers } = read.get(cwd)!;
-  const first = places.get(cwd)!;
-  // A window's tabs each run their recorded agent, even one left alone.
-  const resumes =
-    resumed.length < 2 && fromWindow === undefined
-      ? undefined
-      : resumed.map((tab) => ({
-          ...tab,
-          place: places.get(resolve(tab.resume.cwd))!,
-        }));
-  // Each record names the agent its session is of, which another
-  // directory's files may not know how to start.
-  const unstartable = resumes?.find(
-    (tab) => tab.place.startupOf(tab.agent) === undefined,
-  );
+  const { model, effort, permissionMode, channel, layers } = read;
+  const first = placeOf(read);
 
-  if (unstartable !== undefined) {
-    await leaveStart();
-
-    throw new ValidationError(
-      `Session ${unstartable.resume.sessionId} is of agent ` +
-        `"${unstartable.agent}", which chord cannot start.`,
-    );
-  }
-
-  await refuseMissing(
-    resumes?.map((tab) => {
-      const start = tab.place.startupOf(tab.agent)!;
-
-      return {
-        agent: tab.agent,
-        agentCommand: start.agentCommand,
-        refused: start.refused,
-      };
-    }) ?? [
-      // A session resumed alone works in its record's directory, whose
-      // files may refuse what the command line's would not.
-      { agent, agentCommand, refused: first.startupOf(agent)?.refused },
-    ],
-  );
+  // A session resumed works in its record's directory, whose files may
+  // refuse what the command line's would not.
+  await refuseMissing([
+    { agent, agentCommand, refused: first.startupOf(agent)?.refused },
+  ]);
 
   const shown = { cwd, home };
   const settingsFile = userSettingsFile(xdgConfig);
@@ -581,11 +501,10 @@ const cli = chordCommand().action(async (options, named) => {
     value === undefined
       ? undefined
       : { id: value.id, from: setWhere(value.from, shown) };
-  let resumable: readonly ResumableTab[] = [];
-  let resumableFront = 0;
+  let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
   const server = serveChord();
-  const listed = await listedAgents(agentCommands(layers));
+  const listed = await listedAgents(agentCommands(loaded.layers));
   const window = (
     <App
       agent={agent}
@@ -600,12 +519,8 @@ const cli = chordCommand().action(async (options, named) => {
       startupOf={first.startupOf}
       warnings={problems.map((problem) => problemNote(problem, shown))}
       resume={resume}
-      resumes={resumes}
-      resumedFront={fromWindow?.front}
-      resumedNote={fromWindow?.note}
-      onQuit={(tabs, front) => {
-        resumable = tabs;
-        resumableFront = front;
+      onQuit={(session) => {
+        resumable = session;
       }}
       notifications={{
         channel: channel ?? 'auto',
@@ -653,41 +568,14 @@ const cli = chordCommand().action(async (options, named) => {
   await server.close();
   await clipboard?.disposed();
 
-  // A window opened from a record rewrites it, so quitting it again leaves
-  // no copy.
-  const saving = windowOnQuit(resumable, resumableFront, {
-    id: fromWindow?.id ?? newWindowId(),
-    at: Date.now(),
-  });
-  let saved = false;
-
-  if (saving !== undefined) {
-    try {
-      await writeWindow(chordStateDir(), saving);
-
-      saved = true;
-    } catch (error) {
-      // Each session's command still resumes it, so they are printed in
-      // the window's place.
-      console.error(
-        `chord could not save this window: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-    }
-  }
-
   // After the window has gone, so it stays in the terminal's scrollback.
-  const resuming =
-    saved && saving !== undefined
-      ? windowMessage(saving.id)
-      : resumeMessage(resumable, {
-          agent,
-          // The flag's command alone: the settings give theirs again (Q56).
-          ...(flags.agentCommand === undefined
-            ? {}
-            : { agentCommand: flags.agentCommand }),
-        });
+  const resuming = resumeMessage(resumable, {
+    agent,
+    // The flag's command alone: the settings give theirs again (Q56).
+    ...(flags.agentCommand === undefined
+      ? {}
+      : { agentCommand: flags.agentCommand }),
+  });
 
   if (resuming !== undefined) {
     console.log(resuming);

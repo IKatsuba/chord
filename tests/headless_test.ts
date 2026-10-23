@@ -16,7 +16,7 @@ import {
 } from '../src/headless.ts';
 import type { OneshotOutcome } from '../src/session/oneshot.ts';
 import { turnCost } from '../src/session/prices.ts';
-import { writeWindow } from '../src/session/windows.ts';
+import stripAnsi from 'strip-ansi';
 import { fakeAgentCommand } from './fixtures/fake.ts';
 import { TRACEBACK_ERROR } from './fixtures/fake_agent/options.ts';
 
@@ -646,14 +646,15 @@ test('--dangerously-skip-permissions needs -p', async () => {
  * Runs chord's command line from source with `path` alone as PATH, holding
  * `stubs`: each a command that execs the fake agent, as a CLI the person
  * installed would answer ACP; `overridden` names an agent the project's
- * settings file starts as the fake agent; `recorded` names an agent each of
- * the sessions `RECORDED` gives is of, in chord's records.
+ * settings file starts as the fake agent; `recorded` names the agent the
+ * sessions `RECORDED` gives are of, in chord's records, one for all or one
+ * each.
  */
 async function onPath(
   args: string[],
   stubs: string[],
   overridden?: string,
-  recorded?: string,
+  recorded?: string | readonly string[],
 ) {
   const dir = await mkdtemp(join(tmpdir(), 'chord-path-'));
   const bin = join(dir, 'bin');
@@ -709,17 +710,29 @@ async function onPath(
   }
 }
 
-/** Two sessions in chord's records, and a window record holding both. */
+/**
+ * Two sessions in chord's records, and a window record holding both, as
+ * chord wrote one before 0.58.0.
+ */
 const RECORDED = [
   '0b5c5f9e-0000-4000-8000-000000000001',
   '0b5c5f9e-0000-4000-8000-000000000002',
 ];
 const RECORDED_WINDOW = 'w-0b5c5f9e';
 
-async function seedRecords(stateDir: string, agent: string, cwd: string) {
+async function seedRecords(
+  stateDir: string,
+  agents: string | readonly string[],
+  cwd: string,
+) {
+  const agentOf = (index: number) =>
+    typeof agents === 'string' ? agents : agents[index]!;
+
   await mkdir(join(stateDir, 'records'), { recursive: true });
 
-  for (const sessionId of RECORDED) {
+  for (const [index, sessionId] of RECORDED.entries()) {
+    const agent = agentOf(index);
+
     await writeFile(
       join(stateDir, 'records', `${sessionId}.jsonl`),
       [
@@ -731,12 +744,25 @@ async function seedRecords(stateDir: string, agent: string, cwd: string) {
     );
   }
 
-  await writeWindow(stateDir, {
-    id: RECORDED_WINDOW,
-    at: 3,
-    tabs: RECORDED.map((sessionId) => ({ sessionId, agent, cwd })),
-    front: 0,
-  });
+  // As 0.57.0's windowText wrote it: chord writes none since.
+  await mkdir(join(stateDir, 'windows'), { recursive: true });
+  await writeFile(
+    join(stateDir, 'windows', `${RECORDED_WINDOW}.json`),
+    `${JSON.stringify(
+      {
+        id: RECORDED_WINDOW,
+        at: 3,
+        tabs: RECORDED.map((sessionId, index) => ({
+          sessionId,
+          agent: agentOf(index),
+          cwd,
+        })),
+        front: 0,
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 test('an agent whose command is not on PATH is refused in one line', async () => {
@@ -767,27 +793,77 @@ test('a settings command overrides a table agent, PATH or not', async () => {
   });
 });
 
-test("a restore asks PATH for its tabs' agents, not the default one", async () => {
-  const refused = {
+test("one -r, its agent named or not, asks PATH for its record's agent, not the default one (Q180)", async () => {
+  // Were the default asked for, the line would name claude and npx.
+  for (const named of [['cursor'], []]) {
+    expect(
+      await onPath([...named, '-r', RECORDED[0]!], [], undefined, 'cursor'),
+    ).toStrictEqual({
+      code: 1,
+      stdout: '',
+      stderr:
+        'chord: cursor runs "agent", which is not on PATH; ' +
+        'install it from https://cursor.com/docs/cli/installation\n',
+    });
+  }
+});
+
+test('one -r is refused on another agent named, or on an --agent-command, which goes with the default agent alone (Q180, Q56)', async () => {
+  for (const args of [
+    ['claude', '-r', RECORDED[0]!],
+    ['--agent-command', 'my-acp', '-r', RECORDED[0]!],
+  ]) {
+    const { code, stderr } = await onPath(args, [], undefined, 'cursor');
+
+    expect(code).toBe(2);
+    expect(refusal(stderr)).toEqual([
+      `Session ${RECORDED[0]} belongs to another agent (cursor).`,
+    ]);
+  }
+});
+
+/**
+ * The lines chord printed after Cliffy's "error: ", its help and the colours
+ * Cliffy paints whatever NO_COLOR says left out.
+ */
+function refusal(stderr: string): string[] {
+  const plain = stripAnsi(stderr);
+
+  return plain
+    .slice(plain.indexOf('error: ') + 'error: '.length)
+    .trimEnd()
+    .split('\n');
+}
+
+test('a second -r is refused by Cliffy, before anything asks PATH (Q181)', async () => {
+  const several = await onPath(
+    RECORDED.flatMap((id) => ['-r', id]),
+    [],
+    undefined,
+    'cursor',
+  );
+
+  // A ValidationError, as every --resume refusal is.
+  expect(several.code).toBe(2);
+  expect(several.stderr).not.toContain('not on PATH');
+  expect(refusal(several.stderr)).toEqual([
+    'Option "-r" can only occur once, but was found several times.',
+  ]);
+});
+
+test("an old window's w-… id goes on to start the agent named, as an id chord has no record of (Q179)", async () => {
+  // The window record seedRecords leaves holds both sessions; were it read,
+  // they would be said back. Here the id goes on to start the agent named,
+  // as one chord has no record of does, and PATH has no cursor.
+  expect(
+    await onPath(['cursor', '-r', RECORDED_WINDOW], [], undefined, 'cursor'),
+  ).toStrictEqual({
     code: 1,
     stdout: '',
     stderr:
       'chord: cursor runs "agent", which is not on PATH; ' +
       'install it from https://cursor.com/docs/cli/installation\n',
-  };
-
-  // Were the default asked for, the line would name claude and npx.
-  expect(
-    await onPath(
-      RECORDED.flatMap((id) => ['-r', id]),
-      [],
-      undefined,
-      'cursor',
-    ),
-  ).toStrictEqual(refused);
-  expect(
-    await onPath(['-r', RECORDED_WINDOW], [], undefined, 'cursor'),
-  ).toStrictEqual(refused);
+  });
 });
 
 test('a name only the settings define starts', async () => {
@@ -1097,4 +1173,107 @@ describe('CHD-454 tester: headless structured failure boundaries', () => {
       }
     });
   }
+});
+
+describe('CHD-493 U8 tester: recorded runtime precedes startup validation', () => {
+  async function startup(args: string[], recordCommand?: string) {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-u8-startup-'));
+    const here = join(dir, 'here');
+    const there = join(dir, 'there');
+    const state = join(dir, 'state');
+    const config = join(dir, 'config');
+
+    try {
+      await mkdir(join(here, '.chord'), { recursive: true });
+      await mkdir(join(there, '.chord'), { recursive: true });
+      await mkdir(join(config, 'chord'), { recursive: true });
+      await writeFile(
+        join(config, 'chord', 'settings.json'),
+        JSON.stringify({
+          agent: 'gemini',
+        }),
+      );
+      await seedRecords(join(state, 'chord'), 'cursor', there);
+
+      if (recordCommand !== undefined) {
+        await writeFile(
+          join(there, '.chord', 'settings.json'),
+          JSON.stringify({
+            agents: { cursor: { command: recordCommand } },
+          }),
+        );
+      }
+
+      return spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+          ...args,
+          '-C',
+          here,
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: dir,
+            XDG_STATE_HOME: state,
+            XDG_CONFIG_HOME: config,
+            PATH: join(dir, 'no-programs'),
+            NO_COLOR: '1',
+          },
+          stdio: ['ignore', 'pipe', 'pipe'],
+          encoding: 'utf8',
+          timeout: 10000,
+        },
+      );
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  }
+
+  test('a recorded agent overrides settings.agent before PATH validation', async () => {
+    const result = await startup(['-r', RECORDED[0]!]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'chord: cursor runs "agent", which is not on PATH;',
+    );
+    expect(result.stderr).not.toContain('gemini runs');
+  });
+
+  for (const id of ['unknown-u8', 'w-unknown-u8']) {
+    test(`an unrecorded ${id} keeps settings.agent`, async () => {
+      const result = await startup(['-r', id]);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('chord: gemini runs ');
+      expect(result.stderr).toContain('not on PATH');
+      expect(result.stderr).not.toContain('cursor runs');
+    });
+  }
+
+  for (const args of [
+    ['gemini', '-r', RECORDED[0]!],
+    ['--agent-command', 'missing-override-u8', '-r', RECORDED[0]!],
+  ]) {
+    test(`an explicit agent or command cannot adopt another runtime's record: ${args[0]}`, async () => {
+      const result = await startup(args);
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain(
+        `Session ${RECORDED[0]} belongs to another agent (cursor).`,
+      );
+      expect(result.stderr).not.toContain('not on PATH');
+    });
+  }
+
+  test('a command in the record directory never replaces the invocation command', async () => {
+    const result = await startup(['-r', RECORDED[0]!], 'missing-record-u8');
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'cursor runs "agent", which is not on PATH;',
+    );
+    expect(result.stderr).not.toContain('missing-record-u8');
+  });
 });

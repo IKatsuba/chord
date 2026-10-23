@@ -1,0 +1,40 @@
+ ← from @main
+   ⎿  agentchild
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  2 failed, 212 passed
+
+ → to @main
+   ⎿  Ran deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ⏺ Bash(deno task test tests/parse)
+   ⎿  214 passed, 0 failed
+
+ → to @main
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ I will run the parser tests on each change.
+
+ ← from @main
+   ⎿  Start on the tokenizer; the printer can wait.
+
+ ⏺ Received the message from main.
+
+ ← from @main
+   ⎿  CHD-1 unit 4: points 1 and 2 are good. Four things before I look again:
+
+      1. The fold counts the blank line after the list; drop it, as foldMessage already does for a received message.
+      2. foldMessage runs on every render; keep its lines in the same useMemo as the markdown.
+      3. The hint names ctrl+o even when the person has rebound it; take the key from useHintKey.
+      4. The refusal goes after the body, in the error colour, never folded.
+
+      Commit each as its own fix, run the targeted tests, and tell me when the check passes and I'll look again.
+
+ ⏺ Received the message from main.
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                         Fake Small · medium effort · 3% context used
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 17s
+    parser  fake · Fake Small · medium                           ◦ idle 15s

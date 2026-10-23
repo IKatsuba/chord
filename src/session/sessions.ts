@@ -1,15 +1,13 @@
 /**
  * Finding an earlier session to resume among chord's own session records:
- * the latest one for an agent and a directory (`--continue`), each by the
- * agent's id for it (`-r <id> -r <id> …`), or every one there or in any
- * directory (`/resume`). A whole window's, by its own record, is
- * `windows.ts`'s.
+ * the latest one for an agent and a directory (`--continue`), one by the
+ * agent's id for it (`--resume <id>`), or every one there or in any
+ * directory (`/resume`).
  */
 import { join } from 'node:path';
 import { readdir, readFile } from 'node:fs/promises';
 import { notFound } from '../not_found.ts';
 import { parseRecord, promptLine, recordsDir } from './record.ts';
-import { MAX_TABS } from './tabs.ts';
 
 /** An earlier session to open again, and what chord knows of it. */
 export interface Resume {
@@ -277,6 +275,18 @@ export function elsewhereRefusal(
 }
 
 /**
+ * The agent chord's latest record of session `id` ran on; none for an id
+ * chord has no record of. `chord -r <id>` with no agent on the command line
+ * opens on it (Q180).
+ */
+export function recordedAgent(
+  records: readonly SessionRecord[],
+  id: string,
+): string | undefined {
+  return latest(records.filter((record) => record.sessionId === id))?.agent;
+}
+
+/**
  * The session `--resume <id>` opens. chord need not have seen it: an id it has
  * no record of goes to the agent as it is, and the agent says whether it
  * knows it.
@@ -304,59 +314,6 @@ export function sessionById(
   return { sessionId: id, cwd };
 }
 
-/** A session `--resume` opens in a tab of its own, and whose agent runs it. */
-export interface ResumedTab {
-  readonly agent: string;
-  readonly resume: Resume;
-}
-
-/**
- * The tabs `-r <id> -r <id> …` opens, in the order the ids came, the first in
- * front. One id is `sessionById`'s, as it always was. Several open only from
- * chord's records, so every one is known before the window opens and none
- * leaves it half open: each in its record's directory, on its record's
- * agent, unless `named` says the agent was named on the command line, and
- * then every one must be that agent's, as one id must.
- */
-export function sessionsByIds(
-  records: readonly SessionRecord[],
-  ids: readonly string[],
-  { agent, cwd, named }: FindOptions & { readonly named: boolean },
-): ResumedTab[] {
-  if (ids.length > MAX_TABS) {
-    throw new ResumeError(
-      `A window opens at most ${MAX_TABS} sessions; --resume named ${ids.length}.`,
-    );
-  }
-
-  const twice = ids.find((id, index) => ids.indexOf(id) !== index);
-
-  if (twice !== undefined) {
-    throw new ResumeError(`Session ${twice} is named twice.`);
-  }
-
-  const [only] = ids;
-
-  if (only !== undefined && ids.length === 1) {
-    return [{ agent, resume: sessionById(records, only, { agent, cwd }) }];
-  }
-
-  return ids.map((id) => {
-    const found = latest(records.filter((record) => record.sessionId === id));
-
-    if (!found) {
-      throw new ResumeError(
-        `No session ${id} among chord's records; one it never saw opens ` +
-          'only on its own.',
-      );
-    }
-
-    return named
-      ? { agent, resume: sessionById(records, id, { agent, cwd }) }
-      : { agent: found.agent, resume: resumeOf(found) };
-  });
-}
-
 function resumeOf(record: SessionRecord): Resume {
   return {
     sessionId: record.sessionId,
@@ -382,55 +339,47 @@ export function resumeCommand(
    */
   agentCommand?: string,
 ): string {
-  const words = ['chord', agent];
+  const words = ['chord', shellQuote(agent)];
 
   if (agentCommand !== undefined) {
     words.push('--agent-command', shellQuote(agentCommand));
   }
 
-  return [...words, '--resume', sessionId].join(' ');
+  // An id that starts with a dash would be read as an option on its own;
+  // Cliffy takes it as the flag's value when joined with `=`.
+  return sessionId.startsWith('-')
+    ? [...words, `--resume=${shellQuote(sessionId)}`].join(' ')
+    : [...words, '--resume', shellQuote(sessionId)].join(' ');
 }
 
 /**
- * An open session quitting leaves to resume: its tab's agent, its id and the
- * directory it works in.
+ * The session quitting leaves to resume: its agent and its id.
  */
-export interface ResumableTab {
+export interface Resumable {
   readonly agent: string;
   readonly sessionId: string;
-  readonly cwd: string;
 }
 
 /**
- * What is printed once the window has gone: a command that resumes each
- * session, in tab order, or nothing when none had a prompt. `agentCommand`
- * goes with the sessions of the agent it overrides.
+ * What is printed once the window has gone: the command that resumes its
+ * session, or nothing when no prompt went to it. `agentCommand` goes with
+ * it when it is of the agent that command overrides.
  */
 export function resumeMessage(
-  tabs: readonly ResumableTab[],
+  session: Resumable | undefined,
   override?: {
     readonly agent: string;
     /** The `--agent-command` the person gave, for `agent` alone. */
     readonly agentCommand?: string;
   },
 ): string | undefined {
-  const commands = tabs.map(({ agent, sessionId }) =>
-    resumeCommand(
-      agent,
-      sessionId,
-      agent === override?.agent ? override.agentCommand : undefined,
-    ),
-  );
-
-  if (commands.length === 0) {
-    return undefined;
-  }
-
-  return `${
-    commands.length === 1
-      ? 'Resume this session with:'
-      : 'Resume these sessions with:'
-  }\n${commands.join('\n')}`;
+  return session === undefined
+    ? undefined
+    : `Resume this session with:\n${resumeCommand(
+        session.agent,
+        session.sessionId,
+        session.agent === override?.agent ? override.agentCommand : undefined,
+      )}`;
 }
 
 function shellQuote(text: string): string {

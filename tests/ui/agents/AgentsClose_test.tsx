@@ -3,6 +3,7 @@
  * key, held messages, a parent's close, records and `/resume`.
  */
 import { describe, expect, setSystemTime, test } from 'bun:test';
+import { pickAgent, readyAgent } from '../app/child_window.tsx';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -18,9 +19,7 @@ import {
   MAIN_MESSAGES,
 } from '../../fixtures/fake_agent/scenarios/agents.ts';
 import {
-  CTRL_X,
   DOWN,
-  ESC,
   leader,
   ready,
   send,
@@ -146,22 +145,6 @@ test('/clear with a child picked is refused, and on main it closes the children 
     expect(!window.frame().includes('Waiting on parser.')).toBeTruthy();
   }));
 
-test('closing a parent closes its children, asking first while one waits', () =>
-  withAgents(async (window) => {
-    await opened(window);
-    await window.shows('● docs needs your permission');
-    await leader(window, 'c');
-    await window.shows(' 2 fake ');
-    await leader(window, '1');
-    await window.shows('    parser  fake');
-    await leader(window, 'k');
-    await window.shows('1 fake waits for your permission · ctrl+x k again');
-    await window.press(CTRL_X);
-    await window.press('k');
-    await window.shows('Closed 1 fake and its 2 agents · /resume opens them');
-    expect(!window.frame().includes('    parser')).toBeTruthy();
-  }));
-
 /**
  * Drops each prompt line's `from`, as a record written before it was kept
  * has none, so only the wrapper and the served answers say who sent it.
@@ -191,8 +174,8 @@ const LEFT_OPEN =
   'are not reopened · /resume lists them';
 
 /**
- * Leaves a parent with parser and docs open, closing its tab, and opens it
- * again from `/resume`.
+ * Leaves a parent with parser and docs open for a new session with
+ * `/clear`, which closes them, and opens it again from `/resume`.
  */
 async function leftAndResumed(window: Window, legacy = false): Promise<void> {
   await opened(window);
@@ -202,15 +185,9 @@ async function leftAndResumed(window: Window, legacy = false): Promise<void> {
     () => count(window, 'Received the message from parser · fake.') === 2,
   );
   await window.shows('● docs needs your permission');
-  await leader(window, 'c');
-  await window.shows(' 2 fake ');
+  await send(window, '/clear');
+  await until('the list gone', () => !window.frame().includes('    parser'));
   await ready(window);
-  await leader(window, '1');
-  await window.shows('    parser  fake');
-  await leader(window, 'k');
-  await window.press(CTRL_X);
-  await window.press('k');
-  await window.shows('Closed 1 fake and its 2 agents · /resume opens them');
 
   if (legacy) {
     await forgetSenders(window.dir);
@@ -253,11 +230,11 @@ test('a parent the agent loads is drawn from its record, naming the children lef
     expect(count(window, '← from @parser · fake')).toStrictEqual(2);
     expect(!window.frame().includes('Read(README.md)')).toBeTruthy();
 
+    // The window closed parser with the session /clear let go, so it
+    // says so before the record would.
     await send(window, 'agentclose');
-    await window.shows(
-      'parser was closed when this session was left; open_agent starts ' +
-        'another',
-    );
+    await window.shows('Are you still there?');
+    await window.shows('parser is closed, so I will run the tests myself.');
     expect(!window.frame().includes('    main    fake')).toBeTruthy();
   }));
 
@@ -271,29 +248,32 @@ test(
   resumedFromRecord(true),
 );
 
-test('/resume marks a live child open in its tab, and picking it goes there without a second agent', () =>
+test('/resume marks a live child open now, and picking it goes to it without a second agent', () =>
   withAgents(async (window) => {
     await opened(window);
-    await leader(window, 'c');
-    await window.shows(' 2 fake ');
-    await ready(window);
+    // /resume waits for main's turn, which ends once parser has answered.
+    await until(
+      'both messages answered',
+      () => count(window, 'Received the message from parser · fake.') === 2,
+    );
+    await until('the turn to end', () => !window.frame().includes('Working'));
 
     const agents = window.pids.length;
 
     await window.type('/resume');
     await window.press('\r');
     await window.shows('Resume a session');
-    await window.shows('just now  open in 1  parser · agentchild');
+    await window.shows('just now  open now  parser · agentchild');
 
-    // docs, open in tab 1 too, was last used about when parser was, so
-    // either can be first; parser is picked by its number.
-    const row = /(\d)\. just now {2}open in 1 {2}parser · agentchild/.exec(
+    // docs, open too, was last used about when parser was, so either can be
+    // first; parser is picked by its number.
+    const row = /(\d)\. just now {2}open now {2}parser · agentchild/.exec(
       window.frame(),
     );
 
     assert(row);
     await window.press(row[1]!);
-    // Tab 1 in front, on parser, the same conversation the list names.
+    // parser picked, the same conversation the list names.
     await window.shows('parser · fake · Fake Small · opened by main');
     await window.shows('╭─ parser ─');
     await window.shows(MAIN_MESSAGES[1]);
@@ -324,69 +304,76 @@ test("a picked child's opening line goes on aging with the TUI idle", () =>
   }));
 
 describe('CHD-264 tester: failure surfaces in the window', () => {
-  async function anotherTab(window: Window) {
-    const opened = window.pids.length;
-
-    await leader(window, 'c');
-    // A failure notice can replace the ready hint at a narrow width.
-    await until(
-      'the new fake session connected',
-      () => window.pids.length > opened,
-    );
-  }
-
   for (const [columns, rows] of [
     [80, 24],
     [120, 40],
   ] as const) {
-    test(`idle time beside a failure mark, mixed notices and picker owners stay correct at ${columns}x${rows}; seeing each child clears only its news`, () =>
-      withAgents(async (window) => {
-        await window.resize({ columns, rows });
-        await ready(window);
-        await send(window, 'agentfail');
-        await window.shows("✗ parser's turn failed · ctrl+x a");
+    test(`failure idle age and independent child news survive attendance at ${columns}x${rows}`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
 
-        const failedRow = () =>
-          window
-            .frame()
-            .split('\n')
-            .find((line) => /^ {4}parser {2}fake/.test(line));
-        const age = () => Number(/◦ idle (\d+)s/.exec(failedRow() ?? '')?.[1]);
-        const first = age();
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
 
-        expect(Number.isFinite(first)).toBe(true);
-        await until(
-          'idle time advances beside the timeless failure mark',
-          () => age() > first,
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await readyAgent(window);
+            assert(main);
+            await main.window.open(main.key, {
+              agent: 'fake',
+              name: 'parser',
+              prompt: 'error',
+            });
+            await window.shows("✗ parser's turn failed · ctrl+x a");
+
+            const failedRow = () =>
+              window
+                .frame()
+                .split('\n')
+                .find((line) => /^ {4}parser {2}fake/.test(line));
+            const age = () =>
+              Number(/◦ idle (\d+)s/.exec(failedRow() ?? '')?.[1]);
+            const first = age();
+
+            expect(Number.isFinite(first)).toBe(true);
+            await until(
+              'idle time advances beside the timeless failure mark',
+              () => age() > first,
+            );
+            expect(failedRow()).toMatch(/◦ idle \d+s +✗ turn failed$/);
+            await main.window.open(main.key, {
+              agent: 'fake',
+              name: 'other',
+              prompt: 'crash',
+            });
+            await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a');
+            expect(window.frame()).not.toContain('sessions ended');
+            await leader(window, 'a');
+            await window.shows('╭─ parser ');
+            await window.shows('✗ other exited · ctrl+x a');
+            await send(window, 'text');
+            await window.shows('came in chunks');
+            await pickAgent(window, 'main');
+            await leader(window, 'a');
+            await window.shows('╭─ other ');
+            expect(window.frame()).toMatch(/^ {4}other .*✗ exited$/m);
+            await pickAgent(window, 'main');
+            await pickAgent(window, 'other');
+            expect(window.frame()).toMatch(/^ {4}other .*✗ exited$/m);
+            expect(window.frame()).not.toContain('✗ other exited · ctrl+x a');
+          },
+          { server, runtimes: ['fake'], columns, rows },
         );
-        expect(failedRow()).toMatch(/◦ idle \d+s +✗ turn failed$/);
-        await anotherTab(window);
-        await send(window, 'agentexit');
-        await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a');
-        await anotherTab(window);
-        await leader(window, 'w');
-        await until('the picker marks the failed tab', () =>
-          /1\. fake · 1 agent +◦ idle \d+s +✗ turn failed/.test(window.frame()),
-        );
-        await window.shows('✗ parser: exited');
-        expect(window.frame()).not.toContain('sessions ended');
-        await window.press(ESC);
-        await leader(window, 'a');
-        await window.shows('╭─ parser ');
-        await until('only exited child remains unseen', () =>
-          window.frame().includes('✗ parser exited in 2 fake · ctrl+x a'),
-        );
-        expect(window.frame()).not.toMatch(/^ {4}parser .*turn failed/m);
-        await send(window, 'text');
-        await window.shows('came in chunks');
-        await leader(window, '2');
-        await leader(window, 'a');
-        await window.shows('╭─ parser ');
-        expect(window.frame()).toMatch(/^ {4}parser .*✗ exited$/m);
-        await leader(window, '1');
-        await leader(window, '2');
-        expect(window.frame()).toMatch(/^ {4}parser .*✗ exited$/m);
-        expect(window.frame()).not.toContain('✗ parser exited in 2 fake');
-      }));
+      } finally {
+        await server.close();
+      }
+    });
   }
 });

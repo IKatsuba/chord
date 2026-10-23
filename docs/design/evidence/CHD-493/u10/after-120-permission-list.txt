@@ -1,0 +1,40 @@
+ other · codex · 6.1 Sol · opened by main 14s ago
+
+ ← from @main
+   ⎿  text
+
+ ⏺ What would you like me to do?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ other ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto review mode on (shift+tab to cycle)                                6.1 Sol · medium effort · 5% context used
+    main   fake · Fake Large with a 1M context window · medium  ● permission 7s
+  ❯ other  codex · 6.1 Sol · medium                             ◦ idle 7s

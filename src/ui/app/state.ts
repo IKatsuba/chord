@@ -15,7 +15,6 @@ import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { SignIn } from '../../session/sign_in.ts';
 import type { StartFailure } from '../../session/start_failure.ts';
-import type { EarlierWindow } from '../../session/windows.ts';
 import { addTurn, type Spent } from '../../session/usage.ts';
 import type { AgentOption } from '../../session/config.ts';
 import { reduceTranscript } from '../../session/transcript/reducer.ts';
@@ -27,13 +26,11 @@ import {
   type Action,
   type Binding,
   bound,
-  gotoAction,
   hintKey,
   keystrokeOf,
   layoutKeys,
   type Sequence,
   startsChord,
-  TAB_NUMBERS,
   types,
 } from '../shortcuts/bindings.ts';
 import {
@@ -74,7 +71,6 @@ import {
   type PickersState,
   reducePickers,
   resumePickerShown,
-  sessionsPickerShown,
   teamsPickerShown,
   themePickerShown,
 } from '../pickers/state.ts';
@@ -203,21 +199,13 @@ export interface WindowState
     PickersState,
     ShortcutsState,
     BackgroundState {
+  /** ctrl+c was pressed once; a second press quits. */
+  readonly quitArmed: false | 'ctrl+c';
   /**
-   * ctrl+c, or ctrl+d or `/exit` with sessions busy, was pressed once, and
-   * which, for the line to name it; a second press of either quits.
-   */
-  readonly quitArmed: false | 'ctrl+c' | 'ctrl+d';
-  /**
-   * The agents and tabs closed since the window opened, with what they had
+   * The agents and main sessions closed since the window opened, with what they had
    * spent then, which the window's total still counts (CHD-373, Q59).
    */
   readonly keptSpend?: readonly KeptSpend[];
-  /**
-   * `ctrl+x k` was pressed once on the busy session with this key; a second
-   * press while it holds stops and closes it.
-   */
-  readonly closeArmed?: number;
   /**
    * The list of the session's agents under the prompt has the keys, rather
    * than the box: ↑ ↓ pick, `x` closes.
@@ -281,15 +269,12 @@ export type AppAction =
   | ShortcutsAction
   | BackgroundAction
   | DialogsAction
-  /** ctrl+c, or with `by` ctrl+d or `/exit`, asks for a second press. */
-  | { readonly type: 'quit_armed'; readonly by?: 'ctrl+d' }
+  /** ctrl+c asks for a second press. */
+  | { readonly type: 'quit_armed' }
   | { readonly type: 'quit_disarmed' }
   /** A one-time notice came due, or its box was answered (CHD-434). */
   | { readonly type: 'notice_opened'; readonly id: string }
   | { readonly type: 'notice_closed' }
-  /** `ctrl+x k` on the busy session `key` asks for a second press. */
-  | { readonly type: 'close_armed'; readonly key: number }
-  | { readonly type: 'close_disarmed' }
   /** ↓ on an empty prompt moved the keys into the list, or they went back. */
   | { readonly type: 'agents_focused'; readonly focused: boolean }
   /** The `❯` went on to the summary line, or off it. */
@@ -310,7 +295,6 @@ export type AppAction =
       readonly type: 'resume_listed';
       readonly asked: string;
       readonly sessions: readonly EarlierSession[];
-      readonly windows: readonly EarlierWindow[];
       readonly cwd: string;
       readonly otherwise: string;
     }
@@ -476,6 +460,9 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'pick_settled':
     case 'draft_set':
     case 'bash_mode':
+    case 'draft_kept':
+    case 'kept_taken':
+    case 'kept_edited':
     case 'context_sent':
     case 'editor_failed':
     case 'images_sent':
@@ -493,7 +480,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'resume_asked':
     case 'resume_scope_toggled':
     case 'resume_picker_closed':
-    case 'sessions_picker_closed':
     case 'config_picker_opened':
     case 'config_option_opened':
     case 'config_picker_back':
@@ -506,7 +492,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'mcp_closed':
     case 'teams_picker_opened':
     case 'teams_picker_closed':
-    case 'sessions_picker_opened':
       return listedGone(state, reducePickers(state, action) as AppState);
     case 'help_toggled':
     case 'help_closed':
@@ -539,19 +524,18 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       };
     case 'form_filled':
     case 'questions_answered':
+    case 'choice_moved':
+    case 'plan_box_changed':
     case 'request_overflowed':
       return reduceDialogs(state, action) as AppState;
     case 'request_attended': {
       // The keys go into the request from wherever they were: the list of
-      // agents, a search and the sessions picker let go of them, the draft
-      // staying as it is (CHD-158).
-      const attended = [
-        { type: 'agents_focused', focused: false },
-        { type: 'sessions_picker_closed' },
-      ].reduce<AppState>(
-        (next, step) => reduceApp(next, step as AppAction),
-        reduceDialogs(state, action) as AppState,
-      );
+      // agents and a search let go of them, the draft staying as it is
+      // (CHD-158).
+      const attended = reduceApp(reduceDialogs(state, action) as AppState, {
+        type: 'agents_focused',
+        focused: false,
+      });
       const { search: _, ...rest } = attended;
 
       return rest;
@@ -592,14 +576,12 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         resumeAsked: ___,
         configPicker: ____,
         themePicker: _____,
-        closeArmed: ______,
-        sessionsPicker: _______,
-        agentsFocus: ________,
-        agentCloseArmed: _________,
-        summaryFocus: __________,
-        teamsPicker: ___________,
-        backgroundView: ____________,
-        agentsView: _____________,
+        agentsFocus: ______,
+        agentCloseArmed: _______,
+        summaryFocus: ________,
+        teamsPicker: _________,
+        backgroundView: __________,
+        agentsView: ___________,
         ...rest
       } = state;
 
@@ -652,9 +634,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // A turn may have started while the records were read.
       const said =
         resumeRefusal(rest) ??
-        (action.sessions.length === 0 && action.windows.length === 0
-          ? action.otherwise
-          : undefined);
+        (action.sessions.length === 0 ? action.otherwise : undefined);
 
       // It opens on this directory's, as Claude Code's does, even on none, so
       // that ctrl+a is there to reach the others.
@@ -663,7 +643,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
             ...rest,
             resumePicker: {
               sessions: action.sessions,
-              windows: action.windows,
               cwd: action.cwd,
               everywhere: false,
             },
@@ -689,7 +668,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       };
     }
     case 'agent_closed':
-      // For the record; the list reads the tabs.
+      // For the record; the list reads the window's agents.
       return state;
     case 'run_typed':
       // For the record; the command drew it.
@@ -701,10 +680,12 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         endedMonitors: action.ended,
       };
     case 'cleared':
-      // A new session: only what is the window's own stays, and the draft
-      // with its images.
+      // A new session: only what is the window's own stays, the agents /new
+      // offers among it, and the draft with its images and the drafts set
+      // aside (Q191).
       return {
         ...initialAppState,
+        ...(state.agents === undefined ? {} : { agents: state.agents }),
         // What closed agents and let-go sessions spent, which still counts.
         ...(state.keptSpend === undefined
           ? {}
@@ -712,6 +693,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         expanded: state.expanded,
         theme: state.theme,
         draft: state.draft,
+        ...(state.kept === undefined ? {} : { kept: state.kept }),
         cursor: state.cursor,
         images: state.images,
         imageCount: state.imageCount,
@@ -768,7 +750,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // note of the sessions for good: a note back after it is stale.
       const { sessionsNote: _, ...rest } = state;
 
-      return { ...rest, quitArmed: action.by ?? 'ctrl+c', help: false };
+      return { ...rest, quitArmed: 'ctrl+c', help: false };
     }
     case 'quit_disarmed':
       return { ...state, quitArmed: false };
@@ -778,20 +760,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         : state;
     case 'notice_closed': {
       const { notice: _, ...rest } = state;
-
-      return rest;
-    }
-    case 'close_armed': {
-      const { sessionsNote: _, ...rest } = state;
-
-      return { ...rest, closeArmed: action.key, help: false };
-    }
-    case 'close_disarmed': {
-      if (state.closeArmed === undefined) {
-        return state;
-      }
-
-      const { closeArmed: _, ...rest } = state;
 
       return rest;
     }
@@ -1006,12 +974,15 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   bash: true,
   held: true,
   draft: true,
+  kept: true,
   cursor: true,
   images: true,
   imageCount: true,
   takesImages: true,
   filling: true,
   answering: true,
+  choosing: true,
+  planning: true,
 };
 
 /** A session's own part of the window as `state` fills it. */
@@ -1032,7 +1003,7 @@ export function windowOf(state: AppState): WindowState {
 export const initialSession: SessionState = sessionOf(initialAppState);
 
 /**
- * The window with every open session's state, by its tab's key, and the one
+ * The window with every open session's state, by its key, and the one
  * in front, whose state fills the window.
  */
 export interface WindowedState {
@@ -1050,7 +1021,7 @@ export interface WindowedState {
 export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
   readonly name: string;
   readonly kind: SpendKind;
-  /** The agent a tab's own session is. */
+  /** The agent the main session is. */
   readonly agent?: string | undefined;
   /** The agent a child runs on, as chord starts it. */
   readonly runtime?: string | undefined;
@@ -1060,7 +1031,7 @@ export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
 interface Closing {
   readonly session: SessionState;
   readonly place: KeptPlace;
-  /** The tab `/clear` or a resume let it go from, whose key goes on. */
+  /** The session `/clear` or a resume let it go from, whose key goes on. */
   readonly from?: number;
 }
 
@@ -1106,9 +1077,7 @@ export type WindowedAction =
       readonly key: number;
       readonly action: AppAction;
     }
-  /** A session opened under `key`, as it starts, and comes to the front. */
-  | { readonly type: 'session_opened'; readonly key: number }
-  /** An agent or tab closing: what it spent is kept for the window's total (CHD-373). */
+  /** An agent or a main session closing: what it spent is kept for the window's total (CHD-373). */
   | { readonly type: 'spend_kept'; readonly kept: KeptSpend }
   /**
    * Session `key` is closing: it is held as it is, its last events still
@@ -1119,13 +1088,13 @@ export type WindowedAction =
       readonly key: number;
       readonly place: KeptPlace;
       /**
-       * The tab whose session it is, when that tab goes on with another:
+       * Main's key, when main goes on with another session:
        * `key` is then the closing's own (CHD-373 S3c).
        */
       readonly from?: number;
     }
   /**
-   * What a session `/clear` or a resume let go from tab `from` said of a
+   * What a session `/clear` or a resume let go from main, `from`, said of a
    * turn of its after: to the one of those that had the turn.
    */
   | {
@@ -1177,25 +1146,6 @@ export function reduceWindowed(
   action: WindowedAction,
 ): WindowedState {
   switch (action.type) {
-    case 'session_opened': {
-      // It comes forward as a switch does, so a note of the sessions goes,
-      // and the selection with what drew it.
-      const left = letGo(state);
-      // A pick Enter waits on belongs to the draft it was pressed in.
-      const {
-        sessionsNote: _,
-        selection: __,
-        awaitedPick: ___,
-        ...window
-      } = left.window;
-
-      return {
-        ...left,
-        window,
-        sessions: { ...left.sessions, [action.key]: initialSession },
-        front: action.key,
-      };
-    }
     case 'spend_kept':
       return {
         ...state,
@@ -1296,7 +1246,7 @@ export function reduceWindowed(
     }
     case 'session_closed': {
       const { [action.key]: _, ...sessions } = state.sessions;
-      const { closeArmed: __, agentCloseArmed: ___, ...window } = state.window;
+      const { agentCloseArmed: __, ...window } = state.window;
       const left = { ...state, window, sessions };
 
       // Shown as switching shows it, so a note of the sessions goes too.
@@ -1453,7 +1403,6 @@ function pickerShown(state: AppState): boolean {
 /** One of chord's pickers or panels but the notice is open over the prompt. */
 function otherPickerShown(state: AppState): boolean {
   return (
-    sessionsPickerShown(state) ||
     modelPickerShown(state) ||
     resumePickerShown(state) ||
     configPickerShown(state) ||
@@ -1697,38 +1646,9 @@ function boundCommand(
     }
   }
 
-  // The window's sessions come first, over a form, a permission and every
-  // list, so that a digit after the leader never picks a choice.
+  // ctrl+x a comes first, over a form, a permission and every list.
   if (session !== undefined) {
     return session;
-  }
-
-  // The sessions picker stands in front of a form or a permission, so their
-  // keys wait behind it; only the window's own get past.
-  if (sessionsPickerShown(state)) {
-    if (on('select:cancel')) {
-      return 'close_sessions_picker';
-    }
-
-    if (key.ctrl && input === 'c') {
-      return draft !== ''
-        ? 'clear_draft'
-        : state.quitArmed
-          ? 'quit'
-          : 'arm_quit';
-    }
-
-    if (key.ctrl && input === 'd' && draft === '') {
-      return 'quit';
-    }
-
-    if (on('app:toggleTranscript')) {
-      return 'toggle_expanded';
-    }
-
-    const step = scrollStep(on);
-
-    return step && `scroll_${step}`;
   }
 
   // The list of agents takes ↑ ↓, j k, Enter, Esc and `x`; every other
@@ -2098,37 +2018,11 @@ function agentsCommand(
   return key.return || key.escape ? 'agents_leave' : undefined;
 }
 
-/** What a key bound to a `session:` action asks for. */
+/** What a key bound to `session:attention` asks for. */
 function sessionCommand(
   on: (action: Action) => boolean,
 ): KeyCommand | undefined {
-  if (on('session:new')) {
-    return 'new_session';
-  }
-
-  if (on('session:next')) {
-    return 'next_session';
-  }
-
-  if (on('session:previous')) {
-    return 'previous_session';
-  }
-
-  if (on('session:list')) {
-    return 'list_sessions';
-  }
-
-  if (on('session:attention')) {
-    return 'attend_session';
-  }
-
-  if (on('session:close')) {
-    return 'close_session';
-  }
-
-  const n = TAB_NUMBERS.find((n) => on(gotoAction(n)));
-
-  return n && `goto_session_${n}`;
+  return on('session:attention') ? 'attend_session' : undefined;
 }
 
 /** What a key means to vim mode, while it is on and the box has the keys. */

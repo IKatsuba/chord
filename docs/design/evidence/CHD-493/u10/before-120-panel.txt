@@ -1,0 +1,40 @@
+      3. The hint names ctrl+o even when the person has rebound it; take the key from useHintKey.
+      4. The refusal goes after the body, in the error colour, never folded.
+
+      Commit each as its own fix, run the targeted tests, and tell me when the check passes and I'll look again.
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both in tests/parse/printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ › a draft for main
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                           home end for the top and the bottom   ctrl + x a for what waits on you
+  shift or \ + enter for a newline        ctrl + c to copy                      1–9 to pick a choice
+  ctrl + g to edit in $EDITOR             / @ for commands or files             ↑ ↓ or j k to move between choices
+  ctrl + v to paste an image              ↑ ↓ to pick a command or file         enter to pick the highlighted choice
+  alt + ← → to move by word               tab to complete a command             esc to reject a permission
+  cmd + ← → to line start or end          tab enter to add a file               esc ← to leave a picker or shortcuts
+  ↑ ↓ for prompts, agents, background     esc to close commands or files        ctrl + a to show all directories
+  x to close an agent, stop background    ! for bash mode                       tab ← → ↑ ↓ space to answer forms
+  enter for background, details, a call   backspace to leave bash mode          ctrl + c to stop the turn and its form
+  ctrl + r to search prompts              esc to interrupt or stop a command    /vim for vim mode
+  tab enter to take a match               shift + tab to cycle modes            ? for shortcuts
+  esc to cancel a search                  ctrl + o for verbose output           any key to quit the crash screen
+  pgup pgdn or wheel to scroll            ctrl + c to clear input
+  shift + ↑ ↓ to scroll a line            ctrl + d or ctrl + c twice to quit
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 9s
+    parser  fake · Fake Small · medium                           ◦ idle 14s  ✓ new reply

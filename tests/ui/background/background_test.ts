@@ -98,7 +98,7 @@ const brief = (items: readonly BackgroundItem[]) =>
   );
 
 describe('the items', () => {
-  test("every monitor and task of the tab's agents, oldest first, each in its state", () => {
+  test("every monitor and task of the session's agents, oldest first, each in its state", () => {
     const items = backgroundItems([
       agent(1, {
         monitors: [running('m2', 'dev server', 300)],

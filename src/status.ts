@@ -1,18 +1,13 @@
 /**
  * What chord tells the terminal it is doing: one root record of the Program
  * Status Protocol (OSC 7501), which OpenTUI's `setProgramStatus` writes, for
- * every agent of every tab at once (CHD-382, the owner's Q68).
+ * every agent of the window at once (CHD-382, the owner's Q68).
  */
 
 import type { ProgramStatus, ProgramStatusKind } from '@opentui/core';
 import { type AskingWait, waitMessage } from './notify.ts';
-import {
-  type Failure,
-  failureOf,
-  notifiedName,
-  type TabWait,
-  type Tabs,
-} from './session/tabs.ts';
+import { type AgentWait, type Failure, failureOf } from './session/waits.ts';
+import { notifiedName, type WindowAgents } from './session/window_agents.ts';
 
 /** The protocol's states that one agent can be in. */
 type AgentState = 'blocked' | 'error' | 'working' | 'done' | 'idle';
@@ -62,7 +57,7 @@ function kindOf(wait: AskingWait): ProgramStatusKind {
  * turn ended that the person has not seen; else idle. A monitor or task
  * running between turns leaves it idle (Q69).
  */
-function agentStatus(wait: TabWait, key: number): AgentStatus {
+function agentStatus(wait: AgentWait, key: number): AgentStatus {
   if (wait.asking !== undefined) {
     return {
       state: 'blocked',
@@ -142,18 +137,22 @@ export function messageLine(text: string): string {
 }
 
 /**
- * The root record for every agent of every tab: the first state in `ORDER`
- * any of them is in, and of those in it, the one the attention order would
- * name first, waiting longest, then further left. Only blocked, done and
+ * The root record for every agent of the window: the first state in
+ * `ORDER` any of them is in, and of those in it, the one the attention order
+ * would name first, waiting longest, then main, then the list's order. Only blocked, done and
  * error say why, as a notification would (Q71). `title` names the main
  * session, as the person knows it; none while it has no name (CHD-491).
  */
-export function programStatus<C>(tabs: Tabs<C>, title?: string): ProgramStatus {
+export function programStatus<C>(
+  agents: WindowAgents<C>,
+  title?: string,
+): ProgramStatus {
   const cut = title === undefined ? '' : statusLine(title, TITLE_BYTES);
   const named = cut.trim() === '' ? {} : { title: cut };
-  const all = tabs.tabs
-    .flatMap((tab) => [tab, ...tab.children])
-    .map(({ key, wait }) => agentStatus(wait, key));
+  const all = [
+    ...(agents.main === undefined ? [] : [agents.main]),
+    ...agents.children,
+  ].map(({ key, wait }) => agentStatus(wait, key));
   const state =
     ORDER.find((each) => all.some((agent) => agent.state === each)) ?? 'idle';
   const first = all
@@ -164,7 +163,7 @@ export function programStatus<C>(tabs: Tabs<C>, title?: string): ProgramStatus {
     return { state, app: APP, ...named };
   }
 
-  const name = notifiedName(tabs, first.key) ?? '';
+  const name = notifiedName(agents, first.key) ?? '';
   const message =
     first.asking !== undefined
       ? waitMessage(first.asking, name)

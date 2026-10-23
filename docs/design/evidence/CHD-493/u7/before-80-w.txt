@@ -1,0 +1,24 @@
+  An agent chord does not know chord my-agent --agent-command "my-agent --acp"
+
+
+  error: No window w-1a2b3c4d among chord's records.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -3,12 +3,7 @@
  * chord's first keys; and the words the window's keys are read in, a press
  * and what it asks for.
  */
-import {
-  DEFAULT_KEYMAP,
-  type Keymap,
-  type Sequence,
-  type TabNumber,
-} from './bindings.ts';
+import { DEFAULT_KEYMAP, type Keymap, type Sequence } from './bindings.ts';
 import type { ScrollStep } from '../transcript/scroll.ts';
 
 export interface ShortcutsState {
@@ -182,21 +177,8 @@ export type KeyCommand =
   /** A key bound to `history:previous` or `history:next` other than ↑ and ↓. */
   | 'history_older'
   | 'history_newer'
-  /** ctrl+x c: a new session of the front one's agent, in front. */
-  | 'new_session'
-  /** ctrl+x n and ctrl+x p: the next or previous tab, round the ends. */
-  | 'next_session'
-  | 'previous_session'
-  /** ctrl+x 1 to 9: that tab, if there is one. */
-  | `goto_session_${TabNumber}`
-  /** ctrl+x w: the sessions picker. */
-  | 'list_sessions'
-  /** Esc closes the sessions picker, and the session in front stays. */
-  | 'close_sessions_picker'
-  /** ctrl+x a: the session behind that has waited longest for the person. */
+  /** ctrl+x a: the agent of the session that has waited longest for the person. */
   | 'attend_session'
-  /** ctrl+x k: closes the front session, or asks again while it is busy. */
-  | 'close_session'
   /** ↑ and ↓, or k and j, in the list of agents: pick the row above or below. */
   | 'agents_up'
   | 'agents_down'

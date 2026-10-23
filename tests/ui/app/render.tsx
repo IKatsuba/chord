@@ -16,17 +16,19 @@ import type { Notifications } from '../../../src/notify.ts';
 import type { EditorMode } from '../../../src/settings.ts';
 import { openSession, type Session } from '../../../src/session/session.ts';
 import type {
-  ResumableTab,
+  Resumable,
   SessionRecord,
 } from '../../../src/session/sessions.ts';
 import type { ShellOptions, ShellProcess } from '../../../src/shell.ts';
 import { App } from '../../../src/ui/app/App.tsx';
-import type { OpeningTab, SessionStart } from '../../../src/ui/app/sessions.ts';
+import type { SessionStart } from '../../../src/ui/app/sessions.ts';
+import type { Resume } from '../../../src/session/sessions.ts';
 import {
   keybindingsNotice,
   readKeybindings,
 } from '../../../src/ui/shortcuts/bindings.ts';
 import type { Copy } from '../../../src/ui/app/selection.ts';
+import type { WindowedState } from '../../../src/ui/app/state.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { draw } from '../harness.tsx';
@@ -137,6 +139,7 @@ export async function withWindow(
     shell,
     heldClose,
     heldOpen,
+    whileStarting = false,
     openWith = openSession,
     onQuit,
     startupOf,
@@ -144,10 +147,11 @@ export async function withWindow(
     teams,
     readRecords,
     stateDir,
-    resumes,
+    resume,
     log,
     copy = copiedStub,
     copyOnSelect,
+    onState,
     mouse = true,
   }: {
     /** The agent the window runs, as `chord <agent>` names it, on the fake. */
@@ -191,9 +195,15 @@ export async function withWindow(
      * midway; it is given the screen to look at meanwhile.
      */
     heldOpen?: (frame: () => string) => Promise<void>;
+    /**
+     * The body runs at once, while the window's own session may still be
+     * starting, so a test can quit a start that never ends; the cleanup
+     * after it is the same (CHD-493).
+     */
+    whileStarting?: boolean;
     /** Opens each session in openSession's place, to make one misbehave. */
     openWith?: typeof openSession;
-    onQuit?: (tabs: readonly ResumableTab[]) => void;
+    onQuit?: (session: Resumable | undefined) => void;
     /** How each agent `/new` names starts, as `main.tsx` works it out. */
     startupOf?: (agent: string) => SessionStart | undefined;
     /** The startup splash, which the window's tests leave off. */
@@ -207,8 +217,11 @@ export async function withWindow(
      * them; one of its own in its directory by default.
      */
     stateDir?: string;
-    /** Earlier sessions the window opens in place of a new one, as `--resume` does. */
-    resumes?: readonly OpeningTab[];
+    /**
+     * The earlier session the window opens in place of a new one, as
+     * `--resume` does, working in its own directory.
+     */
+    resume?: Resume;
     /**
      * What the terminal is told, as `../harness.tsx`'s `Logged` keeps it,
      * the window on the alternate screen.
@@ -220,6 +233,8 @@ export async function withWindow(
      */
     copy?: Copy;
     copyOnSelect?: boolean;
+    /** Told the window's state after each change, as App's `onState` is. */
+    onState?: (all: WindowedState) => void;
     /** `"mouse": false`: the terminal is not asked for it, and nothing copies. */
     mouse?: boolean;
   } = {},
@@ -248,9 +263,9 @@ export async function withWindow(
     <App
       agent={agent}
       {...(configHome === undefined ? {} : { configHome: configHome(dir) })}
-      cwd={dir}
+      cwd={resume?.cwd ?? dir}
       stateDir={stateDir ?? join(dir, 'state')}
-      {...(resumes ? { resumes } : {})}
+      {...(resume ? { resume } : {})}
       agentCommand={agentCommand}
       typedCommand={typedCommand}
       warnings={warnings}
@@ -281,6 +296,7 @@ export async function withWindow(
       splash={splash}
       {...(mouse ? { copy } : {})}
       {...(copyOnSelect === undefined ? {} : { copyOnSelect })}
+      {...(onState === undefined ? {} : { onState })}
       open={async (options) => {
         const opening = openWith(options);
 
@@ -348,10 +364,13 @@ export async function withWindow(
   let stuck: Error | undefined;
 
   try {
-    await until('the session', () => session !== undefined);
-    // The window takes it later: until then Enter keeps the draft, and a
-    // test's first prompt would stay unsent.
-    await until('the window to take the session', () => up);
+    if (!whileStarting) {
+      await until('the session', () => session !== undefined);
+      // The window takes it later: until then Enter keeps the draft, and a
+      // test's first prompt would stay unsent.
+      await until('the window to take the session', () => up);
+    }
+
     await body(window);
   } finally {
     await app.unmount();

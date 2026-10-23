@@ -156,16 +156,6 @@ test('/status names the agent, model, mode, session and directory', () => {
   ]);
 });
 
-test('/status counts the sessions open once there are several', () => {
-  const sessions = (open: number, waits: number) =>
-    text(statusReport({ ...FACTS, sessions: { open, waits } })).at(-1);
-
-  expect(sessions(1, 0)).toStrictEqual('Directory: /work');
-  expect(sessions(2, 0)).toStrictEqual('Sessions:  2 open');
-  expect(sessions(3, 1)).toStrictEqual('Sessions:  3 open (1 waits)');
-  expect(sessions(4, 2)).toStrictEqual('Sessions:  4 open (2 wait)');
-});
-
 test("a cost and a context chord worked out read as chord's estimate", () => {
   expect(
     text(
@@ -357,14 +347,16 @@ test("/cost adds the window's table once it holds more than one session, and lea
     agent: 'fake',
     figure: { cost: { amount: 0.025, currency: 'USD' } },
   };
-  const one = {
-    spend: [{ name: '1 fake', kind: 'tab' as const, parts: [main] }],
-    width: 114,
-  };
+  const one = { spend: [main], width: 114 };
   const two = {
     spend: [
-      ...one.spend,
-      { name: '2 fake', kind: 'tab' as const, parts: [main] },
+      main,
+      {
+        name: 'parser',
+        kind: 'agent' as const,
+        runtime: 'fake',
+        figure: { cost: { amount: 0.025, currency: 'USD' } },
+      },
     ],
     width: 114,
   };
@@ -383,10 +375,10 @@ test("/cost adds the window's table once it holds more than one session, and lea
   ]);
   expect(text(costReport({ ...facts, window: two })).slice(2)).toStrictEqual([
     '',
-    'This window     Cost  Tokens',
-    '1 fake       $0.0250       —',
-    '2 fake       $0.0250       —',
-    'Total        $0.0500       —',
+    'This session     Cost  Tokens',
+    'main          $0.0250       —',
+    'parser        $0.0250       —  agent',
+    'Total         $0.0500       —',
   ]);
 });
 

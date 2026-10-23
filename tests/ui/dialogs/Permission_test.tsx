@@ -4,6 +4,7 @@
  * window (CHD-246).
  */
 import { describe, expect, test } from 'bun:test';
+import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
@@ -22,7 +23,6 @@ import {
   END,
   ESC,
   left,
-  leader,
   send,
   until,
   UP,
@@ -694,13 +694,14 @@ describe('CHD-246 tester: request lifecycle and small rooms', () => {
   }
 
   test('two sessions answer their own overflowing requests independently', () =>
-    withWindow(
+    withChild(
       async (window) => {
+        await openOther(window);
         await send(window, 'bigask');
         await asked(window);
         await window.press(END);
         await window.shows('mode: overwrite');
-        await leader(window, 'c');
+        await pickAgent(window, 'other', true);
         await window.shows('Fake Large with a 1M context window');
         await send(window, 'bigask');
         await asked(window);
@@ -708,11 +709,11 @@ describe('CHD-246 tester: request lifecycle and small rooms', () => {
         expect(window.frame()).not.toContain('mode: overwrite');
         await window.press(PAGE_DOWN);
         await window.shows('lines above');
-        await leader(window, '1');
+        await pickAgent(window, 'main', true);
         await asked(window);
         await window.press('1');
         await window.shows('Permission: allow.');
-        await leader(window, '2');
+        await pickAgent(window, 'other', true);
         await asked(window);
         expect(window.frame()).not.toContain('Permission: allow.');
         await window.press(ESC);
@@ -799,3 +800,40 @@ describe('CHD-246 tester: queued large permission requests', () => {
       ));
   }
 });
+
+test('↓ on the last choice goes into the agents list rather than round, and ↑ straight back finds that choice still picked (Q194)', () =>
+  withChild(
+    async (window) => {
+      await openOther(window);
+      await send(window, 'permission');
+      await asked(window);
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.shows('❯ 3. Deny');
+
+      const at = boxTop(window.frame());
+
+      await window.press(DOWN);
+      await window.shows('  ❯ main ');
+      // Its height kept, so nothing above it moves.
+      expect(boxTop(window.frame())).toBe(at);
+      // The keys are the list's: the box promises none of them.
+      expect(window.frame()).not.toContain('❯ 3. Deny');
+      expect(window.frame()).not.toContain('to reject');
+      await window.press(UP);
+      await until(
+        'the list let go',
+        () => !window.frame().includes('  ❯ main '),
+      );
+      expect(window.frame()).toContain('❯ 3. Deny');
+      // The keys are the box's again: ↑ moves up, as before.
+      await window.press(UP);
+      await window.shows('❯ 2. Always allow');
+      await window.press(ESC);
+    },
+    { rows: 40, columns: 120 },
+  ));
+
+/** The row the box above the prompt starts on: the first border drawn. */
+const boxTop = (frame: string) =>
+  frame.split('\n').findIndex((row) => row.startsWith('╭'));

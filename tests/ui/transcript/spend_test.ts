@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { type Child, idle, type Tab } from '../../../src/session/tabs.ts';
+import { idle } from '../../../src/session/waits.ts';
+import {
+  type Child,
+  noAgents,
+  type WindowAgents,
+} from '../../../src/session/window_agents.ts';
 import {
   emptyTranscript,
   type Entry,
@@ -99,59 +104,37 @@ test("a task's figure is what its block keeps", () => {
 test('a sum adds what was reported, says how much chord estimated, and names what reported nothing rather than read it as zero', () => {
   const parts: SpendPart[] = [
     {
-      name: '1 fake',
-      kind: 'tab',
+      name: 'main',
+      kind: 'main',
+      figure: { cost: USD(0.025), tokens: 4000, uncounted: 1 },
+    },
+    {
+      name: 'Fix the tokenizer',
+      kind: 'task',
+      ended: true,
+      figure: { cost: USD(0.0125), tokens: 2000 },
+    },
+    // At work: its figure comes when it ends, so it is not counted.
+    { name: 'Watch the build', kind: 'task', running: true },
+    {
+      name: 'bugfix',
+      kind: 'team',
       parts: [
-        {
-          name: 'main',
-          kind: 'main',
-          figure: { cost: USD(0.025), tokens: 4000, uncounted: 1 },
-        },
-        {
-          name: 'Fix the tokenizer',
-          kind: 'task',
-          ended: true,
-          figure: { cost: USD(0.0125), tokens: 2000 },
-        },
-        // At work: its figure comes when it ends, so it is not counted.
-        { name: 'Watch the build', kind: 'task', running: true },
-        {
-          name: 'bugfix',
-          kind: 'team',
-          parts: [
-            { name: 'lead', kind: 'member', figure: { cost: USD(0.025) } },
-            { name: 'tester', kind: 'member', figure: { cost: USD(0.0125) } },
-          ],
-        },
+        { name: 'lead', kind: 'member', figure: { cost: USD(0.025) } },
+        { name: 'tester', kind: 'member', figure: { cost: USD(0.0125) } },
       ],
     },
     {
-      name: '2 codex',
-      kind: 'tab',
-      parts: [
-        {
-          name: 'main',
-          kind: 'main',
-          figure: { cost: USD(0.412), estimated: 'all', tokens: 188_400 },
-        },
-      ],
+      name: 'parser',
+      kind: 'agent',
+      runtime: 'codex',
+      figure: { cost: USD(0.412), estimated: 'all', tokens: 188_400 },
     },
+    { name: 'gemini', kind: 'agent', runtime: 'gemini' },
     {
-      name: '3 gemini',
-      kind: 'tab',
-      parts: [{ name: 'main', kind: 'main', agent: 'gemini' }],
-    },
-    {
-      name: '4 other',
-      kind: 'tab',
-      parts: [
-        {
-          name: 'main',
-          kind: 'main',
-          agent: 'other',
-          figure: { cost: { amount: 1, currency: 'EUR' } },
-        },
-      ],
+      name: 'other',
+      kind: 'agent',
+      figure: { cost: { amount: 1, currency: 'EUR' } },
     },
   ];
 
@@ -159,11 +142,11 @@ test('a sum adds what was reported, says how much chord estimated, and names wha
     cost: expect.closeTo(0.025 + 0.0125 + 0.025 + 0.0125 + 0.412, 9),
     estimated: 'part',
     tokens: 4000 + 2000 + 188_400,
-    // A tab or a team run has no figure of its own beside its agents'.
+    // A team run has no figure of its own beside its agents'.
     missing: ['gemini', 'other'],
     uncounted: 1,
   });
-  expect(sum([parts[1]!])).toMatchObject({ estimated: 'all' });
+  expect(sum([parts[4]!])).toMatchObject({ estimated: 'all' });
   expect(sum([])).toStrictEqual({
     estimated: 'none',
     missing: [],
@@ -188,19 +171,19 @@ const child = (
   ...more,
 });
 
+/** The window: main, `key` on `agent`, and `children`. */
 const tab = (
   key: number,
   agent: string,
   children: Child<string>[],
-): Tab<string> => ({
-  key,
-  agent,
-  conversation: agent,
-  wait: idle,
+): WindowAgents<string> => ({
+  main: { key, agent, conversation: agent, wait: idle },
   children,
   picked: key,
   closed: [],
+  runs: [],
   opened: children.length,
+  nextKey: Math.max(key, ...children.map((child) => child.key)) + 1,
 });
 
 const session = (
@@ -237,16 +220,13 @@ const shape = (parts: readonly SpendPart[]): unknown =>
     ...(part.parts === undefined ? [] : [shape(part.parts)]),
   ]);
 
-test("the window's spend: each tab's own agent and its tasks, its long-lived agents, a team run with its lead and members, and what closed", () => {
+test("the window's spend: the main session and its tasks, its long-lived agents, a team run with its lead and members, and what closed", () => {
   const spend = windowSpend(
-    [
-      tab(1, 'fake', [
-        child(2, 'a', 'docs'),
-        child(3, 'l', 'bugfix', { team: 'bugfix' }),
-        child(4, 't', 'tester', { team: 'bugfix', lead: 'l' }),
-      ]),
-      tab(5, 'codex', []),
-    ],
+    tab(1, 'codex', [
+      child(2, 'a', 'docs'),
+      child(3, 'l', 'bugfix', { team: 'bugfix' }),
+      child(4, 't', 'tester', { team: 'bugfix', lead: 'l' }),
+    ]),
     {
       1: session(0.15, [task('Fix it', 'completed'), task('Watch', 'running')]),
       2: session(0.02),
@@ -255,7 +235,6 @@ test("the window's spend: each tab's own agent and its tasks, its long-lived age
     },
     [
       {
-        tab: 1,
         lead: 'l',
         part: {
           name: 'coder',
@@ -264,9 +243,8 @@ test("the window's spend: each tab's own agent and its tasks, its long-lived age
           figure: { cost: USD(0.01) },
         },
       },
+      // A main session `/clear` let go.
       {
-        tab: 9,
-        tabName: 'gone fake',
         part: {
           name: 'main',
           kind: 'main',
@@ -276,7 +254,6 @@ test("the window's spend: each tab's own agent and its tasks, its long-lived age
       },
       // A closed run whose lead closed too is one team part of its own.
       {
-        tab: 1,
         lead: 'x',
         team: 'review',
         part: { name: 'lead', kind: 'member', figure: { cost: USD(0.002) } },
@@ -285,50 +262,41 @@ test("the window's spend: each tab's own agent and its tasks, its long-lived age
   );
 
   expect(shape(spend)).toStrictEqual([
+    // Its task agents under it.
     [
-      '1 fake',
-      undefined,
+      'main',
+      0.15,
       [
-        // Its task agents under it.
-        [
-          'main',
-          0.15,
-          [
-            ['Fix it', 0.0125],
-            ['Watch', undefined],
-          ],
-        ],
-        ['docs', 0.02],
-        [
-          'bugfix',
-          undefined,
-          [
-            ['lead', 0.025],
-            ['tester', 0.0125],
-            ['coder', 0.01],
-          ],
-        ],
-        ['review', undefined, [['lead', 0.002]]],
+        ['Fix it', 0.0125],
+        ['Watch', undefined],
       ],
     ],
-    ['2 codex', undefined, [['main', undefined]]],
-    ['gone fake', undefined, [['main', 0.03]]],
+    ['docs', 0.02],
+    [
+      'bugfix',
+      undefined,
+      [
+        ['lead', 0.025],
+        ['tester', 0.0125],
+        ['coder', 0.01],
+      ],
+    ],
+    ['main', 0.03],
+    ['review', undefined, [['lead', 0.002]]],
   ]);
-  // The codex tab reported nothing; the running task is not yet counted.
+  // The running task is not yet counted.
   expect(sum(spend)).toMatchObject({
     cost: expect.closeTo(
       0.15 + 0.0125 + 0.02 + 0.025 + 0.0125 + 0.01 + 0.002 + 0.03,
       9,
     ),
-    missing: ['codex'],
+    missing: [],
   });
 });
 
 test('a closed session counts once: not where it closed while it is open again, and where it closed last', () => {
-  const closed = (amount: number, tabName: string): KeptSpend => ({
+  const closed = (amount: number): KeptSpend => ({
     sessionId: 's1',
-    tab: 9,
-    tabName,
     part: {
       name: 'main',
       kind: 'main',
@@ -336,17 +304,17 @@ test('a closed session counts once: not where it closed while it is open again, 
       figure: { cost: USD(amount) },
     },
   });
-  const kept = [closed(0.01, 'first'), closed(0.03, 'again')];
+  const kept = [closed(0.01), closed(0.03)];
 
-  // Resumed in tab 1, its whole spend is there.
+  // Resumed in main, its whole spend is there.
   expect(
     shape(
-      windowSpend([tab(1, 'fake', [])], { 1: session(0.05, [], 's1') }, kept),
+      windowSpend(tab(1, 'fake', []), { 1: session(0.05, [], 's1') }, kept),
     ),
-  ).toStrictEqual([['1 fake', undefined, [['main', 0.05]]]]);
+  ).toStrictEqual([['main', 0.05]]);
   // Closed twice, the last close holds its whole spend.
-  expect(shape(windowSpend([], {}, kept))).toStrictEqual([
-    ['again', undefined, [['main', 0.03]]],
+  expect(shape(windowSpend(noAgents(), {}, kept))).toStrictEqual([
+    ['main', 0.03],
   ]);
 });
 
@@ -370,33 +338,30 @@ describe('CHD-373 S3b tester: retained session identity and partial figures', ()
     const kept: KeptSpend[] = [
       {
         sessionId: 'one',
-        tab: 9,
         part: { name: 'parser', kind: 'agent', figure: { cost: USD(0.01) } },
       },
       {
         sessionId: 'two',
-        tab: 9,
         part: { name: 'parser', kind: 'agent', figure: { cost: USD(0.02) } },
       },
       {
         sessionId: 'one',
-        tab: 10,
         part: { name: 'parser', kind: 'agent', figure: { cost: USD(0.03) } },
       },
     ];
 
-    expect(sum(windowSpend([], {}, kept)).cost).toBeCloseTo(0.05, 9);
+    expect(sum(windowSpend(noAgents(), {}, kept)).cost).toBeCloseTo(0.05, 9);
 
     const live = windowSpend(
-      [tab(1, 'fake', [])],
+      tab(1, 'fake', []),
       { 1: session(0.04, [], 'one') },
       kept,
     );
 
     expect(sum(live).cost).toBeCloseTo(0.06, 9);
     expect(shape(live)).toEqual([
-      ['1 fake', undefined, [['main', 0.04]]],
-      ['closed tab', undefined, [['parser', 0.02]]],
+      ['main', 0.04],
+      ['parser', 0.02],
     ]);
   });
 
@@ -422,7 +387,10 @@ describe('CHD-373 S3b tester: retained session identity and partial figures', ()
       },
     };
     const parts = windowSpend(
-      [tab(1, 'fake', []), tab(2, 'other', []), tab(3, 'silent', [])],
+      tab(1, 'fake', [
+        child(2, 'o', 'other', { runtime: 'other' }),
+        child(3, 's', 'silent', { runtime: 'silent' }),
+      ]),
       sessions,
       [],
     );
@@ -467,7 +435,7 @@ test("a session whose agent gives running totals has its last total as its token
   ).toStrictEqual({ model: 'm' });
 });
 
-test("a long-lived agent's and a team member's part names the agent it runs on, for its notes, as a tab's main names its own (CHD-472)", () => {
+test("a long-lived agent's and a team member's part names the agent it runs on, for its notes, as main names its own (CHD-472)", () => {
   const runtimes = (parts: readonly SpendPart[]): unknown =>
     parts.map((part) => [
       part.name,
@@ -478,32 +446,24 @@ test("a long-lived agent's and a team member's part names the agent it runs on, 
   expect(
     runtimes(
       windowSpend(
-        [
-          tab(1, 'fake', [
-            child(2, 'a', 'docs', { runtime: 'dirac' }),
-            child(3, 'l', 'bugfix', { team: 'bugfix', runtime: 'dirac' }),
-            child(4, 't', 'tester', { team: 'bugfix', lead: 'l' }),
-          ]),
-        ],
+        tab(1, 'fake', [
+          child(2, 'a', 'docs', { runtime: 'dirac' }),
+          child(3, 'l', 'bugfix', { team: 'bugfix', runtime: 'dirac' }),
+          child(4, 't', 'tester', { team: 'bugfix', lead: 'l' }),
+        ]),
         {},
         [],
       ),
     ),
   ).toStrictEqual([
+    ['main', undefined],
+    ['docs', 'dirac'],
     [
-      '1 fake',
+      'bugfix',
       undefined,
       [
-        ['main', undefined],
-        ['docs', 'dirac'],
-        [
-          'bugfix',
-          undefined,
-          [
-            ['lead', 'dirac'],
-            ['tester', 'fake'],
-          ],
-        ],
+        ['lead', 'dirac'],
+        ['tester', 'fake'],
       ],
     ],
   ]);

@@ -82,7 +82,7 @@ export interface HeaderFacts {
 
 /**
  * The lines beside the mark, for a text column `width` cells wide at `now`.
- * The directory is cut from the left as the tab strip cuts it; the other
+ * The directory is cut from the left, at a `/`; the other
  * lines are cut at the right by the component, a resumed session's title
  * first, as it goes last.
  */

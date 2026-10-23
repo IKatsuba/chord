@@ -13,7 +13,6 @@ const WINDOW: WindowView = {
   sessions: () => [
     {
       key: 0,
-      tab: 1,
       runtime: 'fake',
       id: 'one',
       model: 'fake-large',
@@ -21,7 +20,6 @@ const WINDOW: WindowView = {
     },
     {
       key: 3,
-      tab: 2,
       runtime: 'codex',
       id: undefined,
       model: undefined,
@@ -156,8 +154,8 @@ test('a session the person opened lists the agents and the sessions', () =>
         textOf(await client.callTool({ name: 'list_sessions' })),
       ).toStrictEqual({
         sessions: [
-          { id: 'one', runtime: 'fake', model: 'fake-large', tab: 1 },
-          { id: null, runtime: 'codex', model: null, tab: 2, you: true },
+          { id: 'one', runtime: 'fake', model: 'fake-large' },
+          { id: null, runtime: 'codex', model: null, you: true },
         ],
       });
       expect(

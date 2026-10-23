@@ -1,4 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from './child_window.tsx';
 import assert from 'node:assert/strict';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -69,7 +75,8 @@ test("each session gets chord's server with a token of its own, good until its a
         expect(frame).toContain('"name": "Fake Small"');
         expect(frame).toContain(`"id": "${window.session()?.id}"`);
         expect(frame).toContain('"model": "fake-large"');
-        expect(frame).toContain('"tab": 1');
+        // No tab number since 0.58.0 (CHD-493).
+        expect(frame).not.toContain('"tab"');
       },
       { server, runtimes: ['fake'], rows: 80, columns: 120 },
     );
@@ -137,7 +144,7 @@ test("a user's server named chord keeps its place, and chord's tools answer besi
   }
 });
 
-test("a task agent works nested in its parent's turn, asks the person in the parent's tab, messages it and reports", async () => {
+test("a task agent works nested in its parent's turn, asks the person in the parent's session, messages it and reports", async () => {
   const server = serveChord();
 
   try {
@@ -420,7 +427,7 @@ test("chord's own calls draw by what chord served: the lists, and a task refused
         expect(frame).toContain('List agents(fake)');
         expect(frame).toContain('2 models · fake-large, fake-small');
         expect(frame).toContain('List sessions');
-        expect(frame).toContain('1 open · 1 fake (you)');
+        expect(frame).toContain('1 open · fake (you)');
         expect(frame).toContain('Agent(Fix the tokenizer) · fakx · fake-small');
         expect(frame).toContain('No agent named fakx; chord knows fake');
         expect(!frame.includes('mcp__chord__')).toBeTruthy();
@@ -448,7 +455,7 @@ test("chord's own calls as Codex sends them draw as Claude's do; another server'
         expect(frame).toContain('List agents\n');
         expect(frame).toContain('1 runtime · fake');
         expect(frame).toContain('List sessions');
-        expect(frame).toContain('1 open · 1 fake (you)');
+        expect(frame).toContain('1 open · fake (you)');
         expect(!frame.includes('mcp.chord.')).toBeTruthy();
         // The other server's call is drawn as an MCP call, untied (CHD-419).
         expect(frame).toContain('notes - list_notes (MCP)\n');
@@ -498,25 +505,28 @@ test('Esc stops a running task agent, which sends no report, takes the queued pr
 });
 
 describe('CHD-377 tester: Codex call session isolation', () => {
-  test('two fake sessions with reused call ids keep their own served results', async () => {
+  test('served results on main survive a child reusing its call ids', async () => {
     const server = serveChord();
 
     try {
-      await withWindow(
+      await withChild(
         async (window) => {
           await send(window, 'codexchordcalls');
           await window.shows('Listed as Codex.');
-          await window.shows('1 open · 1 fake (you)');
-          await ready(window);
-          await leader(window, 'c');
-          await ready(window);
+          await window.shows('1 open · fake (you)');
+          await readyAgent(window);
+          await openOther(window);
+          await pickAgent(window, 'other');
+          await readyAgent(window);
           await send(window, 'codexchordcalls');
           await window.shows('Listed as Codex.');
-          await window.shows('2 open');
+          await window.shows('Tool list_sessions not found');
+          expect(window.frame()).toContain('List agents');
+          expect(window.frame()).not.toContain('(you)');
           expect(window.frame()).not.toContain('Bash(mcp.chord.');
-          await leader(window, '1');
-          await window.shows('1 open · 1 fake (you)');
-          expect(window.frame()).not.toContain('2 open');
+          await pickAgent(window, 'main');
+          await window.shows('1 open · fake (you)');
+          expect(window.frame()).not.toContain('Tool list_sessions not found');
           expect(window.frame().match(/Listed as Codex\./g)).toHaveLength(1);
         },
         { server, runtimes: ['fake'], rows: 40, columns: 80 },
@@ -534,7 +544,7 @@ describe('CHD-387 tester: sent messages in the window', () => {
     try {
       await withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'agentsendrefused');
           await window.shows('parser is not open, so I will review it myself.');
           await window.shows("check passes and I'll look again.");
@@ -590,7 +600,7 @@ describe('CHD-158 tester: taskstays closes with its waiting parent', () => {
         try {
           await withWindow(
             async (window) => {
-              await ready(window);
+              await readyAgent(window);
               await send(window, 'taskstays');
               await window.shows('Agent(Fix the tokenizer) · fake asks');
               expect(window.frame()).not.toContain('between turns');
@@ -624,7 +634,7 @@ describe('CHD-470 tester: a steering-gated task parent closes before any steer',
       try {
         await withWindow(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             await send(window, 'tasktillsteered');
             await window.shows('Agent(Fix the tokenizer) · fake asks');
             expect(window.frame()).not.toContain('between turns');
@@ -706,7 +716,7 @@ describe('CHD-373 S2 tester: fake spend reaches both task views', () => {
         try {
           await withWindow(
             async (window) => {
-              await ready(window);
+              await readyAgent(window);
               assert(main);
               await main.window.spawn(main, {
                 agent: 'fake',

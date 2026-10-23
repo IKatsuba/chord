@@ -30,6 +30,7 @@ import {
 import {
   noteLines,
   OPEN_PLAN_BOX,
+  type PlanBoxState,
   planChoices,
   planHint,
   planKey,
@@ -53,6 +54,10 @@ export function PlanBox({
   scroller,
   onOverflow,
   onAnswer,
+  kept,
+  onChange,
+  onLeave,
+  away = false,
 }: {
   wait: PlanWait;
   /** The agent as the agents list names it. */
@@ -70,9 +75,23 @@ export function PlanBox({
    */
   onOverflow?: (overflows: boolean) => void;
   onAnswer: (answer: PlanAnswer) => void;
+  /** The box as it was left, when it was on screen before (Q194). */
+  kept?: PlanBoxState | undefined;
+  /**
+   * The row and the note as the box goes, for whoever keeps them; the one
+   * given at first is called, as the agent it names may no longer be shown.
+   */
+  onChange?: (box: PlanBoxState) => void;
+  /** ↓ on the Note row, where there is a list of agents to go to. */
+  onLeave?: (() => void) | undefined;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
 }) {
   const colours = useColours();
-  const [state, setState] = useState(OPEN_PLAN_BOX);
+  const [state, setState] = useState(kept ?? OPEN_PLAN_BOX);
   // Keys that land in one tick each see the one before.
   const latest = useRef(state);
   const choices = planChoices(wait.agent);
@@ -109,6 +128,14 @@ export function PlanBox({
 
     setState(next);
   };
+
+  // Handed over once, as the box goes, not a key at a time: a burst of keys
+  // is drawn a key at a time, and a dispatch each would overrun React. The
+  // first render's, which names the agent it was asked in, not the one in
+  // front by then.
+  const changed = useRef(onChange);
+
+  useEffect(() => () => changed.current?.(latest.current), []);
 
   const scroll = useCallback(
     (step: ScrollStep) =>
@@ -157,13 +184,17 @@ export function PlanBox({
       if (step.answer !== undefined) {
         onAnswer(step.answer);
       }
+
+      if (step.leave) {
+        onLeave?.();
+      }
     },
     { isActive: active },
   );
 
   const marker = (row: number) => (
     <Gutter {...paint(colours.permission)}>
-      {row === state.row ? '❯' : ' '}
+      {row === state.row && !away ? '❯' : ' '}
     </Gutter>
   );
 
@@ -250,7 +281,11 @@ export function PlanBox({
                     <span attributes={TextAttributes.INVERSE}>{BLOCK}</span>
                   )}
                   <span attributes={DIM}>
-                    {`${onNote && active ? ' ' : ''}${cliTruncate(
+                    {/* While away the cursor's cell is blank, so the text
+                    keeps its column. */}
+                    {`${onNote && !active && away ? ' ' : ''}${
+                      onNote && (active || away) ? ' ' : ''
+                    }${cliTruncate(
                       `Tell ${agent} what to change, sent with 2 (optional)`,
                       Math.max(noteWidth - 1, 1),
                     )}`}
@@ -307,7 +342,7 @@ export function PlanBox({
         {' '}
       </text>
       <text {...TEXT} attributes={DIM} flexShrink={0}>
-        {hint}
+        {away ? ' ' : hint}
       </text>
     </box>
   );

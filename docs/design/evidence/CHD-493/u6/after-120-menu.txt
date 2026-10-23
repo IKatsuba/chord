@@ -1,0 +1,40 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-n
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /new                                                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  fake
+  agoragentic-acp     Agoragentic
+  auggie              Auggie CLI
+  autohand            Autohand Code
+  bob                 Bob
+  claude              Claude Agent
+  cline               Cline
+  codebuddy-code      Codebuddy Code
+  codex               Codex
+  deepagents          DeepAgents

@@ -1,11 +1,24 @@
 /**
  * The window on the fake agent: its header, a turn, its notifications, the
- * keys that quit, clear and edit, the slash commands, and sessions in tabs.
+ * keys that quit, clear and edit, the slash commands, and a child beside main.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from './child_window.tsx';
 import { draw } from '../harness.tsx';
-import { type ResumableTab } from '../../../src/session/sessions.ts';
+import { readdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { serveChord } from '../../../src/server/server.ts';
+import type { Caller } from '../../../src/server/tools.ts';
+import { parseRecord, type RecordEntry } from '../../../src/session/record.ts';
+import { openSession, type Session } from '../../../src/session/session.ts';
+import { type Resumable } from '../../../src/session/sessions.ts';
 import { App } from '../../../src/ui/app/App.tsx';
+import type { WindowedState } from '../../../src/ui/app/state.ts';
 import * as ansi from '../../../src/ui/theme/Ansi.tsx';
 import { editInEditor } from '../../../src/editor.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -14,6 +27,7 @@ import {
   CTRL_C,
   CTRL_D,
   CTRL_G,
+  DOWN,
   ESC,
   inputAsked,
   isAlive,
@@ -27,6 +41,7 @@ import {
   until,
   UP,
   withWindow,
+  type Window,
 } from './render.tsx';
 import manifest from '../../../package.json' with { type: 'json' };
 
@@ -35,27 +50,34 @@ import { OSC9, writes, reported } from './app_window.tsx';
 const VERSION = manifest.version;
 
 describe('CHD-382 U2 tester: cancellation and error reports', () => {
-  test('a blocked tab behind wins over a working front tab', () => {
+  test('a blocked child wins over a working main', () => {
     const log: string[] = [];
 
-    return withWindow(
+    return withChild(
       async (window) => {
-        await ready(window);
-        await leader(window, 'c');
-        await until('the second agent', () => window.pids.length === 2);
-        await ready(window);
-        await send(window, 'permission');
-        await asked(window);
-        await leader(window, '1');
+        await openOther(window);
+        await readyAgent(window);
         await send(window, 'slow');
         await window.shows('esc to interrupt');
+        await pickAgent(window, 'other');
+        await until('the second agent', () => window.pids.length === 2);
+        await readyAgent(window);
+        await send(window, 'permission');
+        await asked(window);
         expect(statusReports(log).at(-1)).toStrictEqual({
           state: 'blocked',
           kind: 'permission',
           app: 'chord',
-          msg: 'fake (2) needs your permission: Write notes.txt',
-          title: 'slow',
+          msg: 'other needs your permission: Write notes.txt',
+          title: 'agentother',
         });
+        // Q194: ↓ from the permission's last choice reaches the list.
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('❯ other');
+        await window.press(UP);
+        await window.press('\r');
         await window.press(ESC);
         await window.shows('Interrupted by user');
         expect(statusReports(log).at(-1)?.state).toBe('blocked');
@@ -71,7 +93,7 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
 
       return withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'slow');
           await until(
             'working report',
@@ -99,7 +121,7 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
 
       return withWindow(
         async (window) => {
-          await ready(window);
+          await readyAgent(window);
           await send(window, 'error');
           await until(
             'failed turn report',
@@ -680,470 +702,146 @@ test('/help opens the shortcuts and /exit quits', () =>
     );
   }));
 
-const CTRL_N = '\x0e';
-
-test("one session's first row is its header's, and two sessions' is the tab strip, the header under it", () =>
+test("the window's first row is its header's", () =>
   withWindow(
     async (window) => {
       const first = () => window.frame().split('\n')[0] ?? '';
 
       await window.shows('chord v');
       expect(first()).toContain(`chord v${VERSION}`);
-      await leader(window, 'c');
-      await window.shows('2 fake');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      expect(first()).toContain('1 fake');
-      expect(
-        !first().includes('chord v'),
-        'the header on the strip',
-      ).toBeTruthy();
-      expect(window.frame().split('\n')[1] ?? '').toContain(
-        `chord v${VERSION}`,
-      );
-      await quitAll(window);
     },
     { columns: 120, rows: 40 },
   ));
 
-test('ctrl+x c opens a second session, and the leader switches between them', () =>
+test('/new and a space lists the agents chord can start, after /clear as before it (U6)', () =>
+  withWindow(
+    async (window) => {
+      const listed = async () => {
+        await window.type('/new ');
+        await until('the agents listed', () =>
+          /^ {2}fake\s*$/m.test(window.frame()),
+        );
+        await window.press(CTRL_C);
+      };
+
+      await ready(window);
+      await listed();
+      await send(window, '/clear');
+      await ready(window);
+      await listed();
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test("/new opens an agent of main's runtime for main, idle, and goes to it; main's transcript draws the call (U6)", () =>
   withWindow(
     async (window) => {
       await send(window, 'text');
-      await window.shows('Hello, world. This reply came in chunks.');
-      expect(
-        !window.frame().includes('1 fake'),
-        'a strip with one session',
-      ).toBeTruthy();
-      await leader(window, 'c');
-      await window.shows('2 fake');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      expect(
-        !window.frame().includes('› text'),
-        "the first session's past",
-      ).toBeTruthy();
-      await send(window, 'the second one');
-      await leader(window, '1');
-      await window.shows('› text');
-      expect(!window.frame().includes('› the second one')).toBeTruthy();
-      await leader(window, CTRL_N);
-      await window.shows('› the second one');
-      expect(!window.frame().includes('› text')).toBeTruthy();
-      await leader(window, 'p');
-      await window.shows('› text');
-      // A number with no tab does nothing.
-      await leader(window, '5');
-      await until(
-        'the leader to go',
-        () => !window.frame().includes('ctrl+x …'),
-      );
-      expect(window.frame()).toContain('› text');
-      await quitAll(window);
+      await window.shows('This reply came in chunks.');
+      await until('the turn to end', () => !window.frame().includes('Working'));
+      await window.type('/new');
+      await window.shows('Open a new agent beside main and go to it');
+      expect(window.frame()).not.toContain('/clear (new)');
+      await window.press('\r');
+      await window.shows('╭─ fake ');
+      await window.shows('    fake ');
+      // Idle, with no first prompt (Q187).
+      expect(window.frame()).not.toContain('in chunks');
+      expect(window.frame()).not.toContain('Working');
+      // Main's transcript has the call, its line saying how it opened.
+      await window.press(DOWN);
+      await until('main picked in the list', async () => {
+        if (window.frame().includes('  ❯ main ')) {
+          return true;
+        }
+
+        await window.press(UP);
+
+        return false;
+      });
+
+      await window.press('\r');
+      await until('main in view', () => !window.frame().includes('╭─ fake '));
+      await window.shows('Open(fake) · fake');
+      await window.shows('⎿  opened with /new');
+      await window.shows('This reply came in chunks.');
     },
     { columns: 120, rows: 40 },
   ));
 
-test("/new opens the agent named on its own settings' model, refuses one chord cannot start, and /status counts the sessions", () =>
+test("/new codex opens a codex agent for main beside main's running turn, which goes on (U6)", () =>
   withWindow(
     async (window) => {
-      await ready(window);
-      // A name the list matches nothing of, so Enter runs it as typed.
-      await window.type('/new qqq');
-      await window.press('\r');
-      await window.shows('No agent named qqq · chord agents lists them');
-      expect(window.frame()).toContain('› /new qqq');
-      expect(
-        !window.frame().includes('1 fake'),
-        'a strip with one session',
-      ).toBeTruthy();
-      expect(window.pids.length).toStrictEqual(1);
-      await window.type('/new fake2');
-      await window.press('\r');
-      await window.shows('2 fake2');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await window.shows('Fake Small');
-      // Alone, it is ctrl+x c: the front session's agent again.
-      await window.type('/new');
-      await window.press('\r');
-      await window.shows('3 fake2');
-      await until('the third agent', () => window.pids.length === 3);
-      await ready(window);
-
-      const status = await reported(window, '/status');
-
-      expect(status).toContain('Agent:     fake2');
-      expect(status).toContain('Model:     Fake Small');
-      expect(status).toContain('Sessions:  3 open');
-      await quitAll(window);
-    },
-    {
-      columns: 120,
-      rows: 40,
-      startupOf: (agent) =>
-        agent === 'fake'
-          ? { agentCommand: fakeAgentCommand() }
-          : agent === 'fake2'
-            ? {
-                agentCommand: fakeAgentCommand(),
-                starting: {
-                  model: { id: 'fake-small', from: 'set in settings' },
-                },
-              }
-            : undefined,
-    },
-  ));
-
-test("/new opens the agent named on its own settings' effort, and says one its runtime refuses", () =>
-  withWindow(
-    async (window) => {
-      await ready(window);
-      await window.type('/new fake2');
-      await window.press('\r');
-      await window.shows('2 fake2');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'effort');
-      await window.shows('Effort: high.');
-      await window.type('/new fake3');
-      await window.press('\r');
-      await window.shows('3 fake3');
-      await until('the third agent', () => window.pids.length === 3);
-      await ready(window);
-      await window.shows(
-        'Could not start on max effort, set in .chord/settings.json: the ' +
-          'agent offers low, medium, high',
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await send(window, '/new codex');
+      await window.shows('╭─ codex ');
+      await until(
+        "codex's row beside main's, still working",
+        () =>
+          /^ {4}codex\s+codex/m.test(window.frame()) &&
+          /^ {4}main\s.*working/m.test(window.frame()),
       );
-      await send(window, 'effort');
-      await window.shows('Effort: medium.');
-      await quitAll(window);
-    },
-    {
-      columns: 140,
-      rows: 40,
-      startupOf: (agent) =>
-        agent === 'fake'
-          ? { agentCommand: fakeAgentCommand() }
-          : agent === 'fake2' || agent === 'fake3'
-            ? {
-                agentCommand: fakeAgentCommand(),
-                starting: {
-                  effort: {
-                    id: agent === 'fake2' ? 'high' : 'max',
-                    from: 'set in .chord/settings.json',
-                  },
-                },
-              }
-            : undefined,
-    },
-  ));
-
-test('/new offers a name only the settings define, and Tab and Enter open it', () =>
-  withWindow(
-    async (window) => {
-      await ready(window);
-      await window.type('/new ');
-      await window.shows('from settings');
-      // Settings first, then own CLIs PATH has, and those it lacks marked.
-      expect(window.frame()).toMatch(/mine +from settings\n.*goose +goose\n/);
-      expect(window.frame()).toMatch(/cursor +Cursor · not on PATH/);
-      await window.type('mi');
-      await window.press('\t');
-      await window.shows('› /new mine');
-      await window.press('\r');
-      await window.shows('2 mine');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await quitAll(window);
     },
     {
       columns: 120,
       rows: 40,
-      runtimes: ['fake', 'cursor', 'goose', 'mine'],
-      listed: [
-        {
-          name: 'cursor',
-          title: 'Cursor',
-          start: 'agent acp',
-          from: 'cli',
-          found: false,
-        },
-        {
-          name: 'goose',
-          title: 'goose',
-          start: 'goose acp',
-          from: 'cli',
-          found: true,
-        },
-        {
-          name: 'mine',
-          title: undefined,
-          start: 'fake-agent',
-          from: 'settings',
-        },
-      ],
-      startupOf: (agent) =>
-        agent === 'fake' || agent === 'mine'
-          ? { agentCommand: fakeAgentCommand() }
-          : undefined,
+      runtimes: ['fake', 'codex'],
+      // Both runtimes on the fake, so codex starts with no codex installed.
+      startupOf: () => ({ agentCommand: fakeAgentCommand() }),
     },
   ));
 
-test('a permission behind is a glyph and a notice, and ctrl+x a goes to it', () =>
-  withWindow(
+test("a child's permission is a notice while main is shown, and ctrl+x a goes to it", () =>
+  withChild(
     async (window) => {
-      const bytes =
-        '\x1b]9;fake (2) needs your permission: Write notes.txt\x07';
+      const bytes = '\x1b]9;docs needs your permission: Write notes.txt\x07';
 
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
       await ready(window);
-      await send(window, 'permission');
-      await asked(window);
-      await leader(window, '1');
-      await window.shows('2 fake ●');
-      await window.shows('● 2 fake needs your permission · ctrl+x a to go');
-      expect(writes(window, bytes)).toStrictEqual(1);
-      // The window never switches by itself, so a digit typed here is a draft.
+      await send(window, 'agentsheldgated');
+      await window.shows('● docs needs your permission · ctrl+x a to go');
+      // The notification goes out once the renderer is idle, after this frame.
+      await until('the notification', () => writes(window, bytes) === 1);
+      // The window never goes there by itself, so a digit typed here is a draft.
       await window.type('1');
       await until(
         'the digit in the draft',
         () => promptRow(window)?.includes('1') ?? false,
       );
       expect(!window.frame().includes('Do you want to proceed?')).toBeTruthy();
-      expect(window.frame()).toContain('2 fake ●');
       await leader(window, 'a');
       await asked(window);
-      expect(window.frame()).toContain('Waiting for permission');
       await window.press('1');
       await until(
         'the permission answered',
         () => !window.frame().includes('Do you want to proceed?'),
       );
-      await until(
-        'the turn to end',
-        () =>
-          !window.frame().includes('2 fake ●') &&
-          !window.frame().includes('Working'),
-      );
       expect(writes(window, bytes)).toStrictEqual(1);
-      await leader(window, 'a');
-      await window.shows('No session waits');
       await quitAll(window);
     },
     { columns: 120, rows: 40, notifications: OSC9 },
   ));
 
-test('a digit after the leader goes to a tab, not to the permission asked', () =>
-  withWindow(
-    async (window) => {
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await leader(window, '1');
-      await send(window, 'permission');
-      await asked(window);
-      await leader(window, '2');
-      await until(
-        'the second tab',
-        () => !window.frame().includes('Do you want to proceed?'),
-      );
-      // The first waits on the person, and its tab says so.
-      await window.shows('1 fake ●');
-      await leader(window, '1');
-      await asked(window);
-      expect(window.frame()).toContain('2. ');
-      await window.press('3');
-      await until(
-        'the permission answered',
-        () => !window.frame().includes('Do you want to proceed?'),
-      );
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
+test('ctrl+x a with nothing waiting says so', () =>
+  withWindow(async (window) => {
+    await ready(window);
+    await leader(window, 'a');
+    await window.shows('Nothing waits on you');
+  }));
 
-test('ctrl+x w lists the sessions open, and Enter goes to the one highlighted', () =>
-  withWindow(
-    async (window) => {
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await leader(window, 'w');
-      await window.shows('Sessions in ');
-      expect(window.frame()).toMatch(/1\. fake {2}◦ idle \d+s {2}text/);
-      expect(window.frame()).toMatch(/2\. fake {2}here/);
-      expect(window.frame()).toContain(
-        'Enter to go · 1–2 to pick · Esc to close',
-      );
-      // None waits, so the highlight starts after the session in front.
-      expect(window.frame()).toMatch(/❯ 1\. fake/);
-      await window.press('\r');
-      await window.shows('› text');
-      expect(
-        !window.frame().includes('Sessions in '),
-        'the picker stayed open',
-      ).toBeTruthy();
-      expect(window.pids.length).toStrictEqual(2);
-
-      // Esc leaves the session in front as it was.
-      await leader(window, 'w');
-      await window.shows('Sessions in ');
-      await window.press(ESC);
-      await until(
-        'the picker to close',
-        () => !window.frame().includes('Sessions in '),
-      );
-      expect(window.frame()).toContain('› text');
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
-
-test('/resume marks a session open in another tab, and picking it goes there without a second agent', () =>
-  withWindow(
-    async (window) => {
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      expect(
-        !window.frame().includes('› text'),
-        "tab 1's past in tab 2",
-      ).toBeTruthy();
-      await window.type('/resume');
-      await window.press('\r');
-      await window.shows('Resume a session');
-      await window.shows('open in 1');
-      await window.press('\r');
-      await window.shows('› text');
-      expect(!window.frame().includes('Resume a session')).toBeTruthy();
-      // Give a second agent the time it would take to start, had one been.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      expect(window.pids.length).toStrictEqual(2);
-      expect(
-        window
-          .frame()
-          .split('\n')
-          .filter((line) => line.includes('› text')).length,
-      ).toStrictEqual(1);
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
-
-test("/clear in tab 2 starts it afresh and leaves tab 1's transcript", () =>
-  withWindow(
-    async (window) => {
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'tools');
-      await window.shows('Read it.');
-      await window.type('/clear');
-      await window.press('\r');
-      await until('tab 2 cleared', () => !window.frame().includes('› tools'));
-      await ready(window);
-      await leader(window, '1');
-      await window.shows('› text');
-      expect(window.frame()).toContain('This reply came in chunks.');
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
-
-test('ctrl+x k closes an idle session at once, and a busy one on the second press', () =>
-  withWindow(
-    async (window) => {
-      const header = () => window.frame().split('\n')[0] ?? '';
-
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'k');
-      await window.shows('Closed 2 fake · /resume opens it again');
-      // The first comes back as it was left: nothing sent to it.
-      expect(
-        !window.frame().includes('› text'),
-        "the closed session's past",
-      ).toBeTruthy();
-      expect(
-        !header().includes('1 fake'),
-        'a strip with one session',
-      ).toBeTruthy();
-      await until(
-        'its agent to stop',
-        async () => !(await isAlive(window.pids[1]!)),
-      );
-
-      // A busy one asks first and is left as it was.
-      await leader(window, 'c');
-      await until('the third agent', () => window.pids.length === 3);
-      await ready(window);
-      await send(window, 'permission');
-      await asked(window);
-      await leader(window, 'k');
-      await window.shows(
-        '2 fake waits for your permission · ctrl+x k again to stop it and close',
-      );
-      expect(header()).toContain('2 fake');
-      expect(
-        await isAlive(window.pids[2]!),
-        'closed on the first press',
-      ).toBeTruthy();
-      await leader(window, 'k');
-      await window.shows('Closed 2 fake · /resume opens it again');
-      expect(!header().includes('2 fake'), 'its tab stayed').toBeTruthy();
-      expect(!window.frame().includes('Do you want to proceed?')).toBeTruthy();
-      await until(
-        'its agent to stop',
-        async () => !(await isAlive(window.pids[2]!)),
-      );
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
-
-test('ctrl+x k on a session running a command asks first, then stops that command and no other', () => {
+test('/clear stops the command the session runs, as the session it ran in goes', () => {
   const stops = new Map<string, number>();
 
   return withWindow(
     async (window) => {
-      const header = () => window.frame().split('\n')[0] ?? '';
-
-      await window.type('!');
-      await window.type('sleep 61');
-      await window.press('\r');
-      await window.shows('sleep 61');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
       await ready(window);
       await window.type('!');
       await window.type('sleep 60');
       await window.press('\r');
       await window.shows('sleep 60');
-      await leader(window, 'k');
-      await window.shows(
-        '2 fake is working · ctrl+x k again to stop it and close',
-      );
       expect(stops.get('sleep 60') ?? 0).toStrictEqual(0);
-      await leader(window, 'k');
-      await until('its tab to close', () => !header().includes('2 fake'));
-      expect(stops.get('sleep 60')).toStrictEqual(1);
-      expect(
-        stops.get('sleep 61') ?? 0,
-        "the other tab's command",
-      ).toStrictEqual(0);
-      await window.shows('sleep 61');
-      await quitAll(window);
+      await send(window, '/clear');
+      await until('the command stopped', () => stops.get('sleep 60') === 1);
     },
     {
       columns: 120,
@@ -1165,106 +863,52 @@ test('ctrl+x k on a session running a command asks first, then stops that comman
   );
 });
 
-test('an armed close that has run out asks again rather than closing', () =>
-  withWindow(
-    async (window) => {
-      const header = () => window.frame().split('\n')[0] ?? '';
-
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'slow');
-      await window.shows('esc to interrupt');
-      await leader(window, 'k');
-      await window.shows(
-        '2 fake is working · ctrl+x k again to stop it and close',
-      );
-      await until(
-        'the armed line to go',
-        () => !window.frame().includes('again to stop it and close'),
-        4000,
-      );
-      await leader(window, 'k');
-      await window.shows(
-        '2 fake is working · ctrl+x k again to stop it and close',
-      );
-      expect(header()).toContain('2 fake');
-      expect(
-        await isAlive(window.pids[1]!),
-        'closed on a press after it ran out',
-      ).toBeTruthy();
-      await quitAll(window);
-    },
-    {
-      columns: 120,
-      rows: 40,
-      agentCommand: fakeAgentCommand(undefined, '--step-ms', '200'),
-    },
-  ));
-
-test('ctrl+d with a session working arms and names it, then quits with each session to resume and no agent left', async () => {
-  let resumable: readonly ResumableTab[] | undefined;
+test('ctrl+d with the session working quits at once, with its one session to resume and no agent left', async () => {
+  let resumable: Resumable | undefined;
 
   await withWindow(
     async (window) => {
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
       await send(window, 'slow');
       await window.shows('esc to interrupt');
-      await leader(window, '1');
-      await window.shows('› text');
       await window.press(CTRL_D);
-      await window.shows('2 fake is working · ctrl+d again to quit');
-      expect(resumable).toStrictEqual(undefined);
-
-      for (const pid of window.pids) {
-        expect(
-          await isAlive(pid),
-          `agent ${pid} stopped on the first press`,
-        ).toBeTruthy();
-      }
-
-      await quitAll(window);
-      expect(resumable?.map(({ agent }) => agent)).toStrictEqual([
-        'fake',
-        'fake',
-      ]);
-      expect(
-        new Set(resumable?.map(({ sessionId }) => sessionId)).size,
-      ).toStrictEqual(2);
+      await until('the quit', () => resumable !== undefined);
+      expect(resumable?.agent).toStrictEqual('fake');
+      await until('the agent to stop', () =>
+        Promise.all(window.pids.map(isAlive)).then((alive) =>
+          alive.every((each) => !each),
+        ),
+      );
     },
     {
       columns: 120,
       rows: 40,
-      // Slow enough that its turn still runs at the second press.
+      // Slow enough that its turn still runs at the press.
       agentCommand: fakeAgentCommand(undefined, '--step-ms', '20'),
-      onQuit: (tabs) => (resumable = tabs),
+      onQuit: (session) => (resumable = session),
     },
   );
 });
 
-test('a form left half filled in a session behind is as it was on coming back', () =>
-  withWindow(
+test('a form left half filled in main is as it was on coming back from a child', () =>
+  withChild(
     async (window) => {
+      await ready(window);
+      await openOther(window);
       await send(window, 'form');
       await inputAsked(window);
       await window.type('keep');
       await window.press(TAB);
       await window.type('a@b');
       await window.shows('Contact email  a@b');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      expect(
-        !window.frame().includes('Project name'),
-        "tab 1's form in tab 2",
-      ).toBeTruthy();
-      // Its tab says it waits instead, and the status line names it.
-      await window.shows('● 1 fake asks for input · ctrl+x a');
-      await leader(window, '1');
+      // other's reply is not yet seen, so ctrl+x a goes there.
+      await leader(window, 'a');
+      await until(
+        "main's form gone with main",
+        () => !window.frame().includes('Project name'),
+      );
+      // The status line names main as waiting instead.
+      await window.shows('● main asks for input · ctrl+x a');
+      await leader(window, 'a');
       await inputAsked(window);
       expect(window.frame()).toContain('Project name   keep');
       expect(window.frame()).toContain('Contact email  a@b');
@@ -1295,5 +939,471 @@ test('an agent that does not start is an error line', async () => {
     );
   } finally {
     await app.unmount();
+  }
+});
+
+describe('CHD-493 U2 tester: aliases retire live per-agent work', () => {
+  for (const columns of [80, 120]) {
+    test(`/clear drops a running turn and its child at ${columns} columns`, () =>
+      withChild(
+        async (window) => {
+          const main = window.session()!;
+
+          await openOther(window);
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+          await send(window, '/clear');
+          await readyAgent(window);
+          await until('the old main and child stopped', () =>
+            Promise.all(window.pids.slice(0, 2).map(isAlive)).then((alive) =>
+              alive.every((each) => !each),
+            ),
+          );
+          expect(window.session()).not.toBe(main);
+          expect(window.frame()).not.toContain('other ·');
+          expect(window.frame()).not.toMatch(/^ {4}other\s/m);
+          expect(window.frame()).not.toContain('Working');
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+          expect(window.frame()).not.toContain('› slow');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          startupOf: () => ({
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--child-runtime',
+              'fake',
+              '--step-ms',
+              '20',
+            ),
+          }),
+        },
+      ));
+
+    test(`/exit stops a hung child without arming at ${columns} columns`, async () => {
+      let quit: Resumable | undefined;
+
+      let quits = 0;
+
+      await withChild(
+        async (window) => {
+          await openOther(window);
+          await until('the hung child is working', () =>
+            /^ {4}other\s.*working/m.test(window.frame()),
+          );
+          await send(window, '/exit');
+          await until('quit was called', () => quit !== undefined);
+          expect(quits).toBe(1);
+          expect(quit?.agent).toStrictEqual('fake');
+          await until('main and its hung child stopped', () =>
+            Promise.all(window.pids.map(isAlive)).then((alive) =>
+              alive.every((each) => !each),
+            ),
+          );
+          expect(window.frame()).not.toContain('again to quit');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          startupOf: (agent) => ({
+            agentCommand:
+              agent === 'codex'
+                ? fakeAgentCommand(undefined, '--hang', 'turn')
+                : fakeAgentCommand(undefined, '--child-runtime', 'codex'),
+          }),
+          onQuit: (resumable) => {
+            quits++;
+
+            quit = resumable;
+          },
+        },
+      );
+    });
+  }
+});
+
+describe('CHD-493 U6 tester: person-opened agents keep main and its menu', () => {
+  const command = fakeAgentCommand();
+  const states = new WeakMap<Window, () => WindowedState>();
+  const connected = (window: Window) =>
+    until('the shown session is ready', () => {
+      const all = states.get(window)!();
+
+      return all.sessions[all.front]?.connection.status === 'ready';
+    });
+
+  type Options = NonNullable<Parameters<typeof withWindow>[1]>;
+
+  async function run(
+    columns: number,
+    body: (
+      window: Window,
+      callers: Caller[],
+      sessions: Session[],
+    ) => Promise<void>,
+    options: Options = {},
+  ) {
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    const callers: Caller[] = [];
+    const sessions: Session[] = [];
+    let state: WindowedState;
+
+    server.admit = (caller) => {
+      callers.push(caller);
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        (window) => {
+          states.set(window, () => state);
+
+          return body(window, callers, sessions);
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          agentCommand: command,
+          runtimes: ['fake', 'codex'],
+          listed: ['fake', 'codex'].map((name) => ({
+            name,
+            title: undefined,
+            start: 'fake',
+            from: 'settings' as const,
+          })),
+          startupOf: () => ({ agentCommand: command }),
+          ...options,
+          server,
+          onState: (all) => {
+            state = all;
+          },
+          openWith: async (settings) => {
+            const session = await openSession(settings);
+
+            sessions.push(session);
+
+            return session;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  }
+
+  async function go(window: Window, name: string) {
+    await window.press(DOWN);
+    await until(`the agents list picks ${name}`, async () => {
+      const rows = window.frame().split('\n');
+      const current = rows.findIndex((row) => /^ {2}❯ /.test(row));
+      const wanted = rows.findIndex(
+        (row) =>
+          row.startsWith(`    ${name} `) || row.startsWith(`  ❯ ${name} `),
+      );
+
+      if (wanted !== -1 && current === wanted) {
+        return true;
+      }
+
+      await window.press(current < wanted ? DOWN : UP);
+
+      return false;
+    });
+
+    await window.press('\r');
+  }
+
+  async function records(window: Window): Promise<RecordEntry[][]> {
+    const dir = join(window.dir, 'state', 'records');
+
+    return Promise.all(
+      (await readdir(dir)).map(async (file) =>
+        parseRecord(await readFile(join(dir, file), 'utf8')),
+      ),
+    );
+  }
+
+  for (const columns of [80, 120]) {
+    test(`/resume keeps /new's agent menu without a preceding /clear at ${columns} columns`, async () => {
+      let cwd = '';
+      const target = crypto.randomUUID();
+
+      await run(
+        columns,
+        async (window) => {
+          cwd = window.dir;
+
+          await connected(window);
+          await send(window, '/resume');
+          await window.shows('Resume a session');
+          await window.press('\r');
+          await until(
+            'the picked session is connected',
+            () => window.session()?.id === target,
+          );
+          await connected(window);
+          await window.type('/new ');
+          await window.shows('codex');
+          await window.press(CTRL_C);
+          await send(window, '/new codex');
+          await window.shows('╭─ codex ');
+          await connected(window);
+        },
+        {
+          readRecords: () =>
+            Promise.resolve([
+              {
+                path: join(cwd, 'earlier.jsonl'),
+                sessionId: target,
+                agent: 'fake',
+                cwd,
+                prompt: 'earlier menu check',
+                lastUsedAt: 0,
+              },
+            ]),
+        },
+      );
+    });
+
+    test(`a child invokes bare /new on main's runtime and settings mode while main keeps working at ${columns} columns`, () =>
+      run(
+        columns,
+        async (window, callers, sessions) => {
+          await connected(window);
+
+          const main = sessions[0]!;
+
+          await main.setModel('fake-small');
+          await main.setEffort('high');
+          await main.setMode('plan');
+          await send(window, 'costwait');
+          await window.shows('Working until stopped.');
+          await send(window, '/new codex');
+          await window.shows('╭─ codex ');
+          await connected(window);
+          await until(
+            'codex is connected',
+            () =>
+              sessions.length === 2 &&
+              sessions[1]?.models()?.current === 'fake-large',
+          );
+
+          const child = sessions[1]!;
+
+          expect(child.efforts()?.current).toBe('medium');
+          await until(
+            'the settings mode applied',
+            () => child.modes()?.current === 'acceptEdits',
+          );
+          expect(child.models()?.current).toBe('fake-large');
+          expect(window.frame()).not.toContain('Hello, world.');
+          expect(window.frame()).toMatch(/main\s+fake.*working/m);
+          await send(window, '/new');
+          await window.shows('╭─ fake ');
+          await connected(window);
+          await until(
+            'the second child is connected',
+            () => sessions.length === 3,
+          );
+          expect(
+            callers
+              .filter(({ role }) => role === 'child')
+              .every(({ key }) => key === callers[0]?.key),
+          ).toBe(true);
+
+          const children = Object.entries(
+            states.get(window)!().sessions,
+          ).filter(([key]) => Number(key) !== callers[0]?.key);
+
+          expect(children).toHaveLength(2);
+          expect(
+            children.flatMap(([, state]) =>
+              state.transcript.entries.filter((entry) => entry.kind === 'user'),
+            ),
+          ).toEqual([]);
+          expect(await isAlive([...main.agentPids][0]!)).toBe(true);
+          await go(window, 'main');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+          await until(
+            'main records the calls and the aside before its next prompt',
+            async () => {
+              const own =
+                (await records(window)).find((record) =>
+                  record.some(
+                    (entry) =>
+                      entry.type === 'session' && entry.sessionId === main.id,
+                  ),
+                ) ?? [];
+              const calls = own.filter(
+                (entry) =>
+                  entry.type === 'ran' && entry.call.tool === 'open_agent',
+              );
+              const informed = own.some(
+                (entry) =>
+                  entry.type === 'prompt' &&
+                  entry.prompt.includes(
+                    'The person opened @codex (codex) with /new;',
+                  ) &&
+                  entry.prompt.includes('It reports to you'),
+              );
+
+              return calls.length === 2 && informed;
+            },
+          );
+        },
+        {
+          startupOf: () => ({
+            agentCommand: command,
+            starting: {
+              model: { id: 'fake-small', from: 'settings' },
+              effort: { id: 'high', from: 'settings' },
+              mode: { id: 'acceptEdits', from: 'settings' },
+            },
+          }),
+        },
+      ));
+
+    test(`unknown and refused runtimes leave the invoking child and its work at ${columns} columns`, () =>
+      run(
+        columns,
+        async (window, _callers, sessions) => {
+          await connected(window);
+          await send(window, '/new');
+          await window.shows('╭─ fake ');
+          await connected(window);
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+          await send(window, '/new nonexistent-runtime');
+          await window.shows('No agent named nonexistent-runtime;');
+          expect(window.frame()).toContain('╭─ fake ');
+          expect(window.frame()).toContain('This reply came in chunks.');
+          await send(window, '/new codex');
+          await window.shows('codex refused by the test settings');
+          expect(window.frame()).toContain('╭─ fake ');
+          expect(sessions).toHaveLength(2);
+        },
+        {
+          startupOf: (agent) =>
+            agent === 'codex'
+              ? { refused: 'codex refused by the test settings' }
+              : { agentCommand: command },
+        },
+      ));
+  }
+
+  test('eight idle children fill the cap in their invoking view; x frees a place and /clear reaps the rest', () =>
+    run(80, async (window, _callers, sessions) => {
+      await connected(window);
+
+      for (let count = 1; count <= 8; count++) {
+        await send(window, '/new');
+        await window.shows(`╭─ fake${count === 1 ? '' : ` ${count}`} `);
+        await connected(window);
+        await until(
+          'the new child connected',
+          () => sessions.length === count + 1,
+        );
+      }
+
+      await send(window, '/new');
+      await window.shows(
+        'This session has 8 agents open; close_agent one first',
+      );
+      expect(window.frame()).toContain('╭─ fake 8 ');
+      expect(sessions).toHaveLength(9);
+      await window.press(DOWN);
+      await window.press('x');
+      await until(
+        'the eighth child stopped',
+        () => sessions[8]?.agentPids.size === 0,
+      );
+      await window.press('\r');
+      await send(window, '/new');
+      await until(
+        'a replacement child connected',
+        () => sessions.length === 10,
+      );
+      await connected(window);
+      await go(window, 'main');
+      await send(window, '/clear');
+      await until('every retired child stopped', () =>
+        sessions.slice(0, 10).every((session) => session.agentPids.size === 0),
+      );
+      await connected(window);
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      expect(window.frame()).not.toMatch(/^ {4}fake\s/m);
+    }));
+
+  test('the fake child messages main through its admitted MCP identity and main can message and close it', () =>
+    run(120, async (window, callers, sessions) => {
+      await connected(window);
+      await send(window, '/new');
+      await window.shows('╭─ fake ');
+      await connected(window);
+      await send(window, 'agentchild');
+      await window.shows('I will run the parser tests on each change.');
+
+      const main = callers.find(({ role }) => role === 'person')!;
+
+      expect(
+        main.window.tell(main, 'fake', 'text', () => {}),
+      ).not.toHaveProperty('error');
+      await window.shows('← from @main');
+      await go(window, 'main');
+      await window.shows('← from @fake · fake');
+      await window.shows('All 214 parser tests pass now.');
+      expect(main.window.close(main, 'fake')).not.toHaveProperty('error');
+      await until('the child exited', () => sessions[1]?.agentPids.size === 0);
+      expect(window.frame()).not.toMatch(/^ {4}fake\s/m);
+    }));
+
+  for (const behavior of ['failed', 'hung'] as const) {
+    test(`a ${behavior} /new start can be left by /clear without an agent remaining`, () =>
+      run(
+        80,
+        async (window, _callers, sessions) => {
+          await connected(window);
+          await send(window, '/new codex');
+          await window.shows(
+            behavior === 'hung' ? 'Starting codex' : 'codex did not start:',
+          );
+          await go(window, 'main');
+
+          if (behavior === 'failed') {
+            await window.shows('did not start:');
+          }
+
+          await send(window, '/clear');
+          await connected(window);
+          expect(window.frame()).not.toContain('╭─ codex ');
+          await until('the original sessions have stopped', () =>
+            sessions.every(
+              (session, index) =>
+                index === sessions.length - 1 || session.agentPids.size === 0,
+            ),
+          );
+        },
+        {
+          startupOf: (agent) => ({
+            agentCommand:
+              agent === 'codex'
+                ? fakeAgentCommand(
+                    undefined,
+                    ...(behavior === 'hung'
+                      ? ['--hang', 'start']
+                      : ['--hang', 'invalid']),
+                  )
+                : command,
+          }),
+        },
+      ));
   }
 });

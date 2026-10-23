@@ -3,6 +3,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { openSession } from '../../../src/session/session.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
 import { describe, expect, test } from 'bun:test';
+import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -366,8 +367,9 @@ describe('CHD-1 tester: question box lifecycle', () => {
     ));
 
   test('switching sessions restores the question, secret draft and countdown without restarting it', () =>
-    withWindow(
+    withChild(
       async (window) => {
+        await openOther(window);
         await send(window, 'askcodex');
         await inputAsked(window, 'fake asks you 2 questions');
         await window.press('2');
@@ -384,10 +386,10 @@ describe('CHD-1 tester: question box lifecycle', () => {
 
         const before = clockSeconds();
 
-        await leader(window, 'c');
+        await pickAgent(window, 'other');
         await until('the second fake agent', () => window.pids.length === 2);
         await send(window, 'askdroid');
-        await inputAsked(window, 'fake asks you 3 questions');
+        await inputAsked(window, 'other asks you 3 questions');
         await window.press('1');
         await window.press('1');
         await window.press('\r');
@@ -400,7 +402,7 @@ describe('CHD-1 tester: question box lifecycle', () => {
         await window.shows('Late, after the answer.');
         await send(window, 'text');
         await window.shows('Hello, world.');
-        await leader(window, '1');
+        await pickAgent(window, 'main');
         await inputAsked(window, 'fake asks you 2 questions');
         expect(window.frame()).toContain('* ◉ Token');
         expect(window.frame()).toContain('❯ •••••••••••');
@@ -413,10 +415,12 @@ describe('CHD-1 tester: question box lifecycle', () => {
     ));
 
   test('a short request withdrawn behind another session never reopens its box on return', () =>
-    withWindow(
+    withChild(
       async (window) => {
-        await window.shows('? for shortcuts');
-        await leader(window, 'c');
+        await openOther(window);
+        await send(window, 'mainbetween');
+        await window.shows('ctrl+x a to answer');
+        await pickAgent(window, 'other');
         await until('the second fake agent', () => window.pids.length === 2);
 
         const session = window.session();
@@ -430,12 +434,13 @@ describe('CHD-1 tester: question box lifecycle', () => {
 
         try {
           await send(window, 'askcodexwait');
-          await leader(window, '1');
+          await pickAgent(window, 'main');
           await until(
             'the background request to withdraw',
             () => request?.signal.aborted === true,
           );
-          await leader(window, '2');
+          await window.press(ESC);
+          await pickAgent(window, 'other');
           await window.shows('Elicitation answer: timed out');
           expect(window.frame()).not.toContain('fake asks you 2 questions');
           expect(window.frame()).not.toContain('answers itself in');
@@ -1046,5 +1051,48 @@ describe('CHD-462 B1 tester: hidden question choice', () => {
         await drawn.unmount();
       }
     });
+  }
+});
+
+describe('CHD-493 U10 tester: question note away and back', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`j stays text on the last row and list focus preserves note and geometry at ${columns} columns`, () =>
+      withChild(
+        async (window) => {
+          await openOther(window);
+          await send(window, 'askclaude');
+          await inputAsked(window, 'fake asks you 2 questions');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.type('j keep this');
+          await window.shows('j keep this');
+
+          const before = window.frame().split('\n');
+          const row = before.findIndex((line) => line.includes('j keep this'));
+
+          expect(before[row]).toContain('❯');
+          await window.press(DOWN);
+          await window.shows('  ❯ main ');
+          expect(window.frame().split('\n')[row]).toContain('j keep this');
+          expect(window.frame().split('\n')[row]).not.toContain('❯');
+          expect(window.frame()).not.toContain('Enter to pick');
+          await window.press('\x1b[A');
+          await window.shows('❯');
+          await window.type('k');
+          await window.shows('j keep thisk');
+          expect(
+            window
+              .frame()
+              .split('\n')
+              .findIndex((line) => line.includes('j keep thisk')),
+          ).toBe(row);
+          await window.press(ESC);
+          await window.shows('Elicitation answer: cancel');
+        },
+        { columns, rows },
+      ));
   }
 });

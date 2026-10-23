@@ -39,8 +39,8 @@ interface ActionSpec {
  * Every action a key can be bound to, by Claude Code's name where Claude Code
  * has the action, and chord's for those it binds no name to: `help:toggle`,
  * `?` on an empty prompt, `select:toggleScope`, `/resume`'s ctrl+a
- * between this directory and every one, the `session:` actions on the
- * sessions open in the window and `agents:close` in the list of a session's
+ * between this directory and every one, `session:attention`, to what
+ * waits on the person, and `agents:close` in the list of a session's
  * agents, which Claude Code does not have. The defaults
  * are chord's keys as they were before there was a file, which is why some
  * differ from Claude Code's.
@@ -49,26 +49,8 @@ export const ACTIONS = {
   'app:toggleTranscript': { context: 'Global', keys: ['ctrl+o'] },
   'history:search': { context: 'Global', keys: ['ctrl+r'] },
   // A leader and a letter, as tmux's prefix and Emacs's ctrl+x: ctrl+x is
-  // no key of the prompt's textarea, of chord's or of tmux's own prefix. The
-  // ctrl+ forms are for a person who keeps ctrl held through the chord.
-  'session:new': { context: 'Global', keys: ['ctrl+x c'] },
-  'session:next': { context: 'Global', keys: ['ctrl+x n', 'ctrl+x ctrl+n'] },
-  'session:previous': {
-    context: 'Global',
-    keys: ['ctrl+x p', 'ctrl+x ctrl+p'],
-  },
-  'session:goto1': { context: 'Global', keys: ['ctrl+x 1'] },
-  'session:goto2': { context: 'Global', keys: ['ctrl+x 2'] },
-  'session:goto3': { context: 'Global', keys: ['ctrl+x 3'] },
-  'session:goto4': { context: 'Global', keys: ['ctrl+x 4'] },
-  'session:goto5': { context: 'Global', keys: ['ctrl+x 5'] },
-  'session:goto6': { context: 'Global', keys: ['ctrl+x 6'] },
-  'session:goto7': { context: 'Global', keys: ['ctrl+x 7'] },
-  'session:goto8': { context: 'Global', keys: ['ctrl+x 8'] },
-  'session:goto9': { context: 'Global', keys: ['ctrl+x 9'] },
-  'session:list': { context: 'Global', keys: ['ctrl+x w'] },
+  // no key of the prompt's textarea, of chord's or of tmux's own prefix.
   'session:attention': { context: 'Global', keys: ['ctrl+x a'] },
-  'session:close': { context: 'Global', keys: ['ctrl+x k'] },
   'chat:submit': { context: 'Chat', keys: ['enter'] },
   'chat:newline': {
     context: 'Chat',
@@ -113,26 +95,6 @@ export const ACTIONS = {
 } as const satisfies Record<string, ActionSpec>;
 
 export type Action = keyof typeof ACTIONS;
-
-/** The tab numbers, each the last key of its `session:goto` action. */
-export const TAB_NUMBERS = [
-  '1',
-  '2',
-  '3',
-  '4',
-  '5',
-  '6',
-  '7',
-  '8',
-  '9',
-] as const;
-
-export type TabNumber = (typeof TAB_NUMBERS)[number];
-
-/** The action that goes to tab `n`. */
-export function gotoAction(n: TabNumber): `session:goto${TabNumber}` {
-  return `session:goto${n}`;
-}
 
 /** One key press: a key and the modifiers held with it. */
 export interface Keystroke {
@@ -526,6 +488,19 @@ function overlap(a: Context, b: Context): boolean {
   return a === b || ALWAYS.includes(a) || ALWAYS.includes(b);
 }
 
+/**
+ * The actions that went with tabs in 0.58.0 (CHD-493): a file that still
+ * binds one is told so, not that it names nothing.
+ */
+const REMOVED = [
+  'session:new',
+  'session:next',
+  'session:previous',
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `session:goto${n}`),
+  'session:list',
+  'session:close',
+];
+
 function isAction(name: string): name is Action {
   return Object.hasOwn(ACTIONS, name);
 }
@@ -622,6 +597,14 @@ export function readKeybindings(text: string): {
 
       if (action !== null && typeof action !== 'string') {
         problems.push(`${name}: the action is not a name or null, ignored`);
+
+        continue;
+      }
+
+      if (action !== null && REMOVED.includes(action)) {
+        problems.push(
+          `${action} went with tabs: chord runs one session, ignored`,
+        );
 
         continue;
       }

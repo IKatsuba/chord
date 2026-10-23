@@ -6,7 +6,6 @@ import { join } from 'node:path';
 import { useReducer } from 'react';
 import { serveChord } from '../../../src/server/server.ts';
 import { openSession, type Session } from '../../../src/session/session.ts';
-import { earlierWindows } from '../../../src/session/windows.ts';
 import { readPast } from '../../../src/session/record.ts';
 import { earlierSessions, readRecords } from '../../../src/session/sessions.ts';
 import { useSessions } from '../../../src/ui/app/sessions.ts';
@@ -29,6 +28,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
     all: WindowedState;
     drive: Drive;
     dir: string;
+    openChild(): Promise<unknown>;
   }
 
   async function withSessions(
@@ -50,6 +50,17 @@ describe('CHD-373 S3b tester: session close wiring', () => {
     const opened: Session[] = [];
     const pids = new Set<number>();
     const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
     const command = fakeAgentCommand(undefined, ...flags);
     let seen: Seen | undefined;
     const read = () => {
@@ -112,9 +123,6 @@ describe('CHD-373 S3b tester: session close wiring', () => {
             return session;
           },
           resume: undefined,
-          resumes: undefined,
-          resumedFront: undefined,
-          resumedNote: undefined,
           server,
           runtimes: [...new Set([agent, 'fake'])],
           home: undefined,
@@ -133,7 +141,20 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         },
       );
 
-      seen = { all, drive, dir };
+      seen = {
+        all,
+        drive,
+        dir,
+        openChild: () => {
+          assert(main);
+
+          return main.window.open(main.key, {
+            agent: 'fake',
+            name: 'other',
+            prompt: 'costwait',
+          });
+        },
+      };
 
       return <text>Session accounting host</text>;
     }
@@ -177,38 +198,47 @@ describe('CHD-373 S3b tester: session close wiring', () => {
     );
   };
 
-  test('two busy tabs close concurrently and keep their final costs separately, once each', () =>
+  test('busy main and child close concurrently and keep their final costs once each', () =>
     withSessions(async (read, releaseCloses) => {
+      await read().openChild();
+      await until(
+        'the busy child exists',
+        () => read().drive.sessions.agents.children.length === 1,
+      );
+
+      const child = read().drive.sessions.agents.children[0]!;
+
+      await until(
+        'child cost before closing',
+        () =>
+          read().all.sessions[child.key]?.transcript.usage?.cost?.amount ===
+          0.01,
+      );
       await costStarted(read, 1);
-      read().drive.openBeside();
-      await until(
-        'second ready',
-        () => read().all.sessions[2]?.connection.status === 'ready',
-      );
-      await costStarted(read, 2);
-      read().drive.openBeside();
-      await until(
-        'surviving tab ready',
-        () => read().all.sessions[3]?.connection.status === 'ready',
-      );
 
-      for (const key of [1, 2]) {
-        read().drive.sessions.pick(key);
-        read().drive.showFront();
-        await until('tab shown', () => read().all.front === key);
-        read().drive.closeFront();
-        await until(
-          'busy close armed',
-          () => read().all.window.closeArmed === key,
-        );
-        read().drive.closeFront();
-        await until(
-          'closed tab removed',
-          () => read().all.sessions[key] === undefined,
-        );
-      }
+      const mainId = read().all.sessions[1]!.sessionId!;
 
-      expect(Object.keys(read().all.closing ?? {})).toHaveLength(2);
+      read().drive.sessions.pick(child.key);
+      read().drive.showFront();
+      await until('child shown', () => read().all.front === child.key);
+      read().drive.closePicked();
+      await until(
+        'child close armed',
+        () => read().all.window.agentCloseArmed === child.key,
+      );
+      read().drive.closePicked();
+      await until(
+        'child removed while closing',
+        () => read().all.sessions[child.key] === undefined,
+      );
+      read().drive.clearFront(() => {});
+
+      await until(
+        'main replaced while both closes are held',
+        () =>
+          read().all.sessions[1]?.sessionId !== mainId &&
+          read().all.sessions[1]?.connection.status === 'ready',
+      );
       releaseCloses();
       await until(
         'both costs settled',
@@ -227,7 +257,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
       ]);
       expect(all.closing).toEqual({});
       expect(
-        sum(windowSpend(drive.sessions.tabs.tabs, all.sessions, kept)),
+        sum(windowSpend(drive.sessions.agents, all.sessions, kept)),
       ).toMatchObject({ cost: 0.02 });
     }, true));
 
@@ -236,10 +266,10 @@ describe('CHD-373 S3b tester: session close wiring', () => {
       read().drive.conversation()!.send('agentcost');
       await until(
         'parser exists',
-        () => read().drive.sessions.tabs.tabs[0]?.children.length === 1,
+        () => read().drive.sessions.agents.children.length === 1,
       );
 
-      const child = read().drive.sessions.tabs.tabs[0]!.children[0]!;
+      const child = read().drive.sessions.agents.children[0]!;
 
       await until(
         'child cost before cancellation',
@@ -269,7 +299,6 @@ describe('CHD-373 S3b tester: session close wiring', () => {
 
       expect(kept).toHaveLength(1);
       expect(kept[0]).toMatchObject({
-        tab: 1,
         sessionId: child.conversation.session?.id,
         part: {
           name: 'parser',
@@ -279,84 +308,8 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         },
       });
       expect(all.sessions[child.key]).toBeUndefined();
-      expect(drive.sessions.tabs.tabs[0]?.children).toHaveLength(0);
+      expect(drive.sessions.agents.children).toHaveLength(0);
       expect(all.closing).toEqual({});
-    }));
-
-  test('restoring a closed session into an unused tab replaces that tab and counts the session only once', () =>
-    withSessions(async (read) => {
-      await costStarted(read, 1);
-
-      const sessionId = read().all.sessions[1]!.sessionId!;
-
-      read().drive.openBeside();
-      await until(
-        'unused tab ready',
-        () => read().all.sessions[2]?.connection.status === 'ready',
-      );
-      read().drive.sessions.pick(1);
-      read().drive.showFront();
-      await until('busy tab shown', () => read().all.front === 1);
-      read().drive.closeFront();
-      await until('close armed', () => read().all.window.closeArmed === 1);
-      read().drive.closeFront();
-      await until(
-        'old spend settled',
-        () => read().all.window.keptSpend?.length === 1,
-      );
-
-      const { dir } = read();
-      const records = await readRecords(join(dir, 'state'));
-      const window = earlierWindows(
-        [
-          {
-            id: 'w-qa',
-            at: 1,
-            tabs: [{ sessionId, agent: 'fake', cwd: dir }],
-            front: 0,
-          },
-        ],
-        records,
-      )[0];
-
-      assert(window);
-      read().drive.pickResume({ kind: 'window', window }, 80);
-      await until('restored session ready', () =>
-        Object.values(read().all.sessions).some(
-          (session) =>
-            session.sessionId === sessionId &&
-            session.connection.status === 'ready',
-        ),
-      );
-      await until(
-        'unused tab close settled',
-        () => read().all.window.keptSpend?.length === 2,
-      );
-
-      let { all, drive } = read();
-      const figure = () =>
-        sum(
-          windowSpend(
-            read().drive.sessions.tabs.tabs,
-            read().all.sessions,
-            read().all.window.keptSpend ?? [],
-          ),
-        );
-
-      expect(all.sessions[2]).toBeUndefined();
-      expect(drive.sessions.tabs.tabs).toHaveLength(1);
-      expect(figure()).toMatchObject({ cost: 0.01 });
-
-      const key = drive.sessions.tabs.tabs[0]!.key;
-
-      drive.pickResume({ kind: 'window', window }, 80);
-      await until('same restored tab selected', () => read().all.front === key);
-
-      ({ all, drive } = read());
-
-      expect(drive.sessions.tabs.tabs).toHaveLength(1);
-      expect(all.window.keptSpend).toHaveLength(2);
-      expect(figure()).toMatchObject({ cost: 0.01 });
     }));
 
   describe('CHD-373 S3c tester: retirement through the window session hook', () => {
@@ -370,7 +323,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
     const figure = (read: () => Seen) =>
       sum(
         windowSpend(
-          read().drive.sessions.tabs.tabs,
+          read().drive.sessions.agents,
           read().all.sessions,
           read().all.window.keptSpend ?? [],
         ),
@@ -503,7 +456,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
             () => read().all.sessions[1]?.transcript.turn.status === 'idle',
           );
           resumedCosts.set(original, 0.02);
-          read().drive.pickResume({ kind: 'session', session }, 80);
+          read().drive.pickResume(session);
           await replacement(read, second);
           await settled(read, 2);
           expect(read().all.sessions[1]?.sessionId).toBe(original);
@@ -536,7 +489,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
 
               const empty = read().all.sessions[1]!.sessionId!;
 
-              read().drive.pickResume({ kind: 'session', session: latest }, 80);
+              read().drive.pickResume(latest);
               await replacement(read, empty);
               await settled(read, 4);
             }
@@ -616,17 +569,8 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         ));
     }
 
-    test('a real spawned task ends into its retired record once even after the replacement tab closes', () =>
+    test('a real spawned task ends into its retired record once even after quit closes its replacement', () =>
       withSessions(async (read) => {
-        read().drive.openBeside();
-        await until(
-          'surviving tab ready',
-          () => read().all.sessions[2]?.connection.status === 'ready',
-        );
-        read().drive.sessions.pick(1);
-        read().drive.showFront();
-        await until('main shown', () => read().all.front === 1);
-
         const old = read().all.sessions[1]!.sessionId!;
 
         read().drive.conversation()!.send('taskcost');
@@ -652,12 +596,26 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         read().drive.clearFront(() => {});
 
         await replacement(read, old);
-        read().drive.closeFront();
+        await settled(read, 1);
+        read().drive.quit();
         await until(
-          'replacement tab closed',
-          () => read().all.sessions[1] === undefined,
+          'quit closed the replacement',
+          () => read().drive.sessions.agents.main === undefined,
         );
-        await settled(read, 2);
+        await until('retired task end persisted after quit', async () => {
+          const records = await readRecords(join(read().dir, 'state'));
+          const parent = records.find((each) => each.sessionId === old);
+
+          return (
+            parent !== undefined &&
+            (await readPast(parent.path)).some(
+              (entry) =>
+                entry.type === 'update' &&
+                entry.update.sessionUpdate === 'subagent_update' &&
+                entry.update._meta?.['chord/spent'] !== undefined,
+            )
+          );
+        });
 
         const kept = read().all.window.keptSpend!.find(
           (part) => part.sessionId === old,
@@ -670,9 +628,9 @@ describe('CHD-373 S3b tester: session close wiring', () => {
           figure: { cost: { amount: 0.01 } },
         });
         expect(figure(read).cost).toBeCloseTo(0.0225, 9);
-        expect(read().all.sessions[2]?.spent).toBeUndefined();
+        expect(read().all.sessions[1]?.spent).toBeUndefined();
         expect(
-          JSON.stringify(read().all.sessions[2]?.transcript.entries),
+          JSON.stringify(read().all.sessions[1]?.transcript.entries ?? []),
         ).not.toContain('Count the cost');
 
         const records = await readRecords(join(read().dir, 'state'));
@@ -693,8 +651,8 @@ describe('CHD-373 S3b tester: session close wiring', () => {
   });
 });
 
-describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', () => {
-  test("its turn's end, its last cost with it, is kept where it was let go, and nothing of it reaches the tab's next session", async () => {
+describe('CHD-373 S3c: a session /clear let go before its turn ends', () => {
+  test("its turn's end, its last cost with it, is kept where it was let go, and nothing of it reaches the next session", async () => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-spend-retire-'));
     const server = serveChord();
     const command = fakeAgentCommand();
@@ -733,9 +691,6 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
             return session;
           },
           resume: undefined,
-          resumes: undefined,
-          resumedFront: undefined,
-          resumedNote: undefined,
           server,
           runtimes: ['fake'],
           home: undefined,
@@ -766,15 +721,6 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
         'main ready',
         () => read().all.sessions[1]?.connection.status === 'ready',
       );
-      // A second tab, so closing the first leaves the window open.
-      read().drive.openBeside();
-      await until(
-        'second ready',
-        () => read().all.sessions[2]?.connection.status === 'ready',
-      );
-      read().drive.sessions.pick(1);
-      read().drive.showFront();
-      await until('first in front', () => read().all.front === 1);
 
       const conversation = read().drive.sessions.conversationOf(1);
 
@@ -785,11 +731,9 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
         () => read().all.sessions[1]?.transcript.usage?.cost?.amount === 0.01,
       );
 
-      // Let go, and its tab gone at once, before the old turn has ended:
-      // what that turn says comes through the closed tab's events.
+      // Let go before the old turn has ended: what that turn says comes
+      // through the let-go session's own events.
       read().drive.clearFront(() => {});
-
-      const closed = read().drive.sessions.close(1);
 
       await until(
         'the let-go session kept',
@@ -797,16 +741,14 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
           read().all.window.keptSpend?.length === 1 &&
           Object.keys(read().all.closing ?? {}).length === 0,
       );
-      await closed;
 
       const [kept] = read().all.window.keptSpend!;
 
-      // Its turn to its end, the late cost included, under its tab.
+      // Its turn to its end, the late cost included.
       expect(kept).toMatchObject({
-        tab: 1,
         part: { name: 'main', figure: { cost: { amount: 0.02 } } },
       });
-      // Nothing of it reached the session the tab went on with.
+      // Nothing of it reached the session the window went on with.
       expect(read().all.sessions[1]?.spent?.costs).toBe(undefined);
     } finally {
       await read().drive.sessions.closeAll();
@@ -917,9 +859,6 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
             return session;
           },
           resume: undefined,
-          resumes: undefined,
-          resumedFront: undefined,
-          resumedNote: undefined,
           server,
           runtimes: ['fake', 'dimcode'],
           home: undefined,
@@ -992,7 +931,7 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
     });
 
     assert(key !== undefined);
-    expect(read().drive.sessions.tabs.tabs[0]?.picked).toBe(1);
+    expect(read().drive.sessions.agents.picked).toBe(1);
 
     return key;
   };

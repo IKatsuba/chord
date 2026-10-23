@@ -1,0 +1,40 @@
+ › cursorplan
+
+ ⏺ Plan(Route updates by session)
+   ⎿  Waiting…
+      Split the session routing out of the connection.
+
+      Route updates by session
+
+      1. Read src/acp/connection.ts.
+      2. Move the routing into src/session/session.ts.
+      3. Run the tests.
+
+      Move
+      ◐ Move the routing
+      ☐ Run the tests
+
+      Todos
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ ››› Waiting for your answer to the plan… (18s)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  keep it short                                                                                                │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main   fake · Fake Large with a 1M context window · medium  ✻ working 17s
+    other  codex · 6.1 Sol · medium                             ◦ idle 5s

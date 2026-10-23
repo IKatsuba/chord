@@ -16,7 +16,8 @@ what makes the collapse safe.
 Revised once after the critic's round (findings 1, 2, 3, 5, 6, 8): U1's
 test migration completed, U2's inventory made from a full grep (§8), the
 `-r a -r b` refusal names each record's agent and directory, the glyphs
-move out of the strip, and a failure row for late MCP calls.
+move out of the strip, and a failure row for late MCP calls. (The `-r a -r b`
+refusal is gone in `CHD-493.md` U9, Q181.)
 
 Design dependencies, marked where they apply: **[W]** the `--resume w-…`
 answer, now protocol's (§4); **[N]** the lead's owner question on `/new`
@@ -175,7 +176,7 @@ named where one exists or is needed.
 | F10 | `/resume` picks a session in another directory | Refused with its command (`elsewhereRefusal`); unchanged. The window has one directory for its life: main's. |
 | F11 | `/resume` or `/clear` while a turn runs / a child is picked | `resumeRefusal` and `/clear clears main; pick main first`; unchanged. |
 | F12 | ctrl+d or `/exit` | Quits at once: one session never armed (`busyTabs` returned `[]` under two tabs, :2640). ctrl+c keeps its own two-press arming with no session count. Whether a busy *child* should arm ctrl+d is not this task's (open question O2). |
-| F13 | `chord -r a -r b` | Refused before anything starts, chord's own words, a command per id with its record's agent and directory (§4). Nothing is spawned, no terminal is taken. |
+| F13 | `chord -r a -r b` | Refused before anything starts, chord's own words, a command per id with its record's agent and directory (§4). Nothing is spawned, no terminal is taken. (Gone in `CHD-493.md` U9, Q181: `-r` takes one value and Cliffy refuses a second.) |
 | F14 | `chord --resume w-1a2b3c4d` with an old record on disk | **[W]** Answered before the terminal is taken, as protocol words it, each tab with its agent and directory. Window files are never written again; runtime only places the check before `terminalSetup`. |
 | F15 | Two chord processes on one session (two panes running `--continue` in one directory, `--resume X` twice, `/resume` of a session another process has open) | **[R3]** Both conversations write `records/<id>.jsonl`; each record line is appended whole, so the file stays readable, but the turns interleave and the agent sees two clients. This exists today across processes; inside one window the tab guard (`openTabs`, :2829) prevented it. With tabs gone, side-by-side sessions are always separate processes, so the window guard no longer covers the common case. No lock is designed here (the brief's non-goal). |
 | F16 | A keybindings file binding a removed `session:` action | Interface's; runtime only notes that `loadKeybindings` problems are said before the window (main.tsx `report(keys.problems)`), so the person sees it once. |
@@ -184,8 +185,10 @@ named where one exists or is needed.
 ## 4. The CLI
 
 - **`--resume` with one id, `--continue`, `-r` with no id:** as today.
+  (Superseded for one id by Q180 and `CHD-493.md` U8: with no `[agent]`
+  named, one id opens on its record's agent.)
   The start picker lists sessions only (interface for `Start.tsx`).
-- **Several ids (`-r a -r b`)**: Cliffy's `collect` stays, so `main.tsx`
+- **Several ids (`-r a -r b`)** (Gone in `CHD-493.md` U9, Q181: `-r` takes one value and Cliffy refuses a second.): Cliffy's `collect` stays, so `main.tsx`
   sees every id and refuses with its own sentences, before any terminal or
   agent. No argv rewriting, no guessing which to open. Dropping `collect`
   would make Cliffy refuse with its generic duplicate-option error. (Runtime's
@@ -199,8 +202,10 @@ named where one exists or is needed.
     overrides (Q56's rule, as `resumeMessage` applies it);
   - an id chord has no record of: the agent and directory of this
     invocation, and the line says so, so nothing is presented as known
-    that is not: `chord codex --cwd /src/app --resume 0199… (no record;
-    the agent and directory are this command's)`.
+    that is not: `chord codex --cwd /src/app --resume 0199…  # no record;
+    the agent and directory are this command's`. The note is a shell
+    comment, so the line still pastes and runs (main, pending the owner's
+    Q181).
   - a named `[agent]` that differs from a record's agent is not resolved
     here: the line carries the record's agent, and running it is checked
     as one `--resume` always is.
@@ -209,7 +214,7 @@ named where one exists or is needed.
   --resume opens one session; it was given 3. Open each in a chord of its own:
   chord claude --cwd /src/app --resume 4f1c…
   chord codex --cwd /src/lib --resume 9a2e…
-  chord claude --cwd /src/app --resume 0199… (no record; the agent and directory are this command's)
+  chord claude --cwd /src/app --resume 0199…  # no record; the agent and directory are this command's
   ```
   The same id twice is still said once per time given; it is a refusal,
   not a plan.
@@ -270,13 +275,13 @@ change `useSessions` and the harness, so they are sequential.
 The ways a window opens several tabs at once.
 
 - `cli.ts` help and examples; `main.tsx`: one id, several refused with
-  `severalRefusal` (§4), `w-…` answered **[W]**, one place read, no
+  `severalRefusal` (§4; gone in U9, Q181), `w-…` answered **[W]**, one place read, no
   `resumes`, no window written on quit. The quit message keeps the plural
   `Resume these sessions with:` for this unit only (tabs from `ctrl+x c`
   still exist until U2; it is today's fallback when a window record fails
   to write, so nothing new).
 - `sessions.ts`: `sessionsByIds`, `ResumedTab` go; `severalRefusal` and
-  `resumeCommand`'s `cwd` come.
+  `resumeCommand`'s `cwd` come (and go in U9, Q181).
 - `windows.ts`: shrinks to what protocol keeps for `w-…`.
 - `useSessions` and the harness: `resumes`/`resumedFront`/`resumedNote`/
   `OpeningTab` go; `resume` + `place` (both exist already) carry a single
@@ -287,13 +292,13 @@ The ways a window opens several tabs at once.
 | File | Case | Outcome |
 |---|---|---|
 | `tests/headless_test.ts` | import of `writeWindow` (:19); `seedRecords` writing a window (:668) | Seed the window as a fixture string: the 0.57.0 JSON as `windowText` wrote it (`{"id":"w-0b5c5f9e","at":3,"tabs":[…],"front":0}` pretty-printed, newline-terminated) written with `writeFile` to `windows/w-0b5c5f9e.json`; no import from `windows.ts`. |
-| `tests/headless_test.ts` | :692 "a restore asks PATH for its tabs' agents" | Rewritten in three: (a) one `-r <id>` whose record's agent is `cursor` still reaches PATH validation and names cursor, not the default (the guarantee kept); (b) `-r a -r b` gets `severalRefusal`'s text, exit 1, and **nothing** asks PATH; (c) `-r w-0b5c5f9e` gets protocol's answer, exit 1, nothing asks PATH. Add (d): records of two agents (`cursor` and `claude`) and one unknown id: each line names its record's agent and directory, the unknown one this command's with its note. |
-| `tests/cli_test.ts` | :75 several ids open a tab each | Rewritten to `severalRefusal` from argv, the mixed-agent case among them. |
-| `tests/cli_test.ts` | :188 ten ids, an unknown id among several, the same id twice | Rewritten: all refused by `severalRefusal`; ten is no longer special. |
+| `tests/headless_test.ts` | :692 "a restore asks PATH for its tabs' agents" | Rewritten in three: (a) one `-r <id>` whose record's agent is `cursor` still reaches PATH validation and names cursor, not the default (the guarantee kept; after U8, Q180, with no agent named); (b) `-r a -r b` gets `severalRefusal`'s text, exit 1, and **nothing** asks PATH; (c) `-r w-0b5c5f9e` gets protocol's answer, exit 1, nothing asks PATH. Add (d): records of two agents (`cursor` and `claude`) and one unknown id: each line names its record's agent and directory, the unknown one this command's with its note. ((b) and (d) gone in U9, Q181: Cliffy refuses a second `-r`.) |
+| `tests/cli_test.ts` | :75 several ids open a tab each | Rewritten to `severalRefusal` from argv, the mixed-agent case among them. (Gone in `CHD-493.md` U9, Q181: `-r` takes one value and Cliffy refuses a second.) |
+| `tests/cli_test.ts` | :188 ten ids, an unknown id among several, the same id twice | Rewritten: all refused by `severalRefusal`; ten is no longer special. (Gone in `CHD-493.md` U9, Q181: `-r` takes one value and Cliffy refuses a second.) |
 | `tests/cli_test.ts` | :316 CHD-466 U2, `window restore` variant | Rewritten to the `w-…` answer **[W]**; the `session resume` variant stays. |
 | `tests/cli_test.ts` | :103, :90, :114, :133, :160, :230, :265 | Stay. |
 | `tests/session/windows_test.ts` | all | Rewritten to what protocol keeps (its draft). |
-| `tests/session/sessions_test.ts` | :220, :255 | Deleted; replaced by `severalRefusal` cases (known, unknown, mixed agents, `--agent-command` only for the overridden agent, a directory that needs quoting). `resumeCommand` with `cwd`: one case next to :311. |
+| `tests/session/sessions_test.ts` | :220, :255 | Deleted; replaced by `severalRefusal` cases (known, unknown, mixed agents, `--agent-command` only for the overridden agent, a directory that needs quoting). `resumeCommand` with `cwd`: one case next to :311. (Gone in `CHD-493.md` U9, Q181: `-r` takes one value and Cliffy refuses a second.) |
 | `tests/ui/app/AppResume_test.tsx` | :105 several resumed open as tabs; :332 a window record's tabs | Deleted. |
 | `tests/ui/app/AppResume_test.tsx` | :224 CHD-466 model probe where the asking session works | Rewritten as two windows each resuming **one** session with `resume` + `place` (one place whose `startupOf` refuses codex, one that allows it), each driving `/model codexmodels`: never started where refused, read where not. Keeps the guarantee that the resumed directory's startup decides the probe; drops the tab switch. |
 | `tests/ui/app/terminal_test.ts` | :207 (passes `resumes: [one]` at :243) | Rewritten to `resume` + `place`; expectations unchanged. |
@@ -338,7 +343,7 @@ any *other* path.
 
 | File | Case | Outcome |
 |---|---|---|
-| `App_test.tsx` | :38 CHD-382 "a blocked tab behind wins over a working front tab" | Rewritten main + child: a blocked child wins over a working main. |
+| `App_test.tsx` | :38 CHD-382 "a blocked tab behind wins over a working front tab" | Rewritten main + child: a blocked child wins over a working main (main's slow work first, the child entered through the empty-draft list, the child asks permission, blocked wins). Its trailing check, cancelling main while the child is blocked, has no path with the keys left (main has no attention then) and is not tested (Q183); Esc cancellation keeps its own tests. |
 | `App_test.tsx` | :685 strip vs header | Keep the one-session half; the two-session half deleted. |
 | `App_test.tsx` | :709 ctrl+x c / leader switching | Deleted. |
 | `App_test.tsx` | :747, :798, :842 `/new <agent>` on its settings' model/effort, names from settings | **[N]** Deleted; the starting values per runtime stay covered for children (`AgentsTasks_test.tsx` :319, `tests/settings_test.ts` `startupOf`). A new case: `/new` clears as `/clear` does, `/new codex` is refused with the lead's wording. |
@@ -378,7 +383,7 @@ any *other* path.
 | `Questions_test.tsx` | :415 a short request withdrawn behind never reopens | Rewritten main + child. |
 | `Permission_test.tsx` | :696 two sessions answer their own overflowing requests | Rewritten main + child. |
 | `PermissionBetween_test.tsx` | :165 attention answers from `${focus}` (ctrl+x w) | The `sessions picker` focus variant deleted; the others stay. |
-| `PromptKeys_test.tsx` | :302 a cancelled turn and another session keep independent drafts | Rewritten main + child. |
+| `PromptKeys_test.tsx` | :302 a cancelled turn and another session keep independent drafts | Narrowed to what keys reach (Q183): cancelled main draft → `ctrl+x a` to a child with an unread reply → back through the agents list. Switching back and forth with both drafts non-empty is not reachable and not tested. |
 | `PromptImage_test.tsx` | :473, :509, :548 a read while another tab comes forward | Rewritten: the read finishes after the person picks a child; it lands in the draft it began in (`stateOf(key)`, the same code). |
 | `PromptImage_test.tsx` | :676, :854 ctrl+v while an agent starts; a `${child ? 'child' : 'tab'}` that fails or starts | The `tab` variants become a child on another runtime; the `child` variants stay. |
 | `TranscriptBack_test.tsx` | :98 two sessions scrolled back keep their own top entry | Rewritten main + child (held scroll per key). |

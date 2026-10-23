@@ -1,5 +1,4 @@
-import { describe, expect, test } from 'bun:test';
-import { idle } from '../../../src/session/tabs.ts';
+import { expect, test } from 'bun:test';
 import {
   choiceKey,
   CURRENT_MARK,
@@ -16,10 +15,6 @@ import {
   pickerRows,
   type PickerView,
   sessionChoices,
-  tabChoices,
-  type TabRow,
-  tabMark,
-  tabState,
   valueChoices,
   valueToAsk,
 } from '../../../src/ui/pickers/picker.ts';
@@ -203,12 +198,9 @@ test('a session reads as how long ago it was last used', () => {
 
 test("/resume's rows line the prompts up after when each was used", () => {
   const session = (id: string, at: string, prompt: string) => ({
-    kind: 'session' as const,
-    session: {
-      resume: { sessionId: id, cwd: '/work' },
-      lastUsedAt: at,
-      prompt,
-    },
+    resume: { sessionId: id, cwd: '/work' },
+    lastUsedAt: at,
+    prompt,
   });
   const choices = sessionChoices(
     [
@@ -228,12 +220,9 @@ test("/resume's rows line the prompts up after when each was used", () => {
 
 test("every directory's /resume rows name each directory from ~, cut from the start at a /", () => {
   const session = (id: string, cwd: string, prompt: string) => ({
-    kind: 'session' as const,
-    session: {
-      resume: { sessionId: id, cwd },
-      lastUsedAt: '2026-10-05T11:58:00.000Z',
-      prompt,
-    },
+    resume: { sessionId: id, cwd },
+    lastUsedAt: '2026-10-05T11:58:00.000Z',
+    prompt,
   });
   const long = 'a'.repeat(40);
   const choices = sessionChoices(
@@ -323,14 +312,11 @@ test('the value an option is set to already asks the agent for nothing', () => {
   expect(valueToAsk(EFFORT, 'high')).toStrictEqual('high');
 });
 
-test("/resume's rows say which tab a session is open in", () => {
+test("/resume's rows say which session is open now, as a child of this one", () => {
   const session = (id: string, at: string, prompt: string) => ({
-    kind: 'session' as const,
-    session: {
-      resume: { sessionId: id, cwd: '/work' },
-      lastUsedAt: at,
-      prompt,
-    },
+    resume: { sessionId: id, cwd: '/work' },
+    lastUsedAt: at,
+    prompt,
   });
   const choices = sessionChoices(
     [
@@ -339,216 +325,12 @@ test("/resume's rows say which tab a session is open in", () => {
     ],
     NOW,
     undefined,
-    new Map([['s2', 2]]),
+    new Set(['s2']),
   );
 
   expect(choices.map(({ label }) => label)).toStrictEqual([
-    '2 minutes ago             fix the build',
-    '3 days ago     open in 2  add a test',
-  ]);
-});
-
-const idleTab: TabRow = {
-  agent: 'fake',
-  wait: idle,
-  front: false,
-  prompt: undefined,
-};
-
-test('a session in the sessions picker says where it stands, as the agents list does, and beside it what is not yet seen (CHD-471)', () => {
-  const now = 1_000_000;
-  const at = (seconds: number) => now - seconds * 1000;
-  const wait = (more: Partial<TabRow['wait']>) => ({
-    ...idleTab,
-    wait: { ...idleTab.wait, ...more },
-  });
-  const permission = { kind: 'permission' } as const;
-  const input = { kind: 'input', message: 'Name the project' } as const;
-
-  expect(tabState({ ...idleTab, front: true }, now)).toStrictEqual('here');
-  expect(tabState(wait({ stopped: at(190) }), now)).toStrictEqual('◦ idle 3m');
-  expect(tabState(wait({ working: at(12) }), now)).toStrictEqual(
-    '✻ working 12s',
-  );
-  expect(
-    tabState(wait({ asking: { on: permission, since: at(41) } }), now),
-  ).toStrictEqual('● permission 41s');
-  expect(
-    tabState(wait({ asking: { on: input, since: at(41) } }), now),
-  ).toStrictEqual('● input 41s');
-
-  // A reply and a failed turn are marks; the session reads idle.
-  const replied = wait({
-    stopped: at(4),
-    unseen: { kind: 'replied', since: at(125) },
-  });
-
-  expect(tabState(replied, now)).toStrictEqual('◦ idle 4s');
-  expect(tabMark(replied)).toStrictEqual('✓ new reply');
-
-  const failed = wait({
-    stopped: at(65),
-    unseen: { kind: 'failed', since: at(65), failure: 'turn' },
-  });
-
-  expect(tabState({ ...failed, waiter: 'parser' }, now)).toStrictEqual(
-    '◦ idle 1m',
-  );
-  expect(tabMark(failed)).toStrictEqual('✗ turn failed');
-  expect(
-    tabMark(wait({ unseen: { kind: 'message', from: '@main', since: now } })),
-  ).toStrictEqual('← new message');
-
-  // Gone is a state, a child's named, and no mark.
-  const exited = {
-    ...wait({
-      unseen: { kind: 'failed', since: at(5), failure: 'exited' },
-      exited: true,
-    }),
-    waiter: 'parser',
-  };
-
-  expect(tabState(exited, now)).toStrictEqual('✗ parser: exited');
-  expect(tabMark(exited)).toStrictEqual(undefined);
-  expect(
-    tabState(
-      wait({ unseen: { kind: 'failed', since: at(5), failure: 'start' } }),
-      now,
-    ),
-  ).toStrictEqual('✗ failed to start');
-  // In front it is here, whatever it waits on, and nothing is unseen.
-  expect(
-    tabState(
-      {
-        ...wait({ asking: { on: permission, since: at(41) } }),
-        front: true,
-      },
-      now,
-    ),
-  ).toStrictEqual('here');
-  expect(tabMark({ ...replied, front: true })).toStrictEqual(undefined);
-});
-
-test("the sessions picker's rows line up its columns, the marks among them, by tab number", () => {
-  const now = 1_000_000;
-  const choices = tabChoices(
-    [
-      { ...idleTab, front: true, prompt: 'fix the failing test' },
-      {
-        ...idleTab,
-        agent: 'claude',
-        wait: {
-          ...idleTab.wait,
-          stopped: now - 3_000,
-          unseen: { kind: 'replied', since: now },
-        },
-        prompt: 'add a notes file',
-      },
-      { ...idleTab, wait: { ...idleTab.wait, working: now - 41_000 } },
-    ],
-    now,
-    2,
-  );
-
-  expect(choices).toStrictEqual([
-    {
-      key: '1',
-      label: 'fake    here                        fix the failing test',
-      value: '1',
-    },
-    {
-      key: '2',
-      label: 'claude  ◦ idle 3s      ✓ new reply  add a notes file',
-      value: '2',
-      current: true,
-    },
-    { key: '3', label: 'fake    ✻ working 41s', value: '3' },
-  ]);
-  expect(initialChoice(choices)).toStrictEqual(1);
-});
-
-test("/resume's window rows read ▣ with their agents and front prompt, in the sessions' columns", () => {
-  const window = (
-    id: string,
-    at: string,
-    tabs: { sessionId: string; agent: string; cwd: string }[],
-    prompt: string,
-  ) => ({
-    kind: 'window' as const,
-    window: {
-      id,
-      lastUsedAt: at,
-      tabs,
-      front: 0,
-      opening: { tabs: [], front: 0 },
-      prompt,
-    },
-  });
-  const session = (id: string, at: string, cwd: string, prompt: string) => ({
-    kind: 'session' as const,
-    session: { resume: { sessionId: id, cwd }, lastUsedAt: at, prompt },
-  });
-  const entries = [
-    window(
-      'w-1',
-      '2026-10-05T11:50:00.000Z',
-      [
-        { sessionId: 's1', agent: 'claude', cwd: '/h/src/app' },
-        { sessionId: 's2', agent: 'codex', cwd: '/h/src/app' },
-        { sessionId: 's3', agent: 'claude', cwd: '/h/src/app' },
-      ],
-      'fix the failing date test',
-    ),
-    session(
-      's1',
-      '2026-10-05T11:49:00.000Z',
-      '/h/src/app',
-      'fix the failing date test',
-    ),
-    window(
-      'w-2',
-      '2026-10-04T12:00:00.000Z',
-      [
-        { sessionId: 's4', agent: 'claude', cwd: '/h/src/app' },
-        { sessionId: 's5', agent: 'codex', cwd: '/h/src/api' },
-      ],
-      'rename the route',
-    ),
-  ];
-
-  expect(
-    sessionChoices(entries, NOW).map(({ key, label }) => [key, label]),
-  ).toStrictEqual([
-    [
-      'w-1',
-      '10 minutes ago  ▣ 3 sessions · claude, codex, claude · fix the failing date test',
-    ],
-    ['s1', '11 minutes ago  fix the failing date test'],
-    ['w-2', 'yesterday       ▣ 2 sessions · claude, codex · rename the route'],
-  ]);
-  // Every directory's: a window names its front tab's, and +1 for the other.
-  expect(
-    sessionChoices(entries, NOW, { home: '/h' }).map(({ label }) => label),
-  ).toStrictEqual([
-    '10 minutes ago  ~/src/app     ▣ 3 sessions · claude, codex, claude · fix the failing date test',
-    '11 minutes ago  ~/src/app     fix the failing date test',
-    'yesterday       ~/src/app +1  ▣ 2 sessions · claude, codex · rename the route',
-  ]);
-  // Open sessions: theirs is `open in n`, a window's how many are open.
-  expect(
-    sessionChoices(
-      entries,
-      NOW,
-      undefined,
-      new Map([
-        ['s1', 1],
-        ['s2', 2],
-      ]),
-    ).map(({ label }) => label),
-  ).toStrictEqual([
-    '10 minutes ago             ▣ 3 sessions, 2 open · claude, codex, claude · fix the failing date test',
-    '11 minutes ago  open in 1  fix the failing date test',
-    'yesterday                  ▣ 2 sessions · claude, codex · rename the route',
+    '2 minutes ago            fix the build',
+    '3 days ago     open now  add a test',
   ]);
 });
 
@@ -572,56 +354,17 @@ test("a numbered list's keys move round, pick, and leave shift+arrows alone", ()
   ).toBeUndefined();
 });
 
-describe('CHD-264 tester: picker failure identity', () => {
-  test('a failed turn is idle with its own stop time and an unnamed mark while the front tab reads here', () => {
-    const now = 1_000_000;
-    const child: TabRow = {
-      ...idleTab,
-      waiter: 'parser',
-      wait: {
-        ...idle,
-        stopped: now - 12_000,
-        unseen: {
-          kind: 'failed',
-          failure: 'turn',
-          since: now - 120_000,
-          failedAt: now - 12_000,
-        },
-      },
-    };
+test('a box that ends at its last choice leaves on ↓ or j there, and still wraps on ↑ (Q194)', () => {
+  const key = { ctrl: false, escape: false };
 
-    expect(tabState(child, now)).toBe('◦ idle 12s');
-    expect(tabMark(child)).toBe('✗ turn failed');
-    expect(
-      tabState({ ...child, wait: { ...child.wait, exited: true } }, now),
-    ).toBe('✗ parser: exited');
-    expect(tabState({ ...child, front: true }, now)).toBe('here');
-    expect(tabState({ ...idleTab, wait: child.wait }, now)).toBe('◦ idle 12s');
+  expect(choiceKey('', { ...key, downArrow: true }, 2, 3, true)).toStrictEqual({
+    leave: true,
   });
-});
-
-describe('CHD-364 tester: legacy and newest replies are timeless marks', () => {
-  test('old and new reply timestamps including epoch zero leave state and mark independent', () => {
-    for (const [since, repliedAt] of [
-      [1000, undefined],
-      [1000, 64000],
-      [-100000, 0],
-    ]) {
-      const tab: TabRow = {
-        ...idleTab,
-        wait: {
-          ...idle,
-          unseen: {
-            kind: 'replied',
-            since: since!,
-            ...(repliedAt === undefined ? {} : { repliedAt }),
-          },
-        },
-      };
-
-      expect(tabState(tab, 65000)).toBe('◦ idle 0s');
-      expect(tabMark(tab)).toBe('✓ new reply');
-      expect(tabMark({ ...tab, front: true })).toBeUndefined();
-    }
+  expect(choiceKey('j', key, 2, 3, true)).toStrictEqual({ leave: true });
+  expect(choiceKey('j', key, 1, 3, true)).toStrictEqual({ move: 2 });
+  expect(choiceKey('', { ...key, upArrow: true }, 0, 3, true)).toStrictEqual({
+    move: 2,
   });
+  // A box alone, Decline its one choice, leaves at once.
+  expect(choiceKey('j', key, 0, 1, true)).toStrictEqual({ leave: true });
 });

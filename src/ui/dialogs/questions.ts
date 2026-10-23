@@ -163,6 +163,11 @@ function setAnswer(
 export interface AskStep {
   readonly state: AskState;
   readonly response?: ElicitationReply;
+  /**
+   * ↓ on the box's last active row, a step's last or Skip: the keys go to
+   * the list of agents, the answers kept as they are (Q193).
+   */
+  readonly leave?: true;
 }
 
 /** The parts of a press the box reads. */
@@ -314,7 +319,9 @@ export function askKey(
     }
 
     if (key.downArrow) {
-      return { state: { ...state, row: SKIP } };
+      return state.row === SKIP
+        ? { state, leave: true }
+        : { state: { ...state, row: SKIP } };
     }
 
     if (key.return) {
@@ -340,9 +347,9 @@ export function askKey(
   }
 
   if (key.downArrow) {
-    return {
-      state: { ...state, row: Math.min(state.row + 1, rows.length - 1) },
-    };
+    return state.row >= rows.length - 1
+      ? { state, leave: true }
+      : { state: { ...state, row: state.row + 1 } };
   }
 
   if (row?.kind === 'text') {

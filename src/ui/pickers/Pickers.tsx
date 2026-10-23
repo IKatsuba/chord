@@ -6,8 +6,8 @@ import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
 import type { AgentOption } from '../../session/config.ts';
 import type { AgentModels } from '../../session/models.ts';
+import type { EarlierSession } from '../../session/sessions.ts';
 import type { HeldBack } from '../../session/servers.ts';
-import type { ResumeEntry } from '../../session/windows.ts';
 import { capital } from '../shortcuts/state.ts';
 import {
   resumeChoices,
@@ -72,8 +72,6 @@ import {
   pickerKey,
   pickerRows,
   sessionChoices,
-  tabChoices,
-  type TabRow,
   valueChoices,
 } from './picker.ts';
 
@@ -147,9 +145,9 @@ export function ModelPicker({
 }
 
 /**
- * `/resume`: this directory's earlier sessions and saved windows, newest
- * first, inline above the prompt as the model picker is; each row says when
- * the session was last used or the window quit, and how it began. ctrl+a
+ * `/resume`: this directory's earlier sessions, newest first, inline above
+ * the prompt as the model picker is; each row says when the session was last
+ * used, and how it began. ctrl+a
  * lists every directory's, each row naming its directory too. Enter on one
  * resumes it; Esc is the window's. `starting` is `chord --resume` with no
  * id, where nothing is open yet: a pick opens, and Esc quits.
@@ -165,8 +163,8 @@ export function ResumePicker({
   onPick,
 }: {
   picker: ResumePickerState;
-  /** The tab each session open in the window is in, by its id. */
-  open: ReadonlyMap<string, number>;
+  /** The ids of the sessions open now, as children of this one. */
+  open: ReadonlySet<string>;
   /** The most sessions shown at once; a longer list scrolls. */
   rows: number;
   agent: string;
@@ -174,7 +172,7 @@ export function ResumePicker({
   home: string | undefined;
   active: boolean;
   starting?: boolean;
-  onPick: (chosen: ResumeEntry) => void;
+  onPick: (chosen: EarlierSession) => void;
 }) {
   const { everywhere } = picker;
   // Read once: rows that age while the list is open would shift under the
@@ -209,16 +207,14 @@ export function ResumePicker({
       </text>
       <text {...CUT} attributes={DIM}>
         {starting
-          ? `Pick one of ${agent}'s earlier sessions, or a saved window, to open.`
-          : `${agent}'s earlier sessions and saved windows in ${
+          ? `Pick one of ${agent}'s earlier sessions to open.`
+          : `${agent}'s earlier sessions in ${
               everywhere ? 'every directory' : 'this directory'
             }.`}
       </text>
       {choices.length === 0 ? (
         <box marginTop={1}>
-          <text {...TEXT}>
-            No earlier sessions or windows in this directory.
-          </text>
+          <text {...TEXT}>No earlier sessions in this directory.</text>
         </box>
       ) : (
         <PickerList
@@ -317,62 +313,6 @@ export function TeamsPicker({
               listing.teams.find(({ name }) => name === highlighted),
               columns,
             ),
-            closeHint,
-          )}
-        </text>
-      </box>
-    </box>
-  );
-}
-
-/**
- * `ctrl+x w`: the sessions open in the window, in tab order, inline above the
- * prompt as the other pickers are; each row says its agent, where it stands
- * and how it began. Enter or a digit puts that one in front; Esc is the
- * window's. It closes nothing, as closing has a key of its own.
- */
-export function SessionsPicker({
-  tabs,
-  start,
-  directory,
-  rows,
-  active,
-  onPick,
-}: {
-  tabs: readonly TabRow[];
-  /** The tab the highlight starts on. */
-  start: number | undefined;
-  /** The window's directory, as the header shows it. */
-  directory: string;
-  /** The most sessions shown at once. */
-  rows: number;
-  active: boolean;
-  onPick: (number: number) => void;
-}) {
-  const choices = tabChoices(tabs, Date.now(), start);
-  const closeHint = useCloseHint();
-
-  return (
-    <box
-      {...borderOf(useColours().permission)}
-      paddingX={1}
-      marginTop={1}
-      flexShrink={0}
-    >
-      <text {...CUT} {...fg(useColours().permission)} attributes={BOLD}>
-        {`Sessions in ${directory}`}
-      </text>
-      <PickerList
-        choices={choices}
-        rows={rows}
-        active={active}
-        onPick={(value) => onPick(Number(value))}
-      />
-      <box marginTop={1}>
-        <text {...TEXT} attributes={DIM}>
-          {hintOf(
-            'Enter to go',
-            choices.length > 1 ? `1–${choices.length} to pick` : '1 to pick',
             closeHint,
           )}
         </text>
@@ -799,26 +739,60 @@ function PickerList({
  * one. Shift+arrows are the window's. Not `marked`, it shows no highlight,
  * as a list the keys have not gone into yet.
  */
+/**
+ * What a box keeps of its choices with its agent, and its way out to the
+ * agents list (Q194): where the highlight was, and who hears it move.
+ */
+export interface KeptChoice {
+  readonly highlighted?: number | undefined;
+  readonly onHighlight?: (highlighted: number) => void;
+  readonly onLeave?: (() => void) | undefined;
+}
+
 export function ChoiceList({
   choices,
   active,
   marked = true,
+  highlighted: kept,
+  onHighlight,
   onSelect,
+  onLeave,
 }: {
   choices: readonly Choice[];
   active: boolean;
   marked?: boolean;
+  /** Where the highlight was left, when the box was on screen before. */
+  highlighted?: number | undefined;
+  /** The highlight moved, for whoever keeps it while the box is away. */
+  onHighlight?: (highlighted: number) => void;
   onSelect: (value: string) => void;
+  /** ↓ on the last choice, where there is a list of agents to go to. */
+  onLeave?: (() => void) | undefined;
 }) {
-  const [highlighted, setHighlighted] = useState(0);
+  const [highlighted, setHighlighted] = useState(
+    Math.min(kept ?? 0, Math.max(choices.length - 1, 0)),
+  );
 
   usePress(
     (input, key) => {
-      const picked = choiceKey(input, key, highlighted, choices.length);
+      const picked = choiceKey(
+        input,
+        key,
+        highlighted,
+        choices.length,
+        onLeave !== undefined,
+      );
 
-      if (picked !== undefined && 'move' in picked) {
+      if (picked === undefined) {
+        return;
+      }
+
+      if ('leave' in picked) {
+        onLeave?.();
+      } else if ('move' in picked) {
         setHighlighted(picked.move);
-      } else if (picked !== undefined) {
+        onHighlight?.(picked.move);
+      } else {
         onSelect(choices[picked.pick]!.value);
       }
     },

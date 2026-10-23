@@ -52,6 +52,8 @@ export const OPEN_PLAN_BOX: PlanBoxState = { row: 0, note: '' };
 export interface PlanStep {
   readonly state: PlanBoxState;
   readonly answer?: PlanAnswer;
+  /** ↓ on the Note row, the box's last: the keys go to the agents list. */
+  readonly leave?: true;
 }
 
 /** The answer `choice` sends, the note going with keep planning alone. */
@@ -90,6 +92,10 @@ export function planKey(
 
     if (key.upArrow && !key.shift) {
       return { state: { ...state, row: noteRow - 1 } };
+    }
+
+    if (key.downArrow && !key.shift) {
+      return { state, leave: true };
     }
 
     const note = edited(state.note, input, key);

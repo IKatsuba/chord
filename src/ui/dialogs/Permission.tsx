@@ -20,7 +20,7 @@ import type {
 } from '../../session/transcript/types.ts';
 import { capital } from '../shortcuts/state.ts';
 import { useColours, useHintKey } from '../app/context.ts';
-import { borderOf, ChoiceList } from '../pickers/Pickers.tsx';
+import { borderOf, ChoiceList, type KeptChoice } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { askerParts } from './asker.ts';
@@ -44,7 +44,7 @@ export type RequestScroller = (step: ScrollStep) => void;
 
 /** The question waiting: the agent's, or chord's own save box. */
 export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
-  const { wait, active, onChoose } = props;
+  const { wait, active, onChoose, kept } = props;
 
   return wait.save === undefined ? (
     <AgentPermission {...props} />
@@ -55,6 +55,8 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
       active={active}
       onChoose={onChoose}
       hidden={props.hidden ?? false}
+      away={props.away ?? false}
+      {...(kept && { kept })}
     />
   );
 }
@@ -69,6 +71,7 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
  */
 function AgentPermission({
   hidden = false,
+  away = false,
   wait,
   asker = [],
   child,
@@ -80,6 +83,7 @@ function AgentPermission({
   scroller,
   onOverflow,
   givesWay = true,
+  kept,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -108,6 +112,11 @@ function AgentPermission({
   between?: boolean;
   /** Asked between turns, the keys not taken into it yet. */
   held?: boolean;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
   /** Cells inside the box's border and padding, for the asker's row. */
   width?: number;
   active: boolean;
@@ -116,6 +125,8 @@ function AgentPermission({
   scroller?: RefObject<RequestScroller | undefined>;
   /** Called as the request comes to run past its room, or to fit again. */
   onOverflow?: (overflows: boolean) => void;
+  /** Its choice kept with its agent, and the way out to the agents list. */
+  kept?: KeptChoice;
 }) {
   const colours = useColours();
   // Who asks, by the rule every box that asks shares (CHD-389): main's own
@@ -170,11 +181,12 @@ function AgentPermission({
           <ChoiceList
             choices={choicesFor(wait)}
             active={active && !held}
-            marked={!held}
+            marked={!held && !away}
             onSelect={onChoose}
+            {...kept}
           />
         </box>
-        {held ? <AttendHint /> : <PermissionHint />}
+        {held ? <AttendHint /> : <PermissionHint blank={away} />}
       </box>
     </box>
   );
@@ -387,16 +399,24 @@ function SaveBox({
   save,
   active,
   onChoose,
+  kept,
+  away = false,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
    * place (CHD-462).
    */
   hidden?: boolean;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
   wait: PermissionWait;
   save: SaveBoxQuestion;
   active: boolean;
   onChoose: (optionId: string) => void;
+  kept?: KeptChoice;
 }) {
   const { permission } = useColours();
   const key = useHintKey('confirm:no');
@@ -416,13 +436,15 @@ function SaveBox({
         <ChoiceList
           choices={saveChoices(wait)}
           active={active}
+          marked={!away}
           onSelect={onChoose}
+          {...kept}
         />
       </box>
       {key !== undefined && (
         <box marginTop={1}>
           <text {...TEXT} attributes={DIM}>
-            {`${capital(key)} to ${save.escape}`}
+            {away ? ' ' : `${capital(key)} to ${save.escape}`}
           </text>
         </box>
       )}
@@ -444,13 +466,30 @@ export function AttendHint() {
   );
 }
 
-/** The permission prompt's last line: the key that rejects, when one does. */
-function PermissionHint() {
+/**
+ * The permission prompt's last line: the key that rejects, when one does;
+ * `blank` while the agents list has the keys, so the box keeps its height.
+ */
+function PermissionHint({ blank = false }: { blank?: boolean }) {
   const key = useHintKey('confirm:no');
 
   return key === undefined ? null : (
     <box marginTop={1} flexShrink={0}>
-      <text {...TEXT} attributes={DIM}>{`${capital(key)} to reject`}</text>
+      <text {...TEXT} attributes={DIM}>
+        {blank ? ' ' : `${capital(key)} to reject`}
+      </text>
+    </box>
+  );
+}
+
+/**
+ * A box's hint row while the agents list has the keys: empty, with the
+ * blank row above it, so the box keeps its height and nothing above moves.
+ */
+export function BlankHint() {
+  return (
+    <box marginTop={1} flexShrink={0}>
+      <text {...TEXT}> </text>
     </box>
   );
 }

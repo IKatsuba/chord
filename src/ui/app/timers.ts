@@ -42,9 +42,6 @@ export function useTimers(
     () =>
       copied !== undefined && dispatch({ type: 'copied_gone', id: copied.id }),
   );
-  useLapse(state.closeArmed, QUIT_WINDOW_MS, () =>
-    dispatch({ type: 'close_disarmed' }),
-  );
   useLapse(state.agentCloseArmed, QUIT_WINDOW_MS, () =>
     dispatch({ type: 'agent_close_disarmed' }),
   );

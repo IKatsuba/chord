@@ -5,12 +5,6 @@
  */
 import type { AgentOption } from '../../session/config.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
-import {
-  type EarlierWindow,
-  entriesIn,
-  resumeEntries,
-  type ResumeEntry,
-} from '../../session/windows.ts';
 import type { Transcript } from '../../session/transcript/types.ts';
 import { asksPerson } from '../dialogs/state.ts';
 import type { TeamListing } from '../teams/teams.ts';
@@ -26,8 +20,6 @@ export interface PickersState {
    * list may open the picker; `/clear` and quitting forget it.
    */
   readonly resumeAsked?: string;
-  /** `ctrl+x w`: the picker of the sessions open in the window is open. */
-  readonly sessionsPicker?: boolean;
   /**
    * `/config`: the picker is open, on the list of options or, once one is
    * chosen, on that option's values.
@@ -51,14 +43,12 @@ export interface ConfigPicker {
 }
 
 /**
- * `/resume`'s picker: the sessions and windows it read, which directories it
- * shows them from, and the working directory that the narrow scope keeps to.
+ * `/resume`'s picker: the sessions it read, which directories it shows them
+ * from, and the working directory that the narrow scope keeps to.
  */
 export interface ResumePicker {
   /** Every directory's earlier sessions, newest first. */
   readonly sessions: readonly EarlierSession[];
-  /** Every saved window, newest first. */
-  readonly windows: readonly EarlierWindow[];
   /** The window's working directory, resolved. */
   readonly cwd: string;
   /** Whether every directory's sessions are shown, or only `cwd`'s. */
@@ -76,13 +66,6 @@ export type PickersAction =
   | { readonly type: 'resume_scope_toggled' }
   /** Esc, or a session picked, closes it. */
   | { readonly type: 'resume_picker_closed' }
-  /**
-   * `ctrl+x w` opens the sessions picker, in place of any other picker, as
-   * its key works with one open.
-   */
-  | { readonly type: 'sessions_picker_opened' }
-  /** Esc, or a session picked, closes it. */
-  | { readonly type: 'sessions_picker_closed' }
   /** `/config` opens its picker on the list of options. */
   | { readonly type: 'config_picker_opened' }
   /** Enter on an option lists its values. */
@@ -184,30 +167,6 @@ export function reducePickers(
               everywhere: !state.resumePicker.everywhere,
             },
           };
-    case 'sessions_picker_opened': {
-      // A theme previewed goes back to the one in use with its picker, and a
-      // `/resume` still reading opens nothing over this one.
-      const {
-        resumePicker: _,
-        resumeAsked: __,
-        configPicker: ___,
-        themePicker: ____,
-        teamsPicker: _____,
-        ...rest
-      } = state;
-
-      return {
-        ...rest,
-        modelPicker: false,
-        mcpPanel: false,
-        sessionsPicker: true,
-      };
-    }
-    case 'sessions_picker_closed': {
-      const { sessionsPicker: _, ...rest } = state;
-
-      return state.sessionsPicker === undefined ? state : rest;
-    }
     case 'resume_picker_closed': {
       const { resumePicker: _, ...rest } = state;
 
@@ -238,14 +197,11 @@ export function modelPickerShown(state: PickersState & Under): boolean {
   );
 }
 
-/**
- * The sessions and windows the picker lists, newest first, for the scope it
- * is on; a window is this directory's when every one of its tabs is.
- */
-export function resumeChoices(picker: ResumePicker): ResumeEntry[] {
-  const entries = resumeEntries(picker.sessions, picker.windows);
-
-  return picker.everywhere ? entries : entriesIn(entries, picker.cwd);
+/** The sessions the picker lists, newest first, for the scope it is on. */
+export function resumeChoices(picker: ResumePicker): EarlierSession[] {
+  return picker.everywhere
+    ? [...picker.sessions]
+    : picker.sessions.filter((session) => session.resume.cwd === picker.cwd);
 }
 
 /**
@@ -260,18 +216,6 @@ export function resumePickerShown(state: PickersState & Under): boolean {
     state.connection.status !== 'closing' &&
     !asksPerson(state.transcript)
   );
-}
-
-/**
- * Whether the sessions picker is on screen: opened, and not closing. Unlike
- * the other pickers it stands in front of a permission or form the session in
- * front asks, as it is how the person leaves that session for another; what
- * is asked is there again once it closes.
- */
-export function sessionsPickerShown(
-  state: PickersState & Pick<Under, 'connection'>,
-): boolean {
-  return state.sessionsPicker === true && state.connection.status !== 'closing';
 }
 
 /**

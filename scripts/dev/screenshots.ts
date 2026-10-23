@@ -103,20 +103,16 @@ const SHOTS: readonly Shot[] = [
     ],
   },
   {
-    name: 'tabs',
-    scenario: 'edit',
+    // The agents beside the main one, under the prompt: `docs` waits on a
+    // permission, which the status line names with the key that goes there.
+    name: 'agents',
+    // parser told nothing, so main is idle once its first turn ends.
+    scenario: 'agentsquiet',
     steps: [
-      ...prompt('/new codex'),
-      { until: '2 codex' },
-      // The tab behind waits on a permission: the scenario's own name, as
-      // the shot never shows that tab's prompt.
-      { keys: ['C-x', '1'] },
-      ...prompt('permission'),
-      { until: 'Do you want to proceed?' },
-      { keys: ['C-x', '2'] },
-      { wait: 500 },
-      ...prompt('Greet people by name with a template literal'),
-      { until: 'Edited.' },
+      ...prompt('Fix the parser, and have the README say what changed'),
+      { until: 'docs needs your permission' },
+      { until: 'Waiting on parser.' },
+      { wait: 4000 },
     ],
   },
   {
@@ -243,6 +239,14 @@ async function capture(shot: Shot): Promise<string> {
       'COLORTERM=truecolor',
       `CHORD_FAKE_SCENARIO=${shot.scenario}`,
       'CHORD_FAKE_STEP_MS=40',
+      // The children a scenario opens run on codex, a name the settings give
+      // the fake, on its model, opened on a person's words.
+      'CHORD_FAKE_CHILD_RUNTIME=codex',
+      'CHORD_FAKE_CHILD_MODEL=gpt-6.1-sol',
+      `CHORD_FAKE_SAID=${JSON.stringify({
+        agentchild: 'Run the parser tests and fix what fails',
+        permission: 'Say in the README what changed',
+      })}`,
     ];
     const chord = [
       process.execPath,

@@ -5,6 +5,12 @@
  * with its stops.
  */
 import { describe, expect, test } from 'bun:test';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from '../app/child_window.tsx';
 import { SummaryLine } from '../../../src/ui/background/Background.tsx';
 import type { BackgroundItem } from '../../../src/ui/background/background.ts';
 import { draw } from '../harness.tsx';
@@ -90,36 +96,37 @@ test('the summary line is the stop after the agents: ↓ from the last agent, th
   ));
 
 describe('CHD-424 tester: standing background edges', () => {
-  test('ended monitors stay absent across prompts in their tab and another tab', () =>
-    withBackground(async (window) => {
-      await ready(window);
+  test('ended monitors stay absent across prompts in main and a child', () =>
+    withChild(async (window) => {
+      await readyAgent(window);
+      await openOther(window);
       await send(window, 'monitors');
       await window.shows('background  2 monitors running');
       await send(window, 'monitorexit');
       await window.shows('background  2 monitors running');
       await window.shows('Received the message from CI run 4812');
 
-      await leader(window, 'c');
-      await ready(window);
+      await pickAgent(window, 'other');
+      await readyAgent(window);
       await send(window, 'monitor');
-      await window.shows('background  1 monitor running');
+      await window.shows('background  3 monitors running');
       expect(window.frame()).not.toContain('1 monitor failed');
       await send(window, 'hello');
-      await window.shows('background  1 monitor running');
+      await window.shows('background  3 monitors running');
 
-      await leader(window, '1');
-      await window.shows('background  2 monitors running');
+      await pickAgent(window, 'main');
+      await window.shows('background  3 monitors running');
       await send(window, 'hello');
-      await window.shows('background  2 monitors running');
+      await window.shows('background  3 monitors running');
       expect(window.frame()).not.toContain('background  ✗');
-      await leader(window, '2');
-      await window.shows('background  1 monitor running');
+      await pickAgent(window, 'other');
+      await window.shows('background  3 monitors running');
     }));
 
   test('a child prompt keeps running monitors; closing that child removes its items without adding an ended row', () =>
     withBackground(
       async (window) => {
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'monitorchild');
         await window.shows('background  2 monitors running');
         await send(window, 'monitorexit');
@@ -157,7 +164,7 @@ describe('CHD-424 tester: standing background edges', () => {
 
   test('a task asks without creating an agent row; its report replaces the ended row', () =>
     withBackground(async (window) => {
-      await ready(window);
+      await readyAgent(window);
       await send(window, 'task');
       await window.shows('background  ● 1 task asking');
       expect(window.frame()).not.toMatch(/^ {4}main\s/m);
@@ -265,7 +272,7 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     await window.press(DOWN);
     await window.shows('❯ background');
     await window.press('\r');
-    await window.shows('│ Background · 2 in this tab');
+    await window.shows('│ Background · 2 in this session');
     await window.shows('Enter for details · x to stop · Esc to close');
     // A picker's frame above the prompt: the transcript, the prompt box,
     // the status line and the summary line stay, the summary's ❯ gone as
@@ -286,7 +293,7 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     await window.press('x');
     // It leaves at once, the ❯ on the row above, as it was the last
     // (CHD-479).
-    await window.shows('│ Background · 1 in this tab');
+    await window.shows('│ Background · 1 in this session');
     await window.shows('❯ dev server errors');
     expect(window.frame()).not.toContain('CI run 4812  monitor');
     await window.press('k');
@@ -298,7 +305,7 @@ test('enter on the summary line opens the view; ↑ ↓ and j k move, x stops a 
     // The stop is told in the transcript as before.
     await window.shows('← from CI run 4812 · monitor · stopped');
     await window.press('\r');
-    await window.shows('│ Background · 1 in this tab');
+    await window.shows('│ Background · 1 in this session');
     // The last row leaving closes the view, as esc does, and the summary
     // line goes with it, the keys back in the prompt box.
     await window.press('x');
@@ -352,26 +359,24 @@ test("esc on its parent's later turn stops a task too: it leaves, and its line s
     { rows: 24, columns: 80 },
   ));
 
-test('the view is modal: the window’s session keys do nothing in it, and esc gives the window back as it was', () =>
+test('the view is modal: keys the window does not bind do nothing in it, and esc gives the window back as it was', () =>
   withBackground(async (window) => {
     await ready(window);
     await send(window, 'monitors');
     await window.shows('    background  2 monitors running');
     await window.press(DOWN);
     await window.press('\r');
-    await window.shows('│ Background · 2 in this tab');
+    await window.shows('│ Background · 2 in this session');
 
-    // ctrl+x w would open the sessions picker; ctrl+x c a new tab.
+    // ctrl+x w and ctrl+x c, which tabs had, are bound to nothing.
     await window.press(CTRL_X);
     await window.press('w');
     await window.press(CTRL_X);
     await window.press('c');
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(window.frame()).toContain('│ Background · 2 in this tab');
-    expect(window.frame()).not.toContain('Sessions in');
+    expect(window.frame()).toContain('│ Background · 2 in this session');
 
     await window.press(ESC);
     await window.shows('❯ background  2 monitors running');
-    expect(!window.frame().includes(' 2 fake ')).toBeTruthy();
     expect(window.frame()).toContain('Two monitors are running.');
   }));

@@ -14,7 +14,7 @@ import type {
   TeamRunShown,
 } from '../../session/transcript/types.ts';
 import type { FoundTeam, Team } from '../../teams.ts';
-import { GLYPHS } from '../app/strip.ts';
+import { GLYPHS } from '../agents/glyphs.ts';
 import type { PickerChoice } from '../pickers/picker.ts';
 import { messageHeader } from '../transcript/message.ts';
 

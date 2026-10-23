@@ -4,6 +4,7 @@
  * picker, and rows taller than the list.
  */
 import { describe, expect, test } from 'bun:test';
+import { pickAgent, readyAgent } from '../app/child_window.tsx';
 import assert from 'node:assert/strict';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -19,7 +20,6 @@ import {
 import {
   DOWN,
   ESC,
-  leader,
   ready,
   send,
   until,
@@ -83,7 +83,7 @@ describe('CHD-405 tester: reports follow the picked runtime', () => {
     [120, 40],
   ] as const) {
     for (const usage of ['missing', 'tokens', 'values'] as const) {
-      test(`a standalone child, main and another tab keep their own report runtime with ${usage} usage at ${columns} columns`, async () => {
+      test(`a standalone child, main and another child keep their own report runtime with ${usage} usage at ${columns} columns`, async () => {
         const server = serveChord();
         const admit = server.admit.bind(server);
         let main: Parameters<typeof admit>[0] | undefined;
@@ -107,7 +107,7 @@ describe('CHD-405 tester: reports follow the picked runtime', () => {
         try {
           await withWindow(
             async (window) => {
-              await ready(window);
+              await readyAgent(window);
               assert(main);
               await main.window.open(main.key, {
                 agent: 'codex',
@@ -160,15 +160,20 @@ describe('CHD-405 tester: reports follow the picked runtime', () => {
                 '/context',
                 /fake has not reported how full its context window is\./,
               );
-              await send(window, '/new other');
-              await ready(window);
+              await main.window.open(main.key, {
+                agent: 'other',
+                name: 'other',
+                prompt: 'text',
+              });
+              await pickAgent(window, 'other');
+              await readyAgent(window);
               await report(window, '/status', /Agent: +other/);
               await report(
                 window,
                 '/cost',
                 /other has not reported what this session has used\./,
               );
-              await leader(window, '1');
+              await pickAgent(window, 'main');
               await report(window, '/status', /Agent: +fake/);
               await window.press(DOWN);
               await window.press(DOWN);
@@ -182,7 +187,12 @@ describe('CHD-405 tester: reports follow the picked runtime', () => {
               rows,
               runtimes: ['fake', 'codex', 'other'],
               agentCommand: command,
-              startupOf: () => ({ agentCommand: command }),
+              startupOf: (runtime) => ({
+                agentCommand:
+                  runtime === 'other'
+                    ? fakeAgentCommand(undefined, '--no-usage')
+                    : command,
+              }),
             },
           );
         } finally {
@@ -229,7 +239,7 @@ describe('CHD-405 N2 tester: standalone child spend is independent', () => {
       try {
         await withWindow(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             assert(main);
             await main.window.open(main.key, {
               agent: 'codex',
@@ -273,89 +283,45 @@ describe('CHD-405 N2 tester: standalone child spend is independent', () => {
   }
 });
 
-describe('CHD-471 L2 tester: child messages in the strip and picker', () => {
+describe('CHD-471 L2 tester: child messages in the agents list', () => {
   for (const [columns, rows] of [
     [80, 24],
     [120, 40],
   ] as const) {
-    test(`a working child's unread message is displayed and opening only that child clears it at ${columns} columns`, async () => {
+    test(`a working child's unread message clears only when that child is picked at ${columns} columns`, async () => {
       const server = serveChord();
 
       try {
         await withWindow(
           async (window) => {
-            await ready(window);
+            await readyAgent(window);
             await send(window, 'agentcallgated');
             await window.shows('← new message');
 
-            const previousSession = window.session();
+            const childRow = () =>
+              window
+                .frame()
+                .split('\n')
+                .find((line) => /^ {4}parser /.test(line)) ?? '';
 
-            await leader(window, 'c');
-            await until(
-              'the second fake session connected',
-              () => window.session() !== previousSession,
-            );
-            await window.shows('2 fake');
-
-            const header = () => window.frame().split('\n')[0] ?? '';
-
-            await until(
-              'parent result recorded before clearing its own reply',
-              async () => {
-                const records = join(window.dir, 'state', 'records');
-
-                for (const file of await readdir(records)) {
-                  const past = await readPast(join(records, file));
-                  const prompt = past.find(
-                    (entry) =>
-                      entry.type === 'prompt' &&
-                      entry.prompt === 'agentcallgated',
-                  );
-
-                  if (
-                    prompt?.type === 'prompt' &&
-                    past.some(
-                      (entry) =>
-                        entry.type === 'result' &&
-                        entry.turnId === prompt.turnId,
-                    )
-                  ) {
-                    return true;
-                  }
-                }
-
-                return false;
-              },
-            );
-
-            await leader(window, '1');
-            await window.shows('› agentcallgated');
-            await leader(window, '2');
-
-            await until(
-              'working and message glyphs in the background tab',
-              () => /1 fake ✻←/.test(header()),
-            );
-            await leader(window, 'w');
-            await until(
-              'picker keeps the child working beside its message mark',
-              () =>
-                /1\. fake · 1 agent +✻ working \d+s +← new message/.test(
-                  window.frame(),
-                ),
-            );
-            expect(window.frame()).not.toContain('← message from @main');
-            await window.press(ESC);
-            await leader(window, '1');
+            expect(childRow()).toMatch(/✻ working \d+s +← new message/);
+            await window.press(DOWN);
+            await window.press('\r');
+            expect(childRow()).toContain('← new message');
             await window.press(DOWN);
             await window.press(DOWN);
             await window.shows(
               `← from @main · after the running calls: ${HELD_AGAIN}`,
             );
-            await leader(window, '2');
+            await window.press(ESC);
+            await window.press(DOWN);
+            await window.press(UP);
+            await window.press('\r');
             await until(
-              'opening the child clears its mark but leaves its working state',
-              () => /1 fake ✻/.test(header()) && !header().includes('✻←'),
+              'reading the child clears only its message mark',
+              () =>
+                /✻ working \d+s/.test(childRow()) &&
+                !childRow().includes('← new message'),
             );
             expect(await readdir(join(window.dir, GATE))).not.toContain(
               GATE_RELEASE,
@@ -459,7 +425,7 @@ describe('CHD-471 L1b tester: tall row actions and summary boundary', () => {
     test(`reading a tall row reaches the summary then returns to its first line at ${columns} columns`, () =>
       withAgents(async (window) => {
         await window.resize({ columns, rows });
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'agenttitled');
         await window.shows('Waiting on it.');
         await until('main turn finished', async () => {
@@ -519,7 +485,7 @@ describe('CHD-471 L1b tester: tall row actions and summary boundary', () => {
     test(`Enter and x still address the tall child while its first line is out of sight at ${columns} columns`, () =>
       withAgents(async (window) => {
         await window.resize({ columns, rows });
-        await ready(window);
+        await readyAgent(window);
         await send(window, 'agenttitled');
         await window.shows('Waiting on it.');
         await window.press(DOWN);

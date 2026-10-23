@@ -1,5 +1,6 @@
 /** The plan box on the fake: cursor's and grok's plans put to the person. */
 import { describe, expect, test } from 'bun:test';
+import { openOther, readyAgent, withChild } from '../app/child_window.tsx';
 import {
   DOWN,
   ESC,
@@ -408,3 +409,45 @@ describe('CHD-437 U2 tester: paging ownership and isolated answers', () => {
       ));
   }
 });
+
+test('↓ on the Note goes into the agents list, and the note is kept with its agent through another one and back (Q194)', () =>
+  withChild(
+    async (window) => {
+      await openOther(window);
+      await readyAgent(window);
+      await send(window, 'cursorplan');
+      await window.shows('Approve Plan');
+      // The box takes the keys once it is up, a moment after it is drawn.
+      await until('the box has the keys', async () => {
+        await window.press(DOWN);
+
+        return window.frame().includes('❯ 2. No, keep planning');
+      });
+
+      await window.press(DOWN);
+      await window.type('two tests');
+      await window.shows('❯ Note  two tests');
+      await window.press(DOWN);
+      await window.shows('  ❯ main ');
+      // The keys are the list's: the box promises none of them.
+      expect(window.frame()).not.toContain('❯ Note');
+      expect(window.frame()).not.toContain('Enter to keep planning');
+      // To other, where the box is not, and back to main's.
+      await window.press(DOWN);
+      await window.shows('  ❯ other ');
+      await until(
+        'the box gone with main',
+        () => !window.frame().includes('Approve Plan'),
+      );
+      await window.press(UP);
+      await window.shows('  ❯ main ');
+      await window.press(UP);
+      await until(
+        'the list let go',
+        () => !window.frame().includes('  ❯ main '),
+      );
+      await window.shows('❯ Note  two tests');
+      await window.press(ESC);
+    },
+    { rows: 40, columns: 120 },
+  ));

@@ -41,8 +41,7 @@ export function chordCommand() {
     )
     .option(
       '-r, --resume [id:string]',
-      'Open a session, or a window (w-…), by the id chord prints on quit; repeated, a tab each; with no id, pick one.',
-      { collect: true },
+      'Open a session by the id chord prints on quit; with no id, pick one.',
     )
     .option(
       '-p, --print <prompt:string>',
@@ -60,7 +59,7 @@ export function chordCommand() {
     )
     .example('Claude Code', 'chord claude')
     .example('Pick up where you left off', 'chord claude --continue')
-    .example('Pick an earlier session or window', 'chord --resume')
+    .example('Pick an earlier session', 'chord --resume')
     .example('Codex in another directory', 'chord codex -C ~/src/app')
     .example('One question, for a script', 'chord -p "What does this do?"')
     .example(

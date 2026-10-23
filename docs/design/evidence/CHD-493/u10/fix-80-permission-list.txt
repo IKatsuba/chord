@@ -1,0 +1,24 @@
+ ⏺ Opened other on codex.
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│   1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ❯ main   fake   ● permission 2s
+    other  codex  ✻ working 4s     ← new message

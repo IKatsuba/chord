@@ -1,13 +1,13 @@
 import type { ElicitationWait } from '../../session/transcript/types.ts';
 import { useColours } from '../app/context.ts';
 import { usePress } from '../app/input.ts';
-import { borderOf, ChoiceList } from '../pickers/Pickers.tsx';
+import { borderOf, ChoiceList, type KeptChoice } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, DIM, fg, TEXT } from '../theme/text.ts';
 import { linkHost } from './form.ts';
 import type { Choice } from './permission.ts';
 import { Fold } from './Fold.tsx';
-import { AttendHint } from './Permission.tsx';
+import { AttendHint, BlankHint } from './Permission.tsx';
 import type { AskerPart } from './asker.ts';
 import { AskerHeading } from './Asker.tsx';
 
@@ -23,8 +23,10 @@ export function LinkPrompt({
   asker,
   active,
   held = false,
+  away = false,
   between = false,
   onAnswer,
+  kept,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -46,8 +48,15 @@ export function LinkPrompt({
   active: boolean;
   /** Asked between turns, the keys not taken into it yet (CHD-158). */
   held?: boolean;
+  /**
+   * The agents list has the keys: drawn as when they are elsewhere, rows
+   * unmarked and no hint, what it kept still kept (U10).
+   */
+  away?: boolean;
   /** `open` when the person chose to open it. */
   onAnswer: (answer: 'open' | 'decline' | 'cancel') => void;
+  /** Its choice kept with its agent, and the way out to the agents list. */
+  kept?: KeptChoice;
 }) {
   const colours = useColours();
   const host = linkHost(wait.url);
@@ -103,15 +112,18 @@ export function LinkPrompt({
           <ChoiceList
             choices={choices}
             active={active}
-            marked={!held}
+            marked={!held && !away}
             onSelect={(value) =>
               onAnswer(value === 'open' ? 'open' : 'decline')
             }
+            {...kept}
           />
         </box>
       </Fold>
       {held ? (
         <AttendHint />
+      ) : away ? (
+        <BlankHint />
       ) : (
         <box marginTop={1}>
           <text {...TEXT} attributes={DIM}>

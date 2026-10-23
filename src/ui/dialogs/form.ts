@@ -444,6 +444,11 @@ export function problemsOf(form: FormState): Map<string, string> {
 export interface FormStep {
   readonly form: FormState;
   readonly response?: ElicitationReply;
+  /**
+   * ↓ past the buttons, the form's last stop: the keys go to the list of
+   * agents, the form kept as it is (Q192).
+   */
+  readonly leave?: true;
 }
 
 /** The parts of a press the form reads, besides the window's. */
@@ -707,6 +712,10 @@ export function formKey(
 
   if (key.upArrow || (key.tab && key.shift)) {
     return { form: step(form, -1) };
+  }
+
+  if (key.downArrow && form.focus.on !== 'field') {
+    return { form, leave: true };
   }
 
   if (key.downArrow || key.tab) {

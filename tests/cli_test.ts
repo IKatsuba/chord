@@ -1,20 +1,26 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ValidationError } from '@cliffy/command';
+import { quote } from 'shell-quote';
 import { chordCommand } from '../src/cli.ts';
 import { fakeAgentCommand } from './fixtures/fake.ts';
 import { recordSession } from './fixtures/records.ts';
-import { writeWindow } from '../src/session/windows.ts';
 import {
-  ResumeError,
+  resumeCommand,
   sessionById,
   type SessionRecord,
-  sessionsByIds,
 } from '../src/session/sessions.ts';
 
 /** What chord's own flags make of `argv`, with nothing run on them. */
@@ -24,7 +30,7 @@ async function parsed(argv: string[]) {
         agent?: string;
         cwd: string;
         model?: string;
-        resume?: (string | true)[];
+        resume?: string | true;
       }
     | undefined;
 
@@ -44,15 +50,16 @@ async function parsed(argv: string[]) {
   return seen;
 }
 
-/** The tabs main.tsx opens from `argv`: each id, its agent and directory. */
-async function opened(argv: string[], records: SessionRecord[]) {
+/** The session main.tsx opens for one id from `argv`: id, agent, directory. */
+async function resumed(argv: string[], records: SessionRecord[]) {
   const seen = await parsed(argv);
-
-  return sessionsByIds(records, (seen?.resume ?? []).map(String), {
-    agent: seen?.agent ?? 'claude',
+  const agent = seen?.agent ?? 'claude';
+  const resume = sessionById(records, String(seen?.resume), {
+    agent,
     cwd: seen?.cwd ?? '/',
-    named: seen?.agent !== undefined,
-  }).map(({ agent, resume }) => [resume.sessionId, agent, resume.cwd]);
+  });
+
+  return [resume.sessionId, agent, resume.cwd];
 }
 
 function record(id: string, agent: string, cwd: string): SessionRecord {
@@ -66,49 +73,31 @@ function record(id: string, agent: string, cwd: string): SessionRecord {
   };
 }
 
-const three = [
-  record('aaa', 'fake', '/proj'),
-  record('bbb', 'fake', '/other'),
-  record('ccc', 'fake2', '/other'),
-];
-
-test('-r <id> -r <id> … from argv opens a tab each, in the order given, each where its record works', async () => {
-  const tabs = [
-    ['ccc', 'fake2', '/other'],
-    ['aaa', 'fake', '/proj'],
-    ['bbb', 'fake', '/other'],
-  ];
-
-  expect(
-    await opened(['-r', 'ccc', '-r', 'aaa', '-r', 'bbb'], three),
-  ).toStrictEqual(tabs);
-  expect(
-    await opened(['--resume', 'ccc', '--resume=aaa', '-r', 'bbb'], three),
-  ).toStrictEqual(tabs);
-});
-
 test('--resume with no id asks for the picker, the agent before or after it', async () => {
-  expect((await parsed(['--resume']))?.resume).toStrictEqual([true]);
+  expect((await parsed(['--resume']))?.resume).toStrictEqual(true);
   expect(await parsed(['claude', '-r'])).toStrictEqual({
     agent: 'claude',
     cwd: process.cwd(),
-    resume: [true],
+    resume: true,
   });
   expect(await parsed(['-r', '-C', '/tmp'])).toStrictEqual({
     cwd: '/tmp',
-    resume: [true],
+    resume: true,
   });
 });
 
-test('an id is read as one, a UUID or a window id alike', async () => {
+test('an id is read as one, a UUID or a window id alike, and a second -r is refused by Cliffy (Q181)', async () => {
   for (const id of ['aaa', 'w-1a2b3c4d', '-x', '0199a1b2-3c4d-7e8f']) {
-    expect((await parsed([`--resume=${id}`]))?.resume).toStrictEqual([id]);
+    expect((await parsed([`--resume=${id}`]))?.resume).toStrictEqual(id);
   }
 
-  expect(
-    (await parsed(['-r', 'aaa', '-r', 'ccc', '--resume', 'w-1a2b3c4d']))
-      ?.resume,
-  ).toStrictEqual(['aaa', 'ccc', 'w-1a2b3c4d']);
+  for (const argv of [
+    ['-r', 'aaa', '-r', 'ccc'],
+    ['--resume', 'aaa', '--resume=ccc'],
+    ['-r', 'aaa', '-r'],
+  ]) {
+    await expect(parsed(argv)).rejects.toThrow('can only occur once');
+  }
 });
 
 test("a word equal to one of chord's option names is not an id: the owner's accepted limit", async () => {
@@ -117,16 +106,11 @@ test("a word equal to one of chord's option names is not an id: the owner's acce
   expect(await parsed(['--resume', 'model'])).toStrictEqual({
     agent: 'model',
     cwd: process.cwd(),
-    resume: [true],
+    resume: true,
   });
   expect(await parsed(['--resume=c'])).toStrictEqual({
     cwd: process.cwd(),
-    resume: [true],
-  });
-  expect(await parsed(['-r', 'aaa', '-r', 'c'])).toStrictEqual({
-    agent: 'c',
-    cwd: process.cwd(),
-    resume: ['aaa', true],
+    resume: true,
   });
 });
 
@@ -134,96 +118,46 @@ test('one id from argv is as it was, the agent before or after it', async () => 
   const records = [record('aaa', 'codex', '/project')];
   const find = { agent: 'codex', cwd: '/project' };
 
-  expect((await parsed(['--resume', 'aaa']))?.resume).toStrictEqual(['aaa']);
-  expect(
-    sessionsByIds(records, ['aaa'], { ...find, named: false }),
-  ).toStrictEqual([
-    { agent: 'codex', resume: sessionById(records, 'aaa', find) },
-  ]);
+  expect((await parsed(['--resume', 'aaa']))?.resume).toStrictEqual('aaa');
+  expect(sessionById(records, 'aaa', find).record).toStrictEqual(
+    '/state/records/aaa.jsonl',
+  );
 
   for (const argv of [
     ['--resume', 'aaa', 'codex'],
     ['codex', '--resume', 'aaa'],
     ['-r', 'aaa', 'codex', '-C', '/tmp'],
   ]) {
-    expect(await opened(argv, records)).toStrictEqual([
-      ['aaa', 'codex', '/project'],
+    expect(await resumed(argv, records)).toStrictEqual([
+      'aaa',
+      'codex',
+      '/project',
     ]);
   }
 
   // An id chord never saw goes to the agent named, as before.
   expect(
-    await opened(['--resume', 'zzz', 'codex', '-C', '/w'], records),
-  ).toStrictEqual([['zzz', 'codex', '/w']]);
+    await resumed(['--resume', 'zzz', 'codex', '-C', '/w'], records),
+  ).toStrictEqual(['zzz', 'codex', '/w']);
 });
 
-test('[agent] and the other flags sit on either side of the ids', async () => {
+test('[agent] and the other flags sit on either side of the id', async () => {
   expect(
-    await parsed([
-      'fake',
-      '-C',
-      '/tmp',
-      '-r',
-      'aaa',
-      '-m',
-      'opus',
-      '-r',
-      'ccc',
-    ]),
+    await parsed(['fake', '-C', '/tmp', '-r', 'aaa', '-m', 'opus']),
   ).toStrictEqual({
     agent: 'fake',
     cwd: '/tmp',
     model: 'opus',
-    resume: ['aaa', 'ccc'],
+    resume: 'aaa',
   });
   // A flag's value is never taken for an id, however it reads.
-  expect(
-    await parsed(['-C', '--resume', '-r', 'aaa', 'fake', '--resume=bbb']),
-  ).toStrictEqual({ agent: 'fake', cwd: '--resume', resume: ['aaa', 'bbb'] });
-  await expect(
-    parsed(['--continue', '--resume', 'aaa', '--resume', 'bbb']),
-  ).rejects.toThrow(ValidationError);
-});
-
-test('ten ids, an unknown id among several and the same id twice refuse from argv', async () => {
-  const ten = Array.from({ length: 10 }, (_, index) => `s${index}`);
-  const nine = ten.slice(0, 9);
-  const records = ten.map((id) => record(id, 'fake', '/proj'));
-
-  expect(
-    (
-      await opened(
-        nine.flatMap((id) => ['-r', id]),
-        records,
-      )
-    ).length,
-  ).toStrictEqual(9);
-
-  const tooMany = opened(
-    ten.flatMap((id) => ['-r', id]),
-    records,
-  );
-
-  await expect(tooMany).rejects.toThrow(ResumeError);
-  await expect(tooMany).rejects.toThrow(
-    'A window opens at most 9 sessions; --resume named 10.',
-  );
-
-  const unknown = opened(['-r', 'aaa', '-r', 'zzz', '-r', 'bbb'], three);
-
-  await expect(unknown).rejects.toThrow(ResumeError);
-  await expect(unknown).rejects.toThrow('No session zzz among');
-
-  const twice = opened(['-r', 'aaa', '-r', 'bbb', '-r', 'aaa'], three);
-
-  await expect(twice).rejects.toThrow(ResumeError);
-  await expect(twice).rejects.toThrow('Session aaa is named twice.');
-
-  const foreign = opened(['fake', '-r', 'aaa', '-r', 'ccc'], three);
-
-  await expect(foreign).rejects.toThrow(ResumeError);
-  await expect(foreign).rejects.toThrow(
-    'Session ccc belongs to another agent (fake2).',
+  expect(await parsed(['-C', '--resume', '-r', 'aaa', 'fake'])).toStrictEqual({
+    agent: 'fake',
+    cwd: '--resume',
+    resume: 'aaa',
+  });
+  await expect(parsed(['--continue', '--resume', 'aaa'])).rejects.toThrow(
+    ValidationError,
   );
 });
 
@@ -314,75 +248,230 @@ test("a refused command for the agent starts nothing, chord's own command neithe
 });
 
 describe('CHD-466 U2 tester: initial agent on resume', () => {
-  for (const window of [false, true]) {
-    test(`${window ? 'window restore' : 'session resume'} refuses the initial runtime in the record directory`, async () => {
-      const dir = await mkdtemp(join(tmpdir(), 'chord-refused-resume-'));
-      const here = join(dir, 'here');
-      const there = join(dir, 'there');
-      const config = join(dir, 'config');
-      const stateHome = join(dir, 'state');
-      const stateDir = join(stateHome, 'chord');
-      const marker = join(dir, 'started');
-      const wrapper = join(dir, 'fake-start.ts');
+  test('session resume refuses the initial runtime in the record directory', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-refused-resume-'));
+    const here = join(dir, 'here');
+    const there = join(dir, 'there');
+    const config = join(dir, 'config');
+    const stateHome = join(dir, 'state');
+    const stateDir = join(stateHome, 'chord');
+    const marker = join(dir, 'started');
+    const wrapper = join(dir, 'fake-start.ts');
+
+    try {
+      await mkdir(here);
+      await mkdir(join(there, '.chord'), { recursive: true });
+      await mkdir(join(config, 'chord'), { recursive: true });
+      await writeFile(
+        wrapper,
+        'import { writeFileSync } from "node:fs"; writeFileSync(' +
+          JSON.stringify(marker) +
+          ', "started"); await import(' +
+          JSON.stringify(fakeAgentCommand()[1]) +
+          ');',
+      );
+      await writeFile(
+        join(config, 'chord', 'settings.json'),
+        JSON.stringify({
+          agent: 'fake',
+          agents: { fake: { command: [process.execPath, wrapper] } },
+        }),
+      );
+
+      const sessionId = await recordSession({
+        stateDir,
+        cwd: there,
+        command: fakeAgentCommand(),
+        prompts: ['text'],
+      });
+
+      await writeFile(
+        join(there, '.chord', 'settings.json'),
+        JSON.stringify({ agents: { fake: { command: null } } }),
+      );
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+          '-C',
+          here,
+          '--resume',
+          sessionId,
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: dir,
+            XDG_CONFIG_HOME: config,
+            XDG_STATE_HOME: stateHome,
+            PATH: join(dir, 'no-programs'),
+            NO_COLOR: '1',
+          },
+          stdio: ['ignore', 'pipe', 'pipe'],
+          encoding: 'utf8',
+          timeout: 10000,
+        },
+      );
+
+      expect(await readFile(marker, 'utf8').catch(() => '')).toBe('');
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        'fake not started: agents.fake.command in .chord/settings.json: expected a string, got null',
+      );
+
+      expect(result.stderr).not.toContain('npx');
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
+describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries', () => {
+  for (const sessionId of [
+    'ordinary',
+    '-opaque',
+    "two words'$(touch injected)",
+  ]) {
+    test(`a suggested command roundtrips opaque id ${JSON.stringify(sessionId)}`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-command-'));
 
       try {
-        await mkdir(here);
-        await mkdir(join(there, '.chord'), { recursive: true });
-        await mkdir(join(config, 'chord'), { recursive: true });
-        await writeFile(
-          wrapper,
-          'import { writeFileSync } from "node:fs"; writeFileSync(' +
-            JSON.stringify(marker) +
-            ', "started"); await import(' +
-            JSON.stringify(fakeAgentCommand()[1]) +
-            ');',
-        );
-        await writeFile(
-          join(config, 'chord', 'settings.json'),
-          JSON.stringify({
-            agent: 'fake',
-            agents: { fake: { command: [process.execPath, wrapper] } },
-          }),
+        const command = resumeCommand('fake', sessionId);
+        const shell = spawnSync(
+          'sh',
+          ['-c', `chord() { printf '%s\\0' "$@"; }\n${command}`],
+          { cwd, encoding: 'utf8' },
         );
 
-        const sessionId = await recordSession({
-          stateDir,
-          cwd: there,
-          command: fakeAgentCommand(),
-          prompts: ['text'],
+        expect(shell.status).toBe(0);
+
+        const argv = shell.stdout.split('\0').slice(0, -1);
+        const options = await parsed(argv);
+
+        expect(options?.resume).toBe(sessionId);
+        expect(options?.agent).toBe('fake');
+        expect(
+          await readFile(join(cwd, 'injected')).catch(() => undefined),
+        ).toBeUndefined();
+      } finally {
+        await rm(cwd, { recursive: true });
+      }
+    });
+  }
+
+  test('an old mixed window id keeps the invocation agent and leaves its record untouched', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-old-window-'));
+    const stateHome = join(cwd, 'state');
+    const directory = join(cwd, "another ' directory");
+    const path = join(stateHome, 'chord', 'windows', 'w-migration.json');
+    const text = `${JSON.stringify(
+      {
+        id: 'w-migration',
+        at: 1,
+        front: 1,
+        tabs: [
+          { agent: 'fake', sessionId: 'not-recorded', cwd: directory },
+          { agent: 'codex', sessionId: 'also-missing', cwd },
+        ],
+      },
+      null,
+      2,
+    )}\n`;
+
+    try {
+      await mkdir(join(stateHome, 'chord', 'windows'), { recursive: true });
+      await writeFile(path, text);
+
+      expect(
+        await resumed(['cursor', '--cwd', cwd, '--resume', 'w-migration'], []),
+      ).toEqual(['w-migration', 'cursor', cwd]);
+
+      const result = spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+          'cursor',
+          '--cwd',
+          cwd,
+          '--resume',
+          'w-migration',
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: cwd,
+            XDG_CONFIG_HOME: join(cwd, 'config'),
+            XDG_STATE_HOME: stateHome,
+            PATH: join(cwd, 'no-programs'),
+            NO_COLOR: '1',
+          },
+          encoding: 'utf8',
+          timeout: 10000,
+        },
+      );
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        'chord: cursor runs "agent", which is not on PATH;',
+      );
+      expect(await readFile(path, 'utf8')).toBe(text);
+    } finally {
+      await rm(cwd, { recursive: true });
+    }
+  });
+});
+
+describe('CHD-493 U9 tester: native duplicate-option boundaries', () => {
+  for (const args of [
+    ['-r', 'one', '-r', 'two'],
+    ['--resume', 'one', '--resume', 'two'],
+    ['-r', 'one', '--resume=two'],
+    ['--resume=one', '-r', 'two'],
+    ['--resume=one', '--resume=two'],
+    ['-r', '-r'],
+    ['--resume', '--resume'],
+    ['-r', '--resume=two'],
+    ['--resume=one', '-r'],
+  ]) {
+    test(`duplicate ${args.join(' ')} stops before the startup action`, async () => {
+      let started = 0;
+      const command = chordCommand()
+        .noExit()
+        .throwErrors()
+        .action(() => {
+          started++;
         });
 
-        await writeFile(
-          join(there, '.chord', 'settings.json'),
-          JSON.stringify({ agents: { fake: { command: null } } }),
-        );
+      await expect(command.parse(args)).rejects.toThrow('can only occur once');
+      expect(started).toBe(0);
 
-        const windowId = 'w-refused';
+      const dir = await mkdtemp(join(tmpdir(), 'chord-duplicate-resume-'));
+      const state = join(dir, 'state');
+      const settings = join(dir, '.chord', 'settings.json');
+      const malformed = '{this settings file must never be parsed';
 
-        if (window) {
-          await writeWindow(stateDir, {
-            id: windowId,
-            at: 1,
-            front: 0,
-            tabs: [{ sessionId, agent: 'fake', cwd: there }],
-          });
-        }
+      try {
+        await mkdir(join(dir, '.chord'));
+        await mkdir(state);
+        await writeFile(settings, malformed);
 
         const result = spawnSync(
           process.execPath,
           [
             fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+            '--agent-command',
+            quote(fakeAgentCommand()),
+            ...args,
             '-C',
-            here,
-            '--resume',
-            window ? windowId : sessionId,
+            dir,
           ],
           {
             env: {
               ...process.env,
               HOME: dir,
-              XDG_CONFIG_HOME: config,
-              XDG_STATE_HOME: stateHome,
+              XDG_STATE_HOME: state,
+              XDG_CONFIG_HOME: join(dir, 'config'),
               PATH: join(dir, 'no-programs'),
               NO_COLOR: '1',
             },
@@ -392,13 +481,15 @@ describe('CHD-466 U2 tester: initial agent on resume', () => {
           },
         );
 
-        expect(await readFile(marker, 'utf8').catch(() => '')).toBe('');
-        expect(result.status).toBe(1);
-        expect(result.stderr).toContain('fake not started:');
+        expect(result.status).toBe(2);
         expect(result.stderr).toContain(
-          'fake not started: agents.fake.command in .chord/settings.json: expected a string, got null',
+          'can only occur once, but was found several times.',
         );
-        expect(result.stderr).not.toContain('npx');
+        expect(result.stderr).not.toContain('settings.json');
+        expect(result.stderr).not.toContain('not on PATH');
+        expect(result.stdout).not.toContain('\x1b[?1049h');
+        expect(await readdir(state)).toEqual([]);
+        expect(await readFile(settings, 'utf8')).toBe(malformed);
       } finally {
         await rm(dir, { recursive: true });
       }

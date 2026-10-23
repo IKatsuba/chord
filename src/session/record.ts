@@ -114,7 +114,7 @@ export type RecordEntry =
   /**
    * A long-lived agent `open_agent` opened, by chord's id for it, closed
    * while the session went on: by `close_agent` or the person's `x`. One
-   * that closed with its parent, as the tab, `/clear` or `/resume` let the
+   * that closed with its parent, as quitting, `/clear` or `/resume` let the
    * parent go, was open when the session was left, and has no such line.
    */
   | { readonly type: 'closed'; readonly agent: string }

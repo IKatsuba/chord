@@ -1411,3 +1411,146 @@ describe('CHD-435 tester: auth-required fixture boundaries', () => {
       ));
   }
 });
+
+describe('CHD-454 tester: startup fixture wire boundaries', () => {
+  test('notacp refuses new, load and resume without session effects or error data', () =>
+    withAgent(
+      ['--start-fails', 'notacp', '--resume-only'],
+      async (agent, seen, cwd) => {
+        const sessionId = crypto.randomUUID();
+        const requests = [
+          ['session/new', () => agent.newSession({ cwd, mcpServers: [] })],
+          [
+            'session/load',
+            () => agent.loadSession({ sessionId, cwd, mcpServers: [] }),
+          ],
+          ['session/resume', () => agent.resumeSession({ sessionId, cwd })],
+        ] as const;
+
+        for (const [method, request] of requests) {
+          await expect(request()).rejects.toMatchObject({
+            code: -32601,
+            message: `Method not found: ${method}`,
+          });
+        }
+
+        const errors = seen.all.flatMap((traffic) =>
+          traffic.from === 'agent' && 'error' in traffic.message
+            ? [traffic.message.error]
+            : [],
+        );
+
+        expect(errors).toStrictEqual(
+          requests.map(([method]) => ({
+            code: -32601,
+            message: `Method not found: ${method}`,
+          })),
+        );
+        expect(seen.updates()).toEqual([]);
+        expect((await agent.listSessions({ cwd })).sessions).toEqual([]);
+      },
+    ));
+
+  test('alias rejects only new with no wire data; load still replays and resume still opens', () =>
+    withAgent(
+      ['--start-fails', 'alias', '--resume-only'],
+      async (agent, seen, cwd) => {
+        await expect(
+          agent.newSession({ cwd, mcpServers: [] }),
+        ).rejects.toMatchObject({ code: -32602 });
+
+        const errors = seen.all.flatMap((traffic) =>
+          traffic.from === 'agent' && 'error' in traffic.message
+            ? [traffic.message.error]
+            : [],
+        );
+
+        expect(errors).toStrictEqual([
+          {
+            code: -32602,
+            message:
+              'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
+          },
+        ]);
+        expect(seen.updates()).toEqual([]);
+
+        const sessionId = crypto.randomUUID();
+
+        await agent.loadSession({ sessionId, cwd, mcpServers: [] });
+        expect(seen.said()).toContain(
+          'Hello, world. This reply came in chunks.',
+        );
+
+        const replies = seen
+          .updates()
+          .filter((update) => update.sessionUpdate === 'agent_message_chunk');
+
+        await agent.resumeSession({ sessionId, cwd });
+        expect(
+          seen
+            .updates()
+            .filter((update) => update.sessionUpdate === 'agent_message_chunk'),
+        ).toEqual(replies);
+        expect(seen.sent()).toContain('session/resume');
+      },
+    ));
+
+  for (const kind of ['traceback', 'stdout', 'notacp', 'alias']) {
+    test(`the environment selects ${kind}, preserving the piped stderr tail or session refusal`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-start-fixture-'));
+      const seen = new Seen();
+      let agent: Agent | undefined;
+
+      try {
+        const opening = openAgent({
+          command: fakeAgentCommand(),
+          cwd,
+          env: { CHORD_FAKE_START_FAILS: kind },
+          onTraffic: seen.push,
+          stop: STOP,
+          ...REFUSE,
+        });
+
+        if (kind === 'traceback' || kind === 'stdout') {
+          let failure: unknown;
+
+          try {
+            agent = await opening;
+          } catch (error) {
+            failure = error;
+          }
+
+          assert(failure instanceof Error);
+
+          const stderr = seen.all
+            .flatMap((traffic) =>
+              traffic.from === 'stderr' ? [traffic.text] : [],
+            )
+            .join('');
+
+          if (kind === 'traceback') {
+            expect(stderr.length).toBeGreaterThan(4096);
+            expect(stderr).toContain('module_0.py');
+            expect(stderr).toContain('module_59.py');
+            expect(stderr.endsWith(TRACEBACK_ERROR + '\n')).toBe(true);
+            expect(failure.message.endsWith(TRACEBACK_ERROR)).toBe(true);
+          } else {
+            expect(stderr).toBe('');
+            expect(failure.message).toBe('The agent exited.');
+          }
+        } else {
+          agent = await opening;
+
+          await expect(
+            agent.newSession({ cwd, mcpServers: [] }),
+          ).rejects.toMatchObject({
+            code: kind === 'notacp' ? -32601 : -32602,
+          });
+        }
+      } finally {
+        await agent?.close();
+        await rm(cwd, { recursive: true });
+      }
+    });
+  }
+});

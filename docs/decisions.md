@@ -416,7 +416,10 @@ binary.
   screen (Q157). Code boxes and tables keep markdansi's rows (Q150), a list
   inside a quote is still markdansi's, unwrapped, and a proposal's body and
   a saved team's keep markdansi's rows, since they fold by counting them
-  (Q152).
+  (Q152). OpenTUI's own `Markdown` renderable was not trialled for the
+  lists: it parses and draws a whole reply, tables and code included, so it
+  would replace markdansi wholesale, beyond the owner's split (markdansi
+  renders, OpenTUI lays out) and Q150 (Q161).
 - Links print their address after the text rather than as OSC 8 hyperlinks,
   so the address reads in every terminal and in a captured screen.
 - The theme is Claude Code's look, not markdansi's yellow headings: headings

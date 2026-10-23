@@ -5,21 +5,12 @@
  * registry agent ran (CHD-454).
  */
 import { AgentGone } from '../acp/connection.ts';
+import type { Tail } from '../acp/process.ts';
 import type { Exit } from '../platform/process.ts';
 
 /** What chord asked last when the agent's start failed. */
 export type StartStep =
   'initialize' | 'session/new' | 'session/load' | 'session/resume';
-
-/** How many of stderr's last lines a start failure keeps. */
-export const STDERR_LINES = 6;
-
-/** The end of a stream, its last lines, and how many lines came before. */
-export interface Tail {
-  readonly lines: readonly string[];
-  /** Non-empty lines left out before `lines`. */
-  readonly cut: number;
-}
 
 /** Why the agent did not start. */
 export interface StartFailure {
@@ -47,27 +38,6 @@ export class StartFailed extends Error {
 }
 
 /**
- * `text`'s last `count` non-empty lines, each as it was written, its indent
- * kept, and how many non-empty lines came before them: of `total`, when
- * `text` is the end of more, whose first line may be the end of one.
- */
-export function tailOf(
-  text: string,
-  count = STDERR_LINES,
-  total?: number,
-): Tail {
-  const held = text.split(/\r?\n/).filter((line) => line.trim() !== '');
-  const whole =
-    total === undefined || total <= held.length ? held : held.slice(1);
-  const lines = whole.slice(-count).map((line) => line.trimEnd());
-
-  return {
-    lines,
-    cut: Math.max((total ?? held.length) - lines.length, 0),
-  };
-}
-
-/**
  * `error`, which ended the start at `step`, as a `StartFailed`: its exit and
  * stderr when the agent's process went, its code when the agent refused.
  * The message stays the error's own.
@@ -85,15 +55,12 @@ export function startFailed(
           'code' in each && typeof each.code === 'number' ? [each.code] : [],
         )[0]
       : undefined;
-  const stderr =
-    gone === undefined
-      ? undefined
-      : tailOf(gone.stderr, STDERR_LINES, gone.stderrLines);
+  const stderr = gone?.stderr;
 
   return new StartFailed(
     {
       step,
-      ...(gone === undefined ? {} : { exit: gone.exit }),
+      ...(gone?.exit === undefined ? {} : { exit: gone.exit }),
       ...(code === undefined ? {} : { code }),
       ...(stderr === undefined || stderr.lines.length === 0 ? {} : { stderr }),
       ...(pinned === undefined ? {} : { pinned }),

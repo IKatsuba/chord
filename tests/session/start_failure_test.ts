@@ -5,44 +5,13 @@ import { asSignIn } from '../../src/session/sign_in.ts';
 import {
   startFailed,
   startFailureOf,
-  tailOf,
 } from '../../src/session/start_failure.ts';
-
-test('a tail is the last non-empty lines as written, and how many came before', () => {
-  const text = [
-    'one',
-    '',
-    'two',
-    '  three',
-    'four  ',
-    '',
-    'five',
-    'six',
-    'seven',
-    '',
-  ].join('\n');
-
-  expect(tailOf(text)).toStrictEqual({
-    lines: ['two', '  three', 'four', 'five', 'six', 'seven'],
-    cut: 1,
-  });
-  expect(tailOf('a\r\nb\r\n', 6)).toStrictEqual({ lines: ['a', 'b'], cut: 0 });
-  expect(tailOf('')).toStrictEqual({ lines: [], cut: 0 });
-});
-
-test('the end of a longer stream counts every line before it, and drops its first, which may be the end of one', () => {
-  expect(tailOf('ed half\nb\nc', 6, 40)).toStrictEqual({
-    lines: ['b', 'c'],
-    cut: 38,
-  });
-});
 
 test('an agent that went says how it ended and the end of its stderr, by the step it went at', () => {
   const gone = new AgentGone(
     'The agent exited: boom',
     { code: 1 },
-    'trace\nboom',
-    2,
+    { lines: ['trace', 'boom'], cut: 0 },
   );
   const failed = startFailed(gone, 'initialize', 'pkg@1.0.0');
 
@@ -55,11 +24,19 @@ test('an agent that went says how it ended and the end of its stderr, by the ste
   });
   expect(
     startFailed(
-      new AgentGone('The agent exited.', { code: 0 }, '', 0),
+      new AgentGone('The agent exited.', { code: 0 }, { lines: [], cut: 0 }),
       'initialize',
       undefined,
     ).failure,
   ).toStrictEqual({ step: 'initialize', exit: { code: 0 } });
+  // An exit not seen by the time its stderr was read is not said.
+  expect(
+    startFailed(
+      new AgentGone('The agent exited.', undefined, { lines: [], cut: 0 }),
+      'session/new',
+      undefined,
+    ).failure,
+  ).toStrictEqual({ step: 'session/new' });
 });
 
 test("a refusal says its code, the sign-in's too, whatever its words", () => {

@@ -1,7 +1,11 @@
 import { execFile } from 'node:child_process';
 import { describe, expect, test } from 'bun:test';
 import process from 'node:process';
-import { spawnAgent, STDERR_SETTLE_MS } from '../../src/acp/process.ts';
+import {
+  spawnAgent,
+  STDERR_LINE_MAX,
+  STDERR_SETTLE_MS,
+} from '../../src/acp/process.ts';
 
 /** How a test stops what it started, a failed one too. */
 const STOP = { exitMs: 100, termMs: 300, killMs: 2000 } as const;
@@ -26,24 +30,50 @@ test("an agent's last words are its stderr's tail once stderr has ended (CHD-495
   }
 });
 
-test('every non-empty line it writes to stderr is counted, past the tail it keeps (CHD-454)', async () => {
+/** The end of the stderr of an agent that runs `script` in sh and exits. */
+async function stderrEndOf(script: string) {
   const agent = await spawnAgent({
-    command: [
-      'sh',
-      '-c',
-      'printf "a\\n\\n  b" >&2; printf " still b\\n" >&2; i=0; while [ $i -lt 300 ]; do echo "line $i of a long trace" >&2; i=$((i+1)); done; exit 1',
-    ],
+    command: ['sh', '-c', script],
     cwd: process.cwd(),
   });
 
   try {
     await agent.status;
     await agent.lastWords();
-    expect(agent.stderrLines()).toBe(302);
-    expect(agent.stderrTail().length).toBeLessThan(302 * 20);
+
+    return agent.stderrEnd();
   } finally {
     await agent.stop(STOP);
   }
+}
+
+test('the end of its stderr is its last non-empty lines as they came, indents kept, and how many came before (CHD-454)', async () => {
+  expect(
+    await stderrEndOf(
+      'printf "a\\n\\n  b" >&2; printf " still b\\n" >&2; i=0; while [ $i -lt 300 ]; do echo "    at frame $i" >&2; i=$((i+1)); done; exit 1',
+    ),
+  ).toStrictEqual({
+    lines: [
+      '    at frame 294',
+      '    at frame 295',
+      '    at frame 296',
+      '    at frame 297',
+      '    at frame 298',
+      '    at frame 299',
+    ],
+    cut: 296,
+  });
+});
+
+test('an unfinished last line is a line of the end, and one past the bound is cut there and marked (CHD-454)', async () => {
+  const end = await stderrEndOf(
+    `printf "  first\\n" >&2; printf "%02000d\\n" 0 >&2; printf "Error: no newline" >&2; exit 1`,
+  );
+
+  expect(end.cut).toBe(0);
+  expect(end.lines[0]).toBe('  first');
+  expect(end.lines[1]).toBe(`${'0'.repeat(STDERR_LINE_MAX)}…`);
+  expect(end.lines[2]).toBe('Error: no newline');
 });
 
 test('a stderr that stays open past the cap: the last words so far come at the cap, and the agent stops whole (CHD-495)', async () => {

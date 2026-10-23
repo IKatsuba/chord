@@ -4,6 +4,8 @@ import type { Exit } from '../platform/process.ts';
 import {
   type AgentProcess,
   settledWithin,
+  STDERR_SETTLE_MS,
+  type Tail,
   spawnAgent,
   type StopBounds,
 } from './process.ts';
@@ -580,10 +582,10 @@ function steeringOf(init: acp.InitializeResponse): boolean {
 export class AgentGone extends Error {
   constructor(
     message: string,
-    readonly exit: Exit,
-    readonly stderr: string,
-    /** How many non-empty lines it wrote to stderr in all. */
-    readonly stderrLines: number,
+    /** How its process ended, when that was seen. */
+    readonly exit: Exit | undefined,
+    /** The end of its stderr, as lines. */
+    readonly stderr: Tail,
   ) {
     super(message);
 
@@ -593,15 +595,16 @@ export class AgentGone extends Error {
 
 /**
  * The agent went, with the end of its stderr when it left any, once that
- * has all come (CHD-495), and how its process ended.
+ * has all come (CHD-495), and how its process ended if that is seen by
+ * then: one that closed its stdout and lives on is not waited for.
  */
 async function goneError(process: AgentProcess): Promise<AgentGone> {
   const tail = (await process.lastWords()).trim();
+  const exit = await settledWithin(process.status, STDERR_SETTLE_MS);
 
   return new AgentGone(
     tail === '' ? 'The agent exited.' : `The agent exited: ${tail}`,
-    await process.status,
-    tail,
-    process.stderrLines(),
+    exit?.status === 'fulfilled' ? exit.value : undefined,
+    process.stderrEnd(),
   );
 }

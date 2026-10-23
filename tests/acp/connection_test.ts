@@ -812,6 +812,12 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
       },
       /** The agent's stdout ends, before its stderr has. */
       closeStdout: () => out.close(),
+      /** Its last words and its stderr's end, while it lives on. */
+      endStderr: (words: string) => {
+        tail += words;
+
+        stderrEnded.resolve();
+      },
       /** Its last words, then its stderr's end and its exit. */
       leave: (words: string) => {
         tail += words;
@@ -839,8 +845,10 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
         }),
         status: exit.promise,
         stderrTail: () => tail,
-        stderrLines: () =>
-          tail.split('\n').filter((line) => line.trim() !== '').length,
+        stderrEnd: () => ({
+          lines: tail.split('\n').filter((line) => line.trim() !== ''),
+          cut: 0,
+        }),
         lastWords: async () => {
           await stderrEnded.promise;
 
@@ -913,6 +921,23 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
     expect(await settled(refused)).toBe(false);
     held.leave('no credentials\n');
     await expect(refused).rejects.toThrow('The agent exited: no credentials');
+  });
+
+  test('one that closes its stdout and lives on: the open fails with its last words, no exit, and stops it (CHD-454)', async () => {
+    const held = heldProcess();
+    const refused = connectAgent(held.process, OPTIONS);
+
+    refused.catch(() => {});
+
+    await soon(() => held.heard.length > 0);
+    held.closeStdout();
+    held.endStderr('still here\n');
+    await expect(refused).rejects.toThrow('The agent exited: still here');
+    await expect(refused).rejects.toMatchObject({
+      exit: undefined,
+      stderr: { lines: ['still here'], cut: 0 },
+    });
+    expect(held.stopped.length).toBeGreaterThan(0);
   });
 
   test('mid-session: a request fails with the last words, and gone() gives them once exited', async () => {

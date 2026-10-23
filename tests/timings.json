@@ -1,7 +1,9 @@
 {
   "version": 1,
   "files": {
+    "tests/ui/app/App_test.tsx": 63500,
     "tests/ui/transcript/agents/Agents_test.tsx": 48623,
+    "tests/headless_test.ts": 47300,
     "tests/ui/agents/AgentsTasks_test.tsx": 45961,
     "tests/ui/prompt/PromptKeys_test.tsx": 44500,
     "tests/ui/app/AppStart_test.tsx": 42806,
@@ -13,7 +15,6 @@
     "tests/session/conversation_cycle_test.ts": 37786,
     "tests/session/conversation_between_test.ts": 37570,
     "tests/ui/agents/TeamsSpend_test.tsx": 36811,
-    "tests/ui/app/App_test.tsx": 36309,
     "tests/ui/app/Tasks_test.tsx": 35736,
     "tests/session/record_test.ts": 35682,
     "tests/ui/background/BackgroundFrame_test.tsx": 35113,
@@ -47,7 +48,6 @@
     "tests/ui/prompt/Prompt_test.tsx": 23823,
     "tests/ui/app/Selection_test.tsx": 23176,
     "tests/session/monitors_test.ts": 22495,
-    "tests/headless_test.ts": 22279,
     "tests/ui/background/BackgroundDetail_test.tsx": 20701,
     "tests/scripts/dev/release/stages_test.ts": 20607,
     "tests/ui/app/AppCycle_test.tsx": 20439,

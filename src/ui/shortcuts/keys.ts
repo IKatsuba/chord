@@ -7,13 +7,10 @@ import stringWidth from 'string-width';
 import {
   type Action,
   DEFAULT_KEYMAP,
-  gotoAction,
   isDefault,
   type Keymap,
   keysOf,
-  type Sequence,
   sequencePanel,
-  TAB_NUMBERS,
 } from './bindings.ts';
 import type { KeyCommand } from './state.ts';
 import { NORMAL_KEYS } from '../prompt/vim.ts';
@@ -82,70 +79,6 @@ export interface Shortcut {
    * would widen the panel's column past 80 columns' two.
    */
   readonly first?: boolean;
-  /**
-   * The line stands for its actions' chords after one leader key; an action
-   * bound to keys that do not start with it gets a line of its own.
-   */
-  readonly leader?: boolean;
-}
-
-/** The actions on the window's sessions, as one panel line names them. */
-const SESSION_ACTIONS: readonly Action[] = [
-  'session:new',
-  'session:next',
-  'session:previous',
-  ...TAB_NUMBERS.map(gotoAction),
-  'session:list',
-  'session:attention',
-  'session:close',
-];
-
-/** What an action on the sessions does, on a line of its own. */
-function sessionDoes(action: Action): string {
-  switch (action) {
-    case 'session:new':
-      return 'for a new session';
-    case 'session:next':
-      return 'for the next session';
-    case 'session:previous':
-      return 'for the previous session';
-    case 'session:list':
-      return 'for the sessions picker';
-    case 'session:attention':
-      return 'for the session that waits';
-    case 'session:close':
-      return 'to close the session';
-    default:
-      return `for session ${action.slice('session:goto'.length)}`;
-  }
-}
-
-/** The leader's first key, as most of the sessions' actions are bound. */
-const LEADER = 'ctrl + x';
-
-/**
- * The sessions' line for `keymap`: the leader's line while any action is
- * bound after it, and a line of its own for each action bound to keys that
- * do not start with it, as rebound keys get.
- */
-function leaderLines(shortcut: Shortcut, keymap: Keymap): Shortcut[] {
-  const actions = shortcut.actions ?? [];
-  const led = (keys: Sequence) =>
-    keys.length > 1 && sequencePanel(keys.slice(0, 1)) === LEADER;
-  const own = actions.flatMap((action): Shortcut[] => {
-    const keys = keysOf(keymap, action)
-      .filter((keys) => !led(keys))
-      .slice(0, 2)
-      .map(sequencePanel);
-
-    return keys.length === 0
-      ? []
-      : [{ ...shortcut, key: keys.join(' '), does: sessionDoes(action) }];
-  });
-
-  const anyLed = actions.some((action) => keysOf(keymap, action).some(led));
-
-  return [...(anyLed ? [shortcut] : []), ...own];
 }
 
 export const SHORTCUTS: readonly Shortcut[] = [
@@ -380,43 +313,20 @@ export const SHORTCUTS: readonly Shortcut[] = [
     actions: ['app:toggleTranscript'],
   },
   { key: 'ctrl + c', does: 'to clear input', commands: ['clear_draft'] },
-  // One line for both, so the panel still fits 80x24 with the sessions'
-  // line; neither key can be rebound. On a draft ctrl+d does nothing.
+  // One line for both, so the panel still fits 80x24; neither key can be
+  // rebound. On a draft ctrl+d does nothing.
   {
     key: 'ctrl + d or ctrl + c',
     does: 'twice to quit',
     commands: ['arm_quit', 'quit'],
     presses: ['ctrl + d', 'ctrl + c'],
   },
-  // The leader alone: the status line names the keys that can follow it,
-  // so one line covers every session action while they keep its leader.
   {
-    key: 'ctrl + x',
-    does: 'then a key for sessions',
-    commands: [
-      'key_pending',
-      'new_session',
-      'next_session',
-      'previous_session',
-      ...TAB_NUMBERS.map((n) => `goto_session_${n}` as const),
-      'list_sessions',
-      'attend_session',
-      'close_session',
-    ],
-    presses: [
-      'ctrl + x',
-      'c',
-      'n',
-      'p',
-      'ctrl + n',
-      'ctrl + p',
-      ...TAB_NUMBERS,
-      'w',
-      'a',
-      'k',
-    ],
-    actions: SESSION_ACTIONS,
-    leader: true,
+    key: 'ctrl + x a',
+    does: 'for what waits on you',
+    commands: ['key_pending', 'attend_session'],
+    presses: ['ctrl + x', 'a'],
+    actions: ['session:attention'],
   },
   {
     key: '1–9',
@@ -458,7 +368,6 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'background_back',
       'close_model_picker',
       'close_resume_picker',
-      'close_sessions_picker',
       'close_config_picker',
       'close_theme_picker',
       'close_mcp',
@@ -540,10 +449,6 @@ export const SHORTCUTS: readonly Shortcut[] = [
 export function shortcuts(keymap: Keymap = DEFAULT_KEYMAP): Shortcut[] {
   return SHORTCUTS.flatMap((shortcut) => {
     const { actions } = shortcut;
-
-    if (shortcut.leader) {
-      return leaderLines(shortcut, keymap);
-    }
 
     if (
       actions === undefined ||

@@ -206,7 +206,7 @@ for (const size of [
       expect(window.frame()).not.toMatch(/agents? (done|failed|stopped)/);
       await window.press(DOWN);
       await window.press('\r');
-      await window.shows(' Background · 1 in this tab');
+      await window.shows(' Background · 1 in this session');
 
       const frame = window.frame();
 
@@ -301,7 +301,7 @@ test("x on a Claude agent stops it alone: its row leaves, its block Cancelled, a
       await window.shows('❯ Run the test suite');
       await window.press('x');
       // Stopped, it leaves, the ❯ on the row that took its place (CHD-479).
-      await window.shows('│ Background · 1 in this tab');
+      await window.shows('│ Background · 1 in this session');
       expect(window.frame()).not.toContain('Run the test suite  agent');
       // The one the turn waits on runs on, and the turn ends on its own;
       // the last row leaving closes the view.
@@ -402,7 +402,7 @@ test('opened over a request held between turns, the frame gives way to ctrl+x a,
     // Held, the prompt has the keys: ↓ reaches the summary line.
     await window.press(DOWN);
     await window.press('\r');
-    await window.shows('│ Background · 1 in this tab');
+    await window.shows('│ Background · 1 in this session');
     expect(window.frame()).toContain('ctrl+x a to answer');
 
     await leader(window, 'a');
@@ -768,7 +768,7 @@ test("an error taller than the frame's room scrolls in it by a page, the rows gi
   try {
     expect(frame()).toStrictEqual([
       '╭────────────────────────────────────────────╮',
-      '│ Background · 3 in this tab                 │',
+      '│ Background · 3 in this session             │',
       '│                                            │',
       '│ ❯ CI run 4812        monitor · m0          │',
       '│                                            │',

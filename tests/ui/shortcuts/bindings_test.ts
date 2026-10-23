@@ -587,11 +587,7 @@ test('ctrl and a Cyrillic letter is ctrl and the US letter in its place', () => 
   expect(keyCommand('x', press({ ctrl: true }), state, '')).toStrictEqual(
     'key_pending',
   );
-  expect(keyCommand('с', press(), waiting, '')).toStrictEqual('new_session');
-  expect(keyCommand('т', press({ ctrl: true }), waiting, '')).toStrictEqual(
-    'next_session',
-  );
-  expect(keyCommand('л', press(), waiting, '')).toStrictEqual('close_session');
+  expect(keyCommand('ф', press(), waiting, '')).toStrictEqual('attend_session');
   expect(keyCommand('o', press(), waiting, '')).toStrictEqual('key_dropped');
   expect(keyCommand('щ', press(), waiting, '')).toStrictEqual('key_dropped');
   expect(keyCommand('к', press({ ctrl: true }), state, '')).toStrictEqual(
@@ -613,9 +609,9 @@ test('a Cyrillic key bound in the file is its own, not the US key in its place',
   const { keymap } = read({
     context: 'Global',
     bindings: {
-      // Cyrillic с, where `ctrl+x c` is a new session.
+      // Cyrillic с, where a US layout has c, which chord binds to nothing.
       'ctrl+x с': 'session:attention',
-      'ctrl+x z': 'session:close',
+      'ctrl+x z': 'app:toggleTranscript',
     },
   });
   const waiting = reduceApp(ready(keymap), {
@@ -624,9 +620,11 @@ test('a Cyrillic key bound in the file is its own, not the US key in its place',
   });
 
   expect(keyCommand('с', press(), waiting, '')).toStrictEqual('attend_session');
-  expect(keyCommand('c', press(), waiting, '')).toStrictEqual('new_session');
+  expect(keyCommand('c', press(), waiting, '')).toStrictEqual('key_dropped');
   // The file's own US keys are found through a Russian layout too.
-  expect(keyCommand('я', press(), waiting, '')).toStrictEqual('close_session');
+  expect(keyCommand('я', press(), waiting, '')).toStrictEqual(
+    'toggle_expanded',
+  );
   expect(keyAnswer('с', press(), waiting, '').input).toStrictEqual('с');
 });
 
@@ -905,30 +903,24 @@ function leader(state: AppState, width: number): string {
   );
 }
 
-test("the leader's keys go to a session, over a permission and a form", () => {
+test("the leader's a goes to what waits, over a permission and a form, and the keys tabs had are free", () => {
   const ctrl = press({ ctrl: true });
   const leaderHeld = holding(ready(DEFAULT_KEYMAP), 'ctrl+x');
 
   expect(keyCommand('x', ctrl, ready(DEFAULT_KEYMAP), '')).toStrictEqual(
     'key_pending',
   );
-  expect(keyCommand('c', press(), leaderHeld, '')).toStrictEqual('new_session');
-  expect(keyCommand('n', press(), leaderHeld, '')).toStrictEqual(
-    'next_session',
-  );
-  expect(keyCommand('n', ctrl, leaderHeld, '')).toStrictEqual('next_session');
-  expect(keyCommand('p', press(), leaderHeld, '')).toStrictEqual(
-    'previous_session',
-  );
-  expect(keyCommand('p', ctrl, leaderHeld, '')).toStrictEqual(
-    'previous_session',
-  );
-  expect(keyCommand('7', press(), leaderHeld, '')).toStrictEqual(
-    'goto_session_7',
-  );
   expect(keyCommand('a', press(), leaderHeld, '')).toStrictEqual(
     'attend_session',
   );
+
+  for (const key of ['c', 'n', 'p', 'w', 'k', '1', '7', '9']) {
+    expect(keyCommand(key, press(), leaderHeld, ''), key).toStrictEqual(
+      'key_dropped',
+    );
+  }
+
+  expect(keyCommand('n', ctrl, leaderHeld, '')).toStrictEqual('key_dropped');
   expect(keyCommand('', press({ escape: true }), leaderHeld, '')).toStrictEqual(
     'key_dropped',
   );
@@ -948,58 +940,69 @@ test("the leader's keys go to a session, over a permission and a form", () => {
   for (const state of [asked, form]) {
     expect(keyCommand('x', ctrl, state, '')).toStrictEqual('key_pending');
     expect(
-      keyCommand('2', press(), holding(state, 'ctrl+x'), ''),
-    ).toStrictEqual('goto_session_2');
+      keyCommand('a', press(), holding(state, 'ctrl+x'), ''),
+    ).toStrictEqual('attend_session');
   }
 });
 
-test('a session action is rebound and unbound through the file', () => {
+test('session:attention is rebound and unbound through the file', () => {
   const { keymap, problems } = read({
     context: 'Global',
-    bindings: { 'ctrl+x t': 'session:new', 'ctrl+x c': null },
+    bindings: { 'ctrl+x t': 'session:attention', 'ctrl+x a': null },
   });
   const held = holding(ready(keymap), 'ctrl+x');
 
   expect(problems).toStrictEqual([]);
-  expect(keyCommand('t', press(), held, '')).toStrictEqual('new_session');
-  expect(keyCommand('c', press(), held, '')).toStrictEqual('key_dropped');
+  expect(keyCommand('t', press(), held, '')).toStrictEqual('attend_session');
+  expect(keyCommand('a', press(), held, '')).toStrictEqual('key_dropped');
+});
+
+test('a file binding an action that went with tabs is told so, and the rest of it holds (CHD-493)', () => {
+  const { keymap, problems } = read({
+    context: 'Global',
+    bindings: {
+      'ctrl+x c': 'session:new',
+      'ctrl+x n': 'session:next',
+      'ctrl+x 3': 'session:goto3',
+      'ctrl+x w': 'session:list',
+      'ctrl+x k': 'session:close',
+      'ctrl+x t': 'session:attention',
+    },
+  });
+
+  expect(problems).toStrictEqual([
+    'session:new went with tabs: chord runs one session, ignored',
+    'session:next went with tabs: chord runs one session, ignored',
+    'session:goto3 went with tabs: chord runs one session, ignored',
+    'session:list went with tabs: chord runs one session, ignored',
+    'session:close went with tabs: chord runs one session, ignored',
+  ]);
+  expect(
+    keyCommand('t', press(), holding(ready(keymap), 'ctrl+x'), ''),
+  ).toStrictEqual('attend_session');
 });
 
 test('the leader line names every key that can follow, as wide as it fits', () => {
   const held = holding(ready(DEFAULT_KEYMAP), 'ctrl+x');
 
   expect(leader(held, 116)).toStrictEqual(
-    'ctrl+x …  c new · n next · p previous · 1–9 go to · w list · a the one that waits · k close · esc never mind',
+    'ctrl+x …  a the one that waits · esc never mind',
   );
-  // Short words first, then items dropped from the end, never cut through.
-  expect(leader(held, 76)).toStrictEqual(
-    'ctrl+x …  c new · n p next prev · 1–9 · w list · a waits · k close',
-  );
-  expect(leader(held, 56)).toStrictEqual(
-    'ctrl+x …  c new · n p next prev · 1–9 · w list · a waits',
-  );
+  // 47 columns: it fits 80 whole.
   expect(leader(held, 47)).toStrictEqual(
-    'ctrl+x …  c new · n p next prev · 1–9 · w list',
+    'ctrl+x …  a the one that waits · esc never mind',
   );
-  expect(leader(held, 40)).toStrictEqual(
-    'ctrl+x …  c new · n p next prev · 1–9',
-  );
-  expect(leader(held, 31)).toStrictEqual('ctrl+x …  c new · n p next prev');
-  expect(leader(held, 20)).toStrictEqual('ctrl+x …  c new');
+  expect(leader(held, 20)).toStrictEqual('ctrl+x …  a waits');
 });
 
 test('the leader line follows the keybindings file', () => {
   const { keymap } = read({
-    context: 'Global',
-    bindings: {
-      'ctrl+x t': 'session:new',
-      'ctrl+x c': null,
-      'ctrl+x 9': null,
-    },
+    context: 'Chat',
+    bindings: { 'ctrl+x ctrl+e': 'chat:externalEditor' },
   });
 
-  expect(leader(holding(ready(keymap), 'ctrl+x'), 130)).toStrictEqual(
-    'ctrl+x …  t new · n next · p previous · 1 2 3 4 5 6 7 8 go to · w list · a the one that waits · k close · esc never mind',
+  expect(leader(holding(ready(keymap), 'ctrl+x'), 116)).toStrictEqual(
+    'ctrl+x …  a the one that waits · ctrl+e edit in $EDITOR · esc never mind',
   );
 });
 
@@ -1020,11 +1023,11 @@ test("a person's own chord shows its next key on the leader line", () => {
   ).toBeTruthy();
 });
 
-test('the panel still fits 80x24: one sessions line, one quit line', () => {
+test('the panel still fits 80x24: one line for what waits, one quit line', () => {
   const lines = shortcuts().map(shortcutLine);
   const columns = inColumns(lines, columnCount(lines, 80));
 
-  expect(lines.includes('ctrl + x then a key for sessions')).toBeTruthy();
+  expect(lines.includes('ctrl + x a for what waits on you')).toBeTruthy();
   expect(lines.includes('ctrl + d or ctrl + c twice to quit')).toBeTruthy();
   expect(!lines.includes('ctrl + d to quit')).toBeTruthy();
   expect(columns.length).toStrictEqual(2);
@@ -1032,28 +1035,26 @@ test('the panel still fits 80x24: one sessions line, one quit line', () => {
   expect(Math.max(...columns.map((column) => column.length))).toStrictEqual(20);
 });
 
-test('a session action bound off the leader gets a panel line of its own', () => {
+test('session:attention bound elsewhere is named as bound, and unbound has no line', () => {
   const { keymap, problems } = read({
     context: 'Global',
-    bindings: { 'ctrl+n': 'session:next' },
+    bindings: { 'ctrl+n': 'session:attention' },
   });
   const lines = shortcuts(keymap).map(shortcutLine);
 
   expect(problems).toStrictEqual([]);
-  expect(lines.includes('ctrl + x then a key for sessions')).toBeTruthy();
-  expect(lines.includes('ctrl + n for the next session')).toBeTruthy();
+  expect(lines.some((line) => line.includes('ctrl + n'))).toBeTruthy();
+  expect(lines.some((line) => line.endsWith('for what waits on you'))).toBe(
+    true,
+  );
 
   const off = read({
     context: 'Global',
     bindings: Object.fromEntries(
-      keysOf(DEFAULT_KEYMAP, 'session:new')
-        .concat(keysOf(DEFAULT_KEYMAP, 'session:next'))
-        .concat(keysOf(DEFAULT_KEYMAP, 'session:previous'))
-        .concat(keysOf(DEFAULT_KEYMAP, 'session:list'))
-        .concat(keysOf(DEFAULT_KEYMAP, 'session:attention'))
-        .concat(keysOf(DEFAULT_KEYMAP, 'session:close'))
-        .concat([...'123456789'].map((n) => keys(`ctrl+x ${n}`)))
-        .map((sequence) => [sequenceHint(sequence), null]),
+      keysOf(DEFAULT_KEYMAP, 'session:attention').map((sequence) => [
+        sequenceHint(sequence),
+        null,
+      ]),
     ),
   });
 
@@ -1061,7 +1062,7 @@ test('a session action bound off the leader gets a panel line of its own', () =>
   expect(
     !shortcuts(off.keymap)
       .map(shortcutLine)
-      .some((line) => line.includes('sessions')),
+      .some((line) => line.includes('waits on you')),
   ).toBeTruthy();
 });
 

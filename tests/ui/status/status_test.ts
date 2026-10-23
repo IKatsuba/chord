@@ -9,7 +9,6 @@ import {
   STATUS_SEPARATOR,
   type StatusFacts,
   statusLine,
-  type TabBehind,
   type AgentWaiting,
   waitsNotice,
   workingLine,
@@ -224,8 +223,8 @@ test("vim's mode is marked first, as Claude Code marks it, and stays when the li
   ).toBeTruthy();
 });
 
-function behind(number: number, agent: string, wait: Partial<TabWait>) {
-  return { number, agent, wait: { ...idle, ...wait } } satisfies TabBehind;
+function behind(name: string, wait: Partial<TabWait>): AgentWaiting {
+  return { name, wait: { ...idle, ...wait } };
 }
 
 const permission = {
@@ -235,35 +234,33 @@ const replied = { unseen: { kind: 'replied' as const, since: 10 } };
 
 test('the waits notice names the one that waits, or counts them', () => {
   expect(waitsNotice([], 'ctrl+x a')).toStrictEqual(undefined);
-  expect(waitsNotice([behind(3, 'fake', { working: 5 })])).toStrictEqual(
+  expect(waitsNotice([behind('docs', { working: 5 })])).toStrictEqual(
     undefined,
   );
   expect(
-    waitsNotice([behind(2, 'claude', permission), behind(3, 'fake', replied)]),
-  ).toStrictEqual({ text: '● 2 claude needs your permission', tone: 'waits' });
+    waitsNotice([behind('docs', permission), behind('parser', replied)]),
+  ).toStrictEqual({ text: '● docs needs your permission', tone: 'waits' });
   expect(
     waitsNotice([
-      behind(2, 'claude', {
+      behind('docs', {
         asking: { on: { kind: 'input', message: 'Who?' }, since: 1 },
       }),
     ])?.text,
-  ).toStrictEqual('● 2 claude asks for input');
+  ).toStrictEqual('● docs asks for input');
   expect(
-    waitsNotice([behind(2, 'claude', permission), behind(4, 'x', permission)])
-      ?.text,
-  ).toStrictEqual('● 2 sessions wait');
-  expect(waitsNotice([behind(3, 'fake', replied)], 'ctrl+x a')).toStrictEqual({
-    text: '✓ 3 fake replied',
-    tone: 'plain',
-    key: 'ctrl+x a',
-  });
-  // A failure outranks a reply, and names the one that failed.
+    waitsNotice([behind('docs', permission), behind('main', permission)])?.text,
+  ).toStrictEqual('● 2 agents wait');
+  // A reply is the list's `✓ new reply`, not the notice's.
+  expect(waitsNotice([behind('parser', replied)], 'ctrl+x a')).toStrictEqual(
+    undefined,
+  );
+  // A failure names the one that failed.
   expect(
     waitsNotice([
-      behind(3, 'fake', replied),
-      behind(4, 'fake', { unseen: { kind: 'failed', since: 30 } }),
+      behind('docs', replied),
+      behind('parser', { unseen: { kind: 'failed', since: 30 } }),
     ]),
-  ).toStrictEqual({ text: "✗ 4 fake's turn failed", tone: 'ended' });
+  ).toStrictEqual({ text: "✗ parser's turn failed", tone: 'ended' });
 });
 
 test('a failure says what failed: a turn, a start or an exit; many count each kind, gravest first, with no noun', () => {
@@ -271,26 +268,19 @@ test('a failure says what failed: a turn, a start or an exit; many count each ki
     unseen: { kind: 'failed' as const, since, failure },
     ...(failure === 'exited' ? { exited: true as const } : {}),
   });
-  const parser = (wait: Partial<TabWait>): TabBehind => ({
-    ...behind(1, 'fake', wait),
-    name: 'parser',
-  });
 
-  expect(waitsNotice([parser(failed('turn'))])?.text).toStrictEqual(
+  expect(waitsNotice([behind('parser', failed('turn'))])?.text).toStrictEqual(
     "✗ parser's turn failed",
   );
-  expect(waitsNotice([parser(failed('start'))])?.text).toStrictEqual(
+  expect(waitsNotice([behind('parser', failed('start'))])?.text).toStrictEqual(
     '✗ parser failed to start',
   );
-  expect(waitsNotice([parser(failed('exited'))])?.text).toStrictEqual(
+  expect(waitsNotice([behind('parser', failed('exited'))])?.text).toStrictEqual(
     '✗ parser exited',
-  );
-  expect(waitsNotice([behind(1, 'fake', failed('turn'))])?.text).toStrictEqual(
-    "✗ 1 fake's turn failed",
   );
   expect(
     waitsNotice(
-      [behind(1, 'fake', failed('turn')), behind(2, 'fake', failed('exited'))],
+      [behind('parser', failed('turn')), behind('docs', failed('exited'))],
       'ctrl+x a',
     ),
   ).toStrictEqual({
@@ -300,28 +290,24 @@ test('a failure says what failed: a turn, a start or an exit; many count each ki
   });
   expect(
     waitsNotice([
-      parser(failed('turn', 10)),
-      behind(2, 'fake', failed('turn', 20)),
-      behind(3, 'fake', failed('start')),
-      behind(4, 'fake', failed('exited')),
-      behind(5, 'fake', failed('exited')),
+      behind('parser', failed('turn', 10)),
+      behind('docs', failed('turn', 20)),
+      behind('lint', failed('start')),
+      behind('main', failed('exited')),
+      behind('tester', failed('exited')),
     ])?.text,
   ).toStrictEqual('✗ 2 exited · 1 failed to start · 2 turns failed');
-  // Replies alone still count as sessions, which only tabs behind make.
-  expect(
-    waitsNotice([behind(1, 'fake', replied), behind(2, 'fake', replied)])?.text,
-  ).toStrictEqual('✓ 2 sessions replied');
 });
 
 test('the waits notice goes ahead of the hint, and the hint goes first', () => {
-  const waits = waitsNotice([behind(2, 'claude', permission)], 'ctrl+x a');
+  const waits = waitsNotice([behind('docs', permission)], 'ctrl+x a');
   const line = { ...facts, mode: 'default', waits };
 
   expect(text(line, 116)).toStrictEqual(
-    '● 2 claude needs your permission · ctrl+x a to go · ? for shortcuts  Fake Large with a 1M context window · 60% used',
+    '● docs needs your permission · ctrl+x a to go · ? for shortcuts  Fake Large with a 1M context window · 60% used',
   );
   expect(text(line, 76)).toStrictEqual(
-    '● 2 claude needs your permission · ctrl+x a  Fake Large with a… · 60% used',
+    '● docs needs your permission · ctrl+x a  Fake Large with a 1M… · 60% used',
   );
   expect(statusLine(line, 76).left[0]?.tone).toStrictEqual('waits');
   // With no usage there is room for a cut model, but the hint goes first.
@@ -331,8 +317,8 @@ test('the waits notice goes ahead of the hint, and the hint goes first', () => {
   ).toBeTruthy();
   // A message just asked for stands alone.
   expect(
-    text({ ...line, notice: 'No session waits' }, 116).split('  ')[0],
-  ).toStrictEqual('No session waits');
+    text({ ...line, notice: 'Nothing waits on you' }, 116).split('  ')[0],
+  ).toStrictEqual('Nothing waits on you');
 });
 
 test('a context chord worked out is marked, and a window nobody knows says nothing', () => {
@@ -519,8 +505,8 @@ describe('CHD-264 tester: grouped failures', () => {
       unseen: { kind: 'failed' as const, failure: 'turn' as const, since: 1 },
     };
     const entries = [
-      behind(1, 'fake', turn),
-      behind(2, 'fake', { ...turn, exited: true }),
+      behind('parser', turn),
+      behind('docs', { ...turn, exited: true }),
     ];
     const notice = waitsNotice(entries, 'ctrl+x a');
 
@@ -532,31 +518,8 @@ describe('CHD-264 tester: grouped failures', () => {
       '✗ 1 exited · 1 turn failed · ctrl+x a',
     );
     expect(notice?.text).not.toContain('sessions');
-    expect(waitsNotice([behind(2, 'fake', { exited: true })])).toBeUndefined();
+    expect(waitsNotice([behind('docs', { exited: true })])).toBeUndefined();
   });
-});
-
-test("a tab behind names a child's failure for the child, in the tab; only its own main's is the tab's", () => {
-  const failed = (failure: 'turn' | 'start' | 'exited') => ({
-    unseen: { kind: 'failed' as const, since: 30, failure },
-  });
-  const child = (failure: 'turn' | 'start' | 'exited'): TabBehind => ({
-    ...behind(2, 'fake', failed(failure)),
-    waiter: 'parser',
-  });
-
-  expect(waitsNotice([child('exited')])?.text).toStrictEqual(
-    '✗ parser exited in 2 fake',
-  );
-  expect(waitsNotice([child('turn')])?.text).toStrictEqual(
-    "✗ parser's turn failed in 2 fake",
-  );
-  expect(waitsNotice([child('start')])?.text).toStrictEqual(
-    '✗ parser failed to start in 2 fake',
-  );
-  expect(waitsNotice([behind(2, 'fake', failed('turn'))])?.text).toStrictEqual(
-    "✗ 2 fake's turn failed",
-  );
 });
 
 test("the front session's own request between turns names the key that answers it, short where it must be (CHD-158)", () => {
@@ -588,9 +551,7 @@ test('an asking task is named as its box names it, or by whose task it is where 
       since: 0,
     },
   });
-  const main = (on: 'permission' | 'input'): TabBehind => ({
-    number: 0,
-    agent: 'main',
+  const main = (on: 'permission' | 'input'): AgentWaiting => ({
     name: 'main',
     wait: asking(on),
     task: 'Agent(Fix the tokenizer) · fake',
@@ -613,9 +574,7 @@ test('an asking task is named as its box names it, or by whose task it is where 
   );
 
   // Two asking are counted as ever, a task as one agent.
-  const tester: TabBehind = {
-    number: 0,
-    agent: 'tester',
+  const tester: AgentWaiting = {
     name: 'tester',
     wait: asking('input'),
   };

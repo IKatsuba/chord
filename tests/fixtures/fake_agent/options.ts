@@ -132,6 +132,20 @@ export const DIMCODE_PERMISSION = valueOf(
 );
 
 /**
+ * The runtime `--child-runtime <name>` (or `CHORD_FAKE_CHILD_RUNTIME`)
+ * names for the children the scenarios open, so a test has an agent of
+ * another runtime in the window, and the screenshots theirs on the names
+ * their settings give the fake (CHD-493); none when not given.
+ */
+export const CHILD_RUNTIME_GIVEN = valueOf(
+  '--child-runtime',
+  'CHORD_FAKE_CHILD_RUNTIME',
+);
+
+/** The runtime `agentother` opens its child on: `codex` unless given. */
+export const CHILD_RUNTIME = CHILD_RUNTIME_GIVEN ?? 'codex';
+
+/**
  * The members a team's lead opens on its first turn, in order: `tester` and
  * `coder` unless `--lead-opens tester,coder,reviewer` (or
  * `CHORD_FAKE_LEAD_OPENS`) says, as the README's screenshots ask.

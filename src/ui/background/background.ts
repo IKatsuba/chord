@@ -21,7 +21,7 @@ import type {
   Subagent,
   Transcript,
 } from '../../session/transcript/types.ts';
-import { GLYPHS } from '../app/strip.ts';
+import { GLYPHS } from '../agents/glyphs.ts';
 import { agentGroup } from '../transcript/agents/subagents.ts';
 import { agentTarget, callTarget } from '../transcript/targets.ts';
 

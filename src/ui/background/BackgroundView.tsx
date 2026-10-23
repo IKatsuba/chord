@@ -187,8 +187,8 @@ export function BackgroundView({
   /** The work of the agent or task whose detail is open (CHD-487). */
   work?: DetailWork | undefined;
   /**
-   * Not drawn, where its details are read kept, while a request in the
-   * front tab stands in its place; it comes back as it was (CHD-481,
+   * Not drawn, where its details are read kept, while a request of this
+   * session's stands in its place; it comes back as it was (CHD-481,
    * CHD-487).
    */
   hidden?: boolean;
@@ -336,7 +336,7 @@ export function BackgroundView({
         </span>
         <span attributes={DIM}>
           {detailed === undefined
-            ? ` · ${items.length} in this tab`
+            ? ` · ${items.length} in this session`
             : ` · ${detailed.kind === 'monitor' ? `${detailed.id}, ` : ''}${
                 shownAt + 1
               } of ${items.length}${ended(detailed) ? ' · ended' : ''}`}

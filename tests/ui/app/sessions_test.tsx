@@ -652,8 +652,8 @@ describe('CHD-373 S3b tester: session close wiring', () => {
   });
 });
 
-describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', () => {
-  test("its turn's end, its last cost with it, is kept where it was let go, and nothing of it reaches the tab's next session", async () => {
+describe('CHD-373 S3c: a session /clear let go before its turn ends', () => {
+  test("its turn's end, its last cost with it, is kept where it was let go, and nothing of it reaches the next session", async () => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-spend-retire-'));
     const server = serveChord();
     const command = fakeAgentCommand();
@@ -722,15 +722,6 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
         'main ready',
         () => read().all.sessions[1]?.connection.status === 'ready',
       );
-      // A second tab, so closing the first leaves the window open.
-      read().drive.openBeside();
-      await until(
-        'second ready',
-        () => read().all.sessions[2]?.connection.status === 'ready',
-      );
-      read().drive.sessions.pick(1);
-      read().drive.showFront();
-      await until('first in front', () => read().all.front === 1);
 
       const conversation = read().drive.sessions.conversationOf(1);
 
@@ -741,11 +732,9 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
         () => read().all.sessions[1]?.transcript.usage?.cost?.amount === 0.01,
       );
 
-      // Let go, and its tab gone at once, before the old turn has ended:
-      // what that turn says comes through the closed tab's events.
+      // Let go before the old turn has ended: what that turn says comes
+      // through the let-go session's own events.
       read().drive.clearFront(() => {});
-
-      const closed = read().drive.sessions.close(1);
 
       await until(
         'the let-go session kept',
@@ -753,7 +742,6 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
           read().all.window.keptSpend?.length === 1 &&
           Object.keys(read().all.closing ?? {}).length === 0,
       );
-      await closed;
 
       const [kept] = read().all.window.keptSpend!;
 
@@ -762,7 +750,7 @@ describe('CHD-373 S3c: a session /clear let go, its tab closed before it ends', 
         tab: 1,
         part: { name: 'main', figure: { cost: { amount: 0.02 } } },
       });
-      // Nothing of it reached the session the tab went on with.
+      // Nothing of it reached the session the window went on with.
       expect(read().all.sessions[1]?.spent?.costs).toBe(undefined);
     } finally {
       await read().drive.sessions.closeAll();

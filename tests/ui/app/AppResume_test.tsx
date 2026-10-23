@@ -24,7 +24,6 @@ import {
   CTRL_D,
   CTRL_R,
   ESC,
-  leader,
   left,
   promptRow,
   ready,
@@ -258,20 +257,6 @@ test('a click on the box while ctrl+r searches gives the box no keys: what is ty
     await until(
       'the search closed',
       () => !window.frame().includes('search prompts'),
-    );
-    expect(promptRow(window)?.replace(/[│›\s]/g, '')).toStrictEqual('');
-  }));
-
-test('a click on the box while the sessions picker is open gives the box no keys: its digit picks and types nothing (CHD-429)', () =>
-  withWindow(async (window) => {
-    await ready(window);
-    await leader(window, 'w');
-    await window.shows('Esc to close');
-    await clickBox(window);
-    await window.press('1');
-    await until(
-      'the picker closed',
-      () => !window.frame().includes('Esc to close'),
     );
     expect(promptRow(window)?.replace(/[│›\s]/g, '')).toStrictEqual('');
   }));

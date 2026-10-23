@@ -1,7 +1,6 @@
 /**
- * The pickers' choices — `/model`'s models, `/resume`'s earlier sessions,
- * `ctrl+x w`'s open ones and `/config`'s options and
- * their values —
+ * The pickers' choices — `/model`'s models, `/resume`'s earlier sessions
+ * and `/config`'s options and their values —
  * where a picker's window onto them sits, and what each key does to it, kept
  * out of the component. The list is drawn by hand, as the slash command list
  * is: ink-select-input scrolls by rotating, so it can neither keep a long
@@ -11,12 +10,8 @@ import stringWidth from 'string-width';
 import { type AgentOption, valueName } from '../../session/config.ts';
 import type { AgentModels } from '../../session/models.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
-import { failureOf, type TabWait } from '../../session/tabs.ts';
 import { homePath } from '../../settings.ts';
 import { visibleRange } from '../prompt/commands.ts';
-import { GLYPHS, tabGlyphs } from '../app/strip.ts';
-import { IDLE_GLYPH } from '../agents/agents.ts';
-import { formatElapsed } from '../../session/elapsed.ts';
 import { cutPath } from './mcp.ts';
 import type { KeyPress } from '../shortcuts/state.ts';
 import type { Choice } from '../dialogs/permission.ts';
@@ -98,27 +93,24 @@ export const DIRECTORY_WIDTH = 30;
  * every directory draws them, each row names its directory between the two,
  * from `~` and cut from the start to `DIRECTORY_WIDTH`, where the name that
  * tells two apart is, and at a `/` so the segments left are whole. The row is
- * cut at the picker's edge as it is drawn. A session open in a tab of the
- * window says which, `open in 2`, after when it was used, as picking it goes
- * there rather than load it twice. The value is the session's place in
+ * cut at the picker's edge as it is drawn. A session open now, as a child of
+ * this one, says `open now` after when it was used, as picking it goes to
+ * the child rather than load it twice. The value is the session's place in
  * `sessions`.
  */
 export function sessionChoices(
   sessions: readonly EarlierSession[],
   now: number,
   directories?: { readonly home: string | undefined },
-  /** The tab each open session is in, by its id. */
-  open: ReadonlyMap<string, number> = new Map(),
+  /** The ids of the sessions open now. */
+  open: ReadonlySet<string> = new Set(),
 ): PickerChoice[] {
   const when = sessions.map((session) => lastUsed(session.lastUsedAt, now));
   const width = Math.max(0, ...when.map((text) => text.length));
-  const tabs = sessions.map((session) => {
-    const tab = open.get(session.resume.sessionId);
-
-    return tab === undefined ? '' : `open in ${tab}`;
-  });
-
-  const tabsWidth = Math.max(0, ...tabs.map((text) => text.length));
+  const opens = sessions.map((session) =>
+    open.has(session.resume.sessionId) ? 'open now' : '',
+  );
+  const opensWidth = Math.max(0, ...opens.map((text) => text.length));
   const where =
     directories === undefined
       ? undefined
@@ -137,7 +129,7 @@ export function sessionChoices(
     key: session.resume.sessionId,
     label: [
       when[index]!.padEnd(width),
-      ...(tabsWidth === 0 ? [] : [tabs[index]!.padEnd(tabsWidth)]),
+      ...(opensWidth === 0 ? [] : [opens[index]!.padEnd(opensWidth)]),
       ...(where === undefined
         ? []
         : [
@@ -146,117 +138,6 @@ export function sessionChoices(
       session.prompt,
     ].join('  '),
     value: String(index),
-  }));
-}
-
-/** One open session as the sessions picker lists it. */
-export interface TabRow {
-  readonly agent: string;
-  readonly wait: TabWait;
-  /** The session in front, which the list calls `here`. */
-  readonly front: boolean;
-  /** Its first prompt, on one line; none before one is sent. */
-  readonly prompt: string | undefined;
-  /** How many long-lived agents it has open; none or 0 for none. */
-  readonly agents?: number;
-  /** The child whose asking or failure `wait` is, named before its words. */
-  readonly waiter?: string;
-}
-
-/** `41s`, `2m`, `1h`: the first unit of an elapsed time, as a row has room for. */
-function briefly(ms: number): string {
-  return formatElapsed(ms).split(' ')[0]!;
-}
-
-/**
- * Where a session stands, as the sessions picker words it, as the agents
- * list does (CHD-471): `here` for the one in front, else always one state,
- * `● permission 41s`, `● input 41s`, `✗ exited`, `✗ failed to start`,
- * `✻ working 12s`, or `◦ idle 3m` since its agents last stopped; what is
- * not yet seen is `tabMark`'s, beside it.
- */
-export function tabState(tab: TabRow, now: number): string {
-  const { wait } = tab;
-
-  if (tab.front) {
-    return 'here';
-  }
-
-  if (wait.asking) {
-    return `${GLYPHS.asking} ${
-      tab.waiter === undefined ? '' : `${tab.waiter}: `
-    }${wait.asking.on.kind === 'input' ? 'input' : 'permission'} ${briefly(
-      now - wait.asking.since,
-    )}`;
-  }
-
-  const failure = wait.exited ? 'exited' : failureOf(wait);
-
-  if (failure === 'exited' || failure === 'start') {
-    return `${GLYPHS.failed} ${tab.waiter === undefined ? '' : `${tab.waiter}: `}${
-      failure === 'exited' ? 'exited' : 'failed to start'
-    }`;
-  }
-
-  return wait.working === undefined
-    ? `${IDLE_GLYPH} idle ${briefly(now - (wait.stopped ?? now))}`
-    : `${GLYPHS.working} working ${briefly(now - wait.working)}`;
-}
-
-/**
- * What of a session behind is not yet seen, as the agents list marks it:
- * `✗ turn failed`, `✓ new reply`, `← new message`; none for the one in
- * front, or when all of it is seen.
- */
-export function tabMark(tab: TabRow): string | undefined {
-  const { wait } = tab;
-  const kind = tabGlyphs(wait).mark;
-
-  return tab.front || kind === undefined
-    ? undefined
-    : kind === 'failed'
-      ? `${GLYPHS.failed} turn failed`
-      : kind === 'replied'
-        ? `${GLYPHS.replied} new reply`
-        : `${GLYPHS.message} new message`;
-}
-
-/**
- * `ctrl+x w`'s rows, in tab order: each session's agent and where it stands,
- * padded so the columns line up, then its first prompt. The row the list opens
- * on is `start`'s. The value is the tab's number.
- */
-export function tabChoices(
-  tabs: readonly TabRow[],
-  now: number,
-  start: number | undefined,
-): PickerChoice[] {
-  const states = tabs.map((tab) => tabState(tab, now));
-  const marks = tabs.map((tab) => tabMark(tab) ?? '');
-  const markWidth = Math.max(0, ...marks.map((text) => stringWidth(text)));
-  // `claude · 2 agents` for a session with long-lived agents of its own.
-  const agents = tabs.map(({ agent, agents = 0 }) =>
-    agents === 0
-      ? agent
-      : `${agent} · ${agents} ${agents === 1 ? 'agent' : 'agents'}`,
-  );
-  const agentWidth = Math.max(0, ...agents.map((agent) => stringWidth(agent)));
-  const stateWidth = Math.max(0, ...states.map((text) => stringWidth(text)));
-  const pad = (text: string, width: number) =>
-    text + ' '.repeat(width - stringWidth(text));
-
-  return tabs.map((tab, index) => ({
-    key: String(index + 1),
-    label: [
-      pad(agents[index]!, agentWidth),
-      pad(states[index]!, stateWidth),
-      ...(markWidth === 0 ? [] : [pad(marks[index]!, markWidth)]),
-      tab.prompt ?? '',
-    ]
-      .join('  ')
-      .trimEnd(),
-    value: String(index + 1),
-    ...(index + 1 === start ? { current: true } : {}),
   }));
 }
 

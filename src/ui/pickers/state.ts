@@ -20,8 +20,6 @@ export interface PickersState {
    * list may open the picker; `/clear` and quitting forget it.
    */
   readonly resumeAsked?: string;
-  /** `ctrl+x w`: the picker of the sessions open in the window is open. */
-  readonly sessionsPicker?: boolean;
   /**
    * `/config`: the picker is open, on the list of options or, once one is
    * chosen, on that option's values.
@@ -68,13 +66,6 @@ export type PickersAction =
   | { readonly type: 'resume_scope_toggled' }
   /** Esc, or a session picked, closes it. */
   | { readonly type: 'resume_picker_closed' }
-  /**
-   * `ctrl+x w` opens the sessions picker, in place of any other picker, as
-   * its key works with one open.
-   */
-  | { readonly type: 'sessions_picker_opened' }
-  /** Esc, or a session picked, closes it. */
-  | { readonly type: 'sessions_picker_closed' }
   /** `/config` opens its picker on the list of options. */
   | { readonly type: 'config_picker_opened' }
   /** Enter on an option lists its values. */
@@ -176,30 +167,6 @@ export function reducePickers(
               everywhere: !state.resumePicker.everywhere,
             },
           };
-    case 'sessions_picker_opened': {
-      // A theme previewed goes back to the one in use with its picker, and a
-      // `/resume` still reading opens nothing over this one.
-      const {
-        resumePicker: _,
-        resumeAsked: __,
-        configPicker: ___,
-        themePicker: ____,
-        teamsPicker: _____,
-        ...rest
-      } = state;
-
-      return {
-        ...rest,
-        modelPicker: false,
-        mcpPanel: false,
-        sessionsPicker: true,
-      };
-    }
-    case 'sessions_picker_closed': {
-      const { sessionsPicker: _, ...rest } = state;
-
-      return state.sessionsPicker === undefined ? state : rest;
-    }
     case 'resume_picker_closed': {
       const { resumePicker: _, ...rest } = state;
 
@@ -249,18 +216,6 @@ export function resumePickerShown(state: PickersState & Under): boolean {
     state.connection.status !== 'closing' &&
     !asksPerson(state.transcript)
   );
-}
-
-/**
- * Whether the sessions picker is on screen: opened, and not closing. Unlike
- * the other pickers it stands in front of a permission or form the session in
- * front asks, as it is how the person leaves that session for another; what
- * is asked is there again once it closes.
- */
-export function sessionsPickerShown(
-  state: PickersState & Pick<Under, 'connection'>,
-): boolean {
-  return state.sessionsPicker === true && state.connection.status !== 'closing';
 }
 
 /**

@@ -9,14 +9,14 @@
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { type Failure, failureOf, type TabWait } from '../../session/tabs.ts';
-import { GLYPHS } from '../app/strip.ts';
+import { GLYPHS } from './glyphs.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
 import type { LeftOpen } from '../../session/transcript/types.ts';
 
 /** One agent of the front session, as the list is asked to draw it. */
 export interface AgentRow {
-  /** Its session's key: the tab's own for `main`, the child's for a child. */
+  /** Its session's key: the main session's for `main`, the child's for a child. */
   readonly key: number;
   /** `main`, or the child's name. */
   readonly name: string;

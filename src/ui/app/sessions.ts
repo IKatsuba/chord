@@ -72,27 +72,20 @@ import {
 } from '../../session/window_monitors.ts';
 import {
   agentOf,
-  askingChild,
-  waitingChild,
   type Child,
   childEnded,
   type ChildInfo,
   childName,
   frontTab,
-  full,
   isLead,
-  listStart,
   MAX_CHILDREN,
   membersOf,
-  mergedWait,
   namedChild,
   notifiedName,
   ownChildren,
   pickedChild,
-  position,
   runName,
   shownKey,
-  shownWait,
   type Tab,
   tabOf,
   type TabWait,
@@ -110,7 +103,7 @@ import {
   noticesFile,
 } from '../../notices.ts';
 import { modelName } from '../../session/models.ts';
-import { modelToAsk, type TabRow, valueToAsk } from '../pickers/picker.ts';
+import { modelToAsk, valueToAsk } from '../pickers/picker.ts';
 import { attachmentsOf, imagesIn, type PastedImage } from '../prompt/images.ts';
 import { mentionsIn } from '../prompt/mentions.ts';
 import { type Cursor, endOf, START } from '../prompt/prompt.ts';
@@ -124,11 +117,7 @@ import { heldBack } from '../dialogs/state.ts';
 import {
   agentCloseArmedLine,
   busyOf,
-  type BusyTab,
-  closeArmedLine,
   ctrlCArmedLine,
-  quitArmedLine,
-  tabBusy,
   teamCloseArmedLine,
 } from './closing.ts';
 import {
@@ -158,7 +147,6 @@ import {
   NO_STOP_HINT,
   stopRefused,
 } from '../background/view.ts';
-import { stripLayout, tabGlyphs } from './strip.ts';
 import {
   headlineText,
   type ListedTeam,
@@ -1986,14 +1974,9 @@ export function useSessions(
     const child = tab && pickedChild(tab);
 
     if (tab === undefined || child === undefined) {
-      const close = hintKey(state.keys, 'session:close');
-
       return dispatch({
         type: 'sessions_noted',
-        message:
-          close === undefined
-            ? 'main is the session'
-            : `main is the session · ${close} closes it`,
+        message: 'main is the session · ctrl+d quits',
       });
     }
 
@@ -2449,79 +2432,13 @@ export function useSessions(
     );
   };
 
-  /**
-   * Why tab `tab` is busy, its children's work counted with its own; none
-   * when closing it cuts nothing short.
-   */
-  const busyOfTab = (tab: Tab<Conversation>) => {
-    const main = all.sessions[tab.key];
-
-    return (
-      main &&
-      tabBusy(
-        main,
-        tab.children.flatMap((child) => {
-          const session = all.sessions[child.key];
-
-          return session ? [session] : [];
-        }),
-      )
-    );
-  };
-
-  /**
-   * A new session of `named`, or of the front one's agent, where the front
-   * one works, at the end of the strip and in front; none past nine, and
-   * none of an agent chord cannot start, which the front session is told.
-   */
-  const openBeside = (named?: string) => {
-    const { tabs } = sessions;
-    const here = frontPlace();
-
-    const refused = here.startupOf(
-      named ?? frontTab(sessions.tabs)?.agent ?? agent,
-    )?.refused;
-
-    if (
-      (named !== undefined && here.startupOf(named) === undefined) ||
-      refused !== undefined
-    ) {
-      return dispatch({
-        type: 'noted',
-        turnId: `new-${crypto.randomUUID()}`,
-        // As typed, so the refusal stands under the name it refuses.
-        command: named === undefined ? 'new' : `new ${named}`,
-        text: refused ?? `No agent named ${named} · chord agents lists them`,
-        failed: true,
-      });
-    }
-
-    if (full(tabs)) {
-      const close = hintKey(state.keys, 'session:close');
-
-      return dispatch({
-        type: 'sessions_noted',
-        message:
-          close === undefined
-            ? 'Nine sessions are open; close one first'
-            : `Nine sessions are open; close one with ${close} first`,
-      });
-    }
-
-    const opening =
-      named ?? tabs.tabs.find((tab) => tab.key === tabs.front)?.agent ?? agent;
-
-    places.current.set(tabs.nextKey, here);
-    // Its state is there before its first event, which may come at once.
-    dispatch({ type: 'session_opened', key: tabs.nextKey });
-    sessions.open(opening);
-    redraw();
-  };
-
-  /** ctrl+x ↓: the session that waits longest on the person, if one does. */
+  /** ctrl+x a: the agent that waits longest on the person, if one does. */
   const attend = () => {
     if (!sessions.attend()) {
-      return dispatch({ type: 'sessions_noted', message: 'No session waits' });
+      return dispatch({
+        type: 'sessions_noted',
+        message: 'Nothing waits on you',
+      });
     }
 
     return showFront();
@@ -2598,16 +2515,6 @@ export function useSessions(
     }
   };
 
-  /** The open sessions that are busy, in tab order; none while one is open. */
-  const busyTabs = (): BusyTab[] =>
-    sessions.tabs.tabs.length < 2
-      ? []
-      : sessions.tabs.tabs.flatMap((tab, index) => {
-          const busy = busyOfTab(tab);
-
-          return busy ? [{ number: index + 1, agent: tab.agent, busy }] : [];
-        });
-
   const quit = () => {
     const { tabs, front } = sessions.tabs;
     const resumable = tabs.flatMap((tab) => {
@@ -2636,125 +2543,6 @@ export function useSessions(
   };
 
   /**
-   * ctrl+d or `/exit`: quits, or with several sessions open and any busy,
-   * asks for a second press first, as ctrl+c always does.
-   */
-  const askQuit = () =>
-    state.quitArmed || busyTabs().length === 0
-      ? quit()
-      : dispatch({ type: 'quit_armed', by: 'ctrl+d' });
-
-  /**
-   * `ctrl+x k`: closes the session in front, the one to its left coming
-   * forward, once a second press confirms cutting a busy one short; the
-   * last one is a quit. Its agent is waited for in the background.
-   */
-  const closeFront = () => {
-    const { tabs, front } = sessions.tabs;
-    const tab = front === undefined ? undefined : tabOf(sessions.tabs, front);
-    const session = front === undefined ? undefined : all.sessions[front];
-
-    if (front === undefined || tab === undefined || session === undefined) {
-      return;
-    }
-
-    if (tabs.length === 1) {
-      return askQuit();
-    }
-
-    const busy = busyOfTab(tab);
-
-    if (busy !== undefined && state.closeArmed !== front) {
-      return dispatch({ type: 'close_armed', key: front });
-    }
-
-    const named = `${position(sessions.tabs, front)} ${tab.agent}`;
-
-    // Its turn is cancelled before its agent goes, so the agent can end it
-    // as it would any cancel; the close withdraws what it still asks. Its
-    // long-lived children close with it: with no tab of their own, left
-    // running they would be out of sight.
-    if (session && busyOf(session) !== undefined) {
-      conversationAt(front)?.interrupt();
-    }
-
-    for (const child of tab.children) {
-      dropChild(child.key);
-    }
-
-    const kept = keepSpend(front, {
-      tab: front,
-      tabName: named,
-      name: 'main',
-      kind: 'main',
-      agent: tab.agent,
-    });
-
-    // Its command stops with it: nothing would be left to show or stop it.
-    stopCommand(front);
-
-    const closed = sessions.close(front);
-
-    kept(closed);
-    void closed.catch(() => {});
-
-    places.current.delete(front);
-
-    dispatch({
-      type: 'session_closed',
-      key: front,
-      front: shownKey(sessions.tabs) ?? front,
-    });
-    redraw();
-
-    const count = tab.children.length;
-
-    if (resumableSession(session) !== undefined) {
-      dispatch({
-        type: 'sessions_noted',
-        message:
-          count === 0
-            ? `Closed ${named} · /resume opens it again`
-            : `Closed ${named} and its ${
-                count === 1 ? 'agent' : `${count} agents`
-              } · /resume opens them again`,
-      });
-    }
-  };
-
-  /** The sessions picker's rows, in tab order. */
-  const tabRows = (): TabRow[] =>
-    sessions.tabs.tabs.map((tab) => {
-      const first = all.sessions[tab.key]?.transcript.entries.find(
-        (entry) => entry.kind === 'user',
-      );
-      const waiter = waitingChild(tab)?.name;
-
-      return {
-        agent: tab.agent,
-        wait: shownWait(tab),
-        front: tab.key === sessions.tabs.front,
-        prompt:
-          first?.kind === 'user'
-            ? first.text.replace(/\s+/g, ' ').trim()
-            : undefined,
-        agents: tab.children.length,
-        ...(waiter === undefined ? {} : { waiter }),
-      };
-    });
-
-  /**
-   * How many sessions are open, and how many wait on the person for a
-   * permission, a form or a link, as `/status` counts them.
-   */
-  const counted = () => ({
-    open: sessions.tabs.tabs.length,
-    waits: sessions.tabs.tabs.filter(
-      (tab) => mergedWait(tab).asking !== undefined,
-    ).length,
-  });
-
-  /**
    * What the whole window has spent, for `/cost`: each tab, closed agents
    * and tabs, and the sessions still closing as they stand (CHD-373 S4).
    */
@@ -2769,39 +2557,17 @@ export function useSessions(
     ]);
   };
 
-  /** The tab the sessions picker opens on. */
-  const listFrom = () => listStart(sessions.tabs);
-
   /**
-   * Enter or a digit on the sessions picker: that tab in front, on the
-   * child that waits there, if one does.
+   * The ids of the sessions open as long-lived children of this one: one of
+   * them `/resume` picks rather than loading it twice.
    */
-  const pickTab = (number: number) => {
-    dispatch({ type: 'sessions_picker_closed' });
-    sessions.goTo(number);
+  const openChildren = (): ReadonlySet<string> =>
+    new Set(
+      (front()?.children ?? []).flatMap((child) => {
+        const id = all.sessions[child.key]?.sessionId;
 
-    const waiter = front() && askingChild(front()!);
-
-    if (waiter !== undefined) {
-      sessions.pick(waiter.key);
-    }
-
-    showFront();
-  };
-
-  /**
-   * The tab each session open in the window is in, by its id: a tab's own
-   * and its long-lived children's, which are open there too.
-   */
-  const openTabs = (): Map<string, number> =>
-    new Map(
-      sessions.tabs.tabs.flatMap((tab, index) =>
-        [tab.key, ...tab.children.map((child) => child.key)].flatMap((key) => {
-          const id = all.sessions[key]?.sessionId;
-
-          return id === undefined ? [] : [[id, index + 1] as const];
-        }),
-      ),
+        return id === undefined ? [] : [id];
+      }),
     );
 
   /** The queued prompts back into the box, ahead of what is typed there. */
@@ -2872,28 +2638,21 @@ export function useSessions(
   /**
    * Enter on `/resume`'s list: leaves the session on screen for `chosen`,
    * the way `/clear` leaves it for a new one: the transcript empties and the
-   * chosen session's past plays into it, as `--resume` plays it. One open in
-   * another tab is gone to instead: two conversations on one session would
-   * each write its record over the other's.
+   * chosen session's past plays into it, as `--resume` plays it. One open
+   * as a child of this session is picked instead: two conversations on one
+   * session would each write its record over the other's.
    */
   const pickSession = (chosen: Resume) => {
     const refusal = resumeRefusal(state);
-    const open = openTabs().get(chosen.sessionId);
+    const tab = front();
+    const open = tab?.children.find(
+      (each) => all.sessions[each.key]?.sessionId === chosen.sessionId,
+    );
 
     dispatch({ type: 'resume_picker_closed' });
 
     if (open !== undefined) {
-      sessions.goTo(open);
-
-      // The agent in that tab whose session it is, the tab's own or a child.
-      const tab = front();
-      const child = tab?.children.find(
-        (each) => all.sessions[each.key]?.sessionId === chosen.sessionId,
-      );
-
-      if (tab !== undefined) {
-        sessions.pick(child?.key ?? tab.key);
-      }
+      sessions.pick(open.key);
 
       return showFront();
     }
@@ -2921,9 +2680,7 @@ export function useSessions(
     takeBackQueue('');
     stopCommand(all.front);
 
-    // The tab's own session goes, and its children with it, as on `/clear`.
-    const tab = front();
-
+    // The main session goes, and its children with it, as on `/clear`.
     for (const child of tab?.children ?? []) {
       dropChild(child.key);
     }
@@ -2968,10 +2725,10 @@ export function useSessions(
   };
 
   /**
-   * The header's strip of tabs, and what the status line says of the tabs
-   * behind that wait and of a close or quit armed, at `columns` wide.
+   * What the status line says of the session's agents that wait and of a
+   * close or quit armed.
    */
-  const lines = (columns: number) => {
+  const lines = () => {
     const { tabs } = sessions;
     // The task of session `key`'s whose request `wait` is, by the name its
     // box gives it; none when the session's agent or a subagent of its own,
@@ -2996,7 +2753,7 @@ export function useSessions(
     };
 
     const frontTab = tabs.tabs.find((tab) => tab.key === tabs.front);
-    // The front tab's agents but the one picked, by their names: `main`
+    // The session's agents but the one picked, by their names: `main`
     // too, while a child is picked.
     const others =
       frontTab === undefined || frontTab.children.length === 0
@@ -3011,42 +2768,13 @@ export function useSessions(
                 'id' in other ? namedChild(frontTab, other) : other.name;
 
               return {
-                number: 0,
-                agent: name,
                 name,
                 wait: other.wait,
                 ...taskOf(other.key, other.wait),
               };
             });
 
-    const waits = waitsNotice(
-      [
-        ...others,
-        ...tabs.tabs.flatMap((tab, index) => {
-          if (tab.key === tabs.front) {
-            return [];
-          }
-
-          const waiter = waitingChild(tab);
-          const wait = mergedWait(tab);
-
-          return [
-            {
-              number: index + 1,
-              agent: tab.agent,
-              wait,
-              ...taskOf(waiter?.key ?? tab.key, wait),
-              ...(waiter === undefined
-                ? {}
-                : { waiter: namedChild(tab, waiter) }),
-            },
-          ];
-        }),
-      ],
-      hintKey(state.keys, 'session:attention'),
-    );
-    const frontBusy = frontTab && busyOfTab(frontTab);
-    const closeKey = hintKey(state.keys, 'session:close');
+    const waits = waitsNotice(others, hintKey(state.keys, 'session:attention'));
     const closeAgentKey = hintKey(state.keys, 'agents:close');
     const armedChild =
       state.agentCloseArmed === undefined
@@ -3067,34 +2795,9 @@ export function useSessions(
         ? teamCloseArmedLine(armedChild.name, members.length, closeAgentKey)
         : armedChild && childBusy && closeAgentKey !== undefined
           ? agentCloseArmedLine(armedChild.name, childBusy, closeAgentKey)
-          : state.closeArmed !== undefined &&
-              frontTab &&
-              frontBusy &&
-              closeKey !== undefined
-            ? closeArmedLine(
-                {
-                  number: position(tabs, frontTab.key) ?? 1,
-                  agent: frontTab.agent,
-                  busy: frontBusy,
-                },
-                closeKey,
-              )
-            : state.quitArmed === 'ctrl+d'
-              ? quitArmedLine(busyTabs(), columns - 4)
-              : state.quitArmed
-                ? ctrlCArmedLine(busyTabs().length)
-                : undefined;
-    const strip = stripLayout(
-      tabs.tabs.map((tab, index) => ({
-        number: index + 1,
-        agent: tab.agent,
-        front: tab.key === tabs.front,
-        glyphs: tabGlyphs(shownWait(tab)),
-      })),
-      homePath(frontPlace().cwd, home),
-      // Inside the header's padding.
-      columns - 2,
-    );
+          : state.quitArmed
+            ? ctrlCArmedLine()
+            : undefined;
 
     // The front session's own request between turns comes first: it is
     // on screen, waiting for the keys.
@@ -3107,7 +2810,7 @@ export function useSessions(
         )
       : undefined;
 
-    return { waits: front ?? waits, armed, strip };
+    return { waits: front ?? waits, armed };
   };
 
   return {
@@ -3117,21 +2820,14 @@ export function useSessions(
     lines,
     conversation,
     showFront,
-    openBeside,
     attend,
     stateOf,
     showDraftIn,
     send,
-    busyTabs,
-    askQuit,
-    closeFront,
+    quit,
     takeBackQueue,
-    tabRows,
-    counted,
     spend,
-    listFrom,
-    pickTab,
-    openTabs,
+    openChildren,
     openResume,
     pickResume,
     pickModel,

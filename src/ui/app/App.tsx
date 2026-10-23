@@ -23,12 +23,7 @@ import {
   type Resume,
   type SessionRecord,
 } from '../../session/sessions.ts';
-import {
-  findAgent,
-  listAgents,
-  type ListedAgent,
-  startLine,
-} from '../../agents.ts';
+import { findAgent, listAgents } from '../../agents.ts';
 import type { ChordServer } from '../../server/server.ts';
 import { agentOf, frontTab, noTabs } from '../../session/tabs.ts';
 import { programStatus } from '../../status.ts';
@@ -38,7 +33,7 @@ import { runShell, type ShellOptions, type ShellProcess } from '../../shell.ts';
 import { subagentPath } from '../../session/subagents.ts';
 import { agentGroup } from '../transcript/agents/subagents.ts';
 import { bashCommand, typedText } from '../prompt/bash.ts';
-import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
+import { menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
@@ -76,7 +71,6 @@ import {
   mcpShown,
   modelPickerShown,
   resumePickerShown,
-  sessionsPickerShown,
   shownTheme,
   teamsPickerShown,
   themePickerShown,
@@ -159,7 +153,6 @@ import {
   ModelPicker,
   NoticeBox,
   ResumePicker,
-  SessionsPicker,
   TeamsPicker,
   ThemePicker,
 } from '../pickers/Pickers.tsx';
@@ -173,7 +166,6 @@ import {
 } from '../prompt/Prompt.tsx';
 import { Shortcuts } from '../shortcuts/Shortcuts.tsx';
 import { LeaderLine, StatusLine, Working } from '../status/Status.tsx';
-import { Strip } from './Strip.tsx';
 import { Plan } from '../plan/Plan.tsx';
 import { Agents } from '../transcript/agents/Agents.tsx';
 import { firstMounted } from '../transcript/mount.ts';
@@ -295,11 +287,6 @@ export interface AppProps {
    * every project; none reads only the project's, as in tests.
    */
   configHome?: string | undefined;
-  /**
-   * The agents as `chord agents` lists them, PATH looked at, for `/new` to
-   * describe and order its names by; the known ones, unlooked, by default.
-   */
-  listed?: readonly ListedAgent[] | undefined;
   /** Which key does what, as the keybindings file has it; the defaults else. */
   keymap?: Keymap | undefined;
   /** What was wrong in the keybindings file, for the status line to say. */
@@ -369,12 +356,6 @@ export function App({
   server,
   configHome,
   runtimes = [...new Set([agent, ...listAgents().map(({ name }) => name)])],
-  listed = listAgents().map(({ name, title, start, runner }) => ({
-    name,
-    title,
-    start: startLine(start),
-    from: runner,
-  })),
   keymap = DEFAULT_KEYMAP,
   keysFailed,
   copy,
@@ -394,7 +375,6 @@ export function App({
           }),
         {
           ...initialAppState,
-          agents: agentItems(runtimes, listed),
           theme,
           ...(vim ? { vim: startingVim } : {}),
           keys: keymap,
@@ -507,7 +487,6 @@ export function App({
   const planAsked = askedPlan(state.transcript);
   const picking = modelPickerShown(state);
   const resumingShown = resumePickerShown(state);
-  const listingSessions = sessionsPickerShown(state);
   const configuring = configPickerShown(state);
   const theming = themePickerShown(state);
   const listingMcp = mcpShown(state);
@@ -525,7 +504,6 @@ export function App({
     configuring ||
     theming ||
     listingMcp ||
-    listingSessions ||
     listingTeams ||
     noticing;
   const colours = paletteOf(
@@ -803,22 +781,6 @@ export function App({
         cutting.current = true;
 
         return;
-      case 'open_session':
-        return sessions.openBeside();
-      case 'next_session':
-        sessions.sessions.next();
-
-        return sessions.showFront();
-      case 'previous_session':
-        sessions.sessions.previous();
-
-        return sessions.showFront();
-      case 'goto_session':
-        sessions.sessions.goTo(step.number);
-
-        return sessions.showFront();
-      case 'close_session':
-        return sessions.closeFront();
       case 'attend_session':
         return sessions.attend();
       case 'move_agent':
@@ -856,7 +818,7 @@ export function App({
       case 'take_pasted_paths':
         return void images.takePastedPaths(step.draft, step.end);
       case 'run_command':
-        return commands.run(step.command, step.args);
+        return commands.run(step.command, step.args, step.typed);
       case 'run_shell':
         return bash.run(all.front, step.command);
       case 'stop_shell':
@@ -870,7 +832,7 @@ export function App({
       case 'clear_selection':
         return selection.clear();
       case 'quit':
-        return sessions.askQuit();
+        return sessions.quit();
     }
   };
 
@@ -972,7 +934,7 @@ export function App({
     onPress: () => selection.pressed(),
   });
 
-  const { waits, armed, strip } = sessions.lines(columns);
+  const { waits, armed } = sessions.lines();
   const directory = homePath(here.cwd, home);
   const firstPrompt = state.transcript.entries.find(
     (entry) => entry.kind === 'user',
@@ -999,9 +961,7 @@ export function App({
   // The asker's words where a sentence names it: `… needs one`.
   const inputAgent = inputAsker.map((part) => part.text).join('') || frontAgent;
   const inputDialog =
-    inputAsked?.mode === 'form' &&
-    inputAsked.questions !== undefined &&
-    !listingSessions ? (
+    inputAsked?.mode === 'form' && inputAsked.questions !== undefined ? (
       <QuestionBox
         key={inputAsked.id}
         wait={inputAsked}
@@ -1028,7 +988,7 @@ export function App({
         }
         onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
       />
-    ) : inputAsked?.mode === 'form' && !listingSessions ? (
+    ) : inputAsked?.mode === 'form' ? (
       <ElicitationForm
         key={inputAsked.id}
         wait={inputAsked}
@@ -1048,7 +1008,7 @@ export function App({
         }
         onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
       />
-    ) : inputAsked?.mode === 'url' && !listingSessions ? (
+    ) : inputAsked?.mode === 'url' ? (
       <LinkPrompt
         key={inputAsked.id}
         wait={inputAsked}
@@ -1089,9 +1049,6 @@ export function App({
               height={rows}
               {...mouse}
             >
-              {/* One session has no row above the header: the header already
-        names chord, the agent and the directory. */}
-              {strip && <Strip view={strip} />}
               {/* Only this box gives way when the window is full. Everything else and
         every entry is pinned with flexShrink={0}, because OpenTUI boxes shrink by
         default and Yoga would squeeze entries and the prompt box instead of
@@ -1116,8 +1073,7 @@ export function App({
                 }}
               >
                 {/* Following, the transcript hangs from the top while it fits,
-          the header on the window's first row, or under the tab strip, and
-          once it overflows it sits on the bottom and new rows push the old
+          the header on the window's first row, and once it overflows it sits on the bottom and new rows push the old
           ones up; scrolled back, it hangs from the row on top, so new rows
           land below the view and nothing on screen moves. */}
                 <Clip
@@ -1256,7 +1212,7 @@ export function App({
               {/* One box above the prompt at a time: the background view
         opened over a request waiting takes its place until it closes
         (CHD-462). */}
-              {asked && !listingSessions && (
+              {asked && (
                 <PermissionPrompt
                   key={asked.id}
                   wait={asked}
@@ -1285,7 +1241,7 @@ export function App({
                   }
                 />
               )}
-              {!asked && planAsked && !listingSessions && (
+              {!asked && planAsked && (
                 <PlanBox
                   key={planAsked.wait.id}
                   wait={planAsked.wait}
@@ -1343,22 +1299,12 @@ export function App({
                   onPick={sessions.pickOption}
                 />
               )}
-              {listingSessions && (
-                <SessionsPicker
-                  tabs={sessions.tabRows()}
-                  start={sessions.listFrom()}
-                  directory={directory}
-                  rows={menuRows}
-                  active={listening}
-                  onPick={sessions.pickTab}
-                />
-              )}
               {resumingShown && state.resumePicker && (
                 <ResumePicker
                   // A fresh list for each scope, its highlight on the first row.
                   key={String(state.resumePicker.everywhere)}
                   picker={state.resumePicker}
-                  open={sessions.openTabs()}
+                  open={sessions.openChildren()}
                   rows={menuRows}
                   agent={frontAgent}
                   home={home}

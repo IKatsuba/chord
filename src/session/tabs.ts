@@ -9,13 +9,10 @@ import {
 import type { ConversationEvent } from './conversation.ts';
 import { senderName } from './tasks.ts';
 
-/** At most nine, because `1`–`9` is the key that goes to one directly. */
-export const MAX_TABS = 9;
-
 /**
  * The long-lived agents one session may have open at once, a team's lead
  * counting as one and its members as none of them: with `main`, the list
- * under the prompt holds no more than the tabs' nine and the teams' members.
+ * under the prompt holds no more than nine rows and the teams' members.
  */
 export const MAX_CHILDREN = 8;
 
@@ -711,23 +708,12 @@ export function notifiedName<C>(
   return lead === undefined ? child.name : `${child.name} (${lead.name})`;
 }
 
-export function full<C>(tabs: Tabs<C>): boolean {
-  return tabs.tabs.length >= MAX_TABS;
-}
-
-/**
- * A new session at the end of the strip, in front, as a tmux window opens;
- * none past the cap.
- */
+/** The window's session, in front. */
 export function openTab<C>(
   tabs: Tabs<C>,
   agent: string,
   conversation: C,
 ): { readonly tabs: Tabs<C>; readonly key: number } | undefined {
-  if (full(tabs)) {
-    return undefined;
-  }
-
   const key = tabs.nextKey;
 
   return {
@@ -784,36 +770,6 @@ export function closeTab<C>(tabs: Tabs<C>, key: number): Tabs<C> {
   const closed = { ...tabs, tabs: left, front: undefined };
 
   return next ? show(closed, next.key) : closed;
-}
-
-function step<C>(tabs: Tabs<C>, by: number): Tabs<C> {
-  const count = tabs.tabs.length;
-  const index = tabs.tabs.findIndex((tab) => tab.key === tabs.front);
-
-  if (count === 0 || index === -1) {
-    return tabs;
-  }
-
-  const next = tabs.tabs[(index + by + count) % count];
-
-  return next ? show(tabs, next.key) : tabs;
-}
-
-/** The next tab, round to the first after the last. */
-export function nextTab<C>(tabs: Tabs<C>): Tabs<C> {
-  return step(tabs, 1);
-}
-
-/** The previous tab, round to the last before the first. */
-export function previousTab<C>(tabs: Tabs<C>): Tabs<C> {
-  return step(tabs, -1);
-}
-
-/** The tab numbered `n`; a number with no tab leaves things as they are. */
-export function goTo<C>(tabs: Tabs<C>, n: number): Tabs<C> {
-  const tab = tabs.tabs[n - 1];
-
-  return tab ? show(tabs, tab.key) : tabs;
 }
 
 function compare(a: Rank, b: Rank): number {
@@ -881,21 +837,6 @@ export function attend<C>(tabs: Tabs<C>): Tabs<C> | undefined {
     others[0];
 
   return next && { ...pick(tabs, next.key), attended: next };
-}
-
-/**
- * The tab number the sessions picker opens on: the tab `attend` would go
- * to, when another one, or else the one after the tab in front, round to
- * the first.
- */
-export function listStart<C>(tabs: Tabs<C>): number | undefined {
-  const attended = attend(tabs)?.front;
-  const key =
-    attended !== undefined && attended !== tabs.front
-      ? attended
-      : nextTab(tabs).front;
-
-  return key === undefined ? undefined : position(tabs, key);
 }
 
 /**

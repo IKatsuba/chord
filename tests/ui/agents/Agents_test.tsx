@@ -136,7 +136,7 @@ test('x closes the picked child, once more while it waits, and chord tells the p
 
     // On main, x closes nothing.
     await window.press('x');
-    await window.shows('main is the session · ctrl+x k closes it');
+    await window.shows('main is the session · ctrl+d quits');
 
     // close_agent from the parent sends no such message; a message after
     // it is refused.
@@ -240,22 +240,12 @@ test("a child's turn that fails tells the parent, and the child stays open", () 
     );
   }));
 
-test("a child's exit in a tab behind is named for the child, in that tab", () =>
+test("a child's exit while main is shown is named for the child", () =>
   withAgents(async (window) => {
     await ready(window);
-    await send(window, 'agentfail');
-    await window.shows("✗ parser's turn failed · ctrl+x a to go");
-    await leader(window, 'c');
-    await window.shows(' 2 fake ');
-    await ready(window);
     await send(window, 'agentexit');
-    await window.shows('✗ 1 exited · 1 turn failed · ctrl+x a to go');
-    // Back in tab 1, its failed turn seen: only tab 2's child is left.
-    await leader(window, '1');
-    await leader(window, 'a');
-    await window.shows('╭─ parser ');
-    await window.shows('✗ parser exited in 2 fake · ctrl+x a to go');
-    expect(!window.frame().includes('2 fake exited')).toBeTruthy();
+    await window.shows('✗ parser exited · ctrl+x a to go');
+    expect(!window.frame().includes('fake exited')).toBeTruthy();
   }));
 
 test("a child's message not yet seen, then its reply, are marks beside its state, whose idle time counts from its reply (CHD-364, CHD-471)", () =>

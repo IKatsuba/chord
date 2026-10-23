@@ -12,23 +12,18 @@ import {
   failedSince,
   failureOf,
   frontTab,
-  goTo,
   hear,
   isLead,
-  listStart,
   MAX_CHILDREN,
-  MAX_TABS,
   mergedWait,
   movePick,
   namedChild,
-  nextTab,
   noTabs,
   notifiedName,
   openChild,
   openTab,
   pick,
   position,
-  previousTab,
   repliedSince,
   runName,
   show,
@@ -108,19 +103,18 @@ function failed(turnId: string): ConversationEvent {
   };
 }
 
+/** Tab `n` shown, as `show` puts one in front. */
+function goTo<C>(tabs: Tabs<C>, n: number): Tabs<C> {
+  const tab = tabs.tabs[n - 1];
+
+  return tab ? show(tabs, tab.key) : tabs;
+}
+
 test('a new tab goes to the end of the strip and comes to the front', () => {
   const tabs = opened('fake', 'claude', 'codex');
 
   expect(strip(tabs)).toStrictEqual(['1 fake', '2 claude', '3 codex*']);
   expect(frontTab(tabs)?.conversation).toStrictEqual('conversation of codex');
-});
-
-test('a tenth tab is refused and the nine stay as they were', () => {
-  const nine = opened(...Array.from({ length: MAX_TABS }, () => 'fake'));
-
-  expect(nine.tabs.length).toStrictEqual(9);
-  expect(openTab(nine, 'fake', 'tenth')).toStrictEqual(undefined);
-  expect(openTab(closeTab(nine, 3), 'fake', 'ninth')?.key).toStrictEqual(10);
 });
 
 test('closing the front tab brings the one to its left forward', () => {
@@ -146,7 +140,6 @@ test('closing the last tab leaves none in front', () => {
 
   expect(tabs.tabs).toStrictEqual([]);
   expect(tabs.front).toStrictEqual(undefined);
-  expect(nextTab(tabs)).toStrictEqual(tabs);
 });
 
 test('tabs to the right of a closed one move down a number, and their keys stay', () => {
@@ -158,22 +151,6 @@ test('tabs to the right of a closed one move down a number, and their keys stay'
   // The number names the place in the strip, not the session.
   expect(frontTab(goTo(tabs, 2))?.agent).toStrictEqual('c');
   expect(tabName(tabs, 4)).toStrictEqual('d (3)');
-});
-
-test('next and previous wrap round the strip', () => {
-  const tabs = opened('a', 'b', 'c');
-
-  expect(strip(nextTab(tabs))).toStrictEqual(['1 a*', '2 b', '3 c']);
-  expect(strip(previousTab(tabs))).toStrictEqual(['1 a', '2 b*', '3 c']);
-  expect(strip(previousTab(nextTab(tabs)))).toStrictEqual(strip(tabs));
-});
-
-test('going to a number with no tab does nothing', () => {
-  const tabs = opened('a', 'b');
-
-  expect(goTo(tabs, 3)).toStrictEqual(tabs);
-  expect(goTo(tabs, 0)).toStrictEqual(tabs);
-  expect(strip(goTo(tabs, 1))).toStrictEqual(['1 a*', '2 b']);
 });
 
 test('a notification names the tab only once there is more than one', () => {
@@ -267,7 +244,6 @@ test('a turn ending behind is unseen until the person goes to it', () => {
   });
   expect(tabOf(tabs, 1)?.wait.working).toStrictEqual(undefined);
   expect(tabOf(goTo(tabs, 1), 1)?.wait.unseen).toStrictEqual(undefined);
-  expect(tabOf(nextTab(tabs), 1)?.wait.unseen).toStrictEqual(undefined);
 });
 
 test('a turn ending in front is not unseen', () => {
@@ -570,19 +546,6 @@ test('attention clears what it goes to, and says when nothing else waits', () =>
   expect(tabOf(there, 1)?.wait.unseen).toStrictEqual(undefined);
   expect(attend(there)).toStrictEqual(undefined);
   expect(attend(opened('a', 'b'))).toStrictEqual(undefined);
-});
-
-test('the sessions picker starts on the tab that waits, or the one after the front', () => {
-  const tabs = opened('fake', 'claude', 'codex');
-
-  // None waits: the one after the front, round to the first.
-  expect(listStart(tabs)).toStrictEqual(1);
-  expect(listStart(goTo(tabs, 1))).toStrictEqual(2);
-
-  const waiting = heard(goTo(tabs, 1), 2, [up, prompt('t'), asked('t', 'p')]);
-
-  expect(listStart(waiting)).toStrictEqual(2);
-  expect(listStart(noTabs())).toStrictEqual(undefined);
 });
 
 /** Tab `tabKey` with children `names` opened in it, in order. */

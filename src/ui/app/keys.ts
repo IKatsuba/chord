@@ -7,6 +7,7 @@ import {
 import { bashCommand, entersBash, typedText } from '../prompt/bash.ts';
 import {
   type ChordCommand,
+  commandQuery,
   completion,
   menuRowLimit,
   submitted,
@@ -87,11 +88,6 @@ export type Step =
   | { readonly type: 'chord_key' }
   /** The box is cut back to a whole placeholder and redrawn. */
   | { readonly type: 'cutting' }
-  | { readonly type: 'open_session' }
-  | { readonly type: 'next_session' }
-  | { readonly type: 'previous_session' }
-  | { readonly type: 'goto_session'; readonly number: number }
-  | { readonly type: 'close_session' }
   | { readonly type: 'attend_session' }
   /** The pick in the list of agents moves `by` rows. */
   | { readonly type: 'move_agent'; readonly by: number }
@@ -122,6 +118,8 @@ export type Step =
   | {
       readonly type: 'run_command';
       readonly command: ChordCommand;
+      /** The name as typed, the command's other one, `new`, among them. */
+      readonly typed: string;
       readonly args: string;
     }
   | { readonly type: 'run_shell'; readonly command: string }
@@ -391,12 +389,17 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
         type: 'history',
         history: recorded(
           history,
-          [`/${action.name}`, action.args].filter(Boolean).join(' '),
+          [`/${action.typed}`, action.args].filter(Boolean).join(' '),
         ),
       },
       show('', START),
       ...vimEmptied(state),
-      { type: 'run_command', command: action.name, args: action.args },
+      {
+        type: 'run_command',
+        command: action.name,
+        typed: action.typed,
+        args: action.args,
+      },
     ];
   }
 
@@ -527,12 +530,6 @@ export function keySteps(
     steps.push(dispatch({ type: 'keys_pending' }));
   }
 
-  // An armed close is taken back by any key but its own, its chord's
-  // first keys aside.
-  if (state.closeArmed !== undefined && command !== 'close_session') {
-    steps.push(dispatch({ type: 'close_disarmed' }));
-  }
-
   if (state.agentCloseArmed !== undefined && command !== 'close_agent') {
     steps.push(dispatch({ type: 'agent_close_disarmed' }));
   }
@@ -556,29 +553,6 @@ function commandSteps(
   switch (command) {
     case 'copy_selection':
       return [{ type: 'copy_selection' }];
-    case 'new_session':
-      return [{ type: 'open_session' }];
-    case 'next_session':
-      return [{ type: 'next_session' }];
-    case 'previous_session':
-      return [{ type: 'previous_session' }];
-    case 'goto_session_1':
-    case 'goto_session_2':
-    case 'goto_session_3':
-    case 'goto_session_4':
-    case 'goto_session_5':
-    case 'goto_session_6':
-    case 'goto_session_7':
-    case 'goto_session_8':
-    case 'goto_session_9':
-      return [
-        {
-          type: 'goto_session',
-          number: Number(command.slice('goto_session_'.length)),
-        },
-      ];
-    case 'close_session':
-      return [{ type: 'close_session' }];
     case 'attend_session': {
       // The front session's own request between turns is what needs the
       // person first: the keys go into its box (CHD-158).
@@ -631,10 +605,6 @@ function commandSteps(
       return [dispatch({ type: 'background_closed' })];
     case 'background_back':
       return [dispatch({ type: 'background_detail_closed' })];
-    case 'list_sessions':
-      return [dispatch({ type: 'sessions_picker_opened' })];
-    case 'close_sessions_picker':
-      return [dispatch({ type: 'sessions_picker_closed' })];
     case 'interrupt': {
       // The queued prompts back into the box, ahead of what is typed there.
       const text =
@@ -675,7 +645,7 @@ function commandSteps(
         return [];
       }
 
-      const text = completion(item);
+      const text = completion(item, commandQuery(draft));
 
       return [show(text, endOf(text))];
     }

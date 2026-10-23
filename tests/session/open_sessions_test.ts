@@ -128,20 +128,30 @@ test('two sessions run on the fake agent at once, a wait in one leaves the other
   }
 });
 
-test('a tab closed on its own still has its agent waited for by closeAll', async () => {
+/** A child of tab `tab`, named `name`, made by `open`'s own factory. */
+function child<C extends { start(): void; close(): Promise<void> }>(
+  open: OpenSessions<C>,
+  tab: number,
+  name: string,
+  make: () => C,
+): number {
+  return open.openChild(
+    tab,
+    { id: name, name, runtime: 'fake', openedAt: 0 },
+    () => make(),
+  )!;
+}
+
+test('a child closed on its own still has its agent waited for by closeAll', async () => {
   const closes: (() => void)[] = [];
-  const open = new OpenSessions({
-    conversation: () => ({
-      start: () => {},
-      close: () => new Promise<void>((resolve) => closes.push(resolve)),
-    }),
-    heard: () => {},
+  const driven = () => ({
+    start: () => {},
+    close: () => new Promise<void>((resolve) => closes.push(resolve)),
   });
+  const open = new OpenSessions({ conversation: driven, heard: () => {} });
+  const tab = open.open('a')!;
 
-  open.open('a');
-  open.open('b');
-
-  void open.close(1);
+  void open.closeChild(child(open, tab, 'b', driven));
 
   let all = false;
   const closing = open.closeAll().then(() => (all = true));
@@ -158,18 +168,14 @@ test('a tab closed on its own still has its agent waited for by closeAll', async
 /** Stand-ins whose closes the test settles one by one, in opening order. */
 function deferredCloses() {
   const closes: { resolve: () => void; reject: (error: Error) => void }[] = [];
-  const open = new OpenSessions({
-    conversation: () => ({
-      start: () => {},
-      close: () =>
-        new Promise<void>((resolve, reject) =>
-          closes.push({ resolve, reject }),
-        ),
-    }),
-    heard: () => {},
+  const make = () => ({
+    start: () => {},
+    close: () =>
+      new Promise<void>((resolve, reject) => closes.push({ resolve, reject })),
   });
+  const open = new OpenSessions({ conversation: make, heard: () => {} });
 
-  return { open, closes };
+  return { open, closes, make };
 }
 
 async function failures(closing: Promise<void>): Promise<string[]> {
@@ -185,80 +191,57 @@ async function failures(closing: Promise<void>): Promise<string[]> {
 }
 
 test('an earlier close that fails while closeAll waits is in its failure', async () => {
-  const { open, closes } = deferredCloses();
-
-  open.open('a');
-
-  const alone = open.close(1).catch((error: Error) => error.message);
+  const { open, closes, make } = deferredCloses();
+  const tab = open.open('a')!;
+  const alone = open
+    .closeChild(child(open, tab, 'b', make))
+    .catch((error: Error) => error.message);
   const all = failures(open.closeAll());
 
   closes[0]!.reject(new Error('agent exit not observed'));
+  closes[1]!.resolve();
 
   expect(await alone).toStrictEqual('agent exit not observed');
   expect(await all).toStrictEqual(['agent exit not observed']);
 });
 
 test('an earlier close that failed before closeAll is still in its failure, once', async () => {
-  const { open, closes } = deferredCloses();
-
-  open.open('a');
-
-  const alone = open.close(1).catch(() => {});
+  const { open, closes, make } = deferredCloses();
+  const tab = open.open('a')!;
+  const alone = open.closeChild(child(open, tab, 'b', make)).catch(() => {});
 
   closes[0]!.reject(new Error('agent exit not observed'));
   await alone;
 
-  expect(await failures(open.closeAll())).toStrictEqual([
-    'agent exit not observed',
-  ]);
+  const first = failures(open.closeAll());
+
+  closes[1]!.resolve();
+  expect(await first).toStrictEqual(['agent exit not observed']);
   expect(await failures(open.closeAll())).toStrictEqual([]);
 });
 
-test("closeAll reports an earlier failure beside an open tab's, after waiting for every agent", async () => {
-  const { open, closes } = deferredCloses();
+test("closeAll reports an earlier failure beside an open agent's, after waiting for every agent", async () => {
+  const { open, closes, make } = deferredCloses();
+  const tab = open.open('a')!;
 
-  open.open('a');
-  open.open('b');
-  open.open('c');
-
-  void open.close(1).catch(() => {});
+  child(open, tab, 'c', make);
+  void open.closeChild(child(open, tab, 'b', make)).catch(() => {});
 
   let settled = false;
   const all = failures(open.closeAll()).finally(() => (settled = true));
 
+  // b's close came first; a and c closed with closeAll.
   expect(closes.length).toStrictEqual(3);
-  closes[0]!.reject(new Error('a did not exit'));
+  closes[0]!.reject(new Error('b did not exit'));
   closes[2]!.reject(new Error('c did not exit'));
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(settled).toStrictEqual(false);
   closes[1]!.resolve();
 
   expect((await all).sort()).toStrictEqual([
-    'a did not exit',
+    'b did not exit',
     'c did not exit',
   ]);
-});
-
-test('past nine, open starts nothing', () => {
-  let made = 0;
-  const open = new OpenSessions({
-    conversation: () => {
-      made++;
-
-      return { start: () => {}, close: () => Promise.resolve() };
-    },
-    heard: () => {},
-  });
-
-  for (let n = 0; n < 9; n++) {
-    open.open('fake');
-  }
-
-  expect(open.open('fake')).toStrictEqual(undefined);
-  expect(made).toStrictEqual(9);
-  expect(open.goTo(3)).toStrictEqual(true);
-  expect(open.goTo(10)).toStrictEqual(false);
-  expect(open.tabs.front).toStrictEqual(3);
 });
 
 test('a child opens in its tab, its events heard under its own key; closing the tab closes it, and closeAll waits for it', async () => {
@@ -312,7 +295,7 @@ test('a child opens in its tab, its events heard under its own key; closing the 
   expect(all).toStrictEqual(true);
 });
 
-test("a busy session closed once its turn reported a cost still reports that turn's end as it closes, and the window keeps it (CHD-373)", async () => {
+test("a busy child closed once its turn reported a cost still reports that turn's end as it closes, and the window keeps it (CHD-373)", async () => {
   const dir = await mkdtemp(join(tmpdir(), 'chord-tabs-'));
   const heard: { key: number; event: ConversationEvent }[] = [];
   const closing: { key: number; event: ConversationEvent }[] = [];
@@ -328,10 +311,28 @@ test("a busy session closed once its turn reported a cost still reports that tur
   });
 
   try {
-    const key = open.open('fake')!;
+    const tab = open.open('fake')!;
+    const key = open.openChild(
+      tab,
+      { id: 'other', name: 'other', runtime: 'fake', openedAt: 0 },
+      (emit) =>
+        new Conversation(
+          () =>
+            openSession({
+              agent: 'fake',
+              cwd: dir,
+              agentCommand: fakeAgentCommand(),
+            }),
+          emit,
+        ),
+    )!;
 
-    await until(() => heard.some(({ event }) => event.type === 'connected'));
-    tabOf(open.tabs, key)!.conversation.send('costwait');
+    await until(() =>
+      heard.some(
+        ({ key: at, event }) => at === key && event.type === 'connected',
+      ),
+    );
+    open.conversationOf(key)!.send('costwait');
     await until(() =>
       heard.some(
         ({ event }) =>
@@ -340,12 +341,12 @@ test("a busy session closed once its turn reported a cost still reports that tur
       ),
     );
 
-    // As the window closes a busy tab: cancelled, held, then closed.
+    // As the window closes a busy child: cancelled, held, then closed.
     const seen = heard.length;
 
-    tabOf(open.tabs, key)!.conversation.interrupt();
+    open.conversationOf(key)!.interrupt();
 
-    const closed = open.close(key);
+    const closed = open.closeChild(key);
     const held = heard.length;
 
     await closed;
@@ -359,20 +360,21 @@ test("a busy session closed once its turn reported a cost still reports that tur
     ).toMatchObject({ cost: { amount: 0.01, currency: 'USD' } });
 
     // The window takes those in as sessions.ts dispatches them.
-    const before = heard
-      .slice(0, held)
-      .map(({ key: at, event }): WindowedAction => ({
+    const before = [
+      { type: 'agent_opened', key },
+      ...heard.slice(0, held).map(({ key: at, event }): WindowedAction => ({
         type: 'in_session',
         key: at,
         action: event,
-      }));
+      })),
+    ] satisfies WindowedAction[];
     const after: WindowedAction[] = [
       {
         type: 'spend_closing',
         key,
-        place: { tab: key, name: 'main', kind: 'main', agent: 'fake' },
+        place: { tab, name: 'other', kind: 'agent', runtime: 'fake' },
       },
-      { type: 'session_closed', key, front: key },
+      { type: 'session_closed', key, front: tab },
       ...closing.map(({ key: at, event }): WindowedAction => ({
         type: 'closing_heard',
         key: at,
@@ -382,7 +384,7 @@ test("a busy session closed once its turn reported a cost still reports that tur
     ];
     const window = [...before, ...after].reduce(
       reduceWindowed,
-      windowed(initialAppState, key),
+      windowed(initialAppState, tab),
     );
 
     expect(window.window.keptSpend?.[0]?.part.figure?.cost).toStrictEqual({

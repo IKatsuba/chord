@@ -9,7 +9,6 @@ import type { ShellRun, Transcript } from '../../session/transcript/types.ts';
 import { asksWithKeys } from '../dialogs/state.ts';
 import type { Keymap } from '../shortcuts/bindings.ts';
 import {
-  agentQuery,
   type CommandItem,
   commandItems,
   commandQuery,
@@ -90,8 +89,6 @@ export interface PromptWindow {
    * mention is still the same, and whether it was Enter.
    */
   readonly awaitedPick?: { readonly mention: Mention; readonly enter: boolean };
-  /** The agents `/new` offers by name, as the window can start them. */
-  readonly agents?: readonly CommandItem[];
   /**
    * The names `/team show`, `edit`, `run` and `stop` offer, as they were
    * read when the draft last came to one; none until then.
@@ -499,8 +496,8 @@ export interface CommandMenu {
 }
 
 /**
- * The slash command list `draft` opens: a `/` and part of a name, `/new `
- * and part of an agent's, or `/team show ` and the like and part of a team's, outside bash mode, while no permission is asked and Esc has not put it away. None when nothing matches,
+ * The slash command list `draft` opens: a `/` and part of a name, or
+ * `/team show ` and the like and part of a team's, outside bash mode, while no permission is asked and Esc has not put it away. None when nothing matches,
  * so Enter sends what was typed, as the agent may know a command chord does
  * not list.
  */
@@ -509,11 +506,10 @@ export function commandMenu(
   draft: string,
 ): CommandMenu | undefined {
   const query = commandQuery(draft);
-  const named = agentQuery(draft);
   const team = teamQuery(draft);
 
   if (
-    (query === undefined && named === undefined && team === undefined) ||
+    (query === undefined && team === undefined) ||
     state.menu.dismissed ||
     state.bash ||
     state.search !== undefined ||
@@ -533,9 +529,7 @@ export function commandMenu(
           ),
           team.name,
         )
-      : query === undefined
-        ? matchAgents(state.agents ?? [], named ?? '')
-        : matchCommands(commandItems(state.transcript.commands), query);
+      : matchCommands(commandItems(state.transcript.commands), query ?? '');
 
   if (items.length === 0) {
     return undefined;

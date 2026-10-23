@@ -35,11 +35,7 @@ export interface CommandsSessions {
   /** Stops the command running in the session in front, if one runs. */
   stopCommand(): void;
   openResume(): void;
-  /** A session of `named`, or of the front one's agent, beside the rest. */
-  openBeside(named?: string): void;
-  askQuit(): void;
-  /** How many sessions are open, and how many of them wait on the person. */
-  counted(): { readonly open: number; readonly waits: number };
+  quit(): void;
   /** What the whole window has spent, closed agents and tabs too. */
   spend(): readonly SpendPart[];
   /**
@@ -71,17 +67,32 @@ export function useCommands(
   dispatch: Dispatch<WindowedAction>,
   sessions: CommandsSessions,
 ): {
-  run: (command: ChordCommand, args?: string) => void;
+  run: (command: ChordCommand, args?: string, typed?: string) => void;
   keepTheme: (chosen: ThemeSetting) => void;
 } {
   const { conversation } = sessions;
   // `/team` says once that it talks to main while a child is picked.
   const talked = useRef(false);
 
-  /** Runs one of chord's own slash commands. */
-  const run = (command: ChordCommand, args = '') => {
+  /**
+   * Runs one of chord's own slash commands, `typed` the name it was given,
+   * its other one among them.
+   */
+  const run = (command: ChordCommand, args = '', typed: string = command) => {
     switch (command) {
       case 'clear': {
+        // `/new` is `/clear`, as in Claude Code: a session of another agent
+        // is another chord, in a pane of its own.
+        if (typed === 'new' && args !== '') {
+          return dispatch({
+            type: 'noted',
+            turnId: `new-${crypto.randomUUID()}`,
+            command: `new ${args}`,
+            text: `/new starts a new ${agent} session here; for ${args}, run chord ${args} in another pane`,
+            failed: true,
+          });
+        }
+
         const refused = sessions.clearFront(() => {
           // The session they were queued in goes; what they said stays.
           sessions.takeBackQueue('');
@@ -110,9 +121,6 @@ export function useCommands(
         return dispatch({ type: 'config_picker_opened' });
       case 'resume':
         return sessions.openResume();
-      case 'new':
-        // `/new` alone is `ctrl+x c`: the front session's agent again.
-        return sessions.openBeside(args === '' ? undefined : args);
       case 'theme':
         return dispatch({ type: 'theme_picker_opened' });
       case 'mcp':
@@ -128,7 +136,7 @@ export function useCommands(
           command,
           rows: report(
             command,
-            reportFacts(state, agent, cwd, Date.now(), sessions.counted(), {
+            reportFacts(state, agent, cwd, Date.now(), {
               spend: sessions.spend(),
               // Under the report's `⎿`, six columns in, inside the
               // transcript's margins: a note never wraps.
@@ -137,7 +145,7 @@ export function useCommands(
           ),
         });
       case 'exit':
-        return sessions.askQuit();
+        return sessions.quit();
       case 'team':
         return team(args);
     }

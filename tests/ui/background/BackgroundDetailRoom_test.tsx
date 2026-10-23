@@ -276,7 +276,7 @@ describe('a request asked while the view is open hides it, and it comes back whe
           await window.shows('esc to interrupt');
           await window.press(DOWN);
           await window.press('\r');
-          await window.shows('Background · 2 in this tab');
+          await window.shows('Background · 2 in this session');
           await window.press('\r');
           await window.shows('Background · m1, 1 of 2');
           await window.press('\x1b[6~');

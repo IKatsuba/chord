@@ -225,10 +225,6 @@ const STATES: Record<string, AppState> = {
       listing: { teams: [], runs: [], dirs: { project: '.chord/teams' } },
     },
   ),
-  'sessions picker': after(
-    { type: 'connected', sessionId: 'session-1' },
-    { type: 'sessions_picker_opened' },
-  ),
   notice: after(
     { type: 'connected', sessionId: 'session-1' },
     { type: 'notice_opened', id: 'dimcode-agents' },
@@ -1091,11 +1087,10 @@ test('ctrl+ч is ctrl+x in every form a terminal sends it', async () => {
       '\x1b[1095;5u',
     ]),
   ).toStrictEqual([leader, leader]);
-  expect(await heard(STATES.leader!, ['с'])).toStrictEqual([
-    { command: 'new_session', input: 'c' },
-  ]);
-  expect(await heard(STATES.leader!, ['\x1b[1090;5u'])).toStrictEqual([
-    { command: 'next_session', input: 'n' },
+  // ф is on the key of US a, as the kitty protocol says it too.
+  expect(await heard(STATES.leader!, ['ф', '\x1b[1092u'])).toStrictEqual([
+    { command: 'attend_session', input: 'a' },
+    { command: 'attend_session', input: 'a' },
   ]);
 });
 
@@ -1135,9 +1130,9 @@ test("a kitty press's base-layout key runs what that key is bound to", async () 
   expect(
     await heard(STATES.ready!, ['\x1b[967::120;5u', '\x1b[967;5u']),
   ).toStrictEqual([leader, { command: undefined, input: 'χ' }]);
-  // The leader's ctrl+ forms the same way: ctrl+ν is ctrl+n.
-  expect(await heard(STATES.leader!, ['\x1b[957::110;5u'])).toStrictEqual([
-    { command: 'next_session', input: 'n' },
+  // The leader's next key the same way: α on the key of US a is a.
+  expect(await heard(STATES.leader!, ['\x1b[945::97u'])).toStrictEqual([
+    { command: 'attend_session', input: 'a' },
   ]);
 });
 
@@ -1209,11 +1204,11 @@ test('every key as an escape code is the same key it was as bytes', async () => 
     await heard(STATES.ready!, ['\x1b[57442;5u', '\x1b[120;5u']),
   ).toStrictEqual([{ command: 'key_pending', input: 'x' }]);
   expect(
-    await heard(STATES.leader!, ['\x1b[57441;2u', '\x1b[99;1;99u']),
-  ).toStrictEqual([{ command: 'new_session', input: 'c' }]);
-  // A chord's bare next key on a layout with no table: Greek ψ is on c.
-  expect(await heard(STATES.leader!, ['\x1b[968::99;1;968u'])).toStrictEqual([
-    { command: 'new_session', input: 'c' },
+    await heard(STATES.leader!, ['\x1b[57441;2u', '\x1b[97;1;97u']),
+  ).toStrictEqual([{ command: 'attend_session', input: 'a' }]);
+  // A chord's bare next key on a layout with no table: Greek α is on a.
+  expect(await heard(STATES.leader!, ['\x1b[945::97;1;945u'])).toStrictEqual([
+    { command: 'attend_session', input: 'a' },
   ]);
 
   const { app, seen, press } = await heldPrompt('', [0, 0]);
@@ -1253,7 +1248,6 @@ test('ctrl+c copies a selection shown in front of every context (CHD-172)', () =
     form: STATES.form!,
     search: STATES.search!,
     picker: STATES.picker!,
-    'sessions picker': STATES['sessions picker']!,
     help: STATES.help!,
     agents: { ...STATES.busy!, agentsFocus: true },
   };

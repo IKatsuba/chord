@@ -13,6 +13,7 @@ import {
   resumableSession,
   windowed,
   type WindowedAction,
+  type WindowedState,
 } from '../../../src/ui/app/state.ts';
 import { openForm } from '../../../src/ui/dialogs/form.ts';
 import { emptySearch } from '../../../src/ui/prompt/search.ts';
@@ -329,6 +330,14 @@ test('a change noted goes into the transcript as a line of its own', () => {
   ]);
 });
 
+/** A child's session `key` opened in the window, and shown. */
+function shownNew(state: WindowedState, key: number): WindowedState {
+  return reduceWindowed(reduceWindowed(state, { type: 'agent_opened', key }), {
+    type: 'session_shown',
+    key,
+  });
+}
+
 test('two sessions keep their own draft, scroll and permission', () => {
   const inOne = (action: AppAction): WindowedAction => ({
     type: 'in_session',
@@ -342,8 +351,9 @@ test('two sessions keep their own draft, scroll and permission', () => {
     inOne({ type: 'prompt', turnId: 't1', text: 'hi', at: 0 }),
     inOne({ type: 'scroll_measured', content: 90, view: 33 }),
     { type: 'scrolled', step: 'page_up' },
-    { type: 'session_opened', key: 2 },
-    // Tab 1 asks while tab 2 is in front.
+    { type: 'agent_opened', key: 2 },
+    { type: 'session_shown', key: 2 },
+    // Session 1 asks while session 2 is in front.
     inOne({
       type: 'permission_requested',
       turnId: 't1',
@@ -384,7 +394,8 @@ test('a pick Enter waits on is dropped when another session comes to the front, 
   const mention = { query: 'mentions.ts', line: 0, column: 0 };
   const waiting = (
     [
-      { type: 'session_opened', key: 2 },
+      { type: 'agent_opened', key: 2 },
+      { type: 'session_shown', key: 2 },
       { type: 'draft_set', text: '@mentions.ts' },
       { type: 'session_shown', key: 1 },
       { type: 'draft_set', text: '@mentions.ts' },
@@ -400,10 +411,7 @@ test('a pick Enter waits on is dropped when another session comes to the front, 
     frontState(reduceWindowed(waiting, { type: 'session_shown', key: 2 }))
       .awaitedPick,
   ).toStrictEqual(undefined);
-  expect(
-    frontState(reduceWindowed(waiting, { type: 'session_opened', key: 3 }))
-      .awaitedPick,
-  ).toStrictEqual(undefined);
+  expect(frontState(shownNew(waiting, 3)).awaitedPick).toStrictEqual(undefined);
 });
 
 test("a form filled in so far is the session's, and comes back with it", () => {
@@ -415,7 +423,8 @@ test("a form filled in so far is the session's, and comes back with it", () => {
   const left = (
     [
       { type: 'form_filled', id: 'e1', form: filled },
-      { type: 'session_opened', key: 2 },
+      { type: 'agent_opened', key: 2 },
+      { type: 'session_shown', key: 2 },
     ] satisfies WindowedAction[]
   ).reduce(reduceWindowed, windowed(ready, 1));
 
@@ -439,7 +448,8 @@ test('a session behind leaves the window as the person has it', () => {
   const searching = (
     [
       inOne({ type: 'prompt', turnId: 't1', text: 'hi', at: 0 }),
-      { type: 'session_opened', key: 2 },
+      { type: 'agent_opened', key: 2 },
+      { type: 'session_shown', key: 2 },
       { type: 'searched', search: emptySearch },
     ] satisfies WindowedAction[]
   ).reduce(reduceWindowed, windowed(ready, 1));
@@ -549,7 +559,7 @@ test("a selection's life: a press holds the view, release shows it, a copy notes
   expect(reduceApp(failed, { type: 'selection_gone' }).copied).toBeUndefined();
 });
 
-test('a tab switched, ctrl+o and the editor clear a selection (CHD-172)', () => {
+test('another session shown, ctrl+o and the editor clear a selection (CHD-172)', () => {
   const shown = { ...ready, selection: { kind: 'shown' } } as const;
 
   expect(
@@ -557,10 +567,9 @@ test('a tab switched, ctrl+o and the editor clear a selection (CHD-172)', () => 
   ).toBeUndefined();
   expect(reduceApp(shown, { type: 'editor_opened' }).selection).toBeUndefined();
 
-  const two = reduceWindowed(
-    reduceWindowed(windowed(shown, 1), { type: 'session_opened', key: 2 }),
-    { type: 'selection_started' },
-  );
+  const two = reduceWindowed(shownNew(windowed(shown, 1), 2), {
+    type: 'selection_started',
+  });
 
   expect(two.window.selection?.kind).toBe('dragging');
   expect(
@@ -605,7 +614,7 @@ test("a new drag takes the last copy's note with it, so its time ends nothing of
   ).toStrictEqual(second.copied);
 });
 
-test('a selection cleared mid-drag lets go of the view, here and on a tab switch (CHD-172)', () => {
+test('a selection cleared mid-drag lets go of the view, here and on a switch of session (CHD-172)', () => {
   const tall = reduceApp(ready, {
     type: 'scroll_measured',
     content: 100,
@@ -632,10 +641,10 @@ test('a selection cleared mid-drag lets go of the view, here and on a tab switch
   expect(left.scroll.held).toBeUndefined();
   expect(left.scroll.following).toBe(false);
 
-  // A tab switched mid-drag frees the view of the tab it leaves.
-  const two = reduceWindowed(
+  // Another session shown mid-drag frees the view of the one it leaves.
+  const two = shownNew(
     reduceWindowed(windowed(tall, 1), { type: 'selection_started' }),
-    { type: 'session_opened', key: 2 },
+    2,
   );
 
   expect(two.sessions[1]!.scroll.held).toBeUndefined();

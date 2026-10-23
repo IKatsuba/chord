@@ -12,7 +12,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
 import * as acp from '@agentclientprotocol/sdk';
-import { STEP_MS } from '../options.ts';
+import { CHILD_RUNTIME, CHILD_RUNTIME_GIVEN, STEP_MS } from '../options.ts';
 import { cwds } from '../sessions.ts';
 import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
@@ -31,19 +31,34 @@ const AGENT_STEP_MS = STEP_MS * 2;
  */
 const HELD_STEP_MS = STEP_MS * 20;
 
-/** What `agents` opens first: the fake runtime's small model on `agentchild`. */
+/**
+ * What `agents` opens first: the fake runtime's small model on
+ * `agentchild`; on another runtime `--child-runtime` names, its own model.
+ */
 export const PARSER_ARGS = {
-  agent: 'fake',
-  model: 'fake-small',
+  agent: CHILD_RUNTIME_GIVEN ?? 'fake',
+  ...((CHILD_RUNTIME_GIVEN ?? 'fake') === 'fake'
+    ? { model: 'fake-small' }
+    : {}),
   prompt: 'agentchild',
   name: 'parser',
 };
 
 /** What it opens second, on the runtime's own model, which asks to write. */
 export const DOCS_ARGS = {
-  agent: 'fake',
+  agent: CHILD_RUNTIME_GIVEN ?? 'fake',
   prompt: 'permission',
   name: 'docs',
+};
+
+/**
+ * What `agentother` opens: `other` on another runtime, `CHILD_RUNTIME`,
+ * which answers its first prompt and is idle after.
+ */
+export const OTHER_ARGS = {
+  agent: CHILD_RUNTIME,
+  prompt: 'text',
+  name: 'other',
 };
 
 /** The parent's two messages to `parser`. */
@@ -481,7 +496,31 @@ async function openTeam(
   return 'end_turn';
 }
 
+/** Opens `other` on `CHILD_RUNTIME` and says so. */
+async function openOther(turn: Turn): Promise<acp.StopReason> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
+  }
+
+  try {
+    await callChord(turn, client, 'open_agent', OTHER_ARGS);
+    await turn.say(`Opened other on ${CHILD_RUNTIME}.`);
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn';
+}
+
 export const AGENTS = {
+  // A child on another runtime, where a test once opened a tab of it
+  // (CHD-493).
+  agentother: (turn) => openOther(turn),
+
   // Opens `parser` and `docs`, then tells `parser` twice what changed,
   // the first once parser is at its first turn, the second once parser has
   // the first, so the second waits behind the turn the first started.

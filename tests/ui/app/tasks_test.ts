@@ -5,7 +5,7 @@ import {
   type Entry,
   type Transcript,
 } from '../../../src/session/transcript/types.ts';
-import { busyOf, closeArmedLine } from '../../../src/ui/app/closing.ts';
+import { busyOf } from '../../../src/ui/app/closing.ts';
 import { chordLine, chordRow } from '../../../src/ui/pickers/mcp.ts';
 import { queueRows, restoredDraft } from '../../../src/ui/prompt/queue.ts';
 import {
@@ -57,11 +57,6 @@ test('a running task agent makes its session busy, after the person’s queued p
   });
 
   expect(two).toStrictEqual({ kind: 'tasks', count: 2 });
-  expect(
-    closeArmedLine({ number: 1, agent: 'claude', busy: two! }, 'ctrl+x k'),
-  ).toStrictEqual(
-    '1 claude has 2 task agents running · ctrl+x k again to stop them and close',
-  );
   expect(
     busyOf({
       transcript: withEntries([task()]),

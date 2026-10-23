@@ -1,6 +1,6 @@
 /**
  * The window on the fake agent: its header, a turn, its notifications, the
- * keys that quit, clear and edit, the slash commands, and sessions in tabs.
+ * keys that quit, clear and edit, the slash commands, and a child beside main.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
 import {
@@ -685,470 +685,91 @@ test('/help opens the shortcuts and /exit quits', () =>
     );
   }));
 
-const CTRL_N = '\x0e';
-
-test("one session's first row is its header's, and two sessions' is the tab strip, the header under it", () =>
+test("the window's first row is its header's", () =>
   withWindow(
     async (window) => {
       const first = () => window.frame().split('\n')[0] ?? '';
 
       await window.shows('chord v');
       expect(first()).toContain(`chord v${VERSION}`);
-      await leader(window, 'c');
-      await window.shows('2 fake');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      expect(first()).toContain('1 fake');
-      expect(
-        !first().includes('chord v'),
-        'the header on the strip',
-      ).toBeTruthy();
-      expect(window.frame().split('\n')[1] ?? '').toContain(
-        `chord v${VERSION}`,
-      );
-      await quitAll(window);
     },
     { columns: 120, rows: 40 },
   ));
 
-test('ctrl+x c opens a second session, and the leader switches between them', () =>
-  withWindow(
+test('/new is /clear: a new session with an empty transcript, history keeping /new (CHD-493)', () =>
+  withWindow(async (window) => {
+    await send(window, 'text');
+    await window.shows('This reply came in chunks.');
+    await until('the turn to end', () => !window.frame().includes('Working'));
+
+    const first = window.session();
+
+    await window.type('/new');
+    await window.shows('/clear (new)');
+    await window.press('\r');
+    await until('a new session', () => window.session() !== first);
+    await ready(window);
+    expect(
+      !window.frame().includes('in chunks'),
+      'the reply stayed',
+    ).toBeTruthy();
+    await until('the first agent to stop', () => first?.agentPids.size === 0);
+    await window.press(UP);
+    await until(
+      'the command as typed',
+      () => promptRow(window)?.includes('› /new') ?? false,
+    );
+  }));
+
+test("a child's permission is a notice while main is shown, and ctrl+x a goes to it", () =>
+  withChild(
     async (window) => {
-      await send(window, 'text');
-      await window.shows('Hello, world. This reply came in chunks.');
-      expect(
-        !window.frame().includes('1 fake'),
-        'a strip with one session',
-      ).toBeTruthy();
-      await leader(window, 'c');
-      await window.shows('2 fake');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      expect(
-        !window.frame().includes('› text'),
-        "the first session's past",
-      ).toBeTruthy();
-      await send(window, 'the second one');
-      await leader(window, '1');
-      await window.shows('› text');
-      expect(!window.frame().includes('› the second one')).toBeTruthy();
-      await leader(window, CTRL_N);
-      await window.shows('› the second one');
-      expect(!window.frame().includes('› text')).toBeTruthy();
-      await leader(window, 'p');
-      await window.shows('› text');
-      // A number with no tab does nothing.
-      await leader(window, '5');
-      await until(
-        'the leader to go',
-        () => !window.frame().includes('ctrl+x …'),
-      );
-      expect(window.frame()).toContain('› text');
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
+      const bytes = '\x1b]9;docs needs your permission: Write notes.txt\x07';
 
-test("/new opens the agent named on its own settings' model, refuses one chord cannot start, and /status counts the sessions", () =>
-  withWindow(
-    async (window) => {
       await ready(window);
-      // A name the list matches nothing of, so Enter runs it as typed.
-      await window.type('/new qqq');
-      await window.press('\r');
-      await window.shows('No agent named qqq · chord agents lists them');
-      expect(window.frame()).toContain('› /new qqq');
-      expect(
-        !window.frame().includes('1 fake'),
-        'a strip with one session',
-      ).toBeTruthy();
-      expect(window.pids.length).toStrictEqual(1);
-      await window.type('/new fake2');
-      await window.press('\r');
-      await window.shows('2 fake2');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await window.shows('Fake Small');
-      // Alone, it is ctrl+x c: the front session's agent again.
-      await window.type('/new');
-      await window.press('\r');
-      await window.shows('3 fake2');
-      await until('the third agent', () => window.pids.length === 3);
-      await ready(window);
-
-      const status = await reported(window, '/status');
-
-      expect(status).toContain('Agent:     fake2');
-      expect(status).toContain('Model:     Fake Small');
-      expect(status).toContain('Sessions:  3 open');
-      await quitAll(window);
-    },
-    {
-      columns: 120,
-      rows: 40,
-      startupOf: (agent) =>
-        agent === 'fake'
-          ? { agentCommand: fakeAgentCommand() }
-          : agent === 'fake2'
-            ? {
-                agentCommand: fakeAgentCommand(),
-                starting: {
-                  model: { id: 'fake-small', from: 'set in settings' },
-                },
-              }
-            : undefined,
-    },
-  ));
-
-test("/new opens the agent named on its own settings' effort, and says one its runtime refuses", () =>
-  withWindow(
-    async (window) => {
-      await ready(window);
-      await window.type('/new fake2');
-      await window.press('\r');
-      await window.shows('2 fake2');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'effort');
-      await window.shows('Effort: high.');
-      await window.type('/new fake3');
-      await window.press('\r');
-      await window.shows('3 fake3');
-      await until('the third agent', () => window.pids.length === 3);
-      await ready(window);
-      await window.shows(
-        'Could not start on max effort, set in .chord/settings.json: the ' +
-          'agent offers low, medium, high',
-      );
-      await send(window, 'effort');
-      await window.shows('Effort: medium.');
-      await quitAll(window);
-    },
-    {
-      columns: 140,
-      rows: 40,
-      startupOf: (agent) =>
-        agent === 'fake'
-          ? { agentCommand: fakeAgentCommand() }
-          : agent === 'fake2' || agent === 'fake3'
-            ? {
-                agentCommand: fakeAgentCommand(),
-                starting: {
-                  effort: {
-                    id: agent === 'fake2' ? 'high' : 'max',
-                    from: 'set in .chord/settings.json',
-                  },
-                },
-              }
-            : undefined,
-    },
-  ));
-
-test('/new offers a name only the settings define, and Tab and Enter open it', () =>
-  withWindow(
-    async (window) => {
-      await ready(window);
-      await window.type('/new ');
-      await window.shows('from settings');
-      // Settings first, then own CLIs PATH has, and those it lacks marked.
-      expect(window.frame()).toMatch(/mine +from settings\n.*goose +goose\n/);
-      expect(window.frame()).toMatch(/cursor +Cursor · not on PATH/);
-      await window.type('mi');
-      await window.press('\t');
-      await window.shows('› /new mine');
-      await window.press('\r');
-      await window.shows('2 mine');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await quitAll(window);
-    },
-    {
-      columns: 120,
-      rows: 40,
-      runtimes: ['fake', 'cursor', 'goose', 'mine'],
-      listed: [
-        {
-          name: 'cursor',
-          title: 'Cursor',
-          start: 'agent acp',
-          from: 'cli',
-          found: false,
-        },
-        {
-          name: 'goose',
-          title: 'goose',
-          start: 'goose acp',
-          from: 'cli',
-          found: true,
-        },
-        {
-          name: 'mine',
-          title: undefined,
-          start: 'fake-agent',
-          from: 'settings',
-        },
-      ],
-      startupOf: (agent) =>
-        agent === 'fake' || agent === 'mine'
-          ? { agentCommand: fakeAgentCommand() }
-          : undefined,
-    },
-  ));
-
-test('a permission behind is a glyph and a notice, and ctrl+x a goes to it', () =>
-  withWindow(
-    async (window) => {
-      const bytes =
-        '\x1b]9;fake (2) needs your permission: Write notes.txt\x07';
-
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'permission');
-      await asked(window);
-      await leader(window, '1');
-      await window.shows('2 fake ●');
-      await window.shows('● 2 fake needs your permission · ctrl+x a to go');
+      await send(window, 'agentsheldgated');
+      await window.shows('● docs needs your permission · ctrl+x a to go');
       expect(writes(window, bytes)).toStrictEqual(1);
-      // The window never switches by itself, so a digit typed here is a draft.
+      // The window never goes there by itself, so a digit typed here is a draft.
       await window.type('1');
       await until(
         'the digit in the draft',
         () => promptRow(window)?.includes('1') ?? false,
       );
       expect(!window.frame().includes('Do you want to proceed?')).toBeTruthy();
-      expect(window.frame()).toContain('2 fake ●');
       await leader(window, 'a');
       await asked(window);
-      expect(window.frame()).toContain('Waiting for permission');
       await window.press('1');
       await until(
         'the permission answered',
         () => !window.frame().includes('Do you want to proceed?'),
       );
-      await until(
-        'the turn to end',
-        () =>
-          !window.frame().includes('2 fake ●') &&
-          !window.frame().includes('Working'),
-      );
       expect(writes(window, bytes)).toStrictEqual(1);
-      await leader(window, 'a');
-      await window.shows('No session waits');
       await quitAll(window);
     },
     { columns: 120, rows: 40, notifications: OSC9 },
   ));
 
-test('a digit after the leader goes to a tab, not to the permission asked', () =>
-  withWindow(
-    async (window) => {
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await leader(window, '1');
-      await send(window, 'permission');
-      await asked(window);
-      await leader(window, '2');
-      await until(
-        'the second tab',
-        () => !window.frame().includes('Do you want to proceed?'),
-      );
-      // The first waits on the person, and its tab says so.
-      await window.shows('1 fake ●');
-      await leader(window, '1');
-      await asked(window);
-      expect(window.frame()).toContain('2. ');
-      await window.press('3');
-      await until(
-        'the permission answered',
-        () => !window.frame().includes('Do you want to proceed?'),
-      );
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
+test('ctrl+x a with nothing waiting says so', () =>
+  withWindow(async (window) => {
+    await ready(window);
+    await leader(window, 'a');
+    await window.shows('Nothing waits on you');
+  }));
 
-test('ctrl+x w lists the sessions open, and Enter goes to the one highlighted', () =>
-  withWindow(
-    async (window) => {
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await leader(window, 'w');
-      await window.shows('Sessions in ');
-      expect(window.frame()).toMatch(/1\. fake {2}◦ idle \d+s {2}text/);
-      expect(window.frame()).toMatch(/2\. fake {2}here/);
-      expect(window.frame()).toContain(
-        'Enter to go · 1–2 to pick · Esc to close',
-      );
-      // None waits, so the highlight starts after the session in front.
-      expect(window.frame()).toMatch(/❯ 1\. fake/);
-      await window.press('\r');
-      await window.shows('› text');
-      expect(
-        !window.frame().includes('Sessions in '),
-        'the picker stayed open',
-      ).toBeTruthy();
-      expect(window.pids.length).toStrictEqual(2);
-
-      // Esc leaves the session in front as it was.
-      await leader(window, 'w');
-      await window.shows('Sessions in ');
-      await window.press(ESC);
-      await until(
-        'the picker to close',
-        () => !window.frame().includes('Sessions in '),
-      );
-      expect(window.frame()).toContain('› text');
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
-
-test('/resume marks a session open in another tab, and picking it goes there without a second agent', () =>
-  withWindow(
-    async (window) => {
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      expect(
-        !window.frame().includes('› text'),
-        "tab 1's past in tab 2",
-      ).toBeTruthy();
-      await window.type('/resume');
-      await window.press('\r');
-      await window.shows('Resume a session');
-      await window.shows('open in 1');
-      await window.press('\r');
-      await window.shows('› text');
-      expect(!window.frame().includes('Resume a session')).toBeTruthy();
-      // Give a second agent the time it would take to start, had one been.
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      expect(window.pids.length).toStrictEqual(2);
-      expect(
-        window
-          .frame()
-          .split('\n')
-          .filter((line) => line.includes('› text')).length,
-      ).toStrictEqual(1);
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
-
-test("/clear in tab 2 starts it afresh and leaves tab 1's transcript", () =>
-  withWindow(
-    async (window) => {
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'tools');
-      await window.shows('Read it.');
-      await window.type('/clear');
-      await window.press('\r');
-      await until('tab 2 cleared', () => !window.frame().includes('› tools'));
-      await ready(window);
-      await leader(window, '1');
-      await window.shows('› text');
-      expect(window.frame()).toContain('This reply came in chunks.');
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
-
-test('ctrl+x k closes an idle session at once, and a busy one on the second press', () =>
-  withWindow(
-    async (window) => {
-      const header = () => window.frame().split('\n')[0] ?? '';
-
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'k');
-      await window.shows('Closed 2 fake · /resume opens it again');
-      // The first comes back as it was left: nothing sent to it.
-      expect(
-        !window.frame().includes('› text'),
-        "the closed session's past",
-      ).toBeTruthy();
-      expect(
-        !header().includes('1 fake'),
-        'a strip with one session',
-      ).toBeTruthy();
-      await until(
-        'its agent to stop',
-        async () => !(await isAlive(window.pids[1]!)),
-      );
-
-      // A busy one asks first and is left as it was.
-      await leader(window, 'c');
-      await until('the third agent', () => window.pids.length === 3);
-      await ready(window);
-      await send(window, 'permission');
-      await asked(window);
-      await leader(window, 'k');
-      await window.shows(
-        '2 fake waits for your permission · ctrl+x k again to stop it and close',
-      );
-      expect(header()).toContain('2 fake');
-      expect(
-        await isAlive(window.pids[2]!),
-        'closed on the first press',
-      ).toBeTruthy();
-      await leader(window, 'k');
-      await window.shows('Closed 2 fake · /resume opens it again');
-      expect(!header().includes('2 fake'), 'its tab stayed').toBeTruthy();
-      expect(!window.frame().includes('Do you want to proceed?')).toBeTruthy();
-      await until(
-        'its agent to stop',
-        async () => !(await isAlive(window.pids[2]!)),
-      );
-      await quitAll(window);
-    },
-    { columns: 120, rows: 40 },
-  ));
-
-test('ctrl+x k on a session running a command asks first, then stops that command and no other', () => {
+test('/clear stops the command the session runs, as the session it ran in goes', () => {
   const stops = new Map<string, number>();
 
   return withWindow(
     async (window) => {
-      const header = () => window.frame().split('\n')[0] ?? '';
-
-      await window.type('!');
-      await window.type('sleep 61');
-      await window.press('\r');
-      await window.shows('sleep 61');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
       await ready(window);
       await window.type('!');
       await window.type('sleep 60');
       await window.press('\r');
       await window.shows('sleep 60');
-      await leader(window, 'k');
-      await window.shows(
-        '2 fake is working · ctrl+x k again to stop it and close',
-      );
       expect(stops.get('sleep 60') ?? 0).toStrictEqual(0);
-      await leader(window, 'k');
-      await until('its tab to close', () => !header().includes('2 fake'));
-      expect(stops.get('sleep 60')).toStrictEqual(1);
-      expect(
-        stops.get('sleep 61') ?? 0,
-        "the other tab's command",
-      ).toStrictEqual(0);
-      await window.shows('sleep 61');
-      await quitAll(window);
+      await send(window, '/clear');
+      await until('the command stopped', () => stops.get('sleep 60') === 1);
     },
     {
       columns: 120,
@@ -1170,106 +791,52 @@ test('ctrl+x k on a session running a command asks first, then stops that comman
   );
 });
 
-test('an armed close that has run out asks again rather than closing', () =>
-  withWindow(
-    async (window) => {
-      const header = () => window.frame().split('\n')[0] ?? '';
-
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await send(window, 'slow');
-      await window.shows('esc to interrupt');
-      await leader(window, 'k');
-      await window.shows(
-        '2 fake is working · ctrl+x k again to stop it and close',
-      );
-      await until(
-        'the armed line to go',
-        () => !window.frame().includes('again to stop it and close'),
-        4000,
-      );
-      await leader(window, 'k');
-      await window.shows(
-        '2 fake is working · ctrl+x k again to stop it and close',
-      );
-      expect(header()).toContain('2 fake');
-      expect(
-        await isAlive(window.pids[1]!),
-        'closed on a press after it ran out',
-      ).toBeTruthy();
-      await quitAll(window);
-    },
-    {
-      columns: 120,
-      rows: 40,
-      agentCommand: fakeAgentCommand(undefined, '--step-ms', '200'),
-    },
-  ));
-
-test('ctrl+d with a session working arms and names it, then quits with each session to resume and no agent left', async () => {
+test('ctrl+d with the session working quits at once, with its one session to resume and no agent left', async () => {
   let resumable: readonly ResumableTab[] | undefined;
 
   await withWindow(
     async (window) => {
-      await send(window, 'text');
-      await window.shows('This reply came in chunks.');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
       await send(window, 'slow');
       await window.shows('esc to interrupt');
-      await leader(window, '1');
-      await window.shows('› text');
       await window.press(CTRL_D);
-      await window.shows('2 fake is working · ctrl+d again to quit');
-      expect(resumable).toStrictEqual(undefined);
-
-      for (const pid of window.pids) {
-        expect(
-          await isAlive(pid),
-          `agent ${pid} stopped on the first press`,
-        ).toBeTruthy();
-      }
-
-      await quitAll(window);
-      expect(resumable?.map(({ agent }) => agent)).toStrictEqual([
-        'fake',
-        'fake',
-      ]);
-      expect(
-        new Set(resumable?.map(({ sessionId }) => sessionId)).size,
-      ).toStrictEqual(2);
+      await until('the quit', () => resumable !== undefined);
+      expect(resumable?.map(({ agent }) => agent)).toStrictEqual(['fake']);
+      await until('the agent to stop', () =>
+        Promise.all(window.pids.map(isAlive)).then((alive) =>
+          alive.every((each) => !each),
+        ),
+      );
     },
     {
       columns: 120,
       rows: 40,
-      // Slow enough that its turn still runs at the second press.
+      // Slow enough that its turn still runs at the press.
       agentCommand: fakeAgentCommand(undefined, '--step-ms', '20'),
       onQuit: (tabs) => (resumable = tabs),
     },
   );
 });
 
-test('a form left half filled in a session behind is as it was on coming back', () =>
-  withWindow(
+test('a form left half filled in main is as it was on coming back from a child', () =>
+  withChild(
     async (window) => {
+      await ready(window);
+      await openOther(window);
       await send(window, 'form');
       await inputAsked(window);
       await window.type('keep');
       await window.press(TAB);
       await window.type('a@b');
       await window.shows('Contact email  a@b');
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      expect(
-        !window.frame().includes('Project name'),
-        "tab 1's form in tab 2",
-      ).toBeTruthy();
-      // Its tab says it waits instead, and the status line names it.
-      await window.shows('● 1 fake asks for input · ctrl+x a');
-      await leader(window, '1');
+      // other's reply is not yet seen, so ctrl+x a goes there.
+      await leader(window, 'a');
+      await until(
+        "main's form gone with main",
+        () => !window.frame().includes('Project name'),
+      );
+      // The status line names main as waiting instead.
+      await window.shows('● main asks for input · ctrl+x a');
+      await leader(window, 'a');
       await inputAsked(window);
       expect(window.frame()).toContain('Project name   keep');
       expect(window.frame()).toContain('Contact email  a@b');

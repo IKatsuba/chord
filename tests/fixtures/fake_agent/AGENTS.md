@@ -61,7 +61,7 @@
   `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
   `permission`,
   `permissionsteer`,
-  `callchildtwo`, `agenttitled`, `agentsquiet`, `agentsheldgated`, `plan`,
+  `callchildtwo`, `agenttitled`, `agentother`, `agentsquiet`, `agentsheldgated`, `plan`,
   `planshrinkgated`,
   `proposal`, `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`,
@@ -177,8 +177,11 @@
   `taskstays` keeps its turn running until it is cancelled, so the task
   asks within it however slow it is, and `tasktillsteered` until a
   message is steered into it, as the task's is, with `--steering`;
+  `agentother` opens `other` on `text`, long-lived on the runtime
+  `--child-runtime <name>` (`CHORD_FAKE_CHILD_RUNTIME`) names, `codex`
+  by default, which the harness starts as the fake under that name;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
-  long-lived on the fake runtime, and messages `parser` twice, waiting on
+  long-lived on the fake runtime, or on `--child-runtime`'s when it is given, and messages `parser` twice, waiting on
   receipt marks in the gate before each next step; `agentsquiet` opens the
   same pair without messaging `parser`, so its first idle is final, to check
   idle age (CHD-364);

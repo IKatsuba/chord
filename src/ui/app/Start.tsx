@@ -95,7 +95,7 @@ export function Start({
             // A fresh list for each scope, its highlight on the first row.
             key={String(everywhere)}
             picker={{ sessions, cwd, everywhere }}
-            open={new Map()}
+            open={new Set()}
             rows={menuRowLimit(rows)}
             agent={agent}
             home={home}

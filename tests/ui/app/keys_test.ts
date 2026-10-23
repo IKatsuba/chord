@@ -114,17 +114,17 @@ test('enter on a chord command runs it and empties the box', () => {
   expect(submitSteps('/clear', context(typing('/clear')))).toStrictEqual([
     { type: 'history', history: recorded(emptyHistory, '/clear') },
     { type: 'show_draft', text: '', cursor: START },
-    { type: 'run_command', command: 'clear', args: '' },
+    { type: 'run_command', command: 'clear', typed: 'clear', args: '' },
   ]);
 });
 
-test('enter on a chord command keeps what was typed after its name', () => {
+test('enter on a chord command keeps what was typed after its name, and the name as typed', () => {
   expect(
     submitSteps('/new codex', context(typing('/new codex'))),
   ).toStrictEqual([
     { type: 'history', history: recorded(emptyHistory, '/new codex') },
     { type: 'show_draft', text: '', cursor: START },
-    { type: 'run_command', command: 'new', args: 'codex' },
+    { type: 'run_command', command: 'clear', typed: 'new', args: 'codex' },
   ]);
 });
 
@@ -295,7 +295,6 @@ describe('tester: selection dispatch precedence', () => {
       text: 'keep this draft',
       cursor: endOf('keep this draft'),
     });
-    expect(suffix.some((step) => step.type === 'open_session')).toBe(false);
     expect(suffix.some((step) => step.type === 'clear_selection')).toBe(false);
   });
 
@@ -499,11 +498,10 @@ describe('a request between turns (CHD-158)', () => {
     expect(leaderA(attended)).toContainEqual({ type: 'attend_session' });
   });
 
-  test('ctrl+x a takes the keys from the list of agents, a search or the sessions picker', () => {
+  test('ctrl+x a takes the keys from the list of agents or a search', () => {
     for (const from of [
       { type: 'agents_focused', focused: true },
       { type: 'searched', search: emptySearch },
-      { type: 'sessions_picker_opened' },
     ] as AppAction[]) {
       const elsewhere = reduceApp(typing('draft', asked), from);
       const attended = reduceApp(elsewhere, {
@@ -513,7 +511,6 @@ describe('a request between turns (CHD-158)', () => {
 
       expect(attended.agentsFocus).toStrictEqual(undefined);
       expect(attended.search).toStrictEqual(undefined);
-      expect(attended.sessionsPicker).toBeFalsy();
       expect(attended.draft).toStrictEqual('draft');
       // Esc is the box's now: it rejects.
       expect(keyCommand('', escape, attended, 'draft')).toStrictEqual(

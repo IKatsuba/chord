@@ -72,8 +72,6 @@ import {
   pickerKey,
   pickerRows,
   sessionChoices,
-  tabChoices,
-  type TabRow,
   valueChoices,
 } from './picker.ts';
 
@@ -147,9 +145,9 @@ export function ModelPicker({
 }
 
 /**
- * `/resume`: this directory's earlier sessions and saved windows, newest
- * first, inline above the prompt as the model picker is; each row says when
- * the session was last used or the window quit, and how it began. ctrl+a
+ * `/resume`: this directory's earlier sessions, newest first, inline above
+ * the prompt as the model picker is; each row says when the session was last
+ * used, and how it began. ctrl+a
  * lists every directory's, each row naming its directory too. Enter on one
  * resumes it; Esc is the window's. `starting` is `chord --resume` with no
  * id, where nothing is open yet: a pick opens, and Esc quits.
@@ -165,8 +163,8 @@ export function ResumePicker({
   onPick,
 }: {
   picker: ResumePickerState;
-  /** The tab each session open in the window is in, by its id. */
-  open: ReadonlyMap<string, number>;
+  /** The ids of the sessions open now, as children of this one. */
+  open: ReadonlySet<string>;
   /** The most sessions shown at once; a longer list scrolls. */
   rows: number;
   agent: string;
@@ -315,62 +313,6 @@ export function TeamsPicker({
               listing.teams.find(({ name }) => name === highlighted),
               columns,
             ),
-            closeHint,
-          )}
-        </text>
-      </box>
-    </box>
-  );
-}
-
-/**
- * `ctrl+x w`: the sessions open in the window, in tab order, inline above the
- * prompt as the other pickers are; each row says its agent, where it stands
- * and how it began. Enter or a digit puts that one in front; Esc is the
- * window's. It closes nothing, as closing has a key of its own.
- */
-export function SessionsPicker({
-  tabs,
-  start,
-  directory,
-  rows,
-  active,
-  onPick,
-}: {
-  tabs: readonly TabRow[];
-  /** The tab the highlight starts on. */
-  start: number | undefined;
-  /** The window's directory, as the header shows it. */
-  directory: string;
-  /** The most sessions shown at once. */
-  rows: number;
-  active: boolean;
-  onPick: (number: number) => void;
-}) {
-  const choices = tabChoices(tabs, Date.now(), start);
-  const closeHint = useCloseHint();
-
-  return (
-    <box
-      {...borderOf(useColours().permission)}
-      paddingX={1}
-      marginTop={1}
-      flexShrink={0}
-    >
-      <text {...CUT} {...fg(useColours().permission)} attributes={BOLD}>
-        {`Sessions in ${directory}`}
-      </text>
-      <PickerList
-        choices={choices}
-        rows={rows}
-        active={active}
-        onPick={(value) => onPick(Number(value))}
-      />
-      <box marginTop={1}>
-        <text {...TEXT} attributes={DIM}>
-          {hintOf(
-            'Enter to go',
-            choices.length > 1 ? `1–${choices.length} to pick` : '1 to pick',
             closeHint,
           )}
         </text>

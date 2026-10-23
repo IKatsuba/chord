@@ -138,6 +138,7 @@ export async function withWindow(
     shell,
     heldClose,
     heldOpen,
+    whileStarting = false,
     openWith = openSession,
     onQuit,
     startupOf,
@@ -192,6 +193,12 @@ export async function withWindow(
      * midway; it is given the screen to look at meanwhile.
      */
     heldOpen?: (frame: () => string) => Promise<void>;
+    /**
+     * The body runs at once, while the window's own session may still be
+     * starting, so a test can quit a start that never ends; the cleanup
+     * after it is the same (CHD-493).
+     */
+    whileStarting?: boolean;
     /** Opens each session in openSession's place, to make one misbehave. */
     openWith?: typeof openSession;
     onQuit?: (tabs: readonly ResumableTab[]) => void;
@@ -352,10 +359,13 @@ export async function withWindow(
   let stuck: Error | undefined;
 
   try {
-    await until('the session', () => session !== undefined);
-    // The window takes it later: until then Enter keeps the draft, and a
-    // test's first prompt would stay unsent.
-    await until('the window to take the session', () => up);
+    if (!whileStarting) {
+      await until('the session', () => session !== undefined);
+      // The window takes it later: until then Enter keeps the draft, and a
+      // test's first prompt would stay unsent.
+      await until('the window to take the session', () => up);
+    }
+
     await body(window);
   } finally {
     await app.unmount();

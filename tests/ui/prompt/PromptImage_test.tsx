@@ -27,6 +27,7 @@ import {
   withWindow,
 } from '../app/render.tsx';
 
+import { openOther, pickAgent, withChild } from '../app/child_window.tsx';
 import {
   LEFT,
   BACKSPACE,
@@ -470,12 +471,13 @@ test('Enter again while a typed path is read sends the prompt once', () => {
   );
 });
 
-test('a typed path read while another tab comes forward goes from its own tab', () => {
+test('a typed path read while a child is shown goes from main, where it was typed', () => {
   const reader = heldReader();
 
-  return withWindow(
+  return withChild(
     async (window) => {
       await connected(window);
+      await openOther(window);
 
       for (const key of 'see /shots/a.png') {
         await window.press(key);
@@ -483,22 +485,23 @@ test('a typed path read while another tab comes forward goes from its own tab', 
 
       await window.press('\r');
       await until('the read', () => reader.waiting.length === 1);
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
+      // other's reply is not yet seen, so ctrl+x a goes there.
+      await leader(window, 'a');
+      await window.shows('╭─ other ');
       reader.waiting[0]?.();
-      await leader(window, '1');
+      // main's reply, not yet seen, is where ctrl+x a goes next.
+      await leader(window, 'a');
       await window.shows('› see [Image #1]');
       await window.shows(RECEIVED);
       expect(
         !window.frame().includes('see /shots/a.png'),
         'the draft stayed',
       ).toBeTruthy();
-      await leader(window, '2');
-      await until('the second tab', () => !window.frame().includes(RECEIVED));
+      await pickAgent(window, 'other');
+      await until('other shown', () => !window.frame().includes(RECEIVED));
       expect(
         !window.frame().includes('[Image #1]'),
-        'the image went to tab 2',
+        'the image went to other',
       ).toBeTruthy();
       await quitAll(window);
     },
@@ -506,7 +509,7 @@ test('a typed path read while another tab comes forward goes from its own tab', 
   );
 });
 
-test('a clipboard image read while another tab comes forward goes into its own draft', () => {
+test('a clipboard image read while a child is shown goes into the draft it began in', () => {
   const waiting: (() => void)[] = [];
   const clipboard: ClipboardReader = () =>
     new Promise((resolve) =>
@@ -521,63 +524,56 @@ test('a clipboard image read while another tab comes forward goes into its own d
       ),
     );
 
-  return withWindow(
+  return withChild(
     async (window) => {
       await connected(window);
+      await openOther(window);
       await window.type('what is');
       await window.press(CTRL_V);
       await until('the read', () => waiting.length === 1);
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
+      await leader(window, 'a');
+      await window.shows('╭─ other ');
       waiting[0]?.();
-      await leader(window, '1');
-      await window.shows('› what is [Image #1]');
-      await leader(window, '2');
-      await until('the second tab', () => !window.frame().includes('what is'));
+      // The finish has no mark of its own on other; a pause lets it land.
+      await new Promise((resolve) => setTimeout(resolve, 200));
       expect(
         !window.frame().includes('[Image #1]'),
-        'the image went to tab 2',
+        'the image went to other',
       ).toBeTruthy();
+      await pickAgent(window, 'main');
+      await window.shows('› what is [Image #1]');
+      // A draft left in the box would take ctrl+d as a key, not a quit.
+      await window.press(CTRL_C);
+      await until(
+        'the draft to clear',
+        () => !window.frame().includes('what is'),
+      );
       await quitAll(window);
     },
     { columns: 120, rows: 40, clipboard },
   );
 });
 
-test('a pasted image path read while another tab comes forward goes into its own draft (CHD-128)', () => {
+test('a pasted image path read while a child is shown goes into the draft it began in (CHD-128)', () => {
   const reader = heldReader();
 
-  return withWindow(
+  return withChild(
     async (window) => {
       await connected(window);
+      await openOther(window);
       await window.paste("'/shots/a.png'");
       await until('the read', () => reader.waiting.length === 1);
-      await leader(window, 'c');
-      await until('the second agent', () => window.pids.length === 2);
-      await ready(window);
-      await window.type('tab two draft');
-      await window.shows('› tab two draft');
+      await leader(window, 'a');
+      await window.shows('╭─ other ');
       reader.waiting[0]?.();
-      // The finish has no mark of its own on tab 2; a pause lets it land.
+      // The finish has no mark of its own on other; a pause lets it land.
       await new Promise((resolve) => setTimeout(resolve, 200));
-      expect(promptRow(window)).toContain('› tab two draft');
       expect(window.frame()).not.toContain('[Image #');
-      await leader(window, '1');
+      await pickAgent(window, 'main');
       await window.shows('› [Image #1]');
       expect(window.frame()).not.toContain('/shots/a.png');
       await window.press('\r');
       await window.shows(RECEIVED);
-      await leader(window, '2');
-      await window.shows('› tab two draft');
-      expect(window.frame()).not.toContain('Received an image');
-      expect(window.frame()).not.toContain('[Image #');
-      // A draft left in the box would take ctrl+d as a key, not a quit.
-      await window.press(CTRL_C);
-      await until(
-        'the draft to clear',
-        () => !window.frame().includes('tab two draft'),
-      );
       await quitAll(window);
     },
     { columns: 120, rows: 40, readImage: reader.readImage },
@@ -678,13 +674,12 @@ describe('ctrl+v while an agent starts says so only until it has started, or fai
     Promise.resolve({ failed: 'No image in the clipboard' });
 
   /**
-   * A window of `size` whose second agent, codex, is a tab opened by `/new`
-   * or a child of main, picked; its agent runs `codex` once `body` has
-   * written the gate it is given.
+   * A window of `size` whose second agent, codex, is a child of main,
+   * picked; its agent runs `codex` once `body` has written the gate it is
+   * given.
    */
   async function onCodex(
     size: { readonly columns: number; readonly rows: number },
-    as: 'tab' | 'child',
     codex: readonly string[],
     body: (window: Window, open: () => Promise<void>) => Promise<void>,
     clipboard: ClipboardReader = NO_IMAGE,
@@ -709,25 +704,20 @@ describe('ctrl+v while an agent starts says so only until it has started, or fai
         async (window) => {
           await ready(window);
 
-          if (as === 'tab') {
-            await window.type('/new codex');
-            await window.press('\r');
-          } else {
-            if (main === undefined) {
-              throw new Error('main was not admitted');
-            }
-
-            await main.window.open(main.key, {
-              agent: 'codex',
-              name: 'foreign',
-              prompt: 'text',
-            });
-            await window.shows('foreign');
-            await window.press(DOWN);
-            await window.press(DOWN);
-            await window.press('\r');
-            await window.shows('╭─ foreign ─');
+          if (main === undefined) {
+            throw new Error('main was not admitted');
           }
+
+          await main.window.open(main.key, {
+            agent: 'codex',
+            name: 'foreign',
+            prompt: 'text',
+          });
+          await window.shows('foreign');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('╭─ foreign ─');
 
           await window.shows('Starting codex…');
           await body(window, () => writeFile(gate, ''));
@@ -756,91 +746,88 @@ describe('ctrl+v while an agent starts says so only until it has started, or fai
   ]) {
     const at = `${size.columns}x${size.rows}`;
 
-    for (const as of ['tab', 'child'] as const) {
-      test(`at ${at}, a ${as}'s notice goes once its agent has started`, () =>
-        onCodex(size, as, fakeAgentCommand(), async (window, open) => {
-          await window.press(CTRL_V);
-          await window.shows('codex has not started yet');
-          await open();
-          await until(
-            'the start',
-            () => !window.frame().includes('Starting codex…'),
-          );
-          await until(
-            'the notice to go',
-            () => !window.frame().includes('codex has not started yet'),
-          );
-        }));
+    test(`at ${at}, a child's notice goes once its agent has started`, () =>
+      onCodex(size, fakeAgentCommand(), async (window, open) => {
+        await window.press(CTRL_V);
+        await window.shows('codex has not started yet');
+        await open();
+        await until(
+          'the start',
+          () => !window.frame().includes('Starting codex…'),
+        );
+        await until(
+          'the notice to go',
+          () => !window.frame().includes('codex has not started yet'),
+        );
+      }));
 
-      test(`at ${at}, a ${as}'s notice goes once its agent has failed to start`, () =>
-        onCodex(size, as, ['sh', '-c', 'exit 1'], async (window, open) => {
-          await window.press(CTRL_V);
-          await window.shows('codex has not started yet');
-          await open();
-          await window.shows('codex did not start');
-          expect(window.frame()).not.toContain('codex has not started yet');
-        }));
+    test(`at ${at}, a child's notice goes once its agent has failed to start`, () =>
+      onCodex(size, ['sh', '-c', 'exit 1'], async (window, open) => {
+        await window.press(CTRL_V);
+        await window.shows('codex has not started yet');
+        await open();
+        await window.shows('codex did not start');
+        expect(window.frame()).not.toContain('codex has not started yet');
+      }));
 
-      for (const [outcome, codex, after] of [
-        ['started', fakeAgentCommand(), 'the start'],
-        ['failed to start', ['sh', '-c', 'exit 1'], 'the failure'],
-      ] as const) {
-        test(`at ${at}, an empty paste in a ${as} read while its agent ${outcome} says nothing of the start`, async () => {
-          // The clipboard answers only once the agent has started, or not.
-          const held =
-            Promise.withResolvers<Awaited<ReturnType<ClipboardReader>>>();
+    for (const [outcome, codex, after] of [
+      ['started', fakeAgentCommand(), 'the start'],
+      ['failed to start', ['sh', '-c', 'exit 1'], 'the failure'],
+    ] as const) {
+      test(`at ${at}, an empty paste in a child read while its agent ${outcome} says nothing of the start`, async () => {
+        // The clipboard answers only once the agent has started, or not.
+        const held =
+          Promise.withResolvers<Awaited<ReturnType<ClipboardReader>>>();
 
-          await onCodex(
-            size,
-            as,
-            codex,
-            async (window, open) => {
-              await window.paste('');
-              await open();
+        await onCodex(
+          size,
+          codex,
+          async (window, open) => {
+            await window.paste('');
+            await open();
+            await until(
+              after,
+              () => !window.frame().includes('Starting codex…'),
+            );
+            held.resolve({
+              image: {
+                mediaType: 'image/png',
+                data: PIXEL_PNG,
+                bytes: PIXEL_BYTES.length,
+              },
+            });
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            expect(window.frame()).not.toContain('codex has not started yet');
+
+            if (outcome === 'started') {
               await until(
-                after,
-                () => !window.frame().includes('Starting codex…'),
+                'the image',
+                () => promptRow(window)?.includes('[Image #1]') ?? false,
               );
-              held.resolve({
-                image: {
-                  mediaType: 'image/png',
-                  data: PIXEL_PNG,
-                  bytes: PIXEL_BYTES.length,
-                },
-              });
-              await new Promise((resolve) => setTimeout(resolve, 300));
-              expect(window.frame()).not.toContain('codex has not started yet');
-
-              if (outcome === 'started') {
-                await until(
-                  'the image',
-                  () => promptRow(window)?.includes('[Image #1]') ?? false,
-                );
-              }
-            },
-            () => held.promise,
-          );
-        });
-      }
-
-      test(`at ${at}, a ${as}'s empty clipboard once started is said until a key`, () =>
-        onCodex(size, as, fakeAgentCommand(), async (window, open) => {
-          await open();
-          await until(
-            'the start',
-            () => !window.frame().includes('Starting codex…'),
-          );
-          await window.press(CTRL_V);
-          await window.shows('No image in the clipboard');
-          await new Promise((resolve) => setTimeout(resolve, 300));
-          expect(window.frame()).toContain('No image in the clipboard');
-          await window.type('x');
-          await until(
-            'the notice to go',
-            () => !window.frame().includes('No image in the clipboard'),
-          );
-        }));
+            }
+          },
+          () => held.promise,
+        );
+      });
     }
+
+    test(`at ${at}, a child's empty clipboard once started is said until a key`, () =>
+      onCodex(size, fakeAgentCommand(), async (window, open) => {
+        await open();
+        await until(
+          'the start',
+          () => !window.frame().includes('Starting codex…'),
+        );
+        await window.press(CTRL_V);
+        await window.shows('No image in the clipboard');
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        expect(window.frame()).toContain('No image in the clipboard');
+        await window.type('x');
+        await until(
+          'the notice to go',
+          () => !window.frame().includes('No image in the clipboard'),
+        );
+      }));
   }
 });
 

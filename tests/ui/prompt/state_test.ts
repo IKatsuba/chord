@@ -6,7 +6,6 @@ import {
   keyCommand,
   reduceApp,
 } from '../../../src/ui/app/state.ts';
-import { agentItems } from '../../../src/ui/prompt/commands.ts';
 import type { PastedImage } from '../../../src/ui/prompt/images.ts';
 import {
   commandMenu,
@@ -85,18 +84,10 @@ const withCommands = reduceApp(ready, {
 const menuNames = (state: AppState, draft: string) =>
   commandMenu(state, draft)?.items.map(({ name }) => name);
 
-test('/new and a space opens the list of agents the window can start', () => {
-  const withAgents = {
-    ...withCommands,
-    agents: agentItems(['fake', 'mine'], []),
-  };
-
-  expect(menuNames(withAgents, '/new ')).toStrictEqual(['fake', 'mine']);
-  expect(menuNames(withAgents, '/new mi')).toStrictEqual(['mine']);
-  expect(commandMenu(withAgents, '/new zz')).toStrictEqual(undefined);
-  expect(commandMenu(withAgents, '/new mine ')).toStrictEqual(undefined);
-  // A window given no agents offers none.
+test('/new is /clear in the list, and a space after it opens no list of agents (CHD-493)', () => {
+  expect(menuNames(withCommands, '/new')).toStrictEqual(['clear']);
   expect(commandMenu(withCommands, '/new ')).toStrictEqual(undefined);
+  expect(commandMenu(withCommands, '/new co')).toStrictEqual(undefined);
 });
 
 test("a / opens the list of chord's commands and the agent's", () => {
@@ -112,7 +103,6 @@ test("a / opens the list of chord's commands and the agent's", () => {
     'help',
     'mcp',
     'model',
-    'new',
     'resume',
     'status',
     'team',
@@ -134,7 +124,6 @@ test("a / opens the list of chord's commands and the agent's", () => {
     'help',
     'mcp',
     'model',
-    'new',
     'resume',
     'status',
     'team',
@@ -209,7 +198,7 @@ test("the list's keys are its own while it is open", () => {
   expect(keyCommand('', up, shut, '/')).toStrictEqual(undefined);
   expect(
     commandMenu(reduceApp(shut, { type: 'draft_edited' }), '/')?.items.length,
-  ).toStrictEqual(16);
+  ).toStrictEqual(15);
 });
 
 test('Esc closes the list before it interrupts the turn', () => {

@@ -34,27 +34,18 @@ describe('an agent that never answers its start is stopped with its window (CHD-
   const wedged = (tag: string) =>
     fakeAgentCommand(undefined, '--hang', 'start', tag);
 
-  test("a tab's agent still starting is gone once its window has closed", async () => {
+  test("the window's own agent still starting is gone once its window has closed", async () => {
     const tag = `chord-wedged-${crypto.randomUUID()}`;
-    const command = fakeAgentCommand();
 
     await withWindow(
       async (window) => {
-        await ready(window);
-        await window.type('/new codex');
-        await window.press('\r');
         await until(
           'the wedged agent',
           async () => (await tagged(tag)).length > 0,
         );
-        await window.shows('Starting codex…');
+        await window.shows('Starting');
       },
-      {
-        runtimes: ['fake', 'codex'],
-        startupOf: (agent) => ({
-          agentCommand: agent === 'codex' ? wedged(tag) : command,
-        }),
-      },
+      { agentCommand: wedged(tag), whileStarting: true },
     );
 
     expect(await tagged(tag)).toStrictEqual([]);
@@ -72,30 +63,19 @@ describe('an agent that never answers its start is stopped with its window (CHD-
     ],
   ] as const) {
     test(`a window fails when a start given up says ${what}`, async () => {
-      const command = fakeAgentCommand();
-      // codex's start never comes, and gives up saying its agent stayed.
+      // The window's own start never comes, and gives up saying its agent
+      // stayed.
       const openWith: typeof openSession = (options) =>
-        options.agent === 'codex'
-          ? new Promise((_resolve, reject) =>
-              options.signal?.addEventListener('abort', () =>
-                reject(failure()),
-              ),
-            )
-          : openSession(options);
+        new Promise((_resolve, reject) =>
+          options.signal?.addEventListener('abort', () => reject(failure())),
+        );
 
       await expect(
         withWindow(
           async (window) => {
-            await ready(window);
-            await window.type('/new codex');
-            await window.press('\r');
-            await window.shows('Starting codex…');
+            await window.shows('Starting');
           },
-          {
-            runtimes: ['fake', 'codex'],
-            openWith,
-            startupOf: () => ({ agentCommand: command }),
-          },
+          { openWith, whileStarting: true },
         ),
       ).rejects.toThrow('an agent still starting did not stop with its window');
     });

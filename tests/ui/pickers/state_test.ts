@@ -14,7 +14,6 @@ import {
   modelPickerShown,
   resumeChoices,
   resumePickerShown,
-  sessionsPickerShown,
   shownTheme,
   themePickerShown,
 } from '../../../src/ui/pickers/state.ts';
@@ -446,55 +445,4 @@ test('/mcp opens its list, takes the keys, and Esc or closing shuts it', () => {
     false,
   );
   expect(mcpShown(reduceApp(open, { type: 'closing' }))).toStrictEqual(false);
-});
-
-test('ctrl+x w opens the sessions picker in place of any other, and Esc closes it', () => {
-  const theming = after(
-    { type: 'connected', sessionId: 'session-1' },
-    { type: 'theme_picker_opened' },
-    { type: 'theme_previewed', theme: 'light' },
-  );
-  const open = reduceApp(theming, { type: 'sessions_picker_opened' });
-
-  expect(sessionsPickerShown(open)).toStrictEqual(true);
-  expect(themePickerShown(open)).toStrictEqual(false);
-  // The theme previewed goes with its picker.
-  expect(shownTheme(open)).toStrictEqual(theming.theme);
-  expect(keyCommand('', escape, open, '')).toStrictEqual(
-    'close_sessions_picker',
-  );
-
-  const closed = reduceApp(open, { type: 'sessions_picker_closed' });
-
-  expect(sessionsPickerShown(closed)).toStrictEqual(false);
-  expect('sessionsPicker' in closed).toStrictEqual(false);
-  expect(
-    sessionsPickerShown(reduceApp(open, { type: 'closing' })),
-  ).toStrictEqual(false);
-});
-
-test('the sessions picker stands in front of a permission: Esc closes it, not the permission', () => {
-  const open = after(
-    { type: 'connected', sessionId: 'session-1' },
-    { type: 'prompt', turnId: 't1', text: 'hi', at: 0 },
-    {
-      type: 'permission_requested',
-      turnId: 't1',
-      permission: { id: 'p1', title: 'Write notes.txt', options: [] },
-    },
-    { type: 'sessions_picker_opened' },
-  );
-
-  expect(sessionsPickerShown(open)).toStrictEqual(true);
-  expect(keyCommand('', escape, open, '')).toStrictEqual(
-    'close_sessions_picker',
-  );
-  expect(
-    keyCommand(
-      '',
-      escape,
-      reduceApp(open, { type: 'sessions_picker_closed' }),
-      '',
-    ),
-  ).toStrictEqual('reject_permission');
 });

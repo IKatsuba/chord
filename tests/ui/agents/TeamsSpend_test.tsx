@@ -167,15 +167,19 @@ describe('a runtime whose command was refused (CHD-466)', () => {
         : { agentCommand: fakeAgentCommand() },
   });
 
-  test('/new codex is refused with the cause, and no tab opens', async () => {
+  test('/new codex is refused as another chord, and nothing is cleared (CHD-493)', async () => {
     const opened = options(BUGFIX);
 
     try {
       await withWindow(async (window) => {
         await ready(window);
+        await send(window, 'hello');
+        await window.shows('› hello');
         await send(window, '/new codex');
-        await window.shows(REFUSED);
-        expect(window.frame()).not.toContain('2 codex');
+        await window.shows(
+          '/new starts a new fake session here; for codex, run chord codex in another pane',
+        );
+        expect(window.frame()).toContain('› hello');
       }, opened);
     } finally {
       await opened.server.close();
@@ -333,7 +337,7 @@ describe('CHD-373 S4: a team member that starts a task agent', () => {
           await window.shows('Team(bugfix) · fake · fake-large');
           await window.shows('1 task running');
           await send(window, '/cost');
-          await window.shows('This window');
+          await window.shows('This session');
           await window.shows('task agent of tester, running');
 
           const run = window

@@ -6,17 +6,13 @@ import {
   type ChildInfo,
   closeChild,
   closeTab,
-  full,
-  goTo,
   hear,
   keyed,
   movePick,
-  nextTab,
   noTabs,
   openChild,
   openTab,
   pick,
-  previousTab,
   shownKey,
   tabOf,
   type Tabs,
@@ -164,15 +160,8 @@ export class OpenSessions<C extends Driven> {
     return true;
   }
 
-  /**
-   * Opens a session of `agent` at the end of the strip and brings it to the
-   * front; none past the cap, and then nothing is started.
-   */
+  /** Opens the window's session, of `agent`. */
   open(agent: string): number | undefined {
-    if (full(this.#tabs)) {
-      return undefined;
-    }
-
     const key = this.#tabs.nextKey;
     const conversation = this.#options.conversation(
       agent,
@@ -196,7 +185,7 @@ export class OpenSessions<C extends Driven> {
    * Takes the tab out at once and closes its agent and its children's;
    * resolves once every one's process has exited.
    */
-  close(key: number): Promise<void> {
+  #close(key: number): Promise<void> {
     const tab = tabOf(this.#tabs, key);
 
     if (!tab) {
@@ -241,7 +230,7 @@ export class OpenSessions<C extends Driven> {
    */
   async closeAll(): Promise<void> {
     for (const tab of this.#tabs.tabs) {
-      void this.close(tab.key);
+      void this.#close(tab.key);
     }
 
     const closing = [...this.#closing];
@@ -260,26 +249,9 @@ export class OpenSessions<C extends Driven> {
     }
   }
 
-  next(): void {
-    this.#tabs = nextTab(this.#tabs);
-  }
-
   /** A key pressed in chord: the agent shown has been looked at. */
   keyed(): void {
     this.#tabs = keyed(this.#tabs);
-  }
-
-  previous(): void {
-    this.#tabs = previousTab(this.#tabs);
-  }
-
-  /** Goes to tab `n`; false when there is no such tab. */
-  goTo(n: number): boolean {
-    const moved = goTo(this.#tabs, n);
-
-    this.#tabs = moved;
-
-    return moved.tabs[n - 1] !== undefined;
   }
 
   /** Goes to the tab that has waited longest; false when none waits. */

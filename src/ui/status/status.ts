@@ -19,14 +19,12 @@ import type { TurnState, Usage } from '../../session/transcript/types.ts';
 import {
   type Action,
   type Binding,
-  gotoAction,
   type Sequence,
   sequenceHint,
-  TAB_NUMBERS,
 } from '../shortcuts/bindings.ts';
 import { SHORTCUTS } from '../shortcuts/keys.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
-import { GLYPHS } from '../app/strip.ts';
+import { GLYPHS } from '../agents/glyphs.ts';
 import type { VimMode } from '../prompt/vim.ts';
 import type { MarkTones } from '../theme/theme.ts';
 
@@ -115,12 +113,12 @@ export interface StatusFacts {
   readonly cycleKey?: string | null | undefined;
   /** Vim mode's mode, marked first on the left while `/vim` has it on. */
   readonly vim?: VimMode | undefined;
-  /** What the sessions behind want of the person, ahead of the mode or hint. */
+  /** What the session's other agents want of the person, ahead of the mode or hint. */
   readonly waits?: WaitsNotice | undefined;
 }
 
 /**
- * The notice of the sessions behind that want the person: what it says, its
+ * The notice of the session's agents that want the person: what it says, its
  * tone, and the key that goes to them, if one is bound.
  */
 export interface WaitsNotice {
@@ -150,31 +148,16 @@ export function betweenNotice(
   };
 }
 
-/**
- * A tab behind the front one, or an agent of the front tab's not picked, as
- * the notice reads it.
- */
-export interface TabBehind {
-  /** Its place in the strip. */
-  readonly number: number;
-  readonly agent: string;
+/** An agent of the session's other than the one shown, as the notice reads it. */
+export interface AgentWaiting {
+  /** Its own name: `docs`, or `main` while a child is picked. */
+  readonly name: string;
   readonly wait: TabWait;
   /**
    * The task of its own whose request it waits on, as the task's box names
    * it: `Agent(Fix the tokenizer) · fake` (CHD-431).
    */
   readonly task?: string;
-  /**
-   * An agent of the front tab's, by its own name: `docs`, or `main` while a
-   * child is picked. A reply of one says nothing here, as the list under
-   * the prompt already shows it.
-   */
-  readonly name?: string;
-  /**
-   * A tab behind's child or member whose wait its own is, by its name: a
-   * failure of one is named for it, in the tab (CHD-264).
-   */
-  readonly waiter?: string;
 }
 
 /** A failure's words after a name, `parser's turn failed`, and in a count. */
@@ -200,63 +183,53 @@ const FAILURE_WORDS: Record<
 };
 
 /**
- * The notice for the tabs behind, or none when none wants the person. A
- * permission or form outranks a failure, which outranks a reply; within each,
- * the one waiting longest is named, or the count once there are more. Many
- * failures count each kind on its own, gravest first, with no noun, so an
- * agent still open is never said to have ended (CHD-264).
+ * The notice for the session's agents not shown, or none when none wants the
+ * person. A permission or form outranks a failure; within each, the one
+ * waiting longest is named, or the count once there are more. A reply says
+ * nothing here, as the list under the prompt already shows it. Many failures
+ * count each kind on its own, gravest first, with no noun, so an agent still
+ * open is never said to have ended (CHD-264).
  */
 export function waitsNotice(
-  behind: readonly TabBehind[],
+  agents: readonly AgentWaiting[],
   key?: string,
 ): WaitsNotice | undefined {
-  const oldest = (since: (tab: TabBehind) => number | undefined) =>
-    behind
-      .filter((tab) => since(tab) !== undefined)
-      .sort((a, b) => since(a)! - since(b)! || a.number - b.number);
-  const asking = oldest((tab) => tab.wait.asking?.since);
-  const failed = oldest((tab) =>
-    tab.wait.unseen?.kind === 'failed' ? tab.wait.unseen.since : undefined,
+  const oldest = (since: (agent: AgentWaiting) => number | undefined) =>
+    agents
+      .filter((agent) => since(agent) !== undefined)
+      .sort((a, b) => since(a)! - since(b)!);
+  const asking = oldest((agent) => agent.wait.asking?.since);
+  const failed = oldest((agent) =>
+    agent.wait.unseen?.kind === 'failed' ? agent.wait.unseen.since : undefined,
   );
-  const replied = oldest((tab) =>
-    tab.wait.unseen?.kind === 'replied' && tab.name === undefined
-      ? tab.wait.unseen.since
-      : undefined,
-  );
-  const named = (tab: TabBehind) => tab.name ?? `${tab.number} ${tab.agent}`;
   const notice = (text: string, tone: StatusTone): WaitsNotice =>
     key === undefined ? { text, tone } : { text, tone, key };
   const [first] = asking;
 
   if (first) {
-    // The front tab's own agents are agents, not sessions.
-    const what = asking.every((tab) => tab.name !== undefined)
-      ? 'agents'
-      : 'sessions';
-
     const does =
       first.wait.asking?.on.kind === 'input'
         ? 'asks for input'
         : 'needs your permission';
 
     if (asking.length > 1) {
-      return notice(`${GLYPHS.asking} ${asking.length} ${what} wait`, 'waits');
+      return notice(`${GLYPHS.asking} ${asking.length} agents wait`, 'waits');
     }
 
     // A task by the name its box gives it, which may be long: where that
     // does not fit, by whose task it is (CHD-431).
     return first.task === undefined
-      ? notice(`${GLYPHS.asking} ${named(first)} ${does}`, 'waits')
+      ? notice(`${GLYPHS.asking} ${first.name} ${does}`, 'waits')
       : {
           ...notice(`${GLYPHS.asking} ${first.task} ${does}`, 'waits'),
-          short: `${GLYPHS.asking} ${named(first)}'s task ${does}`,
+          short: `${GLYPHS.asking} ${first.name}'s task ${does}`,
         };
   }
 
   if (failed.length > 1) {
     const counts = FAILURES.flatMap((failure) => {
       const count = failed.filter(
-        (tab) => failureOf(tab.wait) === failure,
+        (agent) => failureOf(agent.wait) === failure,
       ).length;
 
       return count === 0 ? [] : [FAILURE_WORDS[failure].counted(count)];
@@ -265,27 +238,14 @@ export function waitsNotice(
     return notice(`${GLYPHS.failed} ${counts.join(' · ')}`, 'ended');
   }
 
-  if (failed[0]) {
-    const tab = failed[0];
-    const words = FAILURE_WORDS[failureOf(tab.wait) ?? 'turn'];
+  const [ended] = failed;
 
-    // A child's in a tab behind is its own, in that tab: `parser exited in
-    // 2 fake`, never the tab's, which would read as a count.
-    return notice(
-      `${GLYPHS.failed} ${
-        tab.waiter === undefined
-          ? words.named(named(tab))
-          : `${words.named(tab.waiter)} in ${named(tab)}`
-      }`,
-      'ended',
-    );
-  }
-
-  return replied.length > 1
-    ? notice(`${GLYPHS.replied} ${replied.length} sessions replied`, 'plain')
-    : replied[0]
-      ? notice(`${GLYPHS.replied} ${named(replied[0])} replied`, 'plain')
-      : undefined;
+  return ended
+    ? notice(
+        `${GLYPHS.failed} ${FAILURE_WORDS[failureOf(ended.wait) ?? 'turn'].named(ended.name)}`,
+        'ended',
+      )
+    : undefined;
 }
 
 /** The notice's parts, with the key in full words or bare. */
@@ -587,7 +547,6 @@ function shortened(
 /** One key the leader line offers and what it does: `c new`. */
 export interface LeaderItem {
   readonly keys: string;
-  /** None where the keys say it, as `1–9` does once the line is short. */
   readonly words: string;
 }
 
@@ -600,17 +559,6 @@ export interface LeaderLineView {
 
 /** Between the keys held and the first item, wider than between items. */
 export const LEADER_GAP = '  ';
-
-/** The session actions' words, wide and short, in the order they are offered. */
-const SESSION_WORDS: readonly {
-  readonly action: Action;
-  readonly wide: string;
-  readonly short: string;
-}[] = [
-  { action: 'session:new', wide: 'new', short: 'new' },
-  { action: 'session:next', wide: 'next', short: 'next' },
-  { action: 'session:previous', wide: 'previous', short: 'prev' },
-];
 
 /** What the panel says an action does, without its `to` or `for`. */
 function doesOf(action: Action): string {
@@ -639,42 +587,6 @@ function nextKeys(
 
 function leaderItems(next: Map<Action, string>, short: boolean): LeaderItem[] {
   const items: LeaderItem[] = [];
-  const sessions = SESSION_WORDS.filter(({ action }) => next.has(action));
-  const forward = next.get('session:next');
-  const back = next.get('session:previous');
-
-  for (const { action, wide, short: brief } of sessions) {
-    // Short, the pair reads as one item: `n p next prev`.
-    if (short && forward !== undefined && back !== undefined) {
-      if (action === 'session:next') {
-        items.push({ keys: `${forward} ${back}`, words: 'next prev' });
-      }
-
-      if (action === 'session:next' || action === 'session:previous') {
-        continue;
-      }
-    }
-
-    items.push({ keys: next.get(action)!, words: short ? brief : wide });
-  }
-
-  const tabs = TAB_NUMBERS.flatMap((n) => next.get(gotoAction(n)) ?? []);
-
-  if (tabs.length > 0) {
-    const all = tabs.join('') === TAB_NUMBERS.join('');
-
-    items.push({
-      keys: all ? '1–9' : tabs.join(' '),
-      words: short ? '' : 'go to',
-    });
-  }
-
-  const list = next.get('session:list');
-
-  if (list !== undefined) {
-    items.push({ keys: list, words: 'list' });
-  }
-
   const attention = next.get('session:attention');
 
   if (attention !== undefined) {
@@ -684,22 +596,8 @@ function leaderItems(next: Map<Action, string>, short: boolean): LeaderItem[] {
     });
   }
 
-  const close = next.get('session:close');
-
-  if (close !== undefined) {
-    items.push({ keys: close, words: 'close' });
-  }
-
-  const offered = new Set<Action>([
-    ...SESSION_WORDS.map(({ action }) => action),
-    ...TAB_NUMBERS.map(gotoAction),
-    'session:list',
-    'session:attention',
-    'session:close',
-  ]);
-
   for (const [action, keys] of next) {
-    if (!offered.has(action)) {
+    if (action !== 'session:attention') {
       items.push({ keys, words: doesOf(action) });
     }
   }

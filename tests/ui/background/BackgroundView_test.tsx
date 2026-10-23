@@ -37,7 +37,7 @@ test("enter in a monitor's detail closes the view and scrolls the transcript bac
 
     await window.press(DOWN);
     await window.press('\r');
-    await window.shows(' Background · 2 in this tab');
+    await window.shows(' Background · 2 in this session');
     await window.press('j');
     await window.shows('❯ CI run 4812');
     // Enter on a monitor's row opens its detail; enter in it, the call
@@ -92,7 +92,7 @@ test("enter on the second task of a group puts that task's own row on top, not t
 
     await window.press(DOWN);
     await window.press('\r');
-    await window.shows(' Background · 2 in this tab');
+    await window.shows(' Background · 2 in this session');
     await window.press('j');
     await window.shows('❯ Watch the deploy');
     // Its detail first, then its call from there (CHD-487).

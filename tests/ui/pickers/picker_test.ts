@@ -1,5 +1,4 @@
-import { describe, expect, test } from 'bun:test';
-import { idle } from '../../../src/session/tabs.ts';
+import { expect, test } from 'bun:test';
 import {
   choiceKey,
   CURRENT_MARK,
@@ -16,10 +15,6 @@ import {
   pickerRows,
   type PickerView,
   sessionChoices,
-  tabChoices,
-  type TabRow,
-  tabMark,
-  tabState,
   valueChoices,
   valueToAsk,
 } from '../../../src/ui/pickers/picker.ts';
@@ -317,7 +312,7 @@ test('the value an option is set to already asks the agent for nothing', () => {
   expect(valueToAsk(EFFORT, 'high')).toStrictEqual('high');
 });
 
-test("/resume's rows say which tab a session is open in", () => {
+test("/resume's rows say which session is open now, as a child of this one", () => {
   const session = (id: string, at: string, prompt: string) => ({
     resume: { sessionId: id, cwd: '/work' },
     lastUsedAt: at,
@@ -330,132 +325,13 @@ test("/resume's rows say which tab a session is open in", () => {
     ],
     NOW,
     undefined,
-    new Map([['s2', 2]]),
+    new Set(['s2']),
   );
 
   expect(choices.map(({ label }) => label)).toStrictEqual([
-    '2 minutes ago             fix the build',
-    '3 days ago     open in 2  add a test',
+    '2 minutes ago            fix the build',
+    '3 days ago     open now  add a test',
   ]);
-});
-
-const idleTab: TabRow = {
-  agent: 'fake',
-  wait: idle,
-  front: false,
-  prompt: undefined,
-};
-
-test('a session in the sessions picker says where it stands, as the agents list does, and beside it what is not yet seen (CHD-471)', () => {
-  const now = 1_000_000;
-  const at = (seconds: number) => now - seconds * 1000;
-  const wait = (more: Partial<TabRow['wait']>) => ({
-    ...idleTab,
-    wait: { ...idleTab.wait, ...more },
-  });
-  const permission = { kind: 'permission' } as const;
-  const input = { kind: 'input', message: 'Name the project' } as const;
-
-  expect(tabState({ ...idleTab, front: true }, now)).toStrictEqual('here');
-  expect(tabState(wait({ stopped: at(190) }), now)).toStrictEqual('◦ idle 3m');
-  expect(tabState(wait({ working: at(12) }), now)).toStrictEqual(
-    '✻ working 12s',
-  );
-  expect(
-    tabState(wait({ asking: { on: permission, since: at(41) } }), now),
-  ).toStrictEqual('● permission 41s');
-  expect(
-    tabState(wait({ asking: { on: input, since: at(41) } }), now),
-  ).toStrictEqual('● input 41s');
-
-  // A reply and a failed turn are marks; the session reads idle.
-  const replied = wait({
-    stopped: at(4),
-    unseen: { kind: 'replied', since: at(125) },
-  });
-
-  expect(tabState(replied, now)).toStrictEqual('◦ idle 4s');
-  expect(tabMark(replied)).toStrictEqual('✓ new reply');
-
-  const failed = wait({
-    stopped: at(65),
-    unseen: { kind: 'failed', since: at(65), failure: 'turn' },
-  });
-
-  expect(tabState({ ...failed, waiter: 'parser' }, now)).toStrictEqual(
-    '◦ idle 1m',
-  );
-  expect(tabMark(failed)).toStrictEqual('✗ turn failed');
-  expect(
-    tabMark(wait({ unseen: { kind: 'message', from: '@main', since: now } })),
-  ).toStrictEqual('← new message');
-
-  // Gone is a state, a child's named, and no mark.
-  const exited = {
-    ...wait({
-      unseen: { kind: 'failed', since: at(5), failure: 'exited' },
-      exited: true,
-    }),
-    waiter: 'parser',
-  };
-
-  expect(tabState(exited, now)).toStrictEqual('✗ parser: exited');
-  expect(tabMark(exited)).toStrictEqual(undefined);
-  expect(
-    tabState(
-      wait({ unseen: { kind: 'failed', since: at(5), failure: 'start' } }),
-      now,
-    ),
-  ).toStrictEqual('✗ failed to start');
-  // In front it is here, whatever it waits on, and nothing is unseen.
-  expect(
-    tabState(
-      {
-        ...wait({ asking: { on: permission, since: at(41) } }),
-        front: true,
-      },
-      now,
-    ),
-  ).toStrictEqual('here');
-  expect(tabMark({ ...replied, front: true })).toStrictEqual(undefined);
-});
-
-test("the sessions picker's rows line up its columns, the marks among them, by tab number", () => {
-  const now = 1_000_000;
-  const choices = tabChoices(
-    [
-      { ...idleTab, front: true, prompt: 'fix the failing test' },
-      {
-        ...idleTab,
-        agent: 'claude',
-        wait: {
-          ...idleTab.wait,
-          stopped: now - 3_000,
-          unseen: { kind: 'replied', since: now },
-        },
-        prompt: 'add a notes file',
-      },
-      { ...idleTab, wait: { ...idleTab.wait, working: now - 41_000 } },
-    ],
-    now,
-    2,
-  );
-
-  expect(choices).toStrictEqual([
-    {
-      key: '1',
-      label: 'fake    here                        fix the failing test',
-      value: '1',
-    },
-    {
-      key: '2',
-      label: 'claude  ◦ idle 3s      ✓ new reply  add a notes file',
-      value: '2',
-      current: true,
-    },
-    { key: '3', label: 'fake    ✻ working 41s', value: '3' },
-  ]);
-  expect(initialChoice(choices)).toStrictEqual(1);
 });
 
 test("a numbered list's keys move round, pick, and leave shift+arrows alone", () => {
@@ -476,58 +352,4 @@ test("a numbered list's keys move round, pick, and leave shift+arrows alone", ()
   expect(
     choiceKey('', { ...key, upArrow: true, shift: true }, 1, 3),
   ).toBeUndefined();
-});
-
-describe('CHD-264 tester: picker failure identity', () => {
-  test('a failed turn is idle with its own stop time and an unnamed mark while the front tab reads here', () => {
-    const now = 1_000_000;
-    const child: TabRow = {
-      ...idleTab,
-      waiter: 'parser',
-      wait: {
-        ...idle,
-        stopped: now - 12_000,
-        unseen: {
-          kind: 'failed',
-          failure: 'turn',
-          since: now - 120_000,
-          failedAt: now - 12_000,
-        },
-      },
-    };
-
-    expect(tabState(child, now)).toBe('◦ idle 12s');
-    expect(tabMark(child)).toBe('✗ turn failed');
-    expect(
-      tabState({ ...child, wait: { ...child.wait, exited: true } }, now),
-    ).toBe('✗ parser: exited');
-    expect(tabState({ ...child, front: true }, now)).toBe('here');
-    expect(tabState({ ...idleTab, wait: child.wait }, now)).toBe('◦ idle 12s');
-  });
-});
-
-describe('CHD-364 tester: legacy and newest replies are timeless marks', () => {
-  test('old and new reply timestamps including epoch zero leave state and mark independent', () => {
-    for (const [since, repliedAt] of [
-      [1000, undefined],
-      [1000, 64000],
-      [-100000, 0],
-    ]) {
-      const tab: TabRow = {
-        ...idleTab,
-        wait: {
-          ...idle,
-          unseen: {
-            kind: 'replied',
-            since: since!,
-            ...(repliedAt === undefined ? {} : { repliedAt }),
-          },
-        },
-      };
-
-      expect(tabState(tab, 65000)).toBe('◦ idle 0s');
-      expect(tabMark(tab)).toBe('✓ new reply');
-      expect(tabMark({ ...tab, front: true })).toBeUndefined();
-    }
-  });
 });

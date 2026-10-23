@@ -44,8 +44,6 @@ export interface ReportFacts {
   readonly running?: string | undefined;
   /** The context window and cost as the last `usage_update` gave them. */
   readonly context?: Usage | undefined;
-  /** The sessions open in the window, and how many wait on the person. */
-  readonly sessions?: { readonly open: number; readonly waits: number };
   /**
    * What the whole window has spent, its closed agents and tabs too, and
    * the columns its table is laid out in (CHD-373 S4).
@@ -62,11 +60,9 @@ export function reportFacts(
   agent: string,
   cwd: string,
   now: number,
-  sessions?: { readonly open: number; readonly waits: number },
   window?: ReportFacts['window'],
 ): ReportFacts {
   return {
-    ...(sessions === undefined ? {} : { sessions }),
     ...(window === undefined ? {} : { window }),
     agent,
     cwd,
@@ -398,25 +394,5 @@ export function statusReport(facts: ReportFacts): ReportRow[] {
     ['Mode', mode ?? `not reported by ${facts.agent}`],
     ['Session', facts.sessionId ?? 'starting…'],
     ['Directory', facts.cwd],
-    // As one session always read, until a second opens.
-    ...(facts.sessions === undefined || facts.sessions.open < 2
-      ? []
-      : [sessionsRow(facts.sessions)]),
   ]);
-}
-
-/** `Sessions`' row: how many are open, and how many wait on the person. */
-function sessionsRow({
-  open,
-  waits,
-}: {
-  readonly open: number;
-  readonly waits: number;
-}): [string, string] {
-  return [
-    'Sessions',
-    `${open} open${
-      waits === 0 ? '' : ` (${waits} ${waits === 1 ? 'waits' : 'wait'})`
-    }`,
-  ];
 }

@@ -195,7 +195,7 @@ const TESTER_BLOCKS =
 
 const TESTER_COPY =
   TESTER_PARAGRAPH +
-  '\nSoft source joins, hard\nbreak stays.\nFinal paragraph.';
+  '\n \nSoft source joins, hard\nbreak stays.\n \nFinal paragraph.';
 
 describe('CHD-396 tester: prose selection boundaries', () => {
   for (const columns of [80, 120]) {
@@ -394,8 +394,10 @@ describe('CHD-396 tester: list layout and selection', () => {
 
         const copied = await selectBody(drawn, 'Outer item', columns);
 
-        expect(copied).toContain(
-          'Outer paragraph.\nInner item\n' + 'code'.repeat(45),
+        expect(copied).toBe(
+          'Outer item\n \nOuter paragraph.\n \nInner item\n \n' +
+            'code'.repeat(45) +
+            '\n \nLast item',
         );
         expect(copied).not.toContain('│');
         expect(copied).not.toContain('10.');

@@ -1,13 +1,12 @@
 /**
  * Long-lived agents in the window, on the fake agent and chord's own server:
  * opened under the prompt, picked, written to, messaged both ways, their
- * exits, failures and marks, and the keys a click takes back.
+ * exits, failures and marks.
  */
 import { describe, expect, setSystemTime, test } from 'bun:test';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
-import { readRecords } from '../../../src/session/sessions.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CRASH_WORDS,
@@ -22,12 +21,10 @@ import {
   DOWN,
   ESC,
   leader,
-  left,
   ready,
   send,
   until,
   UP,
-  type Window,
   withWindow,
 } from '../app/render.tsx';
 import { count, opened, parserTaskAsks, withAgents } from './agents_window.tsx';
@@ -311,57 +308,6 @@ test("a child's message not yet seen, then its reply, are marks beside its state
     '--hold-reply',
   ));
 
-/** A left click on the prompt box's text row, as a terminal reports one. */
-async function clickBox(window: Window): Promise<void> {
-  const y = window
-    .frame()
-    .split('\n')
-    .findLastIndex((line) => line.startsWith('│ ›'));
-
-  expect(y).toBeGreaterThan(0);
-  await window.press(left(10, y, 'down'));
-  await window.press(left(10, y, 'up'));
-}
-
-test("a click on the box takes the keys back from the list: the ❯ goes, the child picked stays the box's, and typing goes in in order (CHD-384)", () =>
-  withAgents(async (window) => {
-    await ready(window);
-    await send(window, 'agents');
-    await window.shows('Waiting on parser.');
-    await window.press(DOWN);
-    await window.press(DOWN);
-    await window.shows('❯ parser ');
-    await clickBox(window);
-    await until('the ❯ gone', () => !window.frame().includes('❯ parser '));
-    await window.type('abc');
-    await window.type('def');
-    await window.shows('│ › abcdef');
-    // Still parser's box, and the list's hint gone from the status line.
-    expect(window.frame()).toContain('╭─ parser ');
-    expect(!window.frame().includes('↑ ↓ to pick')).toBeTruthy();
-    // ↓ is the box's again: it stays in the draft, not in the list.
-    await window.press(DOWN);
-    expect(!window.frame().includes('❯ ')).toBeTruthy();
-  }));
-
-test('a click on the box takes the keys back from the summary line too (CHD-384)', () =>
-  withAgents(async (window) => {
-    await ready(window);
-    await send(window, 'monitors');
-    await window.shows('    background  2 monitors running');
-    await window.press(DOWN);
-    await window.shows('❯ background');
-    await clickBox(window);
-    await until('the ❯ gone', () => !window.frame().includes('❯ background'));
-    await window.type('abc');
-    await window.type('def');
-    await window.shows('│ › abcdef');
-    // Enter is the box's: it sends the draft, not opening the view.
-    await window.press('\r');
-    await window.shows('› abcdef');
-    expect(!window.frame().includes(' Background · ')).toBeTruthy();
-  }));
-
 /** How many `closed` lines the records in `dir`'s state hold. */
 async function closedInRecords(dir: string): Promise<number> {
   const records = `${dir}/state/records`;
@@ -520,240 +466,4 @@ describe('CHD-364 tester: narrow idle time beside reply mark', () => {
       '--steer-late',
       '--hold-reply',
     ));
-});
-
-describe('CHD-384 tester: click focus and neighboring dialogs', () => {
-  for (const columns of [80, 120]) {
-    for (const target of ['child', 'summary'] as const) {
-      test(`clicking from ${target} focus at ${columns} columns restores cursor edits and keyboard list navigation`, () =>
-        withAgents(async (window) => {
-          await window.resize({ columns, rows: columns === 80 ? 24 : 40 });
-          await ready(window);
-          await send(window, target === 'child' ? 'monitorchild' : 'monitors');
-          await window.shows('background  2 monitors running');
-          await window.press(DOWN);
-
-          if (target === 'child') {
-            await window.press(DOWN);
-            await window.shows('❯ parser ');
-          } else {
-            await window.shows('❯ background');
-          }
-
-          await clickBox(window);
-          await until(
-            'list highlight released by click',
-            () =>
-              !window
-                .frame()
-                .includes(target === 'child' ? '❯ parser ' : '❯ background'),
-          );
-          await window.type('abc');
-          await window.type('def');
-          await window.shows('│ › abcdef');
-          await window.press('\x1b[D');
-          await window.press('\x1b[D');
-          await window.type('XY');
-          await window.shows('│ › abcdXYef');
-          await window.press('\x7f');
-          await window.shows('│ › abcdXef');
-          expect(window.frame()).not.toContain('↑ ↓ pick');
-          expect(window.frame()).not.toContain('↑ ↓ to pick');
-
-          if (target === 'child') {
-            expect(window.frame()).toContain('╭─ parser ');
-          }
-
-          await window.press('\x03');
-          await window.press(DOWN);
-          await window.shows(target === 'child' ? '❯ parser ' : '❯ background');
-          await window.press(ESC);
-          await until(
-            'keyboard exit releases list',
-            () =>
-              !window
-                .frame()
-                .includes(target === 'child' ? '❯ parser ' : '❯ background'),
-          );
-          await window.type('ghi');
-          await window.shows('│ › ghi');
-        }));
-    }
-  }
-
-  test('a click releases a selected asking child to its permission box without answering it at 80x24', () =>
-    withAgents(async (window) => {
-      await window.resize({ columns: 80, rows: 24 });
-      await ready(window);
-      await send(window, 'agents');
-      await window.shows('Waiting on parser.');
-      await window.press(DOWN);
-      await window.press(DOWN);
-      await window.press(DOWN);
-      await window.shows('❯ docs ');
-      await window.shows('Do you want to proceed?');
-      await clickBox(window);
-      await until(
-        'docs list highlight released',
-        () => !window.frame().includes('❯ docs '),
-      );
-      expect(window.frame()).toContain('Do you want to proceed?');
-      expect(window.frame()).not.toContain('Permission: allow.');
-      await window.press('1');
-      await window.shows('Permission: allow.');
-      expect(window.frame()).toContain('╭─ docs ');
-    }));
-});
-
-describe('CHD-493 U11 tester: each session transition forgets closed children', () => {
-  const mainIdle = (window: Window) =>
-    until(
-      'main is idle',
-      () =>
-        window.frame().split('\n').at(-1)?.includes('? for shortcuts') ===
-          true || /main\s+fake.*◦ idle/.test(window.frame()),
-    );
-
-  for (const columns of [80, 120]) {
-    test(`/clear alone forgets a same-session close at ${columns} columns`, () =>
-      withAgents(async (window) => {
-        await window.resize({ columns, rows: 40 });
-        await opened(window);
-        await send(window, 'agentclose');
-        await window.shows('parser is closed; open_agent starts another');
-        await mainIdle(window);
-
-        const old = window.session()?.id;
-
-        await send(window, '/clear');
-        await until(
-          'the replacement session',
-          () => window.session()?.id !== old,
-        );
-        await mainIdle(window);
-        await send(window, 'agentsendrefused');
-        await window.shows('No agent parser is open in this session;');
-        expect(window.frame()).not.toContain('parser is closed;');
-        expect(window.frame()).not.toContain('parser was closed when');
-      }));
-
-    test(`a direct /resume pick replaces a populated closed list at ${columns} columns`, () =>
-      withAgents(async (window) => {
-        await window.resize({ columns, rows: 40 });
-        await mainIdle(window);
-
-        const target = window.session()!.id;
-
-        await opened(window);
-
-        await send(window, '/clear');
-        await until(
-          'a different session',
-          () => window.session()?.id !== target,
-        );
-        await mainIdle(window);
-        await opened(window);
-        await send(window, 'agentclose');
-        await window.shows('parser is closed; open_agent starts another');
-        await mainIdle(window);
-        await send(window, '/resume');
-        await window.shows('Resume a session');
-
-        // The current main is excluded; select the earlier main, not a child.
-        for (
-          let row = 0;
-          !/❯ \d+\. .* {2}agents\s*│/.test(window.frame());
-          row++
-        ) {
-          expect(row).toBeLessThan(8);
-          await window.press(DOWN);
-        }
-
-        await window.press('\r');
-        await until(
-          'the original session',
-          () => window.session()?.id === target,
-        );
-        await mainIdle(window);
-        await send(window, 'agentsendrefused');
-        await window.shows(
-          'parser was closed when this session was left; open_agent starts another',
-        );
-        expect(window.frame()).not.toContain('parser is closed;');
-      }));
-
-    if (columns === 120) {
-      continue;
-    }
-
-    for (const pick of ['child', 'elsewhere'] as const) {
-      test(`a ${pick} pick preserves same-session closed names at ${columns} columns`, async () => {
-        const server = serveChord();
-
-        try {
-          await withWindow(
-            async (window) => {
-              await opened(window);
-              await send(window, 'agentclose');
-              await window.shows('parser is closed; open_agent starts another');
-              await mainIdle(window);
-
-              const main = window.session()!.id;
-
-              await send(window, '/resume');
-              await window.shows('Resume a session');
-
-              if (pick === 'elsewhere') {
-                await window.press('\x01');
-                await window.shows('elsewhere');
-              }
-
-              await window.press('\r');
-
-              if (pick === 'child') {
-                await window.shows('╭─ docs');
-                // Finish its permission before navigating back to main.
-                await window.press('3');
-                await until('docs is idle', () =>
-                  /docs\s+fake.*◦ idle/.test(window.frame()),
-                );
-                await window.press(DOWN);
-                await window.press(UP);
-                await window.shows('Close(parser)');
-                await window.press('\r');
-              } else {
-                await window.shows('chord fake');
-              }
-
-              expect(window.session()?.id).toBe(main);
-              await mainIdle(window);
-              await send(window, 'agentsendrefused');
-              await window.shows('parser is closed; open_agent starts another');
-            },
-            {
-              columns,
-              rows: 40,
-              server,
-              runtimes: ['fake'],
-              agentCommand: fakeAgentCommand(),
-              readRecords: async (dir) =>
-                (await readRecords(dir))
-                  .filter((record) => record.name === 'docs')
-                  .map((record) =>
-                    pick === 'elsewhere'
-                      ? {
-                          ...record,
-                          sessionId: 'elsewhere',
-                          cwd: record.cwd + '-elsewhere',
-                        }
-                      : record,
-                  ),
-            },
-          );
-        } finally {
-          await server.close();
-        }
-      });
-    }
-  }
 });

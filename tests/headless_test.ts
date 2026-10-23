@@ -926,3 +926,57 @@ describe('CHD-441 tester: the CLI forwards the MCP setting through headless and 
     }
   });
 });
+
+describe('CHD-435 tester: headless sign-in boundaries', () => {
+  for (const kind of ['bare', 'link', 'linkother']) {
+    test(`${kind} prints only the appropriate plain stderr guidance`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-headless-signin-'));
+      let stdout = '';
+      let stderr = '';
+
+      try {
+        const code = await runHeadless({
+          agent: 'fake',
+          cwd,
+          prompt: 'text',
+          format: 'text',
+          agentCommand: fakeAgentCommand(undefined, '--auth-required', kind),
+          stdout: (text) => {
+            stdout += text;
+
+            return Promise.resolve();
+          },
+          stderr: (text) => {
+            stderr += text;
+
+            return Promise.resolve();
+          },
+        });
+
+        expect(code).toBe(1);
+        expect(stdout).toBe('');
+        expect(stderr).not.toContain('fake offers:');
+        expect(stderr).not.toContain('\x1b[');
+
+        if (kind === 'linkother') {
+          expect(stderr).toBe(
+            'chord: fake did not start: The fake could not open its session.\n',
+          );
+        } else {
+          const message =
+            kind === 'bare'
+              ? 'Authentication required'
+              : 'Authentication required: Sign-in was cancelled. Retry to sign in.';
+
+          expect(stderr.split('\n')).toEqual([
+            `chord: fake did not start: ${message}`,
+            "chord: chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.",
+            '',
+          ]);
+        }
+      } finally {
+        await rm(cwd, { recursive: true });
+      }
+    });
+  }
+});

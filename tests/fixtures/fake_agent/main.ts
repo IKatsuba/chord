@@ -253,6 +253,7 @@ import { FAKE_COMMANDS } from '../commands.ts';
 import { readCapabilities } from './client.ts';
 import {
   ARGS,
+  AUTH_REQUIRED,
   HANG,
   NO_CONFIG,
   DIMCODE_PERMISSION,
@@ -995,6 +996,32 @@ function opened(method: string, meta: unknown) {
   return meta === undefined || meta === null ? { method } : { method, meta };
 }
 
+/**
+ * The ways in `--auth-required methods` offers at `initialize`: one whose
+ * description names the command to run, one with a name alone.
+ */
+const AUTH_METHODS: acp.AuthMethod[] = [
+  {
+    id: 'fake-login',
+    name: 'Log in with the fake',
+    description: 'Run `fake login` in the terminal',
+  },
+  { id: 'fake-sso', name: 'Log in with SSO' },
+];
+
+/**
+ * The error a session request answers with under `--auth-required`, as an
+ * agent nobody signed in to answers (CHD-435).
+ */
+function authRequired(): acp.RequestError {
+  return AUTH_REQUIRED === 'methods'
+    ? acp.RequestError.authRequired(
+        undefined,
+        'run `fake login` from your terminal, or set FAKE_API_KEY',
+      )
+    : acp.RequestError.authRequired();
+}
+
 const connection = acp
   .agent({ name: 'chord-fake-agent' })
   .onRequest('initialize', ({ params }) => {
@@ -1004,6 +1031,7 @@ const connection = acp
       ? never()
       : {
           protocolVersion: acp.PROTOCOL_VERSION,
+          ...(AUTH_REQUIRED === 'methods' ? { authMethods: AUTH_METHODS } : {}),
           agentCapabilities: {
             loadSession: !NO_LOAD,
             mcpCapabilities: MCP_TRANSPORTS,
@@ -1029,6 +1057,10 @@ const connection = acp
   })
   .onRequest('authenticate', () => ({}))
   .onRequest('session/new', ({ params, client }) => {
+    if (AUTH_REQUIRED !== undefined) {
+      throw authRequired();
+    }
+
     const sessionId = crypto.randomUUID();
 
     modes.set(sessionId, 'default');
@@ -1055,6 +1087,10 @@ const connection = acp
   .onRequest('session/load', async ({ params, client }) => {
     const { sessionId } = params;
 
+    if (AUTH_REQUIRED !== undefined) {
+      throw authRequired();
+    }
+
     if (process.env.CHORD_FAKE_REFUSE_LOAD === '1' || !UUID.test(sessionId)) {
       throw acp.RequestError.resourceNotFound(sessionId);
     }
@@ -1080,6 +1116,10 @@ const connection = acp
   })
   .onRequest('session/resume', ({ params, client }) => {
     const { sessionId } = params;
+
+    if (AUTH_REQUIRED !== undefined) {
+      throw authRequired();
+    }
 
     if (
       !RESUME_ONLY ||

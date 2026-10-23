@@ -195,6 +195,38 @@ test('session/new takes the directory and the MCP servers', () =>
     );
   }));
 
+// The fake's `--auth-required`, which chord's tests of a start that needs a
+// login play against (CHD-435).
+test('an agent nobody signed in to offers its ways in at initialize and refuses session/new authRequired', () =>
+  withAgent(['--auth-required', 'methods'], async (agent, _seen, cwd) => {
+    expect(agent.init.authMethods).toStrictEqual([
+      {
+        id: 'fake-login',
+        name: 'Log in with the fake',
+        description: 'Run `fake login` in the terminal',
+      },
+      { id: 'fake-sso', name: 'Log in with SSO' },
+    ]);
+    await expect(
+      agent.newSession({ cwd, mcpServers: [] }),
+    ).rejects.toMatchObject({
+      code: -32000,
+      message:
+        'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY',
+    });
+  }));
+
+test('an agent that says only that it needs a login offers no ways in', () =>
+  withAgent(['--auth-required', 'bare'], async (agent, _seen, cwd) => {
+    expect(agent.init.authMethods).toBeUndefined();
+    await expect(
+      agent.newSession({ cwd, mcpServers: [] }),
+    ).rejects.toMatchObject({
+      code: -32000,
+      message: 'Authentication required',
+    });
+  }));
+
 test('session/load replays the past before it answers', () =>
   withAgent([], async (agent, seen, cwd) => {
     const sessionId = crypto.randomUUID();

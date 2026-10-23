@@ -324,112 +324,83 @@ test("a refused command for the agent starts nothing, chord's own command neithe
 });
 
 describe('CHD-466 U2 tester: initial agent on resume', () => {
-  for (const window of [false, true]) {
-    test(`${window ? 'saved window refuses before startup' : 'session resume refuses the initial runtime in the record directory'}`, async () => {
-      const dir = await mkdtemp(join(tmpdir(), 'chord-refused-resume-'));
-      const here = join(dir, 'here');
-      const there = join(dir, 'there');
-      const config = join(dir, 'config');
-      const stateHome = join(dir, 'state');
-      const stateDir = join(stateHome, 'chord');
-      const marker = join(dir, 'started');
-      const wrapper = join(dir, 'fake-start.ts');
+  test('session resume refuses the initial runtime in the record directory', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-refused-resume-'));
+    const here = join(dir, 'here');
+    const there = join(dir, 'there');
+    const config = join(dir, 'config');
+    const stateHome = join(dir, 'state');
+    const stateDir = join(stateHome, 'chord');
+    const marker = join(dir, 'started');
+    const wrapper = join(dir, 'fake-start.ts');
 
-      try {
-        await mkdir(here);
-        await mkdir(join(there, '.chord'), { recursive: true });
-        await mkdir(join(config, 'chord'), { recursive: true });
-        await writeFile(
-          wrapper,
-          'import { writeFileSync } from "node:fs"; writeFileSync(' +
-            JSON.stringify(marker) +
-            ', "started"); await import(' +
-            JSON.stringify(fakeAgentCommand()[1]) +
-            ');',
-        );
-        await writeFile(
-          join(config, 'chord', 'settings.json'),
-          JSON.stringify({
-            agent: 'fake',
-            agents: { fake: { command: [process.execPath, wrapper] } },
-          }),
-        );
+    try {
+      await mkdir(here);
+      await mkdir(join(there, '.chord'), { recursive: true });
+      await mkdir(join(config, 'chord'), { recursive: true });
+      await writeFile(
+        wrapper,
+        'import { writeFileSync } from "node:fs"; writeFileSync(' +
+          JSON.stringify(marker) +
+          ', "started"); await import(' +
+          JSON.stringify(fakeAgentCommand()[1]) +
+          ');',
+      );
+      await writeFile(
+        join(config, 'chord', 'settings.json'),
+        JSON.stringify({
+          agent: 'fake',
+          agents: { fake: { command: [process.execPath, wrapper] } },
+        }),
+      );
 
-        const sessionId = await recordSession({
-          stateDir,
-          cwd: there,
-          command: fakeAgentCommand(),
-          prompts: ['text'],
-        });
+      const sessionId = await recordSession({
+        stateDir,
+        cwd: there,
+        command: fakeAgentCommand(),
+        prompts: ['text'],
+      });
 
-        await writeFile(
-          join(there, '.chord', 'settings.json'),
-          JSON.stringify({ agents: { fake: { command: null } } }),
-        );
+      await writeFile(
+        join(there, '.chord', 'settings.json'),
+        JSON.stringify({ agents: { fake: { command: null } } }),
+      );
 
-        const windowId = 'w-refused';
-
-        if (window) {
-          await mkdir(join(stateDir, 'windows'), { recursive: true });
-          await writeFile(
-            join(stateDir, 'windows', `${windowId}.json`),
-            `${JSON.stringify(
-              {
-                id: windowId,
-                at: 1,
-                tabs: [{ sessionId, agent: 'fake', cwd: there }],
-                front: 0,
-              },
-              null,
-              2,
-            )}\n`,
-          );
-        }
-
-        const result = spawnSync(
-          process.execPath,
-          [
-            fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
-            '-C',
-            here,
-            '--resume',
-            window ? windowId : sessionId,
-          ],
-          {
-            env: {
-              ...process.env,
-              HOME: dir,
-              XDG_CONFIG_HOME: config,
-              XDG_STATE_HOME: stateHome,
-              PATH: join(dir, 'no-programs'),
-              NO_COLOR: '1',
-            },
-            stdio: ['ignore', 'pipe', 'pipe'],
-            encoding: 'utf8',
-            timeout: 10000,
+      const result = spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+          '-C',
+          here,
+          '--resume',
+          sessionId,
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: dir,
+            XDG_CONFIG_HOME: config,
+            XDG_STATE_HOME: stateHome,
+            PATH: join(dir, 'no-programs'),
+            NO_COLOR: '1',
           },
-        );
+          stdio: ['ignore', 'pipe', 'pipe'],
+          encoding: 'utf8',
+          timeout: 10000,
+        },
+      );
 
-        expect(await readFile(marker, 'utf8').catch(() => '')).toBe('');
-        expect(result.status).toBe(window ? 2 : 1);
+      expect(await readFile(marker, 'utf8').catch(() => '')).toBe('');
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        'fake not started: agents.fake.command in .chord/settings.json: expected a string, got null',
+      );
 
-        if (window) {
-          expect(result.stderr).toContain(
-            `${windowId} was a window of 1 session; chord opens one session per run now. Resume it with:\nchord fake --cwd ${there} --resume ${sessionId}`,
-          );
-          expect(result.stderr).not.toContain('fake not started:');
-        } else {
-          expect(result.stderr).toContain(
-            'fake not started: agents.fake.command in .chord/settings.json: expected a string, got null',
-          );
-        }
-
-        expect(result.stderr).not.toContain('npx');
-      } finally {
-        await rm(dir, { recursive: true });
-      }
-    });
-  }
+      expect(result.stderr).not.toContain('npx');
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
 });
 
 describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries', () => {
@@ -465,7 +436,7 @@ describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries',
     });
   }
 
-  test('an old mixed window is refused without starting a runtime or changing its record', async () => {
+  test('an old mixed window id keeps the invocation agent and leaves its record untouched', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'chord-old-window-'));
     const stateHome = join(cwd, 'state');
     const directory = join(cwd, "another ' directory");
@@ -488,10 +459,15 @@ describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries',
       await mkdir(join(stateHome, 'chord', 'windows'), { recursive: true });
       await writeFile(path, text);
 
+      expect(
+        await resumed(['cursor', '--cwd', cwd, '--resume', 'w-migration'], []),
+      ).toEqual(['w-migration', 'cursor', cwd]);
+
       const result = spawnSync(
         process.execPath,
         [
           fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+          'cursor',
           '--cwd',
           cwd,
           '--resume',
@@ -511,17 +487,10 @@ describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries',
         },
       );
 
-      expect(result.status).toBe(2);
+      expect(result.status).toBe(1);
       expect(result.stderr).toContain(
-        'w-migration was a window of 2 sessions;',
+        'chord: cursor runs "agent", which is not on PATH;',
       );
-      expect(result.stderr).toContain(
-        resumeCommand('fake', 'not-recorded', undefined, directory),
-      );
-      expect(result.stderr).toContain(
-        resumeCommand('codex', 'also-missing', undefined, cwd),
-      );
-      expect(result.stderr).not.toContain('not found on PATH');
       expect(await readFile(path, 'utf8')).toBe(text);
     } finally {
       await rm(cwd, { recursive: true });

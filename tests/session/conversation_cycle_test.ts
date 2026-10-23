@@ -1153,3 +1153,67 @@ test('a permission asked in a turn says when it came, as one between turns does,
     expect(asked).not.toHaveProperty('between');
     conversation.interrupt();
   }));
+
+describe('CHD-445 U1 tester: titles before prompts on every opening path', () => {
+  for (const method of ['new', 'load', 'resume'] as const) {
+    test(`${method} delivers its exact title before any prompt`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-start-title-'));
+      const events: ConversationEvent[] = [];
+      const title = `Review the parser — ${method}`;
+      let prompts = 0;
+      const conversation = new Conversation(
+        async () => {
+          const session = await openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--title',
+              title,
+              ...(method === 'resume' ? ['--resume-only', '--no-load'] : []),
+            ),
+            ...(method === 'new'
+              ? {}
+              : { resume: { sessionId: crypto.randomUUID(), cwd: dir } }),
+          });
+          const prompt = session.prompt.bind(session);
+
+          session.prompt = (...args) => {
+            prompts++;
+
+            return prompt(...args);
+          };
+
+          return session;
+        },
+        (event) => events.push(event),
+      );
+
+      try {
+        conversation.start();
+        await until(() => conversation.title === title);
+        expect(prompts).toBe(0);
+
+        // Loading replays its old prompts; only the next reply names the path.
+        events.length = 0;
+
+        conversation.send('opened');
+        await until(() => events.some((event) => event.type === 'result'));
+        expect(
+          JSON.parse(saidIn(events).replace(/^```json\n|\n```$/g, '')),
+        ).toMatchObject({ method: `session/${method}` });
+        expect(conversation.title).toBe(title);
+      } finally {
+        await conversation.close();
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+
+  test('an unconfigured fake remains untitled after a normal turn', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('text');
+      await until(() => events.some((event) => event.type === 'result'));
+      expect(conversation.title).toBeUndefined();
+    }));
+});

@@ -7,6 +7,7 @@ import { describe, expect, setSystemTime, test } from 'bun:test';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
+import { readRecords } from '../../../src/session/sessions.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CRASH_WORDS,
@@ -466,4 +467,57 @@ describe('CHD-364 tester: narrow idle time beside reply mark', () => {
       '--steer-late',
       '--hold-reply',
     ));
+});
+
+describe('CHD-445 U1 tester: each fake child owns its title updates', () => {
+  test('parser and docs record only their own titles, including both docs names', () =>
+    withAgents(async (window) => {
+      await ready(window);
+      await send(window, 'agentstitled');
+      await window.shows('Waiting on parser and docs.');
+
+      let records: Awaited<ReturnType<typeof readRecords>> = [];
+      let parser = '';
+      let docs = '';
+
+      await until('both children to record their titles', async () => {
+        records = await readRecords(join(window.dir, 'state'));
+
+        const parserRecord = records.find((record) => record.name === 'parser');
+        const docsRecord = records.find((record) => record.name === 'docs');
+
+        if (!parserRecord || !docsRecord) {
+          return false;
+        }
+
+        [parser, docs] = await Promise.all([
+          readFile(parserRecord.path, 'utf8'),
+          readFile(docsRecord.path, 'utf8'),
+        ]);
+
+        return (
+          parser.includes('"title":"Fix the tokenizer"') &&
+          docs.includes('"title":"Fix the parser"')
+        );
+      });
+
+      const main = records.find((record) => record.parent === undefined)!;
+      const children = records.filter((record) => record.parent !== undefined);
+
+      expect(children.map((record) => record.name).sort()).toEqual([
+        'docs',
+        'parser',
+      ]);
+      expect(new Set(records.map((record) => record.sessionId)).size).toBe(3);
+      expect(children.every((record) => record.parent === main.sessionId)).toBe(
+        true,
+      );
+      expect(parser).not.toContain('"title":"Look at the parser"');
+      expect(parser).not.toContain('"title":"Fix the parser"');
+      expect(docs).not.toContain('"title":"Fix the tokenizer"');
+      expect(docs.indexOf('"title":"Look at the parser"')).toBeGreaterThan(0);
+      expect(docs.indexOf('"title":"Fix the parser"')).toBeGreaterThan(
+        docs.indexOf('"title":"Look at the parser"'),
+      );
+    }));
 });

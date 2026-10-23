@@ -14,11 +14,6 @@
 --- exit0
  ⏺ kimi did not start: it exited with code 0 before answering initialize.
 
---- exit0-q176
- ⏺ kimi did not start: it exited with code 0 before answering initialize.
-   ⎿  The end of its stdout:
-        kimi-cli is no longer maintained. Install Kimi Code instead.
-
 --- notacp
  ⏺ agoragentic-acp did not start: it does not serve ACP sessions: not an ACP agent, or not at this version.
    ⎿  chord ran agoragentic-mcp@1.3.0, the version the ACP Registry names.

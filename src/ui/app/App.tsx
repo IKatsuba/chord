@@ -41,7 +41,12 @@ import { bashCommand, typedText } from '../prompt/bash.ts';
 import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
-import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
+import {
+  emptyHistory,
+  type History,
+  recordedWith,
+  walking,
+} from '../prompt/history.ts';
 import { PlanBox } from '../dialogs/PlanBox.tsx';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import { placeholderBefore } from '../prompt/images.ts';
@@ -415,7 +420,25 @@ export function App({
 
   const { draft, cursor } = state;
   const setCursor = (at: Cursor) => dispatch({ type: 'draft_set', cursor: at });
-  const [history, setHistory] = useState(emptyHistory);
+  // The prompts sent are the window's; the walk through them, ↑ and ↓'s
+  // place and the draft it began on, is each agent's, as its kept drafts
+  // are: another agent's place must never name one of them (U10).
+  const [shared, setShared] = useState(emptyHistory);
+  const [walks, setWalks] = useState<
+    Readonly<Record<number, Pick<History, 'index' | 'draft'>>>
+  >({});
+  const history: History = {
+    ...shared,
+    index: walks[all.front]?.index,
+    draft: walks[all.front]?.draft ?? '',
+  };
+  const setHistory = ({ index, draft, ...sent }: History) => {
+    const front = all.front;
+
+    setShared({ ...sent, index: undefined, draft: '' });
+    setWalks((walked) => ({ ...walked, [front]: { index, draft } }));
+  };
+
   // The textarea skips telling us a cursor it reported last, so a cursor set
   // from here starts a fresh textarea, or a move back to that spot is lost.
   const [inputKey, setInputKey] = useState(0);

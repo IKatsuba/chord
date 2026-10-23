@@ -17,8 +17,10 @@ import { FileList, Queue } from '../../../src/ui/prompt/Prompt.tsx';
 import { draw } from '../harness.tsx';
 import type { EditorMode } from '../../../src/settings.ts';
 import {
+  asked,
   CTRL_G,
   ESC,
+  leader,
   promptRow,
   ready,
   send,
@@ -718,3 +720,53 @@ for (const columns of [80, 120]) {
       { columns, rows: 30 },
     ));
 }
+
+test("each agent's walk is its own: going to another while a kept draft is shown neither drops nor overwrites either agent's (U10)", () =>
+  withChild(
+    async (window) => {
+      const empty = () => /^│ ›\s*│$/.test(promptRow(window) ?? '');
+
+      await openOther(window);
+      await readyAgent(window);
+      await window.type('main draft');
+      await window.press(DOWN);
+      await until('main set aside', empty);
+      await pickAgent(window, 'other');
+      await readyAgent(window);
+      await window.type('other draft');
+      await window.press(DOWN);
+      await until('other set aside', empty);
+      await send(window, 'permission');
+      await asked(window);
+
+      // From the box's last choice into the list, and up to main.
+      await until('the list has the keys', async () => {
+        if (window.frame().includes('  ❯ other ')) {
+          return true;
+        }
+
+        await window.press(DOWN);
+
+        return false;
+      });
+
+      await window.press(UP);
+      await window.shows('  ❯ main ');
+      await window.press('\r');
+      await until('main has the keys', () => !window.frame().includes('  ❯ '));
+      // Main's walk on its kept draft, the keys go to other's request.
+      await window.press(UP);
+      await window.shows('› main draft');
+      await leader(window, 'a');
+      await asked(window);
+      await window.press('1');
+      await until(
+        'the request answered',
+        () => !window.frame().includes('Do you want to proceed?'),
+      );
+      // Other's own walk: its kept draft, not a place in main's.
+      await window.press(UP);
+      await window.shows('› other draft');
+    },
+    { columns: 120, rows: 40 },
+  ));

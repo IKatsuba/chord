@@ -29,6 +29,7 @@ import { turnCost } from '../../src/session/prices.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { Turn } from '../fixtures/fake_agent/turn.ts';
 import { SHELL } from '../fixtures/fake_agent/scenarios/shell.ts';
+import { LONG_SESSION_TITLE } from '../fixtures/fake_agent/scenarios/text.ts';
 import { PERMISSIONS } from '../fixtures/fake_agent/scenarios/permissions.ts';
 import {
   until,
@@ -861,6 +862,31 @@ test("the agent's own title for its session is kept as it comes and changes, non
       await resumed.conversation.close();
     }
   } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('a title the agent gives at its start, before any prompt, and one longer than any row are kept as given (CHD-445)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(
+    () =>
+      openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(undefined, '--title', 'Started named'),
+      }),
+    (event) => events.push(event),
+  );
+
+  try {
+    conversation.start();
+    await until(() => conversation.title === 'Started named');
+    conversation.send('titledlong');
+    await until(() => events.some((event) => event.type === 'result'));
+    expect(conversation.title).toStrictEqual(LONG_SESSION_TITLE);
+  } finally {
+    await conversation.close();
     await rm(dir, { recursive: true });
   }
 });

@@ -16,6 +16,16 @@ import { mcpServers, openedWith, steeredInto } from '../sessions.ts';
 import { lifetime, pause, type Play } from '../turn.ts';
 import { GATE_RELEASE, gateOpened } from './agents.ts';
 
+/**
+ * The title `titledlong` names its session: longer than any row it is
+ * shown in, in words, so a row that wraps it has places to wrap (CHD-445).
+ */
+export const LONG_SESSION_TITLE =
+  'Find out why the tokenizer drops the closing quote of a string at the ' +
+  'end of a line, write a test in tests/parse/tokenize_test.ts that fails ' +
+  'for that reason, fix src/parse/tokenize.ts and have the diff reviewed ' +
+  'before anything else in the parser changes';
+
 /** How many items the `long` scenario's list has. */
 const LONG_LINES = 200;
 
@@ -243,6 +253,17 @@ export const TEXT = {
       title: 'Fix the parser',
     });
     await turn.say('Renamed.');
+
+    return 'end_turn';
+  },
+
+  // Names its session with `LONG_SESSION_TITLE`.
+  async titledlong(turn) {
+    await turn.send({
+      sessionUpdate: 'session_info_update',
+      title: LONG_SESSION_TITLE,
+    });
+    await turn.say('Named at length.');
 
     return 'end_turn';
   },

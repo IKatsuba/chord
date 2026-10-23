@@ -84,11 +84,38 @@ export interface Tail {
   readonly cut: number;
 }
 
-/** `line` no longer than `STDERR_LINE_MAX`, marked where it was cut. */
-function bounded(line: string): string {
-  return line.length > STDERR_LINE_MAX
-    ? `${line.slice(0, STDERR_LINE_MAX)}…`
-    : line;
+/**
+ * A stderr line as it comes: its first `STDERR_LINE_MAX` characters, whether
+ * any came past them, and whether any of it, kept or not, held something.
+ */
+interface OpenLine {
+  kept: string;
+  cut: boolean;
+  filled: boolean;
+}
+
+function openLine(): OpenLine {
+  return { kept: '', cut: false, filled: false };
+}
+
+/** `part` of the line `line`, its rest past the bound dropped as it comes. */
+function grow(line: OpenLine, part: string): void {
+  const room = STDERR_LINE_MAX - line.kept.length;
+
+  line.kept += part.slice(0, room);
+  line.cut ||= part.length > room;
+  line.filled ||= part.trim() !== '';
+}
+
+/** The line as kept, marked `…` where it was cut; none when it held nothing. */
+function keptLine(line: OpenLine): string | undefined {
+  if (!line.filled) {
+    return undefined;
+  }
+
+  const kept = line.kept.replace(/\r$/, '');
+
+  return line.cut ? `${kept}…` : kept.trimEnd();
 }
 
 /**
@@ -170,27 +197,26 @@ export async function spawnAgent(
   // in all, and the one still open, each kept no longer than the bound.
   const ring: string[] = [];
   let ended = 0;
-  let open = '';
+  let open = openLine();
 
   child.stderr?.setEncoding('utf8').on('data', (text: string) => {
     tail = (tail + text).slice(-STDERR_TAIL);
 
     for (const [index, part] of text.split('\n').entries()) {
       if (index > 0) {
-        const line = open.replace(/\r$/, '').trimEnd();
+        const line = keptLine(open);
 
-        if (line.trim() !== '') {
+        if (line !== undefined) {
           ended += 1;
 
-          ring.push(bounded(line));
+          ring.push(line);
           ring.splice(0, ring.length - STDERR_LINES);
         }
 
-        open = '';
+        open = openLine();
       }
 
-      // Past the bound the rest of the line is dropped as it comes.
-      open = `${open}${part}`.slice(0, STDERR_LINE_MAX + 1);
+      grow(open, part);
     }
 
     options.onStderr?.(text);
@@ -263,8 +289,8 @@ export async function spawnAgent(
     status,
     stderrTail: () => tail,
     stderrEnd: () => {
-      const last = open.trimEnd();
-      const unfinished = last.trim() === '' ? [] : [bounded(last)];
+      const last = keptLine(open);
+      const unfinished = last === undefined ? [] : [last];
       const lines = [...ring, ...unfinished].slice(-STDERR_LINES);
 
       return { lines, cut: ended + unfinished.length - lines.length };

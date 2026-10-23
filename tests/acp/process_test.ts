@@ -76,6 +76,27 @@ test('an unfinished last line is a line of the end, and one past the bound is cu
   expect(end.lines[2]).toBe('Error: no newline');
 });
 
+test('a line past the bound is marked though what was dropped was its end, and counted though its kept start is blank (CHD-454)', async () => {
+  // Each line in two writes, so its bound falls across chunks.
+  const end = await stderrEndOf(
+    [
+      `printf "%01024d" 0 | tr 0 a >&2`,
+      'printf " b\\n" >&2',
+      `printf "%01025d" 0 | tr 0 " " >&2`,
+      'printf "Error\\n" >&2',
+      'exit 1',
+    ].join('; '),
+  );
+
+  expect(end).toStrictEqual({
+    lines: [
+      `${'a'.repeat(STDERR_LINE_MAX)}…`,
+      `${' '.repeat(STDERR_LINE_MAX)}…`,
+    ],
+    cut: 0,
+  });
+});
+
 test('a stderr that stays open past the cap: the last words so far come at the cap, and the agent stops whole (CHD-495)', async () => {
   // The process it leaves holds stderr open well past the cap.
   const agent = await spawnAgent({

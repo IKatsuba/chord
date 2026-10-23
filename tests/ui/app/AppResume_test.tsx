@@ -2,14 +2,22 @@
  * The window resumed: past sessions drawn and answered in, models read where
  * a session works, and what a click gives the keys.
  */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import {
   withChild,
   openOther,
   pickAgent,
   readyAgent,
 } from './child_window.tsx';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import * as fileSystem from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { draw } from '../harness.tsx';
@@ -401,4 +409,131 @@ describe('CHD-493 U1 tester: sessions-only resume with legacy windows', () => {
       await rm(stateDir, { recursive: true });
     }
   });
+});
+
+describe('CHD-493 U7 tester: legacy storage is never opened', () => {
+  for (const columns of [80, 120]) {
+    for (const legacy of ['missing', 'malformed', 'unreadable'] as const) {
+      test(`${legacy} windows are ignored through failed resume, clear and picker at ${columns} columns`, async () => {
+        const dir = await mkdtemp(join(tmpdir(), 'chord-ignored-windows-'));
+        const stateDir = join(dir, 'state');
+        const windows = join(stateDir, 'windows');
+        const id = 'w-still-an-opaque-id';
+        const path = join(windows, `${id}.json`);
+        const bytes = '{this is not a window record\n';
+
+        if (legacy !== 'missing') {
+          await mkdir(windows, { recursive: true });
+          await writeFile(path, bytes);
+        }
+
+        if (legacy === 'unreadable') {
+          await chmod(path, 0);
+          await chmod(windows, 0);
+        }
+
+        const operations = [
+          spyOn(fileSystem, 'readFile'),
+          spyOn(fileSystem, 'readdir'),
+          spyOn(fileSystem, 'opendir'),
+          spyOn(fileSystem, 'open'),
+          spyOn(fileSystem, 'writeFile'),
+          spyOn(fileSystem, 'appendFile'),
+          spyOn(fileSystem, 'mkdir'),
+          spyOn(fileSystem, 'stat'),
+          spyOn(fileSystem, 'lstat'),
+          spyOn(fileSystem, 'access'),
+          spyOn(fileSystem, 'rename'),
+          spyOn(fileSystem, 'unlink'),
+          spyOn(fileSystem, 'rm'),
+        ];
+
+        try {
+          await withWindow(
+            async (window) => {
+              await window.shows(`it cannot resume session ${id}:`);
+              await until('the fake agent refusal', () =>
+                window
+                  .frame()
+                  .replace(/\s+/g, ' ')
+                  .includes(`Resource not found: ${id}`),
+              );
+              expect(window.frame()).not.toContain('was a window');
+              await send(window, '/clear');
+              await until(
+                'the replacement session',
+                () => window.session() !== undefined,
+              );
+              await ready(window);
+              await send(window, 'text');
+              await window.shows('came in chunks.');
+              await until('a normal session record', async () =>
+                (await readRecords(stateDir)).some(
+                  (record) => record.sessionId === window.session()?.id,
+                ),
+              );
+
+              const recorded = window.session()?.id;
+
+              await send(window, '/clear');
+              await until(
+                'another session before listing the saved one',
+                () =>
+                  window.session() !== undefined &&
+                  window.session()?.id !== recorded,
+              );
+              await ready(window);
+              await send(window, '/resume');
+              await window.shows('Resume a session');
+              expect(window.frame()).not.toContain(id);
+              await window.press(ESC);
+            },
+            {
+              stateDir,
+              resume: { sessionId: id, cwd: dir },
+              whileStarting: true,
+              columns,
+              rows: columns === 80 ? 24 : 40,
+            },
+          );
+
+          const touched = operations.flatMap((operation) =>
+            operation.mock.calls.map((args) => String(args[0])),
+          );
+
+          // A normal record must be observed too, so this is an active spy.
+          expect(
+            touched.some((path) => path.startsWith(join(stateDir, 'records'))),
+          ).toBe(true);
+          expect(
+            touched.filter(
+              (path) => path === windows || path.startsWith(windows + '/'),
+            ),
+          ).toEqual([]);
+        } finally {
+          for (const operation of operations) {
+            operation.mockRestore();
+          }
+
+          if (legacy === 'unreadable') {
+            await chmod(windows, 0o700);
+            await chmod(path, 0o600);
+          }
+
+          try {
+            if (legacy === 'missing') {
+              await expect(fileSystem.stat(windows)).rejects.toHaveProperty(
+                'code',
+                'ENOENT',
+              );
+            } else {
+              expect(await readFile(path, 'utf8')).toBe(bytes);
+            }
+          } finally {
+            await rm(dir, { recursive: true });
+          }
+        }
+      });
+    }
+  }
 });

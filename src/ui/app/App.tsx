@@ -150,6 +150,7 @@ import {
 } from '../dialogs/Permission.tsx';
 import {
   ConfigPicker,
+  type KeptChoice,
   McpPanel,
   ModelPicker,
   NoticeBox,
@@ -967,6 +968,20 @@ export function App({
         });
   // The asker's words where a sentence names it: `… needs one`.
   const inputAgent = inputAsker.map((part) => part.text).join('') || frontAgent;
+  // ↓ from a box's last active element: into the agents list, what it holds
+  // kept with its agent (Q192–Q194).
+  const leaving = listRows.length > 0 && {
+    onLeave: () => dispatch({ type: 'agents_focused', focused: true }),
+  };
+  /** A choice box's highlight, kept with its agent by request `id`. */
+  const keptChoice = (id: string): KeptChoice => ({
+    ...(state.choosing?.id === id && {
+      highlighted: state.choosing.highlighted,
+    }),
+    onHighlight: (highlighted) =>
+      dispatch({ type: 'choice_moved', id, highlighted }),
+    ...leaving,
+  });
   const inputDialog =
     inputAsked?.mode === 'form' && inputAsked.questions !== undefined ? (
       <QuestionBox
@@ -994,6 +1009,7 @@ export function App({
           })
         }
         onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
+        {...leaving}
       />
     ) : inputAsked?.mode === 'form' ? (
       <ElicitationForm
@@ -1014,10 +1030,7 @@ export function App({
           dispatch({ type: 'form_filled', id: inputAsked.id, form })
         }
         onAnswer={(response) => conversation()?.answer(inputAsked.id, response)}
-        // Into the agents list, the form kept with its agent (Q192).
-        {...(listRows.length > 0 && {
-          onLeave: () => dispatch({ type: 'agents_focused', focused: true }),
-        })}
+        {...leaving}
       />
     ) : inputAsked?.mode === 'url' ? (
       <LinkPrompt
@@ -1032,6 +1045,7 @@ export function App({
         onAnswer={(answer) =>
           answerLink(openUrl, conversation(), inputAsked, answer)
         }
+        kept={keptChoice(inputAsked.id)}
       />
     ) : undefined;
 
@@ -1241,6 +1255,7 @@ export function App({
                   onChoose={(optionId) =>
                     conversation()?.choose(asked.id, optionId)
                   }
+                  kept={keptChoice(asked.id)}
                   scroller={requestScroller}
                   givesWay={listFolded}
                   onOverflow={(overflows) =>
@@ -1271,6 +1286,23 @@ export function App({
                   onAnswer={(answer) =>
                     conversation()?.answerPlan(planAsked.wait.id, answer)
                   }
+                  kept={
+                    state.planning?.id === planAsked.wait.id
+                      ? state.planning.box
+                      : undefined
+                  }
+                  onChange={(box) =>
+                    dispatch({
+                      type: 'in_session',
+                      key: all.front,
+                      action: {
+                        type: 'plan_box_changed',
+                        id: planAsked.wait.id,
+                        box,
+                      },
+                    })
+                  }
+                  {...leaving}
                 />
               )}
               {state.backgroundView && (

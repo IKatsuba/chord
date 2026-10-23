@@ -341,7 +341,12 @@ export function choiceKey(
   key: KeyPress,
   highlighted: number,
   count: number,
-): { move: number } | { pick: number } | undefined {
+  /**
+   * ↓ on the last choice leaves the box for the agents list, rather than
+   * wrapping to the first (Q194).
+   */
+  ends = false,
+): { move: number } | { pick: number } | { leave: true } | undefined {
   if (count === 0 || (key.shift === true && (key.upArrow || key.downArrow))) {
     return undefined;
   }
@@ -351,7 +356,9 @@ export function choiceKey(
   }
 
   if (key.downArrow === true || input === 'j') {
-    return { move: (highlighted + 1) % count };
+    return ends && highlighted === count - 1
+      ? { leave: true }
+      : { move: (highlighted + 1) % count };
   }
 
   if (key.return === true) {

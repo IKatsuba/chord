@@ -67,6 +67,7 @@ export function QuestionBox({
   now = Date.now,
   onFill,
   onAnswer,
+  onLeave,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -96,6 +97,8 @@ export function QuestionBox({
   now?: () => number;
   onFill?: (state: AskState) => void;
   onAnswer: (response: ElicitationReply) => void;
+  /** ↓ on the last row, where there is a list of agents to go to. */
+  onLeave?: () => void;
 }) {
   const [state, setState] = useState(() => filled ?? openAsk(questions));
   // Keys that land in one tick each see the one before.
@@ -142,6 +145,10 @@ export function QuestionBox({
 
       if (step.response) {
         onAnswer(step.response);
+      }
+
+      if (step.leave) {
+        onLeave?.();
       }
     },
     { isActive: active },

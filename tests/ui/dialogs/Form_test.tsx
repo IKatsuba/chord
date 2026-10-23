@@ -610,3 +610,35 @@ describe('CHD-462 B1 tester: hidden form contents', () => {
     });
   }
 });
+
+test('↓ past the buttons goes into the agents list, and ↑ straight back puts the keys in the form where they were (Q192)', () =>
+  withChild(
+    async (window) => {
+      await openOther(window);
+      await readyAgent(window);
+      await send(window, 'form');
+      await inputAsked(window);
+
+      for (let step = 0; !/❯ ?Accept/.test(window.frame()); step++) {
+        expect(step).toBeLessThan(12);
+        await window.press(DOWN);
+      }
+
+      await window.press(DOWN);
+      await window.shows('  ❯ main ');
+      // Main is the list's first row: ↑ leaves it, back into the form.
+      await window.press(UP);
+      await until(
+        'the list let go',
+        () => !window.frame().includes('  ❯ main '),
+      );
+      expect(window.frame()).toMatch(/❯ ?Accept/);
+      await window.press('\x1b[C');
+      await until('the keys move the form again', () =>
+        /❯ ?Decline/.test(window.frame()),
+      );
+      await window.press(ESC);
+      await window.shows('Elicitation answer: cancel');
+    },
+    { rows: 40, columns: 120 },
+  ));

@@ -161,3 +161,16 @@ test("the Note's lines wrap at its spaces, never cut, a cell left for the cursor
   expect(noteLines('keep it ', 10)).toStrictEqual(['keep it ']);
   expect(noteLines('abcdefghijkl', 5).join('')).toBe('abcdefghijkl');
 });
+
+test('↓ on the Note row leaves the box for the agents list, the note kept; j there is typed (Q194)', () => {
+  const note = { row: planChoices('cursor').length, note: 'shorter' };
+
+  expect(planKey('cursor', note, '', key({ downArrow: true }))).toStrictEqual({
+    state: note,
+    leave: true,
+  });
+  expect(planKey('cursor', note, 'j', key()).state.note).toBe('shorterj');
+  expect(
+    planKey('cursor', OPEN_PLAN_BOX, '', key({ downArrow: true })).leave,
+  ).toBeUndefined();
+});

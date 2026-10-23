@@ -1,7 +1,7 @@
 import type { ElicitationWait } from '../../session/transcript/types.ts';
 import { useColours } from '../app/context.ts';
 import { usePress } from '../app/input.ts';
-import { borderOf, ChoiceList } from '../pickers/Pickers.tsx';
+import { borderOf, ChoiceList, type KeptChoice } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, DIM, fg, TEXT } from '../theme/text.ts';
 import { linkHost } from './form.ts';
@@ -25,6 +25,7 @@ export function LinkPrompt({
   held = false,
   between = false,
   onAnswer,
+  kept,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -48,6 +49,8 @@ export function LinkPrompt({
   held?: boolean;
   /** `open` when the person chose to open it. */
   onAnswer: (answer: 'open' | 'decline' | 'cancel') => void;
+  /** Its choice kept with its agent, and the way out to the agents list. */
+  kept?: KeptChoice;
 }) {
   const colours = useColours();
   const host = linkHost(wait.url);
@@ -107,6 +110,7 @@ export function LinkPrompt({
             onSelect={(value) =>
               onAnswer(value === 'open' ? 'open' : 'decline')
             }
+            {...kept}
           />
         </box>
       </Fold>

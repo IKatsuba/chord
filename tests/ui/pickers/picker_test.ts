@@ -353,3 +353,18 @@ test("a numbered list's keys move round, pick, and leave shift+arrows alone", ()
     choiceKey('', { ...key, upArrow: true, shift: true }, 1, 3),
   ).toBeUndefined();
 });
+
+test('a box that ends at its last choice leaves on ↓ or j there, and still wraps on ↑ (Q194)', () => {
+  const key = { ctrl: false, escape: false };
+
+  expect(choiceKey('', { ...key, downArrow: true }, 2, 3, true)).toStrictEqual({
+    leave: true,
+  });
+  expect(choiceKey('j', key, 2, 3, true)).toStrictEqual({ leave: true });
+  expect(choiceKey('j', key, 1, 3, true)).toStrictEqual({ move: 2 });
+  expect(choiceKey('', { ...key, upArrow: true }, 0, 3, true)).toStrictEqual({
+    move: 2,
+  });
+  // A box alone, Decline its one choice, leaves at once.
+  expect(choiceKey('j', key, 0, 1, true)).toStrictEqual({ leave: true });
+});

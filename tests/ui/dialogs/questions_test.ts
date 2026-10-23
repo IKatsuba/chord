@@ -17,6 +17,7 @@ import {
   clock,
   expiresIn,
   openAsk,
+  rowsOf,
   windowOf,
 } from '../../../src/ui/dialogs/questions.ts';
 import type { ElicitationReply } from '../../../src/session/elicitations.ts';
@@ -498,4 +499,22 @@ describe('CHD-1 tester: question viewport and editing invariants', () => {
       ownChosen: true,
     });
   });
+});
+
+test("↓ on a step's last row, or on Skip, leaves for the agents list with the answers as they are (Q193)", () => {
+  const { questions, form } = read(CLAUDE_QUESTIONS);
+  const down = (state: AskState) =>
+    askKey(questions, form.requestedSchema, state, '', KEYS['↓']!);
+  const last = {
+    ...openAsk(questions),
+    row: rowsOf(questions.questions[0]!).length - 1,
+  };
+  const skip = { ...openAsk(questions), step: questions.questions.length };
+  const onSkip = down(skip).state;
+
+  expect(down(last)).toStrictEqual({ state: last, leave: true });
+  // On the Submit step ↓ goes to Skip, and from Skip it leaves.
+  expect(down(skip).leave).toBeUndefined();
+  expect(down(onSkip)).toStrictEqual({ state: onSkip, leave: true });
+  expect(down(openAsk(questions)).leave).toBeUndefined();
 });

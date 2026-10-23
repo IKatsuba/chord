@@ -739,26 +739,60 @@ function PickerList({
  * one. Shift+arrows are the window's. Not `marked`, it shows no highlight,
  * as a list the keys have not gone into yet.
  */
+/**
+ * What a box keeps of its choices with its agent, and its way out to the
+ * agents list (Q194): where the highlight was, and who hears it move.
+ */
+export interface KeptChoice {
+  readonly highlighted?: number | undefined;
+  readonly onHighlight?: (highlighted: number) => void;
+  readonly onLeave?: (() => void) | undefined;
+}
+
 export function ChoiceList({
   choices,
   active,
   marked = true,
+  highlighted: kept,
+  onHighlight,
   onSelect,
+  onLeave,
 }: {
   choices: readonly Choice[];
   active: boolean;
   marked?: boolean;
+  /** Where the highlight was left, when the box was on screen before. */
+  highlighted?: number | undefined;
+  /** The highlight moved, for whoever keeps it while the box is away. */
+  onHighlight?: (highlighted: number) => void;
   onSelect: (value: string) => void;
+  /** ↓ on the last choice, where there is a list of agents to go to. */
+  onLeave?: (() => void) | undefined;
 }) {
-  const [highlighted, setHighlighted] = useState(0);
+  const [highlighted, setHighlighted] = useState(
+    Math.min(kept ?? 0, Math.max(choices.length - 1, 0)),
+  );
 
   usePress(
     (input, key) => {
-      const picked = choiceKey(input, key, highlighted, choices.length);
+      const picked = choiceKey(
+        input,
+        key,
+        highlighted,
+        choices.length,
+        onLeave !== undefined,
+      );
 
-      if (picked !== undefined && 'move' in picked) {
+      if (picked === undefined) {
+        return;
+      }
+
+      if ('leave' in picked) {
+        onLeave?.();
+      } else if ('move' in picked) {
         setHighlighted(picked.move);
-      } else if (picked !== undefined) {
+        onHighlight?.(picked.move);
+      } else {
         onSelect(choices[picked.pick]!.value);
       }
     },

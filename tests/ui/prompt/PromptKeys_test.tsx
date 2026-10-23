@@ -26,6 +26,7 @@ import {
   TAB,
   until,
   UP,
+  DOWN,
   type Window,
   withWindow,
 } from '../app/render.tsx';
@@ -675,3 +676,43 @@ describe('CHD-398 tester: held match lifecycle', () => {
     });
   }
 });
+
+for (const columns of [80, 120]) {
+  test(`↓ ↓ leaves main with its draft set aside, ↑ there brings it back with its cursor, and another agent's ↑ never does (U10) at ${columns} columns`, () =>
+    withChild(
+      async (window) => {
+        await openOther(window);
+        await readyAgent(window);
+        await window.type('one two');
+        await window.press('\x1b[1;3D');
+        await window.type('X');
+        await window.shows('› one Xtwo');
+        // The first ↓ sets it aside; pickAgent's ↓ from the empty box goes
+        // into the list.
+        await window.press(DOWN);
+        await until('the box empty', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await pickAgent(window, 'other');
+        await readyAgent(window);
+        await window.press(UP);
+        await until('a prompt sent in its place', () =>
+          (promptRow(window) ?? '').includes('agentother'),
+        );
+        expect(window.frame()).not.toContain('Xtwo');
+        await window.press(DOWN);
+        await until('the box empty again', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await pickAgent(window, 'main');
+        await until('main empty, as it was left', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await window.press(UP);
+        await window.shows('› one Xtwo');
+        await window.type('Y');
+        expect(promptRow(window)).toContain('› one XYtwo');
+      },
+      { columns, rows: 30 },
+    ));
+}

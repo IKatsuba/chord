@@ -222,8 +222,13 @@ function keptTexts(state: AppState): string[] {
 function walkedTo(context: KeyContext, step: Walked): Step[] {
   const draft =
     step.kept === undefined ? undefined : context.state.kept?.[step.kept];
+  const shown = shownKept(context);
 
   return [
+    // A kept draft walked off stays as it was left, edits and all (Q195).
+    ...(shown === undefined
+      ? []
+      : [dispatch({ type: 'kept_edited', index: shown })]),
     { type: 'history', history: step.history },
     dispatch({ type: 'menu_dismissed' }),
     ...(draft === undefined
@@ -236,17 +241,27 @@ function walkedTo(context: KeyContext, step: Walked): Step[] {
   ];
 }
 
-/**
- * The kept draft the box shows, leaving it: sent, or emptied by hand; it
- * goes off the stack, and the walk ends.
- */
-function keptLeft({ state, history }: KeyContext): Step[] {
+/** Which of the agent's kept drafts the walk shows; none off them. */
+function shownKept({ state, history }: KeyContext): number | undefined {
   const index =
     history.index === undefined
       ? undefined
       : history.index - history.prompts.length;
 
   return index === undefined || state.kept?.[index] === undefined
+    ? undefined
+    : index;
+}
+
+/**
+ * The kept draft the box shows, leaving it: sent, or emptied by hand; it
+ * goes off the stack, and the walk ends.
+ */
+function keptLeft(context: KeyContext): Step[] {
+  const { history } = context;
+  const index = shownKept(context);
+
+  return index === undefined
     ? []
     : [
         dispatch({ type: 'kept_taken', index }),
@@ -361,10 +376,7 @@ export function newerSteps(context: KeyContext): Step[] {
   }
 
   if (listed && draft !== '' && history.index === undefined) {
-    return [
-      dispatch({ type: 'draft_kept' }),
-      show('', START),
-    ];
+    return [dispatch({ type: 'draft_kept' }), show('', START)];
   }
 
   return listed && context.agents && draft === '' && history.index === undefined

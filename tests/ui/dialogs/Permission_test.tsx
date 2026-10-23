@@ -800,3 +800,29 @@ describe('CHD-246 tester: queued large permission requests', () => {
       ));
   }
 });
+
+test('↓ on the last choice goes into the agents list rather than round, and ↑ straight back finds that choice still picked (Q194)', () =>
+  withChild(
+    async (window) => {
+      await openOther(window);
+      await send(window, 'permission');
+      await asked(window);
+      await window.press(DOWN);
+      await window.press(DOWN);
+      await window.shows('❯ 3. Deny');
+      await window.press(DOWN);
+      await window.shows('  ❯ main ');
+      expect(window.frame()).not.toContain('❯ 1. Allow');
+      await window.press(UP);
+      await until(
+        'the list let go',
+        () => !window.frame().includes('  ❯ main '),
+      );
+      expect(window.frame()).toContain('❯ 3. Deny');
+      // The keys are the box's again: ↑ moves up, as before.
+      await window.press(UP);
+      await window.shows('❯ 2. Always allow');
+      await window.press(ESC);
+    },
+    { rows: 40, columns: 120 },
+  ));

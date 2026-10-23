@@ -20,7 +20,7 @@ import type {
 } from '../../session/transcript/types.ts';
 import { capital } from '../shortcuts/state.ts';
 import { useColours, useHintKey } from '../app/context.ts';
-import { borderOf, ChoiceList } from '../pickers/Pickers.tsx';
+import { borderOf, ChoiceList, type KeptChoice } from '../pickers/Pickers.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { askerParts } from './asker.ts';
@@ -44,7 +44,7 @@ export type RequestScroller = (step: ScrollStep) => void;
 
 /** The question waiting: the agent's, or chord's own save box. */
 export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
-  const { wait, active, onChoose } = props;
+  const { wait, active, onChoose, kept } = props;
 
   return wait.save === undefined ? (
     <AgentPermission {...props} />
@@ -55,6 +55,7 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
       active={active}
       onChoose={onChoose}
       hidden={props.hidden ?? false}
+      {...(kept && { kept })}
     />
   );
 }
@@ -80,6 +81,7 @@ function AgentPermission({
   scroller,
   onOverflow,
   givesWay = true,
+  kept,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -116,6 +118,8 @@ function AgentPermission({
   scroller?: RefObject<RequestScroller | undefined>;
   /** Called as the request comes to run past its room, or to fit again. */
   onOverflow?: (overflows: boolean) => void;
+  /** Its choice kept with its agent, and the way out to the agents list. */
+  kept?: KeptChoice;
 }) {
   const colours = useColours();
   // Who asks, by the rule every box that asks shares (CHD-389): main's own
@@ -172,6 +176,7 @@ function AgentPermission({
             active={active && !held}
             marked={!held}
             onSelect={onChoose}
+            {...kept}
           />
         </box>
         {held ? <AttendHint /> : <PermissionHint />}
@@ -387,6 +392,7 @@ function SaveBox({
   save,
   active,
   onChoose,
+  kept,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -397,6 +403,7 @@ function SaveBox({
   save: SaveBoxQuestion;
   active: boolean;
   onChoose: (optionId: string) => void;
+  kept?: KeptChoice;
 }) {
   const { permission } = useColours();
   const key = useHintKey('confirm:no');
@@ -417,6 +424,7 @@ function SaveBox({
           choices={saveChoices(wait)}
           active={active}
           onSelect={onChoose}
+          {...kept}
         />
       </box>
       {key !== undefined && (

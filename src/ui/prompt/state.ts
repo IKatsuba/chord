@@ -222,6 +222,11 @@ export type PromptAction =
   | { readonly type: 'draft_kept' }
   /** Kept draft `index` left the stack: sent, or emptied while shown. */
   | { readonly type: 'kept_taken'; readonly index: number }
+  /**
+   * The walk moves off kept draft `index`, shown: it keeps the box as it
+   * stands, edited or not, in its place on the stack (Q195).
+   */
+  | { readonly type: 'kept_edited'; readonly index: number }
   /** A prompt took the output of the `held` runs to the agent. */
   | { readonly type: 'context_sent'; readonly held: readonly string[] }
   /** The editor exited with an error, and the draft is as it was. */
@@ -455,6 +460,23 @@ export function reducePrompt(
             images: [],
             bash: false,
           };
+    case 'kept_edited': {
+      const kept = state.kept ?? [];
+
+      if (kept[action.index] === undefined) {
+        return state;
+      }
+
+      return {
+        ...state,
+        kept: kept.with(action.index, {
+          text: state.draft,
+          cursor: state.cursor,
+          images: imagesIn(state.draft, state.images),
+          bash: state.bash,
+        }),
+      };
+    }
     case 'kept_taken': {
       const kept = (state.kept ?? []).filter(
         (_, index) => index !== action.index,

@@ -178,6 +178,7 @@ test('↓ on an empty draft goes into the list of agents only while there is one
 
   expect(newerSteps(context(ready, { agents: true }))).toStrictEqual(into);
   expect(newerSteps(context(ready))).toStrictEqual([]);
+
   // A draft goes aside first, list or none (Q183).
   for (const agents of [true, false]) {
     expect(newerSteps(context(typing('hi'), { agents }))).toStrictEqual([
@@ -288,6 +289,59 @@ describe('drafts set aside (U10, Q183)', () => {
         (step) => step.type === 'dispatch' && step.action.type === 'kept_taken',
       ),
     ).toStrictEqual(false);
+  });
+
+  test('a kept draft shown and edited stays edited in its place as the walk moves on (Q195)', () => {
+    // A prompt sent before it, so ↑ has somewhere to go.
+    const history = { ...recorded(emptyHistory, 'sent'), index: 1 };
+    const edited = reduceApp(aside, {
+      type: 'draft_set',
+      text: 'one [Image #1] three',
+      cursor: [0, 5],
+    });
+
+    // Walked off it either way, it is written back first.
+    for (const steps of [
+      olderSteps(context(edited, { history })),
+      newerSteps(context(edited, { history })),
+    ]) {
+      expect(steps[0]).toStrictEqual(
+        dispatched({ type: 'kept_edited', index: 0 }),
+      );
+    }
+
+    expect(
+      reduceApp(reduceApp(edited, { type: 'images_added', images: [image] }), {
+        type: 'kept_edited',
+        index: 0,
+      }).kept,
+    ).toStrictEqual([
+      {
+        text: 'one [Image #1] three',
+        cursor: [0, 5],
+        images: [image],
+        bash: false,
+      },
+    ]);
+  });
+});
+
+test("a box's highlight and the plan box are kept with the session by the request they answer (Q194)", () => {
+  const chosen = reduceApp(ready, {
+    type: 'choice_moved',
+    id: 'p1',
+    highlighted: 2,
+  });
+  const planned = reduceApp(chosen, {
+    type: 'plan_box_changed',
+    id: 'plan',
+    box: { row: 2, note: 'smaller' },
+  });
+
+  expect(planned.choosing).toStrictEqual({ id: 'p1', highlighted: 2 });
+  expect(planned.planning).toStrictEqual({
+    id: 'plan',
+    box: { row: 2, note: 'smaller' },
   });
 });
 

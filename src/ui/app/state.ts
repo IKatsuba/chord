@@ -462,6 +462,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'bash_mode':
     case 'draft_kept':
     case 'kept_taken':
+    case 'kept_edited':
     case 'context_sent':
     case 'editor_failed':
     case 'images_sent':
@@ -523,6 +524,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       };
     case 'form_filled':
     case 'questions_answered':
+    case 'choice_moved':
+    case 'plan_box_changed':
     case 'request_overflowed':
       return reduceDialogs(state, action) as AppState;
     case 'request_attended': {
@@ -976,6 +979,8 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   takesImages: true,
   filling: true,
   answering: true,
+  choosing: true,
+  planning: true,
 };
 
 /** A session's own part of the window as `state` fills it. */

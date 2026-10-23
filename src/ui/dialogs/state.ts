@@ -10,6 +10,7 @@ import type {
 import { askedPermission } from './permission.ts';
 import { hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import type { FormState } from './form.ts';
+import type { PlanBoxState } from './plan.ts';
 import type { AskState } from './questions.ts';
 
 /** The session's part: a dialog's state lives with the session asking. */
@@ -21,6 +22,14 @@ export interface DialogsState {
   readonly filling?: { readonly id: string; readonly form: FormState };
   /** The question box as the person has answered it so far, the same way. */
   readonly answering?: { readonly id: string; readonly state: AskState };
+  /**
+   * The choice highlighted in a permission's, a save's or a link's box, by
+   * the request it answers, so ↓ out to the agents list and back finds it
+   * where it was (Q194).
+   */
+  readonly choosing?: { readonly id: string; readonly highlighted: number };
+  /** The plan box's row and note, by the plan it answers, the same way. */
+  readonly planning?: { readonly id: string; readonly box: PlanBoxState };
   /**
    * The permission request, by id, whose request runs past the box's room,
    * so the scroll keys move it rather than the transcript (CHD-246).
@@ -46,6 +55,18 @@ export type DialogsAction =
       readonly id: string;
       readonly state: AskState;
     }
+  /** A key moved the highlight in the box answering the request `id`. */
+  | {
+      readonly type: 'choice_moved';
+      readonly id: string;
+      readonly highlighted: number;
+    }
+  /** A key changed the plan box answering the plan `id`. */
+  | {
+      readonly type: 'plan_box_changed';
+      readonly id: string;
+      readonly box: PlanBoxState;
+    }
   /** The person took the keys into the request `id` asked between turns. */
   | { readonly type: 'request_attended'; readonly id: string }
   /** The permission box laid out request `id`, which `overflows` or fits. */
@@ -64,6 +85,13 @@ export function reduceDialogs(
       return { ...state, filling: { id: action.id, form: action.form } };
     case 'questions_answered':
       return { ...state, answering: { id: action.id, state: action.state } };
+    case 'choice_moved':
+      return {
+        ...state,
+        choosing: { id: action.id, highlighted: action.highlighted },
+      };
+    case 'plan_box_changed':
+      return { ...state, planning: { id: action.id, box: action.box } };
     case 'request_attended':
       return { ...state, attended: action.id };
     case 'request_overflowed': {

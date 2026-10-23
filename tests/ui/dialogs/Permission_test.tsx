@@ -4,6 +4,7 @@
  * window (CHD-246).
  */
 import { describe, expect, test } from 'bun:test';
+import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
@@ -22,7 +23,6 @@ import {
   END,
   ESC,
   left,
-  leader,
   send,
   until,
   UP,
@@ -694,13 +694,14 @@ describe('CHD-246 tester: request lifecycle and small rooms', () => {
   }
 
   test('two sessions answer their own overflowing requests independently', () =>
-    withWindow(
+    withChild(
       async (window) => {
+        await openOther(window);
         await send(window, 'bigask');
         await asked(window);
         await window.press(END);
         await window.shows('mode: overwrite');
-        await leader(window, 'c');
+        await pickAgent(window, 'other');
         await window.shows('Fake Large with a 1M context window');
         await send(window, 'bigask');
         await asked(window);
@@ -708,11 +709,11 @@ describe('CHD-246 tester: request lifecycle and small rooms', () => {
         expect(window.frame()).not.toContain('mode: overwrite');
         await window.press(PAGE_DOWN);
         await window.shows('lines above');
-        await leader(window, '1');
+        await pickAgent(window, 'main');
         await asked(window);
         await window.press('1');
         await window.shows('Permission: allow.');
-        await leader(window, '2');
+        await pickAgent(window, 'other');
         await asked(window);
         expect(window.frame()).not.toContain('Permission: allow.');
         await window.press(ESC);

@@ -3,6 +3,7 @@
  * keys that quit, clear and edit, the slash commands, and sessions in tabs.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
+import { withChild, openOther, pickAgent } from './child_window.tsx';
 import { draw } from '../harness.tsx';
 import { type ResumableTab } from '../../../src/session/sessions.ts';
 import { App } from '../../../src/ui/app/App.tsx';
@@ -35,25 +36,26 @@ import { OSC9, writes, reported } from './app_window.tsx';
 const VERSION = manifest.version;
 
 describe('CHD-382 U2 tester: cancellation and error reports', () => {
-  test('a blocked tab behind wins over a working front tab', () => {
+  test('a blocked child wins over a working main', () => {
     const log: string[] = [];
 
-    return withWindow(
+    return withChild(
       async (window) => {
+        await openOther(window);
         await ready(window);
-        await leader(window, 'c');
+        await pickAgent(window, 'other');
         await until('the second agent', () => window.pids.length === 2);
         await ready(window);
         await send(window, 'permission');
         await asked(window);
-        await leader(window, '1');
+        await pickAgent(window, 'main');
         await send(window, 'slow');
         await window.shows('esc to interrupt');
         expect(statusReports(log).at(-1)).toStrictEqual({
           state: 'blocked',
           kind: 'permission',
           app: 'chord',
-          msg: 'fake (2) needs your permission: Write notes.txt',
+          msg: 'other needs your permission: Write notes.txt',
           title: 'slow',
         });
         await window.press(ESC);

@@ -3,6 +3,7 @@
  * a session works, and what a click gives the keys.
  */
 import { describe, expect, test } from 'bun:test';
+import { withChild, openOther, pickAgent } from './child_window.tsx';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -305,18 +306,14 @@ describe('CHD-429 tester: mouse focus boundaries', () => {
     }
 
     test(`picking after a click preserves a nonempty draft and returns cursor keys at ${columns}x${rows}`, () =>
-      withWindow(
+      withChild(
         async (window) => {
+          await openOther(window);
           await ready(window);
           await window.type('abcdef');
-          await leader(window, 'w');
-          await window.shows('Esc to close');
+          await pickAgent(window, 'other');
           await clickBox(window);
-          await window.press('1');
-          await until(
-            'the picker closed',
-            () => !window.frame().includes('Esc to close'),
-          );
+          await pickAgent(window, 'main');
           expect(promptRow(window)).toContain('› abcdef');
           await window.press('\x1b[D');
           await window.type('X');

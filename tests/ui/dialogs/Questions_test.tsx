@@ -3,6 +3,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { openSession } from '../../../src/session/session.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
 import { describe, expect, test } from 'bun:test';
+import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -366,8 +367,9 @@ describe('CHD-1 tester: question box lifecycle', () => {
     ));
 
   test('switching sessions restores the question, secret draft and countdown without restarting it', () =>
-    withWindow(
+    withChild(
       async (window) => {
+        await openOther(window);
         await send(window, 'askcodex');
         await inputAsked(window, 'fake asks you 2 questions');
         await window.press('2');
@@ -384,7 +386,7 @@ describe('CHD-1 tester: question box lifecycle', () => {
 
         const before = clockSeconds();
 
-        await leader(window, 'c');
+        await pickAgent(window, 'other');
         await until('the second fake agent', () => window.pids.length === 2);
         await send(window, 'askdroid');
         await inputAsked(window, 'fake asks you 3 questions');
@@ -400,7 +402,7 @@ describe('CHD-1 tester: question box lifecycle', () => {
         await window.shows('Late, after the answer.');
         await send(window, 'text');
         await window.shows('Hello, world.');
-        await leader(window, '1');
+        await pickAgent(window, 'main');
         await inputAsked(window, 'fake asks you 2 questions');
         expect(window.frame()).toContain('* ◉ Token');
         expect(window.frame()).toContain('❯ •••••••••••');
@@ -413,10 +415,11 @@ describe('CHD-1 tester: question box lifecycle', () => {
     ));
 
   test('a short request withdrawn behind another session never reopens its box on return', () =>
-    withWindow(
+    withChild(
       async (window) => {
+        await openOther(window);
         await window.shows('? for shortcuts');
-        await leader(window, 'c');
+        await pickAgent(window, 'other');
         await until('the second fake agent', () => window.pids.length === 2);
 
         const session = window.session();
@@ -430,12 +433,12 @@ describe('CHD-1 tester: question box lifecycle', () => {
 
         try {
           await send(window, 'askcodexwait');
-          await leader(window, '1');
+          await pickAgent(window, 'main');
           await until(
             'the background request to withdraw',
             () => request?.signal.aborted === true,
           );
-          await leader(window, '2');
+          await pickAgent(window, 'other');
           await window.shows('Elicitation answer: timed out');
           expect(window.frame()).not.toContain('fake asks you 2 questions');
           expect(window.frame()).not.toContain('answers itself in');

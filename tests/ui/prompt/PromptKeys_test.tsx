@@ -3,6 +3,7 @@
  * headers, selection, option and cmd with the arrows, and held matches.
  */
 import { describe, expect, test } from 'bun:test';
+import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
 import { matchFiles } from '../../../src/ui/prompt/mentions.ts';
 import stripAnsi from 'strip-ansi';
 import stringWidth from 'string-width';
@@ -12,7 +13,6 @@ import type { EditorMode } from '../../../src/settings.ts';
 import {
   CTRL_G,
   ESC,
-  leader,
   promptRow,
   ready,
   send,
@@ -300,8 +300,9 @@ test("a keybinding on option+← takes it from the textarea's word move (CHD-386
 
 describe('CHD-386 tester: cursor move boundaries', () => {
   test('a cancelled turn and another session keep independent editable drafts', () =>
-    withWindow(
+    withChild(
       async (window) => {
+        await openOther(window);
         await send(window, 'slow');
         await window.shows('esc to interrupt');
         await window.type('one two');
@@ -310,16 +311,16 @@ describe('CHD-386 tester: cursor move boundaries', () => {
         await window.press('\x1b[1;3D');
         await window.type('X');
         await window.shows('› one Xtwo');
-        await leader(window, 'c');
+        await pickAgent(window, 'other');
         await until('the second agent', () => window.pids.length === 2);
         await ready(window);
         await window.type('other draft');
         await window.press('\x1b[1;9D');
         await window.type('Y');
         await window.shows('› Yother draft');
-        await leader(window, '1');
+        await pickAgent(window, 'main');
         await window.shows('› one Xtwo');
-        await leader(window, '2');
+        await pickAgent(window, 'other');
         await window.shows('› Yother draft');
       },
       { columns: 80, rows: 24 },

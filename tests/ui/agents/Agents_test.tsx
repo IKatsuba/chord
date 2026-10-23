@@ -561,31 +561,6 @@ describe('CHD-384 tester: click focus and neighboring dialogs', () => {
     }
   }
 
-  test('a click while the sessions picker is open preserves the picker and picked child; Esc returns ordinary typing', () =>
-    withAgents(async (window) => {
-      await window.resize({ columns: 120, rows: 40 });
-      await ready(window);
-      await send(window, 'monitorchild');
-      await window.shows('background  2 monitors running');
-      await window.press(DOWN);
-      await window.press(DOWN);
-      await window.shows('❯ parser ');
-      await leader(window, 'w');
-      await window.shows('Enter to go');
-      await clickBox(window);
-      expect(window.frame()).toContain('Enter to go');
-      await window.press(ESC);
-      await until(
-        'the picker closes',
-        () => !window.frame().includes('Enter to go'),
-      );
-      expect(window.frame()).toContain('╭─ parser ');
-      expect(window.frame()).not.toContain('❯ parser ');
-      await window.type('abc');
-      await window.type('def');
-      await window.shows('│ › abcdef');
-    }));
-
   test('a click releases a selected asking child to its permission box without answering it at 80x24', () =>
     withAgents(async (window) => {
       await window.resize({ columns: 80, rows: 24 });

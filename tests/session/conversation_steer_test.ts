@@ -509,6 +509,50 @@ test("chord's calls the agent cut off before they reached chord are told to it a
   );
 });
 
+// What chord does today, not what it should (CHD-450, the owner's to
+// decide): 0.93's report for a call Claude dropped for a steer carries no
+// `nonExecutionKind`, so chord does not read the calls as cut off.
+for (const [scenario, status] of [
+  ['cutcallsunfinished', 'failed'],
+  ['cutcallsunfinishedv2', 'cancelled'],
+] as const) {
+  test(`chord's calls claude-agent-acp 0.93 ends ${status} as never run, with no structured kind, are not told to the agent (CHD-450)`, async () => {
+    const sent: string[] = [];
+
+    await onFake(
+      ['--steering', 'claude'],
+      async (conversation, events) => {
+        conversation.send(scenario);
+        await ended(events, 1);
+        conversation.send('text');
+        await ended(events, 2);
+
+        const ends = events.flatMap((event) =>
+          event.type === 'update' &&
+          event.update.sessionUpdate === 'tool_call_update' &&
+          event.update.status !== undefined
+            ? [event.update]
+            : [],
+        );
+
+        // No `claudeCode` in `_meta`: what is there is chord's own.
+        expect(
+          ends.map((end) => [
+            end.status,
+            (end._meta as Record<string, unknown> | undefined)?.['claudeCode'],
+          ]),
+        ).toStrictEqual([
+          [status, undefined],
+          [status, undefined],
+        ]);
+        expect(sent).toStrictEqual([scenario, 'text']);
+        expect(saidIn(events)).not.toContain("Received chord's note");
+      },
+      noting(sent),
+    );
+  });
+}
+
 test('a cut call chord served after all reached it, and the note names only the calls that did not', async () => {
   const sent: string[] = [];
   const input = { to: 'main', text: CUT_MESSAGE };

@@ -436,6 +436,8 @@ const SCENARIOS = [
   'chordtools',
   'cutcalls',
   'cutcallsback',
+  'cutcallsunfinished',
+  'cutcallsunfinishedv2',
   'task',
   'chordcalls',
   'codexchordcalls',

@@ -900,6 +900,41 @@ test("chord's calls the agent cut off say after their body that they did nothing
   }
 });
 
+// What chord draws today, not what it should (CHD-450, the owner's to
+// decide): 0.93's report for a call Claude dropped for a steer carries no
+// `nonExecutionKind`, so the calls read as Claude's words, not as cut off.
+for (const [scenario, shown] of [
+  ['cutcallsunfinished', 'Error: Claude stopped this tool call before it ran.'],
+  ['cutcallsunfinishedv2', 'Claude stopped this tool call before it ran.'],
+] as const) {
+  test(`chord's calls claude-agent-acp 0.93 ends as never run read as its words, not as cut off (${scenario}, CHD-450)`, async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, scenario);
+          await window.shows('Read the steer; I will answer that first.');
+          await until(
+            'the turn to end',
+            () => !window.frame().includes('Working'),
+          );
+
+          const read = window.frame().replace(/\s+/g, ' ');
+
+          expect(read).toContain(`→ to @main ⎿ ${shown}`);
+          expect(read).toContain(`⏺ Open ⎿ ${shown}`);
+          expect(read).not.toContain('Not delivered');
+          expect(read).not.toContain('Cut off before it reached chord');
+        },
+        { columns: 80, rows: 50, server },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+}
+
 describe('CHD-422 tester: wrapped source-line exceptions', () => {
   for (const columns of [80, 120]) {
     test(`Read keeps the first three source lines and terminal the last three at ${columns} columns`, async () => {

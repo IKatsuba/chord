@@ -131,6 +131,78 @@ export const CUT_MESSAGE = [
 /** What `cutcalls` asked `open_agent` for, which its adapter cuts off too. */
 export const CUT_OPEN = { agent: 'fake', name: 'parser', prompt: 'agentchild' };
 
+/**
+ * A batch claude-agent-acp 0.93 drops as Claude switches to a steering
+ * message, before either call's input has finished streaming, so neither
+ * reached chord. Each is announced as the streamed tool_use starts, the
+ * send_message refined from the input's complete top-level fields; the turn
+ * answers the steer and ends, and only then does the adapter end each call,
+ * with the report of a call that never ran: `status` and Claude's words for
+ * it, no `_meta` (CHD-450; the adapter's `AcpToolCallRenderer.unfinished`
+ * and `settleActive`).
+ */
+async function unfinishedCalls(
+  turn: Turn,
+  status: 'failed' | 'cancelled',
+): Promise<'end_turn'> {
+  const calls = [
+    ['send_message', { to: 'main' }],
+    ['open_agent', {}],
+  ] as const;
+  const ids = calls.map(([tool]) => turn.callId(tool));
+
+  for (const [index, [tool, input]] of calls.entries()) {
+    const name = `mcp__chord__${tool}`;
+    const meta = { claudeCode: { toolName: name } };
+
+    await turn.send({
+      _meta: meta,
+      toolCallId: ids[index]!,
+      sessionUpdate: 'tool_call',
+      name,
+      rawInput: {},
+      status: 'pending',
+      title: name,
+      kind: 'other',
+      content: [],
+    });
+
+    if (Object.keys(input).length > 0) {
+      await turn.send({
+        _meta: meta,
+        toolCallId: ids[index]!,
+        sessionUpdate: 'tool_call_update',
+        rawInput: input,
+        title: name,
+        kind: 'other',
+      });
+    }
+  }
+
+  await pause(turn.signal, STEP_MS * 20);
+  await turn.say('Read the steer; I will answer that first.');
+
+  for (const id of ids) {
+    await turn.send({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: id,
+      // ACP v1's types have no `cancelled`; 0.93's v2 sends it.
+      status: status as 'failed',
+      content: [
+        {
+          type: 'content',
+          content: {
+            type: 'text',
+            text: 'Claude stopped this tool call before it ran.',
+          },
+        },
+      ],
+    });
+  }
+
+  return 'end_turn';
+}
+
 export const CHORD_TOOLS = {
   // A batch Claude's adapter cuts off as a steer interrupts it: a
   // send_message to main and an open_agent, each failed `interrupted` with
@@ -172,6 +244,15 @@ export const CHORD_TOOLS = {
 
     return 'end_turn';
   },
+
+  // A batch claude-agent-acp 0.93 drops as Claude switches to a steering
+  // message, ended as its ACP v1 ends a call that never ran: `failed`.
+  cutcallsunfinished: (turn) => unfinishedCalls(turn, 'failed'),
+
+  // The same batch ended as 0.93 ends it under the draft ACP v2
+  // (CLAUDE_AGENT_ACP_EXPERIMENTAL_V2=1): `cancelled`, which ACP v1 has no
+  // such status for, sent here over chord's v1 connection all the same.
+  cutcallsunfinishedv2: (turn) => unfinishedCalls(turn, 'cancelled'),
 
   async cutcalls(turn) {
     const chord = (tool: string, input: Record<string, unknown>) => ({

@@ -165,3 +165,113 @@ describe('CHD-495 tester: inherited stderr has a bounded lifetime', () => {
     }
   });
 });
+
+describe('CHD-454 tester: observed stderr chunk boundaries', () => {
+  test('CRLF fragments, blank lines and content beyond a capped blank prefix count exactly once', async () => {
+    const chunks = [
+      'first\r',
+      '\n \t\r',
+      '\n  second',
+      ' continued\r',
+      '\n\nthird\nfourth\r\nfifth\nsixth\n',
+      ' '.repeat(STDERR_LINE_MAX),
+      ' ',
+      'Error beyond the kept prefix',
+      '\r',
+      '\n',
+      ' \t\r\n',
+      'last unfinished',
+    ];
+    let received = '';
+    const agent = await spawnAgent({
+      command: [
+        process.execPath,
+        '-e',
+        `
+        const chunks = ${JSON.stringify(chunks)};
+        let next = 0;
+        process.stderr.write(chunks[next++]);
+        process.stdin.on('data', () => {
+          if (next < chunks.length) process.stderr.write(chunks[next++]);
+          else process.exit(1);
+        });
+      `,
+      ],
+      cwd: process.cwd(),
+      onStderr: (text) => {
+        received += text;
+      },
+    });
+    const input = agent.stdin.getWriter();
+    let prefix = '';
+
+    try {
+      for (const [index, chunk] of chunks.entries()) {
+        prefix += chunk;
+
+        const deadline = performance.now() + 5000;
+
+        while (received !== prefix && performance.now() < deadline) {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+
+        expect(received).toBe(prefix);
+
+        if (index === 0 || index === 1) {
+          expect(agent.stderrEnd()).toEqual({ lines: ['first'], cut: 0 });
+        }
+
+        if (index === 6) {
+          expect(agent.stderrEnd()).toEqual({
+            lines: [
+              'first',
+              '  second continued',
+              'third',
+              'fourth',
+              'fifth',
+              'sixth',
+            ],
+            cut: 0,
+          });
+        }
+
+        if (index === 7) {
+          expect(agent.stderrEnd()).toEqual({
+            lines: [
+              '  second continued',
+              'third',
+              'fourth',
+              'fifth',
+              'sixth',
+              ' '.repeat(STDERR_LINE_MAX) + '…',
+            ],
+            cut: 1,
+          });
+        }
+
+        // The child cannot emit its next fragment until this one has been
+        // processed, so no OS coalescing can erase these boundaries.
+        await input.write(new TextEncoder().encode('next\n'));
+      }
+
+      await agent.status;
+      await agent.lastWords();
+      expect(agent.stderrEnd()).toEqual({
+        lines: [
+          'third',
+          'fourth',
+          'fifth',
+          'sixth',
+          ' '.repeat(STDERR_LINE_MAX) + '…',
+          'last unfinished',
+        ],
+        cut: 2,
+      });
+    } finally {
+      input.releaseLock();
+      await agent.stop(STOP);
+    }
+
+    expect(await isAlive(agent.pid)).toBe(false);
+  });
+});

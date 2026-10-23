@@ -8,12 +8,13 @@ import process from 'node:process';
 import type * as acp from '@agentclientprotocol/sdk';
 import {
   type Agent,
+  AgentGone,
   connectAgent,
   openAgent,
   type OpenAgentOptions,
 } from '../../src/acp/connection.ts';
 import manifest from '../../package.json' with { type: 'json' };
-import { commandArgv } from '../../src/acp/process.ts';
+import { commandArgv, settledWithin } from '../../src/acp/process.ts';
 import type { Traffic } from '../../src/acp/traffic.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { TRACEBACK_ERROR } from '../fixtures/fake_agent/options.ts';
@@ -991,6 +992,94 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
     await agent.close();
     expect(held.stopped).toHaveLength(1);
     await expect(asked).rejects.toThrow('The agent exited.');
+  });
+
+  describe('CHD-454 tester: failure snapshot order', () => {
+    test('stdout can close before stderr; an observed status is retained with the eventual diagnostic', async () => {
+      const held = heldProcess();
+      const status = Promise.withResolvers<{ code: number }>();
+      const reading = Promise.withResolvers<void>();
+      const process = {
+        ...held.process,
+        status: status.promise,
+        lastWords: () => {
+          reading.resolve();
+
+          return held.process.lastWords();
+        },
+      };
+      const refused = connectAgent(process, OPTIONS);
+      const failed = refused.catch((error: unknown) => error);
+
+      try {
+        await soon(() => held.heard.length > 0);
+        held.closeStdout();
+        await reading.promise;
+        status.resolve({ code: 7 });
+        expect(held.stopped).toEqual([]);
+        held.endStderr('  delayed frame\nFinal diagnostic\n');
+
+        const error = await failed;
+
+        assert(error instanceof AgentGone);
+        expect(error.exit).toEqual({ code: 7 });
+        expect(error.stderr).toEqual({
+          lines: ['  delayed frame', 'Final diagnostic'],
+          cut: 0,
+        });
+        expect(error.message).toContain('Final diagnostic');
+      } finally {
+        status.resolve({ code: 7 });
+        await held.process.stop();
+      }
+    });
+
+    test('a status first observed during cleanup is not invented in the already captured failure', async () => {
+      const held = heldProcess();
+      const status = Promise.withResolvers<{ code: number }>();
+      const reading = Promise.withResolvers<void>();
+      const process = {
+        ...held.process,
+        status: status.promise,
+        lastWords: () => {
+          reading.resolve();
+
+          return held.process.lastWords();
+        },
+        stop: () => {
+          status.resolve({ code: 9 });
+
+          return held.process.stop();
+        },
+      };
+      const refused = connectAgent(process, OPTIONS);
+      const failed = refused.catch((error: unknown) => error);
+
+      try {
+        await soon(() => held.heard.length > 0);
+        held.closeStdout();
+        await reading.promise;
+        held.endStderr('  captured diagnostic\n');
+
+        const outcome = await settledWithin(failed, 3000);
+
+        assert(outcome?.status === 'fulfilled');
+        assert(outcome.value instanceof AgentGone);
+        expect(await status.promise).toEqual({ code: 9 });
+        expect(outcome.value.exit).toBeUndefined();
+        expect(outcome.value.stderr).toEqual({
+          lines: ['  captured diagnostic'],
+          cut: 0,
+        });
+        held.endStderr('a later diagnostic\n');
+        expect(outcome.value.stderr).toEqual({
+          lines: ['  captured diagnostic'],
+          cut: 0,
+        });
+      } finally {
+        await process.stop();
+      }
+    });
   });
 });
 

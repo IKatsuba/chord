@@ -6,10 +6,12 @@
 import { execFile } from 'node:child_process';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { findAgent } from '../../src/agents.ts';
+import { startFailureOf } from '../../src/session/start_failure.ts';
 import { signInOf, SignInNeeded } from '../../src/session/sign_in.ts';
 import { FILLED } from '../../src/session/enrich.ts';
 import type { PendingPermission } from '../../src/session/permissions.ts';
@@ -1353,4 +1355,120 @@ describe('CHD-435 tester: sign-in through real session starts', () => {
       });
     }
   }
+});
+
+describe('CHD-454 tester: structured failures through actual starts', () => {
+  async function rejected(options: Parameters<typeof openSession>[0]) {
+    let failure: unknown;
+    let session: Session | undefined;
+
+    try {
+      session = await openSession(options);
+    } catch (error) {
+      failure = error;
+    } finally {
+      await session?.close();
+    }
+
+    assert(failure instanceof Error);
+
+    return failure;
+  }
+
+  for (const step of [
+    'session/new',
+    'session/load',
+    'session/resume',
+  ] as const) {
+    test(`${step} retains its actual request step and refusal code under wrappers, without an override pin`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-start-step-'));
+      const sessionId = crypto.randomUUID();
+
+      try {
+        const failure = await rejected({
+          agent: 'claude',
+          cwd,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--start-fails',
+            'notacp',
+            ...(step === 'session/resume'
+              ? ['--resume-only', '--no-load']
+              : []),
+          ),
+          ...(step === 'session/new' ? {} : { resume: { sessionId, cwd } }),
+        });
+
+        expect(startFailureOf(failure)).toEqual({ step, code: -32601 });
+        expect(failure.message).toContain(`Method not found: ${step}`);
+        expect(signInOf(failure)).toBeUndefined();
+      } finally {
+        await rm(cwd, { recursive: true });
+      }
+    });
+  }
+
+  test('a signal exit remains a signal, with its shell-style status and no invented refusal code', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-start-signal-'));
+
+    try {
+      const failure = await rejected({
+        agent: 'fake',
+        cwd,
+        agentCommand: ['sh', '-c', 'kill -TERM $$'],
+      });
+
+      expect(startFailureOf(failure)).toEqual({
+        step: 'initialize',
+        exit: { code: 143, signal: 'SIGTERM' },
+      });
+    } finally {
+      await rm(cwd, { recursive: true });
+    }
+  });
+
+  test('a registry launch carries its pin, but an explicit command override does not', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-start-pin-'));
+    const previousPath = process.env.PATH;
+    const definition = findAgent('agoragentic-acp');
+
+    assert(definition?.runner === 'npx');
+    expect(definition.start.env['PATH']).toBeUndefined();
+
+    // The registry runner is a local stub. No registry package or model is
+    // ever launched; its requested argv is its diagnostic.
+    await writeFile(
+      join(cwd, 'npx'),
+      '#!/bin/sh\nprintf \'%s\\n\' "$@" >&2\nexit 1\n',
+    );
+    await chmod(join(cwd, 'npx'), 0o755);
+
+    process.env.PATH = `${cwd}:${previousPath ?? ''}`;
+
+    try {
+      const registry = await rejected({ agent: 'agoragentic-acp', cwd });
+      const overridden = await rejected({
+        agent: 'agoragentic-acp',
+        cwd,
+        agentCommand: fakeAgentCommand(undefined, '--start-fails', 'notacp'),
+      });
+
+      expect(startFailureOf(registry)?.pinned).toBe(definition.pinned);
+      expect(startFailureOf(registry)?.stderr?.lines).toContain(
+        definition.pinned!,
+      );
+      expect(startFailureOf(overridden)).toEqual({
+        step: 'session/new',
+        code: -32601,
+      });
+    } finally {
+      if (previousPath === undefined) {
+        delete process.env.PATH;
+      } else {
+        process.env.PATH = previousPath;
+      }
+
+      await rm(cwd, { recursive: true });
+    }
+  });
 });

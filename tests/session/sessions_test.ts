@@ -287,6 +287,10 @@ test('the resume command carries an --agent-command, and every word of it is quo
   expect(resumeCommand('claude', "$(touch x)'; ls")).toStrictEqual(
     `chord claude --resume '$(touch x)'\\''; ls'`,
   );
+  // One that starts with a dash is joined to its flag, or it reads as one.
+  expect(resumeCommand('fake', '-opaque')).toStrictEqual(
+    'chord fake --resume=-opaque',
+  );
 });
 
 test("/resume offers this directory's sessions newest first, once each, but the open one", () => {

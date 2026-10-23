@@ -381,7 +381,11 @@ export function resumeCommand(
     words.push('--agent-command', shellQuote(agentCommand));
   }
 
-  return [...words, '--resume', shellQuote(sessionId)].join(' ');
+  // An id that starts with a dash would be read as an option on its own;
+  // Cliffy takes it as the flag's value when joined with `=`.
+  return sessionId.startsWith('-')
+    ? [...words, `--resume=${shellQuote(sessionId)}`].join(' ')
+    : [...words, '--resume', shellQuote(sessionId)].join(' ');
 }
 
 /**

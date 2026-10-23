@@ -116,9 +116,9 @@ saw, its past as the agent replays it.
 `--resume` (`-r`) opens one session. Given several ids, chord opens
 nothing and prints a command for each, with its recorded agent and
 directory. An id with no record uses the command's agent and directory,
-with a note saying so. An old `--resume w-<id>` window command likewise
-opens nothing and prints a command for each saved session. Old window
-records are left alone and no longer listed or written.
+with a note saying so. An old `chord --resume w-<id>` command passes its id
+to the agent as any id chord has no record of; the agent's refusal shows.
+Legacy files under `windows/` are ignored and left untouched.
 
 Each `--resume` takes one id or none. As the id is optional, a word after
 `--resume` that names one of chord's own flags (`model`, `c`) is not read

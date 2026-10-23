@@ -41,7 +41,7 @@ test('an agent that went says how it ended and the end of its stderr, by the ste
       'session/new',
       undefined,
     ).failure,
-  ).toStrictEqual({ step: 'session/new' });
+  ).toStrictEqual({ step: 'session/new', closed: true });
 });
 
 test("a refusal says its code, the sign-in's too, whatever its words", () => {
@@ -91,6 +91,14 @@ test("the step says what failed in chord words, and the agent's own only where i
   expect(
     at({ step: 'session/load', exit: { code: 137, signal: 'SIGKILL' } }),
   ).toBe('it was stopped by SIGKILL before answering session/load.');
+  // Its connection went with no exit seen: no exit is said, and its stderr
+  // stays out of the headline.
+  expect(at({ step: 'initialize', closed: true })).toBe(
+    'it closed its connection before answering initialize.',
+  );
+  expect(at({ step: 'session/new', closed: true })).toBe(
+    'it closed its connection before answering session/new.',
+  );
   expect(at({ step: 'session/new', code: -32601 })).toBe(
     'it does not serve ACP sessions: not an ACP agent, or not at this version.',
   );

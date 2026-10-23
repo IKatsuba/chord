@@ -17,6 +17,11 @@ export interface StartFailure {
   readonly step: StartStep;
   /** How its process ended, when it ended before answering `step`. */
   readonly exit?: Exit;
+  /**
+   * Its connection closed before it answered `step`, and no exit was seen
+   * by the time its last words came: it may live on.
+   */
+  readonly closed?: true;
   /** The JSON-RPC code of the agent's refusal of `step`. */
   readonly code?: number;
   /** The end of what it wrote to stderr, when it wrote anything. */
@@ -60,7 +65,11 @@ export function startFailed(
   return new StartFailed(
     {
       step,
-      ...(gone?.exit === undefined ? {} : { exit: gone.exit }),
+      ...(gone === undefined
+        ? {}
+        : gone.exit === undefined
+          ? { closed: true }
+          : { exit: gone.exit }),
       ...(code === undefined ? {} : { code }),
       ...(stderr === undefined || stderr.lines.length === 0 ? {} : { stderr }),
       ...(pinned === undefined ? {} : { pinned }),
@@ -106,6 +115,10 @@ export function stepWords(
   }
 
   const { step, exit, code } = failure;
+
+  if (failure.closed) {
+    return `it closed its connection before answering ${step}.`;
+  }
 
   if (exit !== undefined) {
     return exit.signal === undefined

@@ -943,6 +943,7 @@ describe('CHD-493 U2 tester: aliases retire live per-agent work', () => {
           }),
           onQuit: (resumable) => {
             quits++;
+
             quit = resumable;
           },
         },

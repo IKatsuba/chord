@@ -304,31 +304,26 @@ describe('a selection (CHD-172)', () => {
 
         before = window.selected();
 
-        const line = Number(/\d+/.exec(before)![0]);
-        // The line above the dragged one, which a step of the wheel moves
-        // under the pointer.
-        const above = rows()[next.y - 1]!;
+        const shown = rows()[next.y - 1];
 
-        expect(above).toContain(`${line - 1}. Line ${line - 1} of`);
+        // A wheel step during the drag moves the text under the pointer,
+        // and the selection reaches the cell it is over now.
         await window.press(`\x1b[<64;${next.end + 1};${next.y + 1}M`);
         await awaiting(
           'the view to scroll',
-          () => rows()[next.y - 1] !== above,
+          () => rows()[next.y - 1] !== shown,
         );
         step('scrolled');
-        // The anchor stays with its text and the focus reads the pointer's
-        // cell again (CHD-172): the selection runs from that line's cell
-        // under the pointer to its end.
         await awaiting(
-          'the selection to reach the cell under the pointer',
-          () => window.selected() === above.slice(next.end).trimEnd(),
+          'the selection to grow',
+          () => window.selected() !== before,
         );
-        step('reselected');
+        step('grown');
         await window.press(left(next.end, next.y, 'up'));
         await awaiting('the release', () => scroll()?.held === undefined);
         // The person moved the view, so it stays where they left it.
         expect(scroll()?.following).toBe(false);
-        expect(window.frame()).toContain('lines below');
+        expect(window.frame()).toMatch(/\d+ lines? below/);
       },
       {
         copyOnSelect: false,

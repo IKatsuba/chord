@@ -222,3 +222,164 @@ describe('CHD-396 tester: prose selection boundaries', () => {
     }
   });
 });
+
+describe('CHD-396 tester: list layout and selection', () => {
+  for (const columns of [80, 120]) {
+    test(`ordered start numbers and task markers never select or copy at ${columns} columns`, async () => {
+      const ordered = [
+        'Ordered first ' + TESTER_PARAGRAPH,
+        'Ordered second with 日本語 and an ending.',
+        'Ordered third ' + TESTER_PARAGRAPH,
+      ];
+      const task = ['Open task ' + TESTER_PARAGRAPH, 'Done task ending.'];
+
+      for (const [text, items, markers] of [
+        [
+          ordered.map((item, index) => `${98 + index}. ${item}`).join('\n'),
+          ordered,
+          ['98.', '99.', '100.'],
+        ],
+        [`- [ ] ${task[0]}\n- [x] ${task[1]}`, task, ['[ ]', '[x]']],
+      ] as const) {
+        const drawn = await draw(<Reply text={text} width={columns} />, {
+          columns,
+          rows: 40,
+        });
+
+        try {
+          const rows = stripAnsi(drawn.frame()).split('\n');
+
+          for (const marker of markers) {
+            expect(rows.some((row) => row.startsWith(marker))).toBe(true);
+          }
+
+          // A drag beginning on the first marker must start no selection.
+          await drawn.write(left(0, 0, 'down'));
+          await drawn.write(left(columns - 1, 1, 'drag'));
+          await drawn.write(left(columns - 1, 1, 'up'));
+          expect(drawn.selected()).toBe('');
+
+          expect(await selectBody(drawn, items[0]!.slice(0, 10), columns)).toBe(
+            items.join('\n'),
+          );
+        } finally {
+          await drawn.unmount();
+        }
+      }
+    });
+
+    test(`loose nested items retain blank rows and code boxes fit their content column at ${columns} columns`, async () => {
+      const text = [
+        '10. Outer item',
+        '',
+        '    Outer paragraph.',
+        '',
+        '    - Inner item',
+        '',
+        '      ```txt',
+        '      ' + 'code'.repeat(45),
+        '      ```',
+        '',
+        '11. Last item',
+      ].join('\n');
+      const drawn = await draw(<Reply text={text} width={columns} />, {
+        columns,
+        rows: 40,
+      });
+
+      try {
+        const rows = stripAnsi(drawn.frame()).split('\n');
+        const outer = rows.findIndex((row) => row.includes('10. Outer item'));
+        const paragraph = rows.findIndex((row) =>
+          row.includes('Outer paragraph.'),
+        );
+        const inner = rows.findIndex((row) => row.includes('- Inner item'));
+        const box = rows.findIndex((row) => row.includes('┌ txt'));
+        const last = rows.findIndex((row) => row.includes('11. Last item'));
+
+        expect(rows[outer + 1]?.trim()).toBe('');
+        expect(rows[paragraph]?.indexOf('Outer')).toBe(4);
+        expect(rows[inner]?.indexOf('-')).toBe(4);
+        expect(rows[inner + 1]?.trim()).toBe('');
+        expect(rows[box]?.indexOf('┌')).toBe(6);
+        expect(rows[last - 1]?.trim()).toBe('');
+        expect(rows.every((row) => stringWidth(row) <= columns)).toBe(true);
+
+        const copied = await selectBody(drawn, 'Outer item', columns);
+
+        expect(copied).toContain('Outer paragraph.\nInner item\n┌ txt');
+        expect(copied).toContain('│');
+        expect(copied).not.toContain('10.');
+        expect(copied).not.toContain('11.');
+        expect(copied.endsWith('Last item')).toBe(true);
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+
+  test('a streaming list item grows, reflows on narrow resize and keeps its joined copy', async () => {
+    let update: (state: { text: string; width: number }) => void = () => {};
+
+    function StreamingList() {
+      const [state, setState] = useState({
+        text: '10. First partial',
+        width: 80,
+      });
+
+      update = setState;
+
+      return <Reply text={state.text} width={state.width} />;
+    }
+
+    const drawn = await draw(<StreamingList />, { columns: 80, rows: 40 });
+    const items = [
+      'First item has 日本語 and a long ending.',
+      'Nested item ends.',
+    ];
+    const text = `10. ${items[0]}\n    - ${items[1]}`;
+
+    try {
+      expect(await selectBody(drawn, 'First partial', 80)).toBe(
+        'First partial',
+      );
+
+      for (const columns of [80, 20, 120]) {
+        update({ text, width: columns });
+        await drawn.resize({ columns });
+        await until('the list to grow', async () => {
+          await drawn.write('');
+
+          return drawn.mounted(items[1]!);
+        });
+
+        expect(await selectBody(drawn, 'First', columns)).toBe(
+          items.join('\n'),
+        );
+        expect(
+          stripAnsi(drawn.frame())
+            .split('\n')
+            .every((row) => stringWidth(row) <= columns),
+        ).toBe(true);
+      }
+    } finally {
+      await drawn.unmount();
+    }
+  });
+});
+
+describe('CHD-396 tester: task list in the fake window', () => {
+  for (const columns of [80, 120]) {
+    test(`both task bodies copy at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'markdownwrap');
+          await window.shows('break here.');
+          expect(await drag(window, 'open task', 'done task')).toBe(
+            'open task\ndone task',
+          );
+        },
+        { columns, rows: 40, copyOnSelect: false },
+      ));
+  }
+});

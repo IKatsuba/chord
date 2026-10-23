@@ -701,7 +701,7 @@ describe('CHD-246 tester: request lifecycle and small rooms', () => {
         await asked(window);
         await window.press(END);
         await window.shows('mode: overwrite');
-        await pickAgent(window, 'other');
+        await pickAgent(window, 'other', true);
         await window.shows('Fake Large with a 1M context window');
         await send(window, 'bigask');
         await asked(window);
@@ -709,11 +709,11 @@ describe('CHD-246 tester: request lifecycle and small rooms', () => {
         expect(window.frame()).not.toContain('mode: overwrite');
         await window.press(PAGE_DOWN);
         await window.shows('lines above');
-        await pickAgent(window, 'main');
+        await pickAgent(window, 'main', true);
         await asked(window);
         await window.press('1');
         await window.shows('Permission: allow.');
-        await pickAgent(window, 'other');
+        await pickAgent(window, 'other', true);
         await asked(window);
         expect(window.frame()).not.toContain('Permission: allow.');
         await window.press(ESC);

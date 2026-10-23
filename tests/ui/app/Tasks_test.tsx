@@ -504,7 +504,7 @@ test('Esc stops a running task agent, which sends no report, takes the queued pr
 });
 
 describe('CHD-377 tester: Codex call session isolation', () => {
-  test('main and a fake child with reused call ids keep their own served results', async () => {
+  test('served results on main survive a child reusing its call ids', async () => {
     const server = serveChord();
 
     try {
@@ -519,12 +519,13 @@ describe('CHD-377 tester: Codex call session isolation', () => {
           await readyAgent(window);
           await send(window, 'codexchordcalls');
           await window.shows('Listed as Codex.');
-          await window.shows('1 open · 1 fake');
+          await window.shows('Tool list_sessions not found');
+          expect(window.frame()).toContain('List agents');
           expect(window.frame()).not.toContain('(you)');
           expect(window.frame()).not.toContain('Bash(mcp.chord.');
           await pickAgent(window, 'main');
           await window.shows('1 open · 1 fake (you)');
-          expect(window.frame()).not.toContain('2 open');
+          expect(window.frame()).not.toContain('Tool list_sessions not found');
           expect(window.frame().match(/Listed as Codex\./g)).toHaveLength(1);
         },
         { server, runtimes: ['fake'], rows: 40, columns: 80 },

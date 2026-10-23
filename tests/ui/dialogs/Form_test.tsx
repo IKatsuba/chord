@@ -312,7 +312,7 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
         await until('the second agent', () => window.pids.length === 2);
         await window.shows('asks for input · ctrl+x a');
         await send(window, 'form');
-        await inputAsked(window, '│ fake asks for input');
+        await inputAsked(window, '│ other asks for input');
         await window.type('beta');
         await window.press(DOWN);
         await window.type('beta@example.com');
@@ -324,7 +324,7 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
         await window.press(ESC);
         await window.shows('Elicitation answer: cancel');
         await pickAgent(window, 'other');
-        await inputAsked(window, '│ fake asks for input');
+        await inputAsked(window, '│ other asks for input');
         await window.shows('Project name   beta');
         await window.shows('Contact email  beta@example.com');
         aligned(window.frame());
@@ -359,7 +359,7 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
           }
 
           await main.window.open(main.key, {
-            agent: 'fake',
+            agent: 'codex',
             name: 'other',
             prompt: 'form',
           });
@@ -367,7 +367,7 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
           await send(window, 'never');
           await window.shows('Working…');
           await pickAgent(window, 'other');
-          await inputAsked(window);
+          await inputAsked(window, 'other asks for input');
           await window.press(DOWN);
           aligned(window.frame());
           await window.press(CTRL_C);
@@ -382,7 +382,12 @@ describe('CHD-1 tester: generic form row lifecycle', () => {
           columns: 80,
           rows: 24,
           agentCommand: fakeAgentCommand(undefined, '--hang', 'turn'),
-          startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+          startupOf: (agent) => ({
+            agentCommand:
+              agent === 'fake'
+                ? fakeAgentCommand(undefined, '--hang', 'turn')
+                : fakeAgentCommand(),
+          }),
         },
       );
     } finally {

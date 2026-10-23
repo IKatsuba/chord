@@ -57,14 +57,18 @@ export async function openOther(window: Window) {
  * existing attention action can reach an agent; its news or request must
  * still be waiting (Q183). No pointer selection is invented.
  */
-export async function pickAgent(window: Window, name: 'main' | 'other') {
+export async function pickAgent(
+  window: Window,
+  name: 'main' | 'other',
+  attention = false,
+) {
   const rows = () => window.frame().split('\n');
   const target = () =>
     rows().findIndex((row) =>
       new RegExp(`^(?: {4}| {2}❯ )${name}\\s`).test(row),
     );
 
-  if (/^│ ›\s*│$/.test(promptRow(window) ?? '')) {
+  if (!attention && /^│ ›\s*│$/.test(promptRow(window) ?? '')) {
     await window.press(DOWN);
     await until(`the list picks ${name}`, async () => {
       const drawn = rows();
@@ -80,10 +84,14 @@ export async function pickAgent(window: Window, name: 'main' | 'other') {
       return false;
     });
   } else {
-    const picked = () =>
-      name === 'other'
-        ? window.frame().includes('╭─ other ')
-        : !window.frame().includes('╭─ other ');
+    const picked = () => {
+      const frame = window.frame();
+      const other =
+        frame.includes('╭─ other ') ||
+        /^│ other asks(?: for input| you \d+ questions)/m.test(frame);
+
+      return name === 'other' ? other : !other;
+    };
 
     await until(`attention reaches ${name}`, async () => {
       if (picked()) {

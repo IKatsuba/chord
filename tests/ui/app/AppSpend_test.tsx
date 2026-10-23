@@ -731,7 +731,7 @@ describe('CHD-472 U2 tester: model changes price only the growth (Q133)', () => 
                       '--session-usage',
                       '--tokens-only',
                     )
-                  : fakeAgentCommand(),
+                  : fakeAgentCommand(undefined, '--child-runtime', 'dirac'),
             }),
           },
         );
@@ -745,12 +745,12 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
     for (const [models, cost, missing] of [
       [
         ['gpt-5.3-codex', 'fake-unpriced', 'claude-haiku-4-5'],
-        '$0.0068',
+        '$0.0115',
         '1 turn',
       ],
       [
         ['fake-unpriced', 'gpt-5.3-codex', 'fake-unpriced'],
-        '$0.0047',
+        '$0.0094',
         '2 turns',
       ],
     ] as const) {
@@ -785,6 +785,10 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
 
             await connected();
 
+            // agentother already sent one priced Codex reply. Keep that
+            // baseline in the four-turn total, then observe this sequence.
+            reply = '';
+
             try {
               for (const [index, model] of models.entries()) {
                 if (window.session()!.models()?.current !== model) {
@@ -805,9 +809,7 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
                   );
                 }
 
-                if (index !== 0) {
-                  await send(window, 'text');
-                }
+                await send(window, 'text');
 
                 await until(
                   'reply complete',
@@ -821,7 +823,7 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
 
               await send(window, '/cost');
               await until('last total on screen', () =>
-                /Tokens in:\s+3,000/.test(window.frame()),
+                /Tokens in:\s+4,000/.test(window.frame()),
               );
 
               const words = window.frame().replace(/\s+/g, ' ');
@@ -862,7 +864,6 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
               return session;
             },
             startupOf: (agent) => ({
-              ...(agent === 'dirac' ? { model: models[0] } : {}),
               agentCommand:
                 agent === 'dirac'
                   ? fakeAgentCommand(
@@ -872,7 +873,7 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
                       '--no-cost',
                       '--unpriced-model',
                     )
-                  : fakeAgentCommand(),
+                  : fakeAgentCommand(undefined, '--child-runtime', 'dirac'),
             }),
           },
         );

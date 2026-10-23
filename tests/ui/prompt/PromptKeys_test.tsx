@@ -3,6 +3,7 @@
  * headers, selection, option and cmd with the arrows, and held matches.
  */
 import { describe, expect, test } from 'bun:test';
+import { serveChord } from '../../../src/server/server.ts';
 import {
   withChild,
   openOther,
@@ -16,6 +17,7 @@ import { FileList, Queue } from '../../../src/ui/prompt/Prompt.tsx';
 import { draw } from '../harness.tsx';
 import type { EditorMode } from '../../../src/settings.ts';
 import {
+  CTRL_C,
   CTRL_G,
   ESC,
   promptRow,
@@ -529,7 +531,7 @@ describe('CHD-398 tester: held match lifecycle', () => {
   });
 
   for (const action of ['switch', 'close'] as const) {
-    test(`a pending pick is dropped on session ${action}, even for the same mention`, async () => {
+    test(`a pending pick is dropped on child ${action}, even for the same mention`, async () => {
       const releases: ((found: readonly string[]) => void)[] = [];
       const match = (paths: readonly string[], query: string) =>
         query === 'target'
@@ -537,39 +539,49 @@ describe('CHD-398 tester: held match lifecycle', () => {
               releases.push(resolve);
             })
           : matchFiles(paths, query);
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Parameters<typeof admit>[0] | undefined;
 
-      await withWindow(
-        async (window) => {
-          await files(window, 'src/target.ts');
-          await window.type('@target');
-          await until('the first session match', () => releases.length > 0);
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
 
-          if (action === 'switch') {
-            await window.press('\r');
-          }
+        return admit(caller);
+      };
 
-          await window.press('\x18');
-          await window.press('c');
-          await readyAgent(window);
-          await window.type('@target');
+      try {
+        await withChild(
+          async (window) => {
+            await openOther(window);
+            await files(window, 'src/target.ts');
+            await window.type('@target');
+            await until('the main match is held', () => releases.length > 0);
 
-          if (action === 'close') {
-            await window.press(TAB);
-            await window.press('\x18');
-            await window.press('k');
-          }
+            if (action === 'switch') {
+              await window.press('\r');
+            }
 
-          for (const release of releases) {
-            release(['src/target.ts']);
-          }
+            await pickAgent(window, 'other');
+            await window.type('@target');
+            await until('the child match is held', () => releases.length >= 2);
 
-          await window.press('');
-          expect(promptRow(window)).toContain('› @target');
-          expect(promptRow(window)).not.toContain('@src/target.ts');
+            if (action === 'close') {
+              await window.press(TAB);
 
-          if (action === 'switch') {
-            await window.press('\x18');
-            await window.press('1');
+              if (main === undefined) {
+                throw new Error('main was not admitted');
+              }
+
+              // The parent's close_agent path remains reachable while the child
+              // keeps a draft; Q183 adds no person-owned list key here.
+              await main.window.close(main, 'other');
+              await until(
+                'the child closed',
+                () => !/^ {4}other /m.test(window.frame()),
+              );
+            }
 
             for (const release of releases) {
               release(['src/target.ts']);
@@ -578,10 +590,26 @@ describe('CHD-398 tester: held match lifecycle', () => {
             await window.press('');
             expect(promptRow(window)).toContain('› @target');
             expect(promptRow(window)).not.toContain('@src/target.ts');
-          }
-        },
-        { match },
-      );
+
+            if (action === 'switch') {
+              // Q183: clear the child's draft before using its empty-prompt list.
+              await window.press(CTRL_C);
+              await pickAgent(window, 'main');
+
+              for (const release of releases) {
+                release(['src/target.ts']);
+              }
+
+              await window.press('');
+              expect(promptRow(window)).toContain('› @target');
+              expect(promptRow(window)).not.toContain('@src/target.ts');
+            }
+          },
+          { match, server },
+        );
+      } finally {
+        await server.close();
+      }
     });
   }
 

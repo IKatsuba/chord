@@ -597,12 +597,26 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         read().drive.clearFront(() => {});
 
         await replacement(read, old);
+        await settled(read, 1);
         read().drive.quit();
         await until(
           'quit closed the replacement',
           () => read().drive.sessions.tabs.tabs.length === 0,
         );
-        await settled(read, 2);
+        await until('retired task end persisted after quit', async () => {
+          const records = await readRecords(join(read().dir, 'state'));
+          const parent = records.find((each) => each.sessionId === old);
+
+          return (
+            parent !== undefined &&
+            (await readPast(parent.path)).some(
+              (entry) =>
+                entry.type === 'update' &&
+                entry.update.sessionUpdate === 'subagent_update' &&
+                entry.update._meta?.['chord/spent'] !== undefined,
+            )
+          );
+        });
 
         const kept = read().all.window.keptSpend!.find(
           (part) => part.sessionId === old,

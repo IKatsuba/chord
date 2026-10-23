@@ -389,7 +389,7 @@ describe('CHD-1 tester: question box lifecycle', () => {
         await pickAgent(window, 'other');
         await until('the second fake agent', () => window.pids.length === 2);
         await send(window, 'askdroid');
-        await inputAsked(window, 'fake asks you 3 questions');
+        await inputAsked(window, 'other asks you 3 questions');
         await window.press('1');
         await window.press('1');
         await window.press('\r');

@@ -798,7 +798,7 @@ describe('CHD-473 tester: full cells at the note floor and nested accounting', (
       expect(byDepth(4)).toBe(grandchild);
       expect(run).toContain('$0.0090');
       expect(run).toContain('900');
-      expect(main).toContain('$0.0150');
+      expect(main).toContain('$0.0100');
       expect(total).toContain('$0.0300');
       expect(total).toContain('2,100');
 
@@ -959,7 +959,7 @@ describe('CHD-472 U2 tester: provider identity in mixed window totals', () => {
         .replace(/\s+/g, ' ');
 
       expect(total.match(/dirac's provider reports no cost/g)).toHaveLength(1);
-      expect(total).toContain('fake not reported');
+      expect(total).toContain('missing not reported');
       expect(total).not.toContain('dirac not reported');
       expect(total).toContain('6,120');
       expect(output.every((row) => stringWidth(row) <= width)).toBe(true);

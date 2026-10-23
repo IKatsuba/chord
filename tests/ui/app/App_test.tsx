@@ -705,6 +705,26 @@ test("the window's first row is its header's", () =>
     { columns: 120, rows: 40 },
   ));
 
+test('/new and a space lists the agents chord can start, after /clear as before it (U6)', () =>
+  withWindow(
+    async (window) => {
+      const listed = async () => {
+        await window.type('/new ');
+        await until('the agents listed', () =>
+          /^ {2}fake\s*$/m.test(window.frame()),
+        );
+        await window.press(CTRL_C);
+      };
+
+      await ready(window);
+      await listed();
+      await send(window, '/clear');
+      await ready(window);
+      await listed();
+    },
+    { columns: 120, rows: 40 },
+  ));
+
 test("/new opens an agent of main's runtime for main, idle, and goes to it; main's transcript draws the call (U6)", () =>
   withWindow(
     async (window) => {

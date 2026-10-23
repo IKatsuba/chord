@@ -97,6 +97,11 @@ test('/new and a space opens the list of agents the window can start', () => {
   expect(commandMenu(withAgents, '/new mine ')).toStrictEqual(undefined);
   // A window given no agents offers none.
   expect(commandMenu(withCommands, '/new ')).toStrictEqual(undefined);
+  // They are the window's: a new session, /clear's or a /resume pick's,
+  // keeps them (U6).
+  expect(
+    menuNames(reduceApp(withAgents, { type: 'cleared' }), '/new '),
+  ).toStrictEqual(['fake', 'mine']);
 });
 
 test("a / opens the list of chord's commands and the agent's", () => {

@@ -680,10 +680,12 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         endedMonitors: action.ended,
       };
     case 'cleared':
-      // A new session: only what is the window's own stays, and the draft
-      // with its images and the drafts set aside (Q191).
+      // A new session: only what is the window's own stays, the agents /new
+      // offers among it, and the draft with its images and the drafts set
+      // aside (Q191).
       return {
         ...initialAppState,
+        ...(state.agents === undefined ? {} : { agents: state.agents }),
         // What closed agents and let-go sessions spent, which still counts.
         ...(state.keptSpend === undefined
           ? {}

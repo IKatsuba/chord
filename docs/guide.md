@@ -51,59 +51,40 @@ chord codex           # any agent `chord agents` lists
 chord gemini -C ~/src/app
 chord --continue      # Claude Code's latest session in this directory, again
 chord --resume <id>   # a session by its id, which chord prints when you quit
-chord -r <id> -r <id> …   # each a tab of one window, the first in front
-chord --resume w-<id> # a whole window again, as chord prints when you quit it
-chord --resume        # pick an earlier session or a saved window first
+chord --resume        # pick an earlier session first
 chord agents          # the agents chord can start: name, what starts each, and whether PATH has its CLI
 chord -p "Explain src/main.tsx"                # the reply on stdout, then exit
 git diff | chord -p "Review this" --output-format json
 ```
 
-Inside chord, `/resume` lists this directory's earlier sessions and saved
-windows in one list, newest first, each with when it was last used and its
-first prompt, after its name for an agent another agent started; a window reads `▣ 3 sessions · claude, codex, claude` and its
-front tab's first prompt, and its sessions are on the list too, just under
-it. Enter opens the highlighted session in the same window and Esc leaves
-things as they were. Enter on a window opens its tabs beside those open, at
-the end of the strip, with its front tab in front; one already open is not
-opened twice, and a front tab no prompt went to gives its place. A window
-that would take more than nine tabs opens none, and the status line says
-how many to close. ctrl+a lists every directory's, as Claude Code's does,
-each row naming its directory from `~` (a window's front tab's, `+1` for
-each other directory its tabs work in), and ctrl+a again goes back to this
-one. A session or window from another directory is not opened in this
-window, whose settings, MCP servers and files are that directory's; chord
-says so and gives the `chord <agent> --resume <id>` or
-`chord --resume w-<id>` that opens it where it works.
+Each chord process runs one main session with its children. For sessions
+side by side, run chord in separate terminal panes.
+
+Inside chord, `/resume` lists this agent's earlier sessions in this
+directory, newest first, each with when it was last used and its first
+prompt, after its name for an agent another agent started. Enter replaces
+the main session with the highlighted one; Esc leaves things as they were.
+A session open as a child says `open now`; Enter picks it instead of
+opening it again. ctrl+a lists every directory's, each row naming its
+directory from `~`, and ctrl+a again goes back to this one. Settings, MCP
+servers and files stay tied to this directory, so chord gives a command
+to open a session from another directory where it works. For another agent's sessions, run `chord <agent>` and use `/resume`.
 
 `chord --resume` with no id opens the same picker before any agent starts,
 as `claude --resume` does; Enter opens what it picks, from any directory,
 as its own `--resume` would, and Esc quits with nothing started.
 
-ctrl+x c opens another session of the same agent in the same directory,
-in front, beside the one already open, up to nine; `/new` does the same, and
-`/new codex` opens one of the agent it names, on that agent's command, model
-and mode from the settings files; `/new ` and part of a name lists the agents
-chord can start, those only your settings name among them, an agent whose own
-CLI is not on your `PATH` marked so, and Tab or Enter picks one. An agent chord cannot start is refused in
-the transcript, and a tenth session on the status line. With two or more open the
-window's top row has a tab for each, the one in front in inverse. Each shows
-its state glyph (`✻` working, `●` waiting, `✗` gone), then its unseen mark
-(`✗` turn failed, `✓` new reply, `←` new message); idle has no state glyph.
-A child's unseen message marks its tab too. ctrl+x n and ctrl+x p go to
-the next and previous tab, ctrl+x 1 to 9 to a tab by its number, each with its own
-transcript, draft and prompt as it was left. After ctrl+x the status line
-names the keys that can follow, and Esc lets it go. A session behind that
-asks for permission or a form, or ends its turn, never comes to the front by
-itself: the status line says so
-(`● 2 claude needs your permission · ctrl+x a`), and ctrl+x a goes to the one
-that has waited longest, then the next on each press. An unseen exit is
-news even when the agent was idle. A failure names its agent, such as
-`✗ parser's turn failed · ctrl+x a to go`, and its tab when behind,
-`✗ parser exited in 2 fake`. Several failures count each state separately:
-`✗ 1 exited · 1 turn failed · ctrl+x a to go`. Seen failures leave the
-status line. ctrl+x w lists open tabs with the agents list's words for state
-and unseen marks, naming the child or member when it is theirs.
+`/clear` starts a new session with an empty transcript; `/new` is its alias,
+shown as `/clear (new)` in the command menu. `/new <agent>` is refused
+without clearing anything: run `chord <agent>` in another pane instead.
+
+An agent asking for permission or a form, or ending its turn, never takes
+the view by itself. The status line names what waits, and ctrl+x a goes to
+the agent that has waited longest, then the next on each press. An unseen
+exit is news even when the agent was idle. A failure names its agent, such
+as `✗ parser's turn failed · ctrl+x a to go`. Several failures count each
+state separately: `✗ 1 exited · 1 turn failed · ctrl+x a to go`. Seen
+failures leave the status line.
 An asking task is named as its box names it:
 `● Agent(Fix the tokenizer) · fake needs your permission · ctrl+x a to go`,
 or `● main's task needs your permission · ctrl+x a` where it will not fit.
@@ -111,25 +92,12 @@ Forms and links read `asks for input`. The hint names the oldest open
 permission in that session, otherwise its oldest form or link. With several
 asking, `● N agents wait` counts a task as one agent. ctrl+x a reaches its
 box through its owner session; the background summary keeps `● 1 task asking`.
-ctrl+x k closes the session in front, the one to its left coming forward;
-one that is working
-or running a `!` command, waits on you, has prompts queued, or task agents
-running or long-lived agents working or waiting asks for a
-second ctrl+x k first, and its command stops with it. Its long-lived agents
-close with it. Closing the last one
-quits. With several open and any of them busy, ctrl+d
-and `/exit` ask for a second press too and name the busy ones. Quitting
-closes every session, waits for each agent to exit, and prints a
-`chord <agent> --resume <id>` for the session a prompt went to. It repeats
-`--agent-command` only when given as a flag; settings commands are read
-again from their files. With two or more such sessions it saves the window
-instead
-(`~/.local/state/chord/windows/`) and prints one command for all of them,
-`chord --resume w-<id>`, which opens every tab again in its order, each on
-its own agent where it works, the one that was in front in front. A window
-opened that way and quit again is saved over its own record, as it is then.
-A tab whose session record has gone is left out, and the status line says
-which; a window id goes on its own, never among session ids.
+
+ctrl+d and `/exit` quit at once, closing the main session and its children
+and waiting for their agents to exit. chord prints a
+`chord <agent> --resume <id>` for the main session if a prompt went to it.
+It repeats `--agent-command` only when given as a flag; settings commands
+are read again from their files.
 
 If chord fails while drawing the window, a crash screen shows the error
 and as much of its stack as fits. Any key gives the terminal back, prints
@@ -145,18 +113,20 @@ reopens the session. The id is the agent's own: for Claude Code, the one
 `claude --resume` takes, so `--resume <id>` also opens a session chord never
 saw, its past as the agent replays it.
 
-`--resume` (`-r`), given once per id, takes up to nine, the most one window
-holds, and opens each
-in a tab of its own, in the order given, the first in front. Each tab runs
-its session's own agent in its session's own directory, with that
-directory's settings and MCP servers; `@`, `!` commands and the header
-follow the tab in front, and ctrl+x c and `/new` open beside it in
-its directory. Several ids open only sessions chord has a record of: an
-unknown id, the same id twice or a tenth refuses the whole command before
-the window opens. Each `--resume` takes one id or none, so the agent goes
-anywhere around them: `chord codex -r <id> -r <id>`. As the id is optional,
-a word after `--resume` that names one of chord's own flags (`model`, `c`)
-is not read as an id.
+`--resume` (`-r`) opens one session. Given several ids, chord opens
+nothing and prints a command for each, with its recorded agent and
+directory. An id with no record uses the command's agent and directory,
+with a note saying so. An old `--resume w-<id>` window command likewise
+opens nothing and prints a command for each saved session. Old window
+records are left alone and no longer listed or written.
+
+Each `--resume` takes one id or none. As the id is optional, a word after
+`--resume` that names one of chord's own flags (`model`, `c`) is not read
+as an id.
+
+`--continue`, `--resume` and `/resume` can open a session already open in
+another chord process. Both processes then use it, and their turns
+interleave in its record; close it in the other pane before resuming here.
 
 `@` opens the file finder; fuzzy matching starts at the first character
 after it. ↑/↓ moves the highlight, Enter or Tab adds the file, and Esc
@@ -220,14 +190,12 @@ Each session's transcript opens with a header: Chorded's mark in its
 gradient, drawn in half blocks, and beside it chord's version, the agent and
 the model the session started on, its directory and the keys to `?` and
 `/help`; a resumed session's says when it was last used and its first
-prompt. It stands at the top, the window's first row with one session open
-and under the row of tabs with more, and the conversation grows down from it;
-once the conversation fills the window the header scrolls away, and `home`
-brings it back.
+prompt. It stands at the top, and the conversation grows down from it;
+once it fills the window the header scrolls away, and `home` brings it back.
 
 Claude's work after a background task and codebuddy's unasked turns show as
 working: `››› Working… (Ns · esc to interrupt)`, timed from the cycle's
-first update, with `✻` in the tab and `✻ working` in the agents list.
+first update, with `✻ working` in the agents list.
 Its end notifies as a turn's end does. Esc interrupts it; a prompt sent
 meanwhile goes at once and takes it over. Requests inside it are held
 between turns, with ctrl+x a to answer. Claude's cycle ends when it reports
@@ -407,15 +375,15 @@ counted under `Not counted`; the token rows still show the whole total.
 With no price for any answer, the cost says the provider reports none and
 chord has no price for the model.
 
-With more than one session, a task included, `/cost` adds a window table:
-each tab's subtotal, its own agent, children and team runs with their
-members, then the window's total. Tasks sit under whoever started them;
-a team's tasks have separate rows. Each row shows its own spend, except
-tab subtotals. Names and full notes wrap inside their cells; cost and tokens
-stay aligned. A note with fewer than 20 cells of room moves under the row's
-figures. `~` marks estimates in the table and task summaries. Closed children
-and tabs stay counted, as do sessions cleared or resumed in place. The
-table also carries dirac's no-cost and missing-price notes.
+With more than one session, a task included, `/cost` adds a table headed
+`This session`: main, children and team runs with their members, then the
+total. Tasks sit under whoever started them; a team's tasks have separate
+rows. Each row shows its own spend. Names and full notes wrap inside their
+cells; cost and tokens stay aligned. A note with fewer than 20 cells of
+room moves under the row's figures. `~` marks estimates in the table and
+task summaries. Closed children stay counted, as do sessions cleared or
+resumed in place, under `before /clear`. The table also carries dirac's
+no-cost and missing-price notes.
 
 ## Settings
 
@@ -456,14 +424,14 @@ so. `preferredNotifChannel` is `auto` by default: OSC 9, a desktop
 notification, in iTerm2, WezTerm, Ghostty and kitty;
 OSC 777 in foot; the bell elsewhere and inside tmux. `bell`, `osc9`, `osc777`
 choose one, and `off` turns it off. A turn you interrupt with Esc is not
-announced. With several sessions open, the notification names the tab:
-`fake (2) needs your permission: Write notes.txt`.
+announced. The notification names the agent:
+`fake needs your permission: Write notes.txt`.
 
 chord also reports the whole window's status through the
 [Program Status Protocol](https://www.superlogical.com/rex/docs/build/program-status)
 (OSC 7501), always on, independently of `preferredNotifChannel`. One root
-record with `app=chord` covers every agent in every tab, including children.
-Its `title` names the front tab's main session, even with a child picked:
+record with `app=chord` covers main and its children.
+Its `title` names the main session, even with a child picked:
 the agent's own session title, updated when it renames the session and
 restored on resume. Until the agent gives a title, it uses the first prompt
 on one line (`!ls` for that shell command), as `/resume` still shows it.
@@ -478,7 +446,7 @@ monitor's event.
 
 Completed turns, failed turns and failed starts stay reported until you
 visit their agent, press a key while it is shown, or start its next turn.
-An exited agent stays `error` until it restarts or its tab closes.
+An exited agent stays `error` until it restarts or its session closes.
 Only `blocked`, `done` and `error` carry a message, with the notification's
 wording, such as
 `fake needs your permission: Write notes.txt`,
@@ -495,7 +463,7 @@ without support shows nothing. Support includes
 [cmux](https://cmux.com/docs/changelog) and Rex; kitty's support is in
 0.50, not yet released. The Ghostty app does not yet show it.
 
-chord sends the front tab's main session id to the terminal through OSC
+chord sends the main session id to the terminal through OSC
 1337 `SetUserVar=chord_session=<base64 id>`. The value is empty at start
 and after `/clear`, until the first prompt is saved. A resumed or continued
 session sends its id once open, as does a `/resume` pick. The value stays
@@ -572,9 +540,8 @@ and a chord is keys separated by spaces, each within 3 seconds of the one
 before. The actions are `chat:submit`, `chat:newline`, `chat:cancel`,
 `chat:cycleMode`, `chat:externalEditor`, `chat:imagePaste`,
 `history:previous`, `history:next` and `help:toggle` in `Chat`;
-`app:toggleTranscript`, `history:search`, and chord's own `session:new`,
-`session:next`, `session:previous`, `session:goto1` to `session:goto9`,
-`session:list`, `session:attention` and `session:close` in `Global`;
+`app:toggleTranscript`, `history:search` and chord's own `session:attention`
+in `Global`;
 chord's own `agents:close` (`x`) in `Agents`, where it closes an agent
 in the agents list or stops an item in the background view;
 `autocomplete:accept`, `dismiss`, `previous` and `next` in `Autocomplete`;
@@ -587,14 +554,18 @@ and a key that would mean two actions at once, such as a key the
 transcript scrolls on bound in `Chat`, is left out and named as a
 warning in the transcript and on stderr, and the status line counts them; the
 rest of the file still applies. The `?` panel and hints name the bound keys.
+`session:new`, `session:next`, `session:previous`, `session:goto1` to
+`session:goto9`, `session:list` and `session:close` went with tabs in
+0.58.0. A binding to one is ignored with a warning saying so; the rest
+of the file still applies.
 The panel combines the newline keys as `shift or \ + enter`; after a
 backslash, use the key bound to send. It also lists `any key` to quit the
 crash screen; that key cannot be rebound.
 
 The keys work on a Russian layout too, the defaults and the file's alike: a
 press that does nothing as typed is read as the US key in the same place,
-so ctrl+ч is ctrl+x, `с` after it opens a session and vim's normal mode
-moves on р о л д. Text is never read again: Cyrillic typed in the prompt,
+so ctrl+ч is ctrl+x, `а` after it goes to what waits on you, and vim's
+normal mode moves on р о л д. Text is never read again: Cyrillic typed in the prompt,
 a form, the search line or vim's insert mode stays as typed, and a key the
 file binds in Cyrillic is its own. Punctuation a US layout also types stays
 itself, so on "Russian – PC", where the key in `?`'s place types `,`,
@@ -651,16 +622,16 @@ an agent see what it could start: `list_agents` names every agent chord can
 start and the models and modes of those already read, or, given an agent's
 name, that one's, starting it briefly to read them if no session of it is
 open;
-`list_sessions` names the window's open sessions with their agent, model and
-tab. `spawn_task` starts a task agent: another agent, on any runtime chord
-knows and a model it offers, does one job with no tab of its own. Its work
+`list_sessions` names the main session, its id, runtime, model and open
+long-lived agents. `spawn_task` starts a task agent: another agent, on any
+runtime chord knows and a model it offers, does one job. Its work
 draws in its parent's turn as a subagent's block does, `Agent(<name>) ·
 codex · gpt-5.3-codex`. Its ended block shows reported tokens and cost:
 `Done (5 tool uses · 2.0k tokens · $0.0125 · 13s)`; unreported parts are
 left out. In a group such as `Running 2 agents…`, a row that does not fit
 wraps behind `│`, keeping its model, tokens, cost, tool uses and time.
 Its permission requests, forms and links come to you
-in the parent's tab, and what it tells its parent with `send_message`, its
+in the parent's view, and what it tells its parent with `send_message`, its
 one tool, and the report its first turn ends with reach the parent as
 messages, drawn as a `←` row: a turn of the parent's, or, while one runs,
 what the task tells it goes into that turn, and the report waits behind it
@@ -677,7 +648,7 @@ in the parent's transcript and in the answer, which waits for the task to
 be up.
 
 `open_agent` opens a long-lived agent the same way, with the prompt as its
-first turn, a message from `main`. It gets no tab: while a session has one,
+first turn, a message from `main`. While a session has children,
 a list of its agents sits under the status line, `main` and each child in
 the order it opened, each child in a colour of its own, with its runtime,
 model, the effort it is on (`open_agent` takes one as `spawn_task` does)
@@ -687,7 +658,7 @@ from the turn's start, idle from when it stopped. Unseen news is a separate
 column: `✗ turn failed`, `✓ new reply` or `← new message`, cleared when
 you open the agent. A failed turn leaves the agent open and idle;
 `✗ failed to start` means it never came up, `✗ exited` that its process
-is gone. Folded teams and ctrl+x w use the same words and clocks.
+is gone. Folded teams use the same words and clocks.
 `working` uses the theme's accent, dimmed; in `dark-ansi` and `light-ansi`
 it uses dimmed green, keeping it apart from the permission warning's
 yellow. `idle`, `✓ new reply` and `← new message` are dim; a permission
@@ -707,7 +678,7 @@ command reports name the picked agent's runtime, including while it starts,
 stops or fails to start.
 `send_message` from the parent reaches a
 child, and from a child its parent alone, each a turn of the recipient's,
-as many as they trade; `list_sessions` gives each session's children. A
+as many as they trade; `list_sessions` gives the main session's children. A
 message to a working Claude or Codex session goes into its running turn
 through ACP's `_session/steering`, drawn among its calls. Claude waits for
 the tool calls open when the message arrived to end, so steering does not
@@ -821,7 +792,7 @@ opencode, codebuddy, fast-agent, qwen and grok's subagent forms are not
 covered by this view yet.
 The summary names whose subagents they are: `main's 2 agents running` or
 `main's 2 agents and tester's agent running`.
-The summary counts the front tab's items, including its children's and
+The summary counts the main session's items, including its children's and
 team members', by state: asking, untracked and running, including stopping.
 It wraps without cutting text. From an empty prompt, ↓ past the
 agents reaches it; Enter opens the background view above the prompt, full
@@ -893,13 +864,13 @@ the block and elapsed time remain. A task left running reads
 `Open`, `Close` and `→` calls. Its long-lived agents are not reopened with
 it; a closing line names those still open when it was left, which
 `/resume` lists like any session, and a message the parent sends one is
-refused. Opened from `/resume`, such a child is your own session, in a tab,
+refused. Opened from `/resume`, such a child is your own main session,
 with no parent to message. A team run is one of them, named with how many of
 its agents were open (`team bugfix (4 agents)`), and the line ends with
 `/team run bugfix starts the team again`: a fresh run, with no memory of
 the last but the working tree and what main was told. `/resume` lists its
 lead and members like any child. A task agent gets no command on quit,
-and past tasks do not appear in the resumed tab's background view.
+and past tasks do not appear in the resumed session's background view.
 chord's own calls draw as `List agents`, `List sessions`, `Open(parser)`
 and `Close(parser)`, and a message sent as `→ to @main` or `→ to @parser`,
 in Claude and Codex sessions. Messages sent or received, from agents or
@@ -928,16 +899,16 @@ goes on as the agent chose; an agent with no effort starts on its own, and
 the line says it offers none. An unknown key or wrong-type value is named
 with its file and left out; the rest still counts. A file that is not a
 JSON object is named and ignored. A refused `agents.<name>.command`
-instead prevents that agent from starting: main, a tab, child, task or team
+instead prevents that agent from starting: main, child, task or team
 member, and a session resumed alone in a directory that refuses it.
 The warning names the cause and says `<agent> will not start`; stderr
 reads `chord: <agent> not started: …`. chord never falls back to its own
 command. Other settings problems appear on stderr and in yellow at the
 transcript's top. `-p` takes `agent`, `command`, `effort`, `permissionMode`
 and the agent's `mcpServers` setting from the files, and says a refused
-effort or mode on stderr; `--model` is for the window. `--agent-command`, `--model`, `--effort` and `--permission-mode`
-speak for the agent the command line names: a session `/new` opens of another agent starts on that
-agent's settings alone.
+effort or mode on stderr; `--model` is for the window. `--agent-command`,
+`--model`, `--effort` and `--permission-mode` speak for the main agent;
+children start on their own agent's settings or the values their caller gives.
 
 chord knows the agents the [ACP Registry](https://agentclientprotocol.com/registry)
 offers through npx or uvx, with all pins refreshed together: `claude` and
@@ -960,9 +931,8 @@ A settings command may be a string or a list such as `["my-agent", "--acp"]`:
 the program, then its arguments as written, including empty arguments.
 The program must be nonempty and every item a string. The last settings
 file to give a command decides; `--agent-command` overrides all.
-A name your settings files alone give a command starts as `chord <name>` and
-opens with `/new <name>`. `chord agents` lists them all: each one's name and
-title (`from settings` for a name only they define), `npx` or `uvx` for the
+A name your settings files alone give a command starts as `chord <name>`.
+`chord agents` lists them all: each one's name and title (`from settings` for a name only they define), `npx` or `uvx` for the
 registry's, `own CLI · found` or `own CLI · not on PATH` for those that need
 their own CLI, and `settings` where a settings file's command starts it, then
 what starts it, that command in the table's or the registry's place, wrapped

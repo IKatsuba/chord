@@ -53,11 +53,10 @@ Done when chord is the interface its authors open by default.
 | Permission modes, cycled                  | shift+tab: default → accept edits → plan | ACP `session/set_config_option` on the agent's `mode` config option, else `session/set_mode` |
 | Model picker                              | `/model`                            | ACP `model` config option, else `session/set_model` |
 | Agent slash commands with completion      | `/` opens the list                  | ACP `available_commands_update`              |
-| Client slash commands                     | `/clear` `/resume` `/help` `/exit` `/status` `/cost` `/new` | client               |
+| Client slash commands                     | `/clear` (`/new`) `/resume` `/help` `/exit` `/status` `/cost` | client               |
 | `@` file mentions with fuzzy finder       | `@` opens files                     | client (the path in the prompt text), ACP `resource_link` beside it |
 | Bash mode                                 | `!` prefix runs a command           | client, output sent as context               |
 | Resume a session                          | `--continue`, `--resume`, `/resume` | chord's own session records, ACP `session/load` / `session/resume` |
-| Resume a whole window                     | — (not in Claude Code)              | chord's own window records: `--resume w-…`, `/resume`, `--resume` with no id |
 | Queue a prompt while a turn runs          | type and Enter during a turn; Esc puts it back | client, sent once the turn ahead ends |
 | Transcript / verbose view                 | ctrl+o                              | client                                       |
 | Reverse history search                    | ctrl+r                              | client                                       |
@@ -86,7 +85,6 @@ Done when chord is the interface its authors open by default.
 | Rewind to an earlier prompt               | Esc Esc                             | ACP `session/fork` where the agent has it — open |
 | MCP servers for the session               | `/mcp`, `.mcp.json`                 | ACP `mcpServers` in `session/new`            |
 | Custom keybindings                        | `~/.claude/keybindings.json`        | client                                       |
-| Several sessions in one window            | — (not in Claude Code)              | client, one agent per session                |
 | Session list across directories           | `/resume` picker, ctrl+a            | client, chord's own session records          |
 
 "open" marks a row acpx's runtime kept out of reach, since it handed chord no
@@ -137,10 +135,10 @@ back. Starting agents, messages and the agent list are M4's, reused.
 | `/team`: describe, save, list, show, run, stop | —                                   | client: a chord slash command; the session's agent proposes the team, or a change to one asked in plain words, and the person's ok saves it |
 | Hand a job to a team                      | —                                   | client: a long-lived lead opened with the team's instructions, by `/team` or a tool on chord's MCP server |
 | A lead starts its members                 | —                                   | client: one level deeper than M4 — a team's lead opens the file's members; members open no long-lived agents; `spawn_task` is every agent's |
-| Each member's runtime, model, effort, start mode | —                                   | client: as `/new` and the settings files set them per agent |
+| Each member's runtime, model, effort, start mode | —                                   | client: the settings files set them per agent |
 | The team in the agent list                | —                                   | client: the lead and its members nested under it in M4's list, each team folded to its lead's row where the list does not fit |
 | The lead reports to main                  | —                                   | client: M4's messages, drawn `← @lead …` |
-| Teams on resume                           | —                                   | client, chord's own session and window records: the past drawn, each run named with its agents and not reopened, `/team run` the way back |
+| Teams on resume                           | —                                   | client, chord's own session records: the past drawn, each run named with its agents and not reopened, `/team run` the way back |
 
 Every member works in the session's directory; who edits which files when is
 the team's own instructions' business, agreed among the agents, not chord's

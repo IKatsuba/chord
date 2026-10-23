@@ -3175,7 +3175,7 @@ laid out by Prettier with default options.
   with a token budget, a stop of the whole delegation. Always registered;
   a client calls private methods. Goals can spend against a budget.
 - `permissionMode` option: default, auto or bypass from the client. It is
-  process-wide, so a change in one tab reaches every attached session.
+  process-wide, so a change in one session reaches every attached session.
 - `next_prompt` transition `_meta` on `set_mode`: says when the mode
   applies. A client must hold its label until the next prompt.
 - Off-spec: the `name` on `tool_call`, the permission's runtime id, and the
@@ -5631,10 +5631,10 @@ agent's Custom or In chord paragraph instead, the item says so.
 - **CHD-229** (new evidence), Open agent call: show the model actually selected
   when model is omitted: as under CHD-58, kilo and qwen do not report a model
   they pick, so chord shows the last value it had.
-- **CHD-244** (new evidence), /new: refuse a missing own CLI before opening a
-  tab, with its install hint: autohand's npx adapter needs `autohand-cli`
-  installed globally, and `initialize` then offers only an install method
-  (autohand, In chord). goose is also on npm as `@aaif/goose-acp` since v1.50;
+- **CHD-244** (new evidence), session startup: refuse a missing own CLI before
+  opening a session, with its install hint: autohand's npx adapter needs
+  `autohand-cli` installed globally, and `initialize` then offers only an
+  install method (autohand, In chord). goose is also on npm as `@aaif/goose-acp` since v1.50;
   whether chord starts `goose acp` from PATH, falls back to `npx`, or asks the
   ACP Registry to list the package is open (goose, intro). The PATH check cannot
   tell the archived Python `kimi` from Kimi Code; whether chord says so is open

@@ -180,6 +180,8 @@ import { firstMounted } from '../transcript/mount.ts';
 import { Below, TranscriptEntry } from '../transcript/Transcript.tsx';
 import { Failure } from '../transcript/tools/Tool.tsx';
 import { SignInBlock } from './SignIn.tsx';
+import { StartFailureBlock } from './StartFailure.tsx';
+import { stepWords } from '../../session/start_failure.ts';
 import { Header } from '../header/Header.tsx';
 import { Splash } from '../splash/Splash.tsx';
 import { splashShown } from '../splash/splash.ts';
@@ -1193,13 +1195,24 @@ export function App({
                     {first === 0 && state.connection.status === 'failed' && (
                       <>
                         <Failure
-                          text={`${shownAgent} did not start: ${state.connection.message}`}
+                          text={`${shownAgent} did not start: ${stepWords(
+                            state.connection.message,
+                            state.connection.failure,
+                          )}`}
                         />
-                        {state.connection.signIn !== undefined && (
+                        {state.connection.signIn !== undefined ? (
                           <SignInBlock
                             agent={shownAgent}
                             signIn={state.connection.signIn}
+                            pinned={state.connection.failure?.pinned}
                           />
+                        ) : (
+                          state.connection.failure !== undefined && (
+                            <StartFailureBlock
+                              agent={shownAgent}
+                              failure={state.connection.failure}
+                            />
+                          )
                         )}
                       </>
                     )}

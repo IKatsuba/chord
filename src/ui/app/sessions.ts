@@ -18,6 +18,11 @@ import {
 import { OpenSessions } from '../../session/open_sessions.ts';
 import type { Session } from '../../session/session.ts';
 import { signInNote } from '../../session/sign_in.ts';
+import {
+  failureNote,
+  sentence,
+  stepWords,
+} from '../../session/start_failure.ts';
 import { Runtimes, sessionProbe } from '../../server/runtimes.ts';
 import type { ChordServer } from '../../server/server.ts';
 import type {
@@ -894,7 +899,10 @@ export function useSessions(
                   parentOf(child)?.deliver(
                     { name: 'chord' },
                     `${child.name} (${child.runtime}) did not start: ` +
-                      `${event.message}.${
+                      `${sentence(stepWords(event.message, event.failure))}${failureNote(
+                        child.runtime,
+                        event.failure,
+                      )}${
                         event.signIn === undefined
                           ? ''
                           : signInNote(child.runtime, event.signIn)

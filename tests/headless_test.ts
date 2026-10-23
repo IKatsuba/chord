@@ -18,6 +18,7 @@ import type { OneshotOutcome } from '../src/session/oneshot.ts';
 import { turnCost } from '../src/session/prices.ts';
 import { writeWindow } from '../src/session/windows.ts';
 import { fakeAgentCommand } from './fixtures/fake.ts';
+import { TRACEBACK_ERROR } from './fixtures/fake_agent/options.ts';
 
 /** The tokens each of the fake agent's turns reports. */
 const TURN_TOKENS = {
@@ -435,6 +436,40 @@ test("an agent that needs a login says so, its ways in and chord's way on, a lin
       "chord: chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.",
       '',
     ]);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('an agent that exits before initialize says so with its code, then the end of its stderr, a line each (CHD-454)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-headless-'));
+  let stderr = '';
+
+  try {
+    const code = await runHeadless({
+      agent: 'fake',
+      cwd: dir,
+      prompt: 'text',
+      format: 'text',
+      agentCommand: fakeAgentCommand(undefined, '--start-fails', 'traceback'),
+      stdout: () => Promise.resolve(),
+      stderr: (text) => {
+        stderr += text;
+
+        return Promise.resolve();
+      },
+    });
+    const lines = stderr.split('\n');
+
+    expect(code).toStrictEqual(1);
+    expect(lines.slice(0, 4)).toStrictEqual([
+      'chord: fake did not start: it exited with code 1 before answering initialize.',
+      'chord: The end of its stderr:',
+      'chord:   … +116 lines',
+      'chord:       from .module_58 import run',
+    ]);
+    expect(lines.at(-2)).toStrictEqual(`chord:   ${TRACEBACK_ERROR}`);
+    expect(lines.length).toStrictEqual(10);
   } finally {
     await rm(dir, { recursive: true });
   }

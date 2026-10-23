@@ -149,12 +149,19 @@ test('a detail pins its name on one line, cut with … when longer, and its whol
     await send(window, 'subagent');
     await window.shows('Do you want to proceed?');
     await window.press('1');
+    // The first two subagents have the background line too, while they
+    // run, and it goes for a moment as they end and before the third comes:
+    // ↓ then finds no line, or a focus that goes with it. So the third, the
+    // one held, is there first, said after it is spawned; and each key waits
+    // for what the one before drew (CHD-506).
+    await window.shows('It is running; I will say when it ends.');
     await window.shows('background ');
     await window.press(DOWN);
+    await window.shows('❯ background');
     await window.press('\r');
-    await window.shows('❯ ');
+    await window.shows('Enter for details');
     await window.press('\r');
-    await window.shows('Background · ');
+    await window.shows('Background · 1 of 1');
 
     const frame = window.frame().slice(window.frame().indexOf('Background · '));
     const inside = (line: string) =>

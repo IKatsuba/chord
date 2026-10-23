@@ -6,7 +6,11 @@
  * guessed (CHD-373, CHD-378's option C, the owner's Q58).
  */
 import type { Cost } from '@agentclientprotocol/sdk';
-import { isLead, membersOf, type Tab } from '../../session/tabs.ts';
+import {
+  isLead,
+  membersOf,
+  type WindowAgents,
+} from '../../session/window_agents.ts';
 import type { TaskSpent, Transcript } from '../../session/transcript/types.ts';
 import {
   type Spent,
@@ -283,8 +287,8 @@ export interface SpendSession {
 
 /**
  * A closed agent's spend, kept for the window's total (the owner's Q59:
- * closed agents count): the tab it was in, by key, the team lead it worked
- * for, by chord's id, and its part as it was when it closed.
+ * closed agents count): the team lead it worked for, by chord's id, and its
+ * part as it was when it closed.
  */
 export interface KeptSpend {
   /**
@@ -292,9 +296,6 @@ export interface KeptSpend {
    * whole spend where it is open, and one closed again where it closed last.
    */
   readonly sessionId?: string | undefined;
-  readonly tab: number;
-  /** The tab's name as it was then, `1 fake`, for a tab that has closed. */
-  readonly tabName?: string | undefined;
   /** The lead of the team run it was of, by chord's id, itself for a lead. */
   readonly lead?: string | undefined;
   /** That team's name, for a run whose lead has closed. */
@@ -400,10 +401,10 @@ function ownPart(
  * The window's spend: the main session and its task agents, then each
  * long-lived agent, a team run as one part with its lead and members under
  * it; then the agents closed since the window opened, each under its team
- * while that runs, and what was kept for a session no longer open.
+ * while that runs; with main gone, what was kept, as it was.
  */
 export function windowSpend<C>(
-  tabs: readonly Tab<C>[],
+  agents: WindowAgents<C>,
   sessions: Readonly<Record<number, SpendSession | undefined>>,
   everKept: readonly KeptSpend[],
 ): SpendPart[] {
@@ -423,63 +424,53 @@ export function windowSpend<C>(
           .some((later) => later.sessionId === each.sessionId)),
   );
 
-  const open = new Set(tabs.map((tab) => tab.key));
-  const parts = tabs.flatMap((tab): SpendPart[] => {
-    const keptHere = kept.filter((each) => each.tab === tab.key);
-    const leads = tab.children.filter(isLead);
-    const running = new Set(leads.map((lead) => lead.id));
-    const runs = leads.map((lead): SpendPart => ({
-      name: lead.team ?? lead.name,
-      kind: 'team',
-      parts: [
-        // Its row is named by the team; its lead is `lead` under it.
-        ownPart('lead', 'member', sessions[lead.key], undefined, lead.runtime),
-        ...membersOf(tab, lead.id).map((member) =>
-          ownPart(
-            member.name,
-            'member',
-            sessions[member.key],
-            undefined,
-            member.runtime,
-          ),
-        ),
-        ...keptHere
-          .filter((each) => each.lead === lead.id)
-          .map((each) => each.part),
-      ],
-    }));
-    const agents = tab.children
-      .filter((child) => child.team === undefined)
-      .map((child) =>
+  const { main } = agents;
+
+  // With main gone, what was kept, as it was.
+  if (main === undefined) {
+    return regrouped(kept, new Set());
+  }
+
+  const leads = agents.children.filter(isLead);
+  const running = new Set(leads.map((lead) => lead.id));
+  const runs = leads.map((lead): SpendPart => ({
+    name: lead.team ?? lead.name,
+    kind: 'team',
+    parts: [
+      // Its row is named by the team; its lead is `lead` under it.
+      ownPart('lead', 'member', sessions[lead.key], undefined, lead.runtime),
+      ...membersOf(agents, lead.id).map((member) =>
         ownPart(
-          child.name,
-          'agent',
-          sessions[child.key],
+          member.name,
+          'member',
+          sessions[member.key],
           undefined,
-          child.runtime,
+          member.runtime,
         ),
-      );
-
-    return [
-      ownPart('main', 'main', sessions[tab.key], tab.agent),
-      ...agents,
-      ...runs,
-      // What closed under a team still running is in its part above.
-      ...regrouped(
-        keptHere.filter(
-          (each) => each.lead === undefined || !running.has(each.lead),
-        ),
-        running,
       ),
-    ];
-  });
+      ...kept.filter((each) => each.lead === lead.id).map((each) => each.part),
+    ],
+  }));
+  const children = agents.children
+    .filter((child) => child.team === undefined)
+    .map((child) =>
+      ownPart(
+        child.name,
+        'agent',
+        sessions[child.key],
+        undefined,
+        child.runtime,
+      ),
+    );
 
-  // What was kept for a session no longer open, as it was.
   return [
-    ...parts,
+    ownPart('main', 'main', sessions[main.key], main.agent),
+    ...children,
+    ...runs,
+    // What closed under a team still running is in its part above.
     ...regrouped(
-      kept.filter((each) => !open.has(each.tab)),
-      new Set(),
+      kept.filter((each) => each.lead === undefined || !running.has(each.lead)),
+      running,
     ),
   ];
 }

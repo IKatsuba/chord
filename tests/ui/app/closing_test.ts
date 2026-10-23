@@ -76,24 +76,25 @@ test('ctrl+c asks once more before quitting, counting nothing', () => {
   expect(ctrlCArmedLine()).toStrictEqual('Press ctrl+c again to quit');
 });
 
-test('one resume command for each session, in tab order', () => {
-  expect(resumeMessage([])).toStrictEqual(undefined);
-  expect(
-    resumeMessage([{ agent: 'fake', sessionId: 'a', cwd: '/work' }]),
-  ).toStrictEqual('Resume this session with:\nchord fake --resume a');
+test("the resume command of the window's session, or none, its --agent-command only for the agent it overrides", () => {
+  expect(resumeMessage(undefined)).toStrictEqual(undefined);
+  expect(resumeMessage({ agent: 'fake', sessionId: 'a' })).toStrictEqual(
+    'Resume this session with:\nchord fake --resume a',
+  );
   expect(
     resumeMessage(
-      [
-        { agent: 'fake', sessionId: 'a', cwd: '/work' },
-        { agent: 'claude', sessionId: 'b', cwd: '/work' },
-      ],
+      { agent: 'fake', sessionId: 'a' },
       { agent: 'fake', agentCommand: 'run fake' },
     ),
   ).toStrictEqual(
-    'Resume these sessions with:\n' +
-      "chord fake --agent-command 'run fake' --resume a\n" +
-      'chord claude --resume b',
+    "Resume this session with:\nchord fake --agent-command 'run fake' --resume a",
   );
+  expect(
+    resumeMessage(
+      { agent: 'claude', sessionId: 'b' },
+      { agent: 'fake', agentCommand: 'run fake' },
+    ),
+  ).toStrictEqual('Resume this session with:\nchord claude --resume b');
 });
 
 test('an armed quit takes the place of a note of the sessions for good', () => {

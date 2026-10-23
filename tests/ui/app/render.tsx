@@ -16,7 +16,7 @@ import type { Notifications } from '../../../src/notify.ts';
 import type { EditorMode } from '../../../src/settings.ts';
 import { openSession, type Session } from '../../../src/session/session.ts';
 import type {
-  ResumableTab,
+  Resumable,
   SessionRecord,
 } from '../../../src/session/sessions.ts';
 import type { ShellOptions, ShellProcess } from '../../../src/shell.ts';
@@ -203,7 +203,7 @@ export async function withWindow(
     whileStarting?: boolean;
     /** Opens each session in openSession's place, to make one misbehave. */
     openWith?: typeof openSession;
-    onQuit?: (tabs: readonly ResumableTab[]) => void;
+    onQuit?: (session: Resumable | undefined) => void;
     /** How each agent `/new` names starts, as `main.tsx` works it out. */
     startupOf?: (agent: string) => SessionStart | undefined;
     /** The startup splash, which the window's tests leave off. */

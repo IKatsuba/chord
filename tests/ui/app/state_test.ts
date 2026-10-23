@@ -716,7 +716,6 @@ test("a turn's usage keeps its own cost on the session, and the window keeps wha
   });
 
   const kept = (name: string) => ({
-    tab: 1,
     part: { name, kind: 'agent' as const, figure: { cost } },
   });
   const window = [kept('docs'), kept('parser')]
@@ -728,7 +727,7 @@ test("a turn's usage keeps its own cost on the session, and the window keeps wha
 
 test('a closing session is held as it was, takes its last events in, and is kept once its close settles; one never held keeps nothing (CHD-373)', () => {
   const cost = { amount: 0.02, currency: 'USD' };
-  const place = { tab: 1, name: 'docs', kind: 'agent' as const };
+  const place = { name: 'docs', kind: 'agent' as const };
   const closed = (
     [
       { type: 'spend_closing', key: 1, place },
@@ -747,7 +746,6 @@ test('a closing session is held as it was, takes its last events in, and is kept
   expect(closed.closing).toStrictEqual({});
   expect(closed.window.keptSpend).toStrictEqual([
     {
-      tab: 1,
       part: {
         name: 'docs',
         kind: 'agent',
@@ -776,7 +774,7 @@ test("a session /clear lets go is held under a key of its own, takes its running
         type: 'spend_closing',
         key: -1,
         from: 1,
-        place: { tab: 1, name: 'main', kind: 'main', agent: 'fake' },
+        place: { name: 'main', kind: 'main', agent: 'fake' },
       },
       { type: 'in_session', key: 1, action: { type: 'cleared' } },
       {
@@ -802,7 +800,6 @@ test("a session /clear lets go is held under a key of its own, takes its running
   expect(window.window.keptSpend).toStrictEqual([
     {
       sessionId: 'old',
-      tab: 1,
       part: {
         name: 'main',
         kind: 'main',
@@ -822,7 +819,6 @@ describe('CHD-373 S3c tester: settled window spend survives session replacement'
   test('clearing the front session keeps the cost of sessions already retired', () => {
     const kept = {
       sessionId: 'earlier',
-      tab: 1,
       part: {
         name: 'main',
         kind: 'main' as const,

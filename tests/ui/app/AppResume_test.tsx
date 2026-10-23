@@ -37,7 +37,7 @@ test('a resumed session draws its past, answers in the same session, and is name
   const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
   const stateDir = join(dir, 'state');
   const sessions: Session[] = [];
-  let quitWith: string[] | undefined;
+  let quitWith: string | undefined;
   const id = crypto.randomUUID();
   // An id chord has no record of: the fake agent loads it and replays.
   const app = await draw(
@@ -47,8 +47,8 @@ test('a resumed session draws its past, answers in the same session, and is name
       stateDir={stateDir}
       agentCommand={fakeAgentCommand()}
       resume={{ sessionId: id, cwd: dir }}
-      onQuit={(tabs) => {
-        quitWith = tabs.map(({ sessionId }) => sessionId);
+      onQuit={(session) => {
+        quitWith = session?.sessionId;
       }}
       open={async (options) => {
         const session = await openSession(options);
@@ -83,7 +83,7 @@ test('a resumed session draws its past, answers in the same session, and is name
 
     await app.write(CTRL_D);
     await until('the quit', () => quitWith !== undefined);
-    expect(quitWith).toStrictEqual([id]);
+    expect(quitWith).toStrictEqual(id);
 
     // The window kept the session, the past the agent replayed included, so
     // the command printed on quit finds it.

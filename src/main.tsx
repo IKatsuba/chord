@@ -41,7 +41,7 @@ import {
   earlierSessions,
   latestSession,
   readRecords,
-  type ResumableTab,
+  type Resumable,
   type Resume,
   ResumeError,
   resumeMessage,
@@ -510,7 +510,7 @@ const cli = chordCommand().action(async (options, named) => {
     value === undefined
       ? undefined
       : { id: value.id, from: setWhere(value.from, shown) };
-  let resumable: readonly ResumableTab[] = [];
+  let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
   const server = serveChord();
   const window = (
@@ -527,8 +527,8 @@ const cli = chordCommand().action(async (options, named) => {
       startupOf={first.startupOf}
       warnings={problems.map((problem) => problemNote(problem, shown))}
       resume={resume}
-      onQuit={(tabs) => {
-        resumable = tabs;
+      onQuit={(session) => {
+        resumable = session;
       }}
       notifications={{
         channel: channel ?? 'auto',

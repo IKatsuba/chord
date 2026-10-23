@@ -9,9 +9,9 @@ import {
   Conversation,
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
-import { OpenSessions } from '../../src/session/open_sessions.ts';
+import { OpenAgents } from '../../src/session/open_agents.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
-import { tabOf } from '../../src/session/tabs.ts';
+import { agentOf } from '../../src/session/window_agents.ts';
 import {
   initialAppState,
   reduceWindowed,
@@ -32,11 +32,11 @@ async function until(check: () => boolean): Promise<void> {
   }
 }
 
-test('two sessions run on the fake agent at once, a wait in one leaves the other alone, and closing both leaves no agent', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'chord-tabs-'));
+test('main and a child run on the fake agent at once, a wait in one leaves the other alone, and closing both leaves no agent', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-agents-'));
   const sessions: Session[] = [];
   const heard: { key: number; event: ConversationEvent; wait?: Wait }[] = [];
-  const open = new OpenSessions<Conversation>({
+  const open = new OpenAgents<Conversation>({
     conversation: (agent, emit) =>
       new Conversation(async () => {
         const session = await openSession({
@@ -54,12 +54,31 @@ test('two sessions run on the fake agent at once, a wait in one leaves the other
   });
   const of = (key: number) =>
     heard.filter((each) => each.key === key).map(({ event }) => event);
-  const conversation = (key: number) => tabOf(open.tabs, key)!.conversation;
-  const wait = (key: number) => tabOf(open.tabs, key)!.wait;
+  const conversation = (key: number) => open.conversationOf(key)!;
+  const wait = (key: number) => {
+    const found = agentOf(open.agents, key);
+
+    return (found?.child ?? found?.main)!.wait;
+  };
 
   try {
-    const first = open.open('fake')!;
-    const second = open.open('fake')!;
+    // main is picked; the child, not shown, is the one that asks.
+    const second = open.start('fake')!;
+    const first = open.openChild(
+      { id: 'parser', name: 'parser', runtime: 'fake', openedAt: 0 },
+      (emit) =>
+        new Conversation(async () => {
+          const session = await openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(),
+          });
+
+          sessions.push(session);
+
+          return session;
+        }, emit),
+    )!;
 
     await until(() =>
       [first, second].every((key) =>
@@ -67,9 +86,9 @@ test('two sessions run on the fake agent at once, a wait in one leaves the other
       ),
     );
     expect(sessions.length).toStrictEqual(2);
-    expect(open.tabs.front).toStrictEqual(second);
+    expect(open.agents.picked).toStrictEqual(second);
 
-    // The first, behind, asks for permission and its turn waits on it.
+    // The child, not shown, asks for permission and its turn waits on it.
     conversation(first).send('permission');
     await until(() => wait(first).asking !== undefined);
 
@@ -84,8 +103,8 @@ test('two sessions run on the fake agent at once, a wait in one leaves the other
         .map(({ key, wait }) => [key, wait?.kind]),
     ).toStrictEqual([[first, 'permission']]);
 
-    // The second, in front, takes a whole turn meanwhile, and nothing of the
-    // first's wait reaches it.
+    // main, shown, takes a whole turn meanwhile, and nothing of the child's
+    // wait reaches it.
     conversation(second).send('text');
     await until(() => of(second).some((event) => event.type === 'result'));
     expect(wait(second).asking).toStrictEqual(undefined);
@@ -98,7 +117,7 @@ test('two sessions run on the fake agent at once, a wait in one leaves the other
 
     // ctrl+x a goes to it, and the answer lets its turn end.
     expect(open.attend()).toStrictEqual(true);
-    expect(open.tabs.front).toStrictEqual(first);
+    expect(open.agents.picked).toStrictEqual(first);
     assert(requested?.type === 'permission_requested');
     conversation(first).choose(
       requested.permission.id,
@@ -113,7 +132,8 @@ test('two sessions run on the fake agent at once, a wait in one leaves the other
 
     await open.closeAll();
 
-    expect(open.tabs.tabs).toStrictEqual([]);
+    expect(open.agents.main).toStrictEqual(undefined);
+    expect(open.agents.children).toStrictEqual([]);
     expect(pids.length).toStrictEqual(2);
 
     for (const session of sessions) {
@@ -128,17 +148,14 @@ test('two sessions run on the fake agent at once, a wait in one leaves the other
   }
 });
 
-/** A child of tab `tab`, named `name`, made by `open`'s own factory. */
+/** A child named `name`, made by `make`. */
 function child<C extends { start(): void; close(): Promise<void> }>(
-  open: OpenSessions<C>,
-  tab: number,
+  open: OpenAgents<C>,
   name: string,
   make: () => C,
 ): number {
-  return open.openChild(
-    tab,
-    { id: name, name, runtime: 'fake', openedAt: 0 },
-    () => make(),
+  return open.openChild({ id: name, name, runtime: 'fake', openedAt: 0 }, () =>
+    make(),
   )!;
 }
 
@@ -148,10 +165,11 @@ test('a child closed on its own still has its agent waited for by closeAll', asy
     start: () => {},
     close: () => new Promise<void>((resolve) => closes.push(resolve)),
   });
-  const open = new OpenSessions({ conversation: driven, heard: () => {} });
-  const tab = open.open('a')!;
+  const open = new OpenAgents({ conversation: driven, heard: () => {} });
 
-  void open.closeChild(child(open, tab, 'b', driven));
+  open.start('a');
+
+  void open.closeChild(child(open, 'b', driven));
 
   let all = false;
   const closing = open.closeAll().then(() => (all = true));
@@ -173,7 +191,7 @@ function deferredCloses() {
     close: () =>
       new Promise<void>((resolve, reject) => closes.push({ resolve, reject })),
   });
-  const open = new OpenSessions({ conversation: make, heard: () => {} });
+  const open = new OpenAgents({ conversation: make, heard: () => {} });
 
   return { open, closes, make };
 }
@@ -192,9 +210,11 @@ async function failures(closing: Promise<void>): Promise<string[]> {
 
 test('an earlier close that fails while closeAll waits is in its failure', async () => {
   const { open, closes, make } = deferredCloses();
-  const tab = open.open('a')!;
+
+  open.start('a');
+
   const alone = open
-    .closeChild(child(open, tab, 'b', make))
+    .closeChild(child(open, 'b', make))
     .catch((error: Error) => error.message);
   const all = failures(open.closeAll());
 
@@ -207,8 +227,10 @@ test('an earlier close that fails while closeAll waits is in its failure', async
 
 test('an earlier close that failed before closeAll is still in its failure, once', async () => {
   const { open, closes, make } = deferredCloses();
-  const tab = open.open('a')!;
-  const alone = open.closeChild(child(open, tab, 'b', make)).catch(() => {});
+
+  open.start('a');
+
+  const alone = open.closeChild(child(open, 'b', make)).catch(() => {});
 
   closes[0]!.reject(new Error('agent exit not observed'));
   await alone;
@@ -222,10 +244,11 @@ test('an earlier close that failed before closeAll is still in its failure, once
 
 test("closeAll reports an earlier failure beside an open agent's, after waiting for every agent", async () => {
   const { open, closes, make } = deferredCloses();
-  const tab = open.open('a')!;
 
-  child(open, tab, 'c', make);
-  void open.closeChild(child(open, tab, 'b', make)).catch(() => {});
+  open.start('a');
+
+  child(open, 'c', make);
+  void open.closeChild(child(open, 'b', make)).catch(() => {});
 
   let settled = false;
   const all = failures(open.closeAll()).finally(() => (settled = true));
@@ -244,7 +267,7 @@ test("closeAll reports an earlier failure beside an open agent's, after waiting 
   ]);
 });
 
-test('a child opens in its tab, its events heard under its own key; closing the tab closes it, and closeAll waits for it', async () => {
+test('a child opens beside main, its events heard under its own key, and closeAll closes both and waits for them', async () => {
   const started: string[] = [];
   const closes: (() => void)[] = [];
   const heard: number[] = [];
@@ -253,13 +276,14 @@ test('a child opens in its tab, its events heard under its own key; closing the 
     start: () => started.push(name),
     close: () => new Promise<void>((resolve) => closes.push(resolve)),
   });
-  const open = new OpenSessions({
+  const open = new OpenAgents({
     conversation: (agent) => driven(agent),
     heard: (key) => heard.push(key),
   });
-  const tab = open.open('claude')!;
+
+  open.start('claude');
+
   const child = open.openChild(
-    tab,
     {
       id: '7f3a9c2e',
       name: 'parser',
@@ -277,7 +301,7 @@ test('a child opens in its tab, its events heard under its own key; closing the 
   emits.get('parser')!({ type: 'connected', sessionId: 's' });
   expect(heard).toStrictEqual([child]);
   expect(open.conversationOf(child)).toStrictEqual(
-    open.tabs.tabs[0]!.children[0]!.conversation,
+    open.agents.children[0]!.conversation,
   );
 
   open.pick(child);
@@ -296,10 +320,10 @@ test('a child opens in its tab, its events heard under its own key; closing the 
 });
 
 test("a busy child closed once its turn reported a cost still reports that turn's end as it closes, and the window keeps it (CHD-373)", async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'chord-tabs-'));
+  const dir = await mkdtemp(join(tmpdir(), 'chord-agents-'));
   const heard: { key: number; event: ConversationEvent }[] = [];
   const closing: { key: number; event: ConversationEvent }[] = [];
-  const open = new OpenSessions<Conversation>({
+  const open = new OpenAgents<Conversation>({
     conversation: (agent, emit) =>
       new Conversation(
         () =>
@@ -311,9 +335,8 @@ test("a busy child closed once its turn reported a cost still reports that turn'
   });
 
   try {
-    const tab = open.open('fake')!;
+    const tab = open.start('fake')!;
     const key = open.openChild(
-      tab,
       { id: 'other', name: 'other', runtime: 'fake', openedAt: 0 },
       (emit) =>
         new Conversation(
@@ -372,7 +395,7 @@ test("a busy child closed once its turn reported a cost still reports that turn'
       {
         type: 'spend_closing',
         key,
-        place: { tab, name: 'other', kind: 'agent', runtime: 'fake' },
+        place: { name: 'other', kind: 'agent', runtime: 'fake' },
       },
       { type: 'session_closed', key, front: tab },
       ...closing.map(({ key: at, event }): WindowedAction => ({

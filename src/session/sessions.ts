@@ -392,42 +392,31 @@ export function resumeCommand(
  * An open session quitting leaves to resume: its tab's agent, its id and the
  * directory it works in.
  */
-export interface ResumableTab {
+export interface Resumable {
   readonly agent: string;
   readonly sessionId: string;
-  readonly cwd: string;
 }
 
 /**
- * What is printed once the window has gone: a command that resumes each
- * session, in tab order, or nothing when none had a prompt. `agentCommand`
- * goes with the sessions of the agent it overrides.
+ * What is printed once the window has gone: the command that resumes its
+ * session, or nothing when no prompt went to it. `agentCommand` goes with
+ * it when it is of the agent that command overrides.
  */
 export function resumeMessage(
-  tabs: readonly ResumableTab[],
+  session: Resumable | undefined,
   override?: {
     readonly agent: string;
     /** The `--agent-command` the person gave, for `agent` alone. */
     readonly agentCommand?: string;
   },
 ): string | undefined {
-  const commands = tabs.map(({ agent, sessionId }) =>
-    resumeCommand(
-      agent,
-      sessionId,
-      agent === override?.agent ? override.agentCommand : undefined,
-    ),
-  );
-
-  if (commands.length === 0) {
-    return undefined;
-  }
-
-  return `${
-    commands.length === 1
-      ? 'Resume this session with:'
-      : 'Resume these sessions with:'
-  }\n${commands.join('\n')}`;
+  return session === undefined
+    ? undefined
+    : `Resume this session with:\n${resumeCommand(
+        session.agent,
+        session.sessionId,
+        session.agent === override?.agent ? override.agentCommand : undefined,
+      )}`;
 }
 
 function shellQuote(text: string): string {

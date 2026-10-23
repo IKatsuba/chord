@@ -203,10 +203,10 @@ describe('CHD-373 S3b tester: session close wiring', () => {
       await read().openChild();
       await until(
         'the busy child exists',
-        () => read().drive.sessions.tabs.tabs[0]?.children.length === 1,
+        () => read().drive.sessions.agents.children.length === 1,
       );
 
-      const child = read().drive.sessions.tabs.tabs[0]!.children[0]!;
+      const child = read().drive.sessions.agents.children[0]!;
 
       await until(
         'child cost before closing',
@@ -257,7 +257,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
       ]);
       expect(all.closing).toEqual({});
       expect(
-        sum(windowSpend(drive.sessions.tabs.tabs, all.sessions, kept)),
+        sum(windowSpend(drive.sessions.agents, all.sessions, kept)),
       ).toMatchObject({ cost: 0.02 });
     }, true));
 
@@ -266,10 +266,10 @@ describe('CHD-373 S3b tester: session close wiring', () => {
       read().drive.conversation()!.send('agentcost');
       await until(
         'parser exists',
-        () => read().drive.sessions.tabs.tabs[0]?.children.length === 1,
+        () => read().drive.sessions.agents.children.length === 1,
       );
 
-      const child = read().drive.sessions.tabs.tabs[0]!.children[0]!;
+      const child = read().drive.sessions.agents.children[0]!;
 
       await until(
         'child cost before cancellation',
@@ -308,7 +308,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         },
       });
       expect(all.sessions[child.key]).toBeUndefined();
-      expect(drive.sessions.tabs.tabs[0]?.children).toHaveLength(0);
+      expect(drive.sessions.agents.children).toHaveLength(0);
       expect(all.closing).toEqual({});
     }));
 
@@ -323,7 +323,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
     const figure = (read: () => Seen) =>
       sum(
         windowSpend(
-          read().drive.sessions.tabs.tabs,
+          read().drive.sessions.agents,
           read().all.sessions,
           read().all.window.keptSpend ?? [],
         ),
@@ -600,7 +600,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         read().drive.quit();
         await until(
           'quit closed the replacement',
-          () => read().drive.sessions.tabs.tabs.length === 0,
+          () => read().drive.sessions.agents.main === undefined,
         );
         await until('retired task end persisted after quit', async () => {
           const records = await readRecords(join(read().dir, 'state'));
@@ -744,9 +744,8 @@ describe('CHD-373 S3c: a session /clear let go before its turn ends', () => {
 
       const [kept] = read().all.window.keptSpend!;
 
-      // Its turn to its end, the late cost included, under its tab.
+      // Its turn to its end, the late cost included.
       expect(kept).toMatchObject({
-        tab: 1,
         part: { name: 'main', figure: { cost: { amount: 0.02 } } },
       });
       // Nothing of it reached the session the window went on with.
@@ -932,7 +931,7 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
     });
 
     assert(key !== undefined);
-    expect(read().drive.sessions.tabs.tabs[0]?.picked).toBe(1);
+    expect(read().drive.sessions.agents.picked).toBe(1);
 
     return key;
   };

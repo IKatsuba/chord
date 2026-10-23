@@ -10,11 +10,11 @@
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import {
+  type AgentWait,
   type Failure,
   FAILURES,
   failureOf,
-  type TabWait,
-} from '../../session/tabs.ts';
+} from '../../session/waits.ts';
 import type { TurnState, Usage } from '../../session/transcript/types.ts';
 import {
   type Action,
@@ -152,7 +152,7 @@ export function betweenNotice(
 export interface AgentWaiting {
   /** Its own name: `docs`, or `main` while a child is picked. */
   readonly name: string;
-  readonly wait: TabWait;
+  readonly wait: AgentWait;
   /**
    * The task of its own whose request it waits on, as the task's box names
    * it: `Agent(Fix the tokenizer) · fake` (CHD-431).

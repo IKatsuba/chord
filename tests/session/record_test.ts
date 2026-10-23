@@ -1338,7 +1338,7 @@ describe('CHD-373 S3c: a task running as its parent is let go', () => {
             type: 'spend_closing',
             key: -1,
             from: 1,
-            place: { tab: 1, name: 'main', kind: 'main', agent: 'claude' },
+            place: { name: 'main', kind: 'main', agent: 'claude' },
           },
           ...events.slice(at).map((event): WindowedAction =>
             event.type === 'retired_update'

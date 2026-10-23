@@ -8,7 +8,11 @@
  */
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
-import { type Failure, failureOf, type TabWait } from '../../session/tabs.ts';
+import {
+  type AgentWait,
+  type Failure,
+  failureOf,
+} from '../../session/waits.ts';
 import { GLYPHS } from './glyphs.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
@@ -27,7 +31,7 @@ export interface AgentRow {
   readonly effort?: string | undefined;
   /** Its place among the theme's agent colours; none for `main`. */
   readonly colour?: number;
-  readonly wait: TabWait;
+  readonly wait: AgentWait;
   /** The prompt goes to it. */
   readonly picked: boolean;
   /** Its agent never came up. */
@@ -193,8 +197,8 @@ function urgency(row: AgentRow): readonly [number, number] | undefined {
 }
 
 /**
- * A folded team's state: the most urgent among its lead and members, as the
- * sessions picker gives a tab's children's, naming the member whose it is,
+ * A folded team's state: the most urgent among its lead and members,
+ * naming the member whose it is,
  * `● tester: permission 12s`; idle from the one that stopped last when all
  * of them are.
  */

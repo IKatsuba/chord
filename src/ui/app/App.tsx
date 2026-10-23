@@ -19,13 +19,13 @@ import { openSession } from '../../session/session.ts';
 import {
   openSessionLabel,
   readRecords as readSessionRecords,
-  type ResumableTab,
+  type Resumable,
   type Resume,
   type SessionRecord,
 } from '../../session/sessions.ts';
 import { findAgent, listAgents } from '../../agents.ts';
 import type { ChordServer } from '../../server/server.ts';
-import { agentOf, frontTab, noTabs } from '../../session/tabs.ts';
+import { agentOf, noAgents } from '../../session/window_agents.ts';
 import { programStatus } from '../../status.ts';
 import { promptLine } from '../../session/record.ts';
 import { type EditorMode, homePath } from '../../settings.ts';
@@ -237,11 +237,10 @@ export interface AppProps {
   /** The home directory a `~/` path starts in; `$HOME`, by default. */
   home?: string | undefined;
   /**
-   * Hears, as the window quits, the sessions to resume: each open one a
-   * prompt went to, in tab order, and which of them was in front, by its
-   * index; the nearest to its left when the one in front had no prompt.
+   * Hears, as the window quits, its session to resume, or none when no
+   * prompt went to it.
    */
-  onQuit?: (sessions: readonly ResumableTab[], front: number) => void;
+  onQuit?: (session: Resumable | undefined) => void;
   /**
    * Hears that the window has its first session up and takes a prompt,
    * which comes a render after the session opens.
@@ -315,7 +314,7 @@ export interface AppProps {
 const NO_BACKGROUND: Background = { tone: 'dark', from: 'default' };
 
 /** The key the window's first session opens under. */
-const FIRST_SESSION = noTabs().nextKey;
+const FIRST_SESSION = noAgents().nextKey;
 
 /**
  * The whole window. chord owns the full terminal (alternate screen) rather than
@@ -461,13 +460,12 @@ export function App({
     },
   );
   const { conversation } = sessions;
-  // Every tab may run another agent, and work in another directory; what is
-  // drawn and run is the front's.
-  const frontAgent = frontTab(sessions.sessions.tabs)?.agent ?? agent;
-  const here = sessions.frontPlace();
+  // Main's agent, in the window's one place.
+  const frontAgent = sessions.sessions.agents.main?.agent ?? agent;
+  const here = sessions.place;
 
   // Once it has given way, the splash never comes back: not for /clear's
-  // session, nor another tab's start.
+  // session.
   const [splashLeft, setSplashLeft] = useState(false);
   const splashing = splashShown(splash, splashLeft, state.connection);
 
@@ -569,14 +567,14 @@ export function App({
     const owner = item && sessions.stateOf(item.key);
     const subagent =
       owner && item && itemSubagent(owner.transcript.entries, item);
-    const found = item && agentOf(sessions.sessions.tabs, item.key);
+    const found = item && agentOf(sessions.sessions.agents, item.key);
 
     return subagent === undefined || owner === undefined
       ? undefined
       : {
           subagent,
           turn: owner.transcript.turn,
-          agent: found?.child?.runtime ?? found?.tab.agent ?? frontAgent,
+          agent: found?.child?.runtime ?? found?.main?.agent ?? frontAgent,
         };
   })();
   // What the background frame says under its rows, whose lines its rows
@@ -597,7 +595,7 @@ export function App({
     ...(child.leadName === undefined ? {} : { team: child.leadName }),
   };
   // The agent of the session shown, a picked child's runtime rather than
-  // the tab's: what draws or acts on that session names it (CHD-488).
+  // main's: what draws or acts on that session names it (CHD-488).
   const shownAgent = child?.runtime ?? frontAgent;
   const agentColours = useMemo(
     () =>
@@ -710,7 +708,7 @@ export function App({
     );
   }, [namingTeam]);
 
-  const bash = useShell(shell, (key) => sessions.placeOf(key).cwd, dispatch);
+  const bash = useShell(shell, () => sessions.place.cwd, dispatch);
   const images = useImages({
     clipboard,
     readImage,
@@ -736,7 +734,7 @@ export function App({
   const commands = useCommands(
     {
       // The reports speak of the session shown: a picked child's runtime,
-      // not the tab's (CHD-405).
+      // not main's (CHD-405).
       agent: shownAgent,
       cwd: here.cwd,
       saveTheme,
@@ -866,11 +864,10 @@ export function App({
   // The record names the main session: by the agent's own title for it
   // once it gave one, else as /resume will (the owner's Q119, CHD-491).
   const status = () => {
-    const { tabs, front } = sessions.sessions.tabs;
-    const main = tabs.find((tab) => tab.key === front)?.conversation;
+    const main = sessions.sessions.agents.main?.conversation;
 
     return programStatus(
-      sessions.sessions.tabs,
+      sessions.sessions.agents,
       main?.title ?? openSessionLabel(main?.firstPrompt),
     );
   };
@@ -879,11 +876,10 @@ export function App({
 
   // The terminal hears which session `--resume` would open (CHD-492):
   // one opened again once it is up, else one a prompt went to. With no main
-  // session, as a quit takes the tabs away while the agents stop, it keeps
+  // session, as a quit takes it away while the agents stop, it keeps
   // what it was told.
   useEffect(() => {
-    const { tabs, front } = sessions.sessions.tabs;
-    const main = tabs.find((tab) => tab.key === front);
+    const { main } = sessions.sessions.agents;
     const state = main && sessions.stateOf(main.key);
 
     if (main === undefined || state === undefined) {

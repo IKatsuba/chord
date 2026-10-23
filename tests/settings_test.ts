@@ -744,9 +744,7 @@ describe("an agent's command chord refuses (CHD-466, the owner's Q52)", () => {
   test("a resume line repeats the --agent-command the person gave, and never a settings command, which the settings give again (the owner's Q56)", () => {
     // The settings' command, a list or a line: the resume line has none.
     expect(
-      resumeMessage([{ agent: 'codex', sessionId: 'id', cwd: '/w' }], {
-        agent: 'codex',
-      }),
+      resumeMessage({ agent: 'codex', sessionId: 'id' }, { agent: 'codex' }),
     ).toBe('Resume this session with:\nchord codex --resume id');
 
     // The flag's line, as typed: quoted once, read back whole by a shell.
@@ -921,7 +919,7 @@ describe('CHD-466 U1 tester: command settings boundaries', () => {
     ]);
     expect(
       resumeMessage(
-        [{ agent: 'custom', sessionId: 'session-id', cwd: '/work' }],
+        { agent: 'custom', sessionId: 'session-id' },
         { agent: 'custom' },
       ),
     ).toBe('Resume this session with:\nchord custom --resume session-id');

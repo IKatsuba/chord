@@ -10,7 +10,7 @@ import {
   readyAgent,
 } from './child_window.tsx';
 import { draw } from '../harness.tsx';
-import { type ResumableTab } from '../../../src/session/sessions.ts';
+import { type Resumable } from '../../../src/session/sessions.ts';
 import { App } from '../../../src/ui/app/App.tsx';
 import * as ansi from '../../../src/ui/theme/Ansi.tsx';
 import { editInEditor } from '../../../src/editor.ts';
@@ -792,7 +792,7 @@ test('/clear stops the command the session runs, as the session it ran in goes',
 });
 
 test('ctrl+d with the session working quits at once, with its one session to resume and no agent left', async () => {
-  let resumable: readonly ResumableTab[] | undefined;
+  let resumable: Resumable | undefined;
 
   await withWindow(
     async (window) => {
@@ -800,7 +800,7 @@ test('ctrl+d with the session working quits at once, with its one session to res
       await window.shows('esc to interrupt');
       await window.press(CTRL_D);
       await until('the quit', () => resumable !== undefined);
-      expect(resumable?.map(({ agent }) => agent)).toStrictEqual(['fake']);
+      expect(resumable?.agent).toStrictEqual('fake');
       await until('the agent to stop', () =>
         Promise.all(window.pids.map(isAlive)).then((alive) =>
           alive.every((each) => !each),
@@ -812,7 +812,7 @@ test('ctrl+d with the session working quits at once, with its one session to res
       rows: 40,
       // Slow enough that its turn still runs at the press.
       agentCommand: fakeAgentCommand(undefined, '--step-ms', '20'),
-      onQuit: (tabs) => (resumable = tabs),
+      onQuit: (session) => (resumable = session),
     },
   );
 });

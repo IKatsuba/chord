@@ -13,7 +13,7 @@ import {
   waitsNotice,
   workingLine,
 } from '../../../src/ui/status/status.ts';
-import { idle, type TabWait } from '../../../src/session/tabs.ts';
+import { type AgentWait, idle } from '../../../src/session/waits.ts';
 import type { TurnState } from '../../../src/session/transcript/types.ts';
 
 // Two digits used, as wide as the `99% left` the layouts were measured on.
@@ -223,7 +223,7 @@ test("vim's mode is marked first, as Claude Code marks it, and stays when the li
   ).toBeTruthy();
 });
 
-function behind(name: string, wait: Partial<TabWait>): AgentWaiting {
+function behind(name: string, wait: Partial<AgentWait>): AgentWaiting {
   return { name, wait: { ...idle, ...wait } };
 }
 
@@ -541,7 +541,7 @@ test("the front session's own request between turns names the key that answers i
 });
 
 test('an asking task is named as its box names it, or by whose task it is where that does not fit (CHD-431)', () => {
-  const asking = (on: 'permission' | 'input'): TabWait => ({
+  const asking = (on: 'permission' | 'input'): AgentWait => ({
     ...idle,
     asking: {
       on:

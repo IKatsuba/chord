@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import { emptyWatch } from '../../../src/notify.ts';
-import type { TabWait } from '../../../src/session/tabs.ts';
+import type { AgentWait } from '../../../src/session/waits.ts';
 import {
   type AgentRow,
   agentsHeight,
@@ -30,7 +30,7 @@ const NO_SUMMARY = { summary: false, onSummary: false };
 
 function row(
   name: string,
-  more: Omit<Partial<AgentRow>, 'wait'> & { wait?: Partial<TabWait> } = {},
+  more: Omit<Partial<AgentRow>, 'wait'> & { wait?: Partial<AgentWait> } = {},
 ): AgentRow {
   const { wait, ...rest } = more;
 
@@ -121,13 +121,13 @@ test('the picked row is marked while the list has the keys', () => {
 });
 
 test('an agent always has one state, most urgent first, and what is not yet seen is a mark beside it (CHD-471)', () => {
-  const state = (wait: Partial<TabWait>, more: Partial<AgentRow> = {}) => {
+  const state = (wait: Partial<AgentWait>, more: Partial<AgentRow> = {}) => {
     const found = agentState(row('x', { ...more, wait }), NOW);
 
     return `${found.glyph} ${found.words} (${found.tone})`;
   };
 
-  const mark = (wait: Partial<TabWait>) => {
+  const mark = (wait: Partial<AgentWait>) => {
     const found = agentMark(row('x', { wait }));
 
     return found && `${found.glyph} ${found.words} (${found.tone})`;
@@ -586,7 +586,7 @@ test("the list ticks while any agent on it is open, an idle one's time counting 
 });
 
 test('an exit and never starting are states, gravest first; a failed turn is a mark the agent reads idle beside, gone once seen', () => {
-  const words = (wait: Partial<TabWait>, more: Partial<AgentRow> = {}) =>
+  const words = (wait: Partial<AgentWait>, more: Partial<AgentRow> = {}) =>
     agentState(row('x', { ...more, wait: { watch: emptyWatch, ...wait } }), NOW)
       .words;
   const turn = {

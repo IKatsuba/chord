@@ -967,8 +967,15 @@ registry's, `own CLI · found` or `own CLI · not on PATH` for those that need
 their own CLI, and `settings` where a settings file's command starts it, then
 what starts it, that command in the table's or the registry's place, wrapped
 within its column on a terminal and one line per agent when piped.
-You sign in to the agent the way it expects: chord starts the agent's ACP
-adapter or CLI, it does not sign you in to anybody.
+chord does not sign agents in. If a new or resumed session needs a login,
+its `did not start` row keeps the agent's words and lists any sign-in methods
+it offers, each as `name · description`. Sign in with the agent's own CLI in
+a terminal, or set its API key where it offers one, then start chord again.
+The same guidance goes to `-p`'s stderr and to a lead whose child failed to
+start. It appears only when the agent reports ACP's `authRequired` error;
+other start failures keep their usual message.
+For sigit, sign in from its own CLI: `/login <email> <password>` typed in
+chord goes to the agent as prompt text and lands in chord's session record.
 
 `dimcode` may start up to 18 other CLIs it finds on PATH through its own
 `agent` tool, with their approvals bypassed and on your accounts. Their

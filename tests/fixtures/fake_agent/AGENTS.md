@@ -333,8 +333,17 @@
   config options; `--no-config` or `CHORD_FAKE_NO_CONFIG=1` leaves the effort
   out and `--refuse-config` or `CHORD_FAKE_REFUSE_CONFIG=1` refuses every
   change to it; `--no-modes` or `CHORD_FAKE_NO_MODES=1` offers no modes and
-  refuses `session/set_mode`. `--hang <step>` or `CHORD_FAKE_HANG=<step>`
-  wedges it: `start` never answers `initialize`, `config` never answers a
+  refuses `session/set_mode`.
+  `--auth-required <kind>` (`CHORD_FAKE_AUTH_REQUIRED`) checks failed starts
+  on `session/new`, `session/load` and `session/resume`: `methods` refuses
+  with `authRequired` (-32000), a message naming `fake login` or
+  `FAKE_API_KEY`, and two methods offered at `initialize`, one with a
+  description; `bare` refuses with `Authentication required` and no methods. `link` asks a
+  sign-in link first and fails with `authRequired` unless accepted;
+  `linkother` asks the same link but fails with -32603 unless accepted, so
+  it gets no sign-in guidance (CHD-435).
+  `--hang <step>` or `CHORD_FAKE_HANG=<step>` wedges it: `start` never
+  answers `initialize`, `config` never answers a
   config, mode or model change, `turn` never ends a prompt, cancelled or not.
   It ignores SIGTERM and stdin closing, but exits on SIGKILL or parent loss.
   It also exits when started under PID 1, even if that parent is alive. It

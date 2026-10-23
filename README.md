@@ -50,10 +50,11 @@ chord codex      # or any other agent
 
 ## A tour
 
-### Diffs you can read
+### Replies and diffs you can read
 
 Edits arrive as whole, numbered, highlighted diffs, with long lines wrapped
-under their code.
+under their code. Copied replies join wrapped text; code outside quotes
+copies without its box. Blank lines between blocks stay.
 
 <img src="docs/images/edit.png" alt="An Edit tool call drawn as a coloured diff" width="900">
 

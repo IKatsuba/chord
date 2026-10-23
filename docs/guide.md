@@ -237,8 +237,9 @@ a prompt.
 Replies and messages render as markdown, wrapped to the window. Rows can
 break at spaces or after `/`, `-`, `.`, `,`, `:` and `(`. Outside quotes,
 list continuations hang under their item's text, including nested items and
-two-digit numbers. Code blocks and tables keep their drawn rows, as do
-proposal and saved-team previews.
+two-digit numbers. Code blocks wrap long lines at their box edge. Tables
+and code inside quotes keep their drawn rows, as do proposal and saved-team
+previews.
 
 Tool-call headlines show every line, wrapped to the width with no cap:
 a Bash heredoc is visible in full in the transcript. Continuation rows
@@ -526,9 +527,12 @@ the highlight stays until a key or click. In replies and messages, a copied
 paragraph, heading or list item joins its wrapped rows at any window width.
 List markers and hanging indents do not copy; a list inside a quote keeps
 its markers. Source soft breaks join with a space; hard breaks stay newlines.
-Code blocks and tables copy as drawn, borders included. The blank row between
-blocks does not copy. When dragging from a nested item to an outer one, move
-along the outer row before releasing so the selection reaches it.
+Code outside quotes copies without its border, language label or padding;
+a line wrapped at the box edge copies whole. Tables and code inside quotes
+copy as drawn, borders included. Blank rows between blocks and loose-list
+items copy as lines holding one space. When dragging from a nested item to
+an outer one, move along the outer row before releasing so the selection
+reaches it.
 Clicking the prompt takes the keys back from the agents list or background
 summary without changing which agent receives your typing. A picked child's
 name and colour stay on the border. A permission, form, question, picker or

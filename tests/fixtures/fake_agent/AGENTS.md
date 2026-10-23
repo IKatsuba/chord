@@ -7,8 +7,8 @@
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
   (`text`, `texttillsteered`, `thought`, `todos`, `mcp`, `opened`, `markdown`,
-  `markdownwrap`, `titled`, `retitled`, `titledlook`, `titledfix`,
-  `slow`, `long`, `longheld`,
+  `markdownwrap`, `markdowncode`, `titled`, `retitled`, `titledlook`,
+  `titledfix`, `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
   `longresults`,
@@ -58,7 +58,8 @@
   `cutcalls`, `cutcallsback`, `tasklong`, `taskcost`, `agentcost`,
   `tasktallname`, `tasktwo`,
   `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
-  `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `permission`,
+  `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
+  `permission`,
   `permissionsteer`,
   `callchildtwo`, `agenttitled`, `agentsquiet`, `agentsheldgated`, `plan`,
   `planshrinkgated`,
@@ -82,7 +83,9 @@
   plays that scenario; `markdownwrap` sends a reply whose heading,
   three-deep nested list, quote and paragraph wrap at 80 columns, with a
   two-digit marker, task items, and a soft and a hard line break
-  (`docs/design/CHD-396.md`);
+  (`docs/design/CHD-396.md`); `markdowncode` sends code boxes with a long
+  line, a blank code line and a language label wider than its code, plus a
+  loose list with a code box, to check copies across blocks;
   `rawoutputs` sends results with no content: a string,
   stdout/stderr with successful and failed exits, `output`, `result` and
   an object with no known text fields;

@@ -45,7 +45,7 @@ export interface ReportFacts {
   /** The context window and cost as the last `usage_update` gave them. */
   readonly context?: Usage | undefined;
   /**
-   * What the whole window has spent, its closed agents and tabs too, and
+   * What the whole window has spent, its closed agents and sessions too, and
    * the columns its table is laid out in (CHD-373 S4).
    */
   readonly window?: {

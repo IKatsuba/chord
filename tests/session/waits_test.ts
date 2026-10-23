@@ -20,7 +20,7 @@ import {
   withChildren,
 } from './window_agents_helpers.ts';
 
-test('a permission behind is a wait on that tab alone, from when it came', () => {
+test('a permission of an agent not shown is a wait on that agent alone, from when it came', () => {
   const tabs = heard(opened('a', 'b'), 1, [
     up,
     prompt('t1'),
@@ -263,7 +263,7 @@ test("a turn ending leaves its permissions waiting, between turns (the owner's Q
   expect(waitOf(tabs, 1)!.unseen?.kind).toStrictEqual('replied');
 });
 
-test('/clear starts the tab over with nothing waiting', () => {
+test('/clear starts main over with nothing waiting', () => {
   const tabs = heard(opened('a', 'b'), 1, [
     up,
     prompt('t1'),

@@ -3,7 +3,7 @@
  * asked for with `spawn_task`. It has no tab: its work is relayed into its
  * parent's stream as a subagent's, under the task's id, so it draws as
  * CHD-149's subagent block in the parent's turn, and its requests reach the
- * person in the parent's tab. It ends with its first turn, whose last message
+ * person in the parent's session. It ends with its first turn, whose last message
  * is the report, delivered to the parent as a message; then chord closes it.
  */
 import type { SessionUpdate } from '@agentclientprotocol/sdk';

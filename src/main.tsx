@@ -171,9 +171,9 @@ const cli = chordCommand().action(async (options, named) => {
   }
 
   // A plain line rather than Cliffy's refusal, which prints the help
-  // first: nothing is wrong with how chord was called. Only the agents
-  // that start are asked for, so a restore whose tabs are all of other
-  // agents does not need the one the command line would have started.
+  // first: nothing is wrong with how chord was called. Only the agent that
+  // starts is asked for, so resuming another agent's session does not need
+  // the one the command line would have started.
   const refuseMissing = async (
     starts: readonly {
       agent: string;

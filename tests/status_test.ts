@@ -253,7 +253,7 @@ test("a turn that ended in front is done until the person's next key or the next
   ).toStrictEqual('working');
 });
 
-test('a tab behind stays done through keys until it is visited', () => {
+test('an agent not shown stays done through keys until it is picked', () => {
   // Tab 1 is behind tab 2.
   const behind = heard(opened('fake', 'claude'), 1, [
     up,

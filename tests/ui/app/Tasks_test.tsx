@@ -75,7 +75,8 @@ test("each session gets chord's server with a token of its own, good until its a
         expect(frame).toContain('"name": "Fake Small"');
         expect(frame).toContain(`"id": "${window.session()?.id}"`);
         expect(frame).toContain('"model": "fake-large"');
-        expect(frame).toContain('"tab": 1');
+        // No tab number since 0.58.0 (CHD-493).
+        expect(frame).not.toContain('"tab"');
       },
       { server, runtimes: ['fake'], rows: 80, columns: 120 },
     );
@@ -143,7 +144,7 @@ test("a user's server named chord keeps its place, and chord's tools answer besi
   }
 });
 
-test("a task agent works nested in its parent's turn, asks the person in the parent's tab, messages it and reports", async () => {
+test("a task agent works nested in its parent's turn, asks the person in the parent's session, messages it and reports", async () => {
   const server = serveChord();
 
   try {
@@ -426,7 +427,7 @@ test("chord's own calls draw by what chord served: the lists, and a task refused
         expect(frame).toContain('List agents(fake)');
         expect(frame).toContain('2 models · fake-large, fake-small');
         expect(frame).toContain('List sessions');
-        expect(frame).toContain('1 open · 1 fake (you)');
+        expect(frame).toContain('1 open · fake (you)');
         expect(frame).toContain('Agent(Fix the tokenizer) · fakx · fake-small');
         expect(frame).toContain('No agent named fakx; chord knows fake');
         expect(!frame.includes('mcp__chord__')).toBeTruthy();
@@ -454,7 +455,7 @@ test("chord's own calls as Codex sends them draw as Claude's do; another server'
         expect(frame).toContain('List agents\n');
         expect(frame).toContain('1 runtime · fake');
         expect(frame).toContain('List sessions');
-        expect(frame).toContain('1 open · 1 fake (you)');
+        expect(frame).toContain('1 open · fake (you)');
         expect(!frame.includes('mcp.chord.')).toBeTruthy();
         // The other server's call is drawn as an MCP call, untied (CHD-419).
         expect(frame).toContain('notes - list_notes (MCP)\n');

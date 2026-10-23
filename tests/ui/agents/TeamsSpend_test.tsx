@@ -19,7 +19,7 @@ import {
 } from '../app/render.tsx';
 import { BUGFIX, withTeams, started } from './teams_window.tsx';
 
-test("/cost, /context and /status on a picked member name its runtime, not the tab's (CHD-405)", async () => {
+test("/cost, /context and /status on a picked member name its runtime, not main's (CHD-405)", async () => {
   const server = serveChord();
   // tester on another runtime than main's, its agent still the fake.
   const team = BUGFIX.replace(

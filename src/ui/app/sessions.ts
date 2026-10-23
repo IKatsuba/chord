@@ -194,7 +194,7 @@ export interface SessionStart {
 }
 
 /**
- * Where a tab's sessions work, and what that directory's files give them:
+ * Where the window's sessions work, and what that directory's files give them:
  * a session resumed from another directory takes that directory's project
  * settings and MCP servers, as had chord been started there.
  */
@@ -246,7 +246,7 @@ export interface SessionsWindow {
   /** Starts the box afresh on the draft and cursor the state has. */
   redraw: () => void;
   showDraft: (text: string, at: Cursor) => void;
-  /** Tells the terminal chord waits on the person, for the tab named. */
+  /** Tells the terminal chord waits on the person, for the agent named. */
   notify: (wait: Wait | undefined, name: string) => void;
   /** Keeps a prompt sent, with its images, in history. */
   remember: (text: string, images: readonly PastedImage[]) => void;
@@ -286,7 +286,7 @@ export function useSessions(
   };
 
   /**
-   * What a session tab `key` let go said of a turn of its, from the tab
+   * What a session main, `key`, let go said of a turn of its, from main
    * open or closed since: kept where that session is held (CHD-373 S3c).
    * Whether `event` was one.
    */
@@ -393,7 +393,7 @@ export function useSessions(
         }
 
         const next = resuming.current;
-        // A token for each session the tab opens, `/clear`'s included, good
+        // A token for each session main opens, `/clear`'s included, good
         // until that session's agent has gone.
         const admitted = server?.admit({ role: 'person', key, window: view });
         const options = {
@@ -450,7 +450,7 @@ export function useSessions(
   const children = useRef(new Map<string, Conversation>());
 
   /**
-   * Why a child of `args.agent` cannot start from `parent` in tab `key`, with
+   * Why a child of `args.agent` cannot start from `parent` of main, `key`, with
    * what is offered; none when it may: a parent closing, a runtime chord
    * cannot start there, or a model it is known to lack.
    */
@@ -508,7 +508,7 @@ export function useSessions(
   };
 
   /**
-   * A child's own conversation, a session of `args.agent` where tab `key`
+   * A child's own conversation, a session of `args.agent` where main, `key`,
    * works, on the model asked for or not at all, with chord's server given
    * it as `caller`, whose tools its role gives. Its record names
    * `parent`, it as `name`, a task's id, which its parent's record keeps
@@ -573,7 +573,7 @@ export function useSessions(
       },
       Date.now,
       // The model asked for, which the child runs on or not at all, and the
-      // mode a team file set, likewise, or else the tab's settings' one.
+      // mode a team file set, likewise, or else the settings' one.
       {
         ...(args.mode !== undefined
           ? { mode: { id: args.mode, from: asked, required: true } }
@@ -602,7 +602,7 @@ export function useSessions(
 
   /**
    * The conversation a caller's own work runs in: a long-lived child's, or
-   * the tab's session's; none once it has closed.
+   * main's; none once it has closed.
    */
   const callerConversation = (key: number, agent: string | undefined) =>
     agent === undefined
@@ -653,8 +653,8 @@ export function useSessions(
   };
 
   /**
-   * Starts a task agent for the caller, the tab's session or a long-lived
-   * child of it: a session of `agent` where that tab works, with no tab of
+   * Starts a task agent for the caller, main or a long-lived child of it: a
+   * session of `agent` where main works, with no row of
    * its own, drawn in the caller's turn and closed with it. Refused as
    * `startRefusal` says.
    */
@@ -760,7 +760,7 @@ export function useSessions(
   /** How a long-lived child opens, besides its runtime, model and prompt. */
   interface Opening {
     readonly name: string;
-    /** The conversation it answers to: the tab's session's, or its lead's. */
+    /** The conversation it answers to: main's, or its lead's. */
     readonly parent: () => Conversation | undefined;
     /** Who its first prompt is a message from. */
     readonly from: MessageFrom;
@@ -773,8 +773,8 @@ export function useSessions(
   }
 
   /**
-   * Opens a long-lived agent in tab `key`, in its list of agents under the
-   * prompt rather than a tab of its own, its first prompt `opening.from`'s
+   * Opens a long-lived agent of main, `key`, in the list of agents under
+   * the prompt, its first prompt `opening.from`'s
    * message; chord's id for it, which its parent quotes, as answered, and
    * where an effort asked for left it, once it has started.
    */
@@ -885,7 +885,7 @@ export function useSessions(
     };
   };
 
-  /** Why tab `key` cannot open another child of its own, if it cannot. */
+  /** Why main, `key`, cannot open another child of its own, if it cannot. */
   const fullRefusal = (key: number): string | undefined => {
     const agents = ownedBy(sessions.agents, key);
 
@@ -897,8 +897,8 @@ export function useSessions(
   };
 
   /**
-   * Opens a long-lived agent for the session in tab `key`: a session of
-   * `agent` where that tab works, its first prompt the parent's message.
+   * Opens a long-lived agent for main, `key`: a session of `agent` where
+   * main works, its first prompt the parent's message.
    * Refused as `startRefusal` says, and past `MAX_CHILDREN`.
    */
   const openAgent = async (
@@ -936,15 +936,15 @@ export function useSessions(
     >(),
   );
 
-  /** The team files where tab `key` works, read now, each path as shown. */
+  /** The team files where main, `key`, works, read now, each path as shown. */
   const teamsAt = async (key: number): Promise<ListedTeam[]> =>
     (await findTeams({ configHome, cwd: place.cwd }, runtimeNames)).map(
       (found) => ({ ...found, shown: shownTeamFile(key, found) }),
     );
 
   /**
-   * A team file as the window shows it to tab `key`: a project's from the
-   * directory the tab works in, the user's from `~`.
+   * A team file as the window shows it to main, `key`: a project's from the
+   * directory main works in, the user's from `~`.
    */
   const shownTeamFile = (key: number, found: FoundTeam) =>
     found.place === 'project'
@@ -952,8 +952,8 @@ export function useSessions(
       : homePath(found.file, home);
 
   /**
-   * Where a team named `name` goes for tab `key`, a project's file shown
-   * from the directory the tab works in and the user's from `~`, and the
+   * Where a team named `name` goes for main, `key`, a project's file shown
+   * from the directory main works in and the user's from `~`, and the
    * team saved under the name now.
    */
   const teamPlaces = async (key: number, name: string) => {
@@ -987,7 +987,7 @@ export function useSessions(
   };
 
   /**
-   * `run_team`, and `/team run`: the team's lead opened as a child of tab
+   * `run_team`, and `/team run`: the team's lead opened as a child of main,
    * `key`'s session, named after the team and numbered past its first run,
    * on the lead's runtime, model, effort and mode, with the team part and
    * the job as main's message. Refused for a team not found, `lists` saying
@@ -1152,7 +1152,7 @@ export function useSessions(
     );
 
   /**
-   * The conversation a child answers to: its lead's for a member, the tab's
+   * The conversation a child answers to: its lead's for a member, main's
    * session's for any other.
    */
   const parentOf = (child: Child<Conversation>): Conversation | undefined => {
@@ -1164,7 +1164,7 @@ export function useSessions(
   };
 
   /**
-   * Why tab `key` has no open child `to`: closed in it, or open when the
+   * Why main, `key`, has no open child `to`: closed, or open when the
    * session was left, as a resumed past's closing note names it.
    */
   const noChild = (key: number, to: string): string => {
@@ -1323,7 +1323,7 @@ export function useSessions(
   };
 
   /**
-   * Tells tab `key`'s session, with `← chord`, of an `event` that ends its
+   * Tells main, `key`, with `← chord`, of an `event` that ends its
    * child `own`'s work on its own, as `childEnded` words it; a child the
    * window has let go is no news.
    */
@@ -1386,7 +1386,7 @@ export function useSessions(
     };
   };
 
-  // Keys of the sessions a tab let go, held as they close, apart from every
+  // Keys of the sessions main let go, held as they close, apart from every
   // session's own, which count up from one.
   const retiredKeys = useRef(0);
   const retiredKey = () => --retiredKeys.current;
@@ -1564,7 +1564,6 @@ export function useSessions(
         : [
             {
               key: agents.main.key,
-              tab: 1,
               runtime: agents.main.agent,
               id: session?.id,
               model: session?.models()?.current,
@@ -1696,7 +1695,7 @@ export function useSessions(
    */
   const conversation = () => sessions.front;
 
-  /** The conversation of tab or child `key`; none once it has closed. */
+  /** The conversation of main or child `key`; none once it has closed. */
   const conversationAt = (key: number) => sessions.conversationOf(key);
 
   /**
@@ -1714,7 +1713,7 @@ export function useSessions(
     redraw();
   };
 
-  /** The front tab, as `sessions` has it now. */
+  /** The window's agents, as `sessions` has them now. */
   /** The window's agents, once main has started. */
   const front = (): StartedAgents<Conversation> | undefined =>
     ownedBy(sessions.agents, sessions.agents.main?.key);
@@ -1997,7 +1996,7 @@ export function useSessions(
     return members.map((each) => each.name);
   };
 
-  /** The runs open in `tab`, a lead each, in the order they started. */
+  /** The runs open in `agents`, a lead each, in the order they started. */
   const runsIn = (agents: StartedAgents<Conversation>): TeamRun[] =>
     ownChildren(agents).flatMap((child) =>
       isLead(child) && child.team !== undefined
@@ -2006,9 +2005,9 @@ export function useSessions(
     );
 
   /**
-   * `/team`'s picker and its names: the team files where the front tab
+   * `/team`'s picker and its names: the team files where the window
    * works, read now, the runs open in it, and the two directories as the
-   * window shows them; none once the window has no tab.
+   * window shows them; none once main has closed.
    */
   const listTeams = async (): Promise<TeamListing | undefined> => {
     const agents = front();
@@ -2030,7 +2029,7 @@ export function useSessions(
     };
   };
 
-  /** The team file `name` where the front tab works, read now. */
+  /** The team file `name` where the window works, read now. */
   const teamNamed = async (name: string): Promise<ListedTeam | undefined> => {
     const agents = front();
 
@@ -2040,7 +2039,7 @@ export function useSessions(
   };
 
   /**
-   * `/team run`: the run `run_team` starts, for the front tab's `main`, with
+   * `/team run`: the run `run_team` starts, for `main`, with
    * the person's words as the job, drawn as its call is; main, which took
    * no part, hears of it ahead of its next prompt.
    */
@@ -2084,7 +2083,7 @@ export function useSessions(
   };
 
   /**
-   * `/team stop`: the front tab's run `name` closed with its members, at
+   * `/team stop`: the run `name` closed with its members, at
    * once, as the person typed it on purpose; `show` hears what it did
    * before main is told, as for `x`, so the command's line comes first.
    */
@@ -2120,7 +2119,7 @@ export function useSessions(
 
   /**
    * `/team show`: team `name` as its file has it; while it runs in the
-   * front tab, its first run as it stands now, each of the file's agents
+   * window, its first run as it stands now, each of the file's agents
    * with its state and latest headline, the file as the run read it.
    */
   const showTyped = async (name: string): Promise<TeamShown> => {
@@ -2219,7 +2218,7 @@ export function useSessions(
 
   /**
    * `/team new`: `typed` drawn as the person's
-   * prompt in the front tab's `main`, `prompt` what its agent gets, with
+   * prompt in `main`, `prompt` what its agent gets, with
    * the shell output held there ahead of it.
    */
   const sendToMain = (typed: string, prompt: string) => {
@@ -2275,7 +2274,7 @@ export function useSessions(
   };
 
   /**
-   * The front tab's agents as the list under the prompt draws them, `main`
+   * The window's agents as the list under the prompt draws them, `main`
    * first; none while it has no child, and the list is not drawn.
    */
   const agentRows = (): AgentRow[] => {
@@ -2329,7 +2328,7 @@ export function useSessions(
 
   /**
    * The list under the prompt as it is drawn in `limit` lines at `width`:
-   * the front tab's agents while it has a child, a team folded where their
+   * the window's agents while it has a child, a team folded where their
    * lines do not fit, so a resize may fold or unfold one.
    */
   const listed = (limit: number, width: number): AgentRow[] =>
@@ -2338,7 +2337,7 @@ export function useSessions(
     );
 
   /**
-   * The front tab's background: every monitor and task of its `main` and
+   * The window's background: every monitor and task of `main` and
    * its children, those ended since the person's last prompt there kept.
    */
   const background = (): BackgroundItem[] => {
@@ -2379,7 +2378,7 @@ export function useSessions(
     );
   };
 
-  /** The child picked in the front tab, as the box and the header name it. */
+  /** The child picked, as the box and the header name it. */
   const picked = () => {
     const agents = front();
     const child = agents && pickedChild(agents);
@@ -2409,7 +2408,7 @@ export function useSessions(
   };
 
   // Every session's state, for a read that finishes after the person has
-  // gone to another tab: what it finishes into is the session it began in.
+  // picked another agent: what it finishes into is the session it began in.
   const allNow = useRef(all);
 
   allNow.current = all;
@@ -2448,7 +2447,7 @@ export function useSessions(
     left = '',
   ) => {
     // Read through the refs, as a prompt sent after its files were read is
-    // sent from a render that has gone by, maybe with another tab in front.
+    // sent from a render that has gone by, maybe with another agent picked.
     const now = stateOf(key);
     const sending = images ?? now?.images ?? [];
     const inSession = (action: AppAction) =>

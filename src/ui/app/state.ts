@@ -202,7 +202,7 @@ export interface WindowState
   /** ctrl+c was pressed once; a second press quits. */
   readonly quitArmed: false | 'ctrl+c';
   /**
-   * The agents and tabs closed since the window opened, with what they had
+   * The agents and main sessions closed since the window opened, with what they had
    * spent then, which the window's total still counts (CHD-373, Q59).
    */
   readonly keptSpend?: readonly KeptSpend[];
@@ -663,7 +663,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       };
     }
     case 'agent_closed':
-      // For the record; the list reads the tabs.
+      // For the record; the list reads the window's agents.
       return state;
     case 'run_typed':
       // For the record; the command drew it.
@@ -992,7 +992,7 @@ export function windowOf(state: AppState): WindowState {
 export const initialSession: SessionState = sessionOf(initialAppState);
 
 /**
- * The window with every open session's state, by its tab's key, and the one
+ * The window with every open session's state, by its key, and the one
  * in front, whose state fills the window.
  */
 export interface WindowedState {
@@ -1010,7 +1010,7 @@ export interface WindowedState {
 export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
   readonly name: string;
   readonly kind: SpendKind;
-  /** The agent a tab's own session is. */
+  /** The agent the main session is. */
   readonly agent?: string | undefined;
   /** The agent a child runs on, as chord starts it. */
   readonly runtime?: string | undefined;
@@ -1020,7 +1020,7 @@ export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
 interface Closing {
   readonly session: SessionState;
   readonly place: KeptPlace;
-  /** The tab `/clear` or a resume let it go from, whose key goes on. */
+  /** The session `/clear` or a resume let it go from, whose key goes on. */
   readonly from?: number;
 }
 
@@ -1066,7 +1066,7 @@ export type WindowedAction =
       readonly key: number;
       readonly action: AppAction;
     }
-  /** An agent or tab closing: what it spent is kept for the window's total (CHD-373). */
+  /** An agent or a main session closing: what it spent is kept for the window's total (CHD-373). */
   | { readonly type: 'spend_kept'; readonly kept: KeptSpend }
   /**
    * Session `key` is closing: it is held as it is, its last events still
@@ -1077,13 +1077,13 @@ export type WindowedAction =
       readonly key: number;
       readonly place: KeptPlace;
       /**
-       * The tab whose session it is, when that tab goes on with another:
+       * Main's key, when main goes on with another session:
        * `key` is then the closing's own (CHD-373 S3c).
        */
       readonly from?: number;
     }
   /**
-   * What a session `/clear` or a resume let go from tab `from` said of a
+   * What a session `/clear` or a resume let go from main, `from`, said of a
    * turn of its after: to the one of those that had the turn.
    */
   | {

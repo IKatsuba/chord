@@ -39,7 +39,6 @@ function windowOf(probed: string[] = []): WindowView {
     sessions: () => [
       {
         key: 0,
-        tab: 1,
         runtime: 'fake',
         id: 'one',
         model: 'fake-large',
@@ -147,7 +146,7 @@ test('list_agents with a runtime chord does not know says so and starts nothing'
   expect(probed).toStrictEqual([]);
 });
 
-test("list_sessions gives each open session, the caller's marked", () => {
+test("list_sessions gives the window's session, the caller's marked, and no tab (CHD-493)", () => {
   const window = windowOf();
 
   expect(sessionsAnswer({ role: 'person', key: 0, window })).toStrictEqual({
@@ -156,13 +155,12 @@ test("list_sessions gives each open session, the caller's marked", () => {
         id: 'one',
         runtime: 'fake',
         model: 'fake-large',
-        tab: 1,
         you: true,
       },
     ],
   });
   expect(sessionsAnswer({ role: 'person', key: 5, window })).toStrictEqual({
-    sessions: [{ id: 'one', runtime: 'fake', model: 'fake-large', tab: 1 }],
+    sessions: [{ id: 'one', runtime: 'fake', model: 'fake-large' }],
   });
 });
 
@@ -172,7 +170,6 @@ test("list_sessions gives each session's long-lived agents with it, and a child 
     sessions: () => [
       {
         key: 0,
-        tab: 1,
         runtime: 'claude',
         id: 'one',
         model: 'opus',
@@ -202,7 +199,6 @@ test("list_sessions gives each session's long-lived agents with it, and a child 
         id: 'one',
         runtime: 'claude',
         model: 'opus',
-        tab: 1,
         you: true,
         agents: parser,
       },
@@ -216,7 +212,6 @@ test("list_sessions gives each session's long-lived agents with it, and a child 
         id: 'one',
         runtime: 'claude',
         model: 'opus',
-        tab: 1,
         agents: parser,
       },
     ],

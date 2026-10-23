@@ -756,7 +756,7 @@ test('a closing session is held as it was, takes its last events in, and is kept
   ]);
 });
 
-test("a session /clear lets go is held under a key of its own, takes its running turn's end, and is kept once it has closed, as the tab goes on (CHD-373 S3c)", () => {
+test("a session /clear lets go is held under a key of its own, takes its running turn's end, and is kept once it has closed, as main goes on (CHD-373 S3c)", () => {
   const cost = { amount: 0.01, currency: 'USD' };
   const window = (
     [

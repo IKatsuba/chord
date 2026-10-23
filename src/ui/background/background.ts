@@ -1,5 +1,5 @@
 /**
- * The background of a tab, kept out of the components: every monitor and
+ * The background of the session, kept out of the components: every monitor and
  * `spawn_task` task its agents run, and every subagent of theirs that can be
  * stopped alone (CHD-2), as items in start order, and the
  * summary line under the agents list that counts them by state, wrapped
@@ -91,7 +91,7 @@ export interface ItemOwner {
   readonly colour: number;
 }
 
-/** One monitor or task of the tab's agents. */
+/** One monitor or task of the session's agents. */
 export interface BackgroundItem {
   readonly kind: BackgroundKind;
   /** Its id in its owner's session: a monitor's `m1`, a task's own. */
@@ -126,7 +126,7 @@ export interface BackgroundItem {
   readonly parentAt?: number;
 }
 
-/** One agent of the tab, as its items are read from its session. */
+/** One agent of the session, as its items are read from its own. */
 export interface BackgroundAgent {
   readonly key: number;
   readonly owner?: ItemOwner;
@@ -140,7 +140,7 @@ export interface BackgroundAgent {
 }
 
 /**
- * The tab's items, oldest first, each keeping its place as it changes: the
+ * The session's items, oldest first, each keeping its place as it changes: the
  * running, asking and untracked ones, as every kind leaves once it ends
  * (CHD-479, CHD-482); and `keep`, the item whose detail is open, ended
  * or not, until the person leaves it (CHD-481, Q126; an agent's or a task's
@@ -334,7 +334,7 @@ export function leavesList(
   return LEAVES[item.kind].has(item.status.group);
 }
 
-/** The name the agents list gives the tab's own agent. */
+/** The name the agents list gives the main session's agent. */
 const MAIN_NAME = 'main';
 
 /**

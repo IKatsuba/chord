@@ -389,8 +389,7 @@ export function resumeCommand(
 }
 
 /**
- * An open session quitting leaves to resume: its tab's agent, its id and the
- * directory it works in.
+ * The session quitting leaves to resume: its agent and its id.
  */
 export interface Resumable {
   readonly agent: string;

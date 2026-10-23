@@ -36,16 +36,16 @@ export interface CommandsSessions {
   stopCommand(): void;
   openResume(): void;
   quit(): void;
-  /** What the whole window has spent, closed agents and tabs too. */
+  /** What the whole window has spent, closed agents and sessions too. */
   spend(): readonly SpendPart[];
   /**
    * `/clear` on the session in front, `before` done first; why it was
    * refused, if it was, and then nothing is done.
    */
   clearFront(before: () => void): string | undefined;
-  /** The front tab's key, whose `main` `/team` talks to. */
+  /** Main's key, which `/team` talks to. */
   frontKey(): number | undefined;
-  /** A child, not `main`, is picked in the front tab. */
+  /** A child, not `main`, is picked. */
   picked(): unknown;
   listTeams(): Promise<TeamListing | undefined>;
   runTyped(name: string, job: string): Promise<TeamShown>;
@@ -152,7 +152,7 @@ export function useCommands(
   };
 
   /**
-   * `/team` and its forms, for the front tab's `main` whatever is picked,
+   * `/team` and its forms, for `main` whatever is picked,
    * as teams belong to the session the person opened; what each does is
    * drawn in main's transcript under the command as typed.
    */

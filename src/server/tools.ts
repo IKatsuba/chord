@@ -54,7 +54,7 @@ export type Role = 'person' | 'child';
 /** What a session's token says of it. */
 export interface Caller {
   readonly role: Role;
-  /** The key of the tab the session is in, a child's parent's. */
+  /** The main session's key; a child's parent's, which is the main session's. */
   readonly key: number;
   /** A child's task id, as `spawn_task` answered it. */
   readonly task?: string;
@@ -62,7 +62,7 @@ export interface Caller {
   readonly agent?: string;
   /**
    * The long-lived child that started a task, by its id; none for a task the
-   * tab's session started.
+   * main session started.
    */
   readonly by?: string;
   /** A long-lived child that is a team's lead or one of its members. */
@@ -165,11 +165,9 @@ export interface ChildView {
   readonly model: string | undefined;
 }
 
-/** A session open in the window, as the tools read it. */
+/** The window's session, as the tools read it. */
 export interface OpenSessionView {
   readonly key: number;
-  /** Its place in the strip, from 1. */
-  readonly tab: number;
   readonly runtime: string;
   /** The agent's id for it; none while it still starts. */
   readonly id: string | undefined;
@@ -234,13 +232,13 @@ export interface WindowView {
      */
     key?: number,
   ): Promise<RuntimeOffer | undefined>;
-  /** Starts a task agent for the caller: the tab's session or its child. */
+  /** Starts a task agent for the caller: the main session or its child. */
   spawn(caller: Caller, args: SpawnArgs): Promise<SpawnAnswer>;
-  /** Opens a long-lived agent for the session in tab `key`. */
+  /** Opens a long-lived agent for the main session, `key`. */
   open(key: number, args: OpenArgs): Promise<OpenAnswer>;
   /**
    * The teams saved for the caller's directory, and the leads of the runs
-   * open in its tab, by team.
+   * open in its session, by team.
    */
   teams(caller: Caller): Promise<TeamsFound>;
   /**
@@ -249,7 +247,7 @@ export interface WindowView {
    */
   teamPlaces(caller: Caller, name: string): Promise<TeamPlaces>;
   /**
-   * Asks the person in the caller's tab, in the permission box: the option
+   * Asks the person in the main session's permission box: the option
    * they picked, by its id, or undefined once the question is withdrawn.
    */
   askPerson(
@@ -713,7 +711,7 @@ function row(name: string, offer: RuntimeOffer | undefined): AgentRow {
   };
 }
 
-/** `list_sessions`'s answer: the window's sessions, the caller's marked. */
+/** `list_sessions`'s answer: the window's session, the caller's marked. */
 export interface SessionsAnswer {
   readonly sessions: readonly SessionRow[];
 }
@@ -722,7 +720,6 @@ export interface SessionRow {
   readonly id: string | null;
   readonly runtime: string;
   readonly model: string | null;
-  readonly tab: number;
   /** Set on the caller's own session. */
   readonly you?: true;
   /** Its long-lived agents, by chord's id for each; none when it has none. */
@@ -742,7 +739,6 @@ export function sessionsAnswer(caller: Caller): SessionsAnswer {
       id: open.id ?? null,
       runtime: open.runtime,
       model: open.model ?? null,
-      tab: open.tab,
       ...(open.key === caller.key && caller.role === 'person'
         ? { you: true as const }
         : {}),
@@ -894,8 +890,8 @@ const listSessions: Register = (server, caller) =>
     'list_sessions',
     {
       description:
-        "The sessions open in chord's window: each one's id, " +
-        'runtime, model and tab, yours marked `you`.',
+        'The session chord runs: its id, runtime and model, and the ' +
+        'long-lived agents open in it, by id and name; yours marked `you`.',
     },
     () => serve(caller, 'list_sessions', {}, sessionsAnswer(caller)),
   );

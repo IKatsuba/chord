@@ -48,7 +48,7 @@ test('the attention order is the oldest waits first, then the oldest unseen', ()
   expect(attentionOrder(tabs)).toStrictEqual([4, 2, 1, 3]);
 });
 
-test('a tab that waits and has an unseen reply counts once, as waiting', () => {
+test('an agent that waits and has an unseen reply counts once, as waiting', () => {
   let tabs = opened('a', 'b', 'c');
 
   tabs = heard(tabs, 1, [up, prompt('t'), ended('t')], 0);
@@ -110,7 +110,7 @@ test('attention walks the waits, then the unseen, then round to the waits', () =
   expect(fronts).toStrictEqual([4, 2, 1, 3, 4, 2]);
 });
 
-test('attention from a waiting tab put in front by hand goes to the next wait', () => {
+test('attention from a waiting agent picked by hand goes to the next wait', () => {
   let tabs = opened('a', 'b', 'c');
 
   tabs = heard(tabs, 1, [up, prompt('t'), asked('t', 'p')], 0);
@@ -244,7 +244,7 @@ test('closing a child keeps it among the closed, and a pick on it goes back to m
   ]);
 });
 
-test("a child's message, reply and wait are its own; the tab's glyph takes the most urgent of its agents", () => {
+test("a child's message, reply and wait are its own", () => {
   let tabs = withChildren(opened('claude'), 'parser', 'docs');
 
   tabs = heard(tabs, 2, [
@@ -275,7 +275,7 @@ test("a child's message, reply and wait are its own; the tab's glyph takes the m
   expect(shownKey(attend(tabs)!)).toStrictEqual(3);
 });
 
-test('the tab in front on main hears a turn of its own end unseen by no one, and a child behind it as unseen', () => {
+test('main, shown, hears a turn of its own end unseen by no one, and a child not shown as unseen', () => {
   let tabs = withChildren(opened('claude'), 'parser');
 
   tabs = heard(tabs, 2, [

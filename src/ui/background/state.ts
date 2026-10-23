@@ -84,7 +84,7 @@ export const initialBackground: BackgroundState = {};
 
 /**
  * Whether the background view is on screen: open, and not hidden by a
- * permission or form the front tab asked since it opened, as every picker
+ * permission or form the session asked since it opened, as every picker
  * is; it comes back as it was once that is answered. Those already waiting
  * as it opened it stays over, the keys its own (CHD-462).
  */
@@ -102,7 +102,7 @@ export function backgroundShown(
 /**
  * Whether the list under the prompt has the keys: focused, and the view
  * opened from its summary line not open, which takes them while it is up
- * and hands them to what the front tab asks while it is hidden.
+ * and hands them to what the session asks while it is hidden.
  */
 export function agentsHaveKeys(
   state: BackgroundState & { readonly agentsFocus?: true },

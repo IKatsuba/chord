@@ -155,7 +155,7 @@ export function useBackgroundHint(
 
 /**
  * The background view: the pickers' frame above the prompt, full width, a
- * row per item of the tab, the `❯` on one, as tall as its rows up to half
+ * row per item of the session, the `❯` on one, as tall as its rows up to half
  * the window (CHD-462). It takes no keys itself; the window routes them.
  */
 export function BackgroundView({

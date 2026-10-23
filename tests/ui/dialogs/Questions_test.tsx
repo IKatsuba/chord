@@ -1053,3 +1053,46 @@ describe('CHD-462 B1 tester: hidden question choice', () => {
     });
   }
 });
+
+describe('CHD-493 U10 tester: question note away and back', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`j stays text on the last row and list focus preserves note and geometry at ${columns} columns`, () =>
+      withChild(
+        async (window) => {
+          await openOther(window);
+          await send(window, 'askclaude');
+          await inputAsked(window, 'fake asks you 2 questions');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.type('j keep this');
+          await window.shows('j keep this');
+
+          const before = window.frame().split('\n');
+          const row = before.findIndex((line) => line.includes('j keep this'));
+
+          expect(before[row]).toContain('❯');
+          await window.press(DOWN);
+          await window.shows('  ❯ main ');
+          expect(window.frame().split('\n')[row]).toContain('j keep this');
+          expect(window.frame().split('\n')[row]).not.toContain('❯');
+          expect(window.frame()).not.toContain('Enter to pick');
+          await window.press('\x1b[A');
+          await window.shows('❯');
+          await window.type('k');
+          await window.shows('j keep thisk');
+          expect(
+            window
+              .frame()
+              .split('\n')
+              .findIndex((line) => line.includes('j keep thisk')),
+          ).toBe(row);
+          await window.press(ESC);
+          await window.shows('Elicitation answer: cancel');
+        },
+        { columns, rows },
+      ));
+  }
+});

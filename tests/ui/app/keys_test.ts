@@ -684,3 +684,45 @@ describe('a request between turns (CHD-158)', () => {
     expect(leaderA(inTurn)).toContainEqual({ type: 'attend_session' });
   });
 });
+
+describe('CHD-493 U10 tester: independent draft payloads', () => {
+  test('editing and taking a middle draft preserves its neighbours through clear', () => {
+    const image = { id: 9, mediaType: 'image/png', data: 'AA==', bytes: 1 };
+    let state = ready;
+
+    for (const text of ['old', 'middle [Image #9]', 'new']) {
+      state = reduceApp(typing(text, state), { type: 'draft_kept' });
+    }
+
+    state = reduceApp(typing('edited [Image #9]', state), {
+      type: 'images_added',
+      images: [image],
+    });
+    state = reduceApp(state, { type: 'bash_mode', on: true });
+    state = reduceApp(state, { type: 'draft_set', cursor: [0, 2] });
+    state = reduceApp(state, { type: 'kept_edited', index: 1 });
+    state = reduceApp(state, { type: 'cleared' });
+
+    expect(state.kept?.map((draft) => draft.text)).toStrictEqual([
+      'old',
+      'edited [Image #9]',
+      'new',
+    ]);
+    expect(state.kept?.[1]).toStrictEqual({
+      text: 'edited [Image #9]',
+      images: [image],
+      cursor: [0, 2],
+      bash: true,
+    });
+
+    state = reduceApp(state, { type: 'kept_taken', index: 1 });
+
+    expect(state.kept?.map((draft) => draft.text)).toStrictEqual([
+      'old',
+      'new',
+    ]);
+    expect(
+      state.kept?.every((draft) => draft.images.length === 0 && !draft.bash),
+    ).toBe(true);
+  });
+});

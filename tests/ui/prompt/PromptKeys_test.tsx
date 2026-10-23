@@ -785,3 +785,131 @@ test("each agent's walk is its own: going to another while a kept draft is shown
     },
     { columns: 120, rows: 40 },
   ));
+
+describe('CHD-493 U10 tester: kept drafts across agents and turns', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`several drafts survive clear, a cancelled turn and sending one at ${columns} columns`, () =>
+      withChild(
+        async (window) => {
+          const empty = () => /^│ ›\s*│$/.test(promptRow(window) ?? '');
+
+          await openOther(window);
+          await readyAgent(window);
+
+          for (const text of ['old kept', 'new kept']) {
+            await window.type(text);
+            await window.press(DOWN);
+            await until('draft set aside', empty);
+          }
+
+          await send(window, '/clear');
+          await readyAgent(window);
+          await send(window, 'slow');
+          await window.shows('Working.');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await window.press(UP);
+          await window.shows('› new kept');
+          await window.press(UP);
+          await window.shows('› old kept');
+          await window.type(' edited');
+          await window.press(DOWN);
+          await window.shows('› new kept');
+          await window.press('\r');
+          await readyAgent(window);
+          await window.press(UP);
+          await window.shows('› old kept edited');
+          await window.press('\x03');
+          await until('removed kept draft', empty);
+          await window.press(UP);
+          expect(promptRow(window)).not.toContain('old kept');
+        },
+        { columns, rows },
+      ));
+
+    test(`attention and another agent's send preserve an edited middle draft and cursor at ${columns} columns`, () =>
+      withChild(
+        async (window) => {
+          const empty = () => /^│ ›\s*│$/.test(promptRow(window) ?? '');
+
+          await openOther(window);
+          await readyAgent(window);
+
+          for (const text of ['first draft', 'one two', 'last draft']) {
+            await window.type(text);
+            await window.press(DOWN);
+            await until('draft set aside', empty);
+          }
+
+          await pickAgent(window, 'other');
+          await send(window, 'permission');
+          await asked(window);
+          await until('other leaves its permission for the list', async () => {
+            if (window.frame().includes('  ❯ other ')) {
+              return true;
+            }
+
+            await window.press(DOWN);
+
+            return false;
+          });
+
+          await window.press(UP);
+          await window.shows('  ❯ main ');
+          await window.press('\r');
+          await window.press(UP);
+          await window.shows('› last draft');
+          await window.press(UP);
+          await window.shows('› one two');
+          await window.press('\x1b[1;3D');
+          await window.type('X');
+          await window.shows('› one Xtwo');
+          await leader(window, 'a');
+          await asked(window);
+          await window.press('1');
+          await readyAgent(window);
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+          await pickAgent(window, 'main');
+          await window.shows('› one Xtwo');
+          await window.press(DOWN);
+          await window.shows('› last draft');
+          await window.press(UP);
+          await window.shows('› one Xtwo');
+          await window.type('Y');
+          await window.shows('› one XYtwo');
+          await window.press(UP);
+          await window.shows('› first draft');
+          await window.press(DOWN);
+          await window.shows('› one XYtwo');
+        },
+        { columns, rows },
+      ));
+  }
+
+  test('vim j sets aside only at the last line and k returns the draft', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('first');
+        await window.press('\x0a');
+        await window.type('second');
+        await window.press(ESC);
+        await window.shows('-- NORMAL --');
+        await window.press('k');
+        await window.press('j');
+        expect(window.frame()).toContain('› first');
+        await window.press('j');
+        await until('vim draft set aside', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await window.press('k');
+        await window.shows('› first');
+        expect(window.frame()).toContain('second');
+      },
+      { vim: true, columns: 80, rows: 24 },
+    ));
+});

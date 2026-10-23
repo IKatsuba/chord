@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   emptyHistory,
   type History,
@@ -151,4 +151,31 @@ test("an agent's place in the walk stays on its kept draft, or its prompt, as ot
 
   expect(walkOf(sent)).toBe(undefined);
   expect(walkedIn(more, undefined).index).toBe(undefined);
+});
+
+describe('CHD-493 U10 tester: separate walks while shared history grows', () => {
+  test('two stacks keep their middle positions, edits and unshelved drafts across repeated sends', () => {
+    const main = ['main oldest', 'main middle edited', 'main newest'];
+    const other = ['other oldest', 'other newest'];
+    const mainWalk = older(
+      older(sent, 'main field', main)!.history,
+      '',
+      main,
+    )!.history;
+    const otherWalk = older(sent, 'other field', other)!.history;
+    let shared = sent;
+
+    for (const text of ['other sends', 'main sends', 'other sends again']) {
+      shared = recorded(shared, text);
+
+      const m = walkedIn(shared, walkOf(mainWalk));
+      const o = walkedIn(shared, walkOf(otherWalk));
+
+      expect(newer(m, main)?.text).toBe('main newest');
+      expect(older(m, '', main)?.text).toBe('main oldest');
+      expect(newer(o, other)?.text).toBe('other field');
+      expect(older(o, '', other)?.text).toBe('other oldest');
+      expect(newer(newer(m, main)!.history, main)?.text).toBe('main field');
+    }
+  });
 });

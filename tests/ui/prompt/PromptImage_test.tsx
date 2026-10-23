@@ -1076,3 +1076,71 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
     }
   }
 });
+
+describe('CHD-493 U10 tester: a late send beside a kept draft', () => {
+  test('an image send completed in main leaves the other agent on its edited draft', () => {
+    const reader = heldReader();
+
+    return withChild(
+      async (window) => {
+        await connected(window);
+        await openOther(window);
+        await pickAgent(window, 'other');
+        await window.type('other draft');
+        await window.press(DOWN);
+        await until('other draft aside', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await send(window, 'permission');
+        await window.shows('Do you want to proceed?');
+        await until('permission leaves for the agents list', async () => {
+          if (window.frame().includes('  ❯ other ')) {
+            return true;
+          }
+
+          await window.press(DOWN);
+
+          return false;
+        });
+
+        await window.press(UP);
+        await window.shows('  ❯ main ');
+        await window.press('\r');
+
+        for (const key of 'see /shots/a.png') {
+          await window.press(key);
+        }
+
+        await window.press('\r');
+        await until('image send held', () => reader.waiting.length === 1);
+        await leader(window, 'a');
+        await window.shows('Do you want to proceed?');
+        await window.press('1');
+        await until(
+          'permission answered',
+          () => !window.frame().includes('Do you want to proceed?'),
+        );
+        await window.press(UP);
+        await window.shows('› other draft');
+        await window.type(' edited');
+        reader.waiting[0]?.();
+        await until('main sent image', () =>
+          window
+            .frame()
+            .split('\n')
+            .some((row) => /^\s*main\s.*✓ new reply/.test(row)),
+        );
+        expect(promptRow(window)).toContain('› other draft edited');
+        await window.press(DOWN);
+        await until('other field empty', () =>
+          /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+        );
+        await window.press(UP);
+        await window.shows('› other draft edited');
+        await pickAgent(window, 'main');
+        await window.shows(RECEIVED);
+      },
+      { columns: 80, rows: 24, readImage: reader.readImage },
+    );
+  });
+});

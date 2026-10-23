@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
+import { withChild, openOther } from '../app/child_window.tsx';
 import {
   ESC,
+  UP,
   inputAsked,
   promptRow,
   send,
@@ -112,6 +114,52 @@ describe('CHD-158 tester: a held link', () => {
               },
             ],
           }),
+        },
+      );
+    });
+  }
+});
+
+describe('CHD-493 U10 tester: link leaves without answering', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`j leaves Decline and return keeps its choice and geometry at ${columns} columns`, async () => {
+      const opened: string[] = [];
+
+      await withChild(
+        async (window) => {
+          await openOther(window);
+          await send(window, 'link');
+          await inputAsked(window, 'fake asks you to open a link');
+          await window.press('j');
+          await window.shows('❯ 2. Decline');
+
+          const before = window.frame().split('\n');
+          const row = before.findIndex((line) => line.includes('2. Decline'));
+
+          await window.press('j');
+          await window.shows('  ❯ main ');
+          expect(window.frame()).not.toContain('❯ 2. Decline');
+          expect(window.frame()).not.toContain('Enter to pick');
+          expect(window.frame().split('\n')[row]).toContain('2. Decline');
+          expect(opened).toStrictEqual([]);
+          await window.press(UP);
+          await window.shows('❯ 2. Decline');
+          expect(window.frame().split('\n')[row]).toBe(before[row]);
+          await window.press('\r');
+          await window.shows('Elicitation answer: decline');
+          expect(opened).toStrictEqual([]);
+        },
+        {
+          columns,
+          rows,
+          openUrl: (url) => {
+            opened.push(url);
+
+            return Promise.resolve(undefined);
+          },
         },
       );
     });

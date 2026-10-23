@@ -960,7 +960,7 @@ describe('CHD-435 tester: headless sign-in boundaries', () => {
 
         if (kind === 'linkother') {
           expect(stderr).toBe(
-            'chord: fake did not start: The fake could not open its session.\n',
+            'chord: fake did not start: it refused session/new: The fake could not open its session.\n',
           );
         } else {
           const message =

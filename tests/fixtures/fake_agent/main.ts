@@ -455,6 +455,7 @@ const SCENARIOS = [
   'tasktwo',
   'taskwait',
   'agents',
+  'agentsquiet',
   'agentsheld',
   'agentsheldgated',
   'agentchild',

@@ -1,11 +1,19 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ValidationError } from '@cliffy/command';
+import { quote } from 'shell-quote';
 import { chordCommand } from '../src/cli.ts';
 import { fakeAgentCommand } from './fixtures/fake.ts';
 import { recordSession } from './fixtures/records.ts';
@@ -412,4 +420,79 @@ describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries',
       await rm(cwd, { recursive: true });
     }
   });
+});
+
+describe('CHD-493 U9 tester: native duplicate-option boundaries', () => {
+  for (const args of [
+    ['-r', 'one', '-r', 'two'],
+    ['--resume', 'one', '--resume', 'two'],
+    ['-r', 'one', '--resume=two'],
+    ['--resume=one', '-r', 'two'],
+    ['--resume=one', '--resume=two'],
+    ['-r', '-r'],
+    ['--resume', '--resume'],
+    ['-r', '--resume=two'],
+    ['--resume=one', '-r'],
+  ]) {
+    test(`duplicate ${args.join(' ')} stops before the startup action`, async () => {
+      let started = 0;
+      const command = chordCommand()
+        .noExit()
+        .throwErrors()
+        .action(() => {
+          started++;
+        });
+
+      await expect(command.parse(args)).rejects.toThrow('can only occur once');
+      expect(started).toBe(0);
+
+      const dir = await mkdtemp(join(tmpdir(), 'chord-duplicate-resume-'));
+      const state = join(dir, 'state');
+      const settings = join(dir, '.chord', 'settings.json');
+      const malformed = '{this settings file must never be parsed';
+
+      try {
+        await mkdir(join(dir, '.chord'));
+        await mkdir(state);
+        await writeFile(settings, malformed);
+
+        const result = spawnSync(
+          process.execPath,
+          [
+            fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+            '--agent-command',
+            quote(fakeAgentCommand()),
+            ...args,
+            '-C',
+            dir,
+          ],
+          {
+            env: {
+              ...process.env,
+              HOME: dir,
+              XDG_STATE_HOME: state,
+              XDG_CONFIG_HOME: join(dir, 'config'),
+              PATH: join(dir, 'no-programs'),
+              NO_COLOR: '1',
+            },
+            stdio: ['ignore', 'pipe', 'pipe'],
+            encoding: 'utf8',
+            timeout: 10000,
+          },
+        );
+
+        expect(result.status).toBe(2);
+        expect(result.stderr).toContain(
+          'can only occur once, but was found several times.',
+        );
+        expect(result.stderr).not.toContain('settings.json');
+        expect(result.stderr).not.toContain('not on PATH');
+        expect(result.stdout).not.toContain('\x1b[?1049h');
+        expect(await readdir(state)).toEqual([]);
+        expect(await readFile(settings, 'utf8')).toBe(malformed);
+      } finally {
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
 });

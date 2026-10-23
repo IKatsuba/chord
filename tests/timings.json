@@ -211,7 +211,6 @@
     "tests/session/permissions_test.ts": 8,
     "tests/ui/header/mark_spec.ts": 8,
     "tests/ui/transcript/compaction_test.ts": 8,
-    "tests/scripts/dev/timings_test.ts": 7,
     "tests/session/cycles_test.ts": 7,
     "tests/session/modes_test.ts": 7,
     "tests/ui/app/caught_test.ts": 7,

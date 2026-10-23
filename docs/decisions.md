@@ -6796,6 +6796,15 @@ suite on 12 workers. Its tests moved, unchanged, into files of 20–30 s each:
 after each key, `asked`'s 150 ms) are the next cost, and are left as they
 are.
 
+CHD-513 (the owner, 2026-10-23) removed the timing gate CHD-501 put on
+whole runs, a file over 90 s or slower than its record failing the run,
+and with it keeping the record current as anyone's duty: `bun dev test`
+answers the tests' status alone, and CI runs the suite in three
+`--shard`s. `tests/timings.json` stays only to place files: Bun's
+`--parallel` starts each worker's slowest files first by it, and
+`--shard` cuts the shards by its times, taking a file it does not list
+at the median.
+
 ## CHD-411 — package.json keeps only dev (owner, 2026-10-16)
 
 package.json's scripts keep only `dev` (`bun scripts/dev.ts`). The other

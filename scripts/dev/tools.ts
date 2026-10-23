@@ -10,21 +10,12 @@
  * directly (the release) as much as through `bun dev`.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import { constants } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { quote } from 'shell-quote';
-import {
-  compare,
-  fails,
-  isTestFile,
-  MEASURED,
-  readTimings,
-  RECORD,
-  reportLines,
-} from './timings.ts';
 
 /** Runs one command to its end and answers its exit status. */
 export type Run = (argv: readonly string[]) => number;
@@ -75,109 +66,22 @@ export function qaPlace(dir: string): void {
   mkdirSync(dir, { recursive: true });
 }
 
-/** What `test` reads and writes besides the run, so a test can stand in for it. */
-export interface SuiteFiles {
-  /** A file's text from the root; none when it is not there. */
-  read(path: string): string | undefined;
-  remove(path: string): void;
-  /** Every file under `dir`, by its path from the root. */
-  list(dir: string): string[];
-  say(line: string): void;
-}
-
-/** The repository's files, and stderr. */
-export const suiteFiles: SuiteFiles = {
-  read: (path) => {
-    try {
-      return readFileSync(join(root, path), 'utf8');
-    } catch {
-      return undefined;
-    }
-  },
-  remove: (path) => rmSync(join(root, path), { force: true }),
-  list: (dir) =>
-    readdirSync(join(root, dir), { recursive: true, withFileTypes: true })
-      .filter((entry) => entry.isFile())
-      .map((entry) =>
-        join(entry.parentPath, entry.name)
-          .slice(root.length)
-          .replace(/^\//, ''),
-      ),
-  say: (line) => void process.stderr.write(`${line}\n`),
-};
-
 /**
- * The whole suite, a worker per core, `args` passed on to bun test, placed
- * by the times `tests/timings.json` records. A run with no arguments, as
- * `bun dev check` and CI make, measures them again into
- * `tests/timings.measured.json` and fails, naming the files, when one is
- * past its budget, moved far from its record, unrecorded or gone, or when
- * the measurement is missing or unreadable; one with `--update-timings`
- * rewrites the record and is held to the budget only. Any other argument
- * leaves the timings unchecked. The tests' own failure is always the
- * status; the timings' report follows it (CHD-501).
+ * The whole suite, a worker per core, `args` passed on to bun test. Bun
+ * starts each worker's slowest files first, and balances `--shard`, by
+ * the times in `tests/timings.json`; nothing here checks or rewrites them
+ * (CHD-513).
  */
-export function test(
-  args: readonly string[],
-  run: Run = spawn,
-  files: SuiteFiles = suiteFiles,
-): number {
-  const refreshing = args.includes('--update-timings');
-  const measuring = args.length === 0;
-
-  if (measuring) {
-    files.remove(MEASURED);
-  }
-
-  const status = run([
+export function test(args: readonly string[], run: Run = spawn): number {
+  return run([
     process.execPath,
     'test',
     '--parallel',
     '--timeout=60000',
-    ...(measuring
-      ? [`--timings=${MEASURED}`, `--timings=${RECORD}`, '--update-timings']
-      : [`--timings=${RECORD}`]),
+    '--timings=tests/timings.json',
     './tests/',
     ...args,
   ]);
-
-  if (!measuring && !refreshing) {
-    return status;
-  }
-
-  let failed: boolean;
-
-  try {
-    const report = compare(
-      readTimings(RECORD, files.read(RECORD)),
-      refreshing
-        ? readTimings(RECORD, files.read(RECORD))
-        : readTimings(MEASURED, files.read(MEASURED)),
-      files.list('tests').filter(isTestFile),
-      { refreshing },
-    );
-
-    for (const line of reportLines(report)) {
-      files.say(line);
-    }
-
-    failed = fails(report);
-  } catch (error) {
-    files.say(error instanceof Error ? error.message : String(error));
-
-    failed = true;
-  }
-
-  if (status !== 0) {
-    return status;
-  }
-
-  // Said apart, as a check that fails here has passing tests (CHD-501).
-  if (failed) {
-    files.say('timings: the tests passed; their timings fail the check');
-  }
-
-  return failed ? 1 : 0;
 }
 
 /** ESLint over the tree, `args` passed on. */
@@ -200,7 +104,6 @@ export function check(
   only: { static?: boolean },
   run: Run = spawn,
   say: (line: string) => void = (line) => void process.stderr.write(line),
-  files: SuiteFiles = suiteFiles,
 ): number {
   const steps: [string, () => number][] = [
     ['tsc', () => run([process.execPath, 'run', 'tsc'])],
@@ -213,7 +116,7 @@ export function check(
     ["lint/'s tests", () => run([process.execPath, 'test', 'lint/'])],
     ...(only.static === true
       ? []
-      : [['the suite', () => test([], run, files)] as [string, () => number]]),
+      : [['the suite', () => test([], run)] as [string, () => number]]),
   ];
 
   for (const [name, step] of steps) {

@@ -170,11 +170,10 @@ export function devCommand(actions: DevActions = RUN) {
         'test',
         new Command()
           .description(
-            "Run the whole suite with bun test, a worker per core, on the timings in tests/timings.json; the rest of the arguments are bun test's, an empty one only after --. With no arguments, as bun dev check and CI run it, it measures each file again into tests/timings.measured.json and fails, naming them, on a file over 90 s, one slower than the record by 35% and 20 s (a faster one never fails), one unrecorded or one gone; any argument leaves the timings unchecked. --update-timings rewrites tests/timings.json, held to the 90 s only: rerun with it after a file is added, split or changes its time, and commit the record.",
+            "Run the whole suite with bun test, a worker per core, the slowest files first by the times in tests/timings.json; the rest of the arguments are bun test's, an empty one only after --. Its status is the tests'.",
           )
           .arguments('[args...:string]')
           .stopEarly()
-          .example('the timings rewritten', 'bun dev test --update-timings')
           .example('only the uncommitted changes', 'bun dev test --changed')
           .example('an empty pattern, after --', "bun dev test -- -t ''")
           .action(function (_options, ...args) {

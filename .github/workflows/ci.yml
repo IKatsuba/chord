@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  check:
+  static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -14,5 +14,43 @@ jobs:
         with:
           bun-version: 1.4.x
       - run: bun install --frozen-lockfile
-      - run: bun dev check
+      - run: bun dev check --static
+
+  # The suite in three, each test file in exactly one: Bun's --shard cuts
+  # the sorted files by the times in tests/timings.json (CHD-513).
+  tests:
+    name: tests (${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.x
+      - run: bun install --frozen-lockfile
+      - run: bun dev test --shard=${{ matrix.shard }}/3
+
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.x
+      - run: bun install --frozen-lockfile
       - run: bun dev compile
+
+  # The check branch protection requires by name: it passes only when the
+  # static checks, every shard and the compile did, as one job did before.
+  check:
+    needs: [static, tests, compile]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          test '${{ needs.static.result }}' = success
+          test '${{ needs.tests.result }}' = success
+          test '${{ needs.compile.result }}' = success

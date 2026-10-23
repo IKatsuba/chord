@@ -1015,7 +1015,7 @@ and no dismissal is recorded.
 ```sh
 bun install       # the dependencies
 bun dev chord     # run from source
-bun dev check     # types, lint, format, tests and timing check
+bun dev check     # types, lint, format and tests
 bun dev compile   # this machine's binary into dist/
 bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
 ```
@@ -1024,24 +1024,19 @@ bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
 needs. `docs/decisions.md` records why the stack is what it is.
 
 `bun dev --help` lists all development commands: `chord` (`--fake` for the
-test agent), `test` (`--update-timings` to refresh recorded per-file times),
-`check` (`--static` to leave out the suite), `fmt`, `lint`, `compile`
+test agent), `test`, `check` (`--static` to leave out the suite), `fmt`,
+`lint`, `compile`
 (`--all` or `--install`), `npm`, `registry`, `mark`, `screenshots` (optionally
 shot names), `memory`, `selftest <binary>` and `release [version]`.
 Arguments after `chord`, `test` and `lint` pass on as written; an empty
 argument needs `--` (`bun dev test -- -t ''`). Use `bun dev chord -- --help`
 for chord's own help.
 
-Bare `bun dev test` and the suite in `bun dev check`, including CI, measure
-per-file times in gitignored `tests/timings.measured.json`. Compared with
-`tests/timings.json`, a file fails if it takes over 90 s, is slower by at
-least 35% and 20 s, is unrecorded or is no longer present. The report names
-the files; speedups do not fail the comparison. Test failures keep
-precedence; a timing-only failure says the tests
-passed. The record stays untouched: after checking the change is right,
-run `bun dev test --update-timings` and commit `tests/timings.json`.
-Refreshing still fails a file over 90 s; split it. Other extra test
-arguments skip comparison.
+`bun dev test` reports the tests' status. `tests/timings.json` only places
+files: Bun uses it to balance shards and start each worker's slowest files
+first; an unlisted file takes the median. No refresh is required.
+CI runs `static`, three `tests` shards (`--shard=1/3`, `2/3`, `3/3`) and
+`compile`. The required `check` job passes only when all of them succeed.
 
 The owner's `bun dev release [version|major|minor|patch|fix]` releases
 package.json's version when none is given. An exact version must equal it

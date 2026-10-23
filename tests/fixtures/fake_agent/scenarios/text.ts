@@ -5,6 +5,7 @@
 import { once } from 'node:events';
 import process from 'node:process';
 import {
+  MARKDOWN_CODE,
   MARKDOWN_LINES,
   MARKDOWN_OPEN_FENCE,
   MARKDOWN_OPEN_NESTED_FENCE,
@@ -138,6 +139,14 @@ export const TEXT = {
   // OpenTUI breaks them and what a copy over them joins (CHD-396).
   async markdownwrap(turn) {
     await turn.say(MARKDOWN_WRAP);
+
+    return 'end_turn';
+  },
+
+  // Code boxes a copy reads bare: a label wider than its code, a line too
+  // long for the box, a blank line in code, and a loose list (CHD-396).
+  async markdowncode(turn) {
+    await turn.say(MARKDOWN_CODE);
 
     return 'end_turn';
   },

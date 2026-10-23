@@ -85,6 +85,42 @@ for (const columns of [80, 120]) {
     ));
 }
 
+const LONG_CODE =
+  'bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt';
+
+for (const columns of [80, 120]) {
+  test(`a code box is OpenTUI's, and a drag over it copies the code alone at ${columns} columns`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+
+        const frame = stripAnsi(window.frame());
+
+        // The label sits one cell past the corner, as OpenTUI draws a title,
+        // and widens a box whose code is narrower than it.
+        expect(frame).toContain('┌─ typescript ─┐\n   │ x            │');
+        expect(frame).toContain('┌─ sh ──────────┐');
+        expect(
+          frame.split('\n').every((row) => stringWidth(row) <= columns),
+        ).toBe(true);
+        // A line cut at the box's edge copies whole; a blank line stays.
+        expect(await drag(window, 'bun dev chord', 'echo done')).toStrictEqual(
+          `${LONG_CODE}\n\necho done`,
+        );
+        expect(
+          await drag(window, 'A paragraph before', 'echo done'),
+        ).toStrictEqual(
+          `A paragraph before the code.\nx\n${LONG_CODE}\n\necho done`,
+        );
+        expect(
+          await drag(window, 'a loose item with', 'bun dev check'),
+        ).toStrictEqual('a loose item with a box:\nbun dev check');
+      },
+      { columns, rows: 40 },
+    ));
+}
+
 /** Selects body rows, using terminal cells even when a row contains CJK. */
 async function selectBody(drawn: Drawn, first: string, columns: number) {
   const rows = stripAnsi(drawn.frame()).split('\n');

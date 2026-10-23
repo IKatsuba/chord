@@ -351,6 +351,7 @@ const SCENARIOS = [
   'codexmcpnote',
   'markdown',
   'markdownwrap',
+  'markdowncode',
   'graphemes',
   'permission',
   'plan',

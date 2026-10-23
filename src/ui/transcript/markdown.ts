@@ -59,10 +59,12 @@ export interface Block {
 
 /**
  * A block of a reply for OpenTUI to wrap: its text, a quote's beside its
- * bar, or a list laid out as items.
+ * bar, a code block for a box of OpenTUI's to hold, or a list laid out as
+ * items.
  */
 export type Soft =
   | { readonly kind: 'text' | 'quote'; readonly text: string }
+  | Code
   | {
       readonly kind: 'list';
       /** A blank row between items, and between an item's blocks. */
@@ -77,6 +79,23 @@ export type Soft =
 export interface Item {
   readonly marker: string;
   readonly blocks: readonly Soft[];
+}
+
+/**
+ * A code block as its box's parts: the border, its padding and the label on
+ * it are OpenTUI's, so a drag over the box copies the code alone (Q150).
+ */
+export interface Code {
+  readonly kind: 'code';
+  /** The fence's language, its first word; empty for none. */
+  readonly label: string;
+  /** The code, highlighted, its lines whole for OpenTUI to cut at the edge. */
+  readonly code: string;
+  /**
+   * Cells the box takes: its widest line beside the borders and padding, as
+   * wide as the label needs for OpenTUI to draw it, and no wider than `width`.
+   */
+  readonly width: number;
 }
 
 /** Cells a quote's bar takes: the bar and a space. */
@@ -98,7 +117,7 @@ export function markdown(
   palette: Palette = PALETTES.dark,
 ): Block[] {
   return laid(text, width, paint(color, palette), false).flatMap((block) =>
-    block.kind === 'list'
+    block.kind === 'list' || block.kind === 'code'
       ? []
       : [{ quote: block.kind === 'quote', text: block.text }],
   );
@@ -162,6 +181,10 @@ function blocksOf(
 
     if (soft && token.type === 'list') {
       return [listOf(token as Tokens.List, width, on, references)];
+    }
+
+    if (soft && token.type === 'code') {
+      return [codeOf(token as Tokens.Code, width, on)];
     }
 
     const quote = token.type === 'blockquote';
@@ -241,6 +264,47 @@ function listOf(
 }
 
 /**
+ * A code block's label and its lines, highlighted. markdansi highlights a
+ * block a line at a time, which loses a comment or a string that runs on to
+ * the next line, so the code is highlighted whole here. Blank lines at
+ * either end of the code are the agent's, so it is not trimmed as other
+ * blocks are.
+ */
+function highlighted(
+  token: Tokens.Code,
+  color: Paint,
+): { label: string; lines: readonly string[] } {
+  const label = token.lang?.trim().split(/\s+/)[0] ?? '';
+  const language = color?.code && fenceLanguage(label);
+
+  return {
+    label,
+    lines: highlightLines(token.text, language, color?.code?.terminal),
+  };
+}
+
+/**
+ * A code block for OpenTUI's box: as wide as its widest line, or as its
+ * label, which OpenTUI leaves out of a box narrower than the label and 4,
+ * unless that is wider than `width`.
+ */
+function codeOf(token: Tokens.Code, width: number, color: Paint): Code {
+  const { label, lines } = highlighted(token, color);
+  const widest = Math.max(...lines.map((line) => stringWidth(line)));
+  const labelled = label === '' ? 0 : stringWidth(label) + 2 + CODE_INSET;
+
+  return {
+    kind: 'code',
+    label,
+    code: lines.join('\n'),
+    width: Math.max(
+      1,
+      Math.min(width, Math.max(widest + CODE_INSET, labelled)),
+    ),
+  };
+}
+
+/**
  * A code block in a box of its own, whatever its length: markdansi boxes only
  * a block of two lines or more, which leaves a one-line command, the commonest
  * block an agent sends, looking like prose, and a fence that has just opened
@@ -250,18 +314,9 @@ function listOf(
  * goes on below, as markdansi cuts one.
  */
 function renderCode(token: Tokens.Code, width: number, color: Paint): string {
-  const label = token.lang?.trim().split(/\s+/)[0] ?? '';
-  // markdansi highlights a block a line at a time, which loses a comment or
-  // a string that runs on to the next line, so the code is highlighted whole
-  // here and only then cut to the box.
-  const language = color?.code && fenceLanguage(label);
-  // Not trimmed as other blocks are: blank lines at either end of the code
-  // are the agent's.
-  const code = highlightLines(
-    token.text,
-    language,
-    color?.code?.terminal,
-  ).flatMap((line) =>
+  const { label, lines } = highlighted(token, color);
+  // Highlighted whole, and only then cut to the box.
+  const code = lines.flatMap((line) =>
     wrapAnsi(line, Math.max(1, width - CODE_INSET), {
       hard: true,
       wordWrap: false,

@@ -37,9 +37,10 @@ export interface Look {
 }
 
 /**
- * One of `softMarkdown`'s blocks: a text, a quote beside its bar, or a list,
- * each item's marker a text of its own that a drag does not copy, and its
- * blocks hanging beside it.
+ * One of `softMarkdown`'s blocks: a text, a quote beside its bar, a code
+ * block in a box whose border a drag does not copy, or a list, each item's
+ * marker a text of its own that a drag does not copy, and its blocks hanging
+ * beside it.
  */
 export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
   const selectable = useSelectable();
@@ -66,6 +67,29 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
             ))}
           </box>
         ))}
+      </box>
+    );
+  }
+
+  if (block.kind === 'code') {
+    return (
+      <box
+        border
+        borderStyle='single'
+        borderColor={DIM_BORDER}
+        // OpenTUI sets a title one cell past the corner; chord takes it there.
+        {...(block.label !== '' && {
+          title: ` ${block.label} `,
+          titleAlignment: 'left',
+          titleColor: DIM_BORDER,
+        })}
+        paddingLeft={1}
+        paddingRight={1}
+        width={block.width}
+      >
+        <text {...TEXT} {...selectable} {...look} wrapMode='char'>
+          <Ansi text={block.code} />
+        </text>
       </box>
     );
   }

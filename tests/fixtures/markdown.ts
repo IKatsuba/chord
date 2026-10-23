@@ -93,3 +93,32 @@ export const MARKDOWN_WRAP = [
   'break and a hard  ',
   'break here.',
 ].join('\n');
+
+/**
+ * The fake agent's `markdowncode` reply (`docs/design/CHD-396.md`, units 3
+ * and 4): a label wider than its code, a line too long for the box at 80
+ * columns, a blank line inside code, and a loose list with a box in an item.
+ */
+export const MARKDOWN_CODE = [
+  'A paragraph before the code.',
+  '',
+  '```typescript',
+  'x',
+  '```',
+  '',
+  '```sh',
+  'bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt',
+  '',
+  'echo done',
+  '```',
+  '',
+  '- a loose item',
+  '',
+  '- a loose item with a box:',
+  '',
+  '  ```sh',
+  '  bun dev check',
+  '  ```',
+  '',
+  'A paragraph after.',
+].join('\n');

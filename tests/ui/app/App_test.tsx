@@ -916,7 +916,7 @@ test('an agent that does not start is an error line', async () => {
 
 describe('CHD-493 U2 tester: aliases retire live per-agent work', () => {
   for (const columns of [80, 120]) {
-    test(`/new drops a running turn and its child at ${columns} columns`, () =>
+    test(`/clear drops a running turn and its child at ${columns} columns`, () =>
       withChild(
         async (window) => {
           const main = window.session()!;
@@ -924,7 +924,7 @@ describe('CHD-493 U2 tester: aliases retire live per-agent work', () => {
           await openOther(window);
           await send(window, 'slow');
           await window.shows('esc to interrupt');
-          await send(window, '/new');
+          await send(window, '/clear');
           await readyAgent(window);
           await until('the old main and child stopped', () =>
             Promise.all(window.pids.slice(0, 2).map(isAlive)).then((alive) =>

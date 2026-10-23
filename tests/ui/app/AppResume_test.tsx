@@ -3,7 +3,7 @@
  * a session works, and what a click gives the keys.
  */
 import { describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { draw } from '../harness.tsx';
@@ -351,4 +351,52 @@ describe('CHD-429 tester: mouse focus boundaries', () => {
         { columns, rows },
       ));
   }
+});
+
+describe('CHD-493 U1 tester: sessions-only resume with legacy windows', () => {
+  test('a legacy window stays untouched and absent from the picker at both widths', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'chord-legacy-picker-'));
+    const path = join(stateDir, 'windows', 'w-old.json');
+    const legacy = JSON.stringify({
+      id: 'w-old',
+      at: Date.now(),
+      front: 0,
+      tabs: [{ agent: 'fake', sessionId: 'legacy-only', cwd: '/work' }],
+    });
+
+    try {
+      await mkdir(join(stateDir, 'windows'));
+      await writeFile(path, legacy);
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'text');
+          await window.shows('came in chunks.');
+          await send(window, '/clear');
+          await send(window, '/resume');
+          await window.shows('Resume a session');
+
+          for (const columns of [80, 120]) {
+            await window.resize({ columns });
+
+            const frame = window.frame();
+
+            expect(frame).toContain(
+              "fake's earlier sessions in this directory.",
+            );
+            expect(frame).not.toContain('saved windows');
+            expect(frame).not.toContain('legacy-only');
+            expect(frame).not.toContain('w-old');
+            expect(frame).toContain('text');
+          }
+
+          await window.press(ESC);
+        },
+        { stateDir, columns: 80, rows: 24 },
+      );
+      expect(await readFile(path, 'utf8')).toBe(legacy);
+    } finally {
+      await rm(stateDir, { recursive: true });
+    }
+  });
 });

@@ -295,6 +295,7 @@ describe('CHD-493 U11 tester: resumed sessions keep team run numbers', () => {
           await mainIdle(window);
           await send(window, 'team2');
           await window.shows('Team(bugfix 2) · fake · fake-large');
+          await window.shows('← from @bugfix 2 · fake');
           await mainIdle(window);
           await send(window, '/resume');
           await window.shows('Resume a session');

@@ -50,7 +50,7 @@ chord                 # Claude Code, or your settings' agent, here
 chord codex           # any agent `chord agents` lists
 chord gemini -C ~/src/app
 chord --continue      # Claude Code's latest session in this directory, again
-chord --resume <id>   # a session by its id, which chord prints when you quit
+chord --resume <id>   # a recorded session, on its own agent
 chord --resume        # pick an earlier session first
 chord agents          # the agents chord can start: name, what starts each, and whether PATH has its CLI
 chord -p "Explain src/main.tsx"                # the reply on stdout, then exit
@@ -113,16 +113,20 @@ reopens the session. The id is the agent's own: for Claude Code, the one
 `claude --resume` takes, so `--resume <id>` also opens a session chord never
 saw, its past as the agent replays it.
 
-`--resume` (`-r`) opens one session. Given several ids, chord opens
-nothing and prints a command for each, with its recorded agent and
-directory. An id with no record uses the command's agent and directory,
-with a note saying so. An old `chord --resume w-<id>` command passes its id
-to the agent as any id chord has no record of; the agent's refusal shows.
-Legacy files under `windows/` are ignored and left untouched.
+`--resume` (`-r`) takes one id, or none for the picker. Repeating the
+option prints CLI help and a parse error, then exits 2 before any agent
+starts. As the id is optional, a word after `--resume` that names one of
+chord's own flags (`model`, `c`) is not read as an id.
 
-Each `--resume` takes one id or none. As the id is optional, a word after
-`--resume` that names one of chord's own flags (`model`, `c`) is not read
-as an id.
+`chord -r <id>` uses the record's agent when none is named on the command
+line; an id with no record goes to the default agent. A named agent that
+differs from the record's is refused. With no agent named,
+`--agent-command` overrides the default agent alone, so a record for
+another agent is refused too.
+
+An old `chord --resume w-<id>` command passes its id to the agent as any id
+chord has no record of; the agent's refusal shows. Legacy files under
+`windows/` are ignored and left untouched.
 
 `--continue`, `--resume` and `/resume` can open a session already open in
 another chord process. Both processes then use it, and their turns
@@ -468,10 +472,10 @@ chord sends the main session id to the terminal through OSC
 and after `/clear`, until the first prompt is saved. A resumed or continued
 session sends its id once open, as does a `/resume` pick. The value stays
 when chord exits, including on a signal or crash. A launcher such as
-Chorded can keep it and reopen with `chord [agent] --resume=<sessionId>`,
-using the same agent. Use `=`: a separate id starting with `-` reads as
-options. An id spelling a chord option name (`-r`, `-c`, `-m`, …) is not
-taken even with `=`.
+Chorded can keep it and reopen with `chord --resume=<sessionId>`.
+A named agent must match the record. Use `=`: a separate id starting with
+`-` reads as options. An id spelling a chord option name (`-r`, `-c`, `-m`,
+…) is not taken even with `=`.
 
 iTerm2 and WezTerm keep this variable (`user.chord_session` in iTerm2);
 other terminals ignore it. Inside tmux it reaches the outer terminal only

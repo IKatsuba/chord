@@ -129,6 +129,7 @@ chord                  # your default agent in this directory
 chord gemini -C ~/src/app
 chord agents           # every agent chord can start, and whether it is installed
 chord --continue       # the latest session here, again
+chord --resume <id>     # a recorded session, on its own agent
 chord --resume         # pick an earlier session
 chord -p "Explain src/main.tsx"          # one reply on stdout, for scripts
 git diff | chord -p "Review this" --output-format json

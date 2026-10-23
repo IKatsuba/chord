@@ -9,7 +9,6 @@ import { ValidationError } from '@cliffy/command';
 import { chordCommand } from '../src/cli.ts';
 import { fakeAgentCommand } from './fixtures/fake.ts';
 import { recordSession } from './fixtures/records.ts';
-import { writeWindow } from '../src/session/windows.ts';
 import {
   ResumeError,
   sessionById,
@@ -315,7 +314,7 @@ test("a refused command for the agent starts nothing, chord's own command neithe
 
 describe('CHD-466 U2 tester: initial agent on resume', () => {
   for (const window of [false, true]) {
-    test(`${window ? 'window restore' : 'session resume'} refuses the initial runtime in the record directory`, async () => {
+    test(`${window ? 'saved window refuses before startup' : 'session resume refuses the initial runtime in the record directory'}`, async () => {
       const dir = await mkdtemp(join(tmpdir(), 'chord-refused-resume-'));
       const here = join(dir, 'here');
       const there = join(dir, 'there');
@@ -360,12 +359,20 @@ describe('CHD-466 U2 tester: initial agent on resume', () => {
         const windowId = 'w-refused';
 
         if (window) {
-          await writeWindow(stateDir, {
-            id: windowId,
-            at: 1,
-            front: 0,
-            tabs: [{ sessionId, agent: 'fake', cwd: there }],
-          });
+          await mkdir(join(stateDir, 'windows'), { recursive: true });
+          await writeFile(
+            join(stateDir, 'windows', `${windowId}.json`),
+            `${JSON.stringify(
+              {
+                id: windowId,
+                at: 1,
+                tabs: [{ sessionId, agent: 'fake', cwd: there }],
+                front: 0,
+              },
+              null,
+              2,
+            )}\n`,
+          );
         }
 
         const result = spawnSync(
@@ -394,10 +401,16 @@ describe('CHD-466 U2 tester: initial agent on resume', () => {
 
         expect(await readFile(marker, 'utf8').catch(() => '')).toBe('');
         expect(result.status).toBe(1);
-        expect(result.stderr).toContain('fake not started:');
-        expect(result.stderr).toContain(
-          'fake not started: agents.fake.command in .chord/settings.json: expected a string, got null',
-        );
+        if (window) {
+          expect(result.stderr).toContain(
+            `${windowId} was a window of 1 session; chord opens one session per run now. Resume it with:\nchord fake --cwd ${there} --resume ${sessionId}`,
+          );
+          expect(result.stderr).not.toContain('fake not started:');
+        } else {
+          expect(result.stderr).toContain(
+            'fake not started: agents.fake.command in .chord/settings.json: expected a string, got null',
+          );
+        }
         expect(result.stderr).not.toContain('npx');
       } finally {
         await rm(dir, { recursive: true });

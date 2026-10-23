@@ -754,9 +754,12 @@ test("each agent's walk is its own: going to another while a kept draft is shown
       await window.shows('  ❯ main ');
       await window.press('\r');
       await until('main has the keys', () => !window.frame().includes('  ❯ '));
-      // Main's walk on its kept draft, the keys go to other's request.
+      // Main's walk on its kept draft, edited, the keys go to other's
+      // request.
       await window.press(UP);
       await window.shows('› main draft');
+      await window.type('X');
+      await window.shows('› main draftX');
       await leader(window, 'a');
       await asked(window);
       await window.press('1');
@@ -767,6 +770,18 @@ test("each agent's walk is its own: going to another while a kept draft is shown
       // Other's own walk: its kept draft, not a place in main's.
       await window.press(UP);
       await window.shows('› other draft');
+      // Other sends a prompt of its own, one more in the shared history.
+      await window.press(DOWN);
+      await until('other empty again', empty);
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await pickAgent(window, 'main');
+      await window.shows('› main draftX');
+      // Walked off and back, main's edit stays in its kept draft's place.
+      await window.press(DOWN);
+      await until('main empty', empty);
+      await window.press(UP);
+      await window.shows('› main draftX');
     },
     { columns: 120, rows: 40 },
   ));

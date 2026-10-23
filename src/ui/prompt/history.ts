@@ -172,3 +172,38 @@ export function walking(history: History, draft: string): boolean {
     history.index !== undefined && history.prompts[history.index] === draft
   );
 }
+
+/**
+ * An agent's place in the walk: a prompt sent, by its index, or one of the
+ * agent's own kept drafts, by its; with the draft the walk began on. Kept
+ * apart from the prompts, which every agent shares, so a prompt another
+ * agent sends never moves it onto another draft (U10).
+ */
+export interface Walk {
+  readonly prompt?: number;
+  readonly kept?: number;
+  readonly draft: string;
+}
+
+/** Where `history` stands, as an agent keeps it; none off the walk. */
+export function walkOf({ prompts, index, draft }: History): Walk | undefined {
+  if (index === undefined) {
+    return undefined;
+  }
+
+  return index < prompts.length
+    ? { prompt: index, draft }
+    : { kept: index - prompts.length, draft };
+}
+
+/** The prompts `sent`, walked from an agent's place `walk`. */
+export function walkedIn(sent: History, walk: Walk | undefined): History {
+  return {
+    ...sent,
+    index:
+      walk === undefined
+        ? undefined
+        : (walk.prompt ?? sent.prompts.length + (walk.kept ?? 0)),
+    draft: walk?.draft ?? '',
+  };
+}

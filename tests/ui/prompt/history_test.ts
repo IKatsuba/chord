@@ -8,7 +8,9 @@ import {
   recalledImages,
   recorded,
   recordedWith,
+  walkedIn,
   walking,
+  walkOf,
 } from '../../../src/ui/prompt/history.ts';
 
 const sent = ['first', 'second'].reduce(recorded, emptyHistory);
@@ -123,4 +125,30 @@ test('↑ and ↓ bring back a prompt with a control character as it was sent', 
   expect(middle.text).toStrictEqual('with\u000cform feed');
   expect(older(middle.history, middle.text)?.text).toStrictEqual('first');
   expect(newer(middle.history)?.text).toStrictEqual('last');
+});
+
+test("an agent's place in the walk stays on its kept draft, or its prompt, as other agents send prompts (U10)", () => {
+  const kept = ['set aside'];
+  const onKept = older(sent, 'typing', kept)!.history;
+  const onPrompt = older(onKept, '', kept)!.history;
+  // Another agent sends one more prompt; the shared prompts grow.
+  const more = recorded(sent, 'from another agent');
+
+  for (const [place, shown] of [
+    [onKept, 'set aside'],
+    [onPrompt, 'second'],
+  ] as const) {
+    const again = walkedIn(more, walkOf(place));
+
+    expect(newer(again, kept)?.text).not.toBe(undefined);
+    expect(
+      again.index! < more.prompts.length
+        ? more.prompts[again.index!]
+        : kept[again.index! - more.prompts.length],
+    ).toBe(shown);
+    expect(again.draft).toBe('typing');
+  }
+
+  expect(walkOf(sent)).toBe(undefined);
+  expect(walkedIn(more, undefined).index).toBe(undefined);
 });

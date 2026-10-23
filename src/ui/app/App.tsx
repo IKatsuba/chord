@@ -45,7 +45,10 @@ import {
   emptyHistory,
   type History,
   recordedWith,
+  type Walk,
+  walkedIn,
   walking,
+  walkOf,
 } from '../prompt/history.ts';
 import { PlanBox } from '../dialogs/PlanBox.tsx';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
@@ -425,18 +428,14 @@ export function App({
   // are: another agent's place must never name one of them (U10).
   const [shared, setShared] = useState(emptyHistory);
   const [walks, setWalks] = useState<
-    Readonly<Record<number, Pick<History, 'index' | 'draft'>>>
+    Readonly<Record<number, Walk | undefined>>
   >({});
-  const history: History = {
-    ...shared,
-    index: walks[all.front]?.index,
-    draft: walks[all.front]?.draft ?? '',
-  };
-  const setHistory = ({ index, draft, ...sent }: History) => {
+  const history = walkedIn(shared, walks[all.front]);
+  const setHistory = (next: History) => {
     const front = all.front;
 
-    setShared({ ...sent, index: undefined, draft: '' });
-    setWalks((walked) => ({ ...walked, [front]: { index, draft } }));
+    setShared({ ...next, index: undefined, draft: '' });
+    setWalks((walked) => ({ ...walked, [front]: walkOf(next) }));
   };
 
   // The textarea skips telling us a cursor it reported last, so a cursor set

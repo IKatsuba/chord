@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import { until as boundedUntil } from './conversation_fake.ts';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -419,4 +420,76 @@ test("a busy child closed once its turn reported a cost still reports that turn'
     await open.closeAll();
     await rm(dir, { recursive: true });
   }
+});
+
+describe('CHD-493 U3 tester: one main conversation across child activity', () => {
+  test('repeated starts during connection and after a child closes never construct another main', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-one-main-'));
+    const sessions: Session[] = [];
+    const heard: { key: number; event: ConversationEvent }[] = [];
+    let constructed = 0;
+    const make = (emit: (event: ConversationEvent) => void) =>
+      new Conversation(async () => {
+        const session = await openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(),
+        });
+
+        sessions.push(session);
+
+        return session;
+      }, emit);
+    const open = new OpenAgents({
+      conversation: (_agent, emit) => {
+        constructed++;
+
+        return make(emit);
+      },
+      heard: (key, event) => heard.push({ key, event }),
+    });
+
+    try {
+      const first = open.start('fake')!;
+      const main = open.conversationOf(first);
+
+      expect(open.start('codex')).toBeUndefined();
+      await boundedUntil(() =>
+        heard.some(
+          ({ key, event }) => key === first && event.type === 'connected',
+        ),
+      );
+      expect(constructed).toBe(1);
+      expect(sessions).toHaveLength(1);
+
+      const other = open.openChild(
+        { id: 'other', name: 'other', runtime: 'fake', openedAt: 0 },
+        (emit) => make(emit),
+      )!;
+
+      await boundedUntil(() =>
+        heard.some(
+          ({ key, event }) => key === other && event.type === 'connected',
+        ),
+      );
+      open.pick(other);
+      expect(open.start('codex')).toBeUndefined();
+      expect(open.front).toBe(open.conversationOf(other));
+      await open.closeChild(other);
+      expect(open.front).toBe(main);
+      expect(open.start('codex')).toBeUndefined();
+      expect(open.agents.main?.key).toBe(first);
+      expect(open.conversationOf(first)).toBe(main);
+      expect(constructed).toBe(1);
+      expect(sessions).toHaveLength(2);
+    } finally {
+      await open.closeAll();
+
+      for (const session of sessions) {
+        expect(session.agentPids.size).toBe(0);
+      }
+
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

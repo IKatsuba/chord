@@ -690,3 +690,31 @@ describe('CHD-431 Q46 tester: attention after a hand pick', () => {
     expect(attend(second)).toBeUndefined();
   });
 });
+
+describe('CHD-493 U3 tester: closed child keys never become a new child', () => {
+  test('late connection, permission and result leave a same-named replacement idle and main picked', () => {
+    const initial = opened('fake', 'other');
+    const closed = closeChild(initial, 2);
+    const replacement = openChild(
+      closed,
+      { id: 'replacement', name: 'other', runtime: 'fake', openedAt: 1 },
+      'replacement conversation',
+    )!.agents;
+    const late = heard(replacement, 2, [
+      up,
+      prompt('old-turn'),
+      asked('old-turn', 'old-permission'),
+      ended('old-turn'),
+    ]);
+
+    expect(late.main?.key).toBe(1);
+    expect(late.picked).toBe(1);
+    expect(late.children.map(({ key, name }) => [key, name])).toStrictEqual([
+      [3, 'other'],
+    ]);
+    expect(agentOf(late, 2)).toBeUndefined();
+    expect(attentionOrder(late)).toStrictEqual([]);
+    expect(late.children[0]?.wait).toStrictEqual(replacement.children[0]?.wait);
+    expect(late.closed.map(({ name }) => name)).toStrictEqual(['other']);
+  });
+});

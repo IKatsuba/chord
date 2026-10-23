@@ -60,7 +60,7 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
           kind: 'permission',
           app: 'chord',
           msg: 'other needs your permission: Write notes.txt',
-          title: 'slow',
+          title: 'agentother',
         });
         // Q183: main has no attention while the child owns permission keys,
         // so returning to main to cancel it is not a reachable person path.

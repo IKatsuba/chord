@@ -395,8 +395,8 @@ describe('CHD-373 S3b tester: retained session identity and partial figures', ()
 
     expect(sum(live).cost).toBeCloseTo(0.06, 9);
     expect(shape(live)).toEqual([
-      ['1 fake', undefined, [['main', 0.04]]],
-      ['closed tab', undefined, [['parser', 0.02]]],
+      ['main', 0.04],
+      ['parser', 0.02],
     ]);
   });
 

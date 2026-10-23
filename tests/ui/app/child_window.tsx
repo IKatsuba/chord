@@ -1,7 +1,7 @@
 /**
  * Tester steps that keep per-agent guarantees after tabs go: a fake child
- * beside main, selected by the agents list on the routes existing keys reach, preserving drafts
- * and forms when attention can reach the other agent (CHD-493 U2).
+ * beside main, selected through the agents list with drafts set aside,
+ * or through attention while a box keeps the keys (CHD-493).
  */
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -53,9 +53,9 @@ export async function openOther(window: Window) {
 }
 
 /**
- * Empty prompts use the list. With a draft or widget active, only the
- * existing attention action can reach an agent; its news or request must
- * still be waiting (Q183). No pointer selection is invented.
+ * A draft uses ↓ to set it aside, then ↓ to reach the list (U10).
+ * A box without a prompt keeps the attention route, as an explicit
+ * attention request does, preserving its current values and focus.
  */
 export async function pickAgent(
   window: Window,
@@ -68,8 +68,17 @@ export async function pickAgent(
       new RegExp(`^(?: {4}| {2}❯ )${name}\\s`).test(row),
     );
 
-  if (!attention && /^│ ›\s*│$/.test(promptRow(window) ?? '')) {
-    await window.press(DOWN);
+  if (!attention && promptRow(window) !== undefined) {
+    await until('the agents list has the keys', async () => {
+      if (rows().some((row) => /^ {2}❯ /.test(row))) {
+        return true;
+      }
+
+      await window.press(DOWN);
+
+      return rows().some((row) => /^ {2}❯ /.test(row));
+    });
+
     await until(`the list picks ${name}`, async () => {
       const drawn = rows();
       const picked = drawn.findIndex((row) => /^ {2}❯ /.test(row));

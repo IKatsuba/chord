@@ -17,7 +17,6 @@ import { FileList, Queue } from '../../../src/ui/prompt/Prompt.tsx';
 import { draw } from '../harness.tsx';
 import type { EditorMode } from '../../../src/settings.ts';
 import {
-  CTRL_C,
   CTRL_G,
   ESC,
   promptRow,
@@ -322,9 +321,11 @@ describe('CHD-386 tester: cursor move boundaries', () => {
         await pickAgent(window, 'other');
         await until('the second agent', () => window.pids.length === 2);
         await readyAgent(window);
-        // Q183: keep the child empty so the existing list keys can return.
+        // The kept main draft stays with main; other starts empty.
         expect(promptRow(window)).toMatch(/^│ ›\s*│$/);
         await pickAgent(window, 'main');
+        expect(promptRow(window)).toMatch(/^│ ›\s*│$/);
+        await window.press(UP);
         await window.shows('› one Xtwo');
         await window.type('Y');
         expect(promptRow(window)).toContain('› one XYtwo');
@@ -564,7 +565,8 @@ describe('CHD-398 tester: held match lifecycle', () => {
               await window.press('\r');
             }
 
-            await pickAgent(window, 'other');
+            // The pending file choice owns ↓ until switching drops it.
+            await pickAgent(window, 'other', true);
             await window.type('@target');
             await until('the child match is held', () => releases.length >= 2);
 
@@ -576,7 +578,7 @@ describe('CHD-398 tester: held match lifecycle', () => {
               }
 
               // The parent's close_agent path remains reachable while the child
-              // keeps a draft; Q183 adds no person-owned list key here.
+              // keeps a draft and its pending file choice.
               await main.window.close(main, 'other');
               await until(
                 'the child closed',
@@ -593,8 +595,8 @@ describe('CHD-398 tester: held match lifecycle', () => {
             expect(promptRow(window)).not.toContain('@src/target.ts');
 
             if (action === 'switch') {
-              // Q183: clear the child's draft before using its empty-prompt list.
-              await window.press(CTRL_C);
+              // Dismiss the child's file list, then keep its draft via ↓ ↓.
+              await window.press(ESC);
               await pickAgent(window, 'main');
 
               for (const release of releases) {

@@ -619,6 +619,13 @@ test('a pasted image path read while a child is shown goes into the draft it beg
       await pickAgent(window, 'main');
       await window.shows('› [Image #1]');
       expect(window.frame()).not.toContain('/shots/a.png');
+      // The completed image draft also survives the kept-draft route (U10).
+      await pickAgent(window, 'other');
+      expect(promptRow(window)).not.toContain('[Image #1]');
+      await pickAgent(window, 'main');
+      expect(promptRow(window)).toMatch(/^│ ›\s*│$/);
+      await window.press(UP);
+      await window.shows('› [Image #1]');
       await window.press('\r');
       await window.shows(RECEIVED);
       await quitAll(window);

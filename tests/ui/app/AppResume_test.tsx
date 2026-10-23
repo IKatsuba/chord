@@ -312,6 +312,8 @@ describe('CHD-429 tester: mouse focus boundaries', () => {
           await pickAgent(window, 'other');
           await clickBox(window);
           await pickAgent(window, 'main');
+          expect(promptRow(window)).toMatch(/^│ ›\s*│$/);
+          await window.press('\x1b[A');
           expect(promptRow(window)).toContain('› abcdef');
           await window.press('\x1b[D');
           await window.type('X');

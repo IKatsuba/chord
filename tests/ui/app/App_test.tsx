@@ -20,6 +20,7 @@ import {
   CTRL_C,
   CTRL_D,
   CTRL_G,
+  DOWN,
   ESC,
   inputAsked,
   isAlive,
@@ -62,8 +63,16 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
           msg: 'other needs your permission: Write notes.txt',
           title: 'agentother',
         });
-        // Q183: main has no attention while the child owns permission keys,
-        // so returning to main to cancel it is not a reachable person path.
+        // Q194: ↓ from the permission's last choice reaches the list.
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.shows('❯ other');
+        await window.press(UP);
+        await window.press('\r');
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+        expect(statusReports(log).at(-1)?.state).toBe('blocked');
         await quitAll(window);
       },
       { columns: 80, rows: 24, log },

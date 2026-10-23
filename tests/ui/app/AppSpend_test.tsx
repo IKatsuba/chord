@@ -500,7 +500,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
           await readyAgent(window);
           await send(window, 'text');
           await rootTurns(window, 'text', 1);
-          await send(window, 'agentother');
+          await openOther(window);
           await pickAgent(window, 'other');
           await readyAgent(window);
           await send(window, 'text');

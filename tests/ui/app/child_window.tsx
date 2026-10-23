@@ -6,9 +6,9 @@
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
+  CTRL_X,
   DOWN,
   UP,
-  leader,
   promptRow,
   send,
   until,
@@ -98,7 +98,9 @@ export async function pickAgent(
         return true;
       }
 
-      await leader(window, 'a');
+      // The finder can cover the leader hint; assert the selected agent.
+      await window.press(CTRL_X);
+      await window.press('a');
 
       return picked();
     });

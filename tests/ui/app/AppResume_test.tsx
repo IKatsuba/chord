@@ -453,12 +453,12 @@ describe('CHD-493 U7 tester: legacy storage is never opened', () => {
         try {
           await withWindow(
             async (window) => {
-              await window.shows(`it cannot resume session ${id}:`);
+              await window.shows('fake did not start:');
               await until('the fake agent refusal', () =>
                 window
                   .frame()
-                  .replace(/\s+/g, ' ')
-                  .includes(`Resource not found: ${id}`),
+                  .replace(/\s+/g, '')
+                  .includes(`itrefusedsession/load:Resourcenotfound:${id}`),
               );
               expect(window.frame()).not.toContain('was a window');
               await send(window, '/clear');

@@ -19,6 +19,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import stripAnsi from 'strip-ansi';
 import { join } from 'node:path';
 import { draw } from '../harness.tsx';
 import { openSession, type Session } from '../../../src/session/session.ts';
@@ -537,5 +538,159 @@ describe('CHD-493 U7 tester: legacy storage is never opened', () => {
         }
       });
     }
+  }
+});
+
+describe("an agent's title for a session in /resume and a resumed header (CHD-445)", () => {
+  const TITLE =
+    "Fix the tokenizer's handling of a quoted string at the end of a line, then rerun the printer tests";
+
+  /** The colour escape a frame's row draws `text` in. */
+  const paintOf = (frame: string, text: string) => {
+    const row = frame.split('\n').find((line) => line.includes(text)) ?? '';
+    // eslint-disable-next-line no-control-regex
+    const escapes = row.slice(0, row.indexOf(text)).match(/\x1b\[[0-9;]*m/g);
+
+    return escapes?.at(-1);
+  };
+
+  for (const columns of [80, 120]) {
+    test(`/resume names a session by its title after a child's name, a long one wrapped under its own start and highlighted whole, at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows('Resume a session');
+
+          const rows = window
+            .frame()
+            .split('\n')
+            .map((row) => stripAnsi(row));
+          const first = rows.findIndex((row) =>
+            row.includes('Fix the tokenizer'),
+          );
+          const start = rows[first]!.indexOf('Fix the tokenizer');
+          // The row's further lines: nothing before the title's column but
+          // the frame, and text from it.
+          const further: string[] = [];
+
+          for (const row of rows.slice(first + 1)) {
+            if (!/^│\s*$/.test(row.slice(0, start)) || row[start] === ' ') {
+              break;
+            }
+
+            further.push(row);
+          }
+
+          expect(further.length).toBeGreaterThan(0);
+          expect(
+            [rows[first]!, ...further]
+              .map((row) => row.slice(start).replace(/\s*│\s*$/, ''))
+              .join(' '),
+          ).toStrictEqual(TITLE);
+
+          const shown = rows.join('\n');
+
+          expect(shown).not.toContain('look at the tokenizer');
+          expect(shown).toContain('parser · Run the parser tests');
+          expect(shown).toContain('an untitled first prompt');
+
+          // The highlight is on every line of the wrapped row.
+          const tail = further
+            .at(-1)!
+            .slice(start)
+            .replace(/\s*│\s*$/, '');
+
+          expect(paintOf(window.frame(), tail)).toStrictEqual(
+            paintOf(window.frame(), 'Fix the tokenizer'),
+          );
+        },
+        {
+          columns,
+          rows: 40,
+          readRecords: (stateDir) => {
+            const cwd = join(stateDir, '..');
+            const record = (id: string, at: number, more: object) => ({
+              path: join(stateDir, `${id}.jsonl`),
+              sessionId: id,
+              agent: 'fake',
+              cwd,
+              lastUsedAt: Date.now() - at * 60_000,
+              prompt: 'look at the tokenizer',
+              ...more,
+            });
+
+            return Promise.resolve([
+              record('titled', 1, { title: TITLE }),
+              record('child', 2, {
+                parent: 'titled',
+                name: 'parser',
+                title: 'Run the parser tests',
+              }),
+              record('untitled', 3, { prompt: 'an untitled first prompt' }),
+            ]);
+          },
+        },
+      ));
+  }
+
+  for (const [columns, name] of [
+    [80, undefined],
+    [120, 'parser'],
+  ] as const) {
+    test(`a resumed session's header names it by its title${name === undefined ? '' : " after the child's name"}, wrapped under its own start, at ${columns} columns`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
+      const sessions: Session[] = [];
+      const app = await draw(
+        <App
+          agent='fake'
+          cwd={dir}
+          stateDir={join(dir, 'state')}
+          agentCommand={fakeAgentCommand()}
+          resume={{
+            sessionId: crypto.randomUUID(),
+            cwd: dir,
+            lastUsedAt: Date.now() - 2 * 60 * 60_000,
+            prompt: 'look at the tokenizer',
+            title: TITLE,
+            ...(name === undefined ? {} : { name }),
+          }}
+          open={async (options) => {
+            const session = await openSession(options);
+
+            sessions.push(session);
+
+            return session;
+          }}
+        />,
+        { columns, rows: 40 },
+      );
+
+      try {
+        await until('the past', () => app.frame().includes('Hello, world.'));
+
+        const rows = stripAnsi(app.frame()).split('\n');
+        const at = rows.findIndex((row) => row.includes('resumed · '));
+        const start = rows[at]!.indexOf('resumed · ');
+        const said = [rows[at]!, rows[at + 1]!].map((row) =>
+          row.slice(start).trimEnd(),
+        );
+
+        expect(said.join(' ')).toStrictEqual(
+          `resumed · 2 hours ago · ${name === undefined ? '' : `${name} · `}${TITLE}`,
+        );
+        // Under its own start: nothing before it on the second line.
+        expect(rows[at + 1]!.slice(0, start).trim()).toStrictEqual('');
+        expect(app.frame()).not.toContain('look at the tokenizer');
+      } finally {
+        await app.unmount();
+
+        for (const session of sessions) {
+          await session.close();
+        }
+
+        await rm(dir, { recursive: true });
+      }
+    });
   }
 });

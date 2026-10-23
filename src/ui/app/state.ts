@@ -162,6 +162,8 @@ export interface SessionState extends PromptSession, ViewSession, DialogsState {
     readonly lastUsedAt?: number;
     readonly prompt?: string;
     readonly name?: string;
+    /** The agent's title for it, as its record left it (CHD-445). */
+    readonly title?: string;
   };
   /**
    * The agent's config options other than its mode and model, as last read;

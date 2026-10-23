@@ -174,6 +174,7 @@ export interface Session {
         readonly lastUsedAt?: number | undefined;
         readonly prompt?: string | undefined;
         readonly name?: string | undefined;
+        readonly title?: string | undefined;
       }
     | undefined;
   /** Permission requests waiting on the person. */
@@ -571,6 +572,7 @@ export async function openSession(
             lastUsedAt: resume.lastUsedAt,
             prompt: resume.prompt,
             name: resume.name,
+            title: resume.title,
           },
         }),
     permissions,

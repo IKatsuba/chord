@@ -76,15 +76,23 @@ export interface HeaderFacts {
         readonly lastUsedAt?: number | undefined;
         /** Its first prompt, on one line, where its past holds one. */
         readonly title?: string | undefined;
+        /**
+         * Whether `title` is the agent's own title for it, which wraps
+         * under its own start rather than being cut (CHD-445).
+         */
+        readonly titled?: boolean | undefined;
       }
     | undefined;
 }
+
+/** Which of `headerLines` says a session was resumed, when one was. */
+export const RESUMED_LINE = 4;
 
 /**
  * The lines beside the mark, for a text column `width` cells wide at `now`.
  * The directory is cut from the left, at a `/`; the other
  * lines are cut at the right by the component, a resumed session's title
- * first, as it goes last.
+ * first, as it goes last, but an agent's own title, which wraps (CHD-445).
  */
 export function headerLines(
   facts: HeaderFacts,

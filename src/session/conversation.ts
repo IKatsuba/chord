@@ -102,6 +102,8 @@ export type ConversationEvent =
       readonly lastUsedAt?: number;
       readonly prompt?: string;
       readonly name?: string;
+      /** The agent's title for it, as its record left it (CHD-445). */
+      readonly title?: string;
     }
   /**
    * What the agent takes in a prompt besides text, as its
@@ -2497,13 +2499,14 @@ export class Conversation {
 
     // The window's alone: the record knows what it was opened from.
     if (session.resumed !== undefined) {
-      const { lastUsedAt, prompt, name } = session.resumed;
+      const { lastUsedAt, prompt, name, title } = session.resumed;
 
       this.#show({
         type: 'resumed',
         ...(lastUsedAt === undefined ? {} : { lastUsedAt }),
         ...(prompt === undefined ? {} : { prompt }),
         ...(name === undefined ? {} : { name }),
+        ...(title === undefined ? {} : { title }),
       });
     }
 

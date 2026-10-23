@@ -66,6 +66,7 @@ import {
   choiceKey,
   initialChoice,
   modelChoices,
+  choiceLines,
   openView,
   optionChoices,
   type PickerChoice,
@@ -670,6 +671,33 @@ export function McpPanel({
  * hidden that way, and how many are hidden under it, as Claude Code's picker
  * does.
  */
+/**
+ * Each choice's lines where one hangs its label, laid into what the picker
+ * leaves it at `columns`: the frame's border and padding, the highlight's
+ * gutter, the scroll's once the lines take more than `rows`, and the
+ * number; none where no choice hangs, each one line (CHD-445).
+ */
+function hangingLines(
+  choices: readonly PickerChoice[],
+  rows: number,
+  columns: number,
+): string[][] | undefined {
+  if (!choices.some((choice) => choice.hang !== undefined)) {
+    return undefined;
+  }
+
+  const number = `${choices.length}.`.length + 1;
+  const laid = (gutters: number) =>
+    choices.map((choice) =>
+      choiceLines(choice, columns - 4 - gutters - number),
+    );
+  const unscrolled = laid(2);
+
+  return unscrolled.reduce((sum, each) => sum + each.length, 0) > rows
+    ? laid(4)
+    : unscrolled;
+}
+
 function PickerList({
   choices,
   rows,
@@ -684,13 +712,16 @@ function PickerList({
   /** Hears the choice each move highlights. */
   onMove?: (id: string) => void;
 }) {
-  const [view, setView] = useState(() => openView(choices, rows));
-  const shown = pickerRows(choices, view, rows);
+  const { width: columns } = useTerminalDimensions();
+  const lines = hangingLines(choices, rows, columns);
+  const heights = lines?.map((each) => each.length);
+  const [view, setView] = useState(() => openView(choices, rows, heights));
+  const shown = pickerRows(choices, view, rows, heights);
   const { permission } = useColours();
 
   usePress(
     (input, key) => {
-      const step = pickerKey(view, choices.length, rows, input, key);
+      const step = pickerKey(view, choices.length, rows, input, key, heights);
 
       if (step?.type === 'move') {
         setView(step.view);
@@ -717,10 +748,21 @@ function PickerList({
         <box key={choice.value} flexDirection='row'>
           <ChoiceIndicator isSelected={highlighted} />
           {edge !== undefined && <Gutter dimColor>{edge}</Gutter>}
-          <text {...CUT} {...(highlighted ? fg(permission) : {})}>
-            {`${number} `}
-            <Ansi text={choice.label} />
-          </text>
+          <box flexDirection='column'>
+            {(lines?.[choices.indexOf(choice)] ?? [choice.label]).map(
+              (line, at) => (
+                // Every line of a wrapped label takes the highlight.
+                <text
+                  key={at}
+                  {...CUT}
+                  {...(highlighted ? fg(permission) : {})}
+                >
+                  {at === 0 ? `${number} ` : ' '.repeat(number.length + 1)}
+                  <Ansi text={line} />
+                </text>
+              ),
+            )}
+          </box>
         </box>
       ))}
       {shown.hidden > 0 && (

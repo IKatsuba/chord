@@ -192,6 +192,55 @@ test("/resume's row for an agent another started leads with its name, which its 
   expect(row?.resume.prompt).toStrictEqual('agentchild');
 });
 
+test("a record's title is the last session_info_update's, on one line; null takes it back, a blank or a subagent's does not count, and the row reads by it (CHD-445)", () => {
+  const titled = (title: string | null, subagentId?: string): RecordEntry => ({
+    type: 'update',
+    turnId: 't1',
+    update: { sessionUpdate: 'session_info_update', title },
+    ...(subagentId === undefined ? {} : { subagentId }),
+  });
+  const prompt: RecordEntry = {
+    type: 'prompt',
+    turnId: 't1',
+    at: 10,
+    prompt: 'fix the build',
+    images: 0,
+  };
+  const summary = (...updates: RecordEntry[]) =>
+    summaryOf('/r.jsonl', lines(HEADER, prompt, ...updates));
+
+  expect(summary()?.title).toStrictEqual(undefined);
+  expect(
+    summary(
+      titled('Look at the parser'),
+      titled('Fix  the\nparser\u001b[31m'),
+      titled('   '),
+      titled('A subagent of its own', 'sub-1'),
+    )?.title,
+  ).toStrictEqual('Fix the parser[31m');
+  expect(summary(titled('Fix the parser'), titled(null))?.title).toStrictEqual(
+    undefined,
+  );
+
+  const child = summaryOf(
+    '/r.jsonl',
+    lines(
+      { ...HEADER, parent: 'id-main', name: 'parser' },
+      prompt,
+      titled('Run the parser tests'),
+    ),
+  )!;
+  const [main, row] = earlierSessions(
+    [summary(titled('Fix the tokenizer'))!, { ...child, sessionId: 'kid' }],
+    CLAUDE,
+  );
+
+  expect(main?.prompt).toStrictEqual('Fix the tokenizer');
+  expect(main?.resume.title).toStrictEqual('Fix the tokenizer');
+  expect(row?.prompt).toStrictEqual('parser · Run the parser tests');
+  expect(row?.resume.prompt).toStrictEqual('fix the build');
+});
+
 test("--continue does not take another agent's session", () => {
   const continued = () =>
     latestSession([record('codex', { agent: 'codex' })], CLAUDE);

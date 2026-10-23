@@ -7,6 +7,7 @@
  * list in order nor say where it has scrolled to.
  */
 import stringWidth from 'string-width';
+import wrapAnsi from 'wrap-ansi';
 import { type AgentOption, valueName } from '../../session/config.ts';
 import type { AgentModels } from '../../session/models.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
@@ -25,6 +26,89 @@ export const CURRENT_MARK = '✔';
  */
 export interface PickerChoice extends Choice {
   readonly current?: boolean;
+  /**
+   * Where in `label` the part that wraps starts, by its characters: a label
+   * wider than its row wraps from there, its further lines under that
+   * start, never cut. Without it the label is one line, cut at the edge.
+   */
+  readonly hang?: number;
+}
+
+/**
+ * `choice`'s label laid into its lines in `width` cells: one for a choice
+ * that does not hang its label, else the part from its hang wrapped at its
+ * spaces, a word broken only where it alone is wider, each further line
+ * starting under the first's (CHD-445).
+ */
+export function choiceLines(choice: PickerChoice, width: number): string[] {
+  if (choice.hang === undefined) {
+    return [choice.label];
+  }
+
+  const lead = choice.label.slice(0, choice.hang);
+  const indent = stringWidth(lead);
+  const [first = '', ...rest] = wrapAnsi(
+    choice.label.slice(choice.hang),
+    Math.max(1, width - indent),
+    { hard: true, trim: true },
+  ).split('\n');
+
+  return [lead + first, ...rest.map((line) => ' '.repeat(indent) + line)];
+}
+
+/**
+ * Which choices are in sight when each takes `heights` lines and `lines`
+ * are room, from `top` where it can stay: as `visibleRange` for rows of one
+ * line each, the highlighted choice in sight and no room left empty below
+ * the last; one taller than the room is shown alone (CHD-445).
+ */
+export function lineRange(
+  heights: readonly number[],
+  highlighted: number,
+  lines: number,
+  top = 0,
+): { readonly start: number; readonly end: number } {
+  const count = heights.length;
+  const taken = (from: number, to: number) =>
+    heights.slice(from, to).reduce((sum, height) => sum + height, 0);
+
+  if (taken(0, count) <= lines) {
+    return { start: 0, end: count };
+  }
+
+  let start = Math.min(Math.max(top, 0), highlighted);
+
+  while (start < highlighted && taken(start, highlighted + 1) > lines) {
+    start++;
+  }
+
+  while (start > 0 && taken(start - 1, count) <= lines) {
+    start--;
+  }
+
+  let end = start;
+  let used = 0;
+
+  while (end < count && (end === start || used + heights[end]! <= lines)) {
+    used += heights[end]!;
+
+    end++;
+  }
+
+  return { start, end };
+}
+
+/** `visibleRange`, or `lineRange` where choices take more than a line. */
+function rangeOf(
+  count: number,
+  highlighted: number,
+  rows: number,
+  top: number,
+  heights: readonly number[] | undefined,
+) {
+  return heights === undefined
+    ? visibleRange(count, highlighted, rows, top)
+    : lineRange(heights, highlighted, rows, top);
 }
 
 /** One model on the list; `current` is the one the agent says it uses. */
@@ -89,14 +173,15 @@ export const DIRECTORY_WIDTH = 30;
 
 /**
  * `/resume`'s rows, newest first: when each session was last used, padded
- * so the text lines up, then its first prompt. With `home`, as the list of
+ * so the text lines up, then its label: the agent's title or its first
+ * prompt, after a child's name (CHD-445). With `home`, as the list of
  * every directory draws them, each row names its directory between the two,
  * from `~` and cut from the start to `DIRECTORY_WIDTH`, where the name that
- * tells two apart is, and at a `/` so the segments left are whole. The row is
- * cut at the picker's edge as it is drawn. A session open now, as a child of
- * this one, says `open now` after when it was used, as picking it goes to
- * the child rather than load it twice. The value is the session's place in
- * `sessions`.
+ * tells two apart is, and at a `/` so the segments left are whole. A label
+ * wider than its row wraps under its own start (`hang`). A session open
+ * now, as a child of this one, says `open now` after when it was used, as
+ * picking it goes to the child rather than load it twice. The value is the
+ * session's place in `sessions`.
  */
 export function sessionChoices(
   sessions: readonly EarlierSession[],
@@ -125,9 +210,8 @@ export function sessionChoices(
     ...(where ?? []).map((text) => stringWidth(text)),
   );
 
-  return sessions.map((session, index) => ({
-    key: session.resume.sessionId,
-    label: [
+  return sessions.map((session, index) => {
+    const lead = [
       when[index]!.padEnd(width),
       ...(opensWidth === 0 ? [] : [opens[index]!.padEnd(opensWidth)]),
       ...(where === undefined
@@ -135,10 +219,16 @@ export function sessionChoices(
         : [
             where[index]! + ' '.repeat(whereWidth - stringWidth(where[index]!)),
           ]),
-      session.prompt,
-    ].join('  '),
-    value: String(index),
-  }));
+    ].join('  ');
+
+    return {
+      key: session.resume.sessionId,
+      label: `${lead}  ${session.prompt}`,
+      // The title or prompt wraps under its own start (CHD-445).
+      hang: lead.length + 2,
+      value: String(index),
+    };
+  });
 }
 
 const RELATIVE = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
@@ -193,12 +283,14 @@ export interface PickerView {
 export function openView(
   choices: readonly PickerChoice[],
   rows: number,
+  /** Each choice's lines, where one may take more than one. */
+  heights?: readonly number[],
 ): PickerView {
   const highlighted = initialChoice(choices);
 
   return {
     highlighted,
-    top: visibleRange(choices.length, highlighted, rows).start,
+    top: rangeOf(choices.length, highlighted, rows, 0, heights).start,
   };
 }
 
@@ -230,6 +322,8 @@ export function pickerKey(
   rows: number,
   input: string,
   key: PickerKey,
+  /** Each choice's lines, where one may take more than one. */
+  heights?: readonly number[],
 ): PickerStep | undefined {
   if (count === 0) {
     return undefined;
@@ -261,7 +355,7 @@ export function pickerKey(
     type: 'move',
     view: {
       highlighted,
-      top: visibleRange(count, highlighted, rows, view.top).start,
+      top: rangeOf(count, highlighted, rows, view.top, heights).start,
     },
   };
 }
@@ -288,12 +382,15 @@ export function pickerRows<C extends PickerChoice>(
   choices: readonly C[],
   view: PickerView,
   rows: number,
+  /** Each choice's lines, where one may take more than one. */
+  heights?: readonly number[],
 ): { readonly rows: PickerRow<C>[]; readonly hidden: number } {
-  const { start, end } = visibleRange(
+  const { start, end } = rangeOf(
     choices.length,
     view.highlighted,
     rows,
     view.top,
+    heights,
   );
   const scrolls = end - start < choices.length;
   const width = `${choices.length}.`.length;

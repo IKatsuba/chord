@@ -1,10 +1,12 @@
 import { expect, test } from 'bun:test';
 import {
   choiceKey,
+  choiceLines,
   CURRENT_MARK,
   DIRECTORY_WIDTH,
   initialChoice,
   lastUsed,
+  lineRange,
   type ModelChoice,
   modelChoices,
   modelToAsk,
@@ -18,6 +20,7 @@ import {
   valueChoices,
   valueToAsk,
 } from '../../../src/ui/pickers/picker.ts';
+import { visibleRange } from '../../../src/ui/prompt/commands.ts';
 
 const MODELS = {
   available: [
@@ -211,8 +214,8 @@ test("/resume's rows line the prompts up after when each was used", () => {
   );
 
   expect(choices).toStrictEqual([
-    { key: 's1', label: '2 minutes ago  fix the build', value: '0' },
-    { key: 's2', label: '3 days ago     add a test', value: '1' },
+    { key: 's1', label: '2 minutes ago  fix the build', hang: 15, value: '0' },
+    { key: 's2', label: '3 days ago     add a test', hang: 15, value: '1' },
   ]);
   // None is in use, so the highlight starts on the newest.
   expect(initialChoice(choices)).toStrictEqual(0);
@@ -367,4 +370,73 @@ test('a box that ends at its last choice leaves on ↓ or j there, and still wra
   });
   // A box alone, Decline its one choice, leaves at once.
   expect(choiceKey('j', key, 0, 1, true)).toStrictEqual({ leave: true });
+});
+
+test('a /resume label wider than its row wraps at its spaces under its own start, a word broken only where it alone is wider; a choice that does not hang stays one line (CHD-445)', () => {
+  const [row] = sessionChoices(
+    [
+      {
+        resume: { sessionId: 's1', cwd: '/work' },
+        lastUsedAt: '2026-10-05T11:58:00.000Z',
+        prompt: 'Fix the tokenizer handling of a quoted string at the end',
+      },
+    ],
+    NOW,
+  );
+
+  expect(choiceLines(row!, 40)).toStrictEqual([
+    '2 minutes ago  Fix the tokenizer',
+    '               handling of a quoted',
+    '               string at the end',
+  ]);
+  expect(choiceLines(row!, 200)).toStrictEqual([row!.label]);
+  expect(
+    choiceLines(
+      { key: 'x', label: 'abc  ' + 'z'.repeat(12), hang: 5, value: 'x' },
+      10,
+    ),
+  ).toStrictEqual(['abc  zzzzz', '     zzzzz', '     zz']);
+  expect(
+    choiceLines(
+      { key: 'm', label: 'a model name past the edge', value: 'm' },
+      5,
+    ),
+  ).toStrictEqual(['a model name past the edge']);
+});
+
+test("the choices in sight count each one's lines: as visibleRange for rows of a line, the highlight whole in sight, none left empty below, one taller than the room alone (CHD-445)", () => {
+  for (const [count, rows] of [
+    [10, 4],
+    [3, 5],
+    [7, 7],
+  ] as const) {
+    for (let highlighted = 0; highlighted < count; highlighted++) {
+      for (let top = 0; top < count; top++) {
+        expect(
+          lineRange(Array(count).fill(1), highlighted, rows, top),
+        ).toStrictEqual(visibleRange(count, highlighted, rows, top));
+      }
+    }
+  }
+
+  const heights = [1, 3, 1, 2, 1];
+
+  expect(lineRange(heights, 0, 8)).toStrictEqual({ start: 0, end: 5 });
+  expect(lineRange(heights, 0, 5)).toStrictEqual({ start: 0, end: 3 });
+  expect(lineRange(heights, 3, 5, 0)).toStrictEqual({ start: 2, end: 5 });
+  expect(lineRange(heights, 1, 2, 0)).toStrictEqual({ start: 1, end: 2 });
+
+  const choices = heights.map((_, index) => ({
+    key: String(index),
+    label: String(index),
+    value: String(index),
+  }));
+  const shown = pickerRows(choices, { highlighted: 3, top: 0 }, 5, heights);
+
+  expect(shown.rows.map((row) => [row.number, row.edge])).toStrictEqual([
+    ['3.', '↑'],
+    ['4.', ' '],
+    ['5.', ' '],
+  ]);
+  expect(shown.hidden).toStrictEqual(2);
 });

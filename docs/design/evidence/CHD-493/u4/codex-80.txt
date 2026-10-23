@@ -1,0 +1,24 @@
+      kiro, openclaw, opencode, poolside, zeroclaw
+
+ ⏺ chord knows no fakx.
+
+ › codexchordcalls
+
+ ⏺ notes - list_notes (MCP)
+   ⎿  no notes
+
+ ⏺ List agents
+   ⎿  37 runtimes · fake, agoragentic-acp, auggie, autohand, +33 more
+
+ ⏺ List sessions
+   ⎿  1 open · fake (you), 2 agents
+
+ ⏺ Listed as Codex.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 2% used
+    main    fake  ◦ idle 4s
+    parser  fake  ◦ idle 21s        ✓ new reply
+    docs    fake  ● permission 21s  ← new message

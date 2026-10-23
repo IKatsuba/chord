@@ -1,0 +1,40 @@
+
+ › chordcalls
+
+ ⏺ List agents
+   ⎿  37 runtimes · fake, agoragentic-acp, auggie, autohand, +33 more
+
+ ⏺ List agents(fake)
+   ⎿  2 models · fake-large, fake-small
+
+ ⏺ List sessions
+   ⎿  1 open · fake (you), 2 agents
+
+ ⏺ Agent(Fix the tokenizer) · fakx · fake-small
+   ⎿  No agent named fakx; chord knows fake, agoragentic-acp, auggie, autohand, bob, claude, cline, codebuddy-code,
+      codex, deepagents, dimcode, dirac, factory-droid, fast-agent, gemini, github-copilot-cli, glm-acp-agent,
+      grok-build, kilo, minimax-code, minion-code, nova, pi-acp, qoder, qwen-code, sigit, cursor, devin, fx, goose,
+      junie, kimi, kiro, openclaw, opencode, poolside, zeroclaw
+
+ ⏺ chord knows no fakx.
+
+ › codexchordcalls
+
+ ⏺ notes - list_notes (MCP)
+   ⎿  no notes
+
+ ⏺ List agents
+   ⎿  37 runtimes · fake, agoragentic-acp, auggie, autohand, +33 more
+
+ ⏺ List sessions
+   ⎿  1 open · fake (you), 2 agents
+
+ ⏺ Listed as Codex.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a to go · ? for shortcuts        Fake Large with a 1M context window · 2% used
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 3s
+    parser  fake · Fake Small · medium                           ◦ idle 20s        ✓ new reply
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 20s  ← new message

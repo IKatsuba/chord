@@ -7,7 +7,7 @@
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
   (`text`, `texttillsteered`, `thought`, `todos`, `mcp`, `opened`, `markdown`,
-  `titled`, `retitled`, `titledlook`, `titledfix`,
+  `markdownwrap`, `titled`, `retitled`, `titledlook`, `titledfix`,
   `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
@@ -58,7 +58,8 @@
   `cutcalls`, `cutcallsback`, `tasklong`, `taskcost`, `agentcost`,
   `tasktallname`, `tasktwo`,
   `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
-  `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
+  `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `permission`,
+  `permissionsteer`,
   `callchildtwo`, `agenttitled`, `agentsquiet`, `agentsheldgated`, `plan`,
   `planshrinkgated`,
   `proposal`, `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
@@ -78,7 +79,11 @@
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
   `claudeslowstop`, `chordtools`, `codexchordcalls`, `codexmodels`,
   `claudecycle`, `claudecyclebare`, `claudecycleask`, `codebuddycycle`)
-  plays that scenario; `rawoutputs` sends results with no content: a string,
+  plays that scenario; `markdownwrap` sends a reply whose heading,
+  three-deep nested list, quote and paragraph wrap at 80 columns, with a
+  two-digit marker, task items, and a soft and a hard line break
+  (`docs/design/CHD-396.md`);
+  `rawoutputs` sends results with no content: a string,
   stdout/stderr with successful and failed exits, `output`, `result` and
   an object with no known text fields;
   `steps` makes 150 calls, a transcript longer than

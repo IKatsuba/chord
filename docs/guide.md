@@ -234,6 +234,12 @@ between turns, with ctrl+x a to answer. Claude's cycle ends when it reports
 autonomous model usage; without that update it stays working until Esc or
 a prompt.
 
+Replies and messages render as markdown, wrapped to the window. Rows can
+break at spaces or after `/`, `-`, `.`, `,`, `:` and `(`. Outside quotes,
+list continuations hang under their item's text, including nested items and
+two-digit numbers. Code blocks and tables keep their drawn rows, as do
+proposal and saved-team previews.
+
 Tool-call headlines show every line, wrapped to the width with no cap:
 a Bash heredoc is visible in full in the transcript. Continuation rows
 start under the name, at column 3, and `⎿` results follow the last row.
@@ -516,14 +522,20 @@ way.
 chord reads the mouse, so the wheel and the trackpad scroll the
 transcript (or an overflowing permission request), and a drag selects text.
 Release copies it through the system clipboard, or OSC 52 over SSH;
-the highlight stays until a key or click. Clicking the prompt takes the
-keys back from the agents list or background summary without changing
-which agent receives your typing. A picked child's name and colour stay
-on the border. A permission, form, question, picker or ctrl+r search keeps
-the keys when you click the prompt.
+the highlight stays until a key or click. In replies and messages, a copied
+paragraph, heading or list item joins its wrapped rows at any window width.
+List markers and hanging indents do not copy; a list inside a quote keeps
+its markers. Source soft breaks join with a space; hard breaks stay newlines.
+Code blocks and tables copy as drawn, borders included. The blank row between
+blocks does not copy. When dragging from a nested item to an outer one, move
+along the outer row before releasing so the selection reaches it.
+Clicking the prompt takes the keys back from the agents list or background
+summary without changing which agent receives your typing. A picked child's
+name and colour stay on the border. A permission, form, question, picker or
+ctrl+r search keeps the keys when you click the prompt.
 `"copyOnSelect": false` leaves the copy to ctrl+c. To use your
-terminal's own selection instead, hold its modifier while you drag: option in iTerm2, fn in
-Terminal.app, shift in most others. Inside tmux, the wheel and drags
+terminal's selection, hold its modifier while you drag: option in iTerm2,
+fn in Terminal.app, shift in most others. Inside tmux, the wheel and drags
 reach chord only with `set -g mouse on`, and over SSH a copy reaches
 your clipboard only with `set -g allow-passthrough on`. `"mouse": false`,
 read from the user's file only, leaves the mouse to the terminal.

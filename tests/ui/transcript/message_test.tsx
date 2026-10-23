@@ -693,3 +693,84 @@ test("a message's code box is OpenTUI's, and a copy over the message keeps its c
     await drawn.unmount();
   }
 });
+
+describe('CHD-396 U4 tester: message gaps preserve their source blocks', () => {
+  for (const columns of [80, 120]) {
+    test(`sent and received messages keep exactly one-space gap rows at ${columns} columns`, async () => {
+      for (const [text, expected] of [
+        ['First.\n\nSecond.', 'First.\n \nSecond.'],
+        [
+          'First.\n\n```txt\ncode\n```\n\nSecond.',
+          'First.\n \ncode\n \nSecond.',
+        ],
+      ] as const) {
+        for (const entry of [
+          came({ name: 'parser', reachable: true }, text),
+          sent({ input: { to: 'parser', text } }),
+        ]) {
+          const drawn = await draw(
+            <TranscriptEntry
+              entry={entry}
+              turn={{ status: 'idle' }}
+              agent='fake'
+              expanded={false}
+              width={columns}
+            />,
+            { columns, rows: 24 },
+          );
+
+          try {
+            const rows = stripAnsi(drawn.frame()).split('\n');
+            const first = rows.findIndex((row) => row.includes('First.'));
+            const last = rows.findIndex((row) => row.includes('Second.'));
+            const end = rows[last]!.indexOf('Second.') + 6;
+
+            await drawn.write(
+              left(rows[first]!.indexOf('First.'), first, 'down'),
+            );
+
+            for (let row = first + 1; row <= last; row++) {
+              await drawn.write(left(end, row, 'drag'));
+            }
+
+            await drawn.write(left(end, last, 'up'));
+            expect(drawn.selected()).toBe(expected);
+          } finally {
+            await drawn.unmount();
+          }
+        }
+      }
+    });
+
+    test(`message selections can begin on their blank body row at ${columns} columns`, async () => {
+      for (const entry of [
+        came({ name: 'main', reachable: true }, 'First.\n\nSecond.'),
+        sent({ input: { to: 'parser', text: 'First.\n\nSecond.' } }),
+      ]) {
+        const drawn = await draw(
+          <TranscriptEntry
+            entry={entry}
+            turn={{ status: 'idle' }}
+            agent='fake'
+            expanded={false}
+            width={columns}
+          />,
+          { columns, rows: 24 },
+        );
+
+        try {
+          const rows = stripAnsi(drawn.frame()).split('\n');
+          const last = rows.findIndex((row) => row.includes('Second.'));
+          const start = rows[last]!.indexOf('Second.');
+
+          await drawn.write(left(start, last - 1, 'down'));
+          await drawn.write(left(start + 6, last, 'drag'));
+          await drawn.write(left(start + 6, last, 'up'));
+          expect(drawn.selected()).toBe(' \nSecond.');
+        } finally {
+          await drawn.unmount();
+        }
+      }
+    });
+  }
+});

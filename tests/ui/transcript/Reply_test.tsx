@@ -714,3 +714,130 @@ describe('CHD-396 U3 tester: native code selection boundaries', () => {
     });
   }
 });
+
+describe('CHD-396 U4 tester: selectable gap boundaries', () => {
+  for (const columns of [80, 120]) {
+    test(`a drag can start, end or stay on the one-space gap at ${columns} columns`, async () => {
+      for (const [from, to, end, copied] of [
+        [1, 2, 6, ' \nSecond.'],
+        // Move past the gap's one cell; its leading edge selects none of it.
+        [0, 1, 1, 'First.\n '],
+        [1, 1, 1, ' '],
+      ] as const) {
+        const drawn = await draw(
+          <Reply text={'First.\n\nSecond.'} width={columns} />,
+          { columns, rows: 24 },
+        );
+
+        try {
+          expect(stripAnsi(drawn.frame()).split('\n').slice(0, 3)).toEqual([
+            'First.',
+            '',
+            'Second.',
+          ]);
+          await drawn.write(left(0, from, 'down'));
+          await drawn.write(left(end, to, 'drag'));
+          await drawn.write(left(end, to, 'up'));
+          expect(drawn.selected()).toBe(copied);
+        } finally {
+          await drawn.unmount();
+        }
+      }
+    });
+
+    test(`different top-level blocks copy exactly one gap each at ${columns} columns`, async () => {
+      const text =
+        'First.\n\n# Heading\n\n- alpha\n- beta\n\n> Quote.\n\n```txt\ncode\n```\n\nLast.';
+      const drawn = await draw(<Reply text={text} width={columns} />, {
+        columns,
+        rows: 40,
+      });
+
+      try {
+        expect(await selectBody(drawn, 'First.', columns)).toBe(
+          'First.\n \nHeading\n \nalpha\nbeta\n \nQuote.\n \ncode\n \nLast.',
+        );
+      } finally {
+        await drawn.unmount();
+      }
+    });
+
+    test(`tight list and quoted blocks gain no one-space gap at ${columns} columns`, async () => {
+      for (const [text, first, copied] of [
+        [
+          '1. Run:\n   ```txt\n   code\n   ```\n2. Next.',
+          'Run:',
+          'Run:\ncode\nNext.',
+        ],
+        ['> First.\n>\n> Second.', 'First.', 'First.\nSecond.'],
+      ] as const) {
+        const drawn = await draw(<Reply text={text} width={columns} />, {
+          columns,
+          rows: 24,
+        });
+
+        try {
+          expect(await selectBody(drawn, first, columns)).toBe(copied);
+        } finally {
+          await drawn.unmount();
+        }
+      }
+    });
+
+    test(`a loose-list gap belongs to the wider lower marker's text at ${columns} columns`, async () => {
+      for (const start of [4, 5]) {
+        const drawn = await draw(
+          <Reply text={'99. Alpha\n\n100. Beta'} width={columns} />,
+          { columns, rows: 24 },
+        );
+
+        try {
+          const rows = stripAnsi(drawn.frame()).split('\n');
+          const lower = rows.findIndex((row) => row.includes('100. Beta'));
+
+          await drawn.write(left(start, lower - 1, 'down'));
+          await drawn.write(left(8, lower, 'drag'));
+          await drawn.write(left(8, lower, 'up'));
+          expect(drawn.selected()).toBe(start === 5 ? ' \nBeta' : '');
+        } finally {
+          await drawn.unmount();
+        }
+      }
+    });
+  }
+
+  test('a streamed block adds one gap that survives narrow and wide resize', async () => {
+    let update: (state: { text: string; width: number }) => void = () => {};
+
+    function StreamingGaps() {
+      const [state, setState] = useState({ text: 'Seed.', width: 80 });
+
+      update = setState;
+
+      return <Reply text={state.text} width={state.width} />;
+    }
+
+    const drawn = await draw(<StreamingGaps />, { columns: 80, rows: 40 });
+    const added = 'Added ' + 'word '.repeat(20) + 'end.';
+
+    try {
+      expect(await selectBody(drawn, 'Seed.', 80)).toBe('Seed.');
+
+      for (const columns of [80, 20, 120]) {
+        update({ text: 'Seed.\n\n' + added, width: columns });
+        await drawn.resize({ columns });
+        await until('the second block to arrive', async () => {
+          await drawn.write('');
+
+          return drawn.mounted('end.');
+        });
+
+        expect(await selectBody(drawn, 'Seed.', columns)).toBe(
+          'Seed.\n \n' + added,
+        );
+      }
+    } finally {
+      await drawn.unmount();
+    }
+  });
+});

@@ -329,7 +329,7 @@ describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries',
       const cwd = await mkdtemp(join(tmpdir(), 'chord-command-'));
 
       try {
-        const command = resumeCommand('fake', sessionId, undefined, cwd);
+        const command = resumeCommand('fake', sessionId);
         const shell = spawnSync(
           'sh',
           ['-c', `chord() { printf '%s\\0' "$@"; }\n${command}`],
@@ -341,8 +341,8 @@ describe('CHD-493 U1 tester: migration commands cross shell and CLI boundaries',
         const argv = shell.stdout.split('\0').slice(0, -1);
         const options = await parsed(argv);
 
-        expect(options?.resume).toEqual([sessionId]);
-        expect(options?.cwd).toBe(cwd);
+        expect(options?.resume).toBe(sessionId);
+        expect(options?.agent).toBe('fake');
         expect(
           await readFile(join(cwd, 'injected')).catch(() => undefined),
         ).toBeUndefined();

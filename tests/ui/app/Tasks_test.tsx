@@ -512,7 +512,7 @@ describe('CHD-377 tester: Codex call session isolation', () => {
         async (window) => {
           await send(window, 'codexchordcalls');
           await window.shows('Listed as Codex.');
-          await window.shows('1 open · 1 fake (you)');
+          await window.shows('1 open · fake (you)');
           await readyAgent(window);
           await openOther(window);
           await pickAgent(window, 'other');
@@ -524,7 +524,7 @@ describe('CHD-377 tester: Codex call session isolation', () => {
           expect(window.frame()).not.toContain('(you)');
           expect(window.frame()).not.toContain('Bash(mcp.chord.');
           await pickAgent(window, 'main');
-          await window.shows('1 open · 1 fake (you)');
+          await window.shows('1 open · fake (you)');
           expect(window.frame()).not.toContain('Tool list_sessions not found');
           expect(window.frame().match(/Listed as Codex\./g)).toHaveLength(1);
         },

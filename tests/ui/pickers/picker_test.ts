@@ -203,12 +203,9 @@ test('a session reads as how long ago it was last used', () => {
 
 test("/resume's rows line the prompts up after when each was used", () => {
   const session = (id: string, at: string, prompt: string) => ({
-    kind: 'session' as const,
-    session: {
-      resume: { sessionId: id, cwd: '/work' },
-      lastUsedAt: at,
-      prompt,
-    },
+    resume: { sessionId: id, cwd: '/work' },
+    lastUsedAt: at,
+    prompt,
   });
   const choices = sessionChoices(
     [
@@ -228,12 +225,9 @@ test("/resume's rows line the prompts up after when each was used", () => {
 
 test("every directory's /resume rows name each directory from ~, cut from the start at a /", () => {
   const session = (id: string, cwd: string, prompt: string) => ({
-    kind: 'session' as const,
-    session: {
-      resume: { sessionId: id, cwd },
-      lastUsedAt: '2026-10-05T11:58:00.000Z',
-      prompt,
-    },
+    resume: { sessionId: id, cwd },
+    lastUsedAt: '2026-10-05T11:58:00.000Z',
+    prompt,
   });
   const long = 'a'.repeat(40);
   const choices = sessionChoices(
@@ -325,12 +319,9 @@ test('the value an option is set to already asks the agent for nothing', () => {
 
 test("/resume's rows say which tab a session is open in", () => {
   const session = (id: string, at: string, prompt: string) => ({
-    kind: 'session' as const,
-    session: {
-      resume: { sessionId: id, cwd: '/work' },
-      lastUsedAt: at,
-      prompt,
-    },
+    resume: { sessionId: id, cwd: '/work' },
+    lastUsedAt: at,
+    prompt,
   });
   const choices = sessionChoices(
     [
@@ -465,91 +456,6 @@ test("the sessions picker's rows line up its columns, the marks among them, by t
     { key: '3', label: 'fake    ✻ working 41s', value: '3' },
   ]);
   expect(initialChoice(choices)).toStrictEqual(1);
-});
-
-test("/resume's window rows read ▣ with their agents and front prompt, in the sessions' columns", () => {
-  const window = (
-    id: string,
-    at: string,
-    tabs: { sessionId: string; agent: string; cwd: string }[],
-    prompt: string,
-  ) => ({
-    kind: 'window' as const,
-    window: {
-      id,
-      lastUsedAt: at,
-      tabs,
-      front: 0,
-      opening: { tabs: [], front: 0 },
-      prompt,
-    },
-  });
-  const session = (id: string, at: string, cwd: string, prompt: string) => ({
-    kind: 'session' as const,
-    session: { resume: { sessionId: id, cwd }, lastUsedAt: at, prompt },
-  });
-  const entries = [
-    window(
-      'w-1',
-      '2026-10-05T11:50:00.000Z',
-      [
-        { sessionId: 's1', agent: 'claude', cwd: '/h/src/app' },
-        { sessionId: 's2', agent: 'codex', cwd: '/h/src/app' },
-        { sessionId: 's3', agent: 'claude', cwd: '/h/src/app' },
-      ],
-      'fix the failing date test',
-    ),
-    session(
-      's1',
-      '2026-10-05T11:49:00.000Z',
-      '/h/src/app',
-      'fix the failing date test',
-    ),
-    window(
-      'w-2',
-      '2026-10-04T12:00:00.000Z',
-      [
-        { sessionId: 's4', agent: 'claude', cwd: '/h/src/app' },
-        { sessionId: 's5', agent: 'codex', cwd: '/h/src/api' },
-      ],
-      'rename the route',
-    ),
-  ];
-
-  expect(
-    sessionChoices(entries, NOW).map(({ key, label }) => [key, label]),
-  ).toStrictEqual([
-    [
-      'w-1',
-      '10 minutes ago  ▣ 3 sessions · claude, codex, claude · fix the failing date test',
-    ],
-    ['s1', '11 minutes ago  fix the failing date test'],
-    ['w-2', 'yesterday       ▣ 2 sessions · claude, codex · rename the route'],
-  ]);
-  // Every directory's: a window names its front tab's, and +1 for the other.
-  expect(
-    sessionChoices(entries, NOW, { home: '/h' }).map(({ label }) => label),
-  ).toStrictEqual([
-    '10 minutes ago  ~/src/app     ▣ 3 sessions · claude, codex, claude · fix the failing date test',
-    '11 minutes ago  ~/src/app     fix the failing date test',
-    'yesterday       ~/src/app +1  ▣ 2 sessions · claude, codex · rename the route',
-  ]);
-  // Open sessions: theirs is `open in n`, a window's how many are open.
-  expect(
-    sessionChoices(
-      entries,
-      NOW,
-      undefined,
-      new Map([
-        ['s1', 1],
-        ['s2', 2],
-      ]),
-    ).map(({ label }) => label),
-  ).toStrictEqual([
-    '10 minutes ago             ▣ 3 sessions, 2 open · claude, codex, claude · fix the failing date test',
-    '11 minutes ago  open in 1  fix the failing date test',
-    'yesterday                  ▣ 2 sessions · claude, codex · rename the route',
-  ]);
 });
 
 test("a numbered list's keys move round, pick, and leave shift+arrows alone", () => {

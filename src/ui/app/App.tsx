@@ -120,7 +120,7 @@ import {
   type Step,
   submitSteps,
 } from './keys.ts';
-import { type OpeningTab, type SessionStart, useSessions } from './sessions.ts';
+import { type SessionStart, useSessions } from './sessions.ts';
 import {
   answerLink,
   useEditor,
@@ -221,22 +221,6 @@ export interface AppProps {
    * and `/resume` another earlier one.
    */
   resume?: Resume | undefined;
-  /**
-   * Earlier sessions to open again in place of `agent`'s one, each in a tab
-   * of its own, in order, the first in front, each on its own agent where it
-   * works; `cwd` and the settings above are the first's.
-   */
-  resumes?: readonly OpeningTab[] | undefined;
-  /**
-   * Which of `resumes` comes to the front, by its index: the tab a window
-   * record had in front; the first when not said.
-   */
-  resumedFront?: number | undefined;
-  /**
-   * What the status line says once `resumes` are open, such as a window
-   * record's tab left out as its session is gone.
-   */
-  resumedNote?: string | undefined;
   /** The files `@` offers; the working directory's, walked, by default. */
   files?: (cwd: string) => Promise<readonly string[]>;
   /** How the files are matched against what follows `@`; fzf's, by default. */
@@ -363,9 +347,6 @@ export function App({
   readRecords = readSessionRecords,
   open = openSession,
   resume,
-  resumes,
-  resumedFront,
-  resumedNote,
   files = listFiles,
   match = matchFiles,
   shell = runShell,
@@ -470,9 +451,6 @@ export function App({
       readRecords,
       open,
       resume,
-      resumes,
-      resumedFront,
-      resumedNote,
       server,
       runtimes,
       home,
@@ -1385,7 +1363,7 @@ export function App({
                   agent={frontAgent}
                   home={home}
                   active={listening}
-                  onPick={(chosen) => sessions.pickResume(chosen, columns)}
+                  onPick={(chosen) => sessions.pickResume(chosen)}
                 />
               )}
               {theming && (

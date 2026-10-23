@@ -13,7 +13,7 @@ import {
   ResumeError,
   sessionById,
   type SessionRecord,
-  sessionsByIds,
+  severalRefusal,
 } from '../src/session/sessions.ts';
 
 /** What chord's own flags make of `argv`, with nothing run on them. */
@@ -43,15 +43,29 @@ async function parsed(argv: string[]) {
   return seen;
 }
 
-/** The tabs main.tsx opens from `argv`: each id, its agent and directory. */
-async function opened(argv: string[], records: SessionRecord[]) {
+/** The session main.tsx opens for one id from `argv`: id, agent, directory. */
+async function resumed(argv: string[], records: SessionRecord[]) {
   const seen = await parsed(argv);
+  const agent = seen?.agent ?? 'claude';
+  const resume = sessionById(records, String(seen?.resume?.[0]), {
+    agent,
+    cwd: seen?.cwd ?? '/',
+  });
 
-  return sessionsByIds(records, (seen?.resume ?? []).map(String), {
+  return [resume.sessionId, agent, resume.cwd];
+}
+
+/** What main.tsx says to several ids from `argv`: its refusal's lines. */
+async function refused(argv: string[], records: SessionRecord[]) {
+  const seen = await parsed(argv);
+  const refusal = severalRefusal(records, (seen?.resume ?? []).map(String), {
     agent: seen?.agent ?? 'claude',
     cwd: seen?.cwd ?? '/',
-    named: seen?.agent !== undefined,
-  }).map(({ agent, resume }) => [resume.sessionId, agent, resume.cwd]);
+  });
+
+  expect(refusal).toBeInstanceOf(ResumeError);
+
+  return refusal.message.split('\n');
 }
 
 function record(id: string, agent: string, cwd: string): SessionRecord {
@@ -71,19 +85,20 @@ const three = [
   record('ccc', 'fake2', '/other'),
 ];
 
-test('-r <id> -r <id> … from argv opens a tab each, in the order given, each where its record works', async () => {
-  const tabs = [
-    ['ccc', 'fake2', '/other'],
-    ['aaa', 'fake', '/proj'],
-    ['bbb', 'fake', '/other'],
+test("-r <id> -r <id> … from argv is refused with a command each, in the order given, each on its record's agent where it works", async () => {
+  const lines = [
+    '--resume opens one session; it was given 3. Open each in a chord of its own:',
+    'chord fake2 --cwd /other --resume ccc',
+    'chord fake --cwd /proj --resume aaa',
+    'chord fake --cwd /other --resume bbb',
   ];
 
   expect(
-    await opened(['-r', 'ccc', '-r', 'aaa', '-r', 'bbb'], three),
-  ).toStrictEqual(tabs);
+    await refused(['-r', 'ccc', '-r', 'aaa', '-r', 'bbb'], three),
+  ).toStrictEqual(lines);
   expect(
-    await opened(['--resume', 'ccc', '--resume=aaa', '-r', 'bbb'], three),
-  ).toStrictEqual(tabs);
+    await refused(['--resume', 'ccc', '--resume=aaa', '-r', 'bbb'], three),
+  ).toStrictEqual(lines);
 });
 
 test('--resume with no id asks for the picker, the agent before or after it', async () => {
@@ -134,26 +149,26 @@ test('one id from argv is as it was, the agent before or after it', async () => 
   const find = { agent: 'codex', cwd: '/project' };
 
   expect((await parsed(['--resume', 'aaa']))?.resume).toStrictEqual(['aaa']);
-  expect(
-    sessionsByIds(records, ['aaa'], { ...find, named: false }),
-  ).toStrictEqual([
-    { agent: 'codex', resume: sessionById(records, 'aaa', find) },
-  ]);
+  expect(sessionById(records, 'aaa', find).record).toStrictEqual(
+    '/state/records/aaa.jsonl',
+  );
 
   for (const argv of [
     ['--resume', 'aaa', 'codex'],
     ['codex', '--resume', 'aaa'],
     ['-r', 'aaa', 'codex', '-C', '/tmp'],
   ]) {
-    expect(await opened(argv, records)).toStrictEqual([
-      ['aaa', 'codex', '/project'],
+    expect(await resumed(argv, records)).toStrictEqual([
+      'aaa',
+      'codex',
+      '/project',
     ]);
   }
 
   // An id chord never saw goes to the agent named, as before.
   expect(
-    await opened(['--resume', 'zzz', 'codex', '-C', '/w'], records),
-  ).toStrictEqual([['zzz', 'codex', '/w']]);
+    await resumed(['--resume', 'zzz', 'codex', '-C', '/w'], records),
+  ).toStrictEqual(['zzz', 'codex', '/w']);
 });
 
 test('[agent] and the other flags sit on either side of the ids', async () => {
@@ -184,46 +199,41 @@ test('[agent] and the other flags sit on either side of the ids', async () => {
   ).rejects.toThrow(ValidationError);
 });
 
-test('ten ids, an unknown id among several and the same id twice refuse from argv', async () => {
+test('ten ids, an unknown id among several, the same id twice and an agent named on the command line are all refused alike from argv', async () => {
   const ten = Array.from({ length: 10 }, (_, index) => `s${index}`);
-  const nine = ten.slice(0, 9);
   const records = ten.map((id) => record(id, 'fake', '/proj'));
 
   expect(
-    (
-      await opened(
-        nine.flatMap((id) => ['-r', id]),
-        records,
-      )
-    ).length,
-  ).toStrictEqual(9);
-
-  const tooMany = opened(
-    ten.flatMap((id) => ['-r', id]),
-    records,
-  );
-
-  await expect(tooMany).rejects.toThrow(ResumeError);
-  await expect(tooMany).rejects.toThrow(
-    'A window opens at most 9 sessions; --resume named 10.',
-  );
-
-  const unknown = opened(['-r', 'aaa', '-r', 'zzz', '-r', 'bbb'], three);
-
-  await expect(unknown).rejects.toThrow(ResumeError);
-  await expect(unknown).rejects.toThrow('No session zzz among');
-
-  const twice = opened(['-r', 'aaa', '-r', 'bbb', '-r', 'aaa'], three);
-
-  await expect(twice).rejects.toThrow(ResumeError);
-  await expect(twice).rejects.toThrow('Session aaa is named twice.');
-
-  const foreign = opened(['fake', '-r', 'aaa', '-r', 'ccc'], three);
-
-  await expect(foreign).rejects.toThrow(ResumeError);
-  await expect(foreign).rejects.toThrow(
-    'Session ccc belongs to another agent (fake2).',
-  );
+    await refused(
+      ten.flatMap((id) => ['-r', id]),
+      records,
+    ),
+  ).toStrictEqual([
+    '--resume opens one session; it was given 10. Open each in a chord of its own:',
+    ...ten.map((id) => `chord fake --cwd /proj --resume ${id}`),
+  ]);
+  // An id chord has no record of takes this command's agent and directory,
+  // and says so; one said twice is said twice.
+  expect(
+    await refused(
+      ['-C', '/here', '-r', 'aaa', '-r', 'zzz', '-r', 'aaa'],
+      three,
+    ),
+  ).toStrictEqual([
+    '--resume opens one session; it was given 3. Open each in a chord of its own:',
+    'chord fake --cwd /proj --resume aaa',
+    "chord claude --cwd /here --resume zzz (no record; the agent and directory are this command's)",
+    'chord fake --cwd /proj --resume aaa',
+  ]);
+  // An agent named on the command line is not resolved here: each line
+  // carries its record's agent.
+  expect(
+    await refused(['fake', '-r', 'aaa', '-r', 'ccc'], three),
+  ).toStrictEqual([
+    '--resume opens one session; it was given 2. Open each in a chord of its own:',
+    'chord fake --cwd /proj --resume aaa',
+    'chord fake2 --cwd /other --resume ccc',
+  ]);
 });
 
 test('--resume with no id asks for the picker, not an id, and is refused only where nobody can pick', async () => {

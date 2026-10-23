@@ -1,7 +1,6 @@
 import { useTerminalDimensions } from '@opentui/react';
 import { useState } from 'react';
 import type { EarlierSession } from '../../session/sessions.ts';
-import type { EarlierWindow, ResumeEntry } from '../../session/windows.ts';
 import { bound, type Keymap, keystrokeOf } from '../shortcuts/bindings.ts';
 import { ResumePicker } from '../pickers/Pickers.tsx';
 import { menuRowLimit } from '../prompt/commands.ts';
@@ -14,8 +13,8 @@ import { useApp } from './renderer.tsx';
 /**
  * `chord --resume` with no id: the resume picker before any agent starts, as
  * `claude --resume` opens on its own. Nothing is open, so there is no prompt
- * box and no status line to report on; the pick decides the agent, the
- * directory and how many tabs, and `onPick` hears it. Esc quits, as nothing
+ * box and no status line to report on; the pick decides the agent and the
+ * directory, and `onPick` hears it. Esc quits, as nothing
  * the person asked for has started; `onPick` hears none then.
  */
 export function Start({
@@ -24,7 +23,6 @@ export function Start({
   home,
   cwd,
   sessions,
-  windows,
   colours,
   keymap,
   onPick,
@@ -36,10 +34,9 @@ export function Start({
   /** The working directory, resolved, which the narrow scope keeps to. */
   cwd: string;
   sessions: readonly EarlierSession[];
-  windows: readonly EarlierWindow[];
   colours: Palette;
   keymap: Keymap;
-  onPick: (chosen: ResumeEntry | undefined) => void;
+  onPick: (chosen: EarlierSession | undefined) => void;
 }) {
   const { exit } = useApp();
   const { width: columns, height: rows } = useTerminalDimensions();
@@ -48,7 +45,7 @@ export function Start({
 
   const [everywhere, setEverywhere] = useState(false);
   const [picked, setPicked] = useState(false);
-  const pick = (chosen: ResumeEntry | undefined) => {
+  const pick = (chosen: EarlierSession | undefined) => {
     setPicked(true);
     onPick(chosen);
 
@@ -97,7 +94,7 @@ export function Start({
           <ResumePicker
             // A fresh list for each scope, its highlight on the first row.
             key={String(everywhere)}
-            picker={{ sessions, windows, cwd, everywhere }}
+            picker={{ sessions, cwd, everywhere }}
             open={new Map()}
             rows={menuRowLimit(rows)}
             agent={agent}

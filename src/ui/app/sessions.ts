@@ -57,6 +57,7 @@ import type {
 } from '../../session/transcript/types.ts';
 import { FileRecording } from '../../session/record.ts';
 import {
+  type EarlierSession,
   earlierSessions,
   elsewhereRefusal,
   type ResumableTab,
@@ -69,15 +70,6 @@ import {
   startMonitorIn,
   stopMonitorIn,
 } from '../../session/window_monitors.ts';
-import {
-  capNote,
-  type EarlierWindow,
-  earlierWindows,
-  readWindows,
-  type ResumeEntry,
-  windowElsewhereRefusal,
-  windowRoom,
-} from '../../session/windows.ts';
 import {
   agentOf,
   askingChild,
@@ -231,13 +223,6 @@ export interface Place {
   readonly mcpIgnored: readonly Ignored[];
 }
 
-/** A tab the window opens with: its agent, the session it resumes, where. */
-export interface OpeningTab {
-  readonly agent: string;
-  readonly resume: Resume;
-  readonly place: Place;
-}
-
 export interface SessionsOptions {
   agent: string;
   /** The `--agent-command` the person typed, which a resume line repeats. */
@@ -248,15 +233,6 @@ export interface SessionsOptions {
   readRecords: (stateDir: string) => Promise<SessionRecord[]>;
   open: OpenSession;
   resume: Resume | undefined;
-  /**
-   * The tabs the window opens with in place of `agent`'s one, in order, the
-   * first in front, each where its session works.
-   */
-  resumes: readonly OpeningTab[] | undefined;
-  /** Which of `resumes` comes to the front, by its index; the first if none. */
-  resumedFront: number | undefined;
-  /** What the status line says once `resumes` are open. */
-  resumedNote: string | undefined;
   /**
    * chord's own MCP server, which every session gets beside `mcpServers`
    * where its agent takes HTTP; none in tests that do not ask for it.
@@ -300,9 +276,6 @@ export function useSessions(
     readRecords,
     open,
     resume,
-    resumes,
-    resumedFront,
-    resumedNote,
     server,
     runtimes: runtimeNames,
     home,
@@ -1742,34 +1715,16 @@ export function useSessions(
   };
 
   useEffect(() => {
-    const opening = resumes ?? [{ agent, resume, place }];
+    // The window's one session, its state the window's from its first frame.
+    const key = sessions.tabs.nextKey;
 
-    for (const [index, tab] of opening.entries()) {
-      const key = sessions.tabs.nextKey;
+    places.current.set(key, place);
 
-      places.current.set(key, tab.place);
-
-      if (tab.resume !== undefined) {
-        resuming.current.set(key, tab.resume);
-      }
-
-      // The first's state is the window's from its first frame.
-      if (index > 0) {
-        dispatch({ type: 'session_opened', key });
-      }
-
-      sessions.open(tab.agent);
+    if (resume !== undefined) {
+      resuming.current.set(key, resume);
     }
 
-    if (opening.length > 1 && sessions.goTo((resumedFront ?? 0) + 1)) {
-      dispatch({ type: 'session_shown', key: sessions.tabs.front ?? 0 });
-      redraw();
-    }
-
-    // After the front is shown, which takes a note of the sessions away.
-    if (resumedNote !== undefined) {
-      dispatch({ type: 'sessions_noted', message: resumedNote });
-    }
+    sessions.open(agent);
 
     // A crash or a signal closes and reaps them too before chord exits.
     const forget = closeOnForcedExit(() => sessions.closeAll());
@@ -2890,16 +2845,15 @@ export function useSessions(
 
     dispatch({ type: 'resume_asked', asked });
 
-    Promise.all([readRecords(dir), readWindows(dir)]).then(
-      ([records, windows]) =>
+    readRecords(dir).then(
+      (records) =>
         dispatch({
           type: 'resume_listed',
           asked,
           sessions: earlierSessions(records, find, state.sessionId),
-          windows: earlierWindows(windows, records),
           cwd: here,
           otherwise:
-            `No earlier ${front} session or window to resume, ` +
+            `No earlier ${front} session to resume, ` +
             'here or in any other directory.',
         }),
       (error: unknown) =>
@@ -2907,7 +2861,6 @@ export function useSessions(
           type: 'resume_listed',
           asked,
           sessions: [],
-          windows: [],
           cwd: here,
           otherwise: `Could not read the earlier sessions: ${
             error instanceof Error ? error.message : String(error)
@@ -2989,148 +2942,8 @@ export function useSessions(
     }
   };
 
-  /**
-   * Enter on a saved window in `/resume`'s list: its tabs open beside those
-   * open, in its order at the end of the strip, and its front tab comes to
-   * the front. A tab whose session is open already is not opened twice, and
-   * a front tab never prompted gives its place, so plain `chord` and then
-   * `/resume` leaves just the window. Refused whole, never opened in part,
-   * when the cap has no room for it, and, as a session from elsewhere is,
-   * when any tab works in another directory. `columns` is the status line's
-   * width, which words the cap's refusal.
-   */
-  const pickWindow = (chosen: EarlierWindow, columns: number) => {
-    dispatch({ type: 'resume_picker_closed' });
-
-    const here = frontPlace();
-    const elsewhere = chosen.tabs.find((tab) => tab.cwd !== resolve(here.cwd));
-
-    if (elsewhere !== undefined) {
-      return sayResume(
-        windowElsewhereRefusal(chosen.id, homePath(elsewhere.cwd, home)),
-      );
-    }
-
-    const refused = chosen.opening.tabs
-      .map((tab) => here.startupOf(tab.agent)?.refused)
-      .find((line) => line !== undefined);
-
-    if (refused !== undefined) {
-      return sayResume(refused);
-    }
-
-    const unknown = chosen.opening.tabs.find(
-      (tab) => here.startupOf(tab.agent) === undefined,
-    );
-
-    if (unknown !== undefined) {
-      return sayResume(
-        `That window has a ${unknown.agent} tab, which chord cannot start here.`,
-      );
-    }
-
-    const open = openTabs();
-    // By key, read now, as closing a reused tab moves the numbers after it.
-    const openKeys = new Map(
-      [...open].map(([id, number]) => [
-        id,
-        sessions.tabs.tabs[number - 1]?.key,
-      ]),
-    );
-    const opening = chosen.opening.tabs.filter(
-      (tab) => !open.has(tab.resume.sessionId),
-    );
-    const tab = front();
-    const session = tab && all.sessions[tab.key];
-    // Never prompted, with nothing of its own open: a place, not a session.
-    const empty =
-      tab !== undefined &&
-      session !== undefined &&
-      tab.children.length === 0 &&
-      session.resumed === undefined &&
-      resumableSession(session) === undefined &&
-      !resuming.current.has(tab.key);
-    const reused = empty && opening.length > 0;
-    const room = windowRoom({
-      open: sessions.tabs.tabs.length,
-      reused,
-      needed: opening.length,
-    });
-
-    if (!room.fits) {
-      return dispatch({
-        type: 'sessions_noted',
-        message: capNote(room, hintKey(state.keys, 'session:close'), columns),
-      });
-    }
-
-    // Out first, so the window's tabs have its place under the cap.
-    if (reused) {
-      const named = `${position(sessions.tabs, tab.key)} ${tab.agent}`;
-
-      const kept = [
-        ...tab.children.map((child) => keepChild(tab.key, child)),
-        keepSpend(tab.key, {
-          tab: tab.key,
-          tabName: named,
-          name: 'main',
-          kind: 'main',
-          agent: tab.agent,
-        }),
-      ];
-      const closed = sessions.close(tab.key);
-
-      kept.forEach((each) => each(closed));
-      void closed.catch(() => {});
-
-      places.current.delete(tab.key);
-    }
-
-    const keys = new Map<string, number>();
-
-    for (const each of opening) {
-      const key = sessions.tabs.nextKey;
-
-      places.current.set(key, here);
-      resuming.current.set(key, each.resume);
-      dispatch({ type: 'session_opened', key });
-      sessions.open(each.agent);
-      keys.set(each.resume.sessionId, key);
-    }
-
-    if (reused) {
-      dispatch({
-        type: 'session_closed',
-        key: tab.key,
-        front: shownKey(sessions.tabs) ?? tab.key,
-      });
-    }
-
-    const frontId = chosen.opening.tabs[chosen.opening.front]?.resume.sessionId;
-    const frontKey =
-      frontId === undefined
-        ? undefined
-        : (keys.get(frontId) ?? openKeys.get(frontId));
-    const number =
-      frontKey === undefined ? undefined : position(sessions.tabs, frontKey);
-
-    if (number !== undefined) {
-      sessions.goTo(number);
-    }
-
-    showFront();
-    redraw();
-
-    if (chosen.opening.note !== undefined && opening.length > 0) {
-      dispatch({ type: 'sessions_noted', message: chosen.opening.note });
-    }
-  };
-
-  /** Enter on `/resume`'s list: a session, or a saved window. */
-  const pickResume = (chosen: ResumeEntry, columns: number) =>
-    chosen.kind === 'window'
-      ? pickWindow(chosen.window, columns)
-      : pickSession(chosen.session.resume);
+  /** Enter on `/resume`'s list. */
+  const pickResume = (chosen: EarlierSession) => pickSession(chosen.resume);
 
   /** Enter on `/model`'s list. */
   const pickModel = (id: string) => {

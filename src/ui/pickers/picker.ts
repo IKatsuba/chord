@@ -1,6 +1,6 @@
 /**
- * The pickers' choices — `/model`'s models, `/resume`'s earlier sessions
- * and saved windows, `ctrl+x w`'s open ones and `/config`'s options and
+ * The pickers' choices — `/model`'s models, `/resume`'s earlier sessions,
+ * `ctrl+x w`'s open ones and `/config`'s options and
  * their values —
  * where a picker's window onto them sits, and what each key does to it, kept
  * out of the component. The list is drawn by hand, as the slash command list
@@ -10,11 +10,7 @@
 import stringWidth from 'string-width';
 import { type AgentOption, valueName } from '../../session/config.ts';
 import type { AgentModels } from '../../session/models.ts';
-import {
-  type ResumeEntry,
-  windowDirectory,
-  windowSummary,
-} from '../../session/windows.ts';
+import type { EarlierSession } from '../../session/sessions.ts';
 import { failureOf, type TabWait } from '../../session/tabs.ts';
 import { homePath } from '../../settings.ts';
 import { visibleRange } from '../prompt/commands.ts';
@@ -97,79 +93,48 @@ export function valueToAsk(
 export const DIRECTORY_WIDTH = 30;
 
 /**
- * `/resume`'s rows, newest first: when each session was last used, or each
- * window quit, padded so the text lines up, then a session's first prompt or
- * a window's summary, `▣ 3 sessions · claude, codex, claude`, and its front
- * tab's first prompt. With `home`, as the list of every directory draws them,
- * each row names its directory between the two, from `~` and cut from the
- * start to `DIRECTORY_WIDTH`, where the name that tells two apart is, and at
- * a `/` so the segments left are whole; a window's is its front tab's, with
- * ` +1` for each other directory its tabs work in. The row is cut at the
- * picker's edge as it is drawn. A session open in a tab of the window says
- * which, `open in 2`, after when it was used, as picking it goes there rather
- * than load it twice; a window says how many of its sessions are open in its
- * summary, as they may be in several tabs. The value is the entry's place in
- * `entries`.
+ * `/resume`'s rows, newest first: when each session was last used, padded
+ * so the text lines up, then its first prompt. With `home`, as the list of
+ * every directory draws them, each row names its directory between the two,
+ * from `~` and cut from the start to `DIRECTORY_WIDTH`, where the name that
+ * tells two apart is, and at a `/` so the segments left are whole. The row is
+ * cut at the picker's edge as it is drawn. A session open in a tab of the
+ * window says which, `open in 2`, after when it was used, as picking it goes
+ * there rather than load it twice. The value is the session's place in
+ * `sessions`.
  */
 export function sessionChoices(
-  entries: readonly ResumeEntry[],
+  sessions: readonly EarlierSession[],
   now: number,
   directories?: { readonly home: string | undefined },
   /** The tab each open session is in, by its id. */
   open: ReadonlyMap<string, number> = new Map(),
 ): PickerChoice[] {
-  const when = entries.map((entry) =>
-    lastUsed(
-      entry.kind === 'window'
-        ? entry.window.lastUsedAt
-        : entry.session.lastUsedAt,
-      now,
-    ),
-  );
+  const when = sessions.map((session) => lastUsed(session.lastUsedAt, now));
   const width = Math.max(0, ...when.map((text) => text.length));
-  const tabs = entries.map((entry) => {
-    const tab =
-      entry.kind === 'session'
-        ? open.get(entry.session.resume.sessionId)
-        : undefined;
+  const tabs = sessions.map((session) => {
+    const tab = open.get(session.resume.sessionId);
 
     return tab === undefined ? '' : `open in ${tab}`;
   });
 
   const tabsWidth = Math.max(0, ...tabs.map((text) => text.length));
-  const shown = (cwd: string, room: number) =>
-    cutPath(homePath(cwd, directories?.home), room);
   const where =
     directories === undefined
       ? undefined
-      : entries.map((entry) =>
-          entry.kind === 'window'
-            ? windowDirectory(entry.window, shown, DIRECTORY_WIDTH)
-            : shown(entry.session.resume.cwd, DIRECTORY_WIDTH),
+      : sessions.map((session) =>
+          cutPath(
+            homePath(session.resume.cwd, directories.home),
+            DIRECTORY_WIDTH,
+          ),
         );
   const whereWidth = Math.max(
     0,
     ...(where ?? []).map((text) => stringWidth(text)),
   );
-  const textOf = (entry: ResumeEntry) => {
-    if (entry.kind === 'session') {
-      return entry.session.prompt;
-    }
 
-    const { window } = entry;
-    const summary = windowSummary(
-      window,
-      window.tabs.filter(({ sessionId }) => open.has(sessionId)).length,
-    );
-
-    return window.prompt === '' ? summary : `${summary} · ${window.prompt}`;
-  };
-
-  return entries.map((entry, index) => ({
-    key:
-      entry.kind === 'window'
-        ? entry.window.id
-        : entry.session.resume.sessionId,
+  return sessions.map((session, index) => ({
+    key: session.resume.sessionId,
     label: [
       when[index]!.padEnd(width),
       ...(tabsWidth === 0 ? [] : [tabs[index]!.padEnd(tabsWidth)]),
@@ -178,7 +143,7 @@ export function sessionChoices(
         : [
             where[index]! + ' '.repeat(whereWidth - stringWidth(where[index]!)),
           ]),
-      textOf(entry),
+      session.prompt,
     ].join('  '),
     value: String(index),
   }));

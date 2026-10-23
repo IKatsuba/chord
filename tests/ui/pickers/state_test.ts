@@ -115,7 +115,6 @@ function listed(
       type: 'resume_listed',
       asked,
       sessions,
-      windows: [],
       cwd: '/work',
       otherwise: 'None here.',
     },
@@ -127,7 +126,6 @@ test('/resume opens the session picker, and Esc or a pick closes it', () => {
 
   expect(open.resumePicker).toStrictEqual({
     sessions: EARLIER,
-    windows: [],
     cwd: '/work',
     everywhere: false,
   });
@@ -158,17 +156,12 @@ test("ctrl+a switches /resume between this directory's sessions and every one's"
   };
   const open = listed([there, ...EARLIER]).reduce(reduceApp, ready);
 
-  const entries = (sessions: readonly EarlierSession[]) =>
-    sessions.map((session) => ({ kind: 'session' as const, session }));
-
-  expect(resumeChoices(open.resumePicker!)).toStrictEqual(entries(EARLIER));
+  expect(resumeChoices(open.resumePicker!)).toStrictEqual(EARLIER);
   expect(keyCommand('a', ctrl, open, '')).toStrictEqual('toggle_resume_scope');
 
   const wide = reduceApp(open, { type: 'resume_scope_toggled' });
 
-  expect(resumeChoices(wide.resumePicker!)).toStrictEqual(
-    entries([there, ...EARLIER]),
-  );
+  expect(resumeChoices(wide.resumePicker!)).toStrictEqual([there, ...EARLIER]);
   expect(
     reduceApp(wide, { type: 'resume_scope_toggled' }).resumePicker,
   ).toStrictEqual(open.resumePicker);

@@ -16,7 +16,7 @@ import {
 } from '../src/headless.ts';
 import type { OneshotOutcome } from '../src/session/oneshot.ts';
 import { turnCost } from '../src/session/prices.ts';
-import { writeWindow } from '../src/session/windows.ts';
+import stripAnsi from 'strip-ansi';
 import { fakeAgentCommand } from './fixtures/fake.ts';
 import { TRACEBACK_ERROR } from './fixtures/fake_agent/options.ts';
 
@@ -646,14 +646,15 @@ test('--dangerously-skip-permissions needs -p', async () => {
  * Runs chord's command line from source with `path` alone as PATH, holding
  * `stubs`: each a command that execs the fake agent, as a CLI the person
  * installed would answer ACP; `overridden` names an agent the project's
- * settings file starts as the fake agent; `recorded` names an agent each of
- * the sessions `RECORDED` gives is of, in chord's records.
+ * settings file starts as the fake agent; `recorded` names the agent the
+ * sessions `RECORDED` gives are of, in chord's records, one for all or one
+ * each.
  */
 async function onPath(
   args: string[],
   stubs: string[],
   overridden?: string,
-  recorded?: string,
+  recorded?: string | readonly string[],
 ) {
   const dir = await mkdtemp(join(tmpdir(), 'chord-path-'));
   const bin = join(dir, 'bin');
@@ -709,17 +710,29 @@ async function onPath(
   }
 }
 
-/** Two sessions in chord's records, and a window record holding both. */
+/**
+ * Two sessions in chord's records, and a window record holding both, as
+ * chord wrote one before 0.58.0.
+ */
 const RECORDED = [
   '0b5c5f9e-0000-4000-8000-000000000001',
   '0b5c5f9e-0000-4000-8000-000000000002',
 ];
 const RECORDED_WINDOW = 'w-0b5c5f9e';
 
-async function seedRecords(stateDir: string, agent: string, cwd: string) {
+async function seedRecords(
+  stateDir: string,
+  agents: string | readonly string[],
+  cwd: string,
+) {
+  const agentOf = (index: number) =>
+    typeof agents === 'string' ? agents : agents[index]!;
+
   await mkdir(join(stateDir, 'records'), { recursive: true });
 
-  for (const sessionId of RECORDED) {
+  for (const [index, sessionId] of RECORDED.entries()) {
+    const agent = agentOf(index);
+
     await writeFile(
       join(stateDir, 'records', `${sessionId}.jsonl`),
       [
@@ -731,12 +744,25 @@ async function seedRecords(stateDir: string, agent: string, cwd: string) {
     );
   }
 
-  await writeWindow(stateDir, {
-    id: RECORDED_WINDOW,
-    at: 3,
-    tabs: RECORDED.map((sessionId) => ({ sessionId, agent, cwd })),
-    front: 0,
-  });
+  // As 0.57.0's windowText wrote it: chord writes none since.
+  await mkdir(join(stateDir, 'windows'), { recursive: true });
+  await writeFile(
+    join(stateDir, 'windows', `${RECORDED_WINDOW}.json`),
+    `${JSON.stringify(
+      {
+        id: RECORDED_WINDOW,
+        at: 3,
+        tabs: RECORDED.map((sessionId, index) => ({
+          sessionId,
+          agent: agentOf(index),
+          cwd,
+        })),
+        front: 0,
+      },
+      null,
+      2,
+    )}\n`,
+  );
 }
 
 test('an agent whose command is not on PATH is refused in one line', async () => {
@@ -767,27 +793,91 @@ test('a settings command overrides a table agent, PATH or not', async () => {
   });
 });
 
-test("a restore asks PATH for its tabs' agents, not the default one", async () => {
-  const refused = {
+test("one -r on its record's agent asks PATH for that agent, not the default one", async () => {
+  // Were the default asked for, the line would name claude and npx. One id
+  // runs on the agent named, as it always has (Q180).
+  expect(
+    await onPath(['cursor', '-r', RECORDED[0]!], [], undefined, 'cursor'),
+  ).toStrictEqual({
     code: 1,
     stdout: '',
     stderr:
       'chord: cursor runs "agent", which is not on PATH; ' +
       'install it from https://cursor.com/docs/cli/installation\n',
-  };
+  });
+});
 
-  // Were the default asked for, the line would name claude and npx.
-  expect(
-    await onPath(
-      RECORDED.flatMap((id) => ['-r', id]),
-      [],
-      undefined,
-      'cursor',
+/**
+ * The lines chord printed after Cliffy's "error: ", its help and the colours
+ * Cliffy paints whatever NO_COLOR says left out.
+ */
+function refusal(stderr: string): string[] {
+  const plain = stripAnsi(stderr);
+
+  return plain
+    .slice(plain.indexOf('error: ') + 'error: '.length)
+    .trimEnd()
+    .split('\n');
+}
+
+test('several -r and a window id are refused with their commands, before anything asks PATH (CHD-493)', async () => {
+  const several = await onPath(
+    RECORDED.flatMap((id) => ['-r', id]),
+    [],
+    undefined,
+    'cursor',
+  );
+
+  // A ValidationError, as every --resume refusal is.
+  expect(several.code).toBe(2);
+  expect(several.stderr).not.toContain('not on PATH');
+  expect(refusal(several.stderr)).toEqual([
+    '--resume opens one session; it was given 2. Open each in a chord of its own:',
+    expect.stringMatching(
+      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[0]}$`),
     ),
-  ).toStrictEqual(refused);
-  expect(
-    await onPath(['-r', RECORDED_WINDOW], [], undefined, 'cursor'),
-  ).toStrictEqual(refused);
+    expect.stringMatching(
+      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[1]}$`),
+    ),
+  ]);
+
+  const window = await onPath(['-r', RECORDED_WINDOW], [], undefined, 'cursor');
+
+  expect(window.code).toBe(2);
+  expect(window.stderr).not.toContain('not on PATH');
+  expect(refusal(window.stderr)).toEqual([
+    `${RECORDED_WINDOW} was a window of 2 sessions; chord opens one session per run now. Resume each with:`,
+    expect.stringMatching(
+      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[0]}$`),
+    ),
+    expect.stringMatching(
+      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[1]}$`),
+    ),
+  ]);
+});
+
+test("several -r of two agents and an unknown id name each its record's agent and directory, the unknown one this command's (CHD-493)", async () => {
+  const { code, stderr } = await onPath(
+    ['-r', RECORDED[0]!, '-r', 'never-seen', '-r', RECORDED[1]!],
+    [],
+    undefined,
+    ['cursor', 'claude'],
+  );
+
+  expect(code).toBe(2);
+  expect(stderr).not.toContain('not on PATH');
+  expect(refusal(stderr)).toEqual([
+    '--resume opens one session; it was given 3. Open each in a chord of its own:',
+    expect.stringMatching(
+      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[0]}$`),
+    ),
+    expect.stringMatching(
+      /^chord claude --cwd \S+ --resume never-seen \(no record; the agent and directory are this command's\)$/,
+    ),
+    expect.stringMatching(
+      new RegExp(`^chord claude --cwd \\S+ --resume ${RECORDED[1]}$`),
+    ),
+  ]);
 });
 
 test('a name only the settings define starts', async () => {

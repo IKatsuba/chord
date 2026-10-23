@@ -6,8 +6,8 @@ import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
 import type { AgentOption } from '../../session/config.ts';
 import type { AgentModels } from '../../session/models.ts';
+import type { EarlierSession } from '../../session/sessions.ts';
 import type { HeldBack } from '../../session/servers.ts';
-import type { ResumeEntry } from '../../session/windows.ts';
 import { capital } from '../shortcuts/state.ts';
 import {
   resumeChoices,
@@ -174,7 +174,7 @@ export function ResumePicker({
   home: string | undefined;
   active: boolean;
   starting?: boolean;
-  onPick: (chosen: ResumeEntry) => void;
+  onPick: (chosen: EarlierSession) => void;
 }) {
   const { everywhere } = picker;
   // Read once: rows that age while the list is open would shift under the
@@ -209,16 +209,14 @@ export function ResumePicker({
       </text>
       <text {...CUT} attributes={DIM}>
         {starting
-          ? `Pick one of ${agent}'s earlier sessions, or a saved window, to open.`
-          : `${agent}'s earlier sessions and saved windows in ${
+          ? `Pick one of ${agent}'s earlier sessions to open.`
+          : `${agent}'s earlier sessions in ${
               everywhere ? 'every directory' : 'this directory'
             }.`}
       </text>
       {choices.length === 0 ? (
         <box marginTop={1}>
-          <text {...TEXT}>
-            No earlier sessions or windows in this directory.
-          </text>
+          <text {...TEXT}>No earlier sessions in this directory.</text>
         </box>
       ) : (
         <PickerList

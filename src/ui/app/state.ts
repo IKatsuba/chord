@@ -15,7 +15,6 @@ import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { SignIn } from '../../session/sign_in.ts';
 import type { StartFailure } from '../../session/start_failure.ts';
-import type { EarlierWindow } from '../../session/windows.ts';
 import { addTurn, type Spent } from '../../session/usage.ts';
 import type { AgentOption } from '../../session/config.ts';
 import { reduceTranscript } from '../../session/transcript/reducer.ts';
@@ -310,7 +309,6 @@ export type AppAction =
       readonly type: 'resume_listed';
       readonly asked: string;
       readonly sessions: readonly EarlierSession[];
-      readonly windows: readonly EarlierWindow[];
       readonly cwd: string;
       readonly otherwise: string;
     }
@@ -652,9 +650,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // A turn may have started while the records were read.
       const said =
         resumeRefusal(rest) ??
-        (action.sessions.length === 0 && action.windows.length === 0
-          ? action.otherwise
-          : undefined);
+        (action.sessions.length === 0 ? action.otherwise : undefined);
 
       // It opens on this directory's, as Claude Code's does, even on none, so
       // that ctrl+a is there to reach the others.
@@ -663,7 +659,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
             ...rest,
             resumePicker: {
               sessions: action.sessions,
-              windows: action.windows,
               cwd: action.cwd,
               everywhere: false,
             },

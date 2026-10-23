@@ -5,12 +5,6 @@
  */
 import type { AgentOption } from '../../session/config.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
-import {
-  type EarlierWindow,
-  entriesIn,
-  resumeEntries,
-  type ResumeEntry,
-} from '../../session/windows.ts';
 import type { Transcript } from '../../session/transcript/types.ts';
 import { asksPerson } from '../dialogs/state.ts';
 import type { TeamListing } from '../teams/teams.ts';
@@ -51,14 +45,12 @@ export interface ConfigPicker {
 }
 
 /**
- * `/resume`'s picker: the sessions and windows it read, which directories it
- * shows them from, and the working directory that the narrow scope keeps to.
+ * `/resume`'s picker: the sessions it read, which directories it shows them
+ * from, and the working directory that the narrow scope keeps to.
  */
 export interface ResumePicker {
   /** Every directory's earlier sessions, newest first. */
   readonly sessions: readonly EarlierSession[];
-  /** Every saved window, newest first. */
-  readonly windows: readonly EarlierWindow[];
   /** The window's working directory, resolved. */
   readonly cwd: string;
   /** Whether every directory's sessions are shown, or only `cwd`'s. */
@@ -238,14 +230,11 @@ export function modelPickerShown(state: PickersState & Under): boolean {
   );
 }
 
-/**
- * The sessions and windows the picker lists, newest first, for the scope it
- * is on; a window is this directory's when every one of its tabs is.
- */
-export function resumeChoices(picker: ResumePicker): ResumeEntry[] {
-  const entries = resumeEntries(picker.sessions, picker.windows);
-
-  return picker.everywhere ? entries : entriesIn(entries, picker.cwd);
+/** The sessions the picker lists, newest first, for the scope it is on. */
+export function resumeChoices(picker: ResumePicker): EarlierSession[] {
+  return picker.everywhere
+    ? [...picker.sessions]
+    : picker.sessions.filter((session) => session.resume.cwd === picker.cwd);
 }
 
 /**

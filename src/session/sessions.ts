@@ -1,15 +1,13 @@
 /**
  * Finding an earlier session to resume among chord's own session records:
- * the latest one for an agent and a directory (`--continue`), each by the
- * agent's id for it (`-r <id> -r <id> …`), or every one there or in any
- * directory (`/resume`). A whole window's, by its own record, is
- * `windows.ts`'s.
+ * the latest one for an agent and a directory (`--continue`), one by the
+ * agent's id for it (`--resume <id>`), or every one there or in any
+ * directory (`/resume`).
  */
 import { join } from 'node:path';
 import { readdir, readFile } from 'node:fs/promises';
 import { notFound } from '../not_found.ts';
 import { parseRecord, promptLine, recordsDir } from './record.ts';
-import { MAX_TABS } from './tabs.ts';
 
 /** An earlier session to open again, and what chord knows of it. */
 export interface Resume {
@@ -304,57 +302,43 @@ export function sessionById(
   return { sessionId: id, cwd };
 }
 
-/** A session `--resume` opens in a tab of its own, and whose agent runs it. */
-export interface ResumedTab {
-  readonly agent: string;
-  readonly resume: Resume;
-}
-
 /**
- * The tabs `-r <id> -r <id> …` opens, in the order the ids came, the first in
- * front. One id is `sessionById`'s, as it always was. Several open only from
- * chord's records, so every one is known before the window opens and none
- * leaves it half open: each in its record's directory, on its record's
- * agent, unless `named` says the agent was named on the command line, and
- * then every one must be that agent's, as one id must.
+ * The refusal of `-r <id> -r <id> …`: chord opens one session, so each id
+ * is said back as a command of its own, in the order given (CHD-493). An id
+ * chord has a record of runs on that record's agent in its directory; one
+ * it has none of, on this command's, and its line says so. The
+ * `--agent-command` the person typed goes only with the agent it starts.
  */
-export function sessionsByIds(
+export function severalRefusal(
   records: readonly SessionRecord[],
   ids: readonly string[],
-  { agent, cwd, named }: FindOptions & { readonly named: boolean },
-): ResumedTab[] {
-  if (ids.length > MAX_TABS) {
-    throw new ResumeError(
-      `A window opens at most ${MAX_TABS} sessions; --resume named ${ids.length}.`,
-    );
-  }
-
-  const twice = ids.find((id, index) => ids.indexOf(id) !== index);
-
-  if (twice !== undefined) {
-    throw new ResumeError(`Session ${twice} is named twice.`);
-  }
-
-  const [only] = ids;
-
-  if (only !== undefined && ids.length === 1) {
-    return [{ agent, resume: sessionById(records, only, { agent, cwd }) }];
-  }
-
-  return ids.map((id) => {
+  {
+    agent,
+    cwd,
+    agentCommand,
+  }: FindOptions & { readonly agentCommand?: string | undefined },
+): ResumeError {
+  const lines = ids.map((id) => {
     const found = latest(records.filter((record) => record.sessionId === id));
+    const runs = found?.agent ?? agent;
+    const command = resumeCommand(
+      runs,
+      id,
+      runs === agent ? agentCommand : undefined,
+      found?.cwd ?? cwd,
+    );
 
-    if (!found) {
-      throw new ResumeError(
-        `No session ${id} among chord's records; one it never saw opens ` +
-          'only on its own.',
-      );
-    }
-
-    return named
-      ? { agent, resume: sessionById(records, id, { agent, cwd }) }
-      : { agent: found.agent, resume: resumeOf(found) };
+    return found === undefined
+      ? `${command} (no record; the agent and directory are this command's)`
+      : command;
   });
+
+  return new ResumeError(
+    [
+      `--resume opens one session; it was given ${ids.length}. Open each in a chord of its own:`,
+      ...lines,
+    ].join('\n'),
+  );
 }
 
 function resumeOf(record: SessionRecord): Resume {
@@ -381,8 +365,17 @@ export function resumeCommand(
    * settings is not, as the settings give it again (the owner's Q56).
    */
   agentCommand?: string,
+  /**
+   * The directory it opens in, for a session that chord may have no record
+   * of, which would otherwise open wherever the command is typed.
+   */
+  cwd?: string,
 ): string {
   const words = ['chord', agent];
+
+  if (cwd !== undefined) {
+    words.push('--cwd', shellQuote(cwd));
+  }
 
   if (agentCommand !== undefined) {
     words.push('--agent-command', shellQuote(agentCommand));

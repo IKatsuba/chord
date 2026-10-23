@@ -21,7 +21,8 @@ import type {
 } from '../../../src/session/sessions.ts';
 import type { ShellOptions, ShellProcess } from '../../../src/shell.ts';
 import { App } from '../../../src/ui/app/App.tsx';
-import type { OpeningTab, SessionStart } from '../../../src/ui/app/sessions.ts';
+import type { SessionStart } from '../../../src/ui/app/sessions.ts';
+import type { Resume } from '../../../src/session/sessions.ts';
 import {
   keybindingsNotice,
   readKeybindings,
@@ -144,7 +145,7 @@ export async function withWindow(
     teams,
     readRecords,
     stateDir,
-    resumes,
+    resume,
     log,
     copy = copiedStub,
     copyOnSelect,
@@ -207,8 +208,11 @@ export async function withWindow(
      * them; one of its own in its directory by default.
      */
     stateDir?: string;
-    /** Earlier sessions the window opens in place of a new one, as `--resume` does. */
-    resumes?: readonly OpeningTab[];
+    /**
+     * The earlier session the window opens in place of a new one, as
+     * `--resume` does, working in its own directory.
+     */
+    resume?: Resume;
     /**
      * What the terminal is told, as `../harness.tsx`'s `Logged` keeps it,
      * the window on the alternate screen.
@@ -248,9 +252,9 @@ export async function withWindow(
     <App
       agent={agent}
       {...(configHome === undefined ? {} : { configHome: configHome(dir) })}
-      cwd={dir}
+      cwd={resume?.cwd ?? dir}
       stateDir={stateDir ?? join(dir, 'state')}
-      {...(resumes ? { resumes } : {})}
+      {...(resume ? { resume } : {})}
       agentCommand={agentCommand}
       typedCommand={typedCommand}
       warnings={warnings}

@@ -192,7 +192,6 @@ const STATES: Record<string, AppState> = {
       asked: 'r1',
       cwd: '/work',
       otherwise: 'none',
-      windows: [],
       sessions: [
         {
           resume: { sessionId: 'session-0', cwd: '/work' },

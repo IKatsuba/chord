@@ -96,3 +96,48 @@ export function signInOf(error: unknown): SignIn | undefined {
 
   return undefined;
 }
+
+/** chord's own line, the way on: the sign-in is the agent's, outside chord. */
+export function wayOn(agent: string): string {
+  return `chord does not sign agents in. Sign in with ${agent}'s own CLI in a terminal, or set its API key where it offers one.`;
+}
+
+/** The line before the ways `agent` offers, by how many there are. */
+export function offersLine(agent: string, count: number): string {
+  return `${agent} offers ${count === 1 ? 'this sign-in' : 'these sign-ins'}:`;
+}
+
+/** A way in as plain text: its name, then its description in brackets. */
+function wayWords(way: SignInWay): string {
+  return way.name !== undefined && way.description !== undefined
+    ? `${way.name} (${way.description})`
+    : (way.name ?? way.description ?? '');
+}
+
+/** The ways in, as plain text in a line. */
+function offered(ways: readonly SignInWay[]): string {
+  return ways.map(wayWords).join(', ');
+}
+
+/**
+ * What follows a start failure's own line where only plain text goes, as
+ * on `-p`'s stderr: the ways `agent` offers, if any, and the way on.
+ */
+export function signInLines(agent: string, signIn: SignIn): string[] {
+  return [
+    ...(signIn.ways.length === 0
+      ? []
+      : [`${agent} offers: ${offered(signIn.ways)}`]),
+    wayOn(agent),
+  ];
+}
+
+/**
+ * What an agent that opened `agent` is told after why it did not start:
+ * the ways in, and the way on, which is the person's to take, not its own.
+ */
+export function signInNote(agent: string, signIn: SignIn): string {
+  return `${
+    signIn.ways.length === 0 ? '' : ` It offers: ${offered(signIn.ways)}.`
+  } chord does not sign agents in: the person signs in with ${agent}'s own CLI in a terminal, or sets its API key where it offers one.`;
+}

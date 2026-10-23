@@ -1,0 +1,40 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-n
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /new
+
+ ⏺ Open(fake) · fake
+   ⎿  opened with /new
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main  fake · Fake Large with a 1M context window · medium  ◦ idle 11s
+    fake  fake · Fake Large with a 1M context window · medium  ◦ idle 10s

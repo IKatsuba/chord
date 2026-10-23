@@ -1,0 +1,24 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake
+ ▄▀▀▀   /tmp/chord-qa.des454
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ fake did not start: it exited with code 1 before answering initialize.
+   ⎿  The end of its stderr:
+        … +116 lines
+            from .module_58 import run
+          File "/opt/agent/lib/python3.12/site-packages/agent/module_58.py",
+        line 68, in <module>
+            from .module_59 import run
+          File "/opt/agent/lib/python3.12/site-packages/agent/module_59.py",
+        line 69, in <module>
+            from .module_60 import run
+        ImportError: cannot import name 'AuthMethod' from 'acp.schema'
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

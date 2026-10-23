@@ -41,6 +41,11 @@ export interface AgentProcess {
   /** The end of what it wrote to stderr, for a start that failed. */
   stderrTail(): string;
   /**
+   * The last of its stderr's non-empty lines as they came, an unfinished
+   * last one too, and how many came before them (CHD-454).
+   */
+  stderrEnd(): Tail;
+  /**
    * `stderrTail` once stderr has ended, or once `STDERR_SETTLE_MS` pass
    * without its end: what an agent that goes says last, as its exit and the
    * end of its stdout can be heard before its stderr's last piece (CHD-495).
@@ -66,6 +71,52 @@ export interface SpawnAgentOptions {
 
 /** How much of the agent's stderr is kept for an error that quotes it. */
 const STDERR_TAIL = 4096;
+
+/** How many of its stderr's last lines a start failure keeps. */
+export const STDERR_LINES = 6;
+
+/** The most of one stderr line kept; a longer one is cut there, with `…`. */
+export const STDERR_LINE_MAX = 1024;
+
+/** The end of a stream, as lines, and how many non-empty lines came before. */
+export interface Tail {
+  readonly lines: readonly string[];
+  readonly cut: number;
+}
+
+/**
+ * A stderr line as it comes: its first `STDERR_LINE_MAX` characters, whether
+ * any came past them, and whether any of it, kept or not, held something.
+ */
+interface OpenLine {
+  kept: string;
+  cut: boolean;
+  filled: boolean;
+}
+
+function openLine(): OpenLine {
+  return { kept: '', cut: false, filled: false };
+}
+
+/** `part` of the line `line`, its rest past the bound dropped as it comes. */
+function grow(line: OpenLine, part: string): void {
+  const room = STDERR_LINE_MAX - line.kept.length;
+
+  line.kept += part.slice(0, room);
+  line.cut ||= part.length > room;
+  line.filled ||= part.trim() !== '';
+}
+
+/** The line as kept, marked `…` where it was cut; none when it held nothing. */
+function keptLine(line: OpenLine): string | undefined {
+  if (!line.filled) {
+    return undefined;
+  }
+
+  const kept = line.kept.replace(/\r$/, '');
+
+  return line.cut ? `${kept}…` : kept.trimEnd();
+}
 
 /**
  * How long an agent's last words wait for its stderr to end. The end comes
@@ -142,9 +193,31 @@ export async function spawnAgent(
   });
 
   let tail = '';
+  // Its stderr as lines: the last non-empty ones that ended, how many ended
+  // in all, and the one still open, each kept no longer than the bound.
+  const ring: string[] = [];
+  let ended = 0;
+  let open = openLine();
 
   child.stderr?.setEncoding('utf8').on('data', (text: string) => {
     tail = (tail + text).slice(-STDERR_TAIL);
+
+    for (const [index, part] of text.split('\n').entries()) {
+      if (index > 0) {
+        const line = keptLine(open);
+
+        if (line !== undefined) {
+          ended += 1;
+
+          ring.push(line);
+          ring.splice(0, ring.length - STDERR_LINES);
+        }
+
+        open = openLine();
+      }
+
+      grow(open, part);
+    }
 
     options.onStderr?.(text);
   });
@@ -215,6 +288,13 @@ export async function spawnAgent(
     stdout,
     status,
     stderrTail: () => tail,
+    stderrEnd: () => {
+      const last = keptLine(open);
+      const unfinished = last === undefined ? [] : [last];
+      const lines = [...ring, ...unfinished].slice(-STDERR_LINES);
+
+      return { lines, cut: ended + unfinished.length - lines.length };
+    },
     lastWords: async () => {
       await settledWithin(stderrEnded, STDERR_SETTLE_MS);
 

@@ -6,6 +6,11 @@ import type {
 } from '@agentclientprotocol/sdk';
 import { type OneshotOutcome, runOneshot } from './session/oneshot.ts';
 import { signInLines, signInOf } from './session/sign_in.ts';
+import {
+  failureLines,
+  startFailureOf,
+  stepWords,
+} from './session/start_failure.ts';
 import type { StartingValue } from './session/starting.ts';
 import type { ElicitationWait } from './session/transcript/types.ts';
 import type { TokenUsage } from './session/usage.ts';
@@ -306,13 +311,16 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
     });
   } catch (error) {
     const signIn = signInOf(error);
+    const failure = startFailureOf(error);
 
     await stderr(
       [
-        `${options.agent} did not start: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        // An agent that needs a login: chord does not sign agents in.
+        `${options.agent} did not start: ${stepWords(
+          error instanceof Error ? error.message : String(error),
+          failure,
+        )}`,
+        // What chord knows of why, then, for a login, the ways in and on.
+        ...failureLines(options.agent, failure),
         ...(signIn === undefined ? [] : signInLines(options.agent, signIn)),
       ]
         .map((line) => `chord: ${line}\n`)

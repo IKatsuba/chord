@@ -1,0 +1,24 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   minion-code
+ ▄▀▀▀   /tmp/chord-qa.des454
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ minion-code did not start: The agent exited: Installed 42 packages in 120ms
+   Traceback (most recent call last):
+     File "/opt/uv/archive-v0/abc/bin/minion-code", line 5, in <module>
+       from minion_code.cli import main
+     File "/opt/uv/archive-v0/abc/lib/python3.12/site-packages/minion_code/cli.
+   py", line 12, in <module>
+       from minion.agents import CodeAgent
+   ImportError: cannot import name 'CodeAgent' from 'minion.agents' (/opt/uv/
+   archive-v0/abc/lib/python3.12/site-packages/minion/agents/__init__.py)
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

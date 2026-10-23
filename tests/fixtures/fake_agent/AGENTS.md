@@ -342,6 +342,13 @@
   sign-in link first and fails with `authRequired` unless accepted;
   `linkother` asks the same link but fails with -32603 unless accepted, so
   it gets no sign-in guidance (CHD-435).
+  `--start-fails <kind>` (`CHORD_FAKE_START_FAILS`) checks startup failures
+  (CHD-454): `traceback` writes a long Python traceback to stderr and exits
+  1 before `initialize`; `stdout` writes a plain stdout line and exits 0
+  before `initialize`; `notacp` answers `initialize` but refuses every
+  session request with -32601; `alias` refuses `session/new` with -32602
+  for a missing `agentAlias`, as zeroclaw does with several agents and no
+  default.
   `--hang <step>` or `CHORD_FAKE_HANG=<step>` wedges it: `start` never
   answers `initialize`, `config` never answers a
   config, mode or model change, `turn` never ends a prompt, cancelled or not.

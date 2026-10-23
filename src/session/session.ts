@@ -9,7 +9,7 @@ import type {
 import process from 'node:process';
 import { type Agent, openAgent } from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';
-import { agentStart } from '../agents.ts';
+import { agentStart, findAgent } from '../agents.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
 import {
   foldUpdate,
@@ -47,6 +47,7 @@ import type { Resume } from './sessions.ts';
 import { routed, type SessionTree, sessionTree } from './subagents.ts';
 import type { TranscriptAction, TurnResult } from './transcript/types.ts';
 import { asSignIn } from './sign_in.ts';
+import { startFailed, type StartStep } from './start_failure.ts';
 import { tokensOf } from './usage.ts';
 import type { TurnFigures } from './turn_costs.ts';
 
@@ -331,6 +332,10 @@ export async function openSession(
   /** The agent's process until its exit is seen. */
   const live = new Set<number>();
   const start = agentStart(agent, options.agentCommand);
+  // What the registry pins, said when its agent does not start (CHD-454);
+  // a command of the person's own is theirs to know.
+  const pinned =
+    options.agentCommand === undefined ? findAgent(agent)?.pinned : undefined;
   const userServers = options.mcpServers ?? [];
   /** Known once the agent answers; updates before that wait in `early`. */
   let sessionId = resume?.sessionId;
@@ -409,6 +414,8 @@ export async function openSession(
     onElicitation: elicitations.handler,
     onPlan: plans.handler,
     ...(signal === undefined ? {} : { signal }),
+  }).catch((error: unknown) => {
+    throw signal?.aborted ? error : startFailed(error, 'initialize', pinned);
   });
 
   live.add(connection.pid);
@@ -435,6 +442,8 @@ export async function openSession(
 
   let answer: SessionAnswer;
   let past: readonly PastAction[] = [];
+  /** The session request chord sent, for a start that fails at it. */
+  let step: StartStep = 'session/new';
 
   try {
     if (resume === undefined) {
@@ -481,6 +490,7 @@ export async function openSession(
         cwd,
         mcpServers,
         signal,
+        (method) => (step = method),
       );
 
       // What the agent replayed came before its answer. A session chord has
@@ -504,7 +514,12 @@ export async function openSession(
   } catch (refused) {
     // A start the agent refused for want of a login says so, with the ways
     // in it offered (CHD-435).
-    const error = asSignIn(refused, connection.init.authMethods);
+    // Why it failed, under the sign-in it needs when that is why, which
+    // stays what the start rejects with (CHD-435).
+    const error = asSignIn(
+      startFailed(refused, step, pinned),
+      connection.init.authMethods,
+    );
 
     try {
       await shutdown();
@@ -781,17 +796,22 @@ async function reopen(
   cwd: string,
   mcpServers: McpServer[],
   signal: AbortSignal | undefined,
+  asking: (method: 'session/load' | 'session/resume') => void,
 ): Promise<{ answer: SessionAnswer; replays: boolean }> {
   const offers = connection.init.agentCapabilities ?? {};
   const resumes = Boolean(offers.sessionCapabilities?.resume);
   const request = { sessionId, cwd, mcpServers, ...openingMeta(connection) };
 
   if (resumes && (recorded || !offers.loadSession)) {
+    asking('session/resume');
+
     return {
       answer: await connection.resumeSession(request, signal),
       replays: false,
     };
   }
+
+  asking('session/load');
 
   return {
     answer: await connection.loadSession(request, signal),

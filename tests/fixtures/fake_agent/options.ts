@@ -337,3 +337,30 @@ export const AUTH_REQUIRED:
     ? kind
     : undefined;
 })();
+
+/**
+ * `--start-fails <kind>` (`CHORD_FAKE_START_FAILS`): the fake fails to start
+ * as an agent that cannot does (CHD-454). `traceback` writes a long Python
+ * traceback on stderr and exits 1 before `initialize`, as minion-code 0.1.44
+ * does; `stdout` writes a plain line on stdout and exits 0 before
+ * `initialize`, as the archived kimi-cli 1.52.0 does; `notacp` answers
+ * `initialize` and then every session request -32601, as agoragentic-mcp
+ * 1.3.0 does; `alias` refuses `session/new` -32602 for want of an agent
+ * alias, as zeroclaw does with several agents and no default.
+ */
+export const START_FAILS:
+  'traceback' | 'stdout' | 'notacp' | 'alias' | undefined = (() => {
+  const flag = ARGS.indexOf('--start-fails');
+  const kind = flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_START_FAILS;
+
+  return kind === 'traceback' ||
+    kind === 'stdout' ||
+    kind === 'notacp' ||
+    kind === 'alias'
+    ? kind
+    : undefined;
+})();
+
+/** The last line of `--start-fails traceback`'s traceback. */
+export const TRACEBACK_ERROR =
+  "ImportError: cannot import name 'AuthMethod' from 'acp.schema'";

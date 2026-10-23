@@ -4,6 +4,8 @@ import type { Exit } from '../platform/process.ts';
 import {
   type AgentProcess,
   settledWithin,
+  STDERR_SETTLE_MS,
+  type Tail,
   spawnAgent,
   type StopBounds,
 } from './process.ts';
@@ -360,9 +362,9 @@ export async function connectAgent(
       const aborted = () => resolve(signal?.reason);
 
       signal?.addEventListener('abort', aborted, { once: true });
-      void exitMessage(process).then((message) => {
+      void goneError(process).then((gone) => {
         signal?.removeEventListener('abort', aborted);
-        resolve(new Error(message));
+        resolve(gone);
       });
     });
 
@@ -574,11 +576,35 @@ function steeringOf(init: acp.InitializeResponse): boolean {
 }
 
 /**
- * The agent went, with the end of its stderr when it left any, once that
- * has all come (CHD-495).
+ * The agent's process ended before it answered: how, and what it wrote to
+ * stderr last, for a start failure to say (CHD-454).
  */
-async function exitMessage(process: AgentProcess): Promise<string> {
-  const tail = (await process.lastWords()).trim();
+export class AgentGone extends Error {
+  constructor(
+    message: string,
+    /** How its process ended, when that was seen. */
+    readonly exit: Exit | undefined,
+    /** The end of its stderr, as lines. */
+    readonly stderr: Tail,
+  ) {
+    super(message);
 
-  return tail === '' ? 'The agent exited.' : `The agent exited: ${tail}`;
+    this.name = 'AgentGone';
+  }
+}
+
+/**
+ * The agent went, with the end of its stderr when it left any, once that
+ * has all come (CHD-495), and how its process ended if that is seen by
+ * then: one that closed its stdout and lives on is not waited for.
+ */
+async function goneError(process: AgentProcess): Promise<AgentGone> {
+  const tail = (await process.lastWords()).trim();
+  const exit = await settledWithin(process.status, STDERR_SETTLE_MS);
+
+  return new AgentGone(
+    tail === '' ? 'The agent exited.' : `The agent exited: ${tail}`,
+    exit?.status === 'fulfilled' ? exit.value : undefined,
+    process.stderrEnd(),
+  );
 }

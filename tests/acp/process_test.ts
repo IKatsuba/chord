@@ -1,7 +1,11 @@
 import { execFile } from 'node:child_process';
 import { describe, expect, test } from 'bun:test';
 import process from 'node:process';
-import { spawnAgent, STDERR_SETTLE_MS } from '../../src/acp/process.ts';
+import {
+  spawnAgent,
+  STDERR_LINE_MAX,
+  STDERR_SETTLE_MS,
+} from '../../src/acp/process.ts';
 
 /** How a test stops what it started, a failed one too. */
 const STOP = { exitMs: 100, termMs: 300, killMs: 2000 } as const;
@@ -24,6 +28,73 @@ test("an agent's last words are its stderr's tail once stderr has ended (CHD-495
   } finally {
     await agent.stop(STOP);
   }
+});
+
+/** The end of the stderr of an agent that runs `script` in sh and exits. */
+async function stderrEndOf(script: string) {
+  const agent = await spawnAgent({
+    command: ['sh', '-c', script],
+    cwd: process.cwd(),
+  });
+
+  try {
+    await agent.status;
+    await agent.lastWords();
+
+    return agent.stderrEnd();
+  } finally {
+    await agent.stop(STOP);
+  }
+}
+
+test('the end of its stderr is its last non-empty lines as they came, indents kept, and how many came before (CHD-454)', async () => {
+  expect(
+    await stderrEndOf(
+      'printf "a\\n\\n  b" >&2; printf " still b\\n" >&2; i=0; while [ $i -lt 300 ]; do echo "    at frame $i" >&2; i=$((i+1)); done; exit 1',
+    ),
+  ).toStrictEqual({
+    lines: [
+      '    at frame 294',
+      '    at frame 295',
+      '    at frame 296',
+      '    at frame 297',
+      '    at frame 298',
+      '    at frame 299',
+    ],
+    cut: 296,
+  });
+});
+
+test('an unfinished last line is a line of the end, and one past the bound is cut there and marked (CHD-454)', async () => {
+  const end = await stderrEndOf(
+    `printf "  first\\n" >&2; printf "%02000d\\n" 0 >&2; printf "Error: no newline" >&2; exit 1`,
+  );
+
+  expect(end.cut).toBe(0);
+  expect(end.lines[0]).toBe('  first');
+  expect(end.lines[1]).toBe(`${'0'.repeat(STDERR_LINE_MAX)}…`);
+  expect(end.lines[2]).toBe('Error: no newline');
+});
+
+test('a line past the bound is marked though what was dropped was its end, and counted though its kept start is blank (CHD-454)', async () => {
+  // Each line in two writes, so its bound falls across chunks.
+  const end = await stderrEndOf(
+    [
+      `printf "%01024d" 0 | tr 0 a >&2`,
+      'printf " b\\n" >&2',
+      `printf "%01025d" 0 | tr 0 " " >&2`,
+      'printf "Error\\n" >&2',
+      'exit 1',
+    ].join('; '),
+  );
+
+  expect(end).toStrictEqual({
+    lines: [
+      `${'a'.repeat(STDERR_LINE_MAX)}…`,
+      `${' '.repeat(STDERR_LINE_MAX)}…`,
+    ],
+    cut: 0,
+  });
 });
 
 test('a stderr that stays open past the cap: the last words so far come at the cap, and the agent stops whole (CHD-495)', async () => {
@@ -92,5 +163,115 @@ describe('CHD-495 tester: inherited stderr has a bounded lifetime', () => {
 
       expect(await isAlive(descendant)).toBe(false);
     }
+  });
+});
+
+describe('CHD-454 tester: observed stderr chunk boundaries', () => {
+  test('CRLF fragments, blank lines and content beyond a capped blank prefix count exactly once', async () => {
+    const chunks = [
+      'first\r',
+      '\n \t\r',
+      '\n  second',
+      ' continued\r',
+      '\n\nthird\nfourth\r\nfifth\nsixth\n',
+      ' '.repeat(STDERR_LINE_MAX),
+      ' ',
+      'Error beyond the kept prefix',
+      '\r',
+      '\n',
+      ' \t\r\n',
+      'last unfinished',
+    ];
+    let received = '';
+    const agent = await spawnAgent({
+      command: [
+        process.execPath,
+        '-e',
+        `
+        const chunks = ${JSON.stringify(chunks)};
+        let next = 0;
+        process.stderr.write(chunks[next++]);
+        process.stdin.on('data', () => {
+          if (next < chunks.length) process.stderr.write(chunks[next++]);
+          else process.exit(1);
+        });
+      `,
+      ],
+      cwd: process.cwd(),
+      onStderr: (text) => {
+        received += text;
+      },
+    });
+    const input = agent.stdin.getWriter();
+    let prefix = '';
+
+    try {
+      for (const [index, chunk] of chunks.entries()) {
+        prefix += chunk;
+
+        const deadline = performance.now() + 5000;
+
+        while (received !== prefix && performance.now() < deadline) {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+
+        expect(received).toBe(prefix);
+
+        if (index === 0 || index === 1) {
+          expect(agent.stderrEnd()).toEqual({ lines: ['first'], cut: 0 });
+        }
+
+        if (index === 6) {
+          expect(agent.stderrEnd()).toEqual({
+            lines: [
+              'first',
+              '  second continued',
+              'third',
+              'fourth',
+              'fifth',
+              'sixth',
+            ],
+            cut: 0,
+          });
+        }
+
+        if (index === 7) {
+          expect(agent.stderrEnd()).toEqual({
+            lines: [
+              '  second continued',
+              'third',
+              'fourth',
+              'fifth',
+              'sixth',
+              ' '.repeat(STDERR_LINE_MAX) + '…',
+            ],
+            cut: 1,
+          });
+        }
+
+        // The child cannot emit its next fragment until this one has been
+        // processed, so no OS coalescing can erase these boundaries.
+        await input.write(new TextEncoder().encode('next\n'));
+      }
+
+      await agent.status;
+      await agent.lastWords();
+      expect(agent.stderrEnd()).toEqual({
+        lines: [
+          'third',
+          'fourth',
+          'fifth',
+          'sixth',
+          ' '.repeat(STDERR_LINE_MAX) + '…',
+          'last unfinished',
+        ],
+        cut: 2,
+      });
+    } finally {
+      input.releaseLock();
+      await agent.stop(STOP);
+    }
+
+    expect(await isAlive(agent.pid)).toBe(false);
   });
 });

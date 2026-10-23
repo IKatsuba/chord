@@ -18,6 +18,7 @@ import type { OneshotOutcome } from '../src/session/oneshot.ts';
 import { turnCost } from '../src/session/prices.ts';
 import { writeWindow } from '../src/session/windows.ts';
 import { fakeAgentCommand } from './fixtures/fake.ts';
+import { TRACEBACK_ERROR } from './fixtures/fake_agent/options.ts';
 
 /** The tokens each of the fake agent's turns reports. */
 const TURN_TOKENS = {
@@ -435,6 +436,40 @@ test("an agent that needs a login says so, its ways in and chord's way on, a lin
       "chord: chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.",
       '',
     ]);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
+test('an agent that exits before initialize says so with its code, then the end of its stderr, a line each (CHD-454)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-headless-'));
+  let stderr = '';
+
+  try {
+    const code = await runHeadless({
+      agent: 'fake',
+      cwd: dir,
+      prompt: 'text',
+      format: 'text',
+      agentCommand: fakeAgentCommand(undefined, '--start-fails', 'traceback'),
+      stdout: () => Promise.resolve(),
+      stderr: (text) => {
+        stderr += text;
+
+        return Promise.resolve();
+      },
+    });
+    const lines = stderr.split('\n');
+
+    expect(code).toStrictEqual(1);
+    expect(lines.slice(0, 4)).toStrictEqual([
+      'chord: fake did not start: it exited with code 1 before answering initialize.',
+      'chord: The end of its stderr:',
+      'chord:   … +116 lines',
+      'chord:       from .module_58 import run',
+    ]);
+    expect(lines.at(-2)).toStrictEqual(`chord:   ${TRACEBACK_ERROR}`);
+    expect(lines.length).toStrictEqual(10);
   } finally {
     await rm(dir, { recursive: true });
   }
@@ -960,7 +995,7 @@ describe('CHD-435 tester: headless sign-in boundaries', () => {
 
         if (kind === 'linkother') {
           expect(stderr).toBe(
-            'chord: fake did not start: The fake could not open its session.\n',
+            'chord: fake did not start: it refused session/new: The fake could not open its session.\n',
           );
         } else {
           const message =
@@ -973,6 +1008,89 @@ describe('CHD-435 tester: headless sign-in boundaries', () => {
             "chord: chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.",
             '',
           ]);
+        }
+      } finally {
+        await rm(cwd, { recursive: true });
+      }
+    });
+  }
+});
+
+describe('CHD-454 tester: headless structured failure boundaries', () => {
+  for (const shape of [
+    'closed',
+    'signal',
+    'stdout',
+    'zeroalias',
+    'zeronotacp',
+    'otheralias',
+  ]) {
+    test(`${shape} keeps its structured headline and only applicable detail`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-headless-start-'));
+      let stdout = '';
+      let stderr = '';
+      const command =
+        shape === 'closed'
+          ? [
+              'sh',
+              '-c',
+              'printf "  raw diagnostic\\n" >&2; exec 1>&-; exec sleep 30',
+            ]
+          : shape === 'signal'
+            ? ['sh', '-c', 'kill -TERM $$']
+            : fakeAgentCommand(
+                undefined,
+                '--start-fails',
+                shape === 'stdout'
+                  ? 'stdout'
+                  : shape === 'zeronotacp'
+                    ? 'notacp'
+                    : 'alias',
+              );
+      const agent = shape.startsWith('zero') ? 'zeroclaw' : 'fake';
+
+      try {
+        const code = await runHeadless({
+          agent,
+          cwd,
+          prompt: 'text',
+          format: 'text',
+          agentCommand: command,
+          stdout: (text) => {
+            stdout += text;
+
+            return Promise.resolve();
+          },
+          stderr: (text) => {
+            stderr += text;
+
+            return Promise.resolve();
+          },
+        });
+
+        expect(code).toBe(1);
+        expect(stdout).toBe('');
+        expect(stderr).not.toContain('chord ran');
+        expect(stderr.includes('Set a default agent:')).toBe(
+          shape === 'zeroalias',
+        );
+
+        if (shape === 'closed') {
+          expect(stderr.split('\n')).toEqual([
+            'chord: fake did not start: it closed its connection before answering initialize.',
+            'chord: The end of its stderr:',
+            'chord:     raw diagnostic',
+            '',
+          ]);
+        } else if (shape === 'signal') {
+          expect(stderr).toBe(
+            'chord: fake did not start: it was stopped by SIGTERM before answering initialize.\n',
+          );
+        } else if (shape === 'stdout') {
+          expect(stderr).toBe(
+            'chord: fake did not start: it exited with code 0 before answering initialize.\n',
+          );
+          expect(stderr).not.toContain('no longer maintained');
         }
       } finally {
         await rm(cwd, { recursive: true });

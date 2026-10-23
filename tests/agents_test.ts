@@ -23,6 +23,17 @@ test('the default agent is one chord knows', () => {
   expect(findAgent(DEFAULT_AGENT) !== undefined).toBeTruthy();
 });
 
+test("a registry agent says the package and version npx or uvx runs, one of chord's table none (CHD-454)", () => {
+  const agoragentic = REGISTRY_AGENTS.find(
+    (agent) => agent.id === 'agoragentic-acp',
+  )!;
+
+  expect(findAgent('agoragentic-acp')?.pinned).toStrictEqual(
+    `${agoragentic.package}@${agoragentic.version}`,
+  );
+  expect(findAgent('zeroclaw')?.pinned).toBeUndefined();
+});
+
 test('claude and codex are the short names of the registry ids', () => {
   const names = listAgents().map(({ name }) => name);
 

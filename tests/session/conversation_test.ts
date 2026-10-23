@@ -18,6 +18,7 @@ import { openSession, type Session } from '../../src/session/session.ts';
 import { TaskAgent } from '../../src/session/tasks.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { TRACEBACK_ERROR } from '../fixtures/fake_agent/options.ts';
 import {
   heldSession,
   until,
@@ -294,11 +295,21 @@ test("a start the agent refuses for want of a login says so, in the agent's word
         { name: 'Log in with SSO' },
       ],
     },
+    failure: {
+      step: 'session/new',
+      code: -32000,
+      said: 'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY',
+    },
   });
   expect(await failOnFake('--auth-required', 'bare')).toStrictEqual({
     type: 'connect_failed',
     message: 'Authentication required',
     signIn: { message: 'Authentication required', ways: [] },
+    failure: {
+      step: 'session/new',
+      code: -32000,
+      said: 'Authentication required',
+    },
   });
 });
 
@@ -312,6 +323,7 @@ test("droid's start, its sign-in link cancelled, needs a login by its code (CHD-
     type: 'connect_failed',
     message,
     signIn: { message, ways: [] },
+    failure: { step: 'session/new', code: -32000, said: message },
   });
 });
 
@@ -319,6 +331,11 @@ test('a link nobody answered, then a start that failed for another reason, needs
   expect(await failOnFake('--auth-required', 'linkother')).toStrictEqual({
     type: 'connect_failed',
     message: 'The fake could not open its session.',
+    failure: {
+      step: 'session/new',
+      code: -32603,
+      said: 'The fake could not open its session.',
+    },
   });
 });
 
@@ -328,6 +345,56 @@ test('a start that failed for another reason says only why (CHD-435)', async () 
   ).toStrictEqual({
     type: 'connect_failed',
     message: 'The agent exited: no credentials',
+    failure: {
+      step: 'initialize',
+      exit: { code: 1 },
+      stderr: { lines: ['no credentials'], cut: 0 },
+    },
+  });
+});
+
+test('an agent that exits before initialize says with what code, and the last lines of its stderr (CHD-454)', async () => {
+  const failed = await failOnFake('--start-fails', 'traceback');
+
+  expect(failed?.type === 'connect_failed' && failed.failure).toMatchObject({
+    step: 'initialize',
+    exit: { code: 1 },
+    // The traceback's 122 lines, though chord keeps only their end.
+    stderr: { cut: 116 },
+  });
+  expect(
+    failed?.type === 'connect_failed' && failed.failure?.stderr?.lines.at(-1),
+  ).toStrictEqual(TRACEBACK_ERROR);
+  expect(
+    failed?.type === 'connect_failed' && failed.failure?.stderr?.lines.length,
+  ).toStrictEqual(6);
+  // What it said on stdout never reaches chord (Q176).
+  expect(await failOnFake('--start-fails', 'stdout')).toStrictEqual({
+    type: 'connect_failed',
+    message: 'The agent exited.',
+    failure: { step: 'initialize', exit: { code: 0 } },
+  });
+});
+
+test('an agent that refuses its session says which request and with what code (CHD-454)', async () => {
+  expect(await failOnFake('--start-fails', 'notacp')).toStrictEqual({
+    type: 'connect_failed',
+    message: 'Method not found: session/new',
+    failure: {
+      step: 'session/new',
+      code: -32601,
+      said: 'Method not found: session/new',
+    },
+  });
+  expect(await failOnFake('--start-fails', 'alias')).toStrictEqual({
+    type: 'connect_failed',
+    message:
+      'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
+    failure: {
+      step: 'session/new',
+      code: -32602,
+      said: 'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
+    },
   });
 });
 

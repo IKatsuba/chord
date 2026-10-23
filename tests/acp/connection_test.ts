@@ -8,14 +8,16 @@ import process from 'node:process';
 import type * as acp from '@agentclientprotocol/sdk';
 import {
   type Agent,
+  AgentGone,
   connectAgent,
   openAgent,
   type OpenAgentOptions,
 } from '../../src/acp/connection.ts';
 import manifest from '../../package.json' with { type: 'json' };
-import { commandArgv } from '../../src/acp/process.ts';
+import { commandArgv, settledWithin } from '../../src/acp/process.ts';
 import type { Traffic } from '../../src/acp/traffic.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { TRACEBACK_ERROR } from '../fixtures/fake_agent/options.ts';
 import { FORM_SCHEMA, LINK_URL } from '../fixtures/forms.ts';
 
 /** Short enough to keep a wedged agent's test quick, long enough to be real. */
@@ -226,6 +228,58 @@ test('an agent that says only that it needs a login offers no ways in', () =>
       message: 'Authentication required',
     });
   }));
+
+// The fake's `--start-fails`, which chord's tests of an agent that cannot
+// start play against (CHD-454).
+describe('an agent that cannot start, as the fake plays it', () => {
+  test('a broken one exits 1 before initialize, its traceback on stderr', async () => {
+    const refused = openAgent({
+      command: fakeAgentCommand(undefined, '--start-fails', 'traceback'),
+      cwd: process.cwd(),
+      onTraffic: () => {},
+      stop: STOP,
+      ...REFUSE,
+    });
+
+    await expect(refused).rejects.toThrow('The agent exited: ');
+    await expect(refused).rejects.toThrow(TRACEBACK_ERROR);
+  });
+
+  test('one that prints a line on stdout and exits 0 before initialize leaves chord nothing of it', async () => {
+    const refused = openAgent({
+      command: fakeAgentCommand(undefined, '--start-fails', 'stdout'),
+      cwd: process.cwd(),
+      onTraffic: () => {},
+      stop: STOP,
+      ...REFUSE,
+    });
+
+    await expect(refused).rejects.toThrow(/^The agent exited\.$/);
+  });
+
+  test('one that is not an ACP agent answers initialize and no session request', () =>
+    withAgent(['--start-fails', 'notacp'], async (agent, _seen, cwd) => {
+      await expect(
+        agent.newSession({ cwd, mcpServers: [] }),
+      ).rejects.toMatchObject({
+        code: -32601,
+        message: 'Method not found: session/new',
+        data: undefined,
+      });
+    }));
+
+  test('one that needs an agent alias refuses session/new -32602 with no data', () =>
+    withAgent(['--start-fails', 'alias'], async (agent, _seen, cwd) => {
+      await expect(
+        agent.newSession({ cwd, mcpServers: [] }),
+      ).rejects.toMatchObject({
+        code: -32602,
+        message:
+          'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
+        data: undefined,
+      });
+    }));
+});
 
 test('session/load replays the past before it answers', () =>
   withAgent([], async (agent, seen, cwd) => {
@@ -759,6 +813,12 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
       },
       /** The agent's stdout ends, before its stderr has. */
       closeStdout: () => out.close(),
+      /** Its last words and its stderr's end, while it lives on. */
+      endStderr: (words: string) => {
+        tail += words;
+
+        stderrEnded.resolve();
+      },
       /** Its last words, then its stderr's end and its exit. */
       leave: (words: string) => {
         tail += words;
@@ -786,6 +846,10 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
         }),
         status: exit.promise,
         stderrTail: () => tail,
+        stderrEnd: () => ({
+          lines: tail.split('\n').filter((line) => line.trim() !== ''),
+          cut: 0,
+        }),
         lastWords: async () => {
           await stderrEnded.promise;
 
@@ -860,6 +924,23 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
     await expect(refused).rejects.toThrow('The agent exited: no credentials');
   });
 
+  test('one that closes its stdout and lives on: the open fails with its last words, no exit, and stops it (CHD-454)', async () => {
+    const held = heldProcess();
+    const refused = connectAgent(held.process, OPTIONS);
+
+    refused.catch(() => {});
+
+    await soon(() => held.heard.length > 0);
+    held.closeStdout();
+    held.endStderr('still here\n');
+    await expect(refused).rejects.toThrow('The agent exited: still here');
+    await expect(refused).rejects.toMatchObject({
+      exit: undefined,
+      stderr: { lines: ['still here'], cut: 0 },
+    });
+    expect(held.stopped.length).toBeGreaterThan(0);
+  });
+
   test('mid-session: a request fails with the last words, and gone() gives them once exited', async () => {
     const held = heldProcess();
     const agent = await opened(held);
@@ -911,6 +992,94 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
     await agent.close();
     expect(held.stopped).toHaveLength(1);
     await expect(asked).rejects.toThrow('The agent exited.');
+  });
+
+  describe('CHD-454 tester: failure snapshot order', () => {
+    test('stdout can close before stderr; an observed status is retained with the eventual diagnostic', async () => {
+      const held = heldProcess();
+      const status = Promise.withResolvers<{ code: number }>();
+      const reading = Promise.withResolvers<void>();
+      const process = {
+        ...held.process,
+        status: status.promise,
+        lastWords: () => {
+          reading.resolve();
+
+          return held.process.lastWords();
+        },
+      };
+      const refused = connectAgent(process, OPTIONS);
+      const failed = refused.catch((error: unknown) => error);
+
+      try {
+        await soon(() => held.heard.length > 0);
+        held.closeStdout();
+        await reading.promise;
+        status.resolve({ code: 7 });
+        expect(held.stopped).toEqual([]);
+        held.endStderr('  delayed frame\nFinal diagnostic\n');
+
+        const error = await failed;
+
+        assert(error instanceof AgentGone);
+        expect(error.exit).toEqual({ code: 7 });
+        expect(error.stderr).toEqual({
+          lines: ['  delayed frame', 'Final diagnostic'],
+          cut: 0,
+        });
+        expect(error.message).toContain('Final diagnostic');
+      } finally {
+        status.resolve({ code: 7 });
+        await held.process.stop();
+      }
+    });
+
+    test('a status first observed during cleanup is not invented in the already captured failure', async () => {
+      const held = heldProcess();
+      const status = Promise.withResolvers<{ code: number }>();
+      const reading = Promise.withResolvers<void>();
+      const process = {
+        ...held.process,
+        status: status.promise,
+        lastWords: () => {
+          reading.resolve();
+
+          return held.process.lastWords();
+        },
+        stop: () => {
+          status.resolve({ code: 9 });
+
+          return held.process.stop();
+        },
+      };
+      const refused = connectAgent(process, OPTIONS);
+      const failed = refused.catch((error: unknown) => error);
+
+      try {
+        await soon(() => held.heard.length > 0);
+        held.closeStdout();
+        await reading.promise;
+        held.endStderr('  captured diagnostic\n');
+
+        const outcome = await settledWithin(failed, 3000);
+
+        assert(outcome?.status === 'fulfilled');
+        assert(outcome.value instanceof AgentGone);
+        expect(await status.promise).toEqual({ code: 9 });
+        expect(outcome.value.exit).toBeUndefined();
+        expect(outcome.value.stderr).toEqual({
+          lines: ['  captured diagnostic'],
+          cut: 0,
+        });
+        held.endStderr('a later diagnostic\n');
+        expect(outcome.value.stderr).toEqual({
+          lines: ['  captured diagnostic'],
+          cut: 0,
+        });
+      } finally {
+        await process.stop();
+      }
+    });
   });
 });
 
@@ -1356,5 +1525,148 @@ describe('CHD-435 tester: auth-required fixture boundaries', () => {
           });
         },
       ));
+  }
+});
+
+describe('CHD-454 tester: startup fixture wire boundaries', () => {
+  test('notacp refuses new, load and resume without session effects or error data', () =>
+    withAgent(
+      ['--start-fails', 'notacp', '--resume-only'],
+      async (agent, seen, cwd) => {
+        const sessionId = crypto.randomUUID();
+        const requests = [
+          ['session/new', () => agent.newSession({ cwd, mcpServers: [] })],
+          [
+            'session/load',
+            () => agent.loadSession({ sessionId, cwd, mcpServers: [] }),
+          ],
+          ['session/resume', () => agent.resumeSession({ sessionId, cwd })],
+        ] as const;
+
+        for (const [method, request] of requests) {
+          await expect(request()).rejects.toMatchObject({
+            code: -32601,
+            message: `Method not found: ${method}`,
+          });
+        }
+
+        const errors = seen.all.flatMap((traffic) =>
+          traffic.from === 'agent' && 'error' in traffic.message
+            ? [traffic.message.error]
+            : [],
+        );
+
+        expect(errors).toStrictEqual(
+          requests.map(([method]) => ({
+            code: -32601,
+            message: `Method not found: ${method}`,
+          })),
+        );
+        expect(seen.updates()).toEqual([]);
+        expect((await agent.listSessions({ cwd })).sessions).toEqual([]);
+      },
+    ));
+
+  test('alias rejects only new with no wire data; load still replays and resume still opens', () =>
+    withAgent(
+      ['--start-fails', 'alias', '--resume-only'],
+      async (agent, seen, cwd) => {
+        await expect(
+          agent.newSession({ cwd, mcpServers: [] }),
+        ).rejects.toMatchObject({ code: -32602 });
+
+        const errors = seen.all.flatMap((traffic) =>
+          traffic.from === 'agent' && 'error' in traffic.message
+            ? [traffic.message.error]
+            : [],
+        );
+
+        expect(errors).toStrictEqual([
+          {
+            code: -32602,
+            message:
+              'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
+          },
+        ]);
+        expect(seen.updates()).toEqual([]);
+
+        const sessionId = crypto.randomUUID();
+
+        await agent.loadSession({ sessionId, cwd, mcpServers: [] });
+        expect(seen.said()).toContain(
+          'Hello, world. This reply came in chunks.',
+        );
+
+        const replies = seen
+          .updates()
+          .filter((update) => update.sessionUpdate === 'agent_message_chunk');
+
+        await agent.resumeSession({ sessionId, cwd });
+        expect(
+          seen
+            .updates()
+            .filter((update) => update.sessionUpdate === 'agent_message_chunk'),
+        ).toEqual(replies);
+        expect(seen.sent()).toContain('session/resume');
+      },
+    ));
+
+  for (const kind of ['traceback', 'stdout', 'notacp', 'alias']) {
+    test(`the environment selects ${kind}, preserving the piped stderr tail or session refusal`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-start-fixture-'));
+      const seen = new Seen();
+      let agent: Agent | undefined;
+
+      try {
+        const opening = openAgent({
+          command: fakeAgentCommand(),
+          cwd,
+          env: { CHORD_FAKE_START_FAILS: kind },
+          onTraffic: seen.push,
+          stop: STOP,
+          ...REFUSE,
+        });
+
+        if (kind === 'traceback' || kind === 'stdout') {
+          let failure: unknown;
+
+          try {
+            agent = await opening;
+          } catch (error) {
+            failure = error;
+          }
+
+          assert(failure instanceof Error);
+
+          const stderr = seen.all
+            .flatMap((traffic) =>
+              traffic.from === 'stderr' ? [traffic.text] : [],
+            )
+            .join('');
+
+          if (kind === 'traceback') {
+            expect(stderr.length).toBeGreaterThan(4096);
+            expect(stderr).toContain('module_0.py');
+            expect(stderr).toContain('module_59.py');
+            expect(stderr.endsWith(TRACEBACK_ERROR + '\n')).toBe(true);
+            expect(failure.message.endsWith(TRACEBACK_ERROR)).toBe(true);
+          } else {
+            expect(stderr).toBe('');
+            expect(failure.message).toBe('The agent exited.');
+          }
+        } else {
+          agent = await opening;
+
+          await expect(
+            agent.newSession({ cwd, mcpServers: [] }),
+          ).rejects.toMatchObject({
+            code: kind === 'notacp' ? -32601 : -32602,
+          });
+        }
+      } finally {
+        await agent?.close();
+        await rm(cwd, { recursive: true });
+      }
+    });
   }
 });

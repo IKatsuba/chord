@@ -222,7 +222,7 @@ test('ten ids, an unknown id among several, the same id twice and an agent named
   ).toStrictEqual([
     '--resume opens one session; it was given 3. Open each in a chord of its own:',
     'chord fake --cwd /proj --resume aaa',
-    "chord claude --cwd /here --resume zzz (no record; the agent and directory are this command's)",
+    "chord claude --cwd /here --resume zzz  # no record; the agent and directory are this command's",
     'chord fake --cwd /proj --resume aaa',
   ]);
   // An agent named on the command line is not resolved here: each line

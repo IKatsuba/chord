@@ -241,7 +241,7 @@ test('--resume with several ids is refused, each said back as a command on its o
     // The typed --agent-command goes with the agent it starts alone.
     "chord claude --cwd '/my work' --agent-command 'claude-acp --fast' --resume id-c",
     'chord codex --cwd /other --resume id-b',
-    "chord claude --cwd /work --agent-command 'claude-acp --fast' --resume id-x (no record; the agent and directory are this command's)",
+    "chord claude --cwd /work --agent-command 'claude-acp --fast' --resume id-x  # no record; the agent and directory are this command's",
     "chord claude --cwd '/my work' --agent-command 'claude-acp --fast' --resume id-c",
   ]);
   expect(

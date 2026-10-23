@@ -872,7 +872,7 @@ test("several -r of two agents and an unknown id name each its record's agent an
       new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[0]}$`),
     ),
     expect.stringMatching(
-      /^chord claude --cwd \S+ --resume never-seen \(no record; the agent and directory are this command's\)$/,
+      /^chord claude --cwd \S+ --resume never-seen {2}# no record; the agent and directory are this command's$/,
     ),
     expect.stringMatching(
       new RegExp(`^chord claude --cwd \\S+ --resume ${RECORDED[1]}$`),

@@ -329,7 +329,7 @@ export function severalRefusal(
     );
 
     return found === undefined
-      ? `${command} (no record; the agent and directory are this command's)`
+      ? `${command}  # no record; the agent and directory are this command's`
       : command;
   });
 

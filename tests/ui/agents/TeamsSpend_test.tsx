@@ -167,7 +167,7 @@ describe('a runtime whose command was refused (CHD-466)', () => {
         : { agentCommand: fakeAgentCommand() },
   });
 
-  test('/new codex is refused as another chord, and nothing is cleared (CHD-493)', async () => {
+  test("/new codex, its command refused, is refused in open_agent's words where it was typed; nothing opens or is cleared (U6)", async () => {
     const opened = options(BUGFIX);
 
     try {
@@ -176,10 +176,10 @@ describe('a runtime whose command was refused (CHD-466)', () => {
         await send(window, 'hello');
         await window.shows('› hello');
         await send(window, '/new codex');
-        await window.shows(
-          '/new starts a new fake session here; for codex, run chord codex in another pane',
-        );
+        await window.shows(REFUSED.slice(0, 60));
         expect(window.frame()).toContain('› hello');
+        expect(window.frame()).not.toContain('╭─ codex');
+        expect(window.frame()).not.toContain('    codex ');
       }, opened);
     } finally {
       await opened.server.close();

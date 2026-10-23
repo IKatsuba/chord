@@ -9,6 +9,7 @@ import type { ShellRun, Transcript } from '../../session/transcript/types.ts';
 import { asksWithKeys } from '../dialogs/state.ts';
 import type { Keymap } from '../shortcuts/bindings.ts';
 import {
+  agentQuery,
   type CommandItem,
   commandItems,
   commandQuery,
@@ -80,6 +81,8 @@ export interface PromptSession {
 export interface PromptWindow {
   /** The slash command list's highlight and scroll, and whether Esc shut it. */
   readonly menu: MenuState;
+  /** The agents `/new` offers by name, as the window can start them. */
+  readonly agents?: readonly CommandItem[];
   /**
    * The working directory's files as `@` last found them; none until it has
    * looked.
@@ -568,8 +571,8 @@ export interface CommandMenu {
 }
 
 /**
- * The slash command list `draft` opens: a `/` and part of a name, or
- * `/team show ` and the like and part of a team's, outside bash mode, while no permission is asked and Esc has not put it away. None when nothing matches,
+ * The slash command list `draft` opens: a `/` and part of a name, `/new `
+ * and part of an agent's, or `/team show ` and the like and part of a team's, outside bash mode, while no permission is asked and Esc has not put it away. None when nothing matches,
  * so Enter sends what was typed, as the agent may know a command chord does
  * not list.
  */
@@ -578,10 +581,11 @@ export function commandMenu(
   draft: string,
 ): CommandMenu | undefined {
   const query = commandQuery(draft);
+  const named = agentQuery(draft);
   const team = teamQuery(draft);
 
   if (
-    (query === undefined && team === undefined) ||
+    (query === undefined && named === undefined && team === undefined) ||
     state.menu.dismissed ||
     state.bash ||
     state.search !== undefined ||
@@ -601,7 +605,9 @@ export function commandMenu(
           ),
           team.name,
         )
-      : matchCommands(commandItems(state.transcript.commands), query ?? '');
+      : query === undefined
+        ? matchAgents(state.agents ?? [], named ?? '')
+        : matchCommands(commandItems(state.transcript.commands), query);
 
   if (items.length === 0) {
     return undefined;

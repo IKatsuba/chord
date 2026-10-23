@@ -5,6 +5,7 @@
  */
 import type { AvailableCommand } from '@agentclientprotocol/sdk';
 import { Fzf } from 'fzf';
+import { agentNote, type ListedAgent } from '../../agents.ts';
 
 /** chord's own commands; the agent never hears of them. */
 export type ChordCommand =
@@ -15,6 +16,7 @@ export type ChordCommand =
   | 'help'
   | 'mcp'
   | 'model'
+  | 'new'
   | 'resume'
   | 'status'
   | 'team'
@@ -27,13 +29,8 @@ export interface CommandItem {
   readonly description?: string;
   /** Whose it is: chord runs its own, an agent's goes to the agent. */
   readonly owner: 'chord' | 'agent';
-  /** The command it is a name for, as a team is `/team show`'s. */
+  /** The command it is a name for, as an agent is `/new`'s. */
   readonly of?: ChordCommand;
-  /**
-   * Another name chord's command answers to, in every place its own does:
-   * `/new` for `/clear`, as Claude Code lists `/clear (new)`.
-   */
-  readonly alias?: string;
   /** The word between the command and the name: `/team run bugfix`'s `run`. */
   readonly verb?: string;
 }
@@ -43,7 +40,6 @@ const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
     name: 'clear',
     description: 'Start a new session with an empty transcript',
     owner: 'chord',
-    alias: 'new',
   },
   {
     name: 'config',
@@ -69,6 +65,11 @@ const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
   {
     name: 'model',
     description: "Switch the agent's model",
+    owner: 'chord',
+  },
+  {
+    name: 'new',
+    description: 'Open a new agent beside main and go to it',
     owner: 'chord',
   },
   {
@@ -101,17 +102,13 @@ const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
 
 /**
  * chord's commands and the agent's, by name. An agent command named like one
- * of chord's, or like another name of one, is left out: chord's is the one
- * that runs, so listing both would offer one that cannot be picked.
+ * of chord's is left out: chord's is the one that runs, so listing both would
+ * offer one that cannot be picked.
  */
 export function commandItems(
   agent: readonly AvailableCommand[],
 ): CommandItem[] {
-  const ours = new Set<string>(
-    CHORD_COMMANDS.flatMap(({ name, alias }) =>
-      alias === undefined ? [name] : [name, alias],
-    ),
-  );
+  const ours = new Set<string>(CHORD_COMMANDS.map(({ name }) => name));
   const theirs = agent
     .filter(({ name }) => !ours.has(name))
     .map(({ name, description }): CommandItem => {
@@ -138,6 +135,14 @@ export function commandItems(
  */
 export function commandQuery(draft: string): string | undefined {
   return /^\/(\S*)$/.exec(draft)?.[1];
+}
+
+/**
+ * The agent being named after `/new ` and nothing else; undefined once it
+ * holds a second word or line, when the list of agents is put away.
+ */
+export function agentQuery(draft: string): string | undefined {
+  return /^\/new +(\S*)$/.exec(draft)?.[1];
 }
 
 /** The forms of `/team` that take a team's name next. */
@@ -186,9 +191,47 @@ export function teamItems(
 }
 
 /**
- * The names `query` matches, as `matchCommands` matches commands, but the
- * one named exactly first: `/team show bugfix` and Enter shows bugfix, not
- * bugfix2.
+ * The agents `/new` offers, by name, as chord can start them in the window,
+ * each described as `chord agents` lists it in `listed`; one it does not
+ * list, as `--agent-command` names, by its name alone. Those the settings
+ * files start come first, then own CLIs PATH has, then the registry's, and
+ * own CLIs PATH lacks last, so what will start is on top.
+ */
+export function agentItems(
+  names: readonly string[],
+  listed: readonly ListedAgent[],
+): CommandItem[] {
+  const ranked = names.map((name) => {
+    const agent = listed.find((each) => each.name === name);
+
+    return {
+      rank: agent === undefined ? 0 : readiness(agent),
+      item: {
+        name,
+        ...(agent === undefined ? {} : { description: agentNote(agent) }),
+        owner: 'chord',
+        of: 'new',
+      } satisfies CommandItem,
+    };
+  });
+
+  return ranked.toSorted((a, b) => a.rank - b.rank).map(({ item }) => item);
+}
+
+function readiness({ from, found }: ListedAgent): number {
+  switch (from) {
+    case 'settings':
+      return 0;
+    case 'cli':
+      return found === true ? 1 : found === false ? 3 : 2;
+    default:
+      return 2;
+  }
+}
+
+/**
+ * The agents `query` matches, as `matchCommands` matches commands, but the
+ * one named exactly first: `/new fake` and Enter opens fake, not fake2.
  */
 export function matchAgents(
   items: readonly CommandItem[],
@@ -215,30 +258,12 @@ export function matchCommands(
     return [...items];
   }
 
-  // Another name matches as the command's own does, each scored by fzf
-  // alone, and an item matched by both takes its better score.
-  const found = [
-    ...new Fzf(items, {
-      selector: ({ name }) => name,
-      casing: 'case-insensitive',
-    }).find(query),
-    ...new Fzf(
-      items.filter(({ alias }) => alias !== undefined),
-      { selector: ({ alias }) => alias!, casing: 'case-insensitive' },
-    ).find(query),
-  ];
-  const best = new Map<CommandItem, number>();
-
-  for (const { item, score } of found) {
-    best.set(item, Math.max(score, best.get(item) ?? -Infinity));
-  }
-
-  return [...best].sort((a, b) => b[1] - a[1]).map(([item]) => item);
-}
-
-/** Whether fzf matches `query` in `name`, as the list matches it. */
-function matches(query: string, name: string): boolean {
-  return new Fzf([name], { casing: 'case-insensitive' }).find(query).length > 0;
+  return new Fzf(items, {
+    selector: ({ name }) => name,
+    casing: 'case-insensitive',
+  })
+    .find(query)
+    .map(({ item }) => item);
 }
 
 /** The highlight one step up or down, wrapping round at either end. */
@@ -279,32 +304,19 @@ export function menuRowLimit(windowRows: number): number {
   return Math.max(3, Math.floor(windowRows / 4));
 }
 
-/**
- * How the list writes an item: a command with its slash and its other name,
- * `/clear (new)`; a name bare.
- */
+/** How the list writes an item: a command with its slash, a name bare. */
 export function itemLabel(item: CommandItem): string {
-  return item.of !== undefined
-    ? item.name
-    : item.alias === undefined
-      ? `/${item.name}`
-      : `/${item.name} (${item.alias})`;
+  return item.of === undefined ? `/${item.name}` : item.name;
 }
 
 /**
  * What Tab puts in the prompt: the name, and a space for what follows; for a
- * name a command takes, the command with it. A command matched by its other
- * name, `query` being what is typed after the slash, completes to that name,
- * so Tab then Enter goes as typing it out would.
+ * name a command takes, the command with it.
  */
-export function completion(item: CommandItem, query = ''): string {
-  if (item.of !== undefined) {
-    return `/${[item.of, item.verb, item.name].filter(Boolean).join(' ')} `;
-  }
-
-  return item.alias !== undefined && query !== '' && !matches(query, item.name)
-    ? `/${item.alias} `
-    : `/${item.name} `;
+export function completion(item: CommandItem): string {
+  return item.of === undefined
+    ? `/${item.name} `
+    : `/${[item.of, item.verb, item.name].filter(Boolean).join(' ')} `;
 }
 
 /** What Enter on the prompt does. */
@@ -312,9 +324,7 @@ export type Submitted =
   | {
       readonly type: 'chord';
       readonly name: ChordCommand;
-      /** The name as typed: the command's own, or its other one, `new`. */
-      readonly typed: string;
-      /** What follows the name, trimmed, such as the team `/team show` names. */
+      /** What follows the name, trimmed, such as the agent `/new` names. */
       readonly args: string;
     }
   | { readonly type: 'send'; readonly text: string }
@@ -337,7 +347,6 @@ export function submitted(draft: string, highlighted?: CommandItem): Submitted {
     return {
       type: 'chord',
       name: highlighted.of,
-      typed: highlighted.of,
       args:
         highlighted.verb === undefined
           ? highlighted.name
@@ -347,21 +356,12 @@ export function submitted(draft: string, highlighted?: CommandItem): Submitted {
 
   const typed = /^\/(\S+)(?:\s+([\s\S]*))?$/.exec(draft.trim());
   const name = highlighted?.name ?? typed?.[1];
-  const ours =
-    name === undefined
-      ? undefined
-      : CHORD_COMMANDS.find(
-          (command) => command.name === name || command.alias === name,
-        );
+  const ours = CHORD_COMMANDS.find((command) => command.name === name);
 
   if (ours) {
     return {
       type: 'chord',
       name: ours.name,
-      typed:
-        ours.alias !== undefined && typed?.[1] === ours.alias
-          ? ours.alias
-          : ours.name,
       args: highlighted ? '' : (typed?.[2]?.trim() ?? ''),
     };
   }

@@ -114,17 +114,17 @@ test('enter on a chord command runs it and empties the box', () => {
   expect(submitSteps('/clear', context(typing('/clear')))).toStrictEqual([
     { type: 'history', history: recorded(emptyHistory, '/clear') },
     { type: 'show_draft', text: '', cursor: START },
-    { type: 'run_command', command: 'clear', typed: 'clear', args: '' },
+    { type: 'run_command', command: 'clear', args: '' },
   ]);
 });
 
-test('enter on a chord command keeps what was typed after its name, and the name as typed', () => {
+test('enter on a chord command keeps what was typed after its name', () => {
   expect(
     submitSteps('/new codex', context(typing('/new codex'))),
   ).toStrictEqual([
     { type: 'history', history: recorded(emptyHistory, '/new codex') },
     { type: 'show_draft', text: '', cursor: START },
-    { type: 'run_command', command: 'clear', typed: 'new', args: 'codex' },
+    { type: 'run_command', command: 'new', args: 'codex' },
   ]);
 });
 

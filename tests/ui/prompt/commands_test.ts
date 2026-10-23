@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
 import type { AvailableCommand } from '@agentclientprotocol/sdk';
 import {
+  agentItems,
+  agentQuery,
   commandItems,
   commandQuery,
   completion,
@@ -39,6 +41,7 @@ test("the list is chord's commands and the agent's, by name", () => {
     'init',
     'mcp',
     'model',
+    'new',
     'resume',
     'review',
     'status',
@@ -46,12 +49,9 @@ test("the list is chord's commands and the agent's, by name", () => {
     'theme',
     'vim',
   ]);
-  expect(items.find(({ name }) => name === 'clear')).toStrictEqual({
-    name: 'clear',
-    description: 'Start a new session with an empty transcript',
-    owner: 'chord',
-    alias: 'new',
-  });
+  expect(items.find(({ name }) => name === 'clear')?.owner).toStrictEqual(
+    'chord',
+  );
   expect(items.find(({ name }) => name === 'review')).toStrictEqual({
     name: 'review',
     description: 'Review a pull request',
@@ -71,6 +71,7 @@ test("the list is chord's commands and the agent's, by name", () => {
     'help',
     'mcp',
     'model',
+    'new',
     'resume',
     'status',
     'team',
@@ -102,22 +103,6 @@ test("an agent command named like chord's is left out", () => {
       owner: 'chord',
     },
   ]);
-});
-
-test("an agent command named like another name of chord's is left out too (CHD-493)", () => {
-  const items = commandItems([
-    { name: 'new', description: "The agent's new" },
-    { name: 'clear', description: "The agent's clear" },
-  ]);
-
-  // One chord row, `/clear (new)`, and no agent `new` row: Enter on that
-  // would run `/clear`.
-  expect(
-    items
-      .filter(({ name }) => name === 'new' || name === 'clear')
-      .map(itemLabel),
-  ).toStrictEqual(['/clear (new)']);
-  expect(items.some(({ owner }) => owner === 'agent')).toStrictEqual(false);
 });
 
 test('the list is open while the draft is a slash and part of a name', () => {
@@ -170,7 +155,6 @@ test("a team's name is completed after /team show, run and stop, a run's after s
   expect(submitted('/team show bu', show)).toStrictEqual({
     type: 'chord',
     name: 'team',
-    typed: 'team',
     args: 'show bugfix',
   });
   // A run's job is still to be typed, so Enter puts the name in the box.
@@ -188,10 +172,6 @@ test('typing filters by the letters in order, best match first', () => {
   // Letters in order, not side by side, as Claude Code matches them.
   expect(names(matchCommands(items, 'rv'))).toStrictEqual(['review']);
   expect(names(matchCommands(items, 'cl'))[0]).toStrictEqual('clear');
-  // Another name matches as the command's own does.
-  expect(names(matchCommands(items, 'ne'))[0]).toStrictEqual('clear');
-  // Each name on its own: letters from both never make a match.
-  expect(names(matchCommands(items, 'clw'))).not.toContain('clear');
   expect(names(matchCommands(items, 'HE'))).toStrictEqual(['help', 'theme']);
   expect(matchCommands(items, 'zz')).toStrictEqual([]);
 });
@@ -227,28 +207,6 @@ test('Tab completes the name and leaves room for what follows', () => {
   expect(completion({ name: 'echo', owner: 'agent' })).toStrictEqual('/echo ');
 });
 
-test('a command matched by its other name completes to that name, so Tab and Enter go as typing it out (CHD-493)', () => {
-  const clear = commandItems([]).find(({ name }) => name === 'clear')!;
-
-  expect(itemLabel(clear)).toStrictEqual('/clear (new)');
-  expect(completion(clear, 'ne')).toStrictEqual('/new ');
-  expect(completion(clear, 'cl')).toStrictEqual('/clear ');
-  expect(completion(clear)).toStrictEqual('/clear ');
-  expect(submitted('/new ')).toStrictEqual({
-    type: 'chord',
-    name: 'clear',
-    typed: 'new',
-    args: '',
-  });
-  // Enter on the row with `/new` typed is `/clear` under the name typed.
-  expect(submitted('/new', clear)).toStrictEqual({
-    type: 'chord',
-    name: 'clear',
-    typed: 'new',
-    args: '',
-  });
-});
-
 test("Enter runs chord's commands and sends the agent's", () => {
   const help = { name: 'help', owner: 'chord' } as const;
   const greet = { name: 'greet', owner: 'agent' } as const;
@@ -257,7 +215,6 @@ test("Enter runs chord's commands and sends the agent's", () => {
   expect(submitted('/he', help)).toStrictEqual({
     type: 'chord',
     name: 'help',
-    typed: 'help',
     args: '',
   });
   expect(submitted('/gr', greet)).toStrictEqual({
@@ -268,32 +225,32 @@ test("Enter runs chord's commands and sends the agent's", () => {
   expect(submitted('/clear')).toStrictEqual({
     type: 'chord',
     name: 'clear',
-    typed: 'clear',
     args: '',
   });
   expect(submitted('/clear ')).toStrictEqual({
     type: 'chord',
     name: 'clear',
-    typed: 'clear',
     args: '',
   });
   expect(submitted('/exit now')).toStrictEqual({
     type: 'chord',
     name: 'exit',
-    typed: 'exit',
     args: 'now',
   });
-  // What follows the name goes with it, under the name as typed.
+  // What follows the name goes with it, as `/new` names an agent.
   expect(submitted('/new  codex ')).toStrictEqual({
     type: 'chord',
-    name: 'clear',
-    typed: 'new',
+    name: 'new',
     args: 'codex',
+  });
+  expect(submitted('/new', { name: 'new', owner: 'chord' })).toStrictEqual({
+    type: 'chord',
+    name: 'new',
+    args: '',
   });
   expect(submitted('/model')).toStrictEqual({
     type: 'chord',
     name: 'model',
-    typed: 'model',
     args: '',
   });
   expect(submitted('/echo hi there ')).toStrictEqual({
@@ -314,13 +271,84 @@ test("Enter runs chord's commands and sends the agent's", () => {
   });
 });
 
-test('the name typed in full comes first', () => {
-  const runs = teamItems('stop', [], ['bugfix 2', 'bugfix']);
+const AGENTS = agentItems(
+  ['fake2', 'fake', 'codex', 'mine'],
+  [
+    { name: 'fake', title: 'Fake', start: 'fake', from: 'npx' },
+    { name: 'fake2', title: 'Fake 2', start: 'fake2', from: 'npx' },
+    { name: 'codex', title: 'Codex', start: 'codex', from: 'npx' },
+    { name: 'mine', title: undefined, start: 'my-agent', from: 'settings' },
+  ],
+);
 
-  expect(names(matchAgents(runs, 'bugfix'))).toStrictEqual([
-    'bugfix',
-    'bugfix 2',
+test("/new and a space opens the list of agents, until the name's end", () => {
+  expect(agentQuery('/new ')).toStrictEqual('');
+  expect(agentQuery('/new co')).toStrictEqual('co');
+  expect(agentQuery('/new')).toStrictEqual(undefined);
+  expect(agentQuery('/new co ')).toStrictEqual(undefined);
+  expect(agentQuery('/new co\nx')).toStrictEqual(undefined);
+  expect(agentQuery('/model co')).toStrictEqual(undefined);
+});
+
+test('an agent is described by its title, one the settings alone define by them', () => {
+  expect(AGENTS.map(({ description }) => description)).toStrictEqual([
+    'from settings',
+    'Fake 2',
+    'Fake',
+    'Codex',
   ]);
-  expect(names(matchAgents(runs, ''))).toStrictEqual(names(runs));
-  expect(matchAgents(runs, 'zz')).toStrictEqual([]);
+  expect(itemLabel(AGENTS[0]!)).toStrictEqual('mine');
+  expect(itemLabel({ name: 'new', owner: 'chord' })).toStrictEqual('/new');
+});
+
+test('/new puts what will start on top, and marks an own CLI PATH lacks', () => {
+  const items = agentItems(
+    ['fake', 'claude', 'cursor', 'goose', 'mine'],
+    [
+      { name: 'claude', title: 'Claude', start: 'npx c', from: 'npx' },
+      {
+        name: 'cursor',
+        title: 'Cursor',
+        start: 'agent acp',
+        from: 'cli',
+        found: false,
+      },
+      {
+        name: 'goose',
+        title: 'goose',
+        start: 'goose acp',
+        from: 'cli',
+        found: true,
+      },
+      { name: 'mine', title: undefined, start: 'mine', from: 'settings' },
+    ],
+  );
+
+  expect(
+    items.map(({ name, description }) => [name, description]),
+  ).toStrictEqual([
+    // Not listed, as --agent-command names one: by its name alone.
+    ['fake', undefined],
+    ['mine', 'from settings'],
+    ['goose', 'goose'],
+    ['claude', 'Claude'],
+    ['cursor', 'Cursor · not on PATH'],
+  ]);
+});
+
+test('the agent named exactly comes first', () => {
+  expect(names(matchAgents(AGENTS, 'fake'))).toStrictEqual(['fake', 'fake2']);
+  expect(names(matchAgents(AGENTS, ''))).toStrictEqual(names(AGENTS));
+  expect(matchAgents(AGENTS, 'zz')).toStrictEqual([]);
+});
+
+test('Tab and Enter on an agent are /new with its name', () => {
+  const mine = AGENTS[0]!;
+
+  expect(completion(mine)).toStrictEqual('/new mine ');
+  expect(submitted('/new mi', mine)).toStrictEqual({
+    type: 'chord',
+    name: 'new',
+    args: 'mine',
+  });
 });

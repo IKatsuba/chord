@@ -23,7 +23,12 @@ import {
   type Resume,
   type SessionRecord,
 } from '../../session/sessions.ts';
-import { findAgent, listAgents } from '../../agents.ts';
+import {
+  findAgent,
+  listAgents,
+  type ListedAgent,
+  startLine,
+} from '../../agents.ts';
 import type { ChordServer } from '../../server/server.ts';
 import { agentOf, noAgents } from '../../session/window_agents.ts';
 import { programStatus } from '../../status.ts';
@@ -33,7 +38,7 @@ import { runShell, type ShellOptions, type ShellProcess } from '../../shell.ts';
 import { subagentPath } from '../../session/subagents.ts';
 import { agentGroup } from '../transcript/agents/subagents.ts';
 import { bashCommand, typedText } from '../prompt/bash.ts';
-import { menuRowLimit, teamQuery } from '../prompt/commands.ts';
+import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import { emptyHistory, recordedWith, walking } from '../prompt/history.ts';
@@ -288,6 +293,11 @@ export interface AppProps {
    * every project; none reads only the project's, as in tests.
    */
   configHome?: string | undefined;
+  /**
+   * The agents as `chord agents` lists them, PATH looked at, for `/new` to
+   * describe and order its names by; the known ones, unlooked, by default.
+   */
+  listed?: readonly ListedAgent[] | undefined;
   /** Which key does what, as the keybindings file has it; the defaults else. */
   keymap?: Keymap | undefined;
   /** What was wrong in the keybindings file, for the status line to say. */
@@ -363,6 +373,12 @@ export function App({
   server,
   configHome,
   runtimes = [...new Set([agent, ...listAgents().map(({ name }) => name)])],
+  listed = listAgents().map(({ name, title, start, runner }) => ({
+    name,
+    title,
+    start: startLine(start),
+    from: runner,
+  })),
   keymap = DEFAULT_KEYMAP,
   keysFailed,
   copy,
@@ -383,6 +399,7 @@ export function App({
           }),
         {
           ...initialAppState,
+          agents: agentItems(runtimes, listed),
           theme,
           ...(vim ? { vim: startingVim } : {}),
           keys: keymap,
@@ -828,7 +845,7 @@ export function App({
       case 'take_pasted_paths':
         return void images.takePastedPaths(step.draft, step.end);
       case 'run_command':
-        return commands.run(step.command, step.args, step.typed);
+        return commands.run(step.command, step.args);
       case 'run_shell':
         return bash.run(all.front, step.command);
       case 'stop_shell':

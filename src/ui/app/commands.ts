@@ -52,6 +52,11 @@ export interface CommandsSessions {
   stopTyped(name: string, show: (shown: TeamShown) => void): void;
   showTyped(name: string): Promise<TeamShown>;
   sendToMain(typed: string, prompt: string): void;
+  /**
+   * `/new`: an agent of `named`, or of main's runtime, opened for main and
+   * gone to, its call to draw; or why not, if it was refused.
+   */
+  newTyped(named: string): Promise<TeamShown>;
 }
 
 export function useCommands(
@@ -67,32 +72,46 @@ export function useCommands(
   dispatch: Dispatch<WindowedAction>,
   sessions: CommandsSessions,
 ): {
-  run: (command: ChordCommand, args?: string, typed?: string) => void;
+  run: (command: ChordCommand, args?: string) => void;
   keepTheme: (chosen: ThemeSetting) => void;
 } {
   const { conversation } = sessions;
   // `/team` says once that it talks to main while a child is picked.
   const talked = useRef(false);
 
-  /**
-   * Runs one of chord's own slash commands, `typed` the name it was given,
-   * its other one among them.
-   */
-  const run = (command: ChordCommand, args = '', typed: string = command) => {
+  /** Runs one of chord's own slash commands. */
+  const run = (command: ChordCommand, args = '') => {
     switch (command) {
-      case 'clear': {
-        // `/new` is `/clear`, as in Claude Code: a session of another agent
-        // is another chord, in a pane of its own.
-        if (typed === 'new' && args !== '') {
-          return dispatch({
-            type: 'noted',
-            turnId: `new-${crypto.randomUUID()}`,
-            command: `new ${args}`,
-            text: `/new starts a new ${agent} session here; for ${args}, run chord ${args} in another pane`,
-            failed: true,
-          });
-        }
+      case 'new': {
+        const typed = ['new', args].filter(Boolean).join(' ');
+        const key = sessions.frontKey();
 
+        return void sessions.newTyped(args).then((shown) => {
+          // Opened, the call is main's, drawn as `/team run` draws its own;
+          // refused, it is said where it was typed, in open_agent's words.
+          if (shown.kind === 'ran' && key !== undefined) {
+            dispatch({
+              type: 'in_session',
+              key,
+              action: {
+                type: 'team_shown',
+                turnId: `new-${crypto.randomUUID()}`,
+                command: typed,
+                shown,
+              },
+            });
+          } else if (shown.kind === 'said') {
+            dispatch({
+              type: 'noted',
+              turnId: `new-${crypto.randomUUID()}`,
+              command: typed,
+              text: shown.text,
+              failed: true,
+            });
+          }
+        });
+      }
+      case 'clear': {
         const refused = sessions.clearFront(() => {
           // The session they were queued in goes; what they said stays.
           sessions.takeBackQueue('');

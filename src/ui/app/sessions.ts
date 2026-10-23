@@ -770,6 +770,11 @@ export function useSessions(
     readonly part?: TeamPart;
     /** Where its model and mode were asked for, as a refusal says it. */
     readonly asked: string;
+    /**
+     * Opened by the person's `/new`: no first prompt, the person's own in
+     * its view being its first (Q187).
+     */
+    readonly idle?: true;
   }
 
   /**
@@ -800,7 +805,10 @@ export function useSessions(
     };
     const childKey = sessions.agents.nextKey;
 
-    early.current.set(childKey, [[opening.from, args.prompt, opening.part]]);
+    early.current.set(
+      childKey,
+      opening.idle ? [] : [[opening.from, args.prompt, opening.part]],
+    );
     // Its state is there before its first event, which may come at once.
     dispatch({ type: 'agent_opened', key: childKey });
 
@@ -2082,6 +2090,68 @@ export function useSessions(
   };
 
   /**
+   * `/new`: an agent opened for main as `open_agent` opens one, of `named`
+   * or of main's runtime (Q188), on what `open_agent` gives with none named
+   * (Q189), and idle until the person's first prompt in its view (Q187). The
+   * view goes to it at once; main hears of it ahead of its next prompt, the
+   * call drawn as its own; or why not, if it was refused as `open_agent` is.
+   */
+  const newTyped = async (named: string): Promise<TeamShown> => {
+    const main = sessions.agents.main;
+    const said = (text: string): TeamShown => ({
+      kind: 'said',
+      text,
+      failed: true,
+    });
+
+    if (main === undefined) {
+      return said('This session has closed');
+    }
+
+    const args = { agent: named === '' ? main.agent : named, prompt: '' };
+    const refused =
+      (await startRefusal(main.key, conversationAt(main.key), args, 'agent')) ??
+      fullRefusal(main.key);
+    const agents = ownedBy(sessions.agents, main.key);
+
+    if (agents === undefined || refused !== undefined) {
+      return said(refused ?? 'This session has closed');
+    }
+
+    const { opened, started } = startChild(main.key, args, {
+      name: childName(agents, undefined, args.agent),
+      parent: () => conversationAt(main.key),
+      from: MAIN,
+      asked: 'asked by /new',
+      idle: true,
+    });
+    const child = sessions.agents.children.find(
+      (each) => each.id === opened.id,
+    );
+
+    if (child !== undefined) {
+      sessions.pick(child.key);
+      showFront();
+    }
+
+    conversationAt(main.key)?.aside(
+      { name: 'chord' },
+      `The person opened @${opened.name} (${opened.agent}) with /new; it ` +
+        'has no prompt yet. It reports to you, and send_message reaches it.',
+    );
+
+    const call: ChordCall = {
+      tool: 'open_agent',
+      input: { agent: args.agent, typed: '/new' },
+      answer: { ...opened, ...(await started) },
+    };
+
+    conversationAt(main.key)?.ranTyped(call);
+
+    return { kind: 'ran', call };
+  };
+
+  /**
    * `/team stop`: the run `name` closed with its members, at
    * once, as the person typed it on purpose; `show` hears what it did
    * before main is told, as for `x`, so the command's line comes first.
@@ -2799,6 +2869,7 @@ export function useSessions(
     frontKey: () => front()?.main.key,
     listTeams,
     runTyped,
+    newTyped,
     stopTyped,
     showTyped,
     sendToMain,

@@ -7,7 +7,6 @@ import {
 import { bashCommand, entersBash, typedText } from '../prompt/bash.ts';
 import {
   type ChordCommand,
-  commandQuery,
   completion,
   menuRowLimit,
   submitted,
@@ -119,8 +118,6 @@ export type Step =
   | {
       readonly type: 'run_command';
       readonly command: ChordCommand;
-      /** The name as typed, the command's other one, `new`, among them. */
-      readonly typed: string;
       readonly args: string;
     }
   | { readonly type: 'run_shell'; readonly command: string }
@@ -449,7 +446,7 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
         type: 'history',
         history: recorded(
           history,
-          [`/${action.typed}`, action.args].filter(Boolean).join(' '),
+          [`/${action.name}`, action.args].filter(Boolean).join(' '),
         ),
       },
       show('', START),
@@ -457,7 +454,6 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
       {
         type: 'run_command',
         command: action.name,
-        typed: action.typed,
         args: action.args,
       },
     ];
@@ -712,7 +708,7 @@ function commandSteps(
         return [];
       }
 
-      const text = completion(item, commandQuery(draft));
+      const text = completion(item);
 
       return [show(text, endOf(text))];
     }

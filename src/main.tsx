@@ -504,6 +504,7 @@ const cli = chordCommand().action(async (options, named) => {
   let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
   const server = serveChord();
+  const listed = await listedAgents(agentCommands(loaded.layers));
   const window = (
     <App
       agent={agent}
@@ -538,6 +539,7 @@ const cli = chordCommand().action(async (options, named) => {
         layers,
         listAgents().map(({ name }) => name),
       )}
+      listed={listed}
       background={found}
       keymap={keys.keymap}
       keysFailed={keybindingsNotice(

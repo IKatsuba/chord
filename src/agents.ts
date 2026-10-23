@@ -262,6 +262,16 @@ export async function listedAgents(
 /** What chord calls an agent with no title, as the settings files alone define it. */
 export const SETTINGS_ONLY = 'from settings';
 
+/**
+ * An agent's title and, for its own CLI when PATH lacks it, that: how `/new`
+ * describes it, so it says what `chord agents` does.
+ */
+export function agentNote({ title, from, found }: ListedAgent): string {
+  const shown = title ?? SETTINGS_ONLY;
+
+  return from === 'cli' && found === false ? `${shown} · not on PATH` : shown;
+}
+
 /** What `chord agents` says of where an agent's start comes from. */
 function mark({ from, found }: ListedAgent): string {
   switch (from) {

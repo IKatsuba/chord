@@ -705,30 +705,64 @@ test("the window's first row is its header's", () =>
     { columns: 120, rows: 40 },
   ));
 
-test('/new is /clear: a new session with an empty transcript, history keeping /new (CHD-493)', () =>
-  withWindow(async (window) => {
-    await send(window, 'text');
-    await window.shows('This reply came in chunks.');
-    await until('the turn to end', () => !window.frame().includes('Working'));
+test("/new opens an agent of main's runtime for main, idle, and goes to it; main's transcript draws the call (U6)", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await until('the turn to end', () => !window.frame().includes('Working'));
+      await window.type('/new');
+      await window.shows('Open a new agent beside main and go to it');
+      expect(window.frame()).not.toContain('/clear (new)');
+      await window.press('\r');
+      await window.shows('╭─ fake ');
+      await window.shows('    fake ');
+      // Idle, with no first prompt (Q187).
+      expect(window.frame()).not.toContain('in chunks');
+      expect(window.frame()).not.toContain('Working');
+      // Main's transcript has the call, its line saying how it opened.
+      await window.press(DOWN);
+      await until('main picked in the list', async () => {
+        if (window.frame().includes('  ❯ main ')) {
+          return true;
+        }
 
-    const first = window.session();
+        await window.press(UP);
 
-    await window.type('/new');
-    await window.shows('/clear (new)');
-    await window.press('\r');
-    await until('a new session', () => window.session() !== first);
-    await ready(window);
-    expect(
-      !window.frame().includes('in chunks'),
-      'the reply stayed',
-    ).toBeTruthy();
-    await until('the first agent to stop', () => first?.agentPids.size === 0);
-    await window.press(UP);
-    await until(
-      'the command as typed',
-      () => promptRow(window)?.includes('› /new') ?? false,
-    );
-  }));
+        return false;
+      });
+
+      await window.press('\r');
+      await until('main in view', () => !window.frame().includes('╭─ fake '));
+      await window.shows('Open(fake) · fake');
+      await window.shows('⎿  opened with /new');
+      await window.shows('This reply came in chunks.');
+    },
+    { columns: 120, rows: 40 },
+  ));
+
+test("/new codex opens a codex agent for main beside main's running turn, which goes on (U6)", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await send(window, '/new codex');
+      await window.shows('╭─ codex ');
+      await until(
+        "codex's row beside main's, still working",
+        () =>
+          /^ {4}codex\s+codex/m.test(window.frame()) &&
+          /^ {4}main\s.*working/m.test(window.frame()),
+      );
+    },
+    {
+      columns: 120,
+      rows: 40,
+      runtimes: ['fake', 'codex'],
+      // Both runtimes on the fake, so codex starts with no codex installed.
+      startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+    },
+  ));
 
 test("a child's permission is a notice while main is shown, and ctrl+x a goes to it", () =>
   withChild(

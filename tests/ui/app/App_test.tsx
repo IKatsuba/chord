@@ -729,7 +729,8 @@ test("a child's permission is a notice while main is shown, and ctrl+x a goes to
       await ready(window);
       await send(window, 'agentsheldgated');
       await window.shows('● docs needs your permission · ctrl+x a to go');
-      expect(writes(window, bytes)).toStrictEqual(1);
+      // The notification goes out once the renderer is idle, after this frame.
+      await until('the notification', () => writes(window, bytes) === 1);
       // The window never goes there by itself, so a digit typed here is a draft.
       await window.type('1');
       await until(

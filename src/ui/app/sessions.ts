@@ -2257,6 +2257,9 @@ export function useSessions(
       dropChild(child.key);
     }
 
+    // The new session's record says what it closed, from none (Q184).
+    sessions.forgetClosed();
+
     // Its session goes; what it spent still counts, its turn running too,
     // to that turn's end.
     if (agents !== undefined) {
@@ -2633,10 +2636,13 @@ export function useSessions(
     takeBackQueue('');
     stopCommand(all.front);
 
-    // The main session goes, and its children with it, as on `/clear`.
+    // The main session goes, and its children with it, as on `/clear`;
+    // the resumed one's record says what it closed (Q184).
     for (const child of agents?.children ?? []) {
       dropChild(child.key);
     }
+
+    sessions.forgetClosed();
 
     if (agents !== undefined) {
       const kept = keepSpend(

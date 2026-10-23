@@ -117,6 +117,35 @@ test("an agent opened on an effort its runtime refuses runs on the runtime's own
     await window.shows(refusal);
   }));
 
+test("a child of a session left by /clear and picked again in /resume is refused in its record's words (Q184)", () =>
+  withAgents(async (window) => {
+    await opened(window);
+
+    const first = window.session()?.id;
+
+    await send(window, '/clear');
+    await until('a new session', () => window.session()?.id !== first);
+    await ready(window);
+    await send(window, '/resume');
+    await window.shows('Resume a session');
+
+    // The children's sessions are listed too; main's is the one sent `agents`.
+    for (let row = 0; !/❯ \d+\. .* {2}agents\s*│/.test(window.frame()); row++) {
+      expect(row).toBeLessThan(3);
+      await window.press(DOWN);
+    }
+
+    await window.press('\r');
+    // Its transcript again, the child it opened in it.
+    await window.shows('Open(parser) · fake · fake-small');
+    await ready(window);
+    await send(window, 'agentsendrefused');
+    await window.shows(
+      'parser was closed when this session was left; open_agent starts another',
+    );
+    expect(window.frame()).not.toContain('parser is closed;');
+  }));
+
 test('x closes the picked child, once more while it waits, and chord tells the parent', () =>
   withAgents(async (window) => {
     await opened(window);

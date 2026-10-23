@@ -5,6 +5,7 @@ import {
   attend,
   type ChildInfo,
   closeChild,
+  forgetClosed,
   hear,
   keyed,
   movePick,
@@ -155,6 +156,11 @@ export class OpenAgents<C extends Driven> {
     this.#agents = closeChild(this.#agents, key);
 
     return this.#closed(child.conversation.close());
+  }
+
+  /** Forgets the children closed, as a new or resumed session starts. */
+  forgetClosed(): void {
+    this.#agents = forgetClosed(this.#agents);
   }
 
   /** Picks agent `key`. */

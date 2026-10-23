@@ -20,6 +20,7 @@ import {
   openChild,
   pick,
   runName,
+  forgetClosed,
   shownKey,
   type WindowAgents,
 } from '../../src/session/window_agents.ts';
@@ -370,6 +371,42 @@ test("a team's second run is numbered, and a closed run's number is not given ag
 
   expect(runName(tabs, 'bugfix')).toStrictEqual('bugfix 3');
   expect(runName(tabs, 'review')).toStrictEqual('review');
+});
+
+test('a new or resumed session forgets the children closed, but not the runs a number was given (Q184)', () => {
+  let tabs = openChild(
+    opened('claude'),
+    {
+      id: 'one',
+      name: 'bugfix',
+      runtime: 'claude',
+      team: 'bugfix',
+      openedAt: 0,
+    },
+    '',
+  )!.agents;
+
+  tabs = openChild(
+    tabs,
+    { id: 'p', name: 'parser', runtime: 'codex', openedAt: 0 },
+    '',
+  )!.agents;
+  tabs = closeChild(tabs, agentOf(tabs, 2)!.child!.key);
+  tabs = closeChild(tabs, agentOf(tabs, 3)!.child!.key);
+
+  expect(tabs.closed.map((child) => child.name)).toStrictEqual([
+    'bugfix',
+    'parser',
+  ]);
+
+  const fresh = forgetClosed(tabs);
+
+  expect(fresh.closed).toStrictEqual([]);
+  expect(fresh.runs).toStrictEqual(['bugfix']);
+  // An old message's "bugfix" still means the run it meant.
+  expect(runName(fresh, 'bugfix')).toStrictEqual('bugfix 2');
+  // Nothing closed, nothing changes.
+  expect(forgetClosed(fresh)).toBe(fresh);
 });
 
 test("a lead's agent that exits tells main its members are closed and how to start the team again", () => {

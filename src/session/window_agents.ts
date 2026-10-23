@@ -72,9 +72,18 @@ export interface WindowAgents<C> {
   readonly picked: number;
   /**
    * The children closed, by chord's id, so a message to one answers that it
-   * is closed rather than that it never was.
+   * is closed rather than that it never was. Emptied with the session on
+   * `/clear` and a `/resume` pick, after which the record says what was
+   * closed (Q184).
    */
   readonly closed: readonly ChildInfo[];
+  /**
+   * The names of the team runs closed while the window is open, which
+   * `/clear` and `/resume` leave as they are: a run's number is never given
+   * again, so a name in an old message, a resumed transcript's or a record's,
+   * still means the run it meant.
+   */
+  readonly runs: readonly string[];
   /** How many children have opened, which colours the next. */
   readonly opened: number;
   /** The key the next agent opened gets; keys are never reused. */
@@ -106,6 +115,7 @@ export function noAgents<C>(): WindowAgents<C> {
     children: [],
     picked: 1,
     closed: [],
+    runs: [],
     opened: 0,
     nextKey: 1,
   };
@@ -226,7 +236,7 @@ export function runName<C>(agents: WindowAgents<C>, team: string): string {
       'main',
       'chord',
       ...agents.children.map((child) => child.name),
-      ...agents.closed.filter(isLead).map((child) => child.name),
+      ...agents.runs,
     ]),
   );
 }
@@ -365,7 +375,16 @@ export function closeChild<C>(
         ? (agents.main?.key ?? agents.picked)
         : agents.picked,
     closed: [...agents.closed, info],
+    runs: isLead(info) ? [...agents.runs, info.name] : agents.runs,
   };
+}
+
+/**
+ * `agents` with no children closed, as a new or resumed session starts: the
+ * record then says what was closed. Run names stay taken.
+ */
+export function forgetClosed<C>(agents: WindowAgents<C>): WindowAgents<C> {
+  return agents.closed.length === 0 ? agents : { ...agents, closed: [] };
 }
 
 /** `wait` with its `✓`, `✗` or `←` seen, and its turn's end. */

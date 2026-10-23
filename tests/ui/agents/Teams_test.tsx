@@ -124,6 +124,19 @@ test("a second run of a running team is 'bugfix 2', and its lead reaches the fir
     await window.shows('Which files do you hold?');
   }));
 
+test("a run after /clear is numbered past the cleared session's, so an old name still means its run (Q184)", () =>
+  withTeams(async (window) => {
+    await started(window);
+    await send(window, '/clear');
+    await until(
+      'the run closed with its session',
+      () => !window.frame().includes('    bugfix '),
+    );
+    await ready(window);
+    await send(window, 'team2');
+    await window.shows('Team(bugfix 2) · fake · fake-large');
+  }));
+
 test('x on the lead closes its members with it, and chord tells main which', () =>
   withTeams(async (window) => {
     await started(window);

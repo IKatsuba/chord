@@ -181,6 +181,7 @@ const tab = (
   children,
   picked: key,
   closed: [],
+  runs: [],
   opened: children.length,
   nextKey: Math.max(key, ...children.map((child) => child.key)) + 1,
 });

@@ -413,13 +413,17 @@ binary.
   and a code box in an item as wide as the room left. That lifts markdansi's
   limit on a nested item's hang there. OpenTUI breaks a row after
   `/ - . , :` and `(` as well as at spaces, so a path can break mid-path on
-  screen (Q157). Code boxes and tables keep markdansi's rows (Q150), a list
-  inside a quote is still markdansi's, unwrapped, and a proposal's body and
-  a saved team's keep markdansi's rows, since they fold by counting them
-  (Q152). OpenTUI's own `Markdown` renderable was not trialled for the
-  lists: it parses and draws a whole reply, tables and code included, so it
-  would replace markdansi wholesale, beyond the owner's split (markdansi
-  renders, OpenTUI lays out) and Q150 (Q161). An item is one box with the
+  screen (Q157). A code box is an OpenTUI box (Q150): its border, its
+  padding and its label, OpenTUI's title, which OpenTUI sets one cell past
+  the corner, are layout, so a drag copies the code alone, and a line too
+  long for the box is cut there by `wrapMode: 'char'` and copies whole.
+  Tables and a code box inside a quote keep their drawn rows, a list inside
+  a quote is still markdansi's, unwrapped, and a proposal's body and a
+  saved team's keep the drawn rows, since they fold by counting them
+  (Q152). OpenTUI's own `Markdown` renderable was passed over: the owner
+  judged it far worse to look at than markdansi (Q161). It also parses and
+  draws a whole reply, tables and code included, so it would replace
+  markdansi wholesale rather than lay out what markdansi renders. An item is one box with the
   marker's width as `paddingLeft` and the marker at `position: 'absolute'`
   over it, not a row of marker and column: OpenTUI widens a selection by one
   box level per drag event and not on release, so a row and column put a

@@ -1,0 +1,24 @@
+
+ › form
+
+ ››› Waiting for your input… (16s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                          │
+│ Set up the deploy target                                                     │
+│                                                                              │
+│   * Project name   not set                                                   │
+│     Contact email  not set                                                   │
+│   ✔ Replicas       2                                                         │
+│     Traffic share  not set                                                   │
+│   ✔ Public         ☐ No                                                      │
+│   * Region         not set                                                   │
+│     Tags           not set                                                   │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ❯ main   fake   ● input 15s
+    other  codex  ◦ idle 6s    ✓ new reply

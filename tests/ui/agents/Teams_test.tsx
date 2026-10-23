@@ -501,3 +501,52 @@ describe('a task of main asking beside a member, at 80 columns (CHD-431)', () =>
     }
   });
 });
+
+describe('CHD-493 U11 tester: resumed sessions keep team run numbers', () => {
+  const mainIdle = (window: Window) =>
+    until(
+      'main is idle',
+      () =>
+        window.frame().split('\n').at(-1)?.includes('? for shortcuts') ===
+          true || /main\s+fake.*◦ idle/.test(window.frame()),
+    );
+
+  for (const columns of [80, 120]) {
+    test(`a direct pick reserves both retired run names at ${columns} columns`, () =>
+      withTeams(async (window) => {
+        await window.resize({ columns, rows: 40 });
+        await mainIdle(window);
+
+        const target = window.session()!.id;
+
+        await started(window);
+
+        await send(window, '/clear');
+        await until('the next main', () => window.session()?.id !== target);
+        await mainIdle(window);
+        await send(window, 'team2');
+        await window.shows('Team(bugfix 2) · fake · fake-large');
+        await mainIdle(window);
+        await send(window, '/resume');
+        await window.shows('Resume a session');
+
+        for (
+          let row = 0;
+          !/❯ \d+\. .* {2}team\s*│/.test(window.frame());
+          row++
+        ) {
+          expect(row).toBeLessThan(12);
+          await window.press(DOWN);
+        }
+
+        await window.press('\r');
+        await until(
+          'the first main resumed',
+          () => window.session()?.id === target,
+        );
+        await mainIdle(window);
+        await send(window, 'team2');
+        await window.shows('Team(bugfix 3) · fake · fake-large');
+      }));
+  }
+});

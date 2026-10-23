@@ -149,6 +149,55 @@ test('main and a child run on the fake agent at once, a wait in one leaves the o
   }
 });
 
+describe('CHD-493 U11 tester: forgotten children still finish closing', () => {
+  test('forgetting a hanging close removes its name immediately but closeAll still waits for it', async () => {
+    const { open, closes, make } = deferredCloses();
+
+    open.start('fake');
+
+    const key = child(open, 'parser', make);
+    const alone = open.closeChild(key);
+
+    expect(open.agents.closed.map(({ name }) => name)).toEqual(['parser']);
+    open.forgetClosed();
+    expect(open.agents.closed).toEqual([]);
+    expect(open.conversationOf(key)).toBeUndefined();
+
+    let done = false;
+    const all = open.closeAll().then(() => (done = true));
+
+    closes[1]!.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(done).toBe(false);
+    closes[0]!.resolve();
+    await alone;
+    await all;
+    expect(done).toBe(true);
+    expect(open.agents.closed).toEqual([]);
+  });
+
+  test('a failed child close survives repeated forgetting and is reported once at shutdown', async () => {
+    const { open, closes, make } = deferredCloses();
+
+    open.start('fake');
+
+    const alone = open.closeChild(child(open, 'parser', make)).catch(() => {});
+
+    open.forgetClosed();
+    closes[0]!.reject(new Error('parser failed to stop'));
+    await alone;
+    open.forgetClosed();
+
+    const all = failures(open.closeAll());
+
+    closes[1]!.resolve();
+    expect(await all).toEqual(['parser failed to stop']);
+    expect(await failures(open.closeAll())).toEqual([]);
+    expect(open.agents.closed).toEqual([]);
+  });
+});
+
 /** A child named `name`, made by `make`. */
 function child<C extends { start(): void; close(): Promise<void> }>(
   open: OpenAgents<C>,

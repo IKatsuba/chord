@@ -179,6 +179,7 @@ import { Agents } from '../transcript/agents/Agents.tsx';
 import { firstMounted } from '../transcript/mount.ts';
 import { Below, TranscriptEntry } from '../transcript/Transcript.tsx';
 import { Failure } from '../transcript/tools/Tool.tsx';
+import { SignInBlock } from './SignIn.tsx';
 import { Header } from '../header/Header.tsx';
 import { Splash } from '../splash/Splash.tsx';
 import { splashShown } from '../splash/splash.ts';
@@ -1190,9 +1191,17 @@ export function App({
                       />
                     )}
                     {first === 0 && state.connection.status === 'failed' && (
-                      <Failure
-                        text={`${shownAgent} did not start: ${state.connection.message}`}
-                      />
+                      <>
+                        <Failure
+                          text={`${shownAgent} did not start: ${state.connection.message}`}
+                        />
+                        {state.connection.signIn !== undefined && (
+                          <SignInBlock
+                            agent={shownAgent}
+                            signIn={state.connection.signIn}
+                          />
+                        )}
+                      </>
                     )}
                     {state.transcript.entries.slice(first).map((entry, at) => {
                       const index = first + at;

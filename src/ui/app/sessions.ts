@@ -17,6 +17,7 @@ import {
 } from '../../session/conversation.ts';
 import { OpenSessions } from '../../session/open_sessions.ts';
 import type { Session } from '../../session/session.ts';
+import { signInNote } from '../../session/sign_in.ts';
 import { Runtimes, sessionProbe } from '../../server/runtimes.ts';
 import type { ChordServer } from '../../server/server.ts';
 import type {
@@ -893,8 +894,11 @@ export function useSessions(
                   parentOf(child)?.deliver(
                     { name: 'chord' },
                     `${child.name} (${child.runtime}) did not start: ` +
-                      `${event.message}. It takes no messages; open_agent ` +
-                      'starts another.',
+                      `${event.message}.${
+                        event.signIn === undefined
+                          ? ''
+                          : signInNote(child.runtime, event.signIn)
+                      } It takes no messages; open_agent starts another.`,
                   );
                 }
               });

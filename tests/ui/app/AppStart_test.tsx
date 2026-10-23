@@ -7,7 +7,12 @@ import { execFile } from 'node:child_process';
 import { AgentExitError } from '../../../src/acp/process.ts';
 import { openSession } from '../../../src/session/session.ts';
 import { serveChord } from '../../../src/server/server.ts';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { App } from '../../../src/ui/app/App.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { draw } from '../harness.tsx';
 import {
   DOWN,
   isAlive,
@@ -339,4 +344,65 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
       expect(await isAlive(pid)).toBe(false);
     }
   });
+});
+
+/**
+ * The window's frame once a start on the fake started with `flags` failed,
+ * drawn `columns` wide, through the session layer as chord opens one.
+ */
+async function failedFrame(columns: number, ...flags: string[]) {
+  const cwd = await mkdtemp(join(tmpdir(), 'chord-start-'));
+  const app = await draw(
+    <App
+      agent='fake'
+      cwd={cwd}
+      stateDir={join(cwd, 'state')}
+      open={(options) =>
+        openSession({
+          ...options,
+          agentCommand: fakeAgentCommand(undefined, ...flags),
+        })
+      }
+    />,
+    { columns, rows: 30 },
+  );
+
+  try {
+    await until('the way on', () => app.frame().includes('offers one.'));
+
+    return app.frame();
+  } finally {
+    await app.unmount();
+    await rm(cwd, { recursive: true });
+  }
+}
+
+for (const columns of [80, 120]) {
+  test(`a start the agent refuses for want of a login hangs its ways in and chord's way on under the failure at ${columns} columns (CHD-435)`, async () => {
+    const frame = await failedFrame(columns, '--auth-required', 'methods');
+    const rows = frame.split('\n');
+
+    expect(frame.replace(/\s+/g, ' ')).toContain(
+      "⏺ fake did not start: Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY ⎿ fake offers these sign-ins: Log in with the fake · Run `fake login` in the terminal Log in with SSO chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.",
+    );
+    // Each way in sits two in under the block's text.
+    expect(
+      rows.find((row) => row.includes('Log in with SSO'))?.indexOf('Log'),
+    ).toStrictEqual(
+      (rows.find((row) => row.includes('fake offers'))?.indexOf('fake') ?? 0) +
+        2,
+    );
+  });
+}
+
+test("a start that needs a login, its agent offering no ways in, says chord's way on alone (CHD-435)", async () => {
+  const read = (await failedFrame(120, '--auth-required', 'bare')).replace(
+    /\s+/g,
+    ' ',
+  );
+
+  expect(read).toContain(
+    "⏺ fake did not start: Authentication required ⎿ chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.",
+  );
+  expect(read).not.toContain('offers this');
 });

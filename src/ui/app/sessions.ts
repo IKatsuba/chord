@@ -1713,8 +1713,7 @@ export function useSessions(
     redraw();
   };
 
-  /** The window's agents, as `sessions` has them now. */
-  /** The window's agents, once main has started. */
+  /** The window's agents, as `sessions` has them now, once main has started. */
   const front = (): StartedAgents<Conversation> | undefined =>
     ownedBy(sessions.agents, sessions.agents.main?.key);
 

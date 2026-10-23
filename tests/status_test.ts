@@ -90,7 +90,7 @@ describe('CHD-382 U1 tester: status lifecycle and message boundaries', () => {
     });
   });
 
-  test('equal-age requests choose main before its child and expose the next after settlement', () => {
+  test('equal-age requests choose main first, then its child', () => {
     const first = heard(opened('first', 'second'), 1, [
       up,
       prompt('a'),

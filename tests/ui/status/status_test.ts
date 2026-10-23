@@ -10,6 +10,7 @@ import {
   type StatusFacts,
   statusLine,
   type TabBehind,
+  type AgentWaiting,
   waitsNotice,
   workingLine,
 } from '../../../src/ui/status/status.ts';
@@ -629,9 +630,7 @@ describe('CHD-431 tester: task hints preserve identity and fit', () => {
     name: string,
     task: string,
     kind: 'permission' | 'input' = 'permission',
-  ): TabBehind => ({
-    number: 0,
-    agent: name,
+  ): AgentWaiting => ({
     name,
     task,
     wait: {
@@ -666,11 +665,10 @@ describe('CHD-431 tester: task hints preserve identity and fit', () => {
     });
   }
 
-  test('a task and a different tab count as sessions, then show the remaining task after the other settles', () => {
+  test('a task and a different child count as agents, then show the remaining task after the other settles', () => {
     const task = owner('parser', 'Agent(Fix the tokenizer) · fake');
-    const other: TabBehind = {
-      number: 2,
-      agent: 'fake',
+    const other: AgentWaiting = {
+      name: 'docs',
       wait: {
         ...idle,
         asking: { on: { kind: 'input', message: 'Form' }, since: 5 },
@@ -678,7 +676,7 @@ describe('CHD-431 tester: task hints preserve identity and fit', () => {
     };
 
     expect(waitsNotice([task, other], 'ctrl+x a')?.text).toBe(
-      '● 2 sessions wait',
+      '● 2 agents wait',
     );
     expect(waitsNotice([task], 'ctrl+x a')?.text).toBe(
       '● Agent(Fix the tokenizer) · fake needs your permission',

@@ -237,7 +237,7 @@ describe('CHD-405 N2 tester: member spend follows the picked session', () => {
             line.includes(`${agent} has not reported`),
           );
           const table = lines.findIndex(
-            (line, index) => index > at && line.includes('This window'),
+            (line, index) => index > at && line.includes('This session'),
           );
 
           if (at >= 0 && table > at) {

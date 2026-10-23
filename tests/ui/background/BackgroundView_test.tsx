@@ -119,7 +119,7 @@ describe('CHD-424 tester: call navigation edges', () => {
         expect(window.frame()).not.toContain('Agent(Watch the build)');
         await window.press(DOWN);
         await window.press('\r');
-        await window.shows('Background · 1 in this tab');
+        await window.shows('Background · 1 in this session');
         await window.press('\r');
         await window.shows('Enter to go to its call');
         await window.press('\r');
@@ -165,7 +165,7 @@ describe('CHD-424 tester: call navigation edges', () => {
       await window.shows('❯ background');
       expect(window.frame()).toContain('╭─ docs ');
       await window.press('\r');
-      await window.shows('Background · 2 in this tab');
+      await window.shows('Background · 2 in this session');
 
       for (
         let index = 0;

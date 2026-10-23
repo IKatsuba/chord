@@ -89,7 +89,7 @@ describe('CHD-424 tester: background frame edges', () => {
 
         await window.press(DOWN);
         await window.press('\r');
-        await window.shows('Background · 22 in this tab');
+        await window.shows('Background · 22 in this session');
         await window.shows('│ ↓ Watch the build');
 
         for (let index = 0; index < 25; index++) {
@@ -101,7 +101,7 @@ describe('CHD-424 tester: background frame edges', () => {
         expect(window.frame()).not.toContain('│ ↓ Watch the build');
         expect(window.frame().split('\n')).toHaveLength(24);
         await window.press('x');
-        await window.shows('Background · 21 in this tab');
+        await window.shows('Background · 21 in this session');
         expect(window.frame()).toContain('❯ Watch the build');
         expect(window.frame()).not.toMatch(
           /❯ Watch the build .*■ stopped after/,
@@ -126,7 +126,7 @@ describe('CHD-424 tester: background frame edges', () => {
       await window.shows('❯ dev server errors');
       await window.press('x');
       await window.shows('❯ CI run 4812');
-      await window.shows('Background · 1 in this tab');
+      await window.shows('Background · 1 in this session');
 
       const running = /running ([^·\n]+)/.exec(window.frame())?.[1];
 
@@ -268,7 +268,7 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
           );
           await window.press(DOWN);
           await window.press('\r');
-          await window.shows('Background · 1 in this tab');
+          await window.shows('Background · 1 in this session');
           expect(window.frame()).toContain('Run the test suite');
           await window.press('\r');
           await window.shows('Enter to go to its call');
@@ -434,7 +434,7 @@ describe('CHD-462 B1 tester: an arriving input hides and resumes the frame', () 
               await window.shows('Working');
               await window.press(DOWN);
               await window.press('\r');
-              await window.shows('Background · 2 in this tab');
+              await window.shows('Background · 2 in this session');
               await window.press('j');
               await window.shows('❯ CI run 4812');
 
@@ -468,11 +468,11 @@ describe('CHD-462 B1 tester: an arriving input hides and resumes the frame', () 
               expect(window.frame()).not.toContain('Background ·');
               await window.press(ESC);
               expect(await response).toMatchObject({ action: 'cancel' });
-              await window.shows('Background · 2 in this tab');
+              await window.shows('Background · 2 in this session');
               await window.shows('❯ CI run 4812');
               expect(window.frame()).toContain('│ ›');
               await window.press('x');
-              await window.shows('Background · 1 in this tab');
+              await window.shows('Background · 1 in this session');
               await window.shows('❯ dev server errors');
               expect(window.frame()).not.toContain('❯ CI run 4812');
               await window.press(ESC);
@@ -618,7 +618,7 @@ describe('CHD-430 tester: a scrolled task keeps its identity', () => {
             });
 
             expect(added).not.toHaveProperty('error');
-            await window.shows('Background · 2 in this tab');
+            await window.shows('Background · 2 in this session');
             expect(itemLines()).toEqual(before);
             expect(window.frame()).not.toContain('❯ Rewrite');
             await window.press('\r');

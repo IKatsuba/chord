@@ -151,7 +151,7 @@ describe('CHD-481 U3 tester: ended detail keeps identity across keys and resize'
           );
           await window.press(DOWN);
           await window.press('\r');
-          await window.shows('Background · 2 in this tab');
+          await window.shows('Background · 2 in this session');
           await window.press('\r');
           await window.shows('Background · m1, 1 of 2');
           await window.press('j');
@@ -171,7 +171,7 @@ describe('CHD-481 U3 tester: ended detail keeps identity across keys and resize'
           expect(window.frame()).not.toContain('· ended');
           await window.press('\x1b[D');
           await window.shows('❯ dev server errors');
-          await window.shows('Background · 1 in this tab');
+          await window.shows('Background · 1 in this session');
           expect(window.frame()).not.toMatch(/^│ .*CI run 4812/m);
           await window.press(ESC);
           await until(
@@ -387,7 +387,7 @@ describe('CHD-481 Q128 tester: rebound detail boundaries', () => {
           );
           await window.press(DOWN);
           await window.press('\r');
-          await window.shows('Background · 2 in this tab');
+          await window.shows('Background · 2 in this session');
           await window.press('\r');
           await window.shows('Background · m1, 1 of 2');
 

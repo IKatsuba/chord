@@ -6,7 +6,6 @@ import { join } from 'node:path';
 import { useReducer } from 'react';
 import { serveChord } from '../../../src/server/server.ts';
 import { openSession, type Session } from '../../../src/session/session.ts';
-import { earlierWindows } from '../../../src/session/windows.ts';
 import { readPast } from '../../../src/session/record.ts';
 import { earlierSessions, readRecords } from '../../../src/session/sessions.ts';
 import { useSessions } from '../../../src/ui/app/sessions.ts';
@@ -112,9 +111,6 @@ describe('CHD-373 S3b tester: session close wiring', () => {
             return session;
           },
           resume: undefined,
-          resumes: undefined,
-          resumedFront: undefined,
-          resumedNote: undefined,
           server,
           runtimes: [...new Set([agent, 'fake'])],
           home: undefined,
@@ -283,82 +279,6 @@ describe('CHD-373 S3b tester: session close wiring', () => {
       expect(all.closing).toEqual({});
     }));
 
-  test('restoring a closed session into an unused tab replaces that tab and counts the session only once', () =>
-    withSessions(async (read) => {
-      await costStarted(read, 1);
-
-      const sessionId = read().all.sessions[1]!.sessionId!;
-
-      read().drive.openBeside();
-      await until(
-        'unused tab ready',
-        () => read().all.sessions[2]?.connection.status === 'ready',
-      );
-      read().drive.sessions.pick(1);
-      read().drive.showFront();
-      await until('busy tab shown', () => read().all.front === 1);
-      read().drive.closeFront();
-      await until('close armed', () => read().all.window.closeArmed === 1);
-      read().drive.closeFront();
-      await until(
-        'old spend settled',
-        () => read().all.window.keptSpend?.length === 1,
-      );
-
-      const { dir } = read();
-      const records = await readRecords(join(dir, 'state'));
-      const window = earlierWindows(
-        [
-          {
-            id: 'w-qa',
-            at: 1,
-            tabs: [{ sessionId, agent: 'fake', cwd: dir }],
-            front: 0,
-          },
-        ],
-        records,
-      )[0];
-
-      assert(window);
-      read().drive.pickResume({ kind: 'window', window }, 80);
-      await until('restored session ready', () =>
-        Object.values(read().all.sessions).some(
-          (session) =>
-            session.sessionId === sessionId &&
-            session.connection.status === 'ready',
-        ),
-      );
-      await until(
-        'unused tab close settled',
-        () => read().all.window.keptSpend?.length === 2,
-      );
-
-      let { all, drive } = read();
-      const figure = () =>
-        sum(
-          windowSpend(
-            read().drive.sessions.tabs.tabs,
-            read().all.sessions,
-            read().all.window.keptSpend ?? [],
-          ),
-        );
-
-      expect(all.sessions[2]).toBeUndefined();
-      expect(drive.sessions.tabs.tabs).toHaveLength(1);
-      expect(figure()).toMatchObject({ cost: 0.01 });
-
-      const key = drive.sessions.tabs.tabs[0]!.key;
-
-      drive.pickResume({ kind: 'window', window }, 80);
-      await until('same restored tab selected', () => read().all.front === key);
-
-      ({ all, drive } = read());
-
-      expect(drive.sessions.tabs.tabs).toHaveLength(1);
-      expect(all.window.keptSpend).toHaveLength(2);
-      expect(figure()).toMatchObject({ cost: 0.01 });
-    }));
-
   describe('CHD-373 S3c tester: retirement through the window session hook', () => {
     const settled = (read: () => Seen, count: number) =>
       until(
@@ -503,7 +423,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
             () => read().all.sessions[1]?.transcript.turn.status === 'idle',
           );
           resumedCosts.set(original, 0.02);
-          read().drive.pickResume({ kind: 'session', session }, 80);
+          read().drive.pickResume(session);
           await replacement(read, second);
           await settled(read, 2);
           expect(read().all.sessions[1]?.sessionId).toBe(original);
@@ -536,7 +456,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
 
               const empty = read().all.sessions[1]!.sessionId!;
 
-              read().drive.pickResume({ kind: 'session', session: latest }, 80);
+              read().drive.pickResume(latest);
               await replacement(read, empty);
               await settled(read, 4);
             }

@@ -3,6 +3,7 @@
   "files": {
     "tests/ui/transcript/agents/Agents_test.tsx": 48623,
     "tests/ui/agents/AgentsTasks_test.tsx": 45961,
+    "tests/ui/prompt/PromptKeys_test.tsx": 44500,
     "tests/ui/app/AppStart_test.tsx": 42806,
     "tests/ui/app/AppSpend_test.tsx": 42218,
     "tests/session/conversation_steer_test.ts": 40339,
@@ -55,7 +56,6 @@
     "tests/ui/app/Held_test.tsx": 18575,
     "tests/ui/background/Background_test.tsx": 18157,
     "tests/ui/app/AppStartFailure_test.tsx": 18035,
-    "tests/ui/prompt/PromptKeys_test.tsx": 17337,
     "tests/ui/dialogs/PlanBox_test.tsx": 17040,
     "tests/ui/shortcuts/keys_test.tsx": 16023,
     "tests/server/server_test.ts": 15210,

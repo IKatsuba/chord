@@ -540,7 +540,12 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
             agentCommand:
               agent === 'silent'
                 ? fakeAgentCommand(undefined, '--no-usage')
-                : fakeAgentCommand(undefined, '--tokens-only'),
+                : fakeAgentCommand(
+                    undefined,
+                    '--tokens-only',
+                    '--child-runtime',
+                    'silent',
+                  ),
           }),
         },
       ));

@@ -869,3 +869,75 @@ test('an agent that does not start is an error line', async () => {
     await app.unmount();
   }
 });
+
+describe('CHD-493 U2 tester: aliases retire live per-agent work', () => {
+  for (const columns of [80, 120]) {
+    test(`/new drops a running turn and its child at ${columns} columns`, () =>
+      withChild(
+        async (window) => {
+          const main = window.session()!;
+
+          await openOther(window);
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+          await send(window, '/new');
+          await readyAgent(window);
+          await until('the old main and child stopped', () =>
+            Promise.all(window.pids.slice(0, 2).map(isAlive)).then((alive) =>
+              alive.every((each) => !each),
+            ),
+          );
+          expect(window.session()).not.toBe(main);
+          expect(window.frame()).not.toContain('other ·');
+          expect(window.frame()).not.toMatch(/^ {4}other\s/m);
+          expect(window.frame()).not.toContain('Working');
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+          expect(window.frame()).not.toContain('› slow');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          startupOf: () => ({
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--child-runtime',
+              'fake',
+              '--step-ms',
+              '20',
+            ),
+          }),
+        },
+      ));
+
+    test(`/exit stops a hung child without arming at ${columns} columns`, async () => {
+      let quit: readonly ResumableTab[] | undefined;
+
+      await withChild(
+        async (window) => {
+          await openOther(window);
+          await send(window, '/exit');
+          await until('quit was called once', () => quit !== undefined);
+          expect(quit?.map(({ agent }) => agent)).toStrictEqual(['fake']);
+          await until('main and its hung child stopped', () =>
+            Promise.all(window.pids.map(isAlive)).then((alive) =>
+              alive.every((each) => !each),
+            ),
+          );
+          expect(window.frame()).not.toContain('again to quit');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          startupOf: (agent) => ({
+            agentCommand:
+              agent === 'codex'
+                ? fakeAgentCommand(undefined, '--hang', 'turn')
+                : fakeAgentCommand(undefined, '--child-runtime', 'codex'),
+          }),
+          onQuit: (resumable) => (quit = resumable),
+        },
+      );
+    });
+  }
+});

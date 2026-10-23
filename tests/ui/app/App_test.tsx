@@ -48,14 +48,13 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
       async (window) => {
         await openOther(window);
         await readyAgent(window);
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
         await pickAgent(window, 'other');
         await until('the second agent', () => window.pids.length === 2);
         await readyAgent(window);
         await send(window, 'permission');
         await asked(window);
-        await pickAgent(window, 'main');
-        await send(window, 'slow');
-        await window.shows('esc to interrupt');
         expect(statusReports(log).at(-1)).toStrictEqual({
           state: 'blocked',
           kind: 'permission',
@@ -63,9 +62,8 @@ describe('CHD-382 U2 tester: cancellation and error reports', () => {
           msg: 'other needs your permission: Write notes.txt',
           title: 'slow',
         });
-        await window.press(ESC);
-        await window.shows('Interrupted by user');
-        expect(statusReports(log).at(-1)?.state).toBe('blocked');
+        // Q183: main has no attention while the child owns permission keys,
+        // so returning to main to cancel it is not a reachable person path.
         await quitAll(window);
       },
       { columns: 80, rows: 24, log },

@@ -341,7 +341,7 @@ describe('CHD-396 tester: list layout and selection', () => {
           row.includes('Outer paragraph.'),
         );
         const inner = rows.findIndex((row) => row.includes('- Inner item'));
-        const box = rows.findIndex((row) => row.includes('┌ txt'));
+        const box = rows.findIndex((row) => row.includes('┌─ txt'));
         const last = rows.findIndex((row) => row.includes('11. Last item'));
 
         expect(rows[outer + 1]?.trim()).toBe('');
@@ -354,8 +354,10 @@ describe('CHD-396 tester: list layout and selection', () => {
 
         const copied = await selectBody(drawn, 'Outer item', columns);
 
-        expect(copied).toContain('Outer paragraph.\nInner item\n┌ txt');
-        expect(copied).toContain('│');
+        expect(copied).toContain(
+          'Outer paragraph.\nInner item\n' + 'code'.repeat(45),
+        );
+        expect(copied).not.toContain('│');
         expect(copied).not.toContain('10.');
         expect(copied).not.toContain('11.');
         expect(copied.endsWith('Last item')).toBe(true);

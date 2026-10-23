@@ -1135,14 +1135,14 @@ export function useSessions(
     return { ...opened, ...(await started) };
   };
 
-  /** Tab `key`'s open child `to`, by chord's id or its name. */
+  /** Session `key`'s open child `to`, by chord's id or its name. */
   const childOf = (key: number, to: string) =>
     ownedBy(sessions.agents, key)?.children.find(
       (child) => child.id === to || child.name === to,
     );
 
   /**
-   * Tab `key`'s own open child `to`, by chord's id or its name: one the
+   * Session `key`'s own open child `to`, by chord's id or its name: one the
    * session opened, a team's lead among them, and no member.
    */
   const ownChild = (key: number, to: string) =>

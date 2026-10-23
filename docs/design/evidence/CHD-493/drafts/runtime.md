@@ -380,7 +380,7 @@ any *other* path.
 | `Questions_test.tsx` | :415 a short request withdrawn behind never reopens | Rewritten main + child. |
 | `Permission_test.tsx` | :696 two sessions answer their own overflowing requests | Rewritten main + child. |
 | `PermissionBetween_test.tsx` | :165 attention answers from `${focus}` (ctrl+x w) | The `sessions picker` focus variant deleted; the others stay. |
-| `PromptKeys_test.tsx` | :302 a cancelled turn and another session keep independent drafts | Rewritten main + child. |
+| `PromptKeys_test.tsx` | :302 a cancelled turn and another session keep independent drafts | Narrowed to what keys reach (Q183): cancelled main draft → `ctrl+x a` to a child with an unread reply → back through the agents list. Switching back and forth with both drafts non-empty is not reachable and not tested. |
 | `PromptImage_test.tsx` | :473, :509, :548 a read while another tab comes forward | Rewritten: the read finishes after the person picks a child; it lands in the draft it began in (`stateOf(key)`, the same code). |
 | `PromptImage_test.tsx` | :676, :854 ctrl+v while an agent starts; a `${child ? 'child' : 'tab'}` that fails or starts | The `tab` variants become a child on another runtime; the `child` variants stay. |
 | `TranscriptBack_test.tsx` | :98 two sessions scrolled back keep their own top entry | Rewritten main + child (held scroll per key). |

@@ -1174,3 +1174,106 @@ describe('CHD-454 tester: headless structured failure boundaries', () => {
     });
   }
 });
+
+describe('CHD-493 U8 tester: recorded runtime precedes startup validation', () => {
+  async function startup(args: string[], recordCommand?: string) {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-u8-startup-'));
+    const here = join(dir, 'here');
+    const there = join(dir, 'there');
+    const state = join(dir, 'state');
+    const config = join(dir, 'config');
+
+    try {
+      await mkdir(join(here, '.chord'), { recursive: true });
+      await mkdir(join(there, '.chord'), { recursive: true });
+      await mkdir(join(config, 'chord'), { recursive: true });
+      await writeFile(
+        join(config, 'chord', 'settings.json'),
+        JSON.stringify({
+          agent: 'gemini',
+        }),
+      );
+      await seedRecords(join(state, 'chord'), 'cursor', there);
+
+      if (recordCommand !== undefined) {
+        await writeFile(
+          join(there, '.chord', 'settings.json'),
+          JSON.stringify({
+            agents: { cursor: { command: recordCommand } },
+          }),
+        );
+      }
+
+      return spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+          ...args,
+          '-C',
+          here,
+        ],
+        {
+          env: {
+            ...process.env,
+            HOME: dir,
+            XDG_STATE_HOME: state,
+            XDG_CONFIG_HOME: config,
+            PATH: join(dir, 'no-programs'),
+            NO_COLOR: '1',
+          },
+          stdio: ['ignore', 'pipe', 'pipe'],
+          encoding: 'utf8',
+          timeout: 10000,
+        },
+      );
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  }
+
+  test('a recorded agent overrides settings.agent before PATH validation', async () => {
+    const result = await startup(['-r', RECORDED[0]!]);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'chord: cursor runs "agent", which is not on PATH;',
+    );
+    expect(result.stderr).not.toContain('gemini runs');
+  });
+
+  for (const id of ['unknown-u8', 'w-unknown-u8']) {
+    test(`an unrecorded ${id} keeps settings.agent`, async () => {
+      const result = await startup(['-r', id]);
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('chord: gemini runs ');
+      expect(result.stderr).toContain('not on PATH');
+      expect(result.stderr).not.toContain('cursor runs');
+    });
+  }
+
+  for (const args of [
+    ['gemini', '-r', RECORDED[0]!],
+    ['--agent-command', 'missing-override-u8', '-r', RECORDED[0]!],
+  ]) {
+    test(`an explicit agent or command cannot adopt another runtime's record: ${args[0]}`, async () => {
+      const result = await startup(args);
+
+      expect(result.status).toBe(2);
+      expect(result.stderr).toContain(
+        `Session ${RECORDED[0]} belongs to another agent (cursor).`,
+      );
+      expect(result.stderr).not.toContain('not on PATH');
+    });
+  }
+
+  test('a command in the record directory never replaces the invocation command', async () => {
+    const result = await startup(['-r', RECORDED[0]!], 'missing-record-u8');
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'cursor runs "agent", which is not on PATH;',
+    );
+    expect(result.stderr).not.toContain('missing-record-u8');
+  });
+});

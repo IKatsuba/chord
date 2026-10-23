@@ -199,8 +199,10 @@ named where one exists or is needed.
     overrides (Q56's rule, as `resumeMessage` applies it);
   - an id chord has no record of: the agent and directory of this
     invocation, and the line says so, so nothing is presented as known
-    that is not: `chord codex --cwd /src/app --resume 0199… (no record;
-    the agent and directory are this command's)`.
+    that is not: `chord codex --cwd /src/app --resume 0199…  # no record;
+    the agent and directory are this command's`. The note is a shell
+    comment, so the line still pastes and runs (main, pending the owner's
+    Q181).
   - a named `[agent]` that differs from a record's agent is not resolved
     here: the line carries the record's agent, and running it is checked
     as one `--resume` always is.
@@ -209,7 +211,7 @@ named where one exists or is needed.
   --resume opens one session; it was given 3. Open each in a chord of its own:
   chord claude --cwd /src/app --resume 4f1c…
   chord codex --cwd /src/lib --resume 9a2e…
-  chord claude --cwd /src/app --resume 0199… (no record; the agent and directory are this command's)
+  chord claude --cwd /src/app --resume 0199…  # no record; the agent and directory are this command's
   ```
   The same id twice is still said once per time given; it is a refusal,
   not a plan.

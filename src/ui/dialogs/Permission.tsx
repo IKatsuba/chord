@@ -186,7 +186,7 @@ function AgentPermission({
             {...kept}
           />
         </box>
-        {held ? <AttendHint /> : away ? undefined : <PermissionHint />}
+        {held ? <AttendHint /> : <PermissionHint blank={away} />}
       </box>
     </box>
   );
@@ -441,10 +441,10 @@ function SaveBox({
           {...kept}
         />
       </box>
-      {key !== undefined && !away && (
+      {key !== undefined && (
         <box marginTop={1}>
           <text {...TEXT} attributes={DIM}>
-            {`${capital(key)} to ${save.escape}`}
+            {away ? ' ' : `${capital(key)} to ${save.escape}`}
           </text>
         </box>
       )}
@@ -466,13 +466,30 @@ export function AttendHint() {
   );
 }
 
-/** The permission prompt's last line: the key that rejects, when one does. */
-function PermissionHint() {
+/**
+ * The permission prompt's last line: the key that rejects, when one does;
+ * `blank` while the agents list has the keys, so the box keeps its height.
+ */
+function PermissionHint({ blank = false }: { blank?: boolean }) {
   const key = useHintKey('confirm:no');
 
   return key === undefined ? null : (
     <box marginTop={1} flexShrink={0}>
-      <text {...TEXT} attributes={DIM}>{`${capital(key)} to reject`}</text>
+      <text {...TEXT} attributes={DIM}>
+        {blank ? ' ' : `${capital(key)} to reject`}
+      </text>
+    </box>
+  );
+}
+
+/**
+ * A box's hint row while the agents list has the keys: empty, with the
+ * blank row above it, so the box keeps its height and nothing above moves.
+ */
+export function BlankHint() {
+  return (
+    <box marginTop={1} flexShrink={0}>
+      <text {...TEXT}> </text>
     </box>
   );
 }

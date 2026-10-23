@@ -810,8 +810,13 @@ test('↓ on the last choice goes into the agents list rather than round, and �
       await window.press(DOWN);
       await window.press(DOWN);
       await window.shows('❯ 3. Deny');
+
+      const at = boxTop(window.frame());
+
       await window.press(DOWN);
       await window.shows('  ❯ main ');
+      // Its height kept, so nothing above it moves.
+      expect(boxTop(window.frame())).toBe(at);
       // The keys are the list's: the box promises none of them.
       expect(window.frame()).not.toContain('❯ 3. Deny');
       expect(window.frame()).not.toContain('to reject');
@@ -828,3 +833,7 @@ test('↓ on the last choice goes into the agents list rather than round, and �
     },
     { rows: 40, columns: 120 },
   ));
+
+/** The row the box above the prompt starts on: the first border drawn. */
+const boxTop = (frame: string) =>
+  frame.split('\n').findIndex((row) => row.startsWith('╭'));

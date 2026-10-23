@@ -624,8 +624,12 @@ test('↓ past the buttons goes into the agents list, and ↑ straight back puts
         await window.press(DOWN);
       }
 
+      const at = boxTop(window.frame());
+
       await window.press(DOWN);
       await window.shows('  ❯ main ');
+      // Its height kept, so nothing above it moves.
+      expect(boxTop(window.frame())).toBe(at);
       // The keys are the list's: the form promises none of them.
       expect(window.frame()).not.toMatch(/❯ ?Accept/);
       expect(window.frame()).not.toContain('Enter to accept');
@@ -645,3 +649,7 @@ test('↓ past the buttons goes into the agents list, and ↑ straight back puts
     },
     { rows: 40, columns: 120 },
   ));
+
+/** The row the box above the prompt starts on: the first border drawn. */
+const boxTop = (frame: string) =>
+  frame.split('\n').findIndex((row) => row.startsWith('╭'));

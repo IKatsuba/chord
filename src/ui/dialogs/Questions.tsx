@@ -15,7 +15,7 @@ import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { Gutter } from '../transcript/tools/Tool.tsx';
 import { formRowLimit } from './Form.tsx';
 import { Fold } from './Fold.tsx';
-import { AttendHint } from './Permission.tsx';
+import { AttendHint, BlankHint } from './Permission.tsx';
 import type { AskerPart } from './asker.ts';
 import { AskerHeading } from './Asker.tsx';
 import {
@@ -219,7 +219,9 @@ export function QuestionBox({
       </Fold>
       {held ? (
         <AttendHint />
-      ) : away ? undefined : (
+      ) : away ? (
+        <BlankHint />
+      ) : (
         <box marginTop={1}>
           <text {...CUT} attributes={DIM}>
             {askHint(questions, state, inner)}

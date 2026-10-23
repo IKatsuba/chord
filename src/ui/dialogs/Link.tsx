@@ -7,7 +7,7 @@ import { BOLD, DIM, fg, TEXT } from '../theme/text.ts';
 import { linkHost } from './form.ts';
 import type { Choice } from './permission.ts';
 import { Fold } from './Fold.tsx';
-import { AttendHint } from './Permission.tsx';
+import { AttendHint, BlankHint } from './Permission.tsx';
 import type { AskerPart } from './asker.ts';
 import { AskerHeading } from './Asker.tsx';
 
@@ -122,7 +122,9 @@ export function LinkPrompt({
       </Fold>
       {held ? (
         <AttendHint />
-      ) : away ? undefined : (
+      ) : away ? (
+        <BlankHint />
+      ) : (
         <box marginTop={1}>
           <text {...TEXT} attributes={DIM}>
             Enter to choose · Esc to cancel

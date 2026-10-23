@@ -281,7 +281,11 @@ export function PlanBox({
                     <span attributes={TextAttributes.INVERSE}>{BLOCK}</span>
                   )}
                   <span attributes={DIM}>
-                    {`${onNote && active ? ' ' : ''}${cliTruncate(
+                    {/* While away the cursor's cell is blank, so the text
+                    keeps its column. */}
+                    {`${onNote && !active && away ? ' ' : ''}${
+                      onNote && (active || away) ? ' ' : ''
+                    }${cliTruncate(
                       `Tell ${agent} what to change, sent with 2 (optional)`,
                       Math.max(noteWidth - 1, 1),
                     )}`}
@@ -334,16 +338,12 @@ export function PlanBox({
           </box>
         ))}
       </box>
-      {!away && (
-        <>
-          <text {...TEXT} flexShrink={0}>
-            {' '}
-          </text>
-          <text {...TEXT} attributes={DIM} flexShrink={0}>
-            {hint}
-          </text>
-        </>
-      )}
+      <text {...TEXT} flexShrink={0}>
+        {' '}
+      </text>
+      <text {...TEXT} attributes={DIM} flexShrink={0}>
+        {away ? ' ' : hint}
+      </text>
     </box>
   );
 }

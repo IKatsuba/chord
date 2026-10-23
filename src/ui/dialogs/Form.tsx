@@ -27,7 +27,7 @@ import {
 } from './form.ts';
 import { answeredQuestions, askedHeaders } from './questions.ts';
 import { Fold } from './Fold.tsx';
-import { AttendHint } from './Permission.tsx';
+import { AttendHint, BlankHint } from './Permission.tsx';
 import type { AskerPart } from './asker.ts';
 import { AskerHeading } from './Asker.tsx';
 
@@ -371,7 +371,9 @@ export function ElicitationForm({
       </Fold>
       {held ? (
         <AttendHint />
-      ) : away ? undefined : (
+      ) : away ? (
+        <BlankHint />
+      ) : (
         <box marginTop={1}>
           <text {...CUT} attributes={DIM}>
             {formHint(form, inner)}

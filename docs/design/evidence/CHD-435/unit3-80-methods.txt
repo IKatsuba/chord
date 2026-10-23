@@ -1,0 +1,24 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake
+ ▄▀▀▀   /tmp/chord-qa.des435
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ fake did not start: Authentication required: run `fake login` from your
+   terminal, or set FAKE_API_KEY
+   ⎿  fake offers these sign-ins:
+        Log in with the fake · Run `fake login` in the terminal
+        Log in with SSO
+      chord does not sign agents in. Sign in with fake's own CLI in a terminal,
+      or set its API key where it offers one.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

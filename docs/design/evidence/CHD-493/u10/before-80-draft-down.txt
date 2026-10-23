@@ -1,0 +1,24 @@
+
+      Commit each as its own fix, run the targeted tests, and tell me when the
+      check passes and I'll look again.
+
+ ⏺ Waiting on parser.
+
+ ← from @parser · fake
+   ⎿  Ran deno task test tests/parse: 2 failures, both in tests/parse/
+      printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › a draft for main                                                           │
+│   on two lines                                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used
+    main    fake · Fake Large with a 1M context window  ◦ idle 6s
+    parser  fake · Fake Small                           ◦ idle 6s  ✓ new reply

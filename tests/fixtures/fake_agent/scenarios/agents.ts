@@ -443,40 +443,53 @@ async function messageDocsAsking(
   return 'end_turn';
 }
 
+/**
+ * Opens `parser` and `docs`, then sends `parser` each of `messages`, the
+ * next once parser has the one before.
+ */
+async function openTeam(
+  turn: Turn,
+  messages: readonly string[],
+): Promise<acp.StopReason> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
+  }
+
+  try {
+    mkdirSync(join(cwds.get(turn.sessionId) ?? '.', GATE), {
+      recursive: true,
+    });
+    await turn.say('I will open parser on the tests and docs on the README.');
+    await callChord(turn, client, 'open_agent', PARSER_ARGS);
+    await callChord(turn, client, 'open_agent', DOCS_ARGS);
+    await gateOpened(turn, toldMark(PARSER_ARGS.prompt));
+
+    for (const text of messages) {
+      await callChord(turn, client, 'send_message', { to: 'parser', text });
+      await gateOpened(turn, toldMark(text));
+    }
+
+    await turn.say('Waiting on parser.');
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn';
+}
+
 export const AGENTS = {
   // Opens `parser` and `docs`, then tells `parser` twice what changed,
   // the first once parser is at its first turn, the second once parser has
   // the first, so the second waits behind the turn the first started.
-  async agents(turn) {
-    const client = await chordClient(turn);
+  agents: (turn) => openTeam(turn, MAIN_MESSAGES),
 
-    if (client === undefined) {
-      await turn.say('No chord server in this session.');
-
-      return 'end_turn';
-    }
-
-    try {
-      mkdirSync(join(cwds.get(turn.sessionId) ?? '.', GATE), {
-        recursive: true,
-      });
-      await turn.say('I will open parser on the tests and docs on the README.');
-      await callChord(turn, client, 'open_agent', PARSER_ARGS);
-      await callChord(turn, client, 'open_agent', DOCS_ARGS);
-      await gateOpened(turn, toldMark(PARSER_ARGS.prompt));
-
-      for (const text of MAIN_MESSAGES) {
-        await callChord(turn, client, 'send_message', { to: 'parser', text });
-        await gateOpened(turn, toldMark(text));
-      }
-
-      await turn.say('Waiting on parser.');
-    } finally {
-      await client.close();
-    }
-
-    return 'end_turn';
-  },
+  // As `agents`, telling `parser` nothing: its first turn is its last, so
+  // the time it has been idle since then only grows (CHD-507).
+  agentsquiet: (turn) => openTeam(turn, []),
 
   // Opens `docs`, which asks to write, and messages it while it waits on
   // the person, where a runtime that steers holds it for their answer.

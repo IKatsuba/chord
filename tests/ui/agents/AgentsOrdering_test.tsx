@@ -29,7 +29,9 @@ describe('CHD-501 tester: ungated agent pacing preserves delivery order', () => 
           await withWindow(
             async (window) => {
               await send(window, scenario);
-              await window.shows('Waiting on parser.');
+              await until('main to wait on parser', () =>
+                window.mounted('Waiting on parser.'),
+              );
               await until(
                 'both messages received by the fake child',
                 () => received.length === 2,

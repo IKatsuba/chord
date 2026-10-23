@@ -13,6 +13,7 @@ import {
 import { type AgentMode, nextMode } from '../../session/modes.ts';
 import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
+import type { SignIn } from '../../session/sign_in.ts';
 import type { EarlierWindow } from '../../session/windows.ts';
 import { addTurn, type Spent } from '../../session/usage.ts';
 import type { AgentOption } from '../../session/config.ts';
@@ -122,7 +123,12 @@ import {
 export type Connection =
   | { readonly status: 'starting' }
   | { readonly status: 'ready' }
-  | { readonly status: 'failed'; readonly message: string }
+  | {
+      readonly status: 'failed';
+      readonly message: string;
+      /** The login the agent needs, when that is why it did not start. */
+      readonly signIn?: SignIn;
+    }
   | { readonly status: 'closing' };
 
 /**
@@ -566,7 +572,11 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         ? {
             // The failure's own line says why it did not start (Q109).
             ...withoutStartNotice(state),
-            connection: { status: 'failed', message: action.message },
+            connection: {
+              status: 'failed',
+              message: action.message,
+              ...(action.signIn === undefined ? {} : { signIn: action.signIn }),
+            },
           }
         : state;
     case 'closing': {

@@ -5,6 +5,7 @@ import type {
   ToolCallUpdate,
 } from '@agentclientprotocol/sdk';
 import { type OneshotOutcome, runOneshot } from './session/oneshot.ts';
+import { signInLines, signInOf } from './session/sign_in.ts';
 import type { StartingValue } from './session/starting.ts';
 import type { ElicitationWait } from './session/transcript/types.ts';
 import type { TokenUsage } from './session/usage.ts';
@@ -304,10 +305,18 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
         stderr(paragraphs.map((paragraph) => `chord: ${paragraph}\n`).join('')),
     });
   } catch (error) {
+    const signIn = signInOf(error);
+
     await stderr(
-      `chord: ${options.agent} did not start: ${
-        error instanceof Error ? error.message : String(error)
-      }\n`,
+      [
+        `${options.agent} did not start: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        // An agent that needs a login: chord does not sign agents in.
+        ...(signIn === undefined ? [] : signInLines(options.agent, signIn)),
+      ]
+        .map((line) => `chord: ${line}\n`)
+        .join(''),
     );
 
     return 1;

@@ -195,6 +195,38 @@ test('session/new takes the directory and the MCP servers', () =>
     );
   }));
 
+// The fake's `--auth-required`, which chord's tests of a start that needs a
+// login play against (CHD-435).
+test('an agent nobody signed in to offers its ways in at initialize and refuses session/new authRequired', () =>
+  withAgent(['--auth-required', 'methods'], async (agent, _seen, cwd) => {
+    expect(agent.init.authMethods).toStrictEqual([
+      {
+        id: 'fake-login',
+        name: 'Log in with the fake',
+        description: 'Run `fake login` in the terminal',
+      },
+      { id: 'fake-sso', name: 'Log in with SSO' },
+    ]);
+    await expect(
+      agent.newSession({ cwd, mcpServers: [] }),
+    ).rejects.toMatchObject({
+      code: -32000,
+      message:
+        'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY',
+    });
+  }));
+
+test('an agent that says only that it needs a login offers no ways in', () =>
+  withAgent(['--auth-required', 'bare'], async (agent, _seen, cwd) => {
+    expect(agent.init.authMethods).toBeUndefined();
+    await expect(
+      agent.newSession({ cwd, mcpServers: [] }),
+    ).rejects.toMatchObject({
+      code: -32000,
+      message: 'Authentication required',
+    });
+  }));
+
 test('session/load replays the past before it answers', () =>
   withAgent([], async (agent, seen, cwd) => {
     const sessionId = crypto.randomUUID();
@@ -1231,5 +1263,98 @@ describe('CHD-450 tester: unfinished call wire reports', () => {
 
         expect(response).toBeGreaterThan(lastUpdate);
       }));
+  }
+});
+
+describe('CHD-435 tester: auth-required fixture boundaries', () => {
+  async function onAuthFixture(
+    flags: string[],
+    environment: Readonly<Record<string, string>>,
+    body: (agent: Agent, seen: Seen, cwd: string) => Promise<void>,
+  ) {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-auth-fixture-'));
+    const seen = new Seen();
+    const agent = await openAgent({
+      command: fakeAgentCommand(undefined, '--resume-only', ...flags),
+      cwd,
+      env: environment,
+      onTraffic: seen.push,
+      stop: STOP,
+      ...REFUSE,
+    });
+
+    try {
+      await body(agent, seen, cwd);
+    } finally {
+      await agent.close();
+      await rm(cwd, { recursive: true });
+      expect(await isAlive(agent.pid)).toBe(false);
+    }
+  }
+
+  for (const kind of ['methods', 'bare'] as const) {
+    for (const source of ['flag', 'environment'] as const) {
+      test(`${source} selects ${kind}; new, load and resume reject without creating or replaying a session`, () =>
+        onAuthFixture(
+          source === 'flag' ? ['--auth-required', kind] : [],
+          { CHORD_FAKE_AUTH_REQUIRED: source === 'environment' ? kind : '' },
+          async (agent, seen, cwd) => {
+            const error = {
+              code: -32000,
+              message:
+                kind === 'methods'
+                  ? 'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY'
+                  : 'Authentication required',
+            };
+
+            expect(agent.init.authMethods?.map((method) => method.id)).toEqual(
+              kind === 'methods' ? ['fake-login', 'fake-sso'] : undefined,
+            );
+            await expect(
+              agent.newSession({ cwd, mcpServers: [] }),
+            ).rejects.toMatchObject(error);
+
+            // Authentication wins even over validation of an unknown id.
+            for (const sessionId of [crypto.randomUUID(), 'not-a-session']) {
+              await expect(
+                agent.loadSession({ sessionId, cwd, mcpServers: [] }),
+              ).rejects.toMatchObject(error);
+              await expect(
+                agent.resumeSession({ sessionId, cwd }),
+              ).rejects.toMatchObject(error);
+            }
+
+            expect((await agent.listSessions({ cwd })).sessions).toEqual([]);
+            expect(seen.updates()).toEqual([]);
+            expect(
+              seen.sent().filter((method) => method === 'session/load'),
+            ).toHaveLength(2);
+            expect(
+              seen.sent().filter((method) => method === 'session/resume'),
+            ).toHaveLength(2);
+            expect(seen.sent()).not.toContain('authenticate');
+          },
+        ));
+    }
+
+    test(`the ${kind} CLI value wins over the other environment value`, () =>
+      onAuthFixture(
+        ['--auth-required', kind],
+        { CHORD_FAKE_AUTH_REQUIRED: kind === 'methods' ? 'bare' : 'methods' },
+        async (agent, _seen, cwd) => {
+          expect(agent.init.authMethods?.length).toBe(
+            kind === 'methods' ? 2 : undefined,
+          );
+          await expect(
+            agent.newSession({ cwd, mcpServers: [] }),
+          ).rejects.toMatchObject({
+            code: -32000,
+            message:
+              kind === 'methods'
+                ? 'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY'
+                : 'Authentication required',
+          });
+        },
+      ));
   }
 });

@@ -10,6 +10,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { signInOf, SignInNeeded } from '../../src/session/sign_in.ts';
 import { FILLED } from '../../src/session/enrich.ts';
 import type { PendingPermission } from '../../src/session/permissions.ts';
 import {
@@ -1267,5 +1268,89 @@ describe('CHD-441 tester: takes-none survives every session opening path', () =>
         await rm(dir, { recursive: true });
       }
     });
+  }
+});
+
+describe('CHD-435 tester: sign-in through real session starts', () => {
+  for (const entry of ['new', 'load', 'resume'] as const) {
+    for (const kind of ['methods', 'bare', 'link', 'linkother'] as const) {
+      test(`${entry} keeps the ${kind} failure classification and stops the agent`, async () => {
+        const cwd = await mkdtemp(join(tmpdir(), 'chord-sign-in-'));
+        const tag = `chd435-signin-${crypto.randomUUID()}`;
+        const sessionId = crypto.randomUUID();
+        const message =
+          kind === 'methods'
+            ? 'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY'
+            : kind === 'link'
+              ? 'Authentication required: Sign-in was cancelled. Retry to sign in.'
+              : kind === 'linkother'
+                ? 'The fake could not open its session.'
+                : 'Authentication required';
+        let session: Session | undefined;
+        let failure: unknown;
+
+        try {
+          try {
+            session = await openSession({
+              agent: 'fake',
+              cwd,
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--auth-required',
+                kind,
+                '--tester-tag',
+                tag,
+                ...(entry === 'resume' ? ['--resume-only', '--no-load'] : []),
+              ),
+              ...(entry === 'new' ? {} : { resume: { sessionId, cwd } }),
+            });
+          } catch (error) {
+            failure = error;
+          } finally {
+            await session?.close();
+          }
+
+          assert(failure instanceof Error);
+          expect(signInOf(failure)).toStrictEqual(
+            kind === 'linkother'
+              ? undefined
+              : {
+                  message,
+                  ways:
+                    kind === 'methods'
+                      ? [
+                          {
+                            name: 'Log in with the fake',
+                            description: 'Run `fake login` in the terminal',
+                          },
+                          { name: 'Log in with SSO' },
+                        ]
+                      : [],
+                },
+          );
+
+          if (kind === 'linkother') {
+            expect(failure).not.toBeInstanceOf(SignInNeeded);
+            expect(failure.cause).not.toBeInstanceOf(SignInNeeded);
+          } else {
+            expect(entry === 'new' ? failure : failure.cause).toBeInstanceOf(
+              SignInNeeded,
+            );
+          }
+
+          if (entry === 'new') {
+            expect(failure.message).toBe(message);
+          } else {
+            expect(failure.message).toBe(
+              `it cannot resume session ${sessionId}: ${message}`,
+            );
+          }
+
+          expect(await tagged(tag)).toStrictEqual([]);
+        } finally {
+          await rm(cwd, { recursive: true });
+        }
+      });
+    }
   }
 });

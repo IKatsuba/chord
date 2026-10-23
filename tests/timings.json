@@ -125,6 +125,7 @@
     "tests/scripts/dev/release/lib_test.ts": 114,
     "tests/ui/transcript/agents/subagents_test.ts": 107,
     "tests/agents_test.ts": 101,
+    "tests/session/sign_in_test.ts": 101,
     "tests/session/windows_test.ts": 97,
     "tests/session/sessions_test.ts": 89,
     "tests/ui/background/state_test.ts": 87,

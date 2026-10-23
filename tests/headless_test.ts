@@ -409,6 +409,37 @@ test('an agent that does not start exits 1 and says why', async () => {
   }
 });
 
+test("an agent that needs a login says so, its ways in and chord's way on, a line each (CHD-435)", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-headless-'));
+  let stderr = '';
+
+  try {
+    const code = await runHeadless({
+      agent: 'fake',
+      cwd: dir,
+      prompt: 'text',
+      format: 'text',
+      agentCommand: fakeAgentCommand(undefined, '--auth-required', 'methods'),
+      stdout: () => Promise.resolve(),
+      stderr: (text) => {
+        stderr += text;
+
+        return Promise.resolve();
+      },
+    });
+
+    expect(code).toStrictEqual(1);
+    expect(stderr.split('\n')).toStrictEqual([
+      'chord: fake did not start: Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY',
+      'chord: fake offers: Log in with the fake (Run `fake login` in the terminal), Log in with SSO',
+      "chord: chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.",
+      '',
+    ]);
+  } finally {
+    await rm(dir, { recursive: true });
+  }
+});
+
 /**
  * Runs chord's command line from source, as a script would, in a fresh
  * directory with `project` as its `.chord/settings.json` and no user file.
@@ -894,4 +925,58 @@ describe('CHD-441 tester: the CLI forwards the MCP setting through headless and 
       );
     }
   });
+});
+
+describe('CHD-435 tester: headless sign-in boundaries', () => {
+  for (const kind of ['bare', 'link', 'linkother']) {
+    test(`${kind} prints only the appropriate plain stderr guidance`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-headless-signin-'));
+      let stdout = '';
+      let stderr = '';
+
+      try {
+        const code = await runHeadless({
+          agent: 'fake',
+          cwd,
+          prompt: 'text',
+          format: 'text',
+          agentCommand: fakeAgentCommand(undefined, '--auth-required', kind),
+          stdout: (text) => {
+            stdout += text;
+
+            return Promise.resolve();
+          },
+          stderr: (text) => {
+            stderr += text;
+
+            return Promise.resolve();
+          },
+        });
+
+        expect(code).toBe(1);
+        expect(stdout).toBe('');
+        expect(stderr).not.toContain('fake offers:');
+        expect(stderr).not.toContain('\x1b[');
+
+        if (kind === 'linkother') {
+          expect(stderr).toBe(
+            'chord: fake did not start: The fake could not open its session.\n',
+          );
+        } else {
+          const message =
+            kind === 'bare'
+              ? 'Authentication required'
+              : 'Authentication required: Sign-in was cancelled. Retry to sign in.';
+
+          expect(stderr.split('\n')).toEqual([
+            `chord: fake did not start: ${message}`,
+            "chord: chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.",
+            '',
+          ]);
+        }
+      } finally {
+        await rm(cwd, { recursive: true });
+      }
+    });
+  }
 });

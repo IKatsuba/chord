@@ -46,6 +46,7 @@ import { type Heard, pastActions } from './replay.ts';
 import type { Resume } from './sessions.ts';
 import { routed, type SessionTree, sessionTree } from './subagents.ts';
 import type { TranscriptAction, TurnResult } from './transcript/types.ts';
+import { asSignIn } from './sign_in.ts';
 import { tokensOf } from './usage.ts';
 import type { TurnFigures } from './turn_costs.ts';
 
@@ -500,7 +501,11 @@ export async function openSession(
             )
           : pastActions(replayed, Date.now());
     }
-  } catch (error) {
+  } catch (refused) {
+    // A start the agent refused for want of a login says so, with the ways
+    // in it offered (CHD-435).
+    const error = asSignIn(refused, connection.init.authMethods);
+
     try {
       await shutdown();
     } catch (cleanup) {

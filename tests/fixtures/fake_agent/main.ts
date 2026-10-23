@@ -250,9 +250,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
 import { splitContext } from '../../../src/session/context.ts';
 import { FAKE_COMMANDS } from '../commands.ts';
+import { LINK_URL } from '../forms.ts';
 import { readCapabilities } from './client.ts';
 import {
   ARGS,
+  AUTH_REQUIRED,
   HANG,
   NO_CONFIG,
   DIMCODE_PERMISSION,
@@ -995,6 +997,60 @@ function opened(method: string, meta: unknown) {
   return meta === undefined || meta === null ? { method } : { method, meta };
 }
 
+/**
+ * The ways in `--auth-required methods` offers at `initialize`: one whose
+ * description names the command to run, one with a name alone.
+ */
+const AUTH_METHODS: acp.AuthMethod[] = [
+  {
+    id: 'fake-login',
+    name: 'Log in with the fake',
+    description: 'Run `fake login` in the terminal',
+  },
+  { id: 'fake-sso', name: 'Log in with SSO' },
+];
+
+/**
+ * Refuses a session request under `--auth-required`, as an agent nobody
+ * signed in to does (CHD-435): `authRequired`; with `link`, after a sign-in
+ * link asked outside any session while the request waits that is not
+ * accepted, as droid 0.244.0 does (its `authenticateWithElicitation`).
+ */
+async function refuseUnsigned(
+  client: acp.AgentContext,
+  requestId: acp.JsonRpcId,
+): Promise<void> {
+  if (AUTH_REQUIRED === 'methods') {
+    throw acp.RequestError.authRequired(
+      undefined,
+      'run `fake login` from your terminal, or set FAKE_API_KEY',
+    );
+  }
+
+  if (AUTH_REQUIRED === 'bare') {
+    throw acp.RequestError.authRequired();
+  }
+
+  if (AUTH_REQUIRED === 'link' || AUTH_REQUIRED === 'linkother') {
+    const answer = await client.request('elicitation/create', {
+      requestId,
+      mode: 'url',
+      elicitationId: crypto.randomUUID(),
+      message: 'Sign in to the fake to continue',
+      url: LINK_URL,
+    });
+
+    if (answer.action !== 'accept') {
+      throw AUTH_REQUIRED === 'link'
+        ? acp.RequestError.authRequired(
+            undefined,
+            'Sign-in was cancelled. Retry to sign in.',
+          )
+        : new acp.RequestError(-32603, 'The fake could not open its session.');
+    }
+  }
+}
+
 const connection = acp
   .agent({ name: 'chord-fake-agent' })
   .onRequest('initialize', ({ params }) => {
@@ -1004,6 +1060,7 @@ const connection = acp
       ? never()
       : {
           protocolVersion: acp.PROTOCOL_VERSION,
+          ...(AUTH_REQUIRED === 'methods' ? { authMethods: AUTH_METHODS } : {}),
           agentCapabilities: {
             loadSession: !NO_LOAD,
             mcpCapabilities: MCP_TRANSPORTS,
@@ -1028,7 +1085,9 @@ const connection = acp
         };
   })
   .onRequest('authenticate', () => ({}))
-  .onRequest('session/new', ({ params, client }) => {
+  .onRequest('session/new', async ({ params, client, requestId }) => {
+    await refuseUnsigned(client, requestId);
+
     const sessionId = crypto.randomUUID();
 
     modes.set(sessionId, 'default');
@@ -1052,8 +1111,10 @@ const connection = acp
       .filter((session) => !params.cwd || session.cwd === params.cwd)
       .toReversed(),
   }))
-  .onRequest('session/load', async ({ params, client }) => {
+  .onRequest('session/load', async ({ params, client, requestId }) => {
     const { sessionId } = params;
+
+    await refuseUnsigned(client, requestId);
 
     if (process.env.CHORD_FAKE_REFUSE_LOAD === '1' || !UUID.test(sessionId)) {
       throw acp.RequestError.resourceNotFound(sessionId);
@@ -1078,8 +1139,10 @@ const connection = acp
       configOptions: configOptions(sessionId),
     };
   })
-  .onRequest('session/resume', ({ params, client }) => {
+  .onRequest('session/resume', async ({ params, client, requestId }) => {
     const { sessionId } = params;
+
+    await refuseUnsigned(client, requestId);
 
     if (
       !RESUME_ONLY ||

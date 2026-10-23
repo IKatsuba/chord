@@ -248,6 +248,89 @@ async function startOnFake(starting: Starting, ...flags: string[]) {
   return events;
 }
 
+/** The failed start of a conversation on the fake started with `flags`. */
+function failOnFake(...flags: string[]) {
+  return failedStartOf(fakeAgentCommand(undefined, ...flags));
+}
+
+/** The failed start of a conversation on the agent `command` starts. */
+async function failedStartOf(command: string[]) {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(
+    () =>
+      openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: command,
+      }),
+    (event) => events.push(event),
+  );
+
+  try {
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connect_failed'));
+  } finally {
+    await conversation.close();
+    await rm(dir, { recursive: true });
+  }
+
+  return events.find((event) => event.type === 'connect_failed');
+}
+
+test("a start the agent refuses for want of a login says so, in the agent's words, with the ways in it offers (CHD-435)", async () => {
+  expect(await failOnFake('--auth-required', 'methods')).toStrictEqual({
+    type: 'connect_failed',
+    message:
+      'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY',
+    signIn: {
+      message:
+        'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY',
+      ways: [
+        {
+          name: 'Log in with the fake',
+          description: 'Run `fake login` in the terminal',
+        },
+        { name: 'Log in with SSO' },
+      ],
+    },
+  });
+  expect(await failOnFake('--auth-required', 'bare')).toStrictEqual({
+    type: 'connect_failed',
+    message: 'Authentication required',
+    signIn: { message: 'Authentication required', ways: [] },
+  });
+});
+
+// chord answers droid's sign-in link `cancel`, as it comes before anyone
+// listens, and droid then fails the start `authRequired`.
+test("droid's start, its sign-in link cancelled, needs a login by its code (CHD-435)", async () => {
+  const message =
+    'Authentication required: Sign-in was cancelled. Retry to sign in.';
+
+  expect(await failOnFake('--auth-required', 'link')).toStrictEqual({
+    type: 'connect_failed',
+    message,
+    signIn: { message, ways: [] },
+  });
+});
+
+test('a link nobody answered, then a start that failed for another reason, needs no login (CHD-435)', async () => {
+  expect(await failOnFake('--auth-required', 'linkother')).toStrictEqual({
+    type: 'connect_failed',
+    message: 'The fake could not open its session.',
+  });
+});
+
+test('a start that failed for another reason says only why (CHD-435)', async () => {
+  expect(
+    await failedStartOf(['sh', '-c', 'echo "no credentials" >&2; exit 1']),
+  ).toStrictEqual({
+    type: 'connect_failed',
+    message: 'The agent exited: no credentials',
+  });
+});
+
 test('each session starts on the model and in the mode it was given', async () => {
   const events = await startOnFake({
     model: { id: 'fake-small' },

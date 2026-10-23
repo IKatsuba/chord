@@ -302,11 +302,16 @@ test("a start the agent refuses for want of a login says so, in the agent's word
   });
 });
 
-test('a start that failed after chord cancelled the sign-in link nobody could answer needs a login too (CHD-435)', async () => {
+// chord answers droid's sign-in link `cancel`, as it comes before anyone
+// listens, and droid then fails the start `authRequired`.
+test("droid's start, its sign-in link cancelled, needs a login by its code (CHD-435)", async () => {
+  const message =
+    'Authentication required: Sign-in was cancelled. Retry to sign in.';
+
   expect(await failOnFake('--auth-required', 'link')).toStrictEqual({
     type: 'connect_failed',
-    message: 'Sign-in was cancelled. Retry to sign in.',
-    signIn: { message: 'Sign-in was cancelled. Retry to sign in.', ways: [] },
+    message,
+    signIn: { message, ways: [] },
   });
 });
 

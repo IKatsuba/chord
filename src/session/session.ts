@@ -504,11 +504,7 @@ export async function openSession(
   } catch (refused) {
     // A start the agent refused for want of a login says so, with the ways
     // in it offered (CHD-435).
-    const error = asSignIn(
-      refused,
-      connection.init.authMethods,
-      elicitations.linkUnheard,
-    );
+    const error = asSignIn(refused, connection.init.authMethods);
 
     try {
       await shutdown();

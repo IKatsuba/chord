@@ -1,11 +1,6 @@
 import { expect, test } from 'bun:test';
 import { RequestError } from '@agentclientprotocol/sdk';
-import {
-  asSignIn,
-  SignInNeeded,
-  signInOf,
-  waysOf,
-} from '../../src/session/sign_in.ts';
+import { asSignIn, SignInNeeded, signInOf } from '../../src/session/sign_in.ts';
 
 const METHODS = [
   {
@@ -19,7 +14,7 @@ const METHODS = [
 
 test("authRequired is a sign-in, in the agent's words, with the ways in it offers", () => {
   const refused = RequestError.authRequired(undefined, 'run `agent login`');
-  const error = asSignIn(refused, METHODS, false);
+  const error = asSignIn(refused, METHODS);
 
   expect(error).toBeInstanceOf(SignInNeeded);
   expect(signInOf(error)).toStrictEqual({
@@ -34,23 +29,20 @@ test("authRequired is a sign-in, in the agent's words, with the ways in it offer
 
 test('an agent that offers no ways in has none', () => {
   expect(
-    signInOf(asSignIn(RequestError.authRequired(), undefined, false)),
+    signInOf(asSignIn(RequestError.authRequired(), undefined)),
   ).toStrictEqual({ message: 'Authentication required', ways: [] });
 });
 
-test('another failure is not a sign-in, whatever its words say, unless chord cancelled a sign-in link nobody could answer', () => {
+test('another failure is not a sign-in, whatever its words say', () => {
   const other = new RequestError(-32603, 'Sign-in was cancelled.');
 
-  expect(asSignIn(other, METHODS, false)).toBe(other);
-  expect(signInOf(asSignIn(other, METHODS, true))).toStrictEqual({
-    message: 'Sign-in was cancelled.',
-    ways: waysOf(METHODS),
-  });
+  expect(asSignIn(other, METHODS)).toBe(other);
+  expect(signInOf(other)).toBeUndefined();
 });
 
 test('a sign-in is found under the error that wraps it', () => {
   const wrapped = new Error('it cannot resume session s: …', {
-    cause: asSignIn(RequestError.authRequired(), [], false),
+    cause: asSignIn(RequestError.authRequired(), []),
   });
 
   expect(signInOf(wrapped)?.message).toStrictEqual('Authentication required');

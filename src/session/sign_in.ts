@@ -57,21 +57,19 @@ export function waysOf(
 
 /**
  * `error`, a failed session request of the start, as a `SignInNeeded` when
- * it says the agent needs a login: its code is `authRequired`, or chord
- * itself cancelled a sign-in link the agent asked while nobody could answer
- * it (`linkUnheard`, droid's case); otherwise `error` as it is.
+ * its code is `authRequired`, the protocol's word that the agent needs a
+ * login; otherwise `error` as it is.
  */
 export function asSignIn(
   error: unknown,
   methods: readonly AuthMethod[] | null | undefined,
-  linkUnheard: boolean,
 ): unknown {
   const code =
     typeof error === 'object' && error !== null && 'code' in error
       ? error.code
       : undefined;
 
-  if (code !== AUTH_REQUIRED && !linkUnheard) {
+  if (code !== AUTH_REQUIRED) {
     return error;
   }
 

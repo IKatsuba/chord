@@ -1012,10 +1012,9 @@ const AUTH_METHODS: acp.AuthMethod[] = [
 
 /**
  * Refuses a session request under `--auth-required`, as an agent nobody
- * signed in to does (CHD-435): `authRequired`; or, with `link`, as droid
- * does (agent-capabilities dr15), a sign-in link asked outside any session
- * while the request waits, and anything but its acceptance a failure that is
- * not `authRequired`.
+ * signed in to does (CHD-435): `authRequired`; with `link`, after a sign-in
+ * link asked outside any session while the request waits that is not
+ * accepted, as droid 0.244.0 does (its `authenticateWithElicitation`).
  */
 async function refuseUnsigned(
   client: acp.AgentContext,
@@ -1042,8 +1041,8 @@ async function refuseUnsigned(
     });
 
     if (answer.action !== 'accept') {
-      throw new acp.RequestError(
-        -32603,
+      throw acp.RequestError.authRequired(
+        undefined,
         'Sign-in was cancelled. Retry to sign in.',
       );
     }

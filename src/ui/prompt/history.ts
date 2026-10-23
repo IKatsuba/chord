@@ -83,9 +83,9 @@ export interface Walked {
 
 /**
  * Where the walk stands among the prompts and then `kept`, the agent's own
- * drafts set aside, oldest first (U10): past them is the box's draft. The
- * walk is the window's and the drafts an agent's, so a walk begun on an
- * agent with more of them stands at the draft on one with fewer.
+ * drafts set aside, oldest first (U10): past them is the box's draft. A
+ * place past the drafts there are, as one taken off the stack leaves it,
+ * stands at the draft.
  */
 function standing(history: History, kept: number): number {
   const end = history.prompts.length + kept;

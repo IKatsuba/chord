@@ -1,0 +1,40 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   cursor · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-r
+ ▀▀     ? for shortcuts · /help
+        resumed · 15 minutes ago · text
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

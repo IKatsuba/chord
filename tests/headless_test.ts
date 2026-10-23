@@ -835,7 +835,7 @@ function refusal(stderr: string): string[] {
     .split('\n');
 }
 
-test('several -r are refused with their commands, before anything asks PATH (CHD-493)', async () => {
+test('a second -r is refused by Cliffy, before anything asks PATH (Q181)', async () => {
   const several = await onPath(
     RECORDED.flatMap((id) => ['-r', id]),
     [],
@@ -847,13 +847,7 @@ test('several -r are refused with their commands, before anything asks PATH (CHD
   expect(several.code).toBe(2);
   expect(several.stderr).not.toContain('not on PATH');
   expect(refusal(several.stderr)).toEqual([
-    '--resume opens one session; it was given 2. Open each in a chord of its own:',
-    expect.stringMatching(
-      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[0]}$`),
-    ),
-    expect.stringMatching(
-      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[1]}$`),
-    ),
+    'Option "-r" can only occur once, but was found several times.',
   ]);
 });
 
@@ -870,30 +864,6 @@ test("an old window's w-… id goes on to start the agent named, as an id chord 
       'chord: cursor runs "agent", which is not on PATH; ' +
       'install it from https://cursor.com/docs/cli/installation\n',
   });
-});
-
-test("several -r of two agents and an unknown id name each its record's agent and directory, the unknown one this command's (CHD-493)", async () => {
-  const { code, stderr } = await onPath(
-    ['-r', RECORDED[0]!, '-r', 'never-seen', '-r', RECORDED[1]!],
-    [],
-    undefined,
-    ['cursor', 'claude'],
-  );
-
-  expect(code).toBe(2);
-  expect(stderr).not.toContain('not on PATH');
-  expect(refusal(stderr)).toEqual([
-    '--resume opens one session; it was given 3. Open each in a chord of its own:',
-    expect.stringMatching(
-      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[0]}$`),
-    ),
-    expect.stringMatching(
-      /^chord claude --cwd \S+ --resume never-seen {2}# no record; the agent and directory are this command's$/,
-    ),
-    expect.stringMatching(
-      new RegExp(`^chord claude --cwd \\S+ --resume ${RECORDED[1]}$`),
-    ),
-  ]);
 });
 
 test('a name only the settings define starts', async () => {

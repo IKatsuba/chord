@@ -47,7 +47,6 @@ import {
   ResumeError,
   resumeMessage,
   sessionById,
-  severalRefusal,
 } from './session/sessions.ts';
 import { snapshotOnSignal } from './platform/heap.ts';
 import { execPath } from './platform/process.ts';
@@ -143,14 +142,13 @@ const cli = chordCommand().action(async (options, named) => {
   // One id and no agent named on the command line: the session's own
   // agent, as its record says (Q180). An --agent-command still goes with
   // the default agent alone (Q56), so it leaves the id to be refused there.
-  const [one, ...more] =
-    options.resume?.filter((id) => typeof id === 'string') ?? [];
+  // `-r` with no id is Cliffy's `true`: the picker, in place of an id.
+  const given = typeof options.resume === 'string' ? options.resume : undefined;
   const recorded =
     named === undefined &&
     options.agentCommand === undefined &&
-    one !== undefined &&
-    more.length === 0
-      ? recordedAgent(await readRecords(chordStateDir()), one)
+    given !== undefined
+      ? recordedAgent(await readRecords(chordStateDir()), given)
       : undefined;
   const flags = {
     agent: named ?? recorded,
@@ -267,9 +265,8 @@ const cli = chordCommand().action(async (options, named) => {
   // without stopping it (docs/memory.md).
   snapshotOnSignal(() => join(chordStateDir(), 'heaps'));
 
-  // `-r` with no id is Cliffy's `true`: the picker, in place of an id.
-  const picking = options.resume?.some((id) => id === true) === true;
-  let ids = options.resume?.filter((id) => typeof id === 'string');
+  const picking = options.resume === true;
+  let id = given;
   let resume: Resume | undefined;
   const find = { agent, cwd: resolve(options.cwd) };
 
@@ -295,12 +292,6 @@ const cli = chordCommand().action(async (options, named) => {
   const keys = await loadKeybindings(keybindingsFile(xdgConfig));
 
   if (picking) {
-    if (ids !== undefined && ids.length > 0) {
-      throw new ValidationError(
-        '--resume picks with no id, or opens the ids it is given; not both.',
-      );
-    }
-
     // A picker needs a person at a terminal to pick.
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
       throw new ValidationError('--resume needs an id when not in a terminal');
@@ -349,29 +340,20 @@ const cli = chordCommand().action(async (options, named) => {
       return;
     }
 
-    ids = [chosen.resume.sessionId];
+    id = chosen.resume.sessionId;
   }
 
-  if (options.continue || ids !== undefined) {
+  if (options.continue || id !== undefined) {
     const stateDir = chordStateDir();
     const records = await readRecords(stateDir);
-    const [only] = ids ?? [];
 
     try {
-      // One session a run (CHD-493): several are each said back as a
-      // command before anything starts. A w-… id of an old window is an id
-      // like any other, for the agent to answer (Q179).
-      if (ids !== undefined && ids.length > 1) {
-        throw severalRefusal(records, ids, {
-          ...find,
-          agentCommand: flags.agentCommand,
-        });
-      }
-
+      // A w-… id of an old window is an id like any other, for the agent to
+      // answer (Q179).
       resume =
-        only === undefined
+        id === undefined
           ? latestSession(records, find)
-          : sessionById(records, only, find);
+          : sessionById(records, id, find);
     } catch (error) {
       await leaveStart();
 

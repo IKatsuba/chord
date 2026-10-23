@@ -42,7 +42,6 @@ export function chordCommand() {
     .option(
       '-r, --resume [id:string]',
       'Open a session by the id chord prints on quit; with no id, pick one.',
-      { collect: true },
     )
     .option(
       '-p, --print <prompt:string>',

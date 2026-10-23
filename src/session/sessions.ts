@@ -314,45 +314,6 @@ export function sessionById(
   return { sessionId: id, cwd };
 }
 
-/**
- * The refusal of `-r <id> -r <id> …`: chord opens one session, so each id
- * is said back as a command of its own, in the order given (CHD-493). An id
- * chord has a record of runs on that record's agent in its directory; one
- * it has none of, on this command's, and its line says so. The
- * `--agent-command` the person typed goes only with the agent it starts.
- */
-export function severalRefusal(
-  records: readonly SessionRecord[],
-  ids: readonly string[],
-  {
-    agent,
-    cwd,
-    agentCommand,
-  }: FindOptions & { readonly agentCommand?: string | undefined },
-): ResumeError {
-  const lines = ids.map((id) => {
-    const found = latest(records.filter((record) => record.sessionId === id));
-    const runs = found?.agent ?? agent;
-    const command = resumeCommand(
-      runs,
-      id,
-      runs === agent ? agentCommand : undefined,
-      found?.cwd ?? cwd,
-    );
-
-    return found === undefined
-      ? `${command}  # no record; the agent and directory are this command's`
-      : command;
-  });
-
-  return new ResumeError(
-    [
-      `--resume opens one session; it was given ${ids.length}. Open each in a chord of its own:`,
-      ...lines,
-    ].join('\n'),
-  );
-}
-
 function resumeOf(record: SessionRecord): Resume {
   return {
     sessionId: record.sessionId,
@@ -377,17 +338,8 @@ export function resumeCommand(
    * settings is not, as the settings give it again (the owner's Q56).
    */
   agentCommand?: string,
-  /**
-   * The directory it opens in, for a session that chord may have no record
-   * of, which would otherwise open wherever the command is typed.
-   */
-  cwd?: string,
 ): string {
   const words = ['chord', shellQuote(agent)];
-
-  if (cwd !== undefined) {
-    words.push('--cwd', shellQuote(cwd));
-  }
 
   if (agentCommand !== undefined) {
     words.push('--agent-command', shellQuote(agentCommand));

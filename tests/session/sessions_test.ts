@@ -25,7 +25,6 @@ import {
   ResumeError,
   sessionById,
   type SessionRecord,
-  severalRefusal,
   summaryOf,
 } from '../../src/session/sessions.ts';
 import { pastActions } from '../../src/session/replay.ts';
@@ -218,42 +217,6 @@ test("--resume names the agent a session belongs to when it is another's", () =>
   });
 });
 
-test('--resume with several ids is refused, each said back as a command on its own agent in its own directory, in the order given', () => {
-  const records = [
-    record('a'),
-    record('b', { agent: 'codex', cwd: '/other' }),
-    record('c', { cwd: '/my work' }),
-    // An older record of the same session: its latest speaks for it.
-    record('old-b', {
-      sessionId: 'id-b',
-      agent: 'codex',
-      cwd: '/gone',
-      lastUsedAt: Date.parse('2026-09-01T00:00:00.000Z'),
-    }),
-  ];
-  const refusal = severalRefusal(records, ['id-c', 'id-b', 'id-x', 'id-c'], {
-    ...CLAUDE,
-    agentCommand: 'claude-acp --fast',
-  });
-
-  expect(refusal).toBeInstanceOf(ResumeError);
-  expect(refusal.message.split('\n')).toStrictEqual([
-    '--resume opens one session; it was given 4. Open each in a chord of its own:',
-    // The typed --agent-command goes with the agent it starts alone.
-    "chord claude --cwd '/my work' --agent-command 'claude-acp --fast' --resume id-c",
-    'chord codex --cwd /other --resume id-b',
-    "chord claude --cwd /work --agent-command 'claude-acp --fast' --resume id-x  # no record; the agent and directory are this command's",
-    "chord claude --cwd '/my work' --agent-command 'claude-acp --fast' --resume id-c",
-  ]);
-  expect(
-    severalRefusal(records, ['id-a', 'id-b'], CLAUDE).message.split('\n'),
-  ).toStrictEqual([
-    '--resume opens one session; it was given 2. Open each in a chord of its own:',
-    'chord claude --cwd /work --resume id-a',
-    'chord codex --cwd /other --resume id-b',
-  ]);
-});
-
 test("one id's agent is its latest record's, and none for an id chord has no record of (Q180)", () => {
   const records = [
     record('old', {
@@ -291,10 +254,6 @@ test('the resume command carries an --agent-command, and every word of it is quo
   expect(resumeCommand('fake', 'abc', "deno run 'x y.ts'")).toStrictEqual(
     `chord fake --agent-command 'deno run '\\''x y.ts'\\''' --resume abc`,
   );
-  // A directory goes right after the agent, quoted the same way.
-  expect(
-    resumeCommand('codex', 'abc', undefined, '/work/my app'),
-  ).toStrictEqual("chord codex --cwd '/work/my app' --resume abc");
   // An id or agent is opaque: it pastes as one word, and nothing in it runs.
   expect(resumeCommand('my agent', 'a b')).toStrictEqual(
     "chord 'my agent' --resume 'a b'",

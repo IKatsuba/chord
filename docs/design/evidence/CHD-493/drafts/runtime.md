@@ -340,7 +340,7 @@ any *other* path.
 
 | File | Case | Outcome |
 |---|---|---|
-| `App_test.tsx` | :38 CHD-382 "a blocked tab behind wins over a working front tab" | Rewritten main + child: a blocked child wins over a working main. |
+| `App_test.tsx` | :38 CHD-382 "a blocked tab behind wins over a working front tab" | Rewritten main + child: a blocked child wins over a working main (main's slow work first, the child entered through the empty-draft list, the child asks permission, blocked wins). Its trailing check, cancelling main while the child is blocked, has no path with the keys left (main has no attention then) and is not tested (Q183); Esc cancellation keeps its own tests. |
 | `App_test.tsx` | :685 strip vs header | Keep the one-session half; the two-session half deleted. |
 | `App_test.tsx` | :709 ctrl+x c / leader switching | Deleted. |
 | `App_test.tsx` | :747, :798, :842 `/new <agent>` on its settings' model/effort, names from settings | **[N]** Deleted; the starting values per runtime stay covered for children (`AgentsTasks_test.tsx` :319, `tests/settings_test.ts` `startupOf`). A new case: `/new` clears as `/clear` does, `/new codex` is refused with the lead's wording. |

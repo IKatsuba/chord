@@ -357,21 +357,36 @@ describe('CHD-493 U1 tester: sessions-only resume with legacy windows', () => {
   test('a legacy window stays untouched and absent from the picker at both widths', async () => {
     const stateDir = await mkdtemp(join(tmpdir(), 'chord-legacy-picker-'));
     const path = join(stateDir, 'windows', 'w-old.json');
-    const legacy = JSON.stringify({
-      id: 'w-old',
-      at: Date.now(),
-      front: 0,
-      tabs: [{ agent: 'fake', sessionId: 'legacy-only', cwd: '/work' }],
-    });
+    let legacy = '';
 
     try {
       await mkdir(join(stateDir, 'windows'));
-      await writeFile(path, legacy);
       await withWindow(
         async (window) => {
           await ready(window);
           await send(window, 'text');
           await window.shows('came in chunks.');
+
+          const sessionId = window.session()?.id;
+
+          expect(sessionId).toBeDefined();
+          await until(
+            'the session record that made this window listable',
+            async () =>
+              (await readRecords(stateDir)).some(
+                (record) =>
+                  record.sessionId === sessionId && record.cwd === window.dir,
+              ),
+          );
+
+          legacy = JSON.stringify({
+            id: 'w-old',
+            at: Date.now(),
+            front: 0,
+            tabs: [{ agent: 'fake', sessionId, cwd: window.dir }],
+          });
+
+          await writeFile(path, legacy);
           await send(window, '/clear');
           await send(window, '/resume');
           await window.shows('Resume a session');
@@ -385,7 +400,7 @@ describe('CHD-493 U1 tester: sessions-only resume with legacy windows', () => {
               "fake's earlier sessions in this directory.",
             );
             expect(frame).not.toContain('saved windows');
-            expect(frame).not.toContain('legacy-only');
+            expect(frame).not.toContain('▣');
             expect(frame).not.toContain('w-old');
             expect(frame).toContain('text');
           }

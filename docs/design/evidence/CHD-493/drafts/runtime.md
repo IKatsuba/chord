@@ -184,6 +184,8 @@ named where one exists or is needed.
 ## 4. The CLI
 
 - **`--resume` with one id, `--continue`, `-r` with no id:** as today.
+  (Superseded for one id by Q180 and `CHD-493.md` U8: with no `[agent]`
+  named, one id opens on its record's agent.)
   The start picker lists sessions only (interface for `Start.tsx`).
 - **Several ids (`-r a -r b`)**: Cliffy's `collect` stays, so `main.tsx`
   sees every id and refuses with its own sentences, before any terminal or
@@ -289,7 +291,7 @@ The ways a window opens several tabs at once.
 | File | Case | Outcome |
 |---|---|---|
 | `tests/headless_test.ts` | import of `writeWindow` (:19); `seedRecords` writing a window (:668) | Seed the window as a fixture string: the 0.57.0 JSON as `windowText` wrote it (`{"id":"w-0b5c5f9e","at":3,"tabs":[…],"front":0}` pretty-printed, newline-terminated) written with `writeFile` to `windows/w-0b5c5f9e.json`; no import from `windows.ts`. |
-| `tests/headless_test.ts` | :692 "a restore asks PATH for its tabs' agents" | Rewritten in three: (a) one `-r <id>` whose record's agent is `cursor` still reaches PATH validation and names cursor, not the default (the guarantee kept); (b) `-r a -r b` gets `severalRefusal`'s text, exit 1, and **nothing** asks PATH; (c) `-r w-0b5c5f9e` gets protocol's answer, exit 1, nothing asks PATH. Add (d): records of two agents (`cursor` and `claude`) and one unknown id: each line names its record's agent and directory, the unknown one this command's with its note. |
+| `tests/headless_test.ts` | :692 "a restore asks PATH for its tabs' agents" | Rewritten in three: (a) one `-r <id>` whose record's agent is `cursor` still reaches PATH validation and names cursor, not the default (the guarantee kept; after U8, Q180, with no agent named); (b) `-r a -r b` gets `severalRefusal`'s text, exit 1, and **nothing** asks PATH; (c) `-r w-0b5c5f9e` gets protocol's answer, exit 1, nothing asks PATH. Add (d): records of two agents (`cursor` and `claude`) and one unknown id: each line names its record's agent and directory, the unknown one this command's with its note. |
 | `tests/cli_test.ts` | :75 several ids open a tab each | Rewritten to `severalRefusal` from argv, the mixed-agent case among them. |
 | `tests/cli_test.ts` | :188 ten ids, an unknown id among several, the same id twice | Rewritten: all refused by `severalRefusal`; ten is no longer special. |
 | `tests/cli_test.ts` | :316 CHD-466 U2, `window restore` variant | Rewritten to the `w-…` answer **[W]**; the `session resume` variant stays. |

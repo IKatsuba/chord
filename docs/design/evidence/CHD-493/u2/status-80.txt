@@ -1,0 +1,24 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des493u2
+ ▀▀     ? for shortcuts · /help
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   377a928e-7f8c-45d5-8a23-3ed3fd7f9cad
+      Directory: /tmp/chord-qa.des493u2
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

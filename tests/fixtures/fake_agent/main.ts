@@ -1031,7 +1031,7 @@ async function refuseUnsigned(
     throw acp.RequestError.authRequired();
   }
 
-  if (AUTH_REQUIRED === 'link') {
+  if (AUTH_REQUIRED === 'link' || AUTH_REQUIRED === 'linkother') {
     const answer = await client.request('elicitation/create', {
       requestId,
       mode: 'url',
@@ -1041,10 +1041,12 @@ async function refuseUnsigned(
     });
 
     if (answer.action !== 'accept') {
-      throw acp.RequestError.authRequired(
-        undefined,
-        'Sign-in was cancelled. Retry to sign in.',
-      );
+      throw AUTH_REQUIRED === 'link'
+        ? acp.RequestError.authRequired(
+            undefined,
+            'Sign-in was cancelled. Retry to sign in.',
+          )
+        : new acp.RequestError(-32603, 'The fake could not open its session.');
     }
   }
 }

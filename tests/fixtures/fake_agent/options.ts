@@ -321,14 +321,19 @@ export const STEP_MS = Number(
  * `initialize`, one whose description names a command and one with a name
  * alone; `bare` says only `Authentication required` and offers none, as
  * kimi does; `link` asks a sign-in link first, as droid does, and fails so
- * unless it is accepted.
+ * unless it is accepted; `linkother` asks the same link and, unless it is
+ * accepted, fails for some other reason (-32603), which needs no login.
  */
-export const AUTH_REQUIRED: 'methods' | 'bare' | 'link' | undefined = (() => {
+export const AUTH_REQUIRED:
+  'methods' | 'bare' | 'link' | 'linkother' | undefined = (() => {
   const flag = ARGS.indexOf('--auth-required');
   const kind =
     flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_AUTH_REQUIRED;
 
-  return kind === 'methods' || kind === 'bare' || kind === 'link'
+  return kind === 'methods' ||
+    kind === 'bare' ||
+    kind === 'link' ||
+    kind === 'linkother'
     ? kind
     : undefined;
 })();

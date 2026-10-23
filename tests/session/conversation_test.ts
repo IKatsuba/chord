@@ -315,6 +315,13 @@ test("droid's start, its sign-in link cancelled, needs a login by its code (CHD-
   });
 });
 
+test('a link nobody answered, then a start that failed for another reason, needs no login (CHD-435)', async () => {
+  expect(await failOnFake('--auth-required', 'linkother')).toStrictEqual({
+    type: 'connect_failed',
+    message: 'The fake could not open its session.',
+  });
+});
+
 test('a start that failed for another reason says only why (CHD-435)', async () => {
   expect(
     await failedStartOf(['sh', '-c', 'echo "no credentials" >&2; exit 1']),

@@ -1,0 +1,24 @@
+ other · codex · 6.1 Sol · opened by main 14s ago
+
+ ← from @main
+   ⎿  text
+
+ ⏺ What would you like me to do with “text”?
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ other ──────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto review mode on (shift+tab to cycle)       6.1 Sol · medium · 5% used
+    main   fake · Fake Large with a 1M context window  ● permission 8s
+  ❯ other  codex · 6.1 Sol                             ◦ idle 8s

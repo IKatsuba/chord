@@ -1,0 +1,24 @@
+
+ › form
+
+ ››› Waiting for your input… (10s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                          │
+│ Set up the deploy target                                                     │
+│                                                                              │
+│   * Project name   not set                                                   │
+│     Contact email  not set                                                   │
+│   ✔ Replicas       2                                                         │
+│     Traffic share  not set                                                   │
+│   ✔ Public         ☐ No                                                      │
+│   * Region         not set                                                   │
+│     Tags           not set                                                   │
+│                                                                              │
+│ ❯ Accept   Decline                                                           │
+│                                                                              │
+│ ←→ to switch · Enter to accept · Esc to cancel                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main   fake   ● input 10s
+    other  codex  ◦ idle 10s   ✓ new reply

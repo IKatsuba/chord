@@ -1,0 +1,23 @@
+--- command
+ ⏺ auggie did not start: Auggie does not currently support authenticating over ACP. Please run `auggie login` from your
+   terminal
+   ⎿  chord does not sign agents in. Sign in with auggie's own CLI in a terminal, or set its API key where it offers
+      one.
+
+--- described
+ ⏺ kilo did not start: Authentication required
+   ⎿  kilo offers this sign-in:
+        Kilo login · Run `kilo auth login` in the terminal
+      chord does not sign agents in. Sign in with kilo's own CLI in a terminal, or set its API key where it offers one.
+
+--- names
+ ⏺ droid did not start: Sign-in was cancelled. Retry to sign in.
+   ⎿  droid offers these sign-ins:
+        device-pairing
+        factory-api-key
+      chord does not sign agents in. Sign in with droid's own CLI in a terminal, or set its API key where it offers one.
+
+--- nothing
+ ⏺ kimi did not start: Authentication required
+   ⎿  chord does not sign agents in. Sign in with kimi's own CLI in a terminal, or set its API key where it offers one.
+

@@ -59,7 +59,8 @@
   `tasktallname`, `tasktwo`,
   `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
   `mcpnote`, `codexmcpnote`, `markdown`, `permission`, `permissionsteer`,
-  `callchildtwo`, `agenttitled`, `agentsheldgated`, `plan`, `planshrinkgated`,
+  `callchildtwo`, `agenttitled`, `agentsquiet`, `agentsheldgated`, `plan`,
+  `planshrinkgated`,
   `proposal`, `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`,
   `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`, `tasktillsteered`,
@@ -170,7 +171,9 @@
   message is steered into it, as the task's is, with `--steering`;
   `agents` opens `parser` on `agentchild` and `docs` on `permission`, both
   long-lived on the fake runtime, and messages `parser` twice, waiting on
-  receipt marks in the gate before each next step;
+  receipt marks in the gate before each next step; `agentsquiet` opens the
+  same pair without messaging `parser`, so its first idle is final, to check
+  idle age (CHD-364);
   `agentcall` opens `parser` on `callchild` and messages it during its
   running call; `agentcalltwice` sends two messages during that call, to
   check their queue order. `callchild` runs one call for about three

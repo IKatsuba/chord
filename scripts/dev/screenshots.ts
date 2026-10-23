@@ -240,8 +240,13 @@ async function capture(shot: Shot): Promise<string> {
       `CHORD_FAKE_SCENARIO=${shot.scenario}`,
       'CHORD_FAKE_STEP_MS=40',
       // The children a scenario opens run on codex, a name the settings give
-      // the fake.
+      // the fake, on its model, opened on a person's words.
       'CHORD_FAKE_CHILD_RUNTIME=codex',
+      'CHORD_FAKE_CHILD_MODEL=gpt-6.1-sol',
+      `CHORD_FAKE_SAID=${JSON.stringify({
+        agentchild: 'Run the parser tests and fix what fails',
+        permission: 'Say in the README what changed',
+      })}`,
     ];
     const chord = [
       process.execPath,

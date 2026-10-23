@@ -280,6 +280,7 @@ import {
   LATE_COST,
   SAY_CANCELS,
   ECHO_MESSAGES,
+  SAID,
   STEP_MS,
   TOKENS_ONLY,
 } from './options.ts';
@@ -516,6 +517,11 @@ const SCENARIOS = [
 ] as const;
 
 type Scenario = (typeof SCENARIOS)[number];
+
+/** The scenario a person's words stand for, as `--said` gives them, or `text` itself. */
+function unsaid(text: string | undefined): string | undefined {
+  return Object.entries(SAID).find(([, words]) => words === text)?.[0] ?? text;
+}
 
 function isScenario(value: string | undefined): value is Scenario {
   return SCENARIOS.includes(value as Scenario);
@@ -872,7 +878,8 @@ async function playPrompt(
   const text =
     cutNote === null ? whole : whole.trimStart().slice(cutNote[0].length);
   const asked = text.trim();
-  const scenario = isScenario(asked) ? asked : fallback;
+  const named = unsaid(asked);
+  const scenario = isScenario(named) ? named : fallback;
 
   const turn = new Turn(client, params.sessionId, controller.signal);
 
@@ -920,7 +927,7 @@ async function playPrompt(
       /^<message from="([^"]*)"(?: monitor="[^"]*")?>\n([\s\S]*)\n<\/message>$/.exec(
         wrapped,
       );
-    const said = message?.[2]?.trim();
+    const said = unsaid(message?.[2]?.trim());
     const role = team === null ? undefined : `team${team[2] ?? team[1]}`;
 
     if (message) {

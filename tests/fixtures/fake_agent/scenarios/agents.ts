@@ -12,7 +12,13 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
 import * as acp from '@agentclientprotocol/sdk';
-import { CHILD_RUNTIME, CHILD_RUNTIME_GIVEN, STEP_MS } from '../options.ts';
+import {
+  CHILD_MODEL,
+  CHILD_RUNTIME,
+  CHILD_RUNTIME_GIVEN,
+  SAID,
+  STEP_MS,
+} from '../options.ts';
 import { cwds } from '../sessions.ts';
 import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
@@ -37,17 +43,20 @@ const HELD_STEP_MS = STEP_MS * 20;
  */
 export const PARSER_ARGS = {
   agent: CHILD_RUNTIME_GIVEN ?? 'fake',
-  ...((CHILD_RUNTIME_GIVEN ?? 'fake') === 'fake'
-    ? { model: 'fake-small' }
-    : {}),
-  prompt: 'agentchild',
+  ...(CHILD_MODEL !== undefined
+    ? { model: CHILD_MODEL }
+    : (CHILD_RUNTIME_GIVEN ?? 'fake') === 'fake'
+      ? { model: 'fake-small' }
+      : {}),
+  prompt: SAID['agentchild'] ?? 'agentchild',
   name: 'parser',
 };
 
 /** What it opens second, on the runtime's own model, which asks to write. */
 export const DOCS_ARGS = {
   agent: CHILD_RUNTIME_GIVEN ?? 'fake',
-  prompt: 'permission',
+  ...(CHILD_MODEL === undefined ? {} : { model: CHILD_MODEL }),
+  prompt: SAID['permission'] ?? 'permission',
   name: 'docs',
 };
 

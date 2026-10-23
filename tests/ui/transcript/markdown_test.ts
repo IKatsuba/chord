@@ -4,7 +4,11 @@ import process from 'node:process';
 import { promisify } from 'node:util';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
-import { markdown, QUOTE_INSET } from '../../../src/ui/transcript/markdown.ts';
+import {
+  markdown,
+  QUOTE_INSET,
+  softMarkdown,
+} from '../../../src/ui/transcript/markdown.ts';
 import { PALETTES } from '../../../src/ui/theme/theme.ts';
 import {
   MARKDOWN_LINES,
@@ -503,8 +507,8 @@ test("inline code and links take the palette's colours", () => {
   expect(shown!.text.includes('\x1b[38;2;11;92;173m'), 'link').toBeTruthy();
 });
 
-test('unwrapped, a paragraph, a heading and a quote are a line each (CHD-396)', () => {
-  const blocks = markdown(
+test('soft, a paragraph, a heading and a quote are a line each (CHD-396)', () => {
+  const blocks = softMarkdown(
     [
       '## A heading long enough to wrap',
       '',
@@ -513,21 +517,94 @@ test('unwrapped, a paragraph, a heading and a quote are a line each (CHD-396)', 
       'one.',
       '',
       '> A quote long enough to wrap at this width.',
-      '',
-      '- a list item long enough to wrap',
     ].join('\n'),
     20,
     false,
-    PALETTES.dark,
+  );
+
+  expect(blocks).toStrictEqual([
+    { kind: 'text', text: 'A heading long enough to wrap' },
+    // A soft break joins with a space; a hard break stays a line break.
+    {
+      kind: 'text',
+      text: 'A paragraph long enough to wrap, with a soft break and a hard\none.',
+    },
+    { kind: 'quote', text: 'A quote long enough to wrap at this width.' },
+  ]);
+});
+
+test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
+  const [bullets, numbers, tasks] = softMarkdown(
+    [
+      '- an item long enough to wrap',
+      '  1. nested, and long enough too',
+      '     ```sh',
+      '     abcdefghijklmnopqrstu',
+      '     ```',
+      '',
+      '9. nine',
+      '10. ten',
+      '',
+      '- [ ] open',
+      '- [x] done',
+    ].join('\n'),
+    20,
     false,
   );
 
-  expect(blocks.map((block) => block.text)).toStrictEqual([
-    'A heading long enough to wrap',
-    // A soft break joins with a space; a hard break stays a line break.
-    'A paragraph long enough to wrap, with a soft break and a hard\none.',
-    'A quote long enough to wrap at this width.',
-    // Lists keep their rows in this unit.
-    '- a list item long\n  enough to wrap',
-  ]);
+  expect(bullets).toStrictEqual({
+    kind: 'list',
+    loose: false,
+    items: [
+      {
+        marker: '- ',
+        blocks: [
+          { kind: 'text', text: 'an item long enough to wrap' },
+          {
+            kind: 'list',
+            loose: false,
+            items: [
+              {
+                marker: '1. ',
+                // The box wraps in the 15 cells beside both markers.
+                blocks: [
+                  { kind: 'text', text: 'nested, and long enough too' },
+                  {
+                    kind: 'text',
+                    text: '┌ sh ─────────┐\n│ abcdefghijk │\n│ lmnopqrstu  │\n└─────────────┘',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  // Numbered on from the first as written, each marker its own width.
+  expect(
+    numbers?.kind === 'list' && numbers.items.map((item) => item.marker),
+  ).toStrictEqual(['9. ', '10. ']);
+  expect(
+    tasks?.kind === 'list' && tasks.items.map((item) => item.marker),
+  ).toStrictEqual(['[ ] ', '[x] ']);
+});
+
+test('soft, a loose list says so (CHD-396)', () => {
+  const [list] = softMarkdown('- a\n\n  more\n- b', 20, false);
+
+  expect(list).toStrictEqual({
+    kind: 'list',
+    loose: true,
+    items: [
+      {
+        marker: '- ',
+        blocks: [
+          { kind: 'text', text: 'a' },
+          { kind: 'text', text: 'more' },
+        ],
+      },
+      { marker: '- ', blocks: [{ kind: 'text', text: 'b' }] },
+    ],
+  });
 });

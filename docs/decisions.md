@@ -399,6 +399,24 @@ binary.
 - **An H1 is bold and underlined,** an H2 and below bold: markdansi has one
   style for every heading, so an H1 is rendered with a theme of its own.
 - A heading longer than the window is not wrapped by markdansi; Ink wraps it.
+- **A reply's prose and lists are wrapped by OpenTUI, not markdansi**
+  (CHD-396, the owner's choice of 2026-10-15). markdansi's wrap is real line
+  breaks, so a selection over a wrapped paragraph or item copied a newline
+  and the hang's spaces, and differed by window width; OpenTUI's
+  `wrapMode: 'word'` is soft, and a copy joins it, as a prompt's does.
+  Rewriting the copied text in chord was declined as a workaround. So in a
+  reply and a message's body a paragraph, a heading and a quote are rendered
+  with markdansi's `wrap: false`, and a list is laid out from marked's
+  tokens as OpenTUI boxes: each item's marker a dim text of its own that a
+  drag does not copy, its text rendered by markdansi unwrapped beside it,
+  hanging at the marker's own width, a nested list under its item's text,
+  and a code box in an item as wide as the room left. That lifts markdansi's
+  limit on a nested item's hang there. OpenTUI breaks a row after
+  `/ - . , :` and `(` as well as at spaces, so a path can break mid-path on
+  screen (Q157). Code boxes and tables keep markdansi's rows (Q150), a list
+  inside a quote is still markdansi's, unwrapped, and a proposal's body and
+  a saved team's keep markdansi's rows, since they fold by counting them
+  (Q152).
 - Links print their address after the text rather than as OSC 8 hyperlinks,
   so the address reads in every terminal and in a captured screen.
 - The theme is Claude Code's look, not markdansi's yellow headings: headings

@@ -22,14 +22,9 @@ import {
 import { Ansi } from '../../theme/Ansi.tsx';
 import { colour, CUT, DIM, fg, FILL, ROWS, TEXT } from '../../theme/text.ts';
 import type { Palette } from '../../theme/theme.ts';
-import { markdown } from '../markdown.ts';
-import { Reply } from '../Reply.tsx';
-import {
-  type ArrowTone,
-  outArrow,
-  wholeMessage,
-  wrapLine,
-} from '../message.ts';
+import { markdown, softMarkdown } from '../markdown.ts';
+import { Reply, SoftBlock } from '../Reply.tsx';
+import { type ArrowTone, outArrow, wrapLine } from '../message.ts';
 import { diffHeadline, type DiffView } from './diff.ts';
 import {
   agentRows,
@@ -220,37 +215,35 @@ export function MessageBody({
   const blocks = useMemo(
     () =>
       // An agent's own escapes are text, not styling chord answers for.
-      markdown(
-        stripAnsi(text),
-        Math.max(width - 5, 1),
-        undefined,
-        colours,
-        false,
-      ),
+      softMarkdown(stripAnsi(text), Math.max(width - 5, 1), undefined, colours),
     [text, width, colours],
   );
-  const lines = wholeMessage(
-    blocks.flatMap((block, index) => [
-      ...(index === 0 ? [] : ['']),
-      ...block.text.split('\n'),
-    ]),
-  );
+  const look = failed ? fg(colours.error) : { attributes: DIM };
 
   return (
     <>
-      {lines.map((line, index) => (
-        <Under key={index} first={index === 0}>
-          <text
-            {...FILL}
-            {...selectable}
-            {...(failed ? fg(colours.error) : { attributes: DIM })}
-          >
-            <Ansi text={line === '' ? ' ' : line} />
-          </text>
-        </Under>
+      {blocks.map((block, index) => (
+        <Fragment key={index}>
+          {index > 0 && (
+            <Under first={false}>
+              <text {...FILL}> </text>
+            </Under>
+          )}
+          <Under first={index === 0}>
+            <box flexGrow={1} flexShrink={1}>
+              <SoftBlock
+                // A quote reads as the rest of a message, with no bar.
+                block={
+                  block.kind === 'quote' ? { ...block, kind: 'text' } : block
+                }
+                look={look}
+              />
+            </box>
+          </Under>
+        </Fragment>
       ))}
       {ending !== undefined && (
-        <Under first={lines.length === 0}>
+        <Under first={blocks.length === 0}>
           <text {...FILL} {...selectable} {...fg(colours.error)}>
             {ending}
           </text>

@@ -57,16 +57,35 @@ export interface Block {
   readonly text: string;
 }
 
+/**
+ * A block of a reply for OpenTUI to wrap: its text, a quote's beside its
+ * bar, or a list laid out as items.
+ */
+export type Soft =
+  | { readonly kind: 'text' | 'quote'; readonly text: string }
+  | {
+      readonly kind: 'list';
+      /** A blank row between items, and between an item's blocks. */
+      readonly loose: boolean;
+      readonly items: readonly Item[];
+    };
+
+/**
+ * A list item: its marker, dim, and its blocks, which hang beside the marker
+ * as wide as it is.
+ */
+export interface Item {
+  readonly marker: string;
+  readonly blocks: readonly Soft[];
+}
+
 /** Cells a quote's bar takes: the bar and a space. */
 export const QUOTE_INSET = 2;
 
 /**
  * `text` as its top-level blocks, rendered to lines no wider than `width`
  * cells. markdansi puts no blank line between blocks, so paragraphs would run
- * together; the component puts one between these. Unless `wrap`, a
- * paragraph, a heading and a quote's paragraphs come as one line each, for
- * OpenTUI to wrap: its soft wraps join again in a copy, where markdansi's
- * line breaks would copy as newlines (CHD-396). Each call renders the whole
+ * together; the component puts one between these. Each call renders the whole
  * reply again, so a reply cut mid-stream reads as markdown cut there: an open
  * fence is a code block to the end, and an unclosed `**` stays as typed until
  * its pair arrives. Colour follows whether stdout is a terminal, unless
@@ -77,16 +96,44 @@ export function markdown(
   width: number,
   color?: boolean,
   palette: Palette = PALETTES.dark,
-  wrap = true,
 ): Block[] {
-  // Resolved here rather than by markdansi, since the code box and the table
-  // borders are drawn here too.
-  const on: Paint =
-    (color ?? process.stdout.isTTY === true)
-      ? process.env['NO_COLOR']
-        ? PLAIN
-        : palette
-      : undefined;
+  return laid(text, width, paint(color, palette), false).flatMap((block) =>
+    block.kind === 'list'
+      ? []
+      : [{ quote: block.kind === 'quote', text: block.text }],
+  );
+}
+
+/**
+ * `text` as `markdown` lays it out, but with a paragraph, a heading, a
+ * quote's paragraphs and a list item's text each one line, for OpenTUI to
+ * wrap: its soft wraps join again in a copy, where markdansi's line breaks
+ * would copy as newlines and a list's hang as spaces (CHD-396). A list comes
+ * as its items, for the component to set each beside its marker.
+ */
+export function softMarkdown(
+  text: string,
+  width: number,
+  color?: boolean,
+  palette: Palette = PALETTES.dark,
+): Soft[] {
+  return laid(text, width, paint(color, palette), true);
+}
+
+/**
+ * Resolved here rather than by markdansi, since the code box and the table
+ * borders are drawn here too.
+ */
+function paint(color: boolean | undefined, palette: Palette): Paint {
+  return (color ?? process.stdout.isTTY === true)
+    ? process.env['NO_COLOR']
+      ? PLAIN
+      : palette
+    : undefined;
+}
+
+/** `text`'s blocks, `soft` or in rows. */
+function laid(text: string, width: number, on: Paint, soft: boolean): Soft[] {
   const tokens = lexer(text);
   // A reference link resolves against definitions anywhere in the reply, but
   // each block goes to markdansi alone, so every block takes them along.
@@ -94,12 +141,27 @@ export function markdown(
     .filter((token) => token.type === 'def')
     .map((token) => token.raw.trimEnd())
     .join('\n');
-  const block = (raw: string, width: number, options: RenderOptions = {}) =>
-    renderBlock(raw, width, on, { wrap, ...options }, references);
 
-  return tokens.flatMap((token) => {
-    if (token.type === 'space') {
+  return blocksOf(tokens, width, on, references, soft);
+}
+
+function blocksOf(
+  tokens: readonly Token[],
+  width: number,
+  on: Paint,
+  references: string,
+  soft: boolean,
+): Soft[] {
+  const block = (raw: string, width: number, options: RenderOptions = {}) =>
+    renderBlock(raw, width, on, { wrap: !soft, ...options }, references);
+
+  return tokens.flatMap((token): Soft[] => {
+    if (token.type === 'space' || token.type === 'checkbox') {
       return [];
+    }
+
+    if (soft && token.type === 'list') {
+      return [listOf(token as Tokens.List, width, on, references)];
     }
 
     const quote = token.type === 'blockquote';
@@ -112,7 +174,7 @@ export function markdown(
           blockCode((token as Tokens.Blockquote).tokens, 0),
           width - QUOTE_INSET,
           on,
-          { quotePrefix: '', wrap },
+          { quotePrefix: '', wrap: !soft },
           references,
         )
       : token.type === 'table'
@@ -132,11 +194,50 @@ export function markdown(
               ? block(token.raw, width, { theme: themeOf(on, true) })
               : token.type === 'def'
                 ? // The definitions show, as markdansi shows them in a whole reply.
-                  renderBlock(token.raw, width, on, { wrap })
+                  renderBlock(token.raw, width, on, { wrap: !soft })
                 : block(token.raw, width);
 
-    return rendered === '' ? [] : [{ quote, text: rendered }];
+    return rendered === ''
+      ? []
+      : [{ kind: quote ? 'quote' : 'text', text: rendered }];
   });
+}
+
+/**
+ * A list as its items: each item's marker as markdansi draws it, a bullet,
+ * the number it is written with counted on from the list's first, or a
+ * task's box, and its blocks laid out in the width left beside the marker.
+ */
+function listOf(
+  list: Tokens.List,
+  width: number,
+  on: Paint,
+  references: string,
+): Soft {
+  return {
+    kind: 'list',
+    loose: list.loose,
+    items: list.items.map((item, index) => {
+      const marker = `${
+        item.task
+          ? `[${item.checked === true ? 'x' : ' '}]`
+          : list.ordered
+            ? `${Number(list.start === '' ? 1 : list.start) + index}.`
+            : '-'
+      } `;
+
+      return {
+        marker: dim(marker, on),
+        blocks: blocksOf(
+          item.tokens,
+          Math.max(1, width - stringWidth(marker)),
+          on,
+          references,
+          true,
+        ),
+      };
+    }),
+  };
 }
 
 /**

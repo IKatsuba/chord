@@ -18,6 +18,13 @@ const HEADING =
 const QUOTE =
   'A quote whose paragraph is long enough to wrap inside its bar at eighty columns, and at a hundred and twenty too, once it runs on.';
 
+/** The three nested items of the first list, as written. */
+const ITEMS = [
+  'package.json:3: the package @chorded/chord at version 0.54.1 needs Bun 1.4.2 or newer. check runs check:static and then the tests.',
+  'a nested item long enough to wrap at eighty columns, whose wrapped lines should hang under its own text',
+  'deeper still, a numbered item that also runs past the edge of the window so its hang shows too',
+];
+
 /**
  * What a drag copies from the first cell of `first` to the end of `last`,
  * the rows a block starts and ends on.
@@ -45,7 +52,7 @@ async function drag(
 }
 
 for (const columns of [80, 120]) {
-  test(`a wrapped heading and quote copy as one line each at ${columns} columns`, () =>
+  test(`a wrapped heading, quote and list item copy as one line each at ${columns} columns`, () =>
     withWindow(
       async (window) => {
         await send(window, 'markdownwrap');
@@ -58,6 +65,10 @@ for (const columns of [80, 120]) {
         expect(await drag(window, 'A quote whose', 'runs on.')).toStrictEqual(
           QUOTE,
         );
+        // A list copies an item a line, whole, with no marker or indent.
+        expect(
+          await drag(window, 'package.json:3', 'its hang shows too'),
+        ).toStrictEqual(ITEMS.join('\n'));
       },
       { columns, rows: 40 },
     ));

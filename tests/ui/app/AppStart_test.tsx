@@ -724,3 +724,213 @@ describe('the block under a start failure, by what chord knows (CHD-454)', () =>
     ).toBe('');
   });
 });
+
+describe('CHD-454 tester: real startup failure screens and notes', () => {
+  const closed = () => [
+    'sh',
+    '-c',
+    'printf "  raw diagnostic\\n" >&2; exec 1>&-; exec sleep 30',
+  ];
+
+  for (const columns of [80, 120]) {
+    for (const step of [
+      'initialize',
+      'session/load',
+      'session/resume',
+    ] as const) {
+      test(`${step} names the actual failure without a custom-command pin at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, '/new codex');
+
+            const headline =
+              step === 'initialize'
+                ? 'it closed its connection before answering initialize.'
+                : `it refused ${step}: The fake could not open its session.`;
+
+            await until('the structured headline', () =>
+              window.frame().replace(/\s+/g, ' ').includes(headline),
+            ).catch((error: Error) => {
+              throw new Error(`${error.message}\n${window.frame()}`);
+            });
+
+            const frame = window.frame().replace(/\s+/g, ' ');
+
+            expect(frame).not.toContain('chord ran');
+            expect(frame.split('⎿')[0]).not.toContain('raw diagnostic');
+
+            if (step === 'initialize') {
+              expect(frame).toContain('The end of its stderr: raw diagnostic');
+            }
+          },
+          {
+            columns,
+            rows: 40,
+            runtimes: ['fake', 'codex'],
+            openWith: (options) =>
+              openSession(
+                options.agent === 'codex'
+                  ? {
+                      ...options,
+                      agentCommand:
+                        step === 'initialize'
+                          ? closed()
+                          : fakeAgentCommand(
+                              undefined,
+                              '--auth-required',
+                              'linkother',
+                              ...(step === 'session/resume'
+                                ? ['--resume-only', '--no-load']
+                                : []),
+                            ),
+                      ...(step === 'initialize'
+                        ? {}
+                        : {
+                            resume: {
+                              sessionId: crypto.randomUUID(),
+                              cwd: options.cwd,
+                            },
+                          }),
+                    }
+                  : options,
+              ),
+          },
+        ));
+    }
+
+    for (const shape of ['closed', 'traceback']) {
+      test(`a ${shape} child gives its parent the compact failure note at ${columns} columns`, async () => {
+        const server = serveChord();
+        const admit = server.admit.bind(server);
+        let main: Parameters<typeof admit>[0] | undefined;
+
+        server.admit = (caller) => {
+          if (caller.role === 'person') {
+            main = caller;
+          }
+
+          return admit(caller);
+        };
+
+        try {
+          await withWindow(
+            async (window) => {
+              await ready(window);
+
+              const parent = window.session();
+              const prompts: string[] = [];
+
+              if (main === undefined || parent === undefined) {
+                throw new Error('main missing');
+              }
+
+              const prompt = parent.prompt.bind(parent);
+
+              parent.prompt = (text, ...args) => {
+                prompts.push(text);
+
+                return prompt(text, ...args);
+              };
+
+              await main.window.open(main.key, {
+                agent: 'codex',
+                name: 'parser',
+                prompt: 'text',
+              });
+              await until('the compact failed-child note', () =>
+                prompts.some((text) =>
+                  text.includes(
+                    'It takes no messages; open_agent starts another.',
+                  ),
+                ),
+              );
+
+              const note = prompts.join('\n');
+              const headline =
+                shape === 'closed'
+                  ? 'it closed its connection before answering initialize.'
+                  : 'it exited with code 1 before answering initialize.';
+
+              expect(note).toContain(
+                `parser (codex) did not start: ${headline}`,
+              );
+              expect(note).toContain(
+                shape === 'closed'
+                  ? 'Its stderr ended: "raw diagnostic".'
+                  : `Its stderr ended: "${TRACEBACK_ERROR}".`,
+              );
+              expect(note).not.toContain('The end of its stderr:');
+              expect(note).not.toContain('module_59.py');
+              expect(note).not.toContain('chord ran');
+            },
+            {
+              columns,
+              rows: 40,
+              server,
+              runtimes: ['fake', 'codex'],
+              startupOf: (agent) => ({
+                agentCommand:
+                  agent === 'codex'
+                    ? shape === 'closed'
+                      ? closed()
+                      : fakeAgentCommand(
+                          undefined,
+                          '--start-fails',
+                          'traceback',
+                        )
+                    : fakeAgentCommand(),
+              }),
+            },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
+  }
+
+  test('the cut marker is dim and long stderr wraps at the tail column, with its truncation mark', async () => {
+    const level = chalk.level;
+
+    chalk.level = 3;
+
+    const drawn = await draw(
+      <box>
+        <StartFailureBlock
+          agent='fake'
+          failure={{
+            step: 'initialize',
+            exit: { code: 1 },
+            stderr: {
+              cut: 3,
+              lines: ['    ' + 'x'.repeat(1020) + '…', 'final diagnostic'],
+            },
+          }}
+        />
+      </box>,
+      { columns: 80, rows: 24 },
+    );
+
+    try {
+      const frame = drawn.frame();
+      const rows = stripAnsi(frame).split('\n');
+      const first = rows.findIndex((row) => row.includes('xxxxx'));
+      const tailColumn = rows
+        .find((row) => row.includes('final diagnostic'))!
+        .indexOf('final');
+
+      expect(frame).toContain('\x1b[2m… +3 lines\x1b[0m');
+      // OpenTUI puts the indent on a blank row before a word wider than
+      // the available row, then wraps the word at the tail column.
+      expect(rows[first - 1]?.trim()).toBe('');
+      expect(rows[first]!.indexOf('x')).toBe(tailColumn);
+      expect(rows[first + 1]!.indexOf('x')).toBe(tailColumn);
+      expect(rows.some((row) => row.trimEnd().endsWith('…'))).toBe(true);
+    } finally {
+      await drawn.unmount();
+
+      chalk.level = level;
+    }
+  });
+});

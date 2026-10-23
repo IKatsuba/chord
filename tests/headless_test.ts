@@ -1015,3 +1015,86 @@ describe('CHD-435 tester: headless sign-in boundaries', () => {
     });
   }
 });
+
+describe('CHD-454 tester: headless structured failure boundaries', () => {
+  for (const shape of [
+    'closed',
+    'signal',
+    'stdout',
+    'zeroalias',
+    'zeronotacp',
+    'otheralias',
+  ]) {
+    test(`${shape} keeps its structured headline and only applicable detail`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-headless-start-'));
+      let stdout = '';
+      let stderr = '';
+      const command =
+        shape === 'closed'
+          ? [
+              'sh',
+              '-c',
+              'printf "  raw diagnostic\\n" >&2; exec 1>&-; exec sleep 30',
+            ]
+          : shape === 'signal'
+            ? ['sh', '-c', 'kill -TERM $$']
+            : fakeAgentCommand(
+                undefined,
+                '--start-fails',
+                shape === 'stdout'
+                  ? 'stdout'
+                  : shape === 'zeronotacp'
+                    ? 'notacp'
+                    : 'alias',
+              );
+      const agent = shape.startsWith('zero') ? 'zeroclaw' : 'fake';
+
+      try {
+        const code = await runHeadless({
+          agent,
+          cwd,
+          prompt: 'text',
+          format: 'text',
+          agentCommand: command,
+          stdout: (text) => {
+            stdout += text;
+
+            return Promise.resolve();
+          },
+          stderr: (text) => {
+            stderr += text;
+
+            return Promise.resolve();
+          },
+        });
+
+        expect(code).toBe(1);
+        expect(stdout).toBe('');
+        expect(stderr).not.toContain('chord ran');
+        expect(stderr.includes('Set a default agent:')).toBe(
+          shape === 'zeroalias',
+        );
+
+        if (shape === 'closed') {
+          expect(stderr.split('\n')).toEqual([
+            'chord: fake did not start: it closed its connection before answering initialize.',
+            'chord: The end of its stderr:',
+            'chord:     raw diagnostic',
+            '',
+          ]);
+        } else if (shape === 'signal') {
+          expect(stderr).toBe(
+            'chord: fake did not start: it was stopped by SIGTERM before answering initialize.\n',
+          );
+        } else if (shape === 'stdout') {
+          expect(stderr).toBe(
+            'chord: fake did not start: it exited with code 0 before answering initialize.\n',
+          );
+          expect(stderr).not.toContain('no longer maintained');
+        }
+      } finally {
+        await rm(cwd, { recursive: true });
+      }
+    });
+  }
+});

@@ -1399,7 +1399,11 @@ describe('CHD-454 tester: structured failures through actual starts', () => {
           ...(step === 'session/new' ? {} : { resume: { sessionId, cwd } }),
         });
 
-        expect(startFailureOf(failure)).toEqual({ step, code: -32601 });
+        expect(startFailureOf(failure)).toEqual({
+          step,
+          code: -32601,
+          said: `Method not found: ${step}`,
+        });
         expect(failure.message).toContain(`Method not found: ${step}`);
         expect(signInOf(failure)).toBeUndefined();
       } finally {
@@ -1460,6 +1464,7 @@ describe('CHD-454 tester: structured failures through actual starts', () => {
       expect(startFailureOf(overridden)).toEqual({
         step: 'session/new',
         code: -32601,
+        said: 'Method not found: session/new',
       });
     } finally {
       if (previousPath === undefined) {

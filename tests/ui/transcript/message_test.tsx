@@ -1,6 +1,7 @@
 /** Messages between agents on screen: `←` for what came in, `→` for what went. */
 import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
+import { left } from '../app/render.tsx';
 import { draw } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
 import type {
@@ -654,4 +655,41 @@ describe('CHD-387 tester: sent body boundaries', () => {
     expect(compact.join('\n')).not.toContain('to expand');
     expect(compact.join('\n')).not.toContain('… +');
   });
+});
+
+test("a message's code box is OpenTUI's, and a copy over the message keeps its code bare and the blank rows around it, as a reply's does (CHD-396)", async () => {
+  const drawn = await draw(
+    <TranscriptEntry
+      entry={came(
+        { name: 'main', reachable: true },
+        'First.\n\n```sh\nls -la\n```\n\nSecond.',
+      )}
+      turn={{ status: 'idle' }}
+      agent='fake'
+      expanded={false}
+      width={80}
+    />,
+    { columns: 80, rows: 12 },
+  );
+
+  try {
+    const rows = stripAnsi(drawn.frame()).split('\n');
+    const from = rows.findIndex((row) => row.includes('First.'));
+    const to = rows.findIndex((row) => row.includes('Second.'));
+    const end = rows[to]!.indexOf('Second.') + 'Second.'.length;
+
+    expect(rows.join('\n')).toContain('┌─ sh ───┐\n     │ ls -la │');
+    await drawn.write(left(rows[from]!.indexOf('First.'), from, 'down'));
+
+    for (let y = from + 1; y <= to; y++) {
+      await drawn.write(left(end, y, 'drag'));
+    }
+
+    await drawn.write(left(end, to, 'up'));
+    // The box's border does not copy; each blank row holds one space, which
+    // the copy keeps (Q186).
+    expect(drawn.selected()).toStrictEqual('First.\n \nls -la\n \nSecond.');
+  } finally {
+    await drawn.unmount();
+  }
 });

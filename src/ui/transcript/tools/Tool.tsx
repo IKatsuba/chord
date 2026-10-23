@@ -226,7 +226,10 @@ export function MessageBody({
         <Fragment key={index}>
           {index > 0 && (
             <Under first={false}>
-              <text {...FILL}> </text>
+              {/* A copy keeps the blank row, as in a reply (Q151). */}
+              <text {...FILL} {...selectable}>
+                {' '}
+              </text>
             </Under>
           )}
           <Under first={index === 0}>

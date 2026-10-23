@@ -111,11 +111,51 @@ for (const columns of [80, 120]) {
         expect(
           await drag(window, 'A paragraph before', 'echo done'),
         ).toStrictEqual(
-          `A paragraph before the code.\nx\n${LONG_CODE}\n\necho done`,
+          `A paragraph before the code.\n \nx\n \n${LONG_CODE}\n\necho done`,
         );
         expect(
           await drag(window, 'a loose item with', 'bun dev check'),
-        ).toStrictEqual('a loose item with a box:\nbun dev check');
+        ).toStrictEqual('a loose item with a box:\n \nbun dev check');
+      },
+      { columns, rows: 40 },
+    ));
+
+  test(`a copy keeps the blank rows between a reply's blocks and a loose list's, each one space, at ${columns} columns`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+
+        // Between top-level blocks, and between a loose list's items and an
+        // item's blocks, a blank row copies as a line of one space (Q186).
+        expect(
+          await drag(window, 'echo done', 'A paragraph after.'),
+        ).toStrictEqual(
+          [
+            'echo done',
+            ' ',
+            'a loose item',
+            ' ',
+            'a loose item with a box:',
+            ' ',
+            'bun dev check',
+            ' ',
+            'A paragraph after.',
+          ].join('\n'),
+        );
+      },
+      { columns, rows: 40 },
+    ));
+
+  test(`a tight list's items copy with no blank line between them at ${columns} columns`, () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdownwrap');
+        await window.shows('break here.');
+
+        expect(await drag(window, 'nine', 'marker shows')).toStrictEqual(
+          'nine\nten, with a two-digit marker and text long enough to wrap so the hang under a wider marker shows',
+        );
       },
       { columns, rows: 40 },
     ));

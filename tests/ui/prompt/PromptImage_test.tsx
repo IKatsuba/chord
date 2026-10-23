@@ -515,7 +515,13 @@ test('a typed path read while a child is shown goes from main, where it was type
       await leader(window, 'a');
       await window.shows('╭─ other ');
       reader.waiting[0]?.();
-      // main's reply, not yet seen, is where ctrl+x a goes next.
+      // main's reply, not yet seen, is where ctrl+x a goes next, once it came.
+      await until('main has a new reply', () =>
+        window
+          .frame()
+          .split('\n')
+          .some((row) => /^\s*main\s.*✓ new reply/.test(row)),
+      );
       await leader(window, 'a');
       await window.shows('› see [Image #1]');
       await window.shows(RECEIVED);

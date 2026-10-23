@@ -268,6 +268,8 @@ import {
   RESUME_ONLY,
   NO_LOAD,
   SILENT_SET_MODE,
+  START_FAILS,
+  TRACEBACK_ERROR,
   STEER_LATE,
   HOLD_REPLY,
   STEERING,
@@ -1051,6 +1053,47 @@ async function refuseUnsigned(
   }
 }
 
+// An agent that cannot start goes before it reads a line (CHD-454).
+if (START_FAILS === 'traceback') {
+  process.stderr.write(
+    [
+      'Traceback (most recent call last):',
+      ...Array.from({ length: 60 }, (_, n) => [
+        `  File "/opt/agent/lib/python3.12/site-packages/agent/module_${n}.py", line ${n + 10}, in <module>`,
+        `    from .module_${n + 1} import run`,
+      ]).flat(),
+      TRACEBACK_ERROR,
+      '',
+    ].join('\n'),
+  );
+  process.exit(1);
+}
+
+if (START_FAILS === 'stdout') {
+  process.stdout.write(
+    'fake-agent is no longer maintained. Please use its successor.\n',
+  );
+  process.exit(0);
+}
+
+/**
+ * Refuses a session request as an agent that cannot open one under
+ * `--start-fails` does: one with no ACP sessions at all, every request
+ * not found; one that needs an agent alias it was not given, `session/new`.
+ */
+function refuseSession(method: string): void {
+  if (START_FAILS === 'notacp') {
+    throw new acp.RequestError(-32601, `Method not found: ${method}`);
+  }
+
+  if (START_FAILS === 'alias' && method === 'session/new') {
+    throw new acp.RequestError(
+      -32602,
+      'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
+    );
+  }
+}
+
 const connection = acp
   .agent({ name: 'chord-fake-agent' })
   .onRequest('initialize', ({ params }) => {
@@ -1086,6 +1129,7 @@ const connection = acp
   })
   .onRequest('authenticate', () => ({}))
   .onRequest('session/new', async ({ params, client, requestId }) => {
+    refuseSession('session/new');
     await refuseUnsigned(client, requestId);
 
     const sessionId = crypto.randomUUID();
@@ -1114,6 +1158,7 @@ const connection = acp
   .onRequest('session/load', async ({ params, client, requestId }) => {
     const { sessionId } = params;
 
+    refuseSession('session/load');
     await refuseUnsigned(client, requestId);
 
     if (process.env.CHORD_FAKE_REFUSE_LOAD === '1' || !UUID.test(sessionId)) {
@@ -1142,6 +1187,7 @@ const connection = acp
   .onRequest('session/resume', async ({ params, client, requestId }) => {
     const { sessionId } = params;
 
+    refuseSession('session/resume');
     await refuseUnsigned(client, requestId);
 
     if (

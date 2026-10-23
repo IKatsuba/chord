@@ -16,6 +16,7 @@ import manifest from '../../package.json' with { type: 'json' };
 import { commandArgv } from '../../src/acp/process.ts';
 import type { Traffic } from '../../src/acp/traffic.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { TRACEBACK_ERROR } from '../fixtures/fake_agent/options.ts';
 import { FORM_SCHEMA, LINK_URL } from '../fixtures/forms.ts';
 
 /** Short enough to keep a wedged agent's test quick, long enough to be real. */
@@ -226,6 +227,58 @@ test('an agent that says only that it needs a login offers no ways in', () =>
       message: 'Authentication required',
     });
   }));
+
+// The fake's `--start-fails`, which chord's tests of an agent that cannot
+// start play against (CHD-454).
+describe('an agent that cannot start, as the fake plays it', () => {
+  test('a broken one exits 1 before initialize, its traceback on stderr', async () => {
+    const refused = openAgent({
+      command: fakeAgentCommand(undefined, '--start-fails', 'traceback'),
+      cwd: process.cwd(),
+      onTraffic: () => {},
+      stop: STOP,
+      ...REFUSE,
+    });
+
+    await expect(refused).rejects.toThrow('The agent exited: ');
+    await expect(refused).rejects.toThrow(TRACEBACK_ERROR);
+  });
+
+  test('one that prints a line on stdout and exits 0 before initialize leaves chord nothing of it', async () => {
+    const refused = openAgent({
+      command: fakeAgentCommand(undefined, '--start-fails', 'stdout'),
+      cwd: process.cwd(),
+      onTraffic: () => {},
+      stop: STOP,
+      ...REFUSE,
+    });
+
+    await expect(refused).rejects.toThrow(/^The agent exited\.$/);
+  });
+
+  test('one that is not an ACP agent answers initialize and no session request', () =>
+    withAgent(['--start-fails', 'notacp'], async (agent, _seen, cwd) => {
+      await expect(
+        agent.newSession({ cwd, mcpServers: [] }),
+      ).rejects.toMatchObject({
+        code: -32601,
+        message: 'Method not found: session/new',
+        data: undefined,
+      });
+    }));
+
+  test('one that needs an agent alias refuses session/new -32602 with no data', () =>
+    withAgent(['--start-fails', 'alias'], async (agent, _seen, cwd) => {
+      await expect(
+        agent.newSession({ cwd, mcpServers: [] }),
+      ).rejects.toMatchObject({
+        code: -32602,
+        message:
+          'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
+        data: undefined,
+      });
+    }));
+});
 
 test('session/load replays the past before it answers', () =>
   withAgent([], async (agent, seen, cwd) => {

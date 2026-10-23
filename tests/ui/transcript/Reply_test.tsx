@@ -27,12 +27,14 @@ const ITEMS = [
 
 /**
  * What a drag copies from the first cell of `first` to the end of `last`,
- * the rows a block starts and ends on.
+ * the rows a block starts and ends on; `byCell`, across `last`'s row a
+ * cell at a time, as a terminal reports a pointer moving along it.
  */
 async function drag(
   window: Window,
   first: string,
   last: string,
+  byCell = false,
 ): Promise<string> {
   const rows = stripAnsi(window.frame()).split('\n');
   const from = rows.findIndex((row) => row.includes(first));
@@ -45,7 +47,10 @@ async function drag(
     await window.press(left(3, y, 'drag'));
   }
 
-  await window.press(left(end, to, 'drag'));
+  for (let x = byCell ? rows[to]!.indexOf(last) : end; x <= end; x++) {
+    await window.press(left(x, to, 'drag'));
+  }
+
   await window.press(left(end, to, 'up'));
 
   return window.selected();
@@ -69,6 +74,12 @@ for (const columns of [80, 120]) {
         expect(
           await drag(window, 'package.json:3', 'its hang shows too'),
         ).toStrictEqual(ITEMS.join('\n'));
+        // Out of a nested item to the next outer one, OpenTUI widens the
+        // selection a box level per pointer event, so the drag moves along
+        // the row as a person's does (docs/decisions.md).
+        expect(
+          await drag(window, 'deeper still', 'a short item', true),
+        ).toStrictEqual(`${ITEMS[2]}\na short item`);
       },
       { columns, rows: 40 },
     ));

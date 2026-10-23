@@ -419,7 +419,14 @@ binary.
   (Q152). OpenTUI's own `Markdown` renderable was not trialled for the
   lists: it parses and draws a whole reply, tables and code included, so it
   would replace markdansi wholesale, beyond the owner's split (markdansi
-  renders, OpenTUI lays out) and Q150 (Q161).
+  renders, OpenTUI lays out) and Q150 (Q161). An item is one box with the
+  marker's width as `paddingLeft` and the marker at `position: 'absolute'`
+  over it, not a row of marker and column: OpenTUI widens a selection by one
+  box level per drag event and not on release, so a row and column put a
+  sibling item two events away, and a drag straight down to it copied the
+  first item alone. A drag out of a nested item to the next outer one still
+  takes an event per level, which a pointer moving along the row gives; a
+  jump straight there and a release copies the nested item alone (Q163).
 - Links print their address after the text rather than as OSC 8 hyperlinks,
   so the address reads in every terminal and in a captured screen.
 - The theme is Claude Code's look, not markdansi's yellow headings: headings

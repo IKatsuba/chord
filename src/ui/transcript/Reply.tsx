@@ -50,20 +50,20 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
     return (
       <box gap={gap}>
         {block.items.map((item, index) => (
-          <box key={index} flexDirection='row'>
-            <text
-              {...TEXT}
-              {...look}
-              width={stringWidth(stripAnsi(item.marker))}
-              flexShrink={0}
-            >
+          // The item's blocks one box level under the list, the marker laid
+          // over its indent: OpenTUI widens a selection by one box level per
+          // drag event, so a drag down to the next item reaches it at once.
+          <box
+            key={index}
+            gap={gap}
+            paddingLeft={stringWidth(stripAnsi(item.marker))}
+          >
+            <text {...TEXT} {...look} position='absolute' left={0} top={0}>
               <Ansi text={item.marker} />
             </text>
-            <box gap={gap} flexGrow={1} flexShrink={1}>
-              {item.blocks.map((inner, at) => (
-                <SoftBlock key={at} block={inner} {...(look && { look })} />
-              ))}
-            </box>
+            {item.blocks.map((inner, at) => (
+              <SoftBlock key={at} block={inner} {...(look && { look })} />
+            ))}
           </box>
         ))}
       </box>

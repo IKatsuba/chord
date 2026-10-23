@@ -3,6 +3,13 @@ import chalk from 'chalk';
 import { draw } from '../../harness.tsx';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
+import {
+  recordActions,
+  type RecordEntry,
+} from '../../../../src/session/record.ts';
+import { reduceTranscript } from '../../../../src/session/transcript/reducer.ts';
+import { emptyTranscript } from '../../../../src/session/transcript/types.ts';
+import assert from 'node:assert/strict';
 import type {
   ToolCall,
   TurnState,
@@ -1190,5 +1197,93 @@ describe('CHD-440 tester: raw-only results remain reachable on screen', () => {
         },
         { columns, rows },
       ));
+  }
+});
+
+describe('CHD-493 U4 tester: saved list_sessions answers', () => {
+  for (const columns of [80, 120]) {
+    for (const legacy of [true, false]) {
+      for (const count of [0, 1, 2]) {
+        test(`${legacy ? '0.57.0' : 'current'} served row with ${count} children at ${columns} columns`, async () => {
+          const answer = {
+            sessions: [
+              {
+                id: 'saved-main',
+                runtime: 'fake',
+                model: null,
+                you: true,
+                ...(legacy ? { tab: 1 } : {}),
+                ...(count === 0
+                  ? {}
+                  : {
+                      agents: Array.from({ length: count }, (_, index) => ({
+                        id: `child-${index}`,
+                        name: `worker-${index}`,
+                        runtime: 'codex',
+                        model: null,
+                      })),
+                    }),
+              },
+            ],
+          };
+          const entries: RecordEntry[] = [
+            {
+              type: 'update',
+              turnId: 'saved-turn',
+              update: {
+                sessionUpdate: 'tool_call',
+                toolCallId: 'saved-call',
+                title: 'mcp__chord__list_sessions',
+                status: 'completed',
+                rawInput: {},
+              },
+            },
+            {
+              type: 'served',
+              turnId: 'saved-turn',
+              call: { tool: 'list_sessions', input: {}, answer },
+            },
+          ];
+          const state = recordActions(entries).reduce(
+            (state, action) =>
+              action.type === 'usage' ? state : reduceTranscript(state, action),
+            emptyTranscript,
+          );
+          const entry = state.entries[0];
+
+          assert(entry?.kind === 'tool');
+          expect(entry.call.chord?.answer).toStrictEqual(answer);
+
+          const drawn = await draw(
+            <TranscriptEntry
+              entry={entry}
+              turn={{ status: 'idle' }}
+              agent='fake'
+              expanded={false}
+              width={columns}
+            />,
+            { columns, rows: 24 },
+          );
+
+          try {
+            const frame = stripAnsi(drawn.frame());
+            const children =
+              count === 0
+                ? ''
+                : `, ${count} ${count === 1 ? 'agent' : 'agents'}`;
+
+            expect(frame).toContain('List sessions');
+            expect(frame).toContain(`1 open · fake (you)${children}`);
+            expect(frame).not.toContain('1 fake');
+            expect(frame).not.toContain('tab');
+            expect(
+              frame.split('\n').every((line) => stringWidth(line) <= columns),
+            ).toBe(true);
+          } finally {
+            await drawn.unmount();
+          }
+        });
+      }
+    }
   }
 });

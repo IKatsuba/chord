@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -541,4 +541,52 @@ test('propose_team says a write that failed, as a refusal', async () => {
   } finally {
     await rm(dir, { recursive: true });
   }
+});
+
+describe('CHD-493 U4 tester: list_sessions during startup', () => {
+  test('unknown session and model remain null without leaking internal keys or probing agents', () => {
+    const probed: string[] = [];
+    const window: WindowView = {
+      ...windowOf(probed),
+      sessions: () => [
+        {
+          key: 17,
+          runtime: 'fake',
+          id: undefined,
+          model: undefined,
+          children: [
+            {
+              id: 'worker-id',
+              name: 'worker',
+              runtime: 'codex',
+              model: undefined,
+            },
+          ],
+        },
+      ],
+    };
+
+    for (const role of ['person', 'child'] as const) {
+      expect(sessionsAnswer({ role, key: 17, window })).toStrictEqual({
+        sessions: [
+          {
+            id: null,
+            runtime: 'fake',
+            model: null,
+            ...(role === 'person' ? { you: true } : {}),
+            agents: [
+              {
+                id: 'worker-id',
+                name: 'worker',
+                runtime: 'codex',
+                model: null,
+              },
+            ],
+          },
+        ],
+      });
+    }
+
+    expect(probed).toStrictEqual([]);
+  });
 });

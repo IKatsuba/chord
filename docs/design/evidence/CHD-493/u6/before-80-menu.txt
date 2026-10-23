@@ -1,0 +1,24 @@
+ █▄     chord v0.57.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.designer-new
+ █▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /new                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  /clear (new)  Start a new session with an empty transcript

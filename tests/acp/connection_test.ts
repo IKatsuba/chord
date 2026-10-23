@@ -1118,3 +1118,118 @@ describe('CHD-467 tester: EOF releases the fake gate without a termination signa
       }));
   }
 });
+
+describe('CHD-450 tester: unfinished call wire reports', () => {
+  for (const [scenario, status] of [
+    ['cutcallsunfinished', 'failed'],
+    ['cutcallsunfinishedv2', 'cancelled'],
+  ] as const) {
+    test(`${scenario} preserves announcement, partial input and unstructured final reports in wire order`, () =>
+      withAgent(['--steering', 'claude'], async (agent, seen, cwd) => {
+        const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
+        const answer = await agent.prompt({
+          sessionId,
+          prompt: [text(scenario)],
+        });
+        const updates = seen
+          .updates()
+          .filter(
+            (update) =>
+              update.sessionUpdate === 'tool_call' ||
+              update.sessionUpdate === 'tool_call_update' ||
+              update.sessionUpdate === 'agent_message_chunk',
+          );
+        const first = updates[0];
+        const second = updates[2];
+
+        assert(first?.sessionUpdate === 'tool_call');
+        assert(second?.sessionUpdate === 'tool_call');
+        expect(first.toolCallId).not.toBe(second.toolCallId);
+        expect(answer.stopReason).toBe('end_turn');
+
+        const expectedUpdates: readonly unknown[] = [
+          {
+            _meta: { claudeCode: { toolName: 'mcp__chord__send_message' } },
+            toolCallId: first.toolCallId,
+            sessionUpdate: 'tool_call',
+            name: 'mcp__chord__send_message',
+            rawInput: {},
+            status: 'pending',
+            title: 'mcp__chord__send_message',
+            kind: 'other',
+            content: [],
+          },
+          {
+            _meta: { claudeCode: { toolName: 'mcp__chord__send_message' } },
+            toolCallId: first.toolCallId,
+            sessionUpdate: 'tool_call_update',
+            rawInput: { to: 'main' },
+            title: 'mcp__chord__send_message',
+            kind: 'other',
+          },
+          {
+            _meta: { claudeCode: { toolName: 'mcp__chord__open_agent' } },
+            toolCallId: second.toolCallId,
+            sessionUpdate: 'tool_call',
+            name: 'mcp__chord__open_agent',
+            rawInput: {},
+            status: 'pending',
+            title: 'mcp__chord__open_agent',
+            kind: 'other',
+            content: [],
+          },
+          {
+            sessionUpdate: 'agent_message_chunk',
+            content: {
+              type: 'text',
+              text: 'Read the steer; I will answer that first.',
+            },
+          },
+          ...[first.toolCallId, second.toolCallId].map((toolCallId) => ({
+            sessionUpdate: 'tool_call_update',
+            toolCallId,
+            status,
+            content: [
+              {
+                type: 'content',
+                content: {
+                  type: 'text',
+                  text: 'Claude stopped this tool call before it ran.',
+                },
+              },
+            ],
+          })),
+        ];
+
+        expect(updates as readonly unknown[]).toStrictEqual(expectedUpdates);
+
+        // The final reports precede the prompt response, rather than
+        // arriving after chord has already considered the turn settled.
+        const prompt = seen.all.find(
+          (traffic) =>
+            traffic.from === 'chord' &&
+            'method' in traffic.message &&
+            traffic.message.method === 'session/prompt',
+        );
+
+        assert(prompt?.from === 'chord' && 'id' in prompt.message);
+
+        const requestId = prompt.message.id;
+        const response = seen.all.findIndex(
+          (traffic) =>
+            traffic.from === 'agent' &&
+            'id' in traffic.message &&
+            traffic.message.id === requestId &&
+            'result' in traffic.message,
+        );
+        const lastUpdate = seen.all.findLastIndex(
+          (traffic) =>
+            traffic.from === 'agent' &&
+            'method' in traffic.message &&
+            traffic.message.method === 'session/update',
+        );
+
+        expect(response).toBeGreaterThan(lastUpdate);
+      }));
+  }
+});

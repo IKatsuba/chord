@@ -1,6 +1,11 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { RequestError } from '@agentclientprotocol/sdk';
-import { asSignIn, SignInNeeded, signInOf } from '../../src/session/sign_in.ts';
+import {
+  asSignIn,
+  SignInNeeded,
+  signInOf,
+  waysOf,
+} from '../../src/session/sign_in.ts';
 
 const METHODS = [
   {
@@ -47,4 +52,39 @@ test('a sign-in is found under the error that wraps it', () => {
 
   expect(signInOf(wrapped)?.message).toStrictEqual('Authentication required');
   expect(signInOf(new Error('boom'))).toBeUndefined();
+});
+
+describe('CHD-435 tester: structured sign-in classification', () => {
+  test('message words and a string code never classify a failure as authRequired', () => {
+    for (const failure of [
+      new Error('Authentication required: Sign-in was cancelled.'),
+      Object.assign(new Error('Authentication required'), { code: '-32000' }),
+      Object.assign(new Error('Sign-in was cancelled.'), { code: -32603 }),
+      null,
+      'Authentication required',
+    ]) {
+      expect(asSignIn(failure, METHODS)).toBe(failure);
+      expect(signInOf(failure)).toBeUndefined();
+    }
+  });
+
+  test('nested wrappers retain exact sign-in identity and description-only methods stay ordered', () => {
+    const methods = [
+      { id: 'description', name: '  ', description: '  Run `agent login`  ' },
+      { id: 'empty', name: '', description: ' ' },
+      { id: 'named', name: '  SSO  ' },
+    ];
+    const before = structuredClone(methods);
+    const needed = asSignIn(RequestError.authRequired(), methods);
+    const wrapped = new Error('outer', {
+      cause: new Error('inner', { cause: needed }),
+    });
+
+    expect(waysOf(methods)).toStrictEqual([
+      { description: 'Run `agent login`' },
+      { name: 'SSO' },
+    ]);
+    expect(methods).toStrictEqual(before);
+    expect(signInOf(wrapped)).toBe(signInOf(needed));
+  });
 });

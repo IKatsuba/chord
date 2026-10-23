@@ -295,13 +295,21 @@ test("a start the agent refuses for want of a login says so, in the agent's word
         { name: 'Log in with SSO' },
       ],
     },
-    failure: { step: 'session/new', code: -32000 },
+    failure: {
+      step: 'session/new',
+      code: -32000,
+      said: 'Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY',
+    },
   });
   expect(await failOnFake('--auth-required', 'bare')).toStrictEqual({
     type: 'connect_failed',
     message: 'Authentication required',
     signIn: { message: 'Authentication required', ways: [] },
-    failure: { step: 'session/new', code: -32000 },
+    failure: {
+      step: 'session/new',
+      code: -32000,
+      said: 'Authentication required',
+    },
   });
 });
 
@@ -315,7 +323,7 @@ test("droid's start, its sign-in link cancelled, needs a login by its code (CHD-
     type: 'connect_failed',
     message,
     signIn: { message, ways: [] },
-    failure: { step: 'session/new', code: -32000 },
+    failure: { step: 'session/new', code: -32000, said: message },
   });
 });
 
@@ -323,7 +331,11 @@ test('a link nobody answered, then a start that failed for another reason, needs
   expect(await failOnFake('--auth-required', 'linkother')).toStrictEqual({
     type: 'connect_failed',
     message: 'The fake could not open its session.',
-    failure: { step: 'session/new', code: -32603 },
+    failure: {
+      step: 'session/new',
+      code: -32603,
+      said: 'The fake could not open its session.',
+    },
   });
 });
 
@@ -368,13 +380,21 @@ test('an agent that refuses its session says which request and with what code (C
   expect(await failOnFake('--start-fails', 'notacp')).toStrictEqual({
     type: 'connect_failed',
     message: 'Method not found: session/new',
-    failure: { step: 'session/new', code: -32601 },
+    failure: {
+      step: 'session/new',
+      code: -32601,
+      said: 'Method not found: session/new',
+    },
   });
   expect(await failOnFake('--start-fails', 'alias')).toStrictEqual({
     type: 'connect_failed',
     message:
       'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
-    failure: { step: 'session/new', code: -32602 },
+    failure: {
+      step: 'session/new',
+      code: -32602,
+      said: 'session/new requires `agentAlias` (alias of a configured [agents.<alias>] entry)',
+    },
   });
 });
 

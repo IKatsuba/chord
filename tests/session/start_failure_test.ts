@@ -51,14 +51,22 @@ test("a refusal says its code, the sign-in's too, whatever its words", () => {
       'session/new',
       undefined,
     ).failure,
-  ).toStrictEqual({ step: 'session/new', code: -32601 });
+  ).toStrictEqual({
+    step: 'session/new',
+    code: -32601,
+    said: 'Method not found: session/new',
+  });
   expect(
     startFailed(
       asSignIn(RequestError.authRequired(), []),
       'session/load',
       undefined,
     ).failure,
-  ).toStrictEqual({ step: 'session/load', code: -32000 });
+  ).toStrictEqual({
+    step: 'session/load',
+    code: -32000,
+    said: 'Authentication required',
+  });
   expect(
     startFailed(new Error('spawn x ENOENT'), 'initialize', undefined).failure,
   ).toStrictEqual({
@@ -77,7 +85,7 @@ test('a failure is found under the error that wraps it', () => {
     startFailureOf(
       new Error('it cannot resume session s: no alias', { cause: failed }),
     ),
-  ).toStrictEqual({ step: 'session/new', code: -32602 });
+  ).toStrictEqual({ step: 'session/new', code: -32602, said: 'no alias' });
   expect(startFailureOf(new Error('boom'))).toBeUndefined();
 });
 
@@ -108,6 +116,14 @@ test("the step says what failed in chord words, and the agent's own only where i
   expect(at({ step: 'session/resume', code: -32602 })).toBe(
     'it refused session/resume: the agent said this',
   );
+  // The agent's own words, not what chord wrapped them in.
+  expect(
+    stepWords('it cannot resume session s: no such session', {
+      step: 'session/load',
+      code: -32603,
+      said: 'no such session',
+    }),
+  ).toBe('it refused session/load: no such session');
   // A sign-in says it its own way, and a command not found keeps today's words.
   expect(at({ step: 'session/new', code: -32000 })).toBe('the agent said this');
   expect(at({ step: 'initialize' })).toBe('the agent said this');

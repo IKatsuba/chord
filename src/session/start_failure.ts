@@ -24,6 +24,11 @@ export interface StartFailure {
   readonly closed?: true;
   /** The JSON-RPC code of the agent's refusal of `step`. */
   readonly code?: number;
+  /**
+   * The agent's own words for that refusal, under whatever chord wraps the
+   * failure in, such as which session it could not resume.
+   */
+  readonly said?: string;
   /** The end of what it wrote to stderr, when it wrote anything. */
   readonly stderr?: Tail;
   /** The package and version chord ran, for an agent of the registry's. */
@@ -61,6 +66,7 @@ export function startFailed(
         )[0]
       : undefined;
   const stderr = gone?.stderr;
+  const message = error instanceof Error ? error.message : String(error);
 
   return new StartFailed(
     {
@@ -70,14 +76,11 @@ export function startFailed(
         : gone.exit === undefined
           ? { closed: true }
           : { exit: gone.exit }),
-      ...(code === undefined ? {} : { code }),
+      ...(code === undefined ? {} : { code, said: message }),
       ...(stderr === undefined || stderr.lines.length === 0 ? {} : { stderr }),
       ...(pinned === undefined ? {} : { pinned }),
     },
-    {
-      message: error instanceof Error ? error.message : String(error),
-      cause: error,
-    },
+    { message, cause: error },
   );
 }
 
@@ -135,7 +138,7 @@ export function stepWords(
     return 'it does not serve ACP sessions: not an ACP agent, or not at this version.';
   }
 
-  return `it refused ${step}: ${message}`;
+  return `it refused ${step}: ${failure.said ?? message}`;
 }
 
 /** ACP's `authRequired`, which CHD-435's sign-in says. */

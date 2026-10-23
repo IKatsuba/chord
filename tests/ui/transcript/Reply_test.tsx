@@ -161,6 +161,52 @@ for (const columns of [80, 120]) {
     ));
 }
 
+test("a loose list's blank rows are selected at the text column of the item below, and of an item's own text within it", async () => {
+  const drawn = await draw(
+    <Reply
+      text={[
+        '9. nine',
+        '',
+        '10. ten',
+        '',
+        '    - inner',
+        '',
+        '      more',
+      ].join('\n')}
+      width={40}
+    />,
+    { columns: 40, rows: 12 },
+  );
+
+  try {
+    const rows = stripAnsi(drawn.frame()).split('\n');
+    const from = rows.findIndex((row) => row.includes('nine'));
+    const to = rows.findIndex((row) => row.includes('more'));
+
+    await drawn.write(left(rows[from]!.indexOf('nine'), from, 'down'));
+
+    for (let y = from + 1; y <= to; y++) {
+      await drawn.write(left(39, y, 'drag'));
+    }
+
+    await drawn.write(left(39, to, 'up'));
+
+    // A selected blank row keeps its highlighted space, so its last cell is
+    // where the space sits.
+    const shown = stripAnsi(drawn.frame()).split('\n');
+    const blanks = shown
+      .slice(from, to)
+      .filter((row) => row.trim() === '')
+      .map((row) => row.length - 1);
+
+    // Under `10.` (4), between ten and its list (4), and inside `- inner`
+    // (6); never at a marker's column.
+    expect(blanks).toStrictEqual([4, 4, 6]);
+  } finally {
+    await drawn.unmount();
+  }
+});
+
 /** Selects body rows, using terminal cells even when a row contains CJK. */
 async function selectBody(drawn: Drawn, first: string, columns: number) {
   const rows = stripAnsi(drawn.frame()).split('\n');

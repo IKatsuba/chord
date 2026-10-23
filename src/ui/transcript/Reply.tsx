@@ -34,20 +34,24 @@ export function Reply({ text, width }: { text: string; width: number }) {
  * `nodes` with a blank row between each two that a drag selects, so a copy
  * across them keeps the blank line the screen shows (Q151). It holds one
  * space: OpenTUI leaves an empty text out of a selection, and a gap is no
- * text at all (Q186, until OpenTUI PR #1403 copies an empty row).
+ * text at all (Q186, until OpenTUI PR #1403 copies an empty row). The row
+ * before the node at `index` starts `inset(index)` cells in, at its text.
  */
-function spaced(nodes: readonly ReactNode[]): ReactNode[] {
+function spaced(
+  nodes: readonly ReactNode[],
+  inset: (index: number) => number = () => 0,
+): ReactNode[] {
   return nodes.map((node, index) => (
     <Fragment key={index}>
-      {index > 0 && <Blank />}
+      {index > 0 && <Blank inset={inset(index)} />}
       {node}
     </Fragment>
   ));
 }
 
-function Blank() {
+function Blank({ inset }: { inset: number }) {
   return (
-    <text {...TEXT} {...useSelectable()}>
+    <text {...TEXT} {...useSelectable()} marginLeft={inset}>
       {' '}
     </text>
   );
@@ -70,7 +74,10 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
 
   if (block.kind === 'list') {
     // A loose list's blank rows are a copy's too; a tight one has none.
-    const rows = (nodes: ReactNode[]) => (block.loose ? spaced(nodes) : nodes);
+    const rows = (nodes: ReactNode[], inset?: (index: number) => number) =>
+      block.loose ? spaced(nodes, inset) : nodes;
+    const indent = (index: number) =>
+      stringWidth(stripAnsi(block.items[index]?.marker ?? ''));
 
     return (
       <box>
@@ -79,7 +86,7 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
             // The item's blocks one box level under the list, the marker laid
             // over its indent: OpenTUI widens a selection by one box level per
             // drag event, so a drag down to the next item reaches it at once.
-            <box key={index} paddingLeft={stringWidth(stripAnsi(item.marker))}>
+            <box key={index} paddingLeft={indent(index)}>
               <text {...TEXT} {...look} position='absolute' left={0} top={0}>
                 <Ansi text={item.marker} />
               </text>
@@ -90,6 +97,8 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
               )}
             </box>
           )),
+          // Between two items, at the text of the item below it.
+          indent,
         )}
       </box>
     );

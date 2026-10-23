@@ -250,6 +250,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
 import { splitContext } from '../../../src/session/context.ts';
 import { FAKE_COMMANDS } from '../commands.ts';
+import { LINK_URL } from '../forms.ts';
 import { readCapabilities } from './client.ts';
 import {
   ARGS,
@@ -1010,16 +1011,43 @@ const AUTH_METHODS: acp.AuthMethod[] = [
 ];
 
 /**
- * The error a session request answers with under `--auth-required`, as an
- * agent nobody signed in to answers (CHD-435).
+ * Refuses a session request under `--auth-required`, as an agent nobody
+ * signed in to does (CHD-435): `authRequired`; or, with `link`, as droid
+ * does (agent-capabilities dr15), a sign-in link asked outside any session
+ * while the request waits, and anything but its acceptance a failure that is
+ * not `authRequired`.
  */
-function authRequired(): acp.RequestError {
-  return AUTH_REQUIRED === 'methods'
-    ? acp.RequestError.authRequired(
-        undefined,
-        'run `fake login` from your terminal, or set FAKE_API_KEY',
-      )
-    : acp.RequestError.authRequired();
+async function refuseUnsigned(
+  client: acp.AgentContext,
+  requestId: acp.JsonRpcId,
+): Promise<void> {
+  if (AUTH_REQUIRED === 'methods') {
+    throw acp.RequestError.authRequired(
+      undefined,
+      'run `fake login` from your terminal, or set FAKE_API_KEY',
+    );
+  }
+
+  if (AUTH_REQUIRED === 'bare') {
+    throw acp.RequestError.authRequired();
+  }
+
+  if (AUTH_REQUIRED === 'link') {
+    const answer = await client.request('elicitation/create', {
+      requestId,
+      mode: 'url',
+      elicitationId: crypto.randomUUID(),
+      message: 'Sign in to the fake to continue',
+      url: LINK_URL,
+    });
+
+    if (answer.action !== 'accept') {
+      throw new acp.RequestError(
+        -32603,
+        'Sign-in was cancelled. Retry to sign in.',
+      );
+    }
+  }
 }
 
 const connection = acp
@@ -1056,10 +1084,8 @@ const connection = acp
         };
   })
   .onRequest('authenticate', () => ({}))
-  .onRequest('session/new', ({ params, client }) => {
-    if (AUTH_REQUIRED !== undefined) {
-      throw authRequired();
-    }
+  .onRequest('session/new', async ({ params, client, requestId }) => {
+    await refuseUnsigned(client, requestId);
 
     const sessionId = crypto.randomUUID();
 
@@ -1084,12 +1110,10 @@ const connection = acp
       .filter((session) => !params.cwd || session.cwd === params.cwd)
       .toReversed(),
   }))
-  .onRequest('session/load', async ({ params, client }) => {
+  .onRequest('session/load', async ({ params, client, requestId }) => {
     const { sessionId } = params;
 
-    if (AUTH_REQUIRED !== undefined) {
-      throw authRequired();
-    }
+    await refuseUnsigned(client, requestId);
 
     if (process.env.CHORD_FAKE_REFUSE_LOAD === '1' || !UUID.test(sessionId)) {
       throw acp.RequestError.resourceNotFound(sessionId);
@@ -1114,12 +1138,10 @@ const connection = acp
       configOptions: configOptions(sessionId),
     };
   })
-  .onRequest('session/resume', ({ params, client }) => {
+  .onRequest('session/resume', async ({ params, client, requestId }) => {
     const { sessionId } = params;
 
-    if (AUTH_REQUIRED !== undefined) {
-      throw authRequired();
-    }
+    await refuseUnsigned(client, requestId);
 
     if (
       !RESUME_ONLY ||

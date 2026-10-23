@@ -39,6 +39,7 @@ import type {
   Turn,
 } from './session.ts';
 import { historyEntries } from './record.ts';
+import { type SignIn, signInOf } from './sign_in.ts';
 import { heldBackLine } from './servers.ts';
 import {
   type TaskAgent,
@@ -82,7 +83,12 @@ export type ConversationEvent =
       readonly sessionId: string;
       readonly at?: number;
     }
-  | { readonly type: 'connect_failed'; readonly message: string }
+  | {
+      readonly type: 'connect_failed';
+      readonly message: string;
+      /** The login the agent needs, when that is why it did not start. */
+      readonly signIn?: SignIn;
+    }
   /**
    * The session opened is an earlier one, last used at `lastUsedAt`, first
    * prompted with `prompt` and, for an agent another started, called `name`,
@@ -304,6 +310,17 @@ const LEFT_MONITORS_TOLD: 'turn' | 'held' = 'turn';
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** The event of a start `error` ended, with the login it needs, if one. */
+function failedStart(error: unknown): ConversationEvent {
+  const signIn = signInOf(error);
+
+  return {
+    type: 'connect_failed',
+    message: messageOf(error),
+    ...(signIn === undefined ? {} : { signIn }),
+  };
 }
 
 /**
@@ -683,7 +700,7 @@ export class Conversation {
 
           void this.#setUp(session).catch((error: unknown) => {
             if (this.#current(session)) {
-              this.#emit({ type: 'connect_failed', message: messageOf(error) });
+              this.#emit(failedStart(error));
             }
           });
         }
@@ -692,7 +709,7 @@ export class Conversation {
       },
       (error) => {
         if (this.#closing === undefined && this.#opening === opening) {
-          this.#emit({ type: 'connect_failed', message: messageOf(error) });
+          this.#emit(failedStart(error));
         }
 
         return undefined;

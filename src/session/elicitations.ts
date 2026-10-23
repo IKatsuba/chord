@@ -80,6 +80,16 @@ export function waitOf(
 export class ElicitationBridge {
   #listeners = new Set<(request: PendingElicitation) => void>();
   #closed = new AbortController();
+  #linkUnheard = false;
+
+  /**
+   * Whether chord answered a link `cancel` because nobody was there to ask:
+   * an agent that asks its sign-in link while a session opens, as droid
+   * does, then fails the start for it (CHD-435).
+   */
+  get linkUnheard(): boolean {
+    return this.#linkUnheard;
+  }
 
   /**
    * The handler the transport calls; pass it as `openAgent`'s
@@ -124,6 +134,8 @@ export class ElicitationBridge {
 
       // Nobody on screen to ask: the agent hears `cancel` rather than wait.
       if (this.#listeners.size === 0) {
+        this.#linkUnheard ||= request.mode === 'url';
+
         return onAbort();
       }
 

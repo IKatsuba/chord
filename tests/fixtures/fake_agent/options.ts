@@ -320,12 +320,15 @@ export const STEP_MS = Number(
  * says how to sign in in its message and offers two methods at
  * `initialize`, one whose description names a command and one with a name
  * alone; `bare` says only `Authentication required` and offers none, as
- * kimi does.
+ * kimi does; `link` asks a sign-in link instead, as droid does, and fails
+ * unless it is accepted.
  */
-export const AUTH_REQUIRED: 'methods' | 'bare' | undefined = (() => {
+export const AUTH_REQUIRED: 'methods' | 'bare' | 'link' | undefined = (() => {
   const flag = ARGS.indexOf('--auth-required');
   const kind =
     flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_AUTH_REQUIRED;
 
-  return kind === 'methods' || kind === 'bare' ? kind : undefined;
+  return kind === 'methods' || kind === 'bare' || kind === 'link'
+    ? kind
+    : undefined;
 })();

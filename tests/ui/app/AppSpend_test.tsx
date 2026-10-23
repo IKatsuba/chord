@@ -3,10 +3,12 @@
  * requests and cycles, whole-spend reports and turns on changed models.
  */
 import { describe, expect, test } from 'bun:test';
+import { withChild, openOther, pickAgent } from './child_window.tsx';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { readRecords } from '../../../src/session/sessions.ts';
 import { readPast } from '../../../src/session/record.ts';
+import { openSession } from '../../../src/session/session.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
@@ -125,7 +127,7 @@ describe('CHD-405 N2 tester: cycle-held permission cost', () => {
 describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
   const table = (window: Window) => {
     const lines = window.frame().split('\n');
-    const start = lines.findLastIndex((line) => line.includes('This window'));
+    const start = lines.findLastIndex((line) => line.includes('This session'));
 
     expect(start).toBeGreaterThanOrEqual(0);
 
@@ -149,7 +151,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
 
   const showCost = async (window: Window, total?: string) => {
     await send(window, '/cost');
-    await window.shows('This window');
+    await window.shows('This session');
 
     if (total) {
       await until('current cost snapshot', () =>
@@ -204,7 +206,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
   }
 
   for (const columns of [80, 120]) {
-    test(`closed child, clear history and closed tab remain in /cost at ${columns} columns`, () =>
+    test(`closed child and clear history remain in /cost at ${columns} columns`, () =>
       onWindow(async (window) => {
         await ready(window);
         await send(window, 'agentcost');
@@ -235,30 +237,6 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
         expect(row(window, 'before /clear')).toContain('$0.0250');
         expect(row(window, 'parser')).toContain('$0.0100');
         expect(row(window, 'Total')).toContain('$0.0475');
-
-        await leader(window, 'c');
-        await ready(window);
-        await send(window, 'text');
-        await until('second tab turn recorded', async () => {
-          const records = await readRecords(join(window.dir, 'state'));
-          const texts = records.filter(
-            (each) => each.parent === undefined && each.prompt === 'text',
-          );
-
-          return (
-            texts.length === 2 &&
-            (await Promise.all(texts.map((each) => readPast(each.path)))).every(
-              (entries) => entries.some((entry) => entry.type === 'usage'),
-            )
-          );
-        });
-
-        await leader(window, 'k');
-        await window.shows('Closed 2 fake');
-        await showCost(window, '$0.0600');
-        expect(row(window, '2 fake')).toContain('$0.0125');
-        expect(row(window, '2 fake')).toContain('closed');
-        expect(row(window, 'Total')).toContain('$0.0600');
       }, columns));
 
     test(`a closed child's ended task stays under its owner and is added once at ${columns} columns`, () =>
@@ -436,7 +414,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
           expect(task.indexOf('Count the cost')).toBe(
             run.indexOf('bugfix') + 2,
           );
-          expect(amount(row(window, '1 fake'))).toBeCloseTo(
+          expect(amount(row(window, 'Total'))).toBeCloseTo(
             amount(row(window, 'main')) + amount(run),
             9,
           );
@@ -470,7 +448,7 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
 
           await window.press(ESC);
           await send(window, '/cost');
-          await window.shows('This window');
+          await window.shows('This session');
           await until('ended task in cost snapshot', () =>
             row(window, 'Count the cost').includes('$0.0100'),
           );
@@ -484,12 +462,8 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
             expect(ended).toContain('task agent of tester');
           }
 
-          expect(amount(row(window, '1 fake'))).toBeCloseTo(
-            amount(row(window, 'main')) + amount(keptRun) + 0.01,
-            9,
-          );
           expect(amount(row(window, 'Total'))).toBeCloseTo(
-            amount(row(window, '1 fake')),
+            amount(row(window, 'main')) + amount(keptRun) + 0.01,
             9,
           );
 
@@ -522,7 +496,8 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
           await ready(window);
           await send(window, 'text');
           await rootTurns(window, 'text', 1);
-          await send(window, '/new silent');
+          await send(window, 'agentother');
+          await pickAgent(window, 'other');
           await ready(window);
           await send(window, 'text');
           await window.shows('This reply came in chunks.');
@@ -532,11 +507,11 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
           );
           await showCost(window);
 
-          const estimate = row(window, '1 fake');
+          const estimate = row(window, 'main');
           const total = row(window, 'Total');
 
           expect(estimate).toContain('~$');
-          expect(row(window, '2 silent')).toContain('not reported');
+          expect(row(window, 'other')).toContain('not reported');
           expect(total).toContain('~$');
           expect(total).toContain('not reported');
 
@@ -551,6 +526,12 @@ describe('CHD-373 S4 tester: whole-spend reports in the window', () => {
         ['--tokens-only'],
         {
           runtimes: ['fake', 'silent'],
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--tokens-only',
+            '--child-runtime',
+            'silent',
+          ),
           startupOf: (agent) => ({
             agentCommand:
               agent === 'silent'
@@ -649,11 +630,15 @@ describe('CHD-472 U2 tester: model changes price only the growth (Q133)', () => 
       ['claude-haiku-4-5', 1, '$0.0068'],
       ['claude-opus-5-5', 2, '$0.0129'],
     ] as const) {
-      test(`${model} after Codex keeps both prices at ${columns} columns`, () =>
-        withWindow(
+      test(`${model} after Codex keeps both prices at ${columns} columns`, () => {
+        let readings = 0;
+        let unsubscribe: (() => void) | undefined;
+
+        return withChild(
           async (window) => {
             await ready(window);
-            await send(window, '/new dirac');
+            await openOther(window);
+            await pickAgent(window, 'other');
             await until(
               'dirac session opened',
               () => window.session()?.agent === 'dirac',
@@ -676,15 +661,7 @@ describe('CHD-472 U2 tester: model changes price only the growth (Q133)', () => 
 
             await connected();
 
-            let readings = 0;
-            const unsubscribe = window.session()!.subscribe((update) => {
-              if (update.sessionUpdate === 'usage_update') {
-                readings++;
-              }
-            });
-
             try {
-              await send(window, 'text');
               await until('first cost reading', () => readings === 1);
               await connected();
               await send(window, '/model');
@@ -717,13 +694,31 @@ describe('CHD-472 U2 tester: model changes price only the growth (Q133)', () => 
               );
               expect(words).not.toContain('Not counted:');
             } finally {
-              unsubscribe();
+              unsubscribe?.();
             }
           },
           {
             columns,
             rows: 40,
             runtimes: ['fake', 'dirac'],
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--child-runtime',
+              'dirac',
+            ),
+            openWith: async (options) => {
+              const session = await openSession(options);
+
+              if (options.agent === 'dirac') {
+                unsubscribe = session.subscribe((update) => {
+                  if (update.sessionUpdate === 'usage_update') {
+                    readings++;
+                  }
+                });
+              }
+
+              return session;
+            },
             startupOf: (agent) => ({
               agentCommand:
                 agent === 'dirac'
@@ -735,7 +730,8 @@ describe('CHD-472 U2 tester: model changes price only the growth (Q133)', () => 
                   : fakeAgentCommand(),
             }),
           },
-        ));
+        );
+      });
     }
   }
 });
@@ -754,11 +750,15 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
         '2 turns',
       ],
     ] as const) {
-      test(`${models.join(' → ')} at ${columns} columns`, () =>
-        withWindow(
+      test(`${models.join(' → ')} at ${columns} columns`, () => {
+        let reply = '';
+        let unsubscribe: (() => void) | undefined;
+
+        return withChild(
           async (window) => {
             await ready(window);
-            await send(window, '/new dirac');
+            await openOther(window);
+            await pickAgent(window, 'other');
             await until(
               'dirac opened',
               () => window.session()?.agent === 'dirac',
@@ -781,16 +781,6 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
 
             await connected();
 
-            let reply = '';
-            const unsubscribe = window.session()!.subscribe((update) => {
-              if (
-                update.sessionUpdate === 'agent_message_chunk' &&
-                update.content.type === 'text'
-              ) {
-                reply += update.content.text;
-              }
-            });
-
             try {
               for (const [index, model] of models.entries()) {
                 if (window.session()!.models()?.current !== model) {
@@ -811,7 +801,10 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
                   );
                 }
 
-                await send(window, 'text');
+                if (index !== 0) {
+                  await send(window, 'text');
+                }
+
                 await until(
                   'reply complete',
                   () =>
@@ -836,14 +829,36 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
               );
               expect(words).not.toContain("(part chord's estimate)");
             } finally {
-              unsubscribe();
+              unsubscribe?.();
             }
           },
           {
             columns,
             rows: 40,
             runtimes: ['fake', 'dirac'],
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--child-runtime',
+              'dirac',
+            ),
+            openWith: async (options) => {
+              const session = await openSession(options);
+
+              if (options.agent === 'dirac') {
+                unsubscribe = session.subscribe((update) => {
+                  if (
+                    update.sessionUpdate === 'agent_message_chunk' &&
+                    update.content.type === 'text'
+                  ) {
+                    reply += update.content.text;
+                  }
+                });
+              }
+
+              return session;
+            },
             startupOf: (agent) => ({
+              ...(agent === 'dirac' ? { model: models[0] } : {}),
               agentCommand:
                 agent === 'dirac'
                   ? fakeAgentCommand(
@@ -856,7 +871,8 @@ describe('CHD-472 mixed tester: unpriced turns stay counted through further mode
                   : fakeAgentCommand(),
             }),
           },
-        ));
+        );
+      });
     }
   }
 });

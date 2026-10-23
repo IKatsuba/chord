@@ -849,9 +849,9 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
     [80, 24],
     [120, 40],
   ] as const) {
-    for (const child of [false, true]) {
+    {
       for (const fails of [false, true]) {
-        test(`a ${child ? 'child' : 'tab'} that ${fails ? 'fails' : 'starts'} preserves another session's notice at ${columns}×${rows}`, async () => {
+        test(`a child that ${fails ? 'fails' : 'starts'} preserves another session's notice at ${columns}×${rows}`, async () => {
           const gates = await mkdtemp(join(tmpdir(), 'chord-paste-session-'));
           const gate = join(gates, 'open');
           const server = serveChord();
@@ -883,8 +883,7 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
             await withWindow(
               async (window) => {
                 await ready(window);
-
-                if (child) {
+                {
                   if (main === undefined) {
                     throw new Error('main was not admitted');
                   }
@@ -898,8 +897,6 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
                   await window.press(DOWN);
                   await window.press(DOWN);
                   await window.press('\r');
-                } else {
-                  await send(window, '/new codex');
                 }
 
                 await window.shows('Starting codex…');
@@ -908,8 +905,7 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
                   'the original clipboard read waits',
                   () => reads === 1,
                 );
-
-                if (child) {
+                {
                   await window.press(DOWN);
                   await window.press(UP);
                   await window.press('\r');
@@ -917,8 +913,6 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
                     'the parent is shown',
                     () => !window.frame().includes('╭─ foreign ─'),
                   );
-                } else {
-                  await leader(window, '1');
                 }
 
                 await window.press(CTRL_V);
@@ -927,20 +921,7 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
                 await writeFile(gate, '');
                 await until('the background startup settles', () => finished);
 
-                if (!child && !fails) {
-                  // The open promise precedes the UI's connected event.
-                  await leader(window, '2');
-                  await until(
-                    'the original tab is connected',
-                    () =>
-                      !window.frame().includes('Starting codex…') &&
-                      window.frame().includes('? for shortcuts'),
-                  );
-                  await leader(window, '1');
-                  await window.shows(notice);
-                }
-
-                if (child && !fails) {
+                if (!fails) {
                   await until(
                     'the child replies to its initial prompt',
                     () => childReplied,
@@ -961,14 +942,11 @@ describe('CHD-490 tester: delayed startup clipboard stays with its conversation'
                 expect(window.frame()).not.toContain(
                   'codex has not started yet',
                 );
-
-                if (child) {
+                {
                   await window.press(DOWN);
                   await window.press(DOWN);
                   await window.press('\r');
                   await window.shows('╭─ foreign ─');
-                } else {
-                  await leader(window, '2');
                 }
 
                 if (fails) {

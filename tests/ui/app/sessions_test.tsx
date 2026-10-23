@@ -28,6 +28,7 @@ describe('CHD-373 S3b tester: session close wiring', () => {
     all: WindowedState;
     drive: Drive;
     dir: string;
+    openChild(): Promise<unknown>;
   }
 
   async function withSessions(
@@ -49,6 +50,17 @@ describe('CHD-373 S3b tester: session close wiring', () => {
     const opened: Session[] = [];
     const pids = new Set<number>();
     const server = serveChord();
+    const admit = server.admit.bind(server);
+    let main: Parameters<typeof admit>[0] | undefined;
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
     const command = fakeAgentCommand(undefined, ...flags);
     let seen: Seen | undefined;
     const read = () => {
@@ -129,7 +141,20 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         },
       );
 
-      seen = { all, drive, dir };
+      seen = {
+        all,
+        drive,
+        dir,
+        openChild: () => {
+          assert(main);
+
+          return main.window.open(main.key, {
+            agent: 'fake',
+            name: 'other',
+            prompt: 'costwait',
+          });
+        },
+      };
 
       return <text>Session accounting host</text>;
     }
@@ -173,38 +198,47 @@ describe('CHD-373 S3b tester: session close wiring', () => {
     );
   };
 
-  test('two busy tabs close concurrently and keep their final costs separately, once each', () =>
+  test('busy main and child close concurrently and keep their final costs once each', () =>
     withSessions(async (read, releaseCloses) => {
+      await read().openChild();
+      await until(
+        'the busy child exists',
+        () => read().drive.sessions.tabs.tabs[0]?.children.length === 1,
+      );
+
+      const child = read().drive.sessions.tabs.tabs[0]!.children[0]!;
+
+      await until(
+        'child cost before closing',
+        () =>
+          read().all.sessions[child.key]?.transcript.usage?.cost?.amount ===
+          0.01,
+      );
       await costStarted(read, 1);
-      read().drive.openBeside();
-      await until(
-        'second ready',
-        () => read().all.sessions[2]?.connection.status === 'ready',
-      );
-      await costStarted(read, 2);
-      read().drive.openBeside();
-      await until(
-        'surviving tab ready',
-        () => read().all.sessions[3]?.connection.status === 'ready',
-      );
 
-      for (const key of [1, 2]) {
-        read().drive.sessions.pick(key);
-        read().drive.showFront();
-        await until('tab shown', () => read().all.front === key);
-        read().drive.closeFront();
-        await until(
-          'busy close armed',
-          () => read().all.window.closeArmed === key,
-        );
-        read().drive.closeFront();
-        await until(
-          'closed tab removed',
-          () => read().all.sessions[key] === undefined,
-        );
-      }
+      const mainId = read().all.sessions[1]!.sessionId!;
 
-      expect(Object.keys(read().all.closing ?? {})).toHaveLength(2);
+      read().drive.sessions.pick(child.key);
+      read().drive.showFront();
+      await until('child shown', () => read().all.front === child.key);
+      read().drive.closePicked();
+      await until(
+        'child close armed',
+        () => read().all.window.agentCloseArmed === child.key,
+      );
+      read().drive.closePicked();
+      await until(
+        'child removed while closing',
+        () => read().all.sessions[child.key] === undefined,
+      );
+      read().drive.clearFront(() => {});
+
+      await until(
+        'main replaced while both closes are held',
+        () =>
+          read().all.sessions[1]?.sessionId !== mainId &&
+          read().all.sessions[1]?.connection.status === 'ready',
+      );
       releaseCloses();
       await until(
         'both costs settled',
@@ -536,17 +570,8 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         ));
     }
 
-    test('a real spawned task ends into its retired record once even after the replacement tab closes', () =>
+    test('a real spawned task ends into its retired record once even after quit closes its replacement', () =>
       withSessions(async (read) => {
-        read().drive.openBeside();
-        await until(
-          'surviving tab ready',
-          () => read().all.sessions[2]?.connection.status === 'ready',
-        );
-        read().drive.sessions.pick(1);
-        read().drive.showFront();
-        await until('main shown', () => read().all.front === 1);
-
         const old = read().all.sessions[1]!.sessionId!;
 
         read().drive.conversation()!.send('taskcost');
@@ -572,10 +597,10 @@ describe('CHD-373 S3b tester: session close wiring', () => {
         read().drive.clearFront(() => {});
 
         await replacement(read, old);
-        read().drive.closeFront();
+        read().drive.quit();
         await until(
-          'replacement tab closed',
-          () => read().all.sessions[1] === undefined,
+          'quit closed the replacement',
+          () => read().drive.sessions.tabs.tabs.length === 0,
         );
         await settled(read, 2);
 
@@ -590,9 +615,9 @@ describe('CHD-373 S3b tester: session close wiring', () => {
           figure: { cost: { amount: 0.01 } },
         });
         expect(figure(read).cost).toBeCloseTo(0.0225, 9);
-        expect(read().all.sessions[2]?.spent).toBeUndefined();
+        expect(read().all.sessions[1]?.spent).toBeUndefined();
         expect(
-          JSON.stringify(read().all.sessions[2]?.transcript.entries),
+          JSON.stringify(read().all.sessions[1]?.transcript.entries ?? []),
         ).not.toContain('Count the cost');
 
         const records = await readRecords(join(read().dir, 'state'));

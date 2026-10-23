@@ -3,6 +3,7 @@
  * closes or quits (CHD-489).
  */
 import { describe, expect, test } from 'bun:test';
+import { withChild, pickAgent } from './child_window.tsx';
 import { execFile } from 'node:child_process';
 import { AgentExitError } from '../../../src/acp/process.ts';
 import { openSession } from '../../../src/session/session.ts';
@@ -11,7 +12,6 @@ import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   DOWN,
   isAlive,
-  leader,
   quitAll,
   ready,
   send,
@@ -169,9 +169,9 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
     });
   }
 
-  for (const child of [false, true]) {
+  {
     for (const quit of [false, true]) {
-      test(`${quit ? 'quit' : 'close'} stops a selected ${child ? 'child' : 'tab'} before initialize replies`, async () => {
+      test(`${quit ? 'quit' : 'close'} stops a selected child before initialize replies`, async () => {
         const tag = `chord-start-qa-${crypto.randomUUID()}`;
         const server = serveChord();
         const admit = server.admit.bind(server);
@@ -190,8 +190,7 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
           await withWindow(
             async (window) => {
               await ready(window);
-
-              if (child) {
+              {
                 if (main === undefined) {
                   throw new Error('main was not admitted');
                 }
@@ -205,8 +204,6 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
                 await window.press(DOWN);
                 await window.press(DOWN);
                 await window.press('\r');
-              } else {
-                await send(window, '/new codex');
               }
 
               await window.shows('Starting codex…');
@@ -217,11 +214,9 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
 
               if (quit) {
                 await quitAll(window);
-              } else if (child) {
+              } else {
                 await window.press(DOWN);
                 await window.press('x');
-              } else {
-                await leader(window, 'k');
               }
 
               await until(
@@ -257,6 +252,36 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
     }
   }
 
+  test('quit stops the main agent before initialize replies', async () => {
+    const tag = `chord-main-start-qa-${crypto.randomUUID()}`;
+
+    await withWindow(
+      async (window) => {
+        await window.shows('Starting codex…');
+        await until(
+          'the main agent exists before initialize',
+          async () => (await processes(tag)).length > 0,
+        );
+        await quitAll(window);
+        await until(
+          'quit stopped the starting main',
+          async () => (await processes(tag)).length === 0,
+        );
+      },
+      {
+        agent: 'codex',
+        runtimes: ['codex'],
+        whileStarting: true,
+        columns: 120,
+        rows: 40,
+        startupOf: () => ({
+          agentCommand: fakeAgentCommand(undefined, '--hang', 'start', tag),
+        }),
+      },
+    );
+    expect(await processes(tag)).toEqual([]);
+  });
+
   for (const stopFailed of [false, true]) {
     test(`a start rejected before teardown ${stopFailed ? 'reports its nested cleanup error' : 'accepts an ordinary refusal'}`, async () => {
       const failure = stopFailed
@@ -266,14 +291,16 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
           )
         : new Error('ordinary startup refusal');
       const command = fakeAgentCommand();
-      const result = withWindow(
+      const result = withChild(
         async (window) => {
           await ready(window);
-          await send(window, '/new codex');
+          await send(window, 'agentother');
+          await pickAgent(window, 'other');
           await window.shows('codex did not start:');
         },
         {
           runtimes: ['fake', 'codex'],
+          agentCommand: fakeAgentCommand(undefined, '--child-runtime', 'codex'),
           startupOf: () => ({ agentCommand: command }),
           openWith: (options) =>
             options.agent === 'codex'
@@ -297,10 +324,11 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
     const pids: number[] = [];
     let initialized = false;
 
-    await withWindow(
+    await withChild(
       async (window) => {
         await ready(window);
-        await send(window, '/new codex');
+        await send(window, 'agentother');
+        await pickAgent(window, 'other');
         await until(
           'the child initializes before its open is delivered',
           () => initialized,
@@ -310,6 +338,7 @@ describe('CHD-489 tester: startup cleanup across close and quit', () => {
       },
       {
         runtimes: ['fake', 'codex'],
+        agentCommand: fakeAgentCommand(undefined, '--child-runtime', 'codex'),
         startupOf: () => ({ agentCommand: command }),
         openWith: async (options) => {
           const session = await openSession(options);

@@ -654,20 +654,14 @@ test("a note left fewer than 20 cells beside the figures goes below them, from t
 describe('CHD-473 tester: full cells at the note floor and nested accounting', () => {
   const name = 'Long_closed_agent_name_that_needs_several_lines';
   const parts: SpendPart[] = [
-    {
-      name: '1 fake',
-      kind: 'tab',
-      parts: [
-        { name: 'main', kind: 'main', figure: { cost: USD(0.01) } },
-        { name, kind: 'agent', ended: true, figure: { cost: USD(0.02) } },
-      ],
-    },
+    { name: 'main', kind: 'main', figure: { cost: USD(0.01) } },
+    { name, kind: 'agent', ended: true, figure: { cost: USD(0.02) } },
   ];
 
   test('exactly twenty note cells stay beside figures; nineteen move to the second line at the cost edge', () => {
     for (const width of [57, 58]) {
       const drawn = lines(parts, width);
-      const at = drawn.findIndex((line) => line.startsWith('  Long_'));
+      const at = drawn.findIndex((line) => line.startsWith('Long_'));
       const end = drawn.findIndex((line) => line.startsWith('Total'));
       const block = drawn.slice(at, end);
       const note = block.find((line) => line.includes('agent, closed'));
@@ -677,7 +671,7 @@ describe('CHD-473 tester: full cells at the note floor and nested accounting', (
       expect(block[0]).toContain('$0.0200');
       expect(block.join(' ').match(/\$0\.0200/g)).toHaveLength(1);
       expect(
-        block.map((line) => line.match(/^ {2}(\S+)/)?.[1] ?? '').join(''),
+        block.map((line) => line.match(/^(\S+)/)?.[1] ?? '').join(''),
       ).toBe(name);
 
       if (width === 57) {
@@ -695,24 +689,18 @@ describe('CHD-473 tester: full cells at the note floor and nested accounting', (
 
   test('every word of estimate, legacy and uncounted notes survives each width across the floor', () => {
     const detailed: SpendPart[] = [
+      { name: 'main', kind: 'main', figure: { cost: USD(0.01) } },
       {
-        name: '1 fake',
-        kind: 'tab',
-        parts: [
-          { name: 'main', kind: 'main', figure: { cost: USD(0.01) } },
-          {
-            name,
-            kind: 'agent',
-            ended: true,
-            figure: {
-              cost: USD(0.02),
-              estimated: 'all',
-              models: ['model-with-a-very-long-public-name'],
-              before: { cost: USD(0.01), until: Date.UTC(2026, 9, 12, 12) },
-              uncounted: 3,
-            },
-          },
-        ],
+        name,
+        kind: 'agent',
+        ended: true,
+        figure: {
+          cost: USD(0.02),
+          estimated: 'all',
+          models: ['model-with-a-very-long-public-name'],
+          before: { cost: USD(0.01), until: Date.UTC(2026, 9, 12, 12) },
+          uncounted: 3,
+        },
       },
     ];
     const expected =
@@ -720,7 +708,7 @@ describe('CHD-473 tester: full cells at the note floor and nested accounting', (
 
     for (let width = 42; width <= 120; width++) {
       const drawn = lines(detailed, width);
-      const at = drawn.findIndex((line) => line.startsWith('  Long_'));
+      const at = drawn.findIndex((line) => line.startsWith('Long_'));
       const end = drawn.findIndex((line) => line.startsWith('Total'));
       const block = drawn.slice(at, end);
       const nameWidth = Math.floor(width / 3);
@@ -747,51 +735,45 @@ describe('CHD-473 tester: full cells at the note floor and nested accounting', (
     const grandchild = '🧵入れ子の作業名を最後まで読む';
     const nested: SpendPart[] = [
       {
-        name: '1 fake',
-        kind: 'tab',
+        name: 'main',
+        kind: 'main',
+        figure: { cost: USD(0.01), tokens: 100 },
         parts: [
           {
-            name: 'main',
-            kind: 'main',
-            figure: { cost: USD(0.01), tokens: 100 },
+            name: child,
+            kind: 'task',
+            ended: true,
+            figure: { cost: USD(0.002), tokens: 200 },
             parts: [
               {
-                name: child,
+                name: grandchild,
                 kind: 'task',
                 ended: true,
-                figure: { cost: USD(0.002), tokens: 200 },
-                parts: [
-                  {
-                    name: grandchild,
-                    kind: 'task',
-                    ended: true,
-                    figure: { cost: USD(0.003), tokens: 300 },
-                  },
-                ],
+                figure: { cost: USD(0.003), tokens: 300 },
               },
             ],
           },
+        ],
+      },
+      {
+        name: 'run',
+        kind: 'team',
+        parts: [
           {
-            name: 'run',
-            kind: 'team',
+            name: 'lead',
+            kind: 'member',
+            figure: { cost: USD(0.004), tokens: 400 },
+          },
+          {
+            name: 'tester',
+            kind: 'member',
+            figure: { cost: USD(0.005), tokens: 500 },
             parts: [
               {
-                name: 'lead',
-                kind: 'member',
-                figure: { cost: USD(0.004), tokens: 400 },
-              },
-              {
-                name: 'tester',
-                kind: 'member',
-                figure: { cost: USD(0.005), tokens: 500 },
-                parts: [
-                  {
-                    name: 'Owned_task',
-                    kind: 'task',
-                    ended: true,
-                    figure: { cost: USD(0.006), tokens: 600 },
-                  },
-                ],
+                name: 'Owned_task',
+                kind: 'task',
+                ended: true,
+                figure: { cost: USD(0.006), tokens: 600 },
               },
             ],
           },
@@ -808,15 +790,15 @@ describe('CHD-473 tester: full cells at the note floor and nested accounting', (
             (line) => line.match(new RegExp(`^ {${depth}}(\\S+)`))?.[1] ?? [],
           )
           .join('');
-      const run = drawn.find((line) => line.startsWith('  run'))!;
+      const run = drawn.find((line) => line.startsWith('run'))!;
       const total = drawn.find((line) => line.startsWith('Total'))!;
-      const tab = drawn.find((line) => line.startsWith('1 fake'))!;
+      const main = drawn.find((line) => line.startsWith('main'))!;
 
-      expect(byDepth(4)).toBe(child + 'Owned_task');
-      expect(byDepth(6)).toBe(grandchild);
+      expect(byDepth(2)).toBe(child + 'Owned_task');
+      expect(byDepth(4)).toBe(grandchild);
       expect(run).toContain('$0.0090');
       expect(run).toContain('900');
-      expect(tab).toContain('$0.0300');
+      expect(main).toContain('$0.0150');
       expect(total).toContain('$0.0300');
       expect(total).toContain('2,100');
 
@@ -940,58 +922,34 @@ describe('CHD-472 U2 tester: provider identity in mixed window totals', () => {
     test(`dirac's missing provider is named once in Total with both priced and unpriced rows at ${width} cells`, () => {
       const parts: SpendPart[] = [
         {
-          name: '1 ordinary',
-          kind: 'tab',
-          parts: [
-            {
-              name: 'main',
-              kind: 'main',
-              agent: 'fake',
-              figure: { cost: USD(0.01), tokens: 100 },
-            },
-          ],
+          name: 'main',
+          kind: 'main',
+          agent: 'fake',
+          figure: { cost: USD(0.01), tokens: 100 },
         },
         {
-          name: '2 dirac',
-          kind: 'tab',
-          parts: [
-            {
-              name: 'main',
-              kind: 'main',
-              agent: 'dirac',
-              figure: { tokens: 4000, totals: { model: 'unpriced' } },
-            },
-          ],
+          name: 'unpriced',
+          kind: 'agent',
+          runtime: 'dirac',
+          figure: { tokens: 4000, totals: { model: 'unpriced' } },
         },
         {
-          name: '3 dirac',
-          kind: 'tab',
-          parts: [
-            {
-              name: 'main',
-              kind: 'main',
-              agent: 'dirac',
-              figure: {
-                tokens: 2000,
-                totals: { model: 'gpt-5.3-codex' },
-                cost: USD(0.00469),
-                estimated: 'all',
-                models: ['gpt-5.3-codex'],
-              },
-            },
-          ],
+          name: 'priced',
+          kind: 'agent',
+          runtime: 'dirac',
+          figure: {
+            tokens: 2000,
+            totals: { model: 'gpt-5.3-codex' },
+            cost: USD(0.00469),
+            estimated: 'all',
+            models: ['gpt-5.3-codex'],
+          },
         },
         {
-          name: '4 other',
-          kind: 'tab',
-          parts: [
-            {
-              name: 'main',
-              kind: 'main',
-              agent: 'fake',
-              figure: { tokens: 20 },
-            },
-          ],
+          name: 'missing',
+          kind: 'agent',
+          runtime: 'fake',
+          figure: { tokens: 20 },
         },
       ];
       const output = lines(parts, width);

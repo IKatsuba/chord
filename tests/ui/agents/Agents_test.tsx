@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
+  CHILD_MESSAGES,
   CRASH_WORDS,
   GATE,
   GATE_RELEASE,
@@ -478,7 +479,13 @@ describe('CHD-364 tester: narrow idle time beside reply mark', () => {
           // The message is old, while the reply is released at the new time.
           setSystemTime(new Date(Date.now() + 10_000));
           await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
-          await until('the narrow parser reply', () => Number.isFinite(age()));
+          // The last turn sends this; parser is idle for good only after it.
+          await until(
+            'the narrow parser reply after its last turn',
+            () =>
+              window.frame().includes(CHILD_MESSAGES[1]) &&
+              Number.isFinite(age()),
+          );
 
           const first = age();
 

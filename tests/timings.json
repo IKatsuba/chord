@@ -155,7 +155,6 @@
     "tests/session/transcript/chord_test.ts": 37,
     "tests/ui/app/closing_test.ts": 37,
     "tests/session/starting_test.ts": 36,
-    "tests/session/windows_test.ts": 35,
     "tests/status_test.ts": 35,
     "tests/fixtures/fake_agent/sessions_test.ts": 34,
     "tests/scripts/dev/screenshots_test.ts": 34,

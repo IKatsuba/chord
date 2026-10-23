@@ -820,7 +820,7 @@ function refusal(stderr: string): string[] {
     .split('\n');
 }
 
-test('several -r and a window id are refused with their commands, before anything asks PATH (CHD-493)', async () => {
+test('several -r are refused with their commands, before anything asks PATH (CHD-493)', async () => {
   const several = await onPath(
     RECORDED.flatMap((id) => ['-r', id]),
     [],
@@ -840,20 +840,21 @@ test('several -r and a window id are refused with their commands, before anythin
       new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[1]}$`),
     ),
   ]);
+});
 
-  const window = await onPath(['-r', RECORDED_WINDOW], [], undefined, 'cursor');
-
-  expect(window.code).toBe(2);
-  expect(window.stderr).not.toContain('not on PATH');
-  expect(refusal(window.stderr)).toEqual([
-    `${RECORDED_WINDOW} was a window of 2 sessions; chord opens one session per run now. Resume each with:`,
-    expect.stringMatching(
-      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[0]}$`),
-    ),
-    expect.stringMatching(
-      new RegExp(`^chord cursor --cwd \\S+ --resume ${RECORDED[1]}$`),
-    ),
-  ]);
+test("an old window's w-… id goes on to start the agent named, as an id chord has no record of (Q179)", async () => {
+  // The window record seedRecords leaves holds both sessions; were it read,
+  // they would be said back. Here the id goes on to start the agent named,
+  // as one chord has no record of does, and PATH has no cursor.
+  expect(
+    await onPath(['cursor', '-r', RECORDED_WINDOW], [], undefined, 'cursor'),
+  ).toStrictEqual({
+    code: 1,
+    stdout: '',
+    stderr:
+      'chord: cursor runs "agent", which is not on PATH; ' +
+      'install it from https://cursor.com/docs/cli/installation\n',
+  });
 });
 
 test("several -r of two agents and an unknown id name each its record's agent and directory, the unknown one this command's (CHD-493)", async () => {

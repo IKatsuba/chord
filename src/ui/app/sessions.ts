@@ -2542,8 +2542,8 @@ export function useSessions(
     });
 
   /**
-   * `/resume`: reads chord's session and window records afresh, so a session
-   * another window used since is there, and opens the picker on this
+   * `/resume`: reads chord's session records afresh, so a session another
+   * chord used since is there, and opens the picker on this
    * directory's, with every other directory's a key away.
    * What the read finds goes through the reducer, which drops it if a
    * `/clear` or quitting came first and refuses it if a turn started.

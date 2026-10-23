@@ -53,7 +53,6 @@ import { execPath } from './platform/process.ts';
 import { serveChord } from './server/server.ts';
 import { upgradeCommand } from './upgrade.ts';
 import { chordStateDir } from './session/state_dir.ts';
-import { isWindowId, readWindow, windowGone } from './session/windows.ts';
 import {
   agentCommands,
   keybindingsFile,
@@ -347,16 +346,13 @@ const cli = chordCommand().action(async (options, named) => {
 
     try {
       // One session a run (CHD-493): several are each said back as a
-      // command, and an old window's sessions too, before anything starts.
+      // command before anything starts. A w-… id of an old window is an id
+      // like any other, for the agent to answer (Q179).
       if (ids !== undefined && ids.length > 1) {
         throw severalRefusal(records, ids, {
           ...find,
           agentCommand: flags.agentCommand,
         });
-      }
-
-      if (only !== undefined && isWindowId(only)) {
-        throw new ResumeError(windowGone(await readWindow(stateDir, only)));
       }
 
       resume =

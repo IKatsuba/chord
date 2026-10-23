@@ -472,3 +472,197 @@ describe('CHD-396 tester: task list in the fake window', () => {
       ));
   }
 });
+
+describe('CHD-396 U3 tester: native code selection boundaries', () => {
+  for (const columns of [80, 120]) {
+    test(`the copy key writes bare code at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+          expect(await drag(window, 'bun dev chord', 'echo done')).toBe(
+            `${LONG_CODE}\n\necho done`,
+          );
+          expect(copies).toHaveLength(0);
+          await window.press('\x03');
+          await until(
+            'the code copy to reach the clipboard',
+            () => copies.length === 1,
+          );
+          expect(copies[0]?.text).toBe(`${LONG_CODE}\n\necho done`);
+        },
+        { columns, rows: 40, copy, copyOnSelect: false },
+      );
+    });
+
+    test(`border and language-label drags start no selection at ${columns} columns`, async () => {
+      for (const start of [0, 3]) {
+        const drawn = await draw(
+          <Reply text={'```txt\nalpha target omega\n```'} width={columns} />,
+          { columns, rows: 24 },
+        );
+
+        try {
+          expect(stripAnsi(drawn.frame())).toContain('┌─ txt');
+          await drawn.write(left(start, 0, 'down'));
+          await drawn.write(left(12, 1, 'drag'));
+          await drawn.write(left(12, 1, 'up'));
+          expect(drawn.selected()).toBe('');
+        } finally {
+          await drawn.unmount();
+        }
+      }
+    });
+
+    test(`partial code selection copies only the dragged characters at ${columns} columns`, async () => {
+      const drawn = await draw(
+        <Reply text={'```txt\nalpha target omega\n```'} width={columns} />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        const rows = stripAnsi(drawn.frame()).split('\n');
+        const row = rows.findIndex((line) =>
+          line.includes('alpha target omega'),
+        );
+        const start = rows[row]!.indexOf('target');
+
+        await drawn.write(left(start, row, 'down'));
+        await drawn.write(left(start + 5, row, 'drag'));
+        await drawn.write(left(start + 5, row, 'up'));
+        expect(drawn.selected()).toBe('target');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+
+    test(`source trailing spaces survive but box padding does not at ${columns} columns`, async () => {
+      const source = 'alpha  \nb\nlast   ';
+      const drawn = await draw(
+        <Reply text={'```txt\n' + source + '\n```'} width={columns} />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        const rows = stripAnsi(drawn.frame()).split('\n');
+        const first = rows.findIndex((row) => row.includes('alpha'));
+        const last = rows.findIndex((row) => row.includes('last'));
+
+        await drawn.write(left(2, first, 'down'));
+        await drawn.write(left(columns - 1, first, 'drag'));
+        await drawn.write(left(columns - 1, first + 1, 'drag'));
+        await drawn.write(left(columns - 1, last, 'drag'));
+        await drawn.write(left(columns - 1, last, 'up'));
+        expect(drawn.selected()).toBe(source);
+      } finally {
+        await drawn.unmount();
+      }
+    });
+
+    test(`fenced sent and received message bodies use bare-code copies at ${columns} columns`, async () => {
+      const code = 'const value = ' + '1'.repeat(150) + ';\nreturn value;';
+      const text = '```ts\n' + code + '\n```';
+
+      for (const entry of [
+        {
+          kind: 'message' as const,
+          turnId: 'u3',
+          from: { name: 'parser', reachable: true as const },
+          text,
+        },
+        {
+          kind: 'tool' as const,
+          turnId: 'u3',
+          call: {
+            id: 'u3-message',
+            status: 'completed' as const,
+            chord: {
+              tool: 'send_message' as const,
+              input: { to: 'parser', text },
+            },
+          },
+        },
+      ]) {
+        const drawn = await draw(
+          <TranscriptEntry
+            entry={entry}
+            turn={{ status: 'idle' }}
+            agent='fake'
+            expanded={false}
+            width={columns}
+          />,
+          { columns, rows: 24 },
+        );
+
+        try {
+          expect(stripAnsi(drawn.frame())).toContain('┌─ ts');
+          expect(await selectBody(drawn, 'const value', columns)).toBe(code);
+        } finally {
+          await drawn.unmount();
+        }
+      }
+    });
+  }
+
+  test('an open fence grows and its code reflows at narrow and wide widths', async () => {
+    let update: (state: { text: string; width: number }) => void = () => {};
+
+    function StreamingCode() {
+      const [state, setState] = useState({ text: '```txt\nfirst', width: 80 });
+
+      update = setState;
+
+      return <Reply text={state.text} width={state.width} />;
+    }
+
+    const drawn = await draw(<StreamingCode />, { columns: 80, rows: 40 });
+    const code = 'first ' + 'Z'.repeat(140) + '\nlast line';
+
+    try {
+      expect(stripAnsi(drawn.frame())).toContain('┌─ txt');
+      expect(await selectBody(drawn, 'first', 80)).toBe('first');
+
+      for (const columns of [80, 20, 120]) {
+        update({ text: '```txt\n' + code, width: columns });
+        await drawn.resize({ columns });
+        await until('the open code fence to grow', async () => {
+          await drawn.write('');
+
+          return drawn.mounted('last line');
+        });
+
+        expect(await selectBody(drawn, 'first', columns)).toBe(code);
+        expect(
+          stripAnsi(drawn.frame())
+            .split('\n')
+            .every((row) => stringWidth(row) <= columns),
+        ).toBe(true);
+      }
+    } finally {
+      await drawn.unmount();
+    }
+  });
+
+  for (const columns of [6, 12, 15, 16]) {
+    test(`a typescript label fits only when its column has sixteen cells: ${columns}`, async () => {
+      const drawn = await draw(
+        <Reply text={'```typescript\nx\n```'} width={columns} />,
+        { columns, rows: 12 },
+      );
+
+      try {
+        const frame = stripAnsi(drawn.frame());
+
+        expect(frame.includes('typescript')).toBe(columns === 16);
+        expect(
+          frame.split('\n').every((row) => stringWidth(row) <= columns),
+        ).toBe(true);
+        expect(await selectBody(drawn, 'x', columns)).toBe('x');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});

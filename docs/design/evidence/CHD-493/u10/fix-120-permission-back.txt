@@ -1,0 +1,40 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-u
+ ▀▀     ? for shortcuts · /help
+
+ › agentother
+
+ ⏺ Open(other) · codex
+   ⎿  text
+
+ ⏺ Opened other on codex.
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+
+
+
+
+ ››› Waiting for permission… (7s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                                                                      │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│   1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│ ❯ 3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main   fake · Fake Large with a 1M context window · medium  ● permission 6s
+    other  codex · 6.1 Sol · medium                             ◦ idle 2s        ✓ new reply

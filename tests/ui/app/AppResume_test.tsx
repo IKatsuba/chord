@@ -756,3 +756,94 @@ describe("an agent's title for a session in /resume and a resumed header (CHD-44
     );
   });
 });
+
+describe('CHD-445 U2 tester: an open resume picker keeps its title snapshot', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`reopen refreshes a renamed title after Esc at ${columns}×${rows}`, () => {
+      let title = 'First recorded title';
+      let reads = 0;
+
+      return withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows(title);
+
+          title = 'Newest recorded title';
+
+          await window.resize({ rows: rows + 1 });
+          expect(window.frame()).toContain('First recorded title');
+          expect(window.frame()).not.toContain(title);
+          expect(reads).toBe(1);
+          await window.press(ESC);
+          await send(window, '/resume');
+          await window.shows(title);
+          expect(window.frame()).not.toContain('First recorded title');
+          expect(reads).toBe(2);
+          await window.press(ESC);
+          expect(window.frame()).not.toContain('Resume a session');
+        },
+        {
+          columns,
+          rows,
+          readRecords: (stateDir) => {
+            reads++;
+
+            return Promise.resolve([
+              {
+                path: join(stateDir, 'earlier.jsonl'),
+                sessionId: 'earlier',
+                agent: 'fake',
+                cwd: join(stateDir, '..'),
+                lastUsedAt: Date.now() - 60_000,
+                prompt: 'Original prompt stays hidden',
+                title,
+              },
+            ]);
+          },
+        },
+      );
+    });
+  }
+});
+
+describe('CHD-445 U2 tester: resumed headers keep the title that was picked', () => {
+  for (const columns of [80, 120]) {
+    test(`a later fake rename leaves the resumed child header unchanged at ${columns} columns`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-header-title-'));
+
+      try {
+        await withWindow(
+          async (window) => {
+            await window.shows('parser · Picked title');
+            await send(window, 'titledfix');
+            await window.shows('Renamed.');
+            expect(stripAnsi(window.frame())).toContain(
+              'parser · Picked title',
+            );
+            expect(stripAnsi(window.frame())).not.toContain(
+              'resumed · Fix the parser',
+            );
+          },
+          {
+            columns,
+            rows: 40,
+            resume: {
+              sessionId: crypto.randomUUID(),
+              cwd: dir,
+              title: 'Picked title',
+              name: 'parser',
+              prompt: 'Original prompt',
+              lastUsedAt: Date.now() - 60_000,
+            },
+          },
+        );
+      } finally {
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+});

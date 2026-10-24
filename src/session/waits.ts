@@ -242,7 +242,11 @@ function waitAfter(
     ...(endedNow === undefined ? {} : { ended: endedNow }),
     working,
     ...(stopped === undefined ? {} : { stopped }),
-    ...(event.type === 'disconnected' || before.exited
+    // A connection after an exit is the agent up again: an exit the
+    // session's past replays on resume, or one before a restart, is not
+    // what the agent does now (CHD-510).
+    ...(event.type === 'disconnected' ||
+    (before.exited === true && event.type !== 'connected')
       ? { exited: true as const }
       : {}),
   };

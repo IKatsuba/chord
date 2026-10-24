@@ -706,3 +706,23 @@ describe('CHD-471 tester: stop time and seen marks', () => {
     expect(waitOf(tabs, 1)!.stopped).toBe(8000);
   });
 });
+
+test("a connection after an exit is the agent up again: a resumed session's past exit leaves it open, and an exit after the connection still marks it gone (CHD-510)", () => {
+  // As a resume replays it: the past's disconnected, then the connection.
+  const past: ConversationEvent = { type: 'disconnected', turnId: 'history' };
+  const resumed = waitOf(heard(opened('a', 'b'), 1, [past, up]), 1)!;
+
+  expect(resumed.exited).toStrictEqual(undefined);
+
+  // The agent going after it came up is still an exit.
+  const gone = waitOf(
+    heard(opened('a', 'b'), 1, [
+      past,
+      up,
+      { type: 'disconnected', turnId: '' },
+    ]),
+    1,
+  )!;
+
+  expect(gone.exited).toStrictEqual(true);
+});

@@ -759,3 +759,63 @@ test("a connection after an exit is the agent up again: a resumed session's past
     ),
   ).toStrictEqual('turn');
 });
+
+describe('CHD-510 tester: reconnect cleanup belongs to its agent', () => {
+  const gone: ConversationEvent = { type: 'disconnected', turnId: '' };
+
+  test('repeated reconnects clear only that agent while another exit remains unseen', () => {
+    let tabs = heard(heard(opened('a', 'b', 'c'), 1, [up, gone]), 2, [
+      up,
+      gone,
+    ]);
+    const other = waitOf(tabs, 2);
+
+    for (let cycle = 0; cycle < 3; cycle++) {
+      tabs = heard(tabs, 1, [up, up], 9000 + cycle * 3000);
+
+      expect(waitOf(tabs, 1)!.exited).toBeUndefined();
+      expect(waitOf(tabs, 1)!.ended).toBeUndefined();
+      expect(waitOf(tabs, 1)!.unseen).toBeUndefined();
+      expect(waitOf(tabs, 2)).toStrictEqual(other);
+
+      tabs = heard(tabs, 1, [gone], 11000 + cycle * 3000);
+
+      expect(failureOf(waitOf(tabs, 1)!)).toBe('exited');
+    }
+  });
+
+  test('a connection without an exit preserves an unseen failed turn or start', () => {
+    for (const events of [
+      [up, prompt('failed'), failed('failed')],
+      [{ type: 'connect_failed', message: 'refused' }],
+    ] as readonly (readonly ConversationEvent[])[]) {
+      const tabs = heard(opened('a', 'b'), 1, events);
+      const before = waitOf(tabs, 1)!;
+      const after = waitOf(heard(tabs, 1, [up], 9000), 1)!;
+
+      expect(after.unseen).toStrictEqual(before.unseen);
+      expect(after.ended).toStrictEqual(before.ended);
+      expect(failureOf(after)).toBe(failureOf(before));
+    }
+  });
+
+  test('a cancelled turn after reconnect cannot revive the historical exit', () => {
+    const tabs = heard(opened('a', 'b'), 1, [
+      gone,
+      up,
+      prompt('cancelled'),
+      { type: 'cancel', turnId: 'cancelled', at: 3000 },
+      {
+        type: 'result',
+        turnId: 'cancelled',
+        result: { status: 'cancelled', stopReason: 'cancelled' },
+      },
+    ]);
+    const wait = waitOf(tabs, 1)!;
+
+    expect(wait.exited).toBeUndefined();
+    expect(wait.unseen).toBeUndefined();
+    expect(wait.ended?.failure).toBeUndefined();
+    expect(wait.working).toBeUndefined();
+  });
+});

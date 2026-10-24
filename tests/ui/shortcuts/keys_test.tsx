@@ -1502,13 +1502,13 @@ describe('CHD-386 tester: movement panel entries', () => {
       'cmd + ← → to line start or end',
       '↑ ↓ for prompts, agents, background',
     ]);
-    expect(lines).toHaveLength(40);
+    expect(lines).toHaveLength(41);
     expect(
       inColumns(lines, columnCount(lines, 80)).map((c) => c.length),
-    ).toStrictEqual([20, 20]);
+    ).toStrictEqual([21, 20]);
     expect(
       inColumns(lines, columnCount(lines, 120)).map((c) => c.length),
-    ).toStrictEqual([14, 14, 12]);
+    ).toStrictEqual([14, 14, 13]);
     expect(lines).toContain('/ @ for commands or files');
     expect(lines).toContain('↑ ↓ to pick a command or file');
     expect(lines).toContain('tab to complete a command');

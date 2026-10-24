@@ -14,6 +14,7 @@ import {
   optionChoices,
   type PickerKey,
   pickerKey,
+  pickerLayout,
   pickerLines,
   pickerRows,
   type PickerView,
@@ -475,5 +476,28 @@ test("a picker's labels go on lines of their own under their columns, every row 
   ]);
   expect(
     pickerLines([{ key: 'm', label: 'a model', value: 'm' }], 10, 50),
+  ).toStrictEqual(undefined);
+});
+
+test("a picker's layout leaves its labels the frame, the highlight's gutter, the number, and the scroll's gutter once their lines take more than the rows (CHD-445)", () => {
+  const [row] = sessionChoices(
+    [
+      {
+        resume: { sessionId: 's1', cwd: '/work' },
+        lastUsedAt: '2026-10-05T11:58:00.000Z',
+        prompt: 'Fix the tokenizer handling of a quoted string at the end',
+      },
+    ],
+    NOW,
+  );
+
+  // 80 columns: 80 - 4 - 2 - 3 = 71 cells, which the 71 of the row fit.
+  expect(pickerLayout([row!], 5, 80)).toStrictEqual([[row!.label]]);
+  // No room for its line: the scroll's gutter takes two cells more, 69,
+  // and the label wraps.
+  expect(pickerLayout([row!], 0, 80)).toStrictEqual([choiceLines(row!, 69)]);
+  expect(pickerLayout([row!], 0, 80)![0]!.length).toBeGreaterThan(1);
+  expect(
+    pickerLayout([{ key: 'm', label: 'a model', value: 'm' }], 5, 80),
   ).toStrictEqual(undefined);
 });

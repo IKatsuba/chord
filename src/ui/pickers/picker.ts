@@ -100,6 +100,28 @@ export function pickerLines(
 }
 
 /**
+ * Each choice's lines where one hangs its label, laid into what a picker
+ * `columns` wide leaves it: the frame's border and padding, the highlight's
+ * gutter, the scroll's once the lines take more than `rows`, and the
+ * number; none where no choice hangs, each one line (CHD-445).
+ */
+export function pickerLayout(
+  choices: readonly PickerChoice[],
+  rows: number,
+  columns: number,
+): string[][] | undefined {
+  const number = `${choices.length}.`.length + 1;
+  const laid = (gutters: number) =>
+    pickerLines(choices, columns - 4 - gutters - number, columns - 4);
+  const unscrolled = laid(2);
+
+  return unscrolled !== undefined &&
+    unscrolled.reduce((sum, each) => sum + each.length, 0) > rows
+    ? laid(4)
+    : unscrolled;
+}
+
+/**
  * Which choices are in sight when each takes `heights` lines and `lines`
  * are room, from `top` where it can stay: as `visibleRange` for rows of one
  * line each, the highlighted choice in sight and no room left empty below

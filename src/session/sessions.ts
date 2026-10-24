@@ -62,8 +62,8 @@ export interface SessionRecord {
 
 /**
  * Every session record in `stateDir` a prompt was sent in. Only the first
- * line and the prompts are parsed, as a list needs no more; the past is read
- * when a session is opened.
+ * line, the prompts and the agent's titles are parsed, as a list needs no
+ * more; the past is read when a session is opened.
  */
 export async function readRecords(stateDir: string): Promise<SessionRecord[]> {
   const dir = recordsDir(stateDir);

@@ -70,7 +70,7 @@ import {
   optionChoices,
   type PickerChoice,
   pickerKey,
-  pickerLines,
+  pickerLayout,
   pickerRows,
   sessionChoices,
   valueChoices,
@@ -671,28 +671,6 @@ export function McpPanel({
  * hidden that way, and how many are hidden under it, as Claude Code's picker
  * does.
  */
-/**
- * Each choice's lines where one hangs its label, laid into what the picker
- * leaves it at `columns`: the frame's border and padding, the highlight's
- * gutter, the scroll's once the lines take more than `rows`, and the
- * number; none where no choice hangs, each one line (CHD-445).
- */
-function hangingLines(
-  choices: readonly PickerChoice[],
-  rows: number,
-  columns: number,
-): string[][] | undefined {
-  const number = `${choices.length}.`.length + 1;
-  const laid = (gutters: number) =>
-    pickerLines(choices, columns - 4 - gutters - number, columns - 4);
-  const unscrolled = laid(2);
-
-  return unscrolled !== undefined &&
-    unscrolled.reduce((sum, each) => sum + each.length, 0) > rows
-    ? laid(4)
-    : unscrolled;
-}
-
 function PickerList({
   choices,
   rows,
@@ -708,7 +686,7 @@ function PickerList({
   onMove?: (id: string) => void;
 }) {
   const { width: columns } = useTerminalDimensions();
-  const lines = hangingLines(choices, rows, columns);
+  const lines = pickerLayout(choices, rows, columns);
   const heights = lines?.map((each) => each.length);
   const [view, setView] = useState(() => openView(choices, rows, heights));
   const shown = pickerRows(choices, view, rows, heights);

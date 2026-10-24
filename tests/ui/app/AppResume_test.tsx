@@ -23,7 +23,12 @@ import stripAnsi from 'strip-ansi';
 import { join } from 'node:path';
 import { draw } from '../harness.tsx';
 import { openSession, type Session } from '../../../src/session/session.ts';
-import { readRecords } from '../../../src/session/sessions.ts';
+import {
+  earlierSessions,
+  readRecords,
+  summaryOf,
+} from '../../../src/session/sessions.ts';
+import type { RecordEntry } from '../../../src/session/record.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import { App } from '../../../src/ui/app/App.tsx';
 import { terminalOptions } from '../../../src/ui/app/renderer.tsx';
@@ -845,5 +850,106 @@ describe('CHD-445 U2 tester: resumed headers keep the title that was picked', ()
         await rm(dir, { recursive: true });
       }
     });
+  }
+});
+
+describe('CHD-445 Q200 tester: task and child titles on resume', () => {
+  for (const task of [false, true]) {
+    for (const columns of [80, 120]) {
+      test(`${task ? 'a task keeps its caller description' : 'a child keeps its agent title after its name'} in the picker and resumed header at ${columns} columns`, async () => {
+        const dir = await mkdtemp(join(tmpdir(), 'chord-resume-title-'));
+        const path = join(dir, 'record.jsonl');
+        const id = crypto.randomUUID();
+        const name = task ? 'Run the parser tests' : 'parser';
+        const entries: RecordEntry[] = [
+          {
+            type: 'session',
+            version: 1,
+            sessionId: id,
+            agent: 'fake',
+            cwd: dir,
+            at: Date.now() - 60_000,
+            parent: 'parent-session',
+            name,
+            ...(task ? { task: 'task-q200' } : {}),
+          },
+          {
+            type: 'prompt',
+            turnId: 't1',
+            at: Date.now() - 60_000,
+            prompt: 'Original work',
+            images: 0,
+          },
+          {
+            type: 'update',
+            turnId: 't1',
+            update: {
+              sessionUpdate: 'session_info_update',
+              title: 'An earlier agent title',
+            },
+          },
+          {
+            type: 'update',
+            turnId: 't1',
+            update: {
+              sessionUpdate: 'session_info_update',
+              title: 'Final agent title',
+            },
+          },
+          {
+            type: 'result',
+            turnId: 't1',
+            result: { status: 'completed', stopReason: 'end_turn' },
+          },
+        ];
+        const text =
+          entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n';
+
+        try {
+          await writeFile(path, text);
+
+          const record = summaryOf(path, text)!;
+          const [choice] = earlierSessions([record], {
+            agent: 'fake',
+            cwd: dir,
+          });
+
+          expect(choice?.prompt).toBe(
+            `${name} · ${task ? 'Original work' : 'Final agent title'}`,
+          );
+          expect(choice?.resume.title).toBe(
+            task ? undefined : 'Final agent title',
+          );
+          await withWindow(
+            async (window) => {
+              await window.shows('resumed ·');
+              await window.shows('› Original work');
+
+              const header = stripAnsi(window.frame())
+                .split('\n')
+                .find((line) => line.includes('resumed ·'))!;
+
+              expect(header).toContain(
+                task ? name : `${name} · Final agent title`,
+              );
+              expect(header).not.toContain('An earlier agent title');
+
+              if (task) {
+                expect(header).not.toContain('Final agent title');
+                expect(header).not.toContain('Original work');
+              }
+            },
+            {
+              columns,
+              rows: 40,
+              agentCommand: fakeAgentCommand(undefined, '--resume-only'),
+              resume: choice!.resume,
+            },
+          );
+        } finally {
+          await rm(dir, { recursive: true });
+        }
+      });
+    }
   }
 });

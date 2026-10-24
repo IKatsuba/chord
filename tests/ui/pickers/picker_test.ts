@@ -524,18 +524,18 @@ test("a picker's labels go on lines of their own under their columns, every row 
   const rows = sessionChoices(
     [
       {
-        resume: { sessionId: 's1', cwd: '/home/me/src/app' },
+        resume: { sessionId: 's1', cwd: '/h/src/app' },
         lastUsedAt: '2026-10-05T11:58:00.000Z',
         prompt: 'Fix the tokenizer handling of tests/parse/tokenize_test.ts',
       },
       {
-        resume: { sessionId: 's2', cwd: '/home/me/src/lib' },
+        resume: { sessionId: 's2', cwd: '/h/src/lib' },
         lastUsedAt: '2026-10-02T12:00:00.000Z',
         prompt: 'docs · permission',
       },
     ],
     NOW,
-    { home: '/home/me' },
+    { home: '/h' },
   );
 
   // Beside: 60 cells less the columns leave more than half of 50.

@@ -706,3 +706,116 @@ describe('CHD-471 tester: stop time and seen marks', () => {
     expect(waitOf(tabs, 1)!.stopped).toBe(8000);
   });
 });
+
+test("a connection after an exit is the agent up again: a resumed session's past exit leaves it open, in front or not, and an exit after the connection still marks it gone (CHD-510)", () => {
+  // As a resume replays it: the past's disconnected, then the connection.
+  const past: ConversationEvent = { type: 'disconnected', turnId: 'history' };
+
+  // Agent 1 behind another, then in front.
+  for (const tabs of [opened('a', 'b'), goTo(opened('a', 'b'), 1)]) {
+    const resumed = waitOf(heard(tabs, 1, [past, up]), 1)!;
+
+    // Neither its row nor the terminal's status says it exited.
+    expect(resumed.exited).toStrictEqual(undefined);
+    expect(failureOf(resumed)).toStrictEqual(undefined);
+    expect(resumed.ended).toStrictEqual(undefined);
+
+    // The agent going after it came up is still an exit.
+    const gone = waitOf(
+      heard(tabs, 1, [past, up, { type: 'disconnected', turnId: '' }]),
+      1,
+    )!;
+
+    expect(gone.exited).toStrictEqual(true);
+    expect(gone.ended).toStrictEqual({ failure: 'exited' });
+
+    // A turn failed after it came up is a failed turn.
+    const turn = waitOf(
+      heard(tabs, 1, [past, up, prompt('t1'), failed('t1')]),
+      1,
+    )!;
+
+    expect(turn.ended).toStrictEqual({ failure: 'turn' });
+  }
+
+  expect(
+    failureOf(
+      waitOf(
+        heard(opened('a', 'b'), 1, [
+          past,
+          up,
+          { type: 'disconnected', turnId: '' },
+        ]),
+        1,
+      )!,
+    ),
+  ).toStrictEqual('exited');
+  expect(
+    failureOf(
+      waitOf(
+        heard(opened('a', 'b'), 1, [past, up, prompt('t1'), failed('t1')]),
+        1,
+      )!,
+    ),
+  ).toStrictEqual('turn');
+});
+
+describe('CHD-510 tester: reconnect cleanup belongs to its agent', () => {
+  const gone: ConversationEvent = { type: 'disconnected', turnId: '' };
+
+  test('repeated reconnects clear only that agent while another exit remains unseen', () => {
+    let tabs = heard(heard(opened('a', 'b', 'c'), 1, [up, gone]), 2, [
+      up,
+      gone,
+    ]);
+    const other = waitOf(tabs, 2);
+
+    for (let cycle = 0; cycle < 3; cycle++) {
+      tabs = heard(tabs, 1, [up, up], 9000 + cycle * 3000);
+
+      expect(waitOf(tabs, 1)!.exited).toBeUndefined();
+      expect(waitOf(tabs, 1)!.ended).toBeUndefined();
+      expect(waitOf(tabs, 1)!.unseen).toBeUndefined();
+      expect(waitOf(tabs, 2)).toStrictEqual(other);
+
+      tabs = heard(tabs, 1, [gone], 11000 + cycle * 3000);
+
+      expect(failureOf(waitOf(tabs, 1)!)).toBe('exited');
+    }
+  });
+
+  test('a connection without an exit preserves an unseen failed turn or start', () => {
+    for (const events of [
+      [up, prompt('failed'), failed('failed')],
+      [{ type: 'connect_failed', message: 'refused' }],
+    ] as readonly (readonly ConversationEvent[])[]) {
+      const tabs = heard(opened('a', 'b'), 1, events);
+      const before = waitOf(tabs, 1)!;
+      const after = waitOf(heard(tabs, 1, [up], 9000), 1)!;
+
+      expect(after.unseen).toStrictEqual(before.unseen);
+      expect(after.ended).toStrictEqual(before.ended);
+      expect(failureOf(after)).toBe(failureOf(before));
+    }
+  });
+
+  test('a cancelled turn after reconnect cannot revive the historical exit', () => {
+    const tabs = heard(opened('a', 'b'), 1, [
+      gone,
+      up,
+      prompt('cancelled'),
+      { type: 'cancel', turnId: 'cancelled', at: 3000 },
+      {
+        type: 'result',
+        turnId: 'cancelled',
+        result: { status: 'cancelled', stopReason: 'cancelled' },
+      },
+    ]);
+    const wait = waitOf(tabs, 1)!;
+
+    expect(wait.exited).toBeUndefined();
+    expect(wait.unseen).toBeUndefined();
+    expect(wait.ended?.failure).toBeUndefined();
+    expect(wait.working).toBeUndefined();
+  });
+});

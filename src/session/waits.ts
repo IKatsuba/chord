@@ -221,6 +221,15 @@ function waitAfter(
           ? {}
           : { failure: endedFailure }
         : before.ended;
+  // A connection after an exit is the agent up again: an exit the session's
+  // past replays on resume, or one before a restart, is not what the agent
+  // does now, in its row or the terminal's status (CHD-510).
+  const up = event.type === 'connected' && before.exited === true;
+  const unseenUp =
+    up && unseen?.kind === 'failed' && unseen.failure === 'exited'
+      ? undefined
+      : unseen;
+  const endedUp = up && endedNow?.failure === 'exited' ? undefined : endedNow;
   // A cycle of the agent's own works as a turn does (CHD-426).
   const working =
     event.type === 'prompt' || event.type === 'cycle_started'
@@ -238,11 +247,11 @@ function waitAfter(
   return {
     watch,
     asking,
-    unseen,
-    ...(endedNow === undefined ? {} : { ended: endedNow }),
+    unseen: unseenUp,
+    ...(endedUp === undefined ? {} : { ended: endedUp }),
     working,
     ...(stopped === undefined ? {} : { stopped }),
-    ...(event.type === 'disconnected' || before.exited
+    ...(event.type === 'disconnected' || (before.exited === true && !up)
       ? { exited: true as const }
       : {}),
   };

@@ -116,7 +116,9 @@ export function summaryOf(
     return undefined;
   }
 
-  const title = recordedTitle(lines);
+  // A task is known by its spawn_task title alone, as its caller named it,
+  // not by its agent's own (the owner, Q200).
+  const title = header.task === undefined ? recordedTitle(lines) : undefined;
 
   return {
     path,

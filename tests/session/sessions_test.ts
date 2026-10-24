@@ -241,6 +241,40 @@ test("a record's title is the last session_info_update's, on one line; null take
   expect(row?.resume.prompt).toStrictEqual('fix the build');
 });
 
+test("a task's session is known by its spawn_task description and first prompt, never by its agent's own title (CHD-445, Q200)", () => {
+  const task = summaryOf(
+    '/r.jsonl',
+    lines(
+      {
+        ...HEADER,
+        parent: 'id-main',
+        name: 'Run the parser tests',
+        task: 't-1',
+      },
+      {
+        type: 'prompt',
+        turnId: 't1',
+        at: 10,
+        prompt: 'run the tests',
+        images: 0,
+      },
+      {
+        type: 'update',
+        turnId: 't1',
+        update: {
+          sessionUpdate: 'session_info_update',
+          title: "The agent's own title",
+        },
+      },
+    ),
+  )!;
+  const [row] = earlierSessions([task], CLAUDE);
+
+  expect(task.title).toStrictEqual(undefined);
+  expect(row?.prompt).toStrictEqual('Run the parser tests · run the tests');
+  expect(row?.resume.title).toStrictEqual(undefined);
+});
+
 test("--continue does not take another agent's session", () => {
   const continued = () =>
     latestSession([record('codex', { agent: 'codex' })], CLAUDE);

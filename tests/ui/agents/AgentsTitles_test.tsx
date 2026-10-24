@@ -5,9 +5,16 @@
  */
 import { describe, expect, test } from 'bun:test';
 import stripAnsi from 'strip-ansi';
+import assert from 'node:assert/strict';
+import { openSession } from '../../../src/session/session.ts';
+import type { Caller } from '../../../src/server/tools.ts';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { LONG_SESSION_TITLE } from '../../fixtures/fake_agent/scenarios/text.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import {
+  DOWN,
+  ESC,
+  UP,
   ready,
   send,
   statusReports,
@@ -149,4 +156,166 @@ describe("an agent's own title in the agents list (CHD-445)", () => {
       await server.close();
     }
   });
+});
+
+describe('CHD-445 U3 tester: title lifetime and constrained list navigation', () => {
+  for (const [columns, rows, limit] of [
+    [80, 24, 4],
+    [120, 40, 6],
+  ] as const) {
+    test(`a long title remains readable by line and the next agent remains reachable at ${columns}×${rows}`, () =>
+      withAgents(async (window) => {
+        await window.resize({ columns, rows });
+        await titled(window);
+        await send(window, 'titledlong');
+        await window.shows('Named at length.');
+        await window.press(DOWN);
+        await window.shows('❯ main');
+        await window.shows('Find out why');
+
+        for (let presses = 0; !window.frame().includes('changes'); presses++) {
+          expect(presses).toBeLessThan(30);
+          await window.press(DOWN);
+
+          const lines = stripAnsi(window.frame()).split('\n');
+          const bottom = lines.findLastIndex((line) => line.startsWith('╰'));
+          const list = lines
+            .slice(bottom + 2)
+            .filter((line) => line.trim() !== '');
+
+          expect(list.length).toBeLessThanOrEqual(limit);
+        }
+
+        expect(window.frame()).not.toContain('Find out why');
+        await window.press(DOWN);
+        await window.shows('❯ parser');
+        await window.shows('Fix the tokenizer');
+        await window.press(UP);
+        await window.shows('❯ main');
+        await window.shows('Find out why');
+      }));
+
+    test(`/clear leaves main blank when new titled children reopen at ${columns}×${rows}`, () =>
+      withAgents(async (window) => {
+        await window.resize({ columns, rows });
+        await titled(window);
+        await send(window, 'titledlook');
+        await window.shows('Looking.');
+        expect(rowOf(window, 'main')).toContain('Look at the parser');
+        await send(window, '/clear');
+        await titled(window);
+
+        const main = rowOf(window, 'main')!;
+
+        expect(
+          main.slice(main.indexOf('main') + 4, main.indexOf('fake')).trim(),
+        ).toBe('');
+        expect(rowOf(window, 'parser')).toContain('Fix the tokenizer');
+        expect(rowOf(window, 'docs')).toContain('Fix the parser');
+      }));
+
+    for (const scenario of ['crash', 'error', 'longheld']) {
+      test(`a child's title survives ${scenario === 'longheld' ? 'a cancelled turn' : scenario} at ${columns}×${rows}`, () =>
+        withAgents(async (window) => {
+          await window.resize({ columns, rows });
+          await titled(window);
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('╭─ parser');
+          await send(window, scenario);
+
+          if (scenario === 'longheld') {
+            await window.shows('20. Line 20');
+            await window.press(ESC);
+            await window.shows('Interrupted');
+          } else if (scenario === 'error') {
+            await window.shows('The fake agent failed on purpose.');
+          } else {
+            await until(
+              'the titled child to exit',
+              () => rowOf(window, 'parser')?.includes('exited') === true,
+            );
+          }
+
+          expect(rowOf(window, 'parser')).toContain('Fix the tokenizer');
+        }));
+    }
+
+    test(`a hung start has no title and closes from the list at ${columns}×${rows}`, async () => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      let main: Caller | undefined;
+      let opened = 0;
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            assert(main);
+
+            const caller = main;
+
+            await caller.window.open(caller.key, {
+              agent: 'fake',
+              name: 'worker',
+              prompt: 'text',
+            });
+            await until(
+              'the starting child in the list',
+              () => rowOf(window, 'worker') !== undefined,
+            );
+            expect(window.frame()).not.toContain('Never published');
+            await window.press(DOWN);
+            await window.press(DOWN);
+            await window.shows('❯ worker');
+            await window.press('x');
+            await until(
+              'the hung child to leave the list',
+              () =>
+                caller.window
+                  .sessions()
+                  .find((session) => session.key === caller.key)
+                  ?.children.some((child) => child.name === 'worker') === false,
+            ).catch((error: Error) => {
+              throw new Error(`${error.message}\n${window.frame()}`);
+            });
+
+            expect(window.frame()).not.toContain('Never published');
+            expect(window.frame()).not.toMatch(/(?:❯\s+| {4})worker\s+fake/);
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns,
+            rows,
+            openWith: (options) =>
+              openSession({
+                ...options,
+                agentCommand:
+                  ++opened === 1
+                    ? fakeAgentCommand()
+                    : fakeAgentCommand(
+                        undefined,
+                        '--hang',
+                        'start',
+                        '--title',
+                        'Never published',
+                      ),
+              }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
 });

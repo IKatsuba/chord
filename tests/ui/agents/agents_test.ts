@@ -1309,3 +1309,33 @@ describe('leaving a tall row read by line (CHD-445)', () => {
     expect(enteredView(pick(1), 0, frame)).toStrictEqual(undefined);
   });
 });
+
+describe('CHD-445 U3 tester: title columns preserve Unicode cells', () => {
+  for (const width of [76, 116]) {
+    test(`a hard-wrapped title keeps its complete graphemes within the column at ${width} cells`, () => {
+      const title = '界'.repeat(30) + ' ' + '👩‍💻'.repeat(18) + ' ending';
+      const layout = agentsLayout([row('main', { title }), row('parser')], {
+        limit: 100,
+        width,
+        focused: false,
+        now: NOW,
+      });
+      const main = layout.rows[0]!;
+      const lines = [main.title!, ...main.titles];
+
+      expect(main.titleWidth).toBeGreaterThan(0);
+      expect(main.titleWidth).toBeLessThanOrEqual(Math.floor(width / 3));
+      expect(lines.every((line) => stringWidth(line) <= main.titleWidth)).toBe(
+        true,
+      );
+      expect(lines.join('').replace(/\s/g, '')).toBe(title.replace(/\s/g, ''));
+      expect(layout.more).toBe(0);
+      expect(
+        drawn([row('main', { title }), row('parser')], {
+          width,
+          limit: 100,
+        }).every((line) => stringWidth(line) <= width),
+      ).toBe(true);
+    });
+  }
+});

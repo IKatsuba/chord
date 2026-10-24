@@ -45,10 +45,10 @@ pair (`mock-shortcuts-*`):
   stays theirs and never steers.
 - **Fit.** The panel had exactly 40 lines; this is the 41st. At 120×40 the
   three columns still take 14 rows. At 80×24 the two columns take 21 rows,
-  which with the box fills the window to its last row (the header scrolls
-  off, as it does today). Nothing is cut. U2's check confirms this live; if
-  the 80×24 panel overflows, the fix goes to the lead, not into merging other
-  entries.
+  one more than the window has room for beside the box and the blank row
+  above it: the last line, `tab enter to add a file`, is cut. The mock
+  (`mock-shortcuts-80x24`) left that blank row out and so was one row off.
+  Open with the owner (Q217); this section follows the answer.
 
 ## 2. Tab on an agent without steering
 

@@ -57,6 +57,49 @@ export function choiceLines(choice: PickerChoice, width: number): string[] {
 }
 
 /**
+ * Each choice's lines in `width` cells, where a choice hangs its label:
+ * beside its columns, wrapped under the label's start; or, when the room
+ * left beside the widest columns is under half of `inner`, the box's width,
+ * every label on lines of its own under its columns, from the row's start,
+ * so a title is not stood on end in a few cells. The choice is the
+ * picker's, every row alike, so the columns still read down (CHD-445).
+ * None where no choice hangs its label.
+ */
+export function pickerLines(
+  choices: readonly PickerChoice[],
+  width: number,
+  inner: number,
+): string[][] | undefined {
+  if (!choices.some((choice) => choice.hang !== undefined)) {
+    return undefined;
+  }
+
+  const lead = Math.max(
+    ...choices.map((choice) =>
+      choice.hang === undefined
+        ? 0
+        : stringWidth(choice.label.slice(0, choice.hang)),
+    ),
+  );
+
+  if (width - lead >= inner / 2) {
+    return choices.map((choice) => choiceLines(choice, width));
+  }
+
+  return choices.map((choice) =>
+    choice.hang === undefined
+      ? [choice.label]
+      : [
+          choice.label.slice(0, choice.hang).trimEnd(),
+          ...wrapAnsi(choice.label.slice(choice.hang), Math.max(1, width), {
+            hard: true,
+            trim: true,
+          }).split('\n'),
+        ],
+  );
+}
+
+/**
  * Which choices are in sight when each takes `heights` lines and `lines`
  * are room, from `top` where it can stay: as `visibleRange` for rows of one
  * line each, the highlighted choice in sight and no room left empty below

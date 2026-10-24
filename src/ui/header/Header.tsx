@@ -8,7 +8,6 @@ import {
   headerLines,
   MARK_GAP,
   markColour,
-  RESUMED_LINE,
   textWidth,
 } from './header.ts';
 import { MARK } from './mark.ts';
@@ -57,15 +56,7 @@ export function Header({
       </box>
       <box flexShrink={1}>
         {lines.map((line, index) => (
-          <text
-            key={index}
-            // The agent's title for a resumed session wraps under its own
-            // start, never cut (CHD-445); the rest is cut at the edge.
-            {...(index === RESUMED_LINE && facts.resumed?.titled === true
-              ? TEXT
-              : CUT)}
-            {...selectable}
-          >
+          <text key={index} {...CUT} {...selectable}>
             {line.map((part, at) => (
               <span key={at} attributes={part.bold ? TextAttributes.BOLD : DIM}>
                 {part.text}

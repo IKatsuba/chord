@@ -14,6 +14,7 @@ import {
   optionChoices,
   type PickerKey,
   pickerKey,
+  pickerLines,
   pickerRows,
   type PickerView,
   sessionChoices,
@@ -439,4 +440,40 @@ test("the choices in sight count each one's lines: as visibleRange for rows of a
     ['5.', ' '],
   ]);
   expect(shown.hidden).toStrictEqual(2);
+});
+
+test("a picker's labels go on lines of their own under their columns, every row alike, where the room beside the columns is under half the box (CHD-445)", () => {
+  const rows = sessionChoices(
+    [
+      {
+        resume: { sessionId: 's1', cwd: '/home/me/src/app' },
+        lastUsedAt: '2026-10-05T11:58:00.000Z',
+        prompt: 'Fix the tokenizer handling of tests/parse/tokenize_test.ts',
+      },
+      {
+        resume: { sessionId: 's2', cwd: '/home/me/src/lib' },
+        lastUsedAt: '2026-10-02T12:00:00.000Z',
+        prompt: 'docs · permission',
+      },
+    ],
+    NOW,
+    { home: '/home/me' },
+  );
+
+  // Beside: 60 cells less the columns leave more than half of 50.
+  expect(pickerLines(rows, 60, 50)![1]).toStrictEqual([
+    '3 days ago     ~/src/lib  docs · permission',
+  ]);
+  // Under: 30 cells less the columns leave under half of 50.
+  expect(pickerLines(rows, 30, 50)).toStrictEqual([
+    [
+      '2 minutes ago  ~/src/app',
+      'Fix the tokenizer handling of',
+      'tests/parse/tokenize_test.ts',
+    ],
+    ['3 days ago     ~/src/lib', 'docs · permission'],
+  ]);
+  expect(
+    pickerLines([{ key: 'm', label: 'a model', value: 'm' }], 10, 50),
+  ).toStrictEqual(undefined);
 });

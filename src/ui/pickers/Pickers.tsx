@@ -66,11 +66,11 @@ import {
   choiceKey,
   initialChoice,
   modelChoices,
-  choiceLines,
   openView,
   optionChoices,
   type PickerChoice,
   pickerKey,
+  pickerLines,
   pickerRows,
   sessionChoices,
   valueChoices,
@@ -682,18 +682,13 @@ function hangingLines(
   rows: number,
   columns: number,
 ): string[][] | undefined {
-  if (!choices.some((choice) => choice.hang !== undefined)) {
-    return undefined;
-  }
-
   const number = `${choices.length}.`.length + 1;
   const laid = (gutters: number) =>
-    choices.map((choice) =>
-      choiceLines(choice, columns - 4 - gutters - number),
-    );
+    pickerLines(choices, columns - 4 - gutters - number, columns - 4);
   const unscrolled = laid(2);
 
-  return unscrolled.reduce((sum, each) => sum + each.length, 0) > rows
+  return unscrolled !== undefined &&
+    unscrolled.reduce((sum, each) => sum + each.length, 0) > rows
     ? laid(4)
     : unscrolled;
 }

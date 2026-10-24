@@ -426,6 +426,42 @@ function lineTop(
 }
 
 /**
+ * The lines a picker's rows may take from `top`: its `budget`, less the
+ * `… +N more` line where rows come after them, as that line is within the
+ * budget too; the whole budget while the highlighted row is taller than it,
+ * which draws no such line (docs/design/CHD-445.md).
+ */
+function room(
+  heights: readonly number[],
+  highlighted: number,
+  top: number,
+  budget: number,
+): number {
+  const { starts, total } = lineStarts(heights);
+
+  if (total <= budget || (heights[highlighted] ?? 1) > budget) {
+    return budget;
+  }
+
+  return starts.some((start) => start >= top + budget) ? budget - 1 : budget;
+}
+
+/** `lineTop` within the room the view it gives leaves the rows. */
+function placed(
+  heights: readonly number[],
+  index: number,
+  budget: number,
+  top: number,
+  from: 'first' | 'last',
+): number {
+  const whole = lineTop(heights, index, budget, top, from);
+
+  return room(heights, index, whole, budget) < budget
+    ? lineTop(heights, index, budget - 1, top, from)
+    : whole;
+}
+
+/**
  * The view a picker whose rows take `heights` lines opens on, `budget`
  * lines at most: the choice in use highlighted, from its first line.
  */
@@ -438,7 +474,7 @@ export function openLineView(
 
   return {
     highlighted,
-    top: lineTop(heights, highlighted, budget, 0, 'first'),
+    top: placed(heights, highlighted, budget, 0, 'first'),
   };
 }
 
@@ -452,7 +488,7 @@ export function fromFirstLine(
 
   return {
     highlighted: view.highlighted,
-    top: lineTop(
+    top: placed(
       heights,
       view.highlighted,
       budget,
@@ -511,7 +547,7 @@ export function lineKey(
     type: 'move',
     view: {
       highlighted,
-      top: lineTop(
+      top: placed(
         heights,
         highlighted,
         budget,
@@ -556,8 +592,11 @@ export function linedRows<C extends PickerChoice>(
   const heights = lines.map((each) => each.length);
   const { starts, total } = lineStarts(heights);
   const scrolls = total > budget;
-  const top = scrolls ? Math.min(Math.max(view.top, 0), total - budget) : 0;
-  const end = scrolls ? top + budget : total;
+  const fits = scrolls
+    ? room(heights, view.highlighted, Math.max(view.top, 0), budget)
+    : total;
+  const top = scrolls ? Math.min(Math.max(view.top, 0), total - fits) : 0;
+  const end = scrolls ? top + fits : total;
   const width = `${choices.length}.`.length;
   const rows: LinedRow<C>[] = [];
   let hidden = 0;
@@ -598,6 +637,28 @@ export function linedRows<C extends PickerChoice>(
   return {
     rows,
     hidden: (heights[view.highlighted] ?? 1) > budget ? 0 : hidden,
+  };
+}
+
+/** Rows of one line each, as `linedRows` gives a picker's lines. */
+export function oneLineRows<C extends PickerChoice>(shown: {
+  readonly rows: readonly PickerRow<C>[];
+  readonly hidden: number;
+}): { readonly rows: LinedRow<C>[]; readonly hidden: number } {
+  return {
+    rows: shown.rows.map(({ choice, highlighted, number, edge }) => ({
+      choice,
+      highlighted,
+      number,
+      lines: [
+        {
+          text: choice.label,
+          first: true,
+          ...(edge === undefined ? {} : { edge }),
+        },
+      ],
+    })),
+    hidden: shown.hidden,
   };
 }
 

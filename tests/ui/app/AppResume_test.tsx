@@ -694,7 +694,7 @@ describe("an agent's title for a session in /resume and a resumed header (CHD-44
     });
   }
 
-  test('a title taller than the picker is read a line a press at 80×24, the picker no taller than with titles that fit', () => {
+  test('a title taller than the picker is read a line a press at 80×24, the picker no taller than with titles that fit, and a resize of the height shows it from its first line', () => {
     const words = Array.from({ length: 160 }, (_, at) => `word${at}`);
 
     return withWindow(
@@ -725,6 +725,11 @@ describe("an agent's title for a session in /resume and a resumed header (CHD-44
 
         expect(window.frame()).toContain('word159');
         expect(window.frame()).not.toContain('word0 ');
+
+        // A resize of the height alone shows the row from its first line.
+        await window.resize({ rows: 30 });
+        await window.shows('word0 ');
+        expect(window.frame()).toContain('❯');
       },
       {
         columns: 80,

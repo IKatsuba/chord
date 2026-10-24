@@ -438,10 +438,12 @@ test("a row taller than the picker is read a line a press while highlighted, the
     ];
   };
 
+  // Every view, its `… +N more` line counted, stays within the budget.
   const step = (view: PickerView, key: PickerKey) => {
     const moved = lineKey(view, heights, 6, '', key);
 
     assert(moved?.type === 'move');
+    expect(drawn(moved.view).length).toBeLessThanOrEqual(6);
 
     return moved.view;
   };
@@ -453,8 +455,7 @@ test("a row taller than the picker is read a line a press while highlighted, the
     '  2. a',
     '     b',
     '     c',
-    '     d',
-    '↓    e',
+    '↓    d',
     '+1',
   ]);
 
@@ -462,6 +463,7 @@ test("a row taller than the picker is read a line a press while highlighted, the
   view = step(view, down);
 
   expect(view).toStrictEqual({ highlighted: 1, top: 0 });
+  // Read by line now, the whole budget its own: no `+N more`.
   expect(drawn(view).at(-1)).toStrictEqual('↓    e');
 
   // A line a press, to its last, the highlight staying on the row.

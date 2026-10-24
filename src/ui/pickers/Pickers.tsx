@@ -69,14 +69,13 @@ import {
   fromFirstLine,
   lineKey,
   linedRows,
-  type LinedRow,
+  oneLineRows,
   openLineView,
   openView,
   optionChoices,
   type PickerChoice,
   pickerKey,
   pickerLayout,
-  type PickerRow,
   pickerRows,
   sessionChoices,
   valueChoices,
@@ -677,28 +676,6 @@ export function McpPanel({
  * hidden that way, and how many are hidden under it, as Claude Code's picker
  * does.
  */
-/** Rows of one line each, as `linedRows` gives a picker's lines. */
-function lined<C extends PickerChoice>(shown: {
-  readonly rows: readonly PickerRow<C>[];
-  readonly hidden: number;
-}): { readonly rows: LinedRow<C>[]; readonly hidden: number } {
-  return {
-    rows: shown.rows.map(({ choice, highlighted, number, edge }) => ({
-      choice,
-      highlighted,
-      number,
-      lines: [
-        {
-          text: choice.label,
-          first: true,
-          ...(edge === undefined ? {} : { edge }),
-        },
-      ],
-    })),
-    hidden: shown.hidden,
-  };
-}
-
 function PickerList({
   choices,
   rows,
@@ -722,13 +699,15 @@ function PickerList({
       : openLineView(choices, heights, rows),
   );
   const { permission } = useColours();
-  const laidAt = useRef(columns);
+  const laidAt = useRef(`${columns}x${rows}`);
 
-  // A resize lays the labels out again: the highlighted row shows from its
-  // first line (CHD-445).
+  // A resize, of either side, lays the labels out again: the highlighted
+  // row shows from its first line (CHD-445).
   useEffect(() => {
-    if (laidAt.current !== columns) {
-      laidAt.current = columns;
+    const at = `${columns}x${rows}`;
+
+    if (laidAt.current !== at) {
+      laidAt.current = at;
 
       if (heights !== undefined) {
         setView((was) => fromFirstLine(was, heights, rows));
@@ -740,7 +719,7 @@ function PickerList({
   // room read a line a press (docs/design/CHD-445.md).
   const shown =
     lines === undefined
-      ? lined(pickerRows(choices, view, rows))
+      ? oneLineRows(pickerRows(choices, view, rows))
       : linedRows(choices, lines, view, rows);
 
   usePress(

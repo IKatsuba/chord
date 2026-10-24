@@ -283,6 +283,12 @@ interface Prompt {
 /** How a message to the session went: straight into a turn, or queued. */
 export type Delivery = 'sent' | 'queued';
 
+/**
+ * How the person's prompt steered into a running turn went: as a message
+ * does, or not at all, as the agent takes no steering.
+ */
+export type Steered = Delivery | 'unsteerable';
+
 /** A monitor started, as `monitor` answers it. */
 export interface MonitorStarted {
   readonly id: string;
@@ -1055,6 +1061,56 @@ export class Conversation {
     }
 
     void this.#steer(session, into, next, queued);
+
+    return 'sent';
+  }
+
+  /**
+   * The person's prompt put into the running turn, as `tell` puts another
+   * agent's message (CHD-378): `prompt` built as `send` builds it, held
+   * shell output ahead. `unsteerable` on an agent that takes no steering,
+   * with nothing sent or queued, the draft the caller's to keep; with no
+   * turn to go into it goes as `send` sends it.
+   * Undefined before the session is up and once closing.
+   */
+  steerIn(text: string, prompt: string = text): Steered | undefined {
+    const session = this.#session;
+
+    if (!session || this.#closing) {
+      return undefined;
+    }
+
+    if (!session.steers()) {
+      return 'unsteerable';
+    }
+
+    const into = this.#steerable(session);
+    const ahead = this.#ahead.splice(0);
+    const next: Prompt = {
+      turnId: crypto.randomUUID(),
+      text,
+      prompt: [...ahead, prompt].join('\n\n'),
+      attachments: [],
+      mentions: [],
+    };
+
+    if (into === undefined) {
+      return this.#enqueue(session, next);
+    }
+
+    if (this.#waitsOnPerson()) {
+      this.#queued.push({ ...next, afterAnswer: true });
+      this.#emit({
+        type: 'queued',
+        turnId: next.turnId,
+        text,
+        afterAnswer: true,
+      });
+
+      return 'queued';
+    }
+
+    void this.#steer(session, into, next);
 
     return 'sent';
   }

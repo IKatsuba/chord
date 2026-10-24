@@ -582,7 +582,13 @@ export function recordActions(
           break;
         }
 
-        end();
+        // The person's, steered into the turn running then, starts none
+        // (CHD-378).
+        const into = entry.into === undefined ? undefined : id(entry.into);
+
+        if (into === undefined) {
+          end();
+        }
 
         if (message !== undefined) {
           actions.push({
@@ -612,10 +618,13 @@ export function recordActions(
             turnId,
             text: withImages(text, entry.images),
             at: entry.at,
+            ...(into === undefined ? {} : { into }),
           },
         );
 
-        open = turnId;
+        if (into === undefined) {
+          open = turnId;
+        }
 
         break;
       }

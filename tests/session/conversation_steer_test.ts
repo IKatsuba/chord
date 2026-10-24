@@ -1570,3 +1570,203 @@ describe('a request with no turn running (CHD-158)', () => {
       );
     }));
 });
+
+describe("the person's prompt steered into the running turn (CHD-378)", () => {
+  for (const adapter of ['claude', 'codex']) {
+    test(`on ${adapter}'s adapter it goes into the turn at once, drawn there as the person's and never queued`, () =>
+      onFake(['--steering', adapter], async (conversation, events) => {
+        conversation.send('slow');
+        await until(() => saidIn(events).startsWith('Working'));
+
+        expect(conversation.steerIn('Then the docs.')).toStrictEqual('sent');
+        await until(() =>
+          saidIn(events).includes('Read the message from nobody.'),
+        );
+
+        const into = events.findLast((event) => event.type === 'prompt');
+
+        assert(into?.type === 'prompt');
+        expect(promptsIn(events)).toStrictEqual([
+          ['slow', undefined],
+          ['Then the docs.', firstTurn(events)],
+        ]);
+        expect(into.from).toBeUndefined();
+        expect(!events.some((event) => event.type === 'queued')).toBeTruthy();
+        conversation.interrupt();
+        await until(() => events.some((event) => event.type === 'result'));
+      }));
+  }
+
+  test('on an agent that takes no steering nothing is sent or queued, and the shell output held for the next prompt stays', async () => {
+    const sent: string[] = [];
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        conversation.send('slow');
+        await until(() => saidIn(events).startsWith('Working'));
+        conversation.aside(MAIN, 'parser exited.');
+
+        expect(conversation.steerIn('Then the docs.')).toStrictEqual(
+          'unsteerable',
+        );
+        expect(promptsIn(events)).toStrictEqual([['slow', undefined]]);
+        expect(!events.some((event) => event.type === 'queued')).toBeTruthy();
+        conversation.interrupt();
+        await until(() => events.some((event) => event.type === 'result'));
+        conversation.send('text');
+        await until(() => sent.length === 2);
+
+        expect(sent[1]).toContain('parser exited.');
+      },
+      (session) => {
+        const prompt = session.prompt.bind(session);
+
+        return Object.assign(session, {
+          prompt: ((text, ...rest) => {
+            sent.push(text);
+
+            return prompt(text, ...rest);
+          }) as Session['prompt'],
+        });
+      },
+    );
+  });
+
+  test("one that meets the turn's end on Claude's adapter is refused, and goes as the next turn", () =>
+    onFake(
+      ['--steering', 'claude', '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await went();
+
+        expect(conversation.steerIn('Stop.')).toStrictEqual('sent');
+        await ended(events, 2);
+
+        expect(promptsIn(events)).toStrictEqual([
+          ['text', undefined],
+          ['Stop.', undefined],
+        ]);
+      },
+    ));
+
+  test("a turn Codex's adapter starts with one that missed the turn is cancelled, and the prompt goes as chord's next turn", async () => {
+    let cancels = 0;
+
+    await onFake(
+      ['--steering', 'codex', '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await went();
+
+        expect(conversation.steerIn('slow')).toStrictEqual('sent');
+        await until(
+          () =>
+            promptsIn(events).length === 2 &&
+            saidIn(events).includes('Working'),
+        );
+
+        expect(cancels).toStrictEqual(1);
+        expect(promptsIn(events)).toStrictEqual([
+          ['text', undefined],
+          ['slow', undefined],
+        ]);
+        expect(saidIn(events)).not.toContain('Started alongside');
+        conversation.interrupt();
+      },
+      (session) => {
+        const cancel = session.cancel.bind(session);
+
+        return Object.assign(session, {
+          cancel: () => {
+            cancels += 1;
+
+            return cancel();
+          },
+        });
+      },
+    );
+  });
+
+  test("while the turn waits on the person's answer it is held, marked so, and goes into the turn once they answer", async () => {
+    const stub = await steeringStub();
+    const { conversation, events, steers } = stub;
+
+    conversation.send('go');
+    stub.go();
+    await stub.settled();
+    stub.ask('first');
+
+    expect(conversation.steerIn('Run the tests.')).toStrictEqual('queued');
+    expect(events.at(-1)).toMatchObject({
+      type: 'queued',
+      text: 'Run the tests.',
+      afterAnswer: true,
+    });
+    await stub.settled();
+    expect(steers).toHaveLength(0);
+    conversation.choose('first', 'allow');
+    await until(() => steers.length === 1);
+    steers[0]!.answer('injected');
+    await until(() => promptsIn(events).length === 2);
+
+    expect(promptsIn(events).at(-1)).toStrictEqual([
+      'Run the tests.',
+      firstTurn(events),
+    ]);
+    stub.end();
+    await conversation.close();
+  });
+
+  test('several go one at a time in the order pressed, each with what is held ahead of it, and the prompts queued with Enter stay queued', async () => {
+    const stub = await steeringStub();
+    const { conversation, events, steers, prompts } = stub;
+
+    conversation.send('go');
+    stub.go();
+    await stub.settled();
+
+    expect(conversation.send('Queued with Enter.')).toStrictEqual(true);
+    conversation.aside(MAIN, 'parser exited.');
+    conversation.steerIn('Run the tests.');
+    conversation.steerIn('Then the docs.');
+    await until(() => steers.length === 1);
+    await stub.settled();
+
+    // The second waits for the first's answer.
+    expect(steers).toHaveLength(1);
+    expect(steers[0]!.text).toContain('parser exited.');
+    expect(steers[0]!.text).toEndWith('Run the tests.');
+    steers[0]!.answer('injected');
+    await until(() => steers.length === 2);
+
+    expect(steers[1]!.text).toStrictEqual('Then the docs.');
+    steers[1]!.answer('injected');
+    await until(() => promptsIn(events).length === 3);
+    expect(prompts).toHaveLength(1);
+    stub.end();
+    await until(() => prompts.length === 2);
+
+    expect(promptsIn(events)).toStrictEqual([
+      ['go', undefined],
+      ['Run the tests.', firstTurn(events)],
+      ['Then the docs.', firstTurn(events)],
+      ['Queued with Enter.', undefined],
+    ]);
+    await conversation.close();
+  });
+
+  test('with no turn running it goes as the next turn, as Enter sends it', async () => {
+    const stub = await steeringStub();
+    const { conversation, events, steers, prompts } = stub;
+
+    expect(conversation.steerIn('go')).toStrictEqual('sent');
+    await until(() => prompts.length === 1);
+
+    expect(steers).toHaveLength(0);
+    expect(promptsIn(events)).toStrictEqual([['go', undefined]]);
+    stub.go();
+    stub.end();
+    await conversation.close();
+  });
+});

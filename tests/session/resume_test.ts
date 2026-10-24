@@ -737,6 +737,99 @@ test('a message steered into a turn is recorded where it went, and a reopened se
     ]);
   }));
 
+test("the person's prompt steered into a turn is recorded where it went, as theirs, and a reopened session draws it there (CHD-378)", () =>
+  withPlace(async (place) => {
+    const steering = fakeAgentCommand(undefined, '--steering', 'claude');
+    const events: ConversationEvent[] = [];
+    const failures: string[] = [];
+    const conversation = new Conversation(
+      () =>
+        openSession({ agent: 'fake', cwd: place.dir, agentCommand: steering }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      new FileRecording(place.stateDir, (message) => failures.push(message)),
+    );
+    const until = async (check: () => boolean) => {
+      while (!check()) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    };
+
+    try {
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+      conversation.send('permissionsteer');
+      await until(() =>
+        events.some((event) => event.type === 'permission_requested'),
+      );
+      conversation.steerIn('Then the docs.');
+
+      const asked = events.find(
+        (event) => event.type === 'permission_requested',
+      );
+
+      assert(asked?.type === 'permission_requested');
+      conversation.choose(asked.permission.id, 'allow');
+      await until(() => events.some((event) => event.type === 'result'));
+    } finally {
+      await conversation.close();
+    }
+
+    expect(failures).toStrictEqual([]);
+
+    const live = drawn(
+      events
+        .filter((event): event is TranscriptAction =>
+          ['prompt', 'update', 'result'].includes(event.type),
+        )
+        .reduce(reduceTranscript, emptyTranscript).entries,
+    );
+    const [record] = await readRecords(place.stateDir);
+
+    assert(record !== undefined);
+
+    const past = await readPast(record.path);
+    const into = past.find(
+      (entry) => entry.type === 'prompt' && entry.into !== undefined,
+    );
+    const connected = events.find((event) => event.type === 'connected');
+
+    assert(connected?.type === 'connected');
+
+    // Replayed, it starts no turn: the one it went into ends once, after it.
+    const turns = recordActions(past).flatMap((action) =>
+      action.type === 'prompt' || action.type === 'result'
+        ? [[action.type, action.type === 'prompt' ? action.into : undefined]]
+        : [],
+    );
+    const session = await open(place, place.resuming, {
+      sessionId: connected.sessionId,
+      cwd: place.dir,
+      record: record.path,
+    });
+
+    try {
+      expect(turns).toStrictEqual([
+        ['prompt', undefined],
+        ['prompt', expect.stringMatching(/^history-/)],
+        ['result', undefined],
+      ]);
+      expect(into).toMatchObject({ prompt: 'Then the docs.' });
+      expect(into).not.toHaveProperty('from');
+      expect(replayed(session.history())).toStrictEqual(live);
+    } finally {
+      await session.close();
+    }
+
+    expect(live).toStrictEqual([
+      'user: permissionsteer',
+      'tool: Write notes.txt completed',
+      'user: Then the docs.',
+      'assistant: Read the message from nobody.\n\nPermission: allow.',
+    ]);
+  }));
+
 test('--resume by an id chord has a record of opens it in its own directory', () =>
   withPlace(async (place) => {
     const id = await earlier(place);

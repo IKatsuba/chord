@@ -1770,3 +1770,30 @@ describe("the person's prompt steered into the running turn (CHD-378)", () => {
     await conversation.close();
   });
 });
+
+test("Esc takes the person's steer held behind Claude's open calls back with the queue, never to be sent, while another agent's held message still goes (CHD-378)", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('bashcut');
+    await callOpen(events);
+
+    expect(conversation.steerIn('Skip the slow tests')).toStrictEqual('sent');
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(
+      () => events.filter((event) => event.type === 'queued').length === 2,
+    );
+    expect(events.at(-2)).toMatchObject({
+      type: 'queued',
+      text: 'Skip the slow tests',
+      afterCalls: true,
+    });
+    conversation.interrupt();
+
+    expect(events).toContainEqual({ type: 'queue_withdrawn' });
+    await until(() => promptsIn(events).length === 2);
+    await ended(events, 2);
+
+    expect(promptsIn(events)).toStrictEqual([
+      ['bashcut', undefined],
+      ['Then the docs.', undefined],
+    ]);
+  }));

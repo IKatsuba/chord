@@ -464,6 +464,14 @@ export class Conversation {
    */
   #steering = Promise.resolve();
   /**
+   * The person's steers that wait in the queue, shown there, for the
+   * calls open as they came or for an answer, by turn id: Esc takes them
+   * back to the box with the prompts queued (CHD-378).
+   */
+  #heldSteers = new Set<string>();
+  /** The person's held steers Esc took back, which go nowhere now. */
+  #takenBack = new Set<string>();
+  /**
    * The tool calls of the turn on screen not ended yet, by id, which hold a
    * steer back on an agent whose steer cuts them off.
    */
@@ -833,6 +841,8 @@ export class Conversation {
     this.#queued = [];
     this.#steers = new Set();
     this.#steering = Promise.resolve();
+    this.#heldSteers = new Set();
+    this.#takenBack = new Set();
     this.#openCalls = new Set();
     this.#calls = emptyTranscript;
     this.#madeAt = new Map();
@@ -1257,6 +1267,10 @@ export class Conversation {
 
       shown = why;
 
+      if (next.from === undefined) {
+        this.#heldSteers.add(next.turnId);
+      }
+
       this.#emit({
         type: 'queued',
         turnId: next.turnId,
@@ -1295,6 +1309,12 @@ export class Conversation {
         (this.#waitsOnPerson() || open())
       ) {
         await this.#wake.promise;
+      }
+
+      this.#heldSteers.delete(next.turnId);
+
+      if (this.#takenBack.delete(next.turnId)) {
+        return;
       }
 
       outcome =
@@ -2136,7 +2156,13 @@ export class Conversation {
 
     this.#queued = this.#queued.filter((queued) => queued.from);
 
-    if (withdrawn.length > 0) {
+    // The person's steers held in the queue go back with the prompts.
+    const steers = [...this.#heldSteers];
+
+    this.#heldSteers = new Set();
+    this.#takenBack = new Set([...this.#takenBack, ...steers]);
+
+    if (withdrawn.length > 0 || steers.length > 0) {
       this.#emit({ type: 'queue_withdrawn' });
     }
 

@@ -48,6 +48,7 @@ import {
 import { EDIT_NEW } from '../fixtures/edits.ts';
 import { BASH_OUTPUT, SHELL_OUTPUT } from '../fixtures/terminals.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { until } from './conversation_fake.ts';
 import { recordSession } from '../fixtures/records.ts';
 import { play, run, said as saidChunks } from '../fixtures/recorder.ts';
 
@@ -750,11 +751,6 @@ test("the person's prompt steered into a turn is recorded where it went, as thei
       {},
       new FileRecording(place.stateDir, (message) => failures.push(message)),
     );
-    const until = async (check: () => boolean) => {
-      while (!check()) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
-    };
 
     try {
       conversation.start();

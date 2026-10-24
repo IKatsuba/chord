@@ -116,10 +116,23 @@ describe("an agent's own title in the agents list (CHD-445)", () => {
           await ready(window);
           // Its record's title is not restored: the first prompt names it.
           await until('the title', () => status() === 'titledlong');
-          // The agent names it again, live: still untitled.
+
+          // The agent names it again, live: still untitled. Its title comes
+          // before its reply, and its turn's end is drawn after both, so the
+          // reports since the send hold any title it could have told.
+          const sent = statusReports(log).length;
+
           await send(window, 'titled');
           await window.shows('Named.');
-          await new Promise((resolve) => setTimeout(resolve, 200));
+          await until(
+            'the turn ended',
+            () => !window.frame().includes('esc to interrupt'),
+          );
+          expect(
+            statusReports(log)
+              .slice(sent)
+              .map((report) => report.title),
+          ).not.toContain('Fix the tokenizer');
           expect(status()).toStrictEqual('titledlong');
           // A child, so the list is drawn: main's title column is blank.
           await send(window, '/new');

@@ -1,6 +1,6 @@
 import process from 'node:process';
 import { useTerminalDimensions } from '@opentui/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import wrapAnsi from 'wrap-ansi';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
@@ -66,11 +66,17 @@ import {
   choiceKey,
   initialChoice,
   modelChoices,
+  fromFirstLine,
+  lineKey,
+  linedRows,
+  type LinedRow,
+  openLineView,
   openView,
   optionChoices,
   type PickerChoice,
   pickerKey,
   pickerLayout,
+  type PickerRow,
   pickerRows,
   sessionChoices,
   valueChoices,
@@ -671,6 +677,28 @@ export function McpPanel({
  * hidden that way, and how many are hidden under it, as Claude Code's picker
  * does.
  */
+/** Rows of one line each, as `linedRows` gives a picker's lines. */
+function lined<C extends PickerChoice>(shown: {
+  readonly rows: readonly PickerRow<C>[];
+  readonly hidden: number;
+}): { readonly rows: LinedRow<C>[]; readonly hidden: number } {
+  return {
+    rows: shown.rows.map(({ choice, highlighted, number, edge }) => ({
+      choice,
+      highlighted,
+      number,
+      lines: [
+        {
+          text: choice.label,
+          first: true,
+          ...(edge === undefined ? {} : { edge }),
+        },
+      ],
+    })),
+    hidden: shown.hidden,
+  };
+}
+
 function PickerList({
   choices,
   rows,
@@ -688,13 +716,39 @@ function PickerList({
   const { width: columns } = useTerminalDimensions();
   const lines = pickerLayout(choices, rows, columns);
   const heights = lines?.map((each) => each.length);
-  const [view, setView] = useState(() => openView(choices, rows, heights));
-  const shown = pickerRows(choices, view, rows, heights);
+  const [view, setView] = useState(() =>
+    heights === undefined
+      ? openView(choices, rows)
+      : openLineView(choices, heights, rows),
+  );
   const { permission } = useColours();
+  const laidAt = useRef(columns);
+
+  // A resize lays the labels out again: the highlighted row shows from its
+  // first line (CHD-445).
+  useEffect(() => {
+    if (laidAt.current !== columns) {
+      laidAt.current = columns;
+
+      if (heights !== undefined) {
+        setView((was) => fromFirstLine(was, heights, rows));
+      }
+    }
+  }, [columns, heights, rows]);
+
+  // Rows of one line, or labels laid into lines, a row taller than the
+  // room read a line a press (docs/design/CHD-445.md).
+  const shown =
+    lines === undefined
+      ? lined(pickerRows(choices, view, rows))
+      : linedRows(choices, lines, view, rows);
 
   usePress(
     (input, key) => {
-      const step = pickerKey(view, choices.length, rows, input, key, heights);
+      const step =
+        heights === undefined
+          ? pickerKey(view, choices.length, rows, input, key)
+          : lineKey(view, heights, rows, input, key);
 
       if (step?.type === 'move') {
         setView(step.view);
@@ -717,25 +771,19 @@ function PickerList({
 
   return (
     <box marginTop={1} flexDirection='column'>
-      {shown.rows.map(({ choice, highlighted, number, edge }) => (
-        <box key={choice.value} flexDirection='row'>
-          <ChoiceIndicator isSelected={highlighted} />
-          {edge !== undefined && <Gutter dimColor>{edge}</Gutter>}
-          <box flexDirection='column'>
-            {(lines?.[choices.indexOf(choice)] ?? [choice.label]).map(
-              (line, at) => (
-                // Every line of a wrapped label takes the highlight.
-                <text
-                  key={at}
-                  {...CUT}
-                  {...(highlighted ? fg(permission) : {})}
-                >
-                  {at === 0 ? `${number} ` : ' '.repeat(number.length + 1)}
-                  <Ansi text={line} />
-                </text>
-              ),
-            )}
-          </box>
+      {shown.rows.map(({ choice, highlighted, number, lines: drawn }) => (
+        <box key={choice.value} flexDirection='column'>
+          {drawn.map(({ text, first, edge }, at) => (
+            <box key={at} flexDirection='row'>
+              <ChoiceIndicator isSelected={highlighted && first} />
+              {edge !== undefined && <Gutter dimColor>{edge}</Gutter>}
+              {/* Every line of a wrapped label takes the highlight. */}
+              <text {...CUT} {...(highlighted ? fg(permission) : {})}>
+                {first ? `${number} ` : ' '.repeat(number.length + 1)}
+                <Ansi text={text} />
+              </text>
+            </box>
+          ))}
         </box>
       ))}
       {shown.hidden > 0 && (

@@ -121,61 +121,6 @@ export function pickerLayout(
     : unscrolled;
 }
 
-/**
- * Which choices are in sight when each takes `heights` lines and `lines`
- * are room, from `top` where it can stay: as `visibleRange` for rows of one
- * line each, the highlighted choice in sight and no room left empty below
- * the last; one taller than the room is shown alone (CHD-445).
- */
-export function lineRange(
-  heights: readonly number[],
-  highlighted: number,
-  lines: number,
-  top = 0,
-): { readonly start: number; readonly end: number } {
-  const count = heights.length;
-  const taken = (from: number, to: number) =>
-    heights.slice(from, to).reduce((sum, height) => sum + height, 0);
-
-  if (taken(0, count) <= lines) {
-    return { start: 0, end: count };
-  }
-
-  let start = Math.min(Math.max(top, 0), highlighted);
-
-  while (start < highlighted && taken(start, highlighted + 1) > lines) {
-    start++;
-  }
-
-  while (start > 0 && taken(start - 1, count) <= lines) {
-    start--;
-  }
-
-  let end = start;
-  let used = 0;
-
-  while (end < count && (end === start || used + heights[end]! <= lines)) {
-    used += heights[end]!;
-
-    end++;
-  }
-
-  return { start, end };
-}
-
-/** `visibleRange`, or `lineRange` where choices take more than a line. */
-function rangeOf(
-  count: number,
-  highlighted: number,
-  rows: number,
-  top: number,
-  heights: readonly number[] | undefined,
-) {
-  return heights === undefined
-    ? visibleRange(count, highlighted, rows, top)
-    : lineRange(heights, highlighted, rows, top);
-}
-
 /** One model on the list; `current` is the one the agent says it uses. */
 export interface ModelChoice extends PickerChoice {
   readonly current: boolean;
@@ -348,14 +293,12 @@ export interface PickerView {
 export function openView(
   choices: readonly PickerChoice[],
   rows: number,
-  /** Each choice's lines, where one may take more than one. */
-  heights?: readonly number[],
 ): PickerView {
   const highlighted = initialChoice(choices);
 
   return {
     highlighted,
-    top: rangeOf(choices.length, highlighted, rows, 0, heights).start,
+    top: visibleRange(choices.length, highlighted, rows).start,
   };
 }
 
@@ -387,8 +330,6 @@ export function pickerKey(
   rows: number,
   input: string,
   key: PickerKey,
-  /** Each choice's lines, where one may take more than one. */
-  heights?: readonly number[],
 ): PickerStep | undefined {
   if (count === 0) {
     return undefined;
@@ -404,12 +345,7 @@ export function pickerKey(
     return index < count ? { type: 'pick', index } : undefined;
   }
 
-  const step =
-    (key.upArrow && !key.shift) || input === 'k'
-      ? -1
-      : (key.downArrow && !key.shift) || input === 'j'
-        ? 1
-        : 0;
+  const step = moveOf(input, key);
   const highlighted = Math.min(Math.max(view.highlighted + step, 0), count - 1);
 
   if (highlighted === view.highlighted) {
@@ -420,8 +356,248 @@ export function pickerKey(
     type: 'move',
     view: {
       highlighted,
-      top: rangeOf(count, highlighted, rows, view.top, heights).start,
+      top: visibleRange(count, highlighted, rows, view.top).start,
     },
+  };
+}
+
+/** ↑ or k one up, ↓ or j one down; shift+↑/↓ are the window's. */
+function moveOf(input: string, key: PickerKey): -1 | 0 | 1 {
+  return (key.upArrow && !key.shift) || input === 'k'
+    ? -1
+    : (key.downArrow && !key.shift) || input === 'j'
+      ? 1
+      : 0;
+}
+
+/**
+ * Where each choice's lines start among all of them, and how many there
+ * are, for a picker whose rows take `heights` lines.
+ */
+function lineStarts(heights: readonly number[]): {
+  readonly starts: number[];
+  readonly total: number;
+} {
+  const starts: number[] = [];
+  let total = 0;
+
+  for (const height of heights) {
+    starts.push(total);
+
+    total += height;
+  }
+
+  return { starts, total };
+}
+
+/**
+ * The least move of `top`, a picker's first line in sight among `budget`,
+ * that brings row `index` into sight: whole where it fits, else its first
+ * line, as a move down reaches it, or its last, as a move up does
+ * (docs/design/CHD-445.md, "A row taller than the picker").
+ */
+function lineTop(
+  heights: readonly number[],
+  index: number,
+  budget: number,
+  top: number,
+  from: 'first' | 'last',
+): number {
+  const { starts, total } = lineStarts(heights);
+
+  if (total <= budget) {
+    return 0;
+  }
+
+  const start = starts[index] ?? 0;
+  const end = start + (heights[index] ?? 1);
+  let next = top;
+
+  if (end - start <= budget) {
+    next = Math.min(next, start);
+    next = Math.max(next, end - budget);
+  } else if (from === 'first') {
+    next = start < next ? start : Math.max(next, start - budget + 1);
+  } else {
+    next = end > next + budget ? end - budget : Math.min(next, end - 1);
+  }
+
+  return Math.min(Math.max(next, 0), total - budget);
+}
+
+/**
+ * The view a picker whose rows take `heights` lines opens on, `budget`
+ * lines at most: the choice in use highlighted, from its first line.
+ */
+export function openLineView(
+  choices: readonly PickerChoice[],
+  heights: readonly number[],
+  budget: number,
+): PickerView {
+  const highlighted = initialChoice(choices);
+
+  return {
+    highlighted,
+    top: lineTop(heights, highlighted, budget, 0, 'first'),
+  };
+}
+
+/** `view` again from its highlighted row's first line, as after a resize. */
+export function fromFirstLine(
+  view: PickerView,
+  heights: readonly number[],
+  budget: number,
+): PickerView {
+  const { starts } = lineStarts(heights);
+
+  return {
+    highlighted: view.highlighted,
+    top: lineTop(
+      heights,
+      view.highlighted,
+      budget,
+      starts[view.highlighted] ?? 0,
+      'first',
+    ),
+  };
+}
+
+/**
+ * `pickerKey` for a picker whose rows take `heights` lines, `budget` at
+ * most, `top` its first line in sight: a row taller than the budget, while
+ * highlighted, is read a line a press before the highlight moves on, and a
+ * move brings the next row into sight with the least move of the view
+ * (docs/design/CHD-445.md, "A row taller than the picker").
+ */
+export function lineKey(
+  view: PickerView,
+  heights: readonly number[],
+  budget: number,
+  input: string,
+  key: PickerKey,
+): PickerStep | undefined {
+  const step = moveOf(input, key);
+
+  if (step === 0) {
+    const picked = pickerKey(view, heights.length, budget, input, key);
+
+    return picked?.type === 'pick' ? picked : undefined;
+  }
+
+  const { starts, total } = lineStarts(heights);
+  const start = starts[view.highlighted] ?? 0;
+  const end = start + (heights[view.highlighted] ?? 1);
+
+  if (total > budget && end - start > budget) {
+    if (step > 0 && end > view.top + budget) {
+      return { type: 'move', view: { ...view, top: view.top + 1 } };
+    }
+
+    if (step < 0 && start < view.top) {
+      return { type: 'move', view: { ...view, top: view.top - 1 } };
+    }
+  }
+
+  const highlighted = Math.min(
+    Math.max(view.highlighted + step, 0),
+    heights.length - 1,
+  );
+
+  if (highlighted === view.highlighted) {
+    return undefined;
+  }
+
+  return {
+    type: 'move',
+    view: {
+      highlighted,
+      top: lineTop(
+        heights,
+        highlighted,
+        budget,
+        view.top,
+        step > 0 ? 'first' : 'last',
+      ),
+    },
+  };
+}
+
+/** One row of a picker whose rows take lines, as drawn. */
+export interface LinedRow<C extends PickerChoice = PickerChoice> {
+  readonly choice: C;
+  readonly highlighted: boolean;
+  /** Its place in the whole list, which its digit picks: `1.`, `10.`. */
+  readonly number: string;
+  /**
+   * Its lines in sight, each with the edge column's mark: `↑` on the first
+   * line in sight when lines are out of sight above, `↓` on the last when
+   * they are below, `' '` on the others; none when every line is in sight.
+   */
+  readonly lines: readonly {
+    readonly text: string;
+    /** Whether it is the row's first line, which the `❯` and number take. */
+    readonly first: boolean;
+    readonly edge?: '↑' | '↓' | ' ';
+  }[];
+}
+
+/**
+ * The lines in sight of a picker whose rows are `lines`, `budget` at
+ * most, from `view.top`, and how many rows come after the last in sight:
+ * none counted while the highlighted row is taller than the budget, as its
+ * own edges say where it goes on (docs/design/CHD-445.md).
+ */
+export function linedRows<C extends PickerChoice>(
+  choices: readonly C[],
+  lines: readonly (readonly string[])[],
+  view: PickerView,
+  budget: number,
+): { readonly rows: LinedRow<C>[]; readonly hidden: number } {
+  const heights = lines.map((each) => each.length);
+  const { starts, total } = lineStarts(heights);
+  const scrolls = total > budget;
+  const top = scrolls ? Math.min(Math.max(view.top, 0), total - budget) : 0;
+  const end = scrolls ? top + budget : total;
+  const width = `${choices.length}.`.length;
+  const rows: LinedRow<C>[] = [];
+  let hidden = 0;
+
+  choices.forEach((choice, index) => {
+    const start = starts[index] ?? 0;
+    const shown = (lines[index] ?? [])
+      .map((text, at) => ({ text, at: start + at }))
+      .filter(({ at }) => at >= top && at < end);
+
+    if (shown.length === 0) {
+      hidden += start >= end ? 1 : 0;
+
+      return;
+    }
+
+    rows.push({
+      choice,
+      highlighted: index === view.highlighted,
+      number: `${index + 1}.`.padEnd(width),
+      lines: shown.map(({ text, at }) => ({
+        text,
+        first: at === start,
+        ...(scrolls
+          ? {
+              edge:
+                at === top && top > 0
+                  ? ('↑' as const)
+                  : at === end - 1 && end < total
+                    ? ('↓' as const)
+                    : (' ' as const),
+            }
+          : {}),
+      })),
+    });
+  });
+
+  return {
+    rows,
+    hidden: (heights[view.highlighted] ?? 1) > budget ? 0 : hidden,
   };
 }
 
@@ -447,15 +623,12 @@ export function pickerRows<C extends PickerChoice>(
   choices: readonly C[],
   view: PickerView,
   rows: number,
-  /** Each choice's lines, where one may take more than one. */
-  heights?: readonly number[],
 ): { readonly rows: PickerRow<C>[]; readonly hidden: number } {
-  const { start, end } = rangeOf(
+  const { start, end } = visibleRange(
     choices.length,
     view.highlighted,
     rows,
     view.top,
-    heights,
   );
   const scrolls = end - start < choices.length;
   const width = `${choices.length}.`.length;

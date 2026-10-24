@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import {
   choiceKey,
   choiceLines,
@@ -6,7 +7,10 @@ import {
   DIRECTORY_WIDTH,
   initialChoice,
   lastUsed,
-  lineRange,
+  fromFirstLine,
+  lineKey,
+  linedRows,
+  openLineView,
   type ModelChoice,
   modelChoices,
   modelToAsk,
@@ -22,7 +26,6 @@ import {
   valueChoices,
   valueToAsk,
 } from '../../../src/ui/pickers/picker.ts';
-import { visibleRange } from '../../../src/ui/prompt/commands.ts';
 
 const MODELS = {
   available: [
@@ -406,41 +409,113 @@ test('a /resume label wider than its row wraps at its spaces under its own start
   ).toStrictEqual(['a model name past the edge']);
 });
 
-test("the choices in sight count each one's lines: as visibleRange for rows of a line, the highlight whole in sight, none left empty below, one taller than the room alone (CHD-445)", () => {
-  for (const [count, rows] of [
-    [10, 4],
-    [3, 5],
-    [7, 7],
-  ] as const) {
-    for (let highlighted = 0; highlighted < count; highlighted++) {
-      for (let top = 0; top < count; top++) {
-        expect(
-          lineRange(Array(count).fill(1), highlighted, rows, top),
-        ).toStrictEqual(visibleRange(count, highlighted, rows, top));
-      }
-    }
-  }
-
-  const heights = [1, 3, 1, 2, 1];
-
-  expect(lineRange(heights, 0, 8)).toStrictEqual({ start: 0, end: 5 });
-  expect(lineRange(heights, 0, 5)).toStrictEqual({ start: 0, end: 3 });
-  expect(lineRange(heights, 3, 5, 0)).toStrictEqual({ start: 2, end: 5 });
-  expect(lineRange(heights, 1, 2, 0)).toStrictEqual({ start: 1, end: 2 });
-
-  const choices = heights.map((_, index) => ({
+test("a row taller than the picker is read a line a press while highlighted, the view moving the least it must, and no '+N more' then (CHD-445)", () => {
+  // As the design's 80×24 mock: row 2 wraps to 8 lines in a budget of 6.
+  const lines = [
+    ['Fix the tokenizer'],
+    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
+    ['docs · Fix the parser'],
+  ];
+  const heights = lines.map((each) => each.length);
+  const choices = lines.map((_, index) => ({
     key: String(index),
     label: String(index),
     value: String(index),
   }));
-  const shown = pickerRows(choices, { highlighted: 3, top: 0 }, 5, heights);
+  const down = { upArrow: false, downArrow: true, return: false, shift: false };
+  const up = { ...down, upArrow: true, downArrow: false };
+  const drawn = (view: PickerView) => {
+    const shown = linedRows(choices, lines, view, 6);
 
-  expect(shown.rows.map((row) => [row.number, row.edge])).toStrictEqual([
-    ['3.', '↑'],
-    ['4.', ' '],
-    ['5.', ' '],
+    return [
+      ...shown.rows.flatMap((row) =>
+        row.lines.map(
+          (line) =>
+            `${line.edge ?? ''}${row.highlighted && line.first ? '❯' : ' '}${line.first ? row.number : '  '} ${line.text}`,
+        ),
+      ),
+      ...(shown.hidden > 0 ? [`+${shown.hidden}`] : []),
+    ];
+  };
+
+  const step = (view: PickerView, key: PickerKey) => {
+    const moved = lineKey(view, heights, 6, '', key);
+
+    assert(moved?.type === 'move');
+
+    return moved.view;
+  };
+
+  let view = openLineView(choices, heights, 6);
+
+  expect(drawn(view)).toStrictEqual([
+    ' ❯1. Fix the tokenizer',
+    '  2. a',
+    '     b',
+    '     c',
+    '     d',
+    '↓    e',
+    '+1',
   ]);
-  expect(shown.hidden).toStrictEqual(2);
+
+  // Onto the tall row: its first line is in sight, so nothing moves.
+  view = step(view, down);
+
+  expect(view).toStrictEqual({ highlighted: 1, top: 0 });
+  expect(drawn(view).at(-1)).toStrictEqual('↓    e');
+
+  // A line a press, to its last, the highlight staying on the row.
+  view = step(view, down);
+  view = step(view, down);
+  view = step(view, down);
+
+  expect(view).toStrictEqual({ highlighted: 1, top: 3 });
+  expect(drawn(view)).toStrictEqual([
+    '↑    c',
+    '     d',
+    '     e',
+    '     f',
+    '     g',
+    '↓    h',
+  ]);
+
+  // Then on to row 3, brought whole into sight with the least move.
+  view = step(view, down);
+
+  expect(view).toStrictEqual({ highlighted: 2, top: 4 });
+  expect(drawn(view)).toStrictEqual([
+    '↑    d',
+    '     e',
+    '     f',
+    '     g',
+    '     h',
+    ' ❯3. docs · Fix the parser',
+  ]);
+  expect(lineKey(view, heights, 6, '', down)).toStrictEqual(undefined);
+
+  // Back the same way: onto row 2 at its last line, then a line a press.
+  view = step(view, up);
+
+  expect(view).toStrictEqual({ highlighted: 1, top: 4 });
+
+  view = step(view, up);
+
+  expect(view).toStrictEqual({ highlighted: 1, top: 3 });
+  // Enter picks the row wherever in it the view is; a resize shows it from
+  // its first line again.
+  expect(
+    lineKey(view, heights, 6, '', { ...down, downArrow: false, return: true }),
+  ).toStrictEqual({ type: 'pick', index: 1 });
+  expect(fromFirstLine(view, heights, 6)).toStrictEqual({
+    highlighted: 1,
+    top: 1,
+  });
+  // Rows that fit are whole and unmarked.
+  expect(
+    linedRows(choices, [['x'], ['y']], { highlighted: 0, top: 0 }, 6).rows.map(
+      (row) => row.lines,
+    ),
+  ).toStrictEqual([[{ text: 'x', first: true }], [{ text: 'y', first: true }]]);
 });
 
 test("a picker's labels go on lines of their own under their columns, every row alike, where the room beside the columns is under half the box (CHD-445)", () => {

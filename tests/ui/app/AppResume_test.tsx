@@ -693,4 +693,61 @@ describe("an agent's title for a session in /resume and a resumed header (CHD-44
       }
     });
   }
+
+  test('a title taller than the picker is read a line a press at 80×24, the picker no taller than with titles that fit', () => {
+    const words = Array.from({ length: 160 }, (_, at) => `word${at}`);
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/resume');
+        await window.shows('Resume a session');
+
+        const height = () =>
+          stripAnsi(window.frame())
+            .split('\n')
+            .filter((row) => row.startsWith('│')).length;
+        const before = height();
+
+        await window.shows('word0');
+        expect(window.frame()).not.toContain('word159');
+        // Onto the tall row, then a line a press until its end is in sight.
+        await window.press('j');
+
+        for (
+          let press = 0;
+          press < 40 && !window.frame().includes('word159');
+          press++
+        ) {
+          await window.press('j');
+          expect(height()).toBeLessThanOrEqual(before);
+        }
+
+        expect(window.frame()).toContain('word159');
+        expect(window.frame()).not.toContain('word0 ');
+      },
+      {
+        columns: 80,
+        rows: 24,
+        readRecords: (stateDir) => {
+          const cwd = join(stateDir, '..');
+          const record = (id: string, at: number, more: object) => ({
+            path: join(stateDir, `${id}.jsonl`),
+            sessionId: id,
+            agent: 'fake',
+            cwd,
+            lastUsedAt: Date.now() - at * 60_000,
+            prompt: 'a first prompt',
+            ...more,
+          });
+
+          return Promise.resolve([
+            record('short', 1, { title: 'Fix the tokenizer' }),
+            record('tall', 2, { title: words.join(' ') }),
+            record('after', 3, { title: 'docs · Fix the parser' }),
+          ]);
+        },
+      },
+    );
+  });
 });

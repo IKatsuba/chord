@@ -1,0 +1,40 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des445u3
+ ▀▀     ? for shortcuts · /help
+
+ › titled
+
+ ⏺ Named.
+
+ › agentstitled
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  titled
+
+ ⏺ Open(docs) · fake
+   ⎿  retitled
+
+ ⏺ Waiting on parser and docs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main    Fix the tokenizer  fake · Fake Large with a 1M context window · medium  ◦ idle 7s
+    parser  Fix the tokenizer  fake · Fake Small · medium                           ◦ idle 7s  ✓ new reply
+    docs    Fix the parser     fake · Fake Large with a 1M context window · medium  ◦ idle 7s  ✓ new reply

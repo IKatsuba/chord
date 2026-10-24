@@ -1,0 +1,24 @@
+ ▄▀▀▀   /tmp/chord-qa.des445u3
+ ▀▀     ? for shortcuts · /help
+
+ › titled
+
+ ⏺ Named.
+
+ › agentstitled
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  titled
+
+ ⏺ Open(docs) · fake
+   ⎿  retitled
+
+ ⏺ Waiting on parser and docs.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main    Fix the tokenizer  fake  ◦ idle 9s
+    parser  Fix the tokenizer  fake  ◦ idle 9s  ✓ new reply
+    docs    Fix the parser     fake  ◦ idle 9s  ✓ new reply

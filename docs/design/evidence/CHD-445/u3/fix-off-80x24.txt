@@ -1,0 +1,24 @@
+ parser · fake · Fake Small · opened by main 14s ago
+
+ ← from @main
+   ⎿  titled
+
+ ⏺ Named.
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back    Fake Small · medium · 1% used
+  ↑         reviewed before anything
+            else in the parser
+            changes
+  ❯ parser  Fix the tokenizer          fake  ◦ idle 13s

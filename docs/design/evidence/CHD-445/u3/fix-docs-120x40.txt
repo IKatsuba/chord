@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 26s ago
+
+ ← from @main
+   ⎿  retitled
+
+ ⏺ Looking.Renamed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back       Fake Large with a 1M context window · 1% used
+  ↑         fails for that reason, fix
+            src/parse/tokenize.ts and have the
+            diff reviewed before anything else in
+            the parser changes
+    parser  Fix the tokenizer                       fake · Fake Small · medium                           ◦ idle 25s
+  ❯ docs    Fix the parser                          fake · Fake Large with a 1M context window · medium  ◦ idle 25s

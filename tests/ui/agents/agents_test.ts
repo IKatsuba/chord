@@ -67,14 +67,20 @@ function drawn(
     ...layout.rows.flatMap((laid) =>
       laid.lines.map(({ at, gutter }) => {
         if (at === 0) {
-          return `${gutter}${laid.branch ?? ''}${laid.name}  ${laid.detail}${
+          return `${gutter}${laid.branch ?? ''}${laid.name}${
+            laid.title === undefined ? '' : `  ${laid.title}`
+          }  ${laid.detail}${
             laid.state === undefined ? '' : `  ${laid.state.text}`
           }${laid.unseen === undefined ? '' : `  ${laid.unseen.text}`}`.trimEnd();
         }
 
-        // A wrapped row's further lines: the name's, what went under the
-        // detail.
+        // A wrapped row's further lines: the name's, the title's, what went
+        // under the detail.
         const name = laid.names[at - 1];
+        const title =
+          laid.titleWidth === 0
+            ? ''
+            : `  ${laid.titles[at - 1] ?? ' '.repeat(laid.titleWidth)}`;
         const below = (laid.below[at - 1] ?? [])
           .map(({ text }) => text)
           .join('');
@@ -83,7 +89,7 @@ function drawn(
           name === undefined
             ? ' '.repeat(laid.nameWidth)
             : name.tree + name.text
-        }${below === '' ? '' : `  ${below}`}`.trimEnd();
+        }${title}${below === '' ? '' : `  ${below}`}`.trimEnd();
       }),
     ),
     ...(layout.more > 0 ? [`  … +${layout.more} more`] : []),
@@ -1172,5 +1178,88 @@ describe('CHD-464 tester: list space at its floor', () => {
     ]);
     expect(agentsLines(rows, { ...options, limit: 4 })).toBe(3);
     expect(agentsLines(rows, options)).toBe(2);
+  });
+});
+
+describe("an agent's own title in the list (CHD-445)", () => {
+  test('stands in a column of its own between the name and the runtime, blank for a row without one', () => {
+    expect(
+      drawn([
+        row('main', { title: 'Fix the tokenizer', model: 'Opus' }),
+        row('parser', { title: 'Run the parser tests' }),
+        row('docs'),
+      ]),
+    ).toStrictEqual([
+      '  main    Fix the tokenizer     codex · Opus           ◦ idle 0s',
+      '  parser  Run the parser tests  codex · gpt-5.3-codex  ◦ idle 0s',
+      '  docs                          codex · gpt-5.3-codex  ◦ idle 0s',
+    ]);
+  });
+
+  test('wraps inside a column no wider than a third of the list, at whole words, never cut', () => {
+    const title =
+      "Fix the tokenizer's handling of a quoted string at the end of a line";
+    const lines = drawn([row('main', { title }), row('parser')], {
+      width: 80,
+      limit: 10,
+    });
+
+    expect(lines).toStrictEqual([
+      "  main    Fix the tokenizer's         codex · gpt-5.3-codex  ◦ idle 0s",
+      '          handling of a quoted',
+      '          string at the end of a',
+      '          line',
+      '  parser                              codex · gpt-5.3-codex  ◦ idle 0s',
+    ]);
+    expect(
+      lines
+        .slice(0, 4)
+        .map((line) => line.slice(10, 36).trim())
+        .join(' '),
+    ).toStrictEqual(title);
+  });
+
+  test("a member's own title stands under the tree, and a folded lead's row keeps the lead's", () => {
+    const lead = row('bugfix', { title: 'Review the fix', team: 1, key: 1 });
+    const tester = row('tester', {
+      title: 'Test quoted strings',
+      team: 1,
+      branch: '└─',
+      key: 2,
+    });
+
+    expect(drawn([row('main'), lead, tester])).toStrictEqual([
+      '  main                            codex · gpt-5.3-codex  ◦ idle 0s',
+      '  bugfix     Review the fix       codex · gpt-5.3-codex  ◦ idle 0s',
+      '  └─ tester  Test quoted strings  codex · gpt-5.3-codex  ◦ idle 0s',
+    ]);
+    expect(drawn([row('main'), { ...lead, folded: [tester] }])[1]).toContain(
+      'bugfix     Review the fix',
+    );
+  });
+
+  test("a picked row as tall as the list, rows after it, is read by line and shows whole, and the next press moves on (the picker's exact fit)", () => {
+    const tallTitle = Array.from(
+      { length: 6 },
+      (_, at) => `line${at}word`,
+    ).join(' ');
+    const rows = [
+      row('main', { title: tallTitle, picked: true }),
+      row('parser'),
+      row('docs'),
+    ];
+    const frame = { limit: 6, width: 30, now: NOW };
+    const lines = drawn(rows, { ...frame, focused: true });
+
+    expect(lines).toHaveLength(6);
+    expect(lines.join('\n')).toContain('line5word');
+    expect(lines.join('\n')).not.toContain('more');
+    expect(scrolledView(rows, 1, { ...frame, view: undefined })).toStrictEqual(
+      undefined,
+    );
+    // Unpicked, it shows the lines that fit beside the notice.
+    expect(drawn(rows, { ...frame, focused: false }).at(-1)).toStrictEqual(
+      '  … +2 more',
+    );
   });
 });

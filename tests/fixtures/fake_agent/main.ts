@@ -244,7 +244,9 @@
  * (CHD-491); `titledlook` and `titledfix` give those two names one prompt
  * each; `titledlong` names it at length, and `agentstitled` opens two
  * children that name their own (CHD-445). `--title <text>`
- * (`CHORD_FAKE_TITLE`) names every session at its start, before any prompt.
+ * (`CHORD_FAKE_TITLE`) names every session at its start, before any prompt;
+ * `tasktitled` starts a task on `titledlong`, whose title chord shows
+ * nowhere (Q200).
  */
 import process from 'node:process';
 import { Readable, Writable } from 'node:stream';
@@ -388,6 +390,7 @@ const SCENARIOS = [
   'mainbetweentwice',
   'taskbetween',
   'taskstays',
+  'tasktitled',
   'taskstayshold',
   'tasktillsteered',
   'teamtask',

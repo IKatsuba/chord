@@ -102,6 +102,39 @@ async function taskStays(
   return 'end_turn';
 }
 
+/**
+ * What `tasktitled` asks for: a task whose agent names its own session,
+ * which chord shows nowhere, the task known by this name (CHD-445, Q200).
+ */
+export const TITLED_TASK_ARGS = {
+  agent: 'fake',
+  prompt: 'titledlong',
+  name: 'Name the session',
+};
+
+/** Starts a task on `args` and ends the turn, the task working on. */
+async function startTask(
+  turn: Turn,
+  args: typeof TITLED_TASK_ARGS,
+): Promise<acp.StopReason> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
+  }
+
+  try {
+    await callChord(turn, client, 'spawn_task', args);
+    await turn.say('Started.');
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn';
+}
+
 /** How long `taskchildhold` stays at work if no cancel comes. */
 const HOLD_MS = 10_000;
 
@@ -303,6 +336,9 @@ export const TASKS = {
   // the task takes to ask its permission and send its message: no timer
   // ends it, only the cancel, or the client going.
   taskstays: (turn) => taskStays(turn, TASK_ARGS),
+
+  // A task whose agent titles its session (CHD-445, Q200).
+  tasktitled: (turn) => startTask(turn, TITLED_TASK_ARGS),
 
   // As `taskstays`, its task on `taskchildhold`, which stays at work after
   // its message until it is cancelled (CHD-399).

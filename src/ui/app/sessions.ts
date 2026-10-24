@@ -1773,7 +1773,7 @@ export function useSessions(
                   picked: row.key === target.key,
                 })),
                 top,
-                frame,
+                { ...frame, reading: view !== undefined },
               )
             : undefined,
       });

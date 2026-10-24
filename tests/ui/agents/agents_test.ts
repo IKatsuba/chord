@@ -1263,3 +1263,49 @@ describe("an agent's own title in the list (CHD-445)", () => {
     );
   });
 });
+
+describe('leaving a tall row read by line (CHD-445)', () => {
+  test('the next row comes whole into sight with the least move, the rows above kept as far as they fit, and ↑ picks the tall row again from its first line', () => {
+    // main's title wraps to five lines in a list of four, as at 80×24.
+    const title = Array.from({ length: 5 }, (_, at) => `line${at}word`).join(
+      ' ',
+    );
+    const pick = (key: number) => [
+      row('main', { title, key: 0, picked: key === 0 }),
+      row('parser', { key: 1, picked: key === 1 }),
+      row('docs', { key: 2, picked: key === 2 }),
+    ];
+    const frame = { limit: 4, width: 50, now: NOW };
+    // Read main to its last line.
+    let view = enteredView(pick(0), 0, frame)!;
+
+    view = scrolledView(pick(0), 1, { ...frame, view })!;
+
+    expect(scrolledView(pick(0), 1, { ...frame, view })).toStrictEqual(
+      undefined,
+    );
+
+    const { top } = agentsLayout(pick(0), { ...frame, focused: true, view });
+    const onParser = enteredView(pick(1), top, { ...frame, reading: true })!;
+    const lines = drawn(pick(1), { ...frame, focused: true, view: onParser });
+
+    expect(lines).toHaveLength(4);
+    expect(lines[0]).toMatch(/^↑ /);
+    expect(lines.slice(0, 3).join('\n')).toContain('line4word');
+    expect(lines[3]).toMatch(/^❯ parser/);
+    expect(lines.join('\n')).not.toContain('more');
+
+    // Back up: main from its first line.
+    const back = enteredView(
+      pick(0),
+      agentsLayout(pick(1), { ...frame, focused: true, view: onParser }).top,
+      { ...frame, reading: true },
+    )!;
+
+    expect(drawn(pick(0), { ...frame, focused: true, view: back })[0]).toMatch(
+      /^❯ main\s+line0word/,
+    );
+    // Not read by line before: a row that fits gets no window, as today.
+    expect(enteredView(pick(1), 0, frame)).toStrictEqual(undefined);
+  });
+});

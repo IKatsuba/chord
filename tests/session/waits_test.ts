@@ -707,22 +707,55 @@ describe('CHD-471 tester: stop time and seen marks', () => {
   });
 });
 
-test("a connection after an exit is the agent up again: a resumed session's past exit leaves it open, and an exit after the connection still marks it gone (CHD-510)", () => {
+test("a connection after an exit is the agent up again: a resumed session's past exit leaves it open, in front or not, and an exit after the connection still marks it gone (CHD-510)", () => {
   // As a resume replays it: the past's disconnected, then the connection.
   const past: ConversationEvent = { type: 'disconnected', turnId: 'history' };
-  const resumed = waitOf(heard(opened('a', 'b'), 1, [past, up]), 1)!;
 
-  expect(resumed.exited).toStrictEqual(undefined);
+  // Agent 1 behind another, then in front.
+  for (const tabs of [opened('a', 'b'), goTo(opened('a', 'b'), 1)]) {
+    const resumed = waitOf(heard(tabs, 1, [past, up]), 1)!;
 
-  // The agent going after it came up is still an exit.
-  const gone = waitOf(
-    heard(opened('a', 'b'), 1, [
-      past,
-      up,
-      { type: 'disconnected', turnId: '' },
-    ]),
-    1,
-  )!;
+    // Neither its row nor the terminal's status says it exited.
+    expect(resumed.exited).toStrictEqual(undefined);
+    expect(failureOf(resumed)).toStrictEqual(undefined);
+    expect(resumed.ended).toStrictEqual(undefined);
 
-  expect(gone.exited).toStrictEqual(true);
+    // The agent going after it came up is still an exit.
+    const gone = waitOf(
+      heard(tabs, 1, [past, up, { type: 'disconnected', turnId: '' }]),
+      1,
+    )!;
+
+    expect(gone.exited).toStrictEqual(true);
+    expect(gone.ended).toStrictEqual({ failure: 'exited' });
+
+    // A turn failed after it came up is a failed turn.
+    const turn = waitOf(
+      heard(tabs, 1, [past, up, prompt('t1'), failed('t1')]),
+      1,
+    )!;
+
+    expect(turn.ended).toStrictEqual({ failure: 'turn' });
+  }
+
+  expect(
+    failureOf(
+      waitOf(
+        heard(opened('a', 'b'), 1, [
+          past,
+          up,
+          { type: 'disconnected', turnId: '' },
+        ]),
+        1,
+      )!,
+    ),
+  ).toStrictEqual('exited');
+  expect(
+    failureOf(
+      waitOf(
+        heard(opened('a', 'b'), 1, [past, up, prompt('t1'), failed('t1')]),
+        1,
+      )!,
+    ),
+  ).toStrictEqual('turn');
 });

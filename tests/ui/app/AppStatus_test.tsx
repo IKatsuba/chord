@@ -812,3 +812,36 @@ describe('CHD-491 U2 tester: agent titles on the actual wire', () => {
     }
   });
 });
+
+test("a resumed session whose past has its agent's exit never tells the terminal main exited, with no key pressed (CHD-510)", () => {
+  const log: string[] = [];
+
+  return withWindow(
+    async (window) => {
+      await ready(window);
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await send(window, '/clear');
+      await ready(window);
+      await send(window, '/resume');
+      await window.shows('Resume a session');
+
+      const sent = statusReports(log).length;
+
+      await window.press('\r');
+      await window.shows('resumed · ');
+      await ready(window);
+      await until(
+        'the resumed title to be reported',
+        () => lastStatus(log)?.title === 'text',
+      );
+      expect(
+        statusReports(log)
+          .slice(sent)
+          .filter((status) => status.state === 'error'),
+      ).toStrictEqual([]);
+      expect(lastStatus(log)?.state).not.toBe('error');
+    },
+    { log },
+  );
+});

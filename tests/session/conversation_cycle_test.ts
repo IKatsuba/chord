@@ -29,6 +29,7 @@ import { turnCost } from '../../src/session/prices.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { Turn } from '../fixtures/fake_agent/turn.ts';
 import { SHELL } from '../fixtures/fake_agent/scenarios/shell.ts';
+import { LONG_SESSION_TITLE } from '../fixtures/fake_agent/scenarios/text.ts';
 import { PERMISSIONS } from '../fixtures/fake_agent/scenarios/permissions.ts';
 import {
   until,
@@ -865,6 +866,31 @@ test("the agent's own title for its session is kept as it comes and changes, non
   }
 });
 
+test('a title the agent gives at its start, before any prompt, and one longer than any row are kept as given (CHD-445)', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(
+    () =>
+      openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(undefined, '--title', 'Started named'),
+      }),
+    (event) => events.push(event),
+  );
+
+  try {
+    conversation.start();
+    await until(() => conversation.title === 'Started named');
+    conversation.send('titledlong');
+    await until(() => events.some((event) => event.type === 'result'));
+    expect(conversation.title).toStrictEqual(LONG_SESSION_TITLE);
+  } finally {
+    await conversation.close();
+    await rm(dir, { recursive: true });
+  }
+});
+
 describe('CHD-491 U2 tester: title ownership, reset and recorded state', () => {
   for (const cleared of [false, true]) {
     test(`resume preserves the ${cleared ? 'null-cleared fallback' : 'last usable own title'} despite nested and blank updates`, async () => {
@@ -1127,3 +1153,67 @@ test('a permission asked in a turn says when it came, as one between turns does,
     expect(asked).not.toHaveProperty('between');
     conversation.interrupt();
   }));
+
+describe('CHD-445 U1 tester: titles before prompts on every opening path', () => {
+  for (const method of ['new', 'load', 'resume'] as const) {
+    test(`${method} delivers its exact title before any prompt`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-start-title-'));
+      const events: ConversationEvent[] = [];
+      const title = `Review the parser — ${method}`;
+      let prompts = 0;
+      const conversation = new Conversation(
+        async () => {
+          const session = await openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--title',
+              title,
+              ...(method === 'resume' ? ['--resume-only', '--no-load'] : []),
+            ),
+            ...(method === 'new'
+              ? {}
+              : { resume: { sessionId: crypto.randomUUID(), cwd: dir } }),
+          });
+          const prompt = session.prompt.bind(session);
+
+          session.prompt = (...args) => {
+            prompts++;
+
+            return prompt(...args);
+          };
+
+          return session;
+        },
+        (event) => events.push(event),
+      );
+
+      try {
+        conversation.start();
+        await until(() => conversation.title === title);
+        expect(prompts).toBe(0);
+
+        // Loading replays its old prompts; only the next reply names the path.
+        events.length = 0;
+
+        conversation.send('opened');
+        await until(() => events.some((event) => event.type === 'result'));
+        expect(
+          JSON.parse(saidIn(events).replace(/^```json\n|\n```$/g, '')),
+        ).toMatchObject({ method: `session/${method}` });
+        expect(conversation.title).toBe(title);
+      } finally {
+        await conversation.close();
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+
+  test('an unconfigured fake remains untitled after a normal turn', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('text');
+      await until(() => events.some((event) => event.type === 'result'));
+      expect(conversation.title).toBeUndefined();
+    }));
+});

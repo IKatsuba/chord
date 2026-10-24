@@ -505,6 +505,33 @@ async function openTeam(
   return 'end_turn';
 }
 
+/** Opens `parser` and `docs`, each on a scenario that titles its session. */
+async function openTitled(turn: Turn): Promise<acp.StopReason> {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server in this session.');
+
+    return 'end_turn';
+  }
+
+  try {
+    await callChord(turn, client, 'open_agent', {
+      ...PARSER_ARGS,
+      prompt: 'titled',
+    });
+    await callChord(turn, client, 'open_agent', {
+      ...DOCS_ARGS,
+      prompt: 'retitled',
+    });
+    await turn.say('Waiting on parser and docs.');
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn';
+}
+
 /** Opens `other` on `CHILD_RUNTIME` and says so. */
 async function openOther(turn: Turn): Promise<acp.StopReason> {
   const client = await chordClient(turn);
@@ -529,6 +556,10 @@ export const AGENTS = {
   // A child on another runtime, where a test once opened a tab of it
   // (CHD-493).
   agentother: (turn) => openOther(turn),
+
+  // Opens `parser` on `titled` and `docs` on `retitled`, so each child
+  // names its own session, and the second renames it (CHD-445).
+  agentstitled: (turn) => openTitled(turn),
 
   // Opens `parser` and `docs`, then tells `parser` twice what changed,
   // the first once parser is at its first turn, the second once parser has

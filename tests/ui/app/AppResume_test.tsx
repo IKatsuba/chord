@@ -19,10 +19,16 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import stripAnsi from 'strip-ansi';
 import { join } from 'node:path';
 import { draw } from '../harness.tsx';
 import { openSession, type Session } from '../../../src/session/session.ts';
-import { readRecords } from '../../../src/session/sessions.ts';
+import {
+  earlierSessions,
+  readRecords,
+  summaryOf,
+} from '../../../src/session/sessions.ts';
+import type { RecordEntry } from '../../../src/session/record.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import { App } from '../../../src/ui/app/App.tsx';
 import { terminalOptions } from '../../../src/ui/app/renderer.tsx';
@@ -534,6 +540,414 @@ describe('CHD-493 U7 tester: legacy storage is never opened', () => {
           } finally {
             await rm(dir, { recursive: true });
           }
+        }
+      });
+    }
+  }
+});
+
+describe("an agent's title for a session in /resume and a resumed header (CHD-445)", () => {
+  const TITLE =
+    "Fix the tokenizer's handling of a quoted string at the end of a line, then rerun the printer tests";
+
+  /** The colour escape a frame's row draws `text` in. */
+  const paintOf = (frame: string, text: string) => {
+    const row = frame.split('\n').find((line) => line.includes(text)) ?? '';
+    // eslint-disable-next-line no-control-regex
+    const escapes = row.slice(0, row.indexOf(text)).match(/\x1b\[[0-9;]*m/g);
+
+    return escapes?.at(-1);
+  };
+
+  for (const columns of [80, 120]) {
+    test(`/resume names a session by its title after a child's name, a long one wrapped under its own start and highlighted whole, at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows('Resume a session');
+
+          const rows = window
+            .frame()
+            .split('\n')
+            .map((row) => stripAnsi(row));
+          const first = rows.findIndex((row) =>
+            row.includes('Fix the tokenizer'),
+          );
+          const start = rows[first]!.indexOf('Fix the tokenizer');
+          // The row's further lines: nothing before the title's column but
+          // the frame, and text from it.
+          const further: string[] = [];
+
+          for (const row of rows.slice(first + 1)) {
+            if (!/^│\s*$/.test(row.slice(0, start)) || row[start] === ' ') {
+              break;
+            }
+
+            further.push(row);
+          }
+
+          expect(further.length).toBeGreaterThan(0);
+          expect(
+            [rows[first]!, ...further]
+              .map((row) => row.slice(start).replace(/\s*│\s*$/, ''))
+              .join(' '),
+          ).toStrictEqual(TITLE);
+
+          const shown = rows.join('\n');
+
+          expect(shown).not.toContain('look at the tokenizer');
+          expect(shown).toContain('parser · Run the parser tests');
+          expect(shown).toContain('an untitled first prompt');
+
+          // The highlight is on every line of the wrapped row.
+          const tail = further
+            .at(-1)!
+            .slice(start)
+            .replace(/\s*│\s*$/, '');
+
+          expect(paintOf(window.frame(), tail)).toStrictEqual(
+            paintOf(window.frame(), 'Fix the tokenizer'),
+          );
+        },
+        {
+          columns,
+          rows: 40,
+          readRecords: (stateDir) => {
+            const cwd = join(stateDir, '..');
+            const record = (id: string, at: number, more: object) => ({
+              path: join(stateDir, `${id}.jsonl`),
+              sessionId: id,
+              agent: 'fake',
+              cwd,
+              lastUsedAt: Date.now() - at * 60_000,
+              prompt: 'look at the tokenizer',
+              ...more,
+            });
+
+            return Promise.resolve([
+              record('titled', 1, { title: TITLE }),
+              record('child', 2, {
+                parent: 'titled',
+                name: 'parser',
+                title: 'Run the parser tests',
+              }),
+              record('untitled', 3, { prompt: 'an untitled first prompt' }),
+            ]);
+          },
+        },
+      ));
+  }
+
+  for (const [columns, name] of [
+    [80, undefined],
+    [120, 'parser'],
+  ] as const) {
+    test(`a resumed session's header names it by its title${name === undefined ? '' : " after the child's name"}, wrapped under its own start, at ${columns} columns`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-app-'));
+      const sessions: Session[] = [];
+      const app = await draw(
+        <App
+          agent='fake'
+          cwd={dir}
+          stateDir={join(dir, 'state')}
+          agentCommand={fakeAgentCommand()}
+          resume={{
+            sessionId: crypto.randomUUID(),
+            cwd: dir,
+            lastUsedAt: Date.now() - 2 * 60 * 60_000,
+            prompt: 'look at the tokenizer',
+            title: TITLE,
+            ...(name === undefined ? {} : { name }),
+          }}
+          open={async (options) => {
+            const session = await openSession(options);
+
+            sessions.push(session);
+
+            return session;
+          }}
+        />,
+        { columns, rows: 40 },
+      );
+
+      try {
+        await until('the past', () => app.frame().includes('Hello, world.'));
+
+        const rows = stripAnsi(app.frame()).split('\n');
+        const at = rows.findIndex((row) => row.includes('resumed · '));
+        const start = rows[at]!.indexOf('resumed · ');
+        const said = [rows[at]!, rows[at + 1]!].map((row) =>
+          row.slice(start).trimEnd(),
+        );
+
+        expect(said.join(' ')).toStrictEqual(
+          `resumed · 2 hours ago · ${name === undefined ? '' : `${name} · `}${TITLE}`,
+        );
+        // Under its own start: nothing before it on the second line.
+        expect(rows[at + 1]!.slice(0, start).trim()).toStrictEqual('');
+        expect(app.frame()).not.toContain('look at the tokenizer');
+      } finally {
+        await app.unmount();
+
+        for (const session of sessions) {
+          await session.close();
+        }
+
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+
+  test('a title taller than the picker is read a line a press at 80×24, the picker no taller than with titles that fit, and a resize of the height shows it from its first line', () => {
+    const words = Array.from({ length: 160 }, (_, at) => `word${at}`);
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/resume');
+        await window.shows('Resume a session');
+
+        const height = () =>
+          stripAnsi(window.frame())
+            .split('\n')
+            .filter((row) => row.startsWith('│')).length;
+        const before = height();
+
+        await window.shows('word0');
+        expect(window.frame()).not.toContain('word159');
+        // Onto the tall row, then a line a press until its end is in sight.
+        await window.press('j');
+
+        for (
+          let press = 0;
+          press < 40 && !window.frame().includes('word159');
+          press++
+        ) {
+          await window.press('j');
+          expect(height()).toBeLessThanOrEqual(before);
+        }
+
+        expect(window.frame()).toContain('word159');
+        expect(window.frame()).not.toContain('word0 ');
+
+        // A resize of the height alone shows the row from its first line.
+        await window.resize({ rows: 30 });
+        await window.shows('word0 ');
+        expect(window.frame()).toContain('❯');
+      },
+      {
+        columns: 80,
+        rows: 24,
+        readRecords: (stateDir) => {
+          const cwd = join(stateDir, '..');
+          const record = (id: string, at: number, more: object) => ({
+            path: join(stateDir, `${id}.jsonl`),
+            sessionId: id,
+            agent: 'fake',
+            cwd,
+            lastUsedAt: Date.now() - at * 60_000,
+            prompt: 'a first prompt',
+            ...more,
+          });
+
+          return Promise.resolve([
+            record('short', 1, { title: 'Fix the tokenizer' }),
+            record('tall', 2, { title: words.join(' ') }),
+            record('after', 3, { title: 'docs · Fix the parser' }),
+          ]);
+        },
+      },
+    );
+  });
+});
+
+describe('CHD-445 U2 tester: an open resume picker keeps its title snapshot', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`reopen refreshes a renamed title after Esc at ${columns}×${rows}`, () => {
+      let title = 'First recorded title';
+      let reads = 0;
+
+      return withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows(title);
+
+          title = 'Newest recorded title';
+
+          await window.resize({ rows: rows + 1 });
+          expect(window.frame()).toContain('First recorded title');
+          expect(window.frame()).not.toContain(title);
+          expect(reads).toBe(1);
+          await window.press(ESC);
+          await send(window, '/resume');
+          await window.shows(title);
+          expect(window.frame()).not.toContain('First recorded title');
+          expect(reads).toBe(2);
+          await window.press(ESC);
+          expect(window.frame()).not.toContain('Resume a session');
+        },
+        {
+          columns,
+          rows,
+          readRecords: (stateDir) => {
+            reads++;
+
+            return Promise.resolve([
+              {
+                path: join(stateDir, 'earlier.jsonl'),
+                sessionId: 'earlier',
+                agent: 'fake',
+                cwd: join(stateDir, '..'),
+                lastUsedAt: Date.now() - 60_000,
+                prompt: 'Original prompt stays hidden',
+                title,
+              },
+            ]);
+          },
+        },
+      );
+    });
+  }
+});
+
+describe('CHD-445 U2 tester: resumed headers keep the title that was picked', () => {
+  for (const columns of [80, 120]) {
+    test(`a later fake rename leaves the resumed child header unchanged at ${columns} columns`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-header-title-'));
+
+      try {
+        await withWindow(
+          async (window) => {
+            await window.shows('parser · Picked title');
+            await send(window, 'titledfix');
+            await window.shows('Renamed.');
+            expect(stripAnsi(window.frame())).toContain(
+              'parser · Picked title',
+            );
+            expect(stripAnsi(window.frame())).not.toContain(
+              'resumed · Fix the parser',
+            );
+          },
+          {
+            columns,
+            rows: 40,
+            resume: {
+              sessionId: crypto.randomUUID(),
+              cwd: dir,
+              title: 'Picked title',
+              name: 'parser',
+              prompt: 'Original prompt',
+              lastUsedAt: Date.now() - 60_000,
+            },
+          },
+        );
+      } finally {
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+});
+
+describe('CHD-445 Q200 tester: task and child titles on resume', () => {
+  for (const task of [false, true]) {
+    for (const columns of [80, 120]) {
+      test(`${task ? 'a task keeps its caller description' : 'a child keeps its agent title after its name'} in the picker and resumed header at ${columns} columns`, async () => {
+        const dir = await mkdtemp(join(tmpdir(), 'chord-resume-title-'));
+        const path = join(dir, 'record.jsonl');
+        const id = crypto.randomUUID();
+        const name = task ? 'Run the parser tests' : 'parser';
+        const entries: RecordEntry[] = [
+          {
+            type: 'session',
+            version: 1,
+            sessionId: id,
+            agent: 'fake',
+            cwd: dir,
+            at: Date.now() - 60_000,
+            parent: 'parent-session',
+            name,
+            ...(task ? { task: 'task-q200' } : {}),
+          },
+          {
+            type: 'prompt',
+            turnId: 't1',
+            at: Date.now() - 60_000,
+            prompt: 'Original work',
+            images: 0,
+          },
+          {
+            type: 'update',
+            turnId: 't1',
+            update: {
+              sessionUpdate: 'session_info_update',
+              title: 'An earlier agent title',
+            },
+          },
+          {
+            type: 'update',
+            turnId: 't1',
+            update: {
+              sessionUpdate: 'session_info_update',
+              title: 'Final agent title',
+            },
+          },
+          {
+            type: 'result',
+            turnId: 't1',
+            result: { status: 'completed', stopReason: 'end_turn' },
+          },
+        ];
+        const text =
+          entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n';
+
+        try {
+          await writeFile(path, text);
+
+          const record = summaryOf(path, text)!;
+          const [choice] = earlierSessions([record], {
+            agent: 'fake',
+            cwd: dir,
+          });
+
+          expect(choice?.prompt).toBe(
+            `${name} · ${task ? 'Original work' : 'Final agent title'}`,
+          );
+          expect(choice?.resume.title).toBe(
+            task ? undefined : 'Final agent title',
+          );
+          await withWindow(
+            async (window) => {
+              await window.shows('resumed ·');
+              await window.shows('› Original work');
+
+              const header = stripAnsi(window.frame())
+                .split('\n')
+                .find((line) => line.includes('resumed ·'))!;
+
+              expect(header).toContain(
+                task ? name : `${name} · Final agent title`,
+              );
+              expect(header).not.toContain('An earlier agent title');
+
+              if (task) {
+                expect(header).not.toContain('Final agent title');
+                expect(header).not.toContain('Original work');
+              }
+            },
+            {
+              columns,
+              rows: 40,
+              agentCommand: fakeAgentCommand(undefined, '--resume-only'),
+              resume: choice!.resume,
+            },
+          );
+        } finally {
+          await rm(dir, { recursive: true });
         }
       });
     }

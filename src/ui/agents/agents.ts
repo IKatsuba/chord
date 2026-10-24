@@ -24,6 +24,11 @@ export interface AgentRow {
   readonly key: number;
   /** `main`, or the child's name. */
   readonly name: string;
+  /**
+   * The agent's own title for its session, on one line, beside the name;
+   * none while it has given none (CHD-445).
+   */
+  readonly title?: string | undefined;
   readonly runtime: string;
   /** The model as the status line names it; none until known. */
   readonly model?: string | undefined;
@@ -368,6 +373,15 @@ export interface LaidRow {
   readonly names: readonly { readonly tree: string; readonly text: string }[];
   /** The name column's width, branch included, for a line under it. */
   readonly nameWidth: number;
+  /**
+   * The title's first line, padded to its column; none where no row has a
+   * title and the column is not drawn (CHD-445).
+   */
+  readonly title?: string;
+  /** The title's further lines, padded to its column. */
+  readonly titles: readonly string[];
+  /** The title column's width; 0 where it is not drawn. */
+  readonly titleWidth: number;
   /** Its runtime and model. */
   readonly detail: string;
   /**
@@ -406,9 +420,10 @@ export interface AgentsLayout {
 }
 
 /**
- * Where the list's lines start while its picked row is taller than its
- * budget and read by line (CHD-471): the line at its top, for that row at
- * that width and limit; another row or size starts it again.
+ * Where the list's lines start while it is read by line (CHD-471): its
+ * picked row taller than its budget, or one picked on from such a row
+ * (CHD-445). The line at its top, for that row at that width and limit;
+ * another row or size starts it again.
  */
 export interface AgentsView {
   readonly key: number;
@@ -485,7 +500,16 @@ function laidRows(
     return { text: `${state.glyph} ${state.words}`, tone: state.tone };
   };
 
-  const detailAt = MARK_WIDTH + names + GAP.length;
+  // The agents' own titles in a column after the names, capped as the
+  // names are and wrapping inside it; none where no row has one, so the
+  // list is as it was (CHD-445). A folded lead's is its own.
+  const titles = Math.min(
+    Math.max(1, Math.floor(width / 3)),
+    widest(rows.map((row) => row.title ?? '')),
+  );
+
+  const detailAt =
+    MARK_WIDTH + names + GAP.length + (titles === 0 ? 0 : titles + GAP.length);
 
   for (const fit of FITS) {
     const runtimeOf = (row: AgentRow) =>
@@ -576,6 +600,10 @@ function laidRows(
       const lines = wrapped(row.name, nameRoom).map((line) =>
         pad(line, nameRoom),
       );
+      const titled =
+        titles === 0
+          ? []
+          : wrapped(row.title ?? '', titles).map((line) => pad(line, titles));
       // Under the branch, the tree goes on past a member that is not the last.
       const under = pad(row.branch === '├─' ? '│' : '', stringWidth(branch));
       const mark = markOf(row);
@@ -625,11 +653,14 @@ function laidRows(
         name: lines[0]!,
         names: lines.slice(1).map((text) => ({ tree: under, text })),
         nameWidth: names,
+        ...(titles === 0 ? {} : { title: titled[0]! }),
+        titles: titled.slice(1),
+        titleWidth: titles,
         detail: isBeside ? pad(detail, measured.detail) : detail,
         ...(isBeside ? { state } : {}),
         ...(isBeside && mark !== undefined ? { unseen: mark } : {}),
         below,
-        height: Math.max(lines.length, 1 + below.length),
+        height: Math.max(lines.length, titled.length, 1 + below.length),
       };
     });
   }
@@ -648,6 +679,40 @@ export function agentsHeight(
   return laidRows(rows, { width, focused: false, now }).reduce(
     (sum, row) => sum + row.height,
     0,
+  );
+}
+
+/**
+ * Whether a picked row `height` lines tall is read by line: when it would
+ * not be in sight whole beside the `… +N more` line, the limit less one
+ * while rows of `total` lines are out of sight, the whole limit while none
+ * are (CHD-445, the picker's exact fit in CHD-471's rule).
+ */
+function tall(height: number, total: number, room: number): boolean {
+  return height > (total > room ? room - 1 : room);
+}
+
+/**
+ * Where a window on the list read by line starts once its pick is a row
+ * that fits: the least move from `top` that brings row `at` whole into
+ * sight, so the rows above stay in sight as far as they fit (CHD-445,
+ * CHD-471's least move).
+ */
+function wholeTop(
+  laid: readonly LaidRow[],
+  at: number,
+  room: number,
+  top: number,
+): number {
+  const first = laid.slice(0, at).reduce((sum, row) => sum + row.height, 0);
+  const total = laid.reduce((sum, row) => sum + row.height, 0);
+
+  return Math.min(
+    Math.max(0, total - room),
+    Math.max(
+      0,
+      Math.min(first, Math.max(top, first + laid[at]!.height - room)),
+    ),
   );
 }
 
@@ -734,9 +799,24 @@ export function agentsLayout(
     rows.findIndex((row) => row.picked),
   );
 
-  if (focused && laid[at] !== undefined && laid[at].height > room) {
+  const isTall =
+    focused && laid[at] !== undefined && tall(laid[at].height, total, room);
+  // Read on by line from a tall row onto one that fits, as `enteredView`
+  // gives it a window (CHD-445).
+  const readOn =
+    focused &&
+    !isTall &&
+    laid[at] !== undefined &&
+    view !== undefined &&
+    view.key === laid[at].row.key &&
+    view.width === width &&
+    view.limit === room;
+
+  if (isTall || readOn) {
     // Read by line: a window of the list's lines, no `… +N more`.
-    const top = windowTop(laid, at, room, width, view);
+    const top = isTall
+      ? windowTop(laid, at, room, width, view)
+      : wholeTop(laid, at, room, view!.top);
     const bottom = top + room;
     let first = 0;
 
@@ -853,8 +933,9 @@ export function scrolledView(
   const laid = laidRows(rows, { width, focused: true, now });
   const at = rows.findIndex((row) => row.picked);
   const room = Math.max(1, limit);
+  const total = laid.reduce((sum, row) => sum + row.height, 0);
 
-  if (at < 0 || laid[at]!.height <= room) {
+  if (at < 0 || !tall(laid[at]!.height, total, room)) {
     return undefined;
   }
 
@@ -877,14 +958,39 @@ export function scrolledView(
 export function enteredView(
   rows: readonly AgentRow[],
   top: number,
-  { limit, width, now }: { limit: number; width: number; now: number },
+  {
+    limit,
+    width,
+    now,
+    reading = false,
+  }: {
+    limit: number;
+    width: number;
+    now: number;
+    /** The list was read by line, so a row that fits is read on that way. */
+    reading?: boolean;
+  },
 ): AgentsView | undefined {
   const laid = laidRows(rows, { width, focused: true, now });
   const at = rows.findIndex((row) => row.picked);
   const room = Math.max(1, limit);
+  const total = laid.reduce((sum, row) => sum + row.height, 0);
 
-  if (at < 0 || laid[at]!.height <= room) {
+  if (at < 0 || total <= room) {
     return undefined;
+  }
+
+  if (!tall(laid[at]!.height, total, room)) {
+    // Read on from a window by line: the least move brings it whole into
+    // sight, the rows above kept as far as they fit (CHD-445).
+    return reading
+      ? {
+          key: rows[at]!.key,
+          width,
+          limit: room,
+          top: wholeTop(laid, at, room, top),
+        }
+      : undefined;
   }
 
   const first = laid.slice(0, at).reduce((sum, row) => sum + row.height, 0);

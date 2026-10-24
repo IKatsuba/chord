@@ -242,7 +242,11 @@
  * the transports it names past stdio, `none` for stdio alone. `titled` names
  * its session in a `session_info_update`, and `retitled` names it twice
  * (CHD-491); `titledlook` and `titledfix` give those two names one prompt
- * each.
+ * each; `titledlong` names it at length, and `agentstitled` opens two
+ * children that name their own (CHD-445). `--title <text>`
+ * (`CHORD_FAKE_TITLE`) names every session at its start, before any prompt;
+ * `tasktitled` starts a task on `titledlong`, whose title chord shows
+ * nowhere (Q200).
  */
 import process from 'node:process';
 import { Readable, Writable } from 'node:stream';
@@ -282,6 +286,7 @@ import {
   ECHO_MESSAGES,
   SAID,
   STEP_MS,
+  TITLE_AT_START,
   TOKENS_ONLY,
 } from './options.ts';
 import { COMPACTION } from './scenarios/compaction.ts';
@@ -385,6 +390,7 @@ const SCENARIOS = [
   'mainbetweentwice',
   'taskbetween',
   'taskstays',
+  'tasktitled',
   'taskstayshold',
   'tasktillsteered',
   'teamtask',
@@ -398,6 +404,7 @@ const SCENARIOS = [
   'retitled',
   'titledlook',
   'titledfix',
+  'titledlong',
   'costwait',
   'costwaitlate',
   'long',
@@ -489,6 +496,7 @@ const SCENARIOS = [
   'agentexit',
   'agentfail',
   'agenttitled',
+  'agentstitled',
   'taskeffort',
   'taskmaxeffort',
   'agenteffort',
@@ -847,6 +855,26 @@ function advertiseCommands(client: Client, sessionId: string): void {
   );
 }
 
+/** Names the session `TITLE_AT_START` just after the reply, when given. */
+function titleAtStart(client: Client, sessionId: string): void {
+  if (TITLE_AT_START === undefined) {
+    return;
+  }
+
+  setTimeout(
+    () =>
+      void client
+        .notify('session/update', {
+          sessionId,
+          update: {
+            sessionUpdate: 'session_info_update',
+            title: TITLE_AT_START,
+          },
+        })
+        .catch(() => {}),
+  );
+}
+
 /**
  * Plays a prompt as a turn of the session's: the one `session/prompt` asks
  * for, or one a steer started with no turn running, as Codex's adapter does,
@@ -1149,6 +1177,7 @@ const connection = acp
     created.push({ sessionId, cwd: params.cwd });
     // The client hears of the commands only once the session is already up.
     advertiseCommands(client, sessionId);
+    titleAtStart(client, sessionId);
 
     return {
       sessionId,
@@ -1186,6 +1215,7 @@ const connection = acp
     }
 
     advertiseCommands(client, sessionId);
+    titleAtStart(client, sessionId);
 
     return {
       ...sessionModes(),
@@ -1212,6 +1242,7 @@ const connection = acp
     cwds.set(sessionId, params.cwd);
     loadMarks.set(sessionId, crypto.randomUUID().slice(0, 8));
     advertiseCommands(client, sessionId);
+    titleAtStart(client, sessionId);
 
     if (CYCLE_ON_RESUME) {
       runCycle(client, sessionId);

@@ -29,6 +29,13 @@ export interface Resume {
   readonly prompt?: string | undefined;
   /** An agent another started's name or task, where its record says. */
   readonly name?: string | undefined;
+  /** The agent's own title for it, where its record says (CHD-445). */
+  readonly title?: string | undefined;
+  /**
+   * Whether it is a task's, which keeps its spawn_task name and shows its
+   * agent's title nowhere, opened again as main too (CHD-445, Q200).
+   */
+  readonly task?: boolean | undefined;
 }
 
 /** Why there is nothing to resume: a sentence to show the person. */
@@ -51,12 +58,19 @@ export interface SessionRecord {
   readonly parent?: string;
   /** An agent another started's: its name, or its task's description. */
   readonly name?: string;
+  /**
+   * The agent's own title for it, on one line: the last a
+   * `session_info_update` gave it (CHD-445).
+   */
+  readonly title?: string;
+  /** A task agent's, whose agent's title is shown nowhere (Q200). */
+  readonly task?: boolean;
 }
 
 /**
  * Every session record in `stateDir` a prompt was sent in. Only the first
- * line and the prompts are parsed, as a list needs no more; the past is read
- * when a session is opened.
+ * line, the prompts and the agent's titles are parsed, as a list needs no
+ * more; the past is read when a session is opened.
  */
 export async function readRecords(stateDir: string): Promise<SessionRecord[]> {
   const dir = recordsDir(stateDir);
@@ -109,6 +123,10 @@ export function summaryOf(
     return undefined;
   }
 
+  // A task is known by its spawn_task title alone, as its caller named it,
+  // not by its agent's own (the owner, Q200).
+  const title = header.task === undefined ? recordedTitle(lines) : undefined;
+
   return {
     path,
     sessionId: header.sessionId,
@@ -118,7 +136,61 @@ export function summaryOf(
     prompt: promptLine(first.prompt),
     ...(header.parent === undefined ? {} : { parent: header.parent }),
     ...(header.name === undefined ? {} : { name: header.name }),
+    ...(title === undefined ? {} : { title }),
+    ...(header.task === undefined ? {} : { task: true }),
   };
+}
+
+/**
+ * The agent's title for a session as its record's `lines` leave it, as the
+ * conversation keeps it (CHD-491): the last `session_info_update` that gave
+ * one, `null` taking it back and a blank one left out; a subagent's is not
+ * the session's. Only the lines that name the update are parsed.
+ */
+function recordedTitle(lines: readonly string[]): string | undefined {
+  let title: string | undefined;
+
+  for (const line of lines) {
+    if (
+      !line.startsWith('{"type":"update"') ||
+      !line.includes('"session_info_update"')
+    ) {
+      continue;
+    }
+
+    const [entry] = parseRecord(line);
+
+    if (
+      entry?.type !== 'update' ||
+      entry.subagentId !== undefined ||
+      entry.update.sessionUpdate !== 'session_info_update'
+    ) {
+      continue;
+    }
+
+    if (entry.update.title === null) {
+      title = undefined;
+    } else if (
+      typeof entry.update.title === 'string' &&
+      entry.update.title.trim() !== ''
+    ) {
+      title = titleLine(entry.update.title);
+    }
+  }
+
+  return title;
+}
+
+/**
+ * A title as chord draws it: on one line, its whitespace folded as a
+ * prompt's is, and its control characters left out, so an escape sequence
+ * in it is text and not acted on (CHD-445).
+ */
+export function titleLine(title: string): string {
+  return title
+    .replaceAll(/\s+/g, ' ')
+    .replaceAll(/\p{Cc}/gu, '')
+    .trim();
 }
 
 function latest(records: readonly SessionRecord[]) {
@@ -213,18 +285,22 @@ export function earlierSessions(
 }
 
 /**
- * What a session is called where chord names it: its first prompt, on one
- * line, after the name of an agent another started, as what it was asked
- * says little of which one it is.
+ * What a session is called where chord names it: the agent's title for it,
+ * or its first prompt, on one line, after the name of an agent another
+ * started, as what it was asked says little of which one it is (CHD-445).
  */
 export function sessionLabel({
   prompt,
   name,
+  title,
 }: {
   readonly prompt: string;
   readonly name?: string | undefined;
+  readonly title?: string | undefined;
 }): string {
-  return name === undefined ? prompt : `${name} · ${prompt}`;
+  const said = title ?? prompt;
+
+  return name === undefined ? said : `${name} · ${said}`;
 }
 
 /**
@@ -322,6 +398,8 @@ function resumeOf(record: SessionRecord): Resume {
     lastUsedAt: record.lastUsedAt,
     prompt: record.prompt,
     ...(record.name === undefined ? {} : { name: record.name }),
+    ...(record.title === undefined ? {} : { title: record.title }),
+    ...(record.task === true ? { task: true } : {}),
   };
 }
 

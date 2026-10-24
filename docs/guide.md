@@ -61,14 +61,17 @@ Each chord process runs one main session with its children. For sessions
 side by side, run chord in separate terminal panes.
 
 Inside chord, `/resume` lists this agent's earlier sessions in this
-directory, newest first, each with when it was last used and its first
-prompt, after its name for an agent another agent started. Enter replaces
-the main session with the highlighted one; Esc leaves things as they were.
-A session open as a child says `open now`; Enter picks it instead of
-opening it again. ctrl+a lists every directory's, each row naming its
-directory from `~`, and ctrl+a again goes back to this one. Settings, MCP
-servers and files stay tied to this directory, so chord gives a command
-to open a session from another directory where it works. For another agent's sessions, run `chord <agent>` and use `/resume`.
+directory, newest first, with when each was last used and its title, or
+first prompt if untitled, after a child's name. Labels wrap, never cut;
+↑ ↓ read a row taller than the picker a line per press before moving on.
+`❯` stays on its first line; edge arrows mark more above or below. The
+picker stays within its room. Enter replaces main with the highlighted
+session; Esc leaves it alone. A child open now says `open now`; Enter picks
+it instead. ctrl+a lists every directory's, with paths from `~`; ctrl+a
+again returns here. Each list opens from the top. Settings, MCP servers
+and files stay tied here, so chord gives a command to open another
+directory's session where it works. For another agent's sessions, run
+`chord <agent>` and use `/resume`.
 
 `chord --resume` with no id opens the same picker before any agent starts,
 as `claude --resume` does; Enter opens what it picks, from any directory,
@@ -199,8 +202,10 @@ lists its values and Enter on a value sets it.
 Each session's transcript opens with a header: Chorded's mark in its
 gradient, drawn in half blocks, and beside it chord's version, the agent and
 the model the session started on, its directory and the keys to `?` and
-`/help`; a resumed session's says when it was last used and its first
-prompt. It stands at the top, and the conversation grows down from it;
+`/help`; a resumed session's adds `resumed · <age> · <title>`, a child's
+name before the title, or its first prompt if untitled. Titles wrap without
+cutting. The picker and header keep the title read when opened. The
+conversation grows down from the header;
 once it fills the window the header scrolls away, and `home` brings it back.
 
 Claude's work after a background task and codebuddy's unasked turns show as
@@ -450,7 +455,7 @@ record with `app=chord` covers main and its children.
 Its `title` names the main session, even with a child picked:
 the agent's own session title, updated when it renames the session and
 restored on resume. Until the agent gives a title, it uses the first prompt
-on one line (`!ls` for that shell command), as `/resume` still shows it.
+on one line (`!ls` for that shell command), as `/resume` does.
 With neither, the title is absent; `/clear` resets it.
 The title takes at most 192 UTF-8 bytes (256 in base64 on the wire).
 The first state present wins: `blocked`, `error`, `working`, `done`, `idle`.
@@ -640,9 +645,10 @@ name, that one's, starting it briefly to read them if no session of it is
 open;
 `list_sessions` names the main session, its id, runtime, model and open
 long-lived agents. `spawn_task` starts a task agent: another agent, on any
-runtime chord knows and a model it offers, does one job. Its work
-draws in its parent's turn as a subagent's block does, `Agent(<name>) ·
-codex · gpt-5.3-codex`. Its ended block shows reported tokens and cost:
+runtime chord knows and a model it offers, does one job. Its caller's title
+names it; its agent's session title is never shown, even resumed as main.
+Its work draws in its parent's turn as a subagent's block does,
+`Agent(<name>) · codex · gpt-5.3-codex`. Its ended block shows reported tokens and cost:
 `Done (5 tool uses · 2.0k tokens · $0.0125 · 13s)`; unreported parts are
 left out. In a group such as `Running 2 agents…`, a row that does not fit
 wraps behind `│`, keeping its model, tokens, cost, tool uses and time.
@@ -666,9 +672,13 @@ be up.
 `open_agent` opens a long-lived agent the same way, with the prompt as its
 first turn, a message from `main`. While a session has children,
 a list of its agents sits under the status line, `main` and each child in
-the order it opened, each child in a colour of its own, with its runtime,
-model, the effort it is on (`open_agent` takes one as `spawn_task` does)
-and state: `● permission 17s`, `✻ working 41s`, `◦ idle 3m`,
+the order it opened, each child in a colour of its own. Session titles
+stand between names and runtimes in a column at most a third of the width,
+wrapped without cutting; with no titles, the column is absent. Whitespace
+is folded to spaces and escapes are not acted on. A rename updates in
+place with no notice; team members and folded leads show their own titles.
+Each row has its runtime, model, effort (`open_agent` takes one as
+`spawn_task` does) and state: `● permission 17s`, `✻ working 41s`, `◦ idle 3m`,
 `✗ exited` or `✗ failed to start`. Asking counts from the request, working
 from the turn's start, idle from when it stopped. Unseen news is a separate
 column: `✗ turn failed`, `✓ new reply` or `← new message`, cleared when
@@ -680,9 +690,9 @@ it uses dimmed green, keeping it apart from the permission warning's
 yellow. `idle`, `✓ new reply` and `← new message` are dim; a permission
 keeps its warning colour. `/team show` uses the same colours.
 As room narrows, effort, model and the mark's words give way in that order;
-its glyph stays. Names and state words wrap without cutting, their lines
-counted toward the list's limit. In a short window, the list folds down to
-one agent row and `… +N more`, staying there until the transcript has rows
+its glyph stays. Names, titles and state words wrap without cutting, their
+lines counted toward the list's limit. In a short window, the list folds
+down to one agent row and `… +N more`, staying there until the transcript has rows
 again. The background summary stays whole. ↑ ↓ scroll a row taller than
 the list by line before moving on. ↓ on an empty prompt that is not walking
 history moves into the list, where ↑ ↓ or j k pick; Enter, Esc or ↑ from

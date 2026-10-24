@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › titledlong
+
+ ⏺ Named at length.
+
+ › agentstitled
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  titled
+
+ ⏺ Open(docs) · fake
+   ⎿  retitled
+
+ ⏺ Waiting on parser and docs.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ❯ main    Find out why the           fake  ◦ idle 35s
+            tokenizer drops the
+            closing quote of a string
+  ↓         at the end of a line,

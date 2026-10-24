@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › titledlong
+
+ ⏺ Named at length.
+
+ › agentstitled
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  titled
+
+ ⏺ Open(docs) · fake
+   ⎿  retitled
+
+ ⏺ Waiting on parser and docs.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ↑         and have the diff
+            reviewed before anything
+            else in the parser
+  ↓         changes

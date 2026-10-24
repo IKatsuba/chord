@@ -1,6 +1,6 @@
 import process from 'node:process';
 import { useTerminalDimensions } from '@opentui/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import wrapAnsi from 'wrap-ansi';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
@@ -66,10 +66,16 @@ import {
   choiceKey,
   initialChoice,
   modelChoices,
+  fromFirstLine,
+  lineKey,
+  linedRows,
+  oneLineRows,
+  openLineView,
   openView,
   optionChoices,
   type PickerChoice,
   pickerKey,
+  pickerLayout,
   pickerRows,
   sessionChoices,
   valueChoices,
@@ -684,13 +690,44 @@ function PickerList({
   /** Hears the choice each move highlights. */
   onMove?: (id: string) => void;
 }) {
-  const [view, setView] = useState(() => openView(choices, rows));
-  const shown = pickerRows(choices, view, rows);
+  const { width: columns } = useTerminalDimensions();
+  const lines = pickerLayout(choices, rows, columns);
+  const heights = lines?.map((each) => each.length);
+  const [view, setView] = useState(() =>
+    heights === undefined
+      ? openView(choices, rows)
+      : openLineView(choices, heights, rows),
+  );
   const { permission } = useColours();
+  const laidAt = useRef(`${columns}x${rows}`);
+
+  // A resize, of either side, lays the labels out again: the highlighted
+  // row shows from its first line (CHD-445).
+  useEffect(() => {
+    const at = `${columns}x${rows}`;
+
+    if (laidAt.current !== at) {
+      laidAt.current = at;
+
+      if (heights !== undefined) {
+        setView((was) => fromFirstLine(was, heights, rows));
+      }
+    }
+  }, [columns, heights, rows]);
+
+  // Rows of one line, or labels laid into lines, a row taller than the
+  // room read a line a press (docs/design/CHD-445.md).
+  const shown =
+    lines === undefined
+      ? oneLineRows(pickerRows(choices, view, rows))
+      : linedRows(choices, lines, view, rows);
 
   usePress(
     (input, key) => {
-      const step = pickerKey(view, choices.length, rows, input, key);
+      const step =
+        heights === undefined
+          ? pickerKey(view, choices.length, rows, input, key)
+          : lineKey(view, heights, rows, input, key);
 
       if (step?.type === 'move') {
         setView(step.view);
@@ -713,14 +750,19 @@ function PickerList({
 
   return (
     <box marginTop={1} flexDirection='column'>
-      {shown.rows.map(({ choice, highlighted, number, edge }) => (
-        <box key={choice.value} flexDirection='row'>
-          <ChoiceIndicator isSelected={highlighted} />
-          {edge !== undefined && <Gutter dimColor>{edge}</Gutter>}
-          <text {...CUT} {...(highlighted ? fg(permission) : {})}>
-            {`${number} `}
-            <Ansi text={choice.label} />
-          </text>
+      {shown.rows.map(({ choice, highlighted, number, lines: drawn }) => (
+        <box key={choice.value} flexDirection='column'>
+          {drawn.map(({ text, first, edge }, at) => (
+            <box key={at} flexDirection='row'>
+              <ChoiceIndicator isSelected={highlighted && first} />
+              {edge !== undefined && <Gutter dimColor>{edge}</Gutter>}
+              {/* Every line of a wrapped label takes the highlight. */}
+              <text {...CUT} {...(highlighted ? fg(permission) : {})}>
+                {first ? `${number} ` : ' '.repeat(number.length + 1)}
+                <Ansi text={text} />
+              </text>
+            </box>
+          ))}
         </box>
       ))}
       {shown.hidden > 0 && (

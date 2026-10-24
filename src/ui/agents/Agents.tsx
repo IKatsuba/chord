@@ -152,6 +152,9 @@ export function AgentsList({
                     {gutter(beside)}
                     {laid.branch && <span attributes={DIM}>{laid.branch}</span>}
                     {name(laid.name)}
+                    {laid.title !== undefined && (
+                      <Ansi text={`  ${laid.title}`} />
+                    )}
                     <span attributes={DIM}>
                       <Ansi text={`  ${laid.detail}`} />
                     </span>
@@ -169,9 +172,10 @@ export function AgentsList({
                 );
               }
 
-              // Under the name its next line, or as many spaces, then what
-              // went under the detail.
+              // Under the name its next line, or as many spaces, then the
+              // title's, then what went under the detail.
               const under = laid.names[at - 1];
+              const title = laid.titles[at - 1];
               const below = laid.below[at - 1] ?? [];
 
               return (
@@ -185,6 +189,12 @@ export function AgentsList({
                       {name(under.text)}
                     </>
                   )}
+                  {laid.titleWidth > 0 &&
+                    (title !== undefined || below.length > 0) && (
+                      <Ansi
+                        text={`  ${title ?? ' '.repeat(laid.titleWidth)}`}
+                      />
+                    )}
                   {below.length > 0 && '  '}
                   {below.map((run, index) => toned(run, String(index)))}
                 </text>

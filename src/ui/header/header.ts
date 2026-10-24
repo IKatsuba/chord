@@ -3,6 +3,7 @@
  * docs/design/CHD-201.md settles it: how the mark is coloured on this
  * terminal, and the lines beside it.
  */
+import wrapAnsi from 'wrap-ansi';
 import { cutPath } from '../pickers/mcp.ts';
 import { lastUsed } from '../pickers/picker.ts';
 import type { MarkTones } from '../theme/theme.ts';
@@ -76,6 +77,11 @@ export interface HeaderFacts {
         readonly lastUsedAt?: number | undefined;
         /** Its first prompt, on one line, where its past holds one. */
         readonly title?: string | undefined;
+        /**
+         * Whether `title` is the agent's own title for it, which wraps
+         * under its own start rather than being cut (CHD-445).
+         */
+        readonly titled?: boolean | undefined;
       }
     | undefined;
 }
@@ -84,7 +90,8 @@ export interface HeaderFacts {
  * The lines beside the mark, for a text column `width` cells wide at `now`.
  * The directory is cut from the left, at a `/`; the other
  * lines are cut at the right by the component, a resumed session's title
- * first, as it goes last.
+ * first, as it goes last; an agent's own title wraps under its own start,
+ * at its spaces, a word broken only where it alone is wider (CHD-445).
  */
 export function headerLines(
   facts: HeaderFacts,
@@ -120,5 +127,17 @@ export function headerLines(
     (part) => part !== undefined && part !== '',
   );
 
-  return [...lines, [{ text: said.join(' · ') }]];
+  if (resumed.titled !== true) {
+    return [...lines, [{ text: said.join(' · ') }]];
+  }
+
+  return [
+    ...lines,
+    ...wrapAnsi(said.join(' · '), Math.max(1, width), {
+      hard: true,
+      trim: true,
+    })
+      .split('\n')
+      .map((line) => [{ text: line }]),
+  ];
 }

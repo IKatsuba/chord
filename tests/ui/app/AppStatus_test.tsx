@@ -722,7 +722,7 @@ describe('CHD-491 U2 tester: agent titles on the actual wire', () => {
           expect(lastStatus(log)?.title).toBeUndefined();
           await send(window, '/resume');
           await window.shows('Resume a session');
-          await window.shows('Fallback main title');
+          await window.shows('Persisted own title');
           await window.press('\r');
           await until(
             'last own title restored on resume',

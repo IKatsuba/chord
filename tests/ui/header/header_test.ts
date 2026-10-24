@@ -140,3 +140,26 @@ test('a resumed session says only what is known of it', () => {
     texts(headerLines({ ...FACTS, resumed: { title: 'hello' } }, 80, NOW))[4],
   ).toStrictEqual('resumed · hello');
 });
+
+test("an agent's own title for a resumed session wraps under its own start at its spaces, a path moved whole, where a first prompt is cut (CHD-445)", () => {
+  const title =
+    'Find out why the tokenizer drops the closing quote, write a test in tests/parse/tokenize_test.ts that fails';
+  const lines = (titled: boolean) =>
+    texts(
+      headerLines(
+        {
+          ...FACTS,
+          resumed: { lastUsedAt: NOW - 2 * HOUR, title, titled },
+        },
+        50,
+        NOW,
+      ),
+    ).slice(4);
+
+  expect(lines(true)).toStrictEqual([
+    'resumed · 2 hours ago · Find out why the tokenizer',
+    'drops the closing quote, write a test in',
+    'tests/parse/tokenize_test.ts that fails',
+  ]);
+  expect(lines(false)).toStrictEqual([`resumed · 2 hours ago · ${title}`]);
+});

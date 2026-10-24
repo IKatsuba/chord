@@ -122,6 +122,14 @@ function valueOf(flag: string, variable: string): string | undefined {
 }
 
 /**
+ * `--title <text>`, or `CHORD_FAKE_TITLE`: every session the fake opens,
+ * loads or resumes names itself `<text>` in a `session_info_update` just
+ * after the reply, before any prompt, as an agent that titles a session of
+ * its own accord does (CHD-445). None when not given, as auggie sends none.
+ */
+export const TITLE_AT_START = valueOf('--title', 'CHORD_FAKE_TITLE');
+
+/**
  * `--dimcode-permission <value>`, or `CHORD_FAKE_DIMCODE_PERMISSION`: every
  * session offers dimcode's `permission` config option, `read-only`,
  * `workspace-write` or `full-access`, starting at the value given (CHD-434).

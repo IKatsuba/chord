@@ -18,6 +18,7 @@ import type { OpenSession, Starting } from '../../session/conversation.ts';
 import { openSession } from '../../session/session.ts';
 import {
   openSessionLabel,
+  sessionLabel,
   readRecords as readSessionRecords,
   type Resumable,
   type Resume,
@@ -1178,16 +1179,29 @@ export function App({
                           helpKey: hintKey(state.keys, 'help:toggle'),
                           resumed: state.resumed && {
                             lastUsedAt: state.resumed.lastUsedAt,
-                            // A child is known by its name, as its first
+                            // The agent's title, after a child's name, as
+                            // its /resume row said (CHD-445). Without one, a
+                            // child is known by its name, as its first
                             // prompt is its parent's; an agent's replay is
                             // all there is of a session chord has no record
                             // of.
-                            title:
-                              state.resumed.name ??
-                              state.resumed.prompt ??
-                              (firstPrompt?.kind === 'user'
-                                ? promptLine(firstPrompt.text)
-                                : undefined),
+                            ...(state.resumed.title === undefined
+                              ? {
+                                  title:
+                                    state.resumed.name ??
+                                    state.resumed.prompt ??
+                                    (firstPrompt?.kind === 'user'
+                                      ? promptLine(firstPrompt.text)
+                                      : undefined),
+                                }
+                              : {
+                                  title: sessionLabel({
+                                    prompt: state.resumed.prompt ?? '',
+                                    name: state.resumed.name,
+                                    title: state.resumed.title,
+                                  }),
+                                  titled: true,
+                                }),
                           },
                         }}
                         columns={columns}

@@ -302,7 +302,7 @@ describe('CHD-493 U11 tester: resumed sessions keep team run numbers', () => {
 
           for (
             let row = 0;
-            !/❯ \d+\. .* {2}team\s*│/.test(window.frame());
+            !/❯\s+\d+\. .* {2}team\s*│/.test(window.frame());
             row++
           ) {
             expect(row).toBeLessThan(12);

@@ -1,10 +1,16 @@
 import { expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import {
   choiceKey,
+  choiceLines,
   CURRENT_MARK,
   DIRECTORY_WIDTH,
   initialChoice,
   lastUsed,
+  fromFirstLine,
+  lineKey,
+  linedRows,
+  openLineView,
   type ModelChoice,
   modelChoices,
   modelToAsk,
@@ -12,6 +18,8 @@ import {
   optionChoices,
   type PickerKey,
   pickerKey,
+  pickerLayout,
+  pickerLines,
   pickerRows,
   type PickerView,
   sessionChoices,
@@ -211,8 +219,8 @@ test("/resume's rows line the prompts up after when each was used", () => {
   );
 
   expect(choices).toStrictEqual([
-    { key: 's1', label: '2 minutes ago  fix the build', value: '0' },
-    { key: 's2', label: '3 days ago     add a test', value: '1' },
+    { key: 's1', label: '2 minutes ago  fix the build', hang: 15, value: '0' },
+    { key: 's2', label: '3 days ago     add a test', hang: 15, value: '1' },
   ]);
   // None is in use, so the highlight starts on the newest.
   expect(initialChoice(choices)).toStrictEqual(0);
@@ -367,4 +375,255 @@ test('a box that ends at its last choice leaves on ↓ or j there, and still wra
   });
   // A box alone, Decline its one choice, leaves at once.
   expect(choiceKey('j', key, 0, 1, true)).toStrictEqual({ leave: true });
+});
+
+test('a /resume label wider than its row wraps at its spaces under its own start, a word broken only where it alone is wider; a choice that does not hang stays one line (CHD-445)', () => {
+  const [row] = sessionChoices(
+    [
+      {
+        resume: { sessionId: 's1', cwd: '/work' },
+        lastUsedAt: '2026-10-05T11:58:00.000Z',
+        prompt: 'Fix the tokenizer handling of a quoted string at the end',
+      },
+    ],
+    NOW,
+  );
+
+  expect(choiceLines(row!, 40)).toStrictEqual([
+    '2 minutes ago  Fix the tokenizer',
+    '               handling of a quoted',
+    '               string at the end',
+  ]);
+  expect(choiceLines(row!, 200)).toStrictEqual([row!.label]);
+  expect(
+    choiceLines(
+      { key: 'x', label: 'abc  ' + 'z'.repeat(12), hang: 5, value: 'x' },
+      10,
+    ),
+  ).toStrictEqual(['abc  zzzzz', '     zzzzz', '     zz']);
+  expect(
+    choiceLines(
+      { key: 'm', label: 'a model name past the edge', value: 'm' },
+      5,
+    ),
+  ).toStrictEqual(['a model name past the edge']);
+});
+
+test("a row taller than the picker is read a line a press while highlighted, the view moving the least it must, and no '+N more' then (CHD-445)", () => {
+  // As the design's 80×24 mock: row 2 wraps to 8 lines in a budget of 6.
+  const lines = [
+    ['Fix the tokenizer'],
+    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
+    ['docs · Fix the parser'],
+  ];
+  const heights = lines.map((each) => each.length);
+  const choices = lines.map((_, index) => ({
+    key: String(index),
+    label: String(index),
+    value: String(index),
+  }));
+  const down = { upArrow: false, downArrow: true, return: false, shift: false };
+  const up = { ...down, upArrow: true, downArrow: false };
+  const drawn = (view: PickerView) => {
+    const shown = linedRows(choices, lines, view, 6);
+
+    return [
+      ...shown.rows.flatMap((row) =>
+        row.lines.map(
+          (line) =>
+            `${line.edge ?? ''}${row.highlighted && line.first ? '❯' : ' '}${line.first ? row.number : '  '} ${line.text}`,
+        ),
+      ),
+      ...(shown.hidden > 0 ? [`+${shown.hidden}`] : []),
+    ];
+  };
+
+  // Every view, its `… +N more` line counted, stays within the budget.
+  const step = (view: PickerView, key: PickerKey) => {
+    const moved = lineKey(view, heights, 6, '', key);
+
+    assert(moved?.type === 'move');
+    expect(drawn(moved.view).length).toBeLessThanOrEqual(6);
+
+    return moved.view;
+  };
+
+  let view = openLineView(choices, heights, 6);
+
+  expect(drawn(view)).toStrictEqual([
+    ' ❯1. Fix the tokenizer',
+    '  2. a',
+    '     b',
+    '     c',
+    '↓    d',
+    '+1',
+  ]);
+
+  // Onto the tall row: its first line is in sight, so nothing moves.
+  view = step(view, down);
+
+  expect(view).toStrictEqual({ highlighted: 1, top: 0 });
+  // Read by line now, the whole budget its own: no `+N more`.
+  expect(drawn(view).at(-1)).toStrictEqual('↓    e');
+
+  // A line a press, to its last, the highlight staying on the row.
+  view = step(view, down);
+  view = step(view, down);
+  view = step(view, down);
+
+  expect(view).toStrictEqual({ highlighted: 1, top: 3 });
+  expect(drawn(view)).toStrictEqual([
+    '↑    c',
+    '     d',
+    '     e',
+    '     f',
+    '     g',
+    '↓    h',
+  ]);
+
+  // Then on to row 3, brought whole into sight with the least move.
+  view = step(view, down);
+
+  expect(view).toStrictEqual({ highlighted: 2, top: 4 });
+  expect(drawn(view)).toStrictEqual([
+    '↑    d',
+    '     e',
+    '     f',
+    '     g',
+    '     h',
+    ' ❯3. docs · Fix the parser',
+  ]);
+  expect(lineKey(view, heights, 6, '', down)).toStrictEqual(undefined);
+
+  // Back the same way: onto row 2 at its last line, then a line a press.
+  view = step(view, up);
+
+  expect(view).toStrictEqual({ highlighted: 1, top: 4 });
+
+  view = step(view, up);
+
+  expect(view).toStrictEqual({ highlighted: 1, top: 3 });
+  // Enter picks the row wherever in it the view is; a resize shows it from
+  // its first line again.
+  expect(
+    lineKey(view, heights, 6, '', { ...down, downArrow: false, return: true }),
+  ).toStrictEqual({ type: 'pick', index: 1 });
+  expect(fromFirstLine(view, heights, 6)).toStrictEqual({
+    highlighted: 1,
+    top: 1,
+  });
+  // Rows that fit are whole and unmarked.
+  expect(
+    linedRows(choices, [['x'], ['y']], { highlighted: 0, top: 0 }, 6).rows.map(
+      (row) => row.lines,
+    ),
+  ).toStrictEqual([[{ text: 'x', first: true }], [{ text: 'y', first: true }]]);
+});
+
+test("a picker's labels go on lines of their own under their columns, every row alike, where the room beside the columns is under half the box (CHD-445)", () => {
+  const rows = sessionChoices(
+    [
+      {
+        resume: { sessionId: 's1', cwd: '/h/src/app' },
+        lastUsedAt: '2026-10-05T11:58:00.000Z',
+        prompt: 'Fix the tokenizer handling of tests/parse/tokenize_test.ts',
+      },
+      {
+        resume: { sessionId: 's2', cwd: '/h/src/lib' },
+        lastUsedAt: '2026-10-02T12:00:00.000Z',
+        prompt: 'docs · permission',
+      },
+    ],
+    NOW,
+    { home: '/h' },
+  );
+
+  // Beside: 60 cells less the columns leave more than half of 50.
+  expect(pickerLines(rows, 60, 50)![1]).toStrictEqual([
+    '3 days ago     ~/src/lib  docs · permission',
+  ]);
+  // Under: 30 cells less the columns leave under half of 50.
+  expect(pickerLines(rows, 30, 50)).toStrictEqual([
+    [
+      '2 minutes ago  ~/src/app',
+      'Fix the tokenizer handling of',
+      'tests/parse/tokenize_test.ts',
+    ],
+    ['3 days ago     ~/src/lib', 'docs · permission'],
+  ]);
+  expect(
+    pickerLines([{ key: 'm', label: 'a model', value: 'm' }], 10, 50),
+  ).toStrictEqual(undefined);
+});
+
+test("a picker's layout leaves its labels the frame, the highlight's gutter, the number, and the scroll's gutter once their lines take more than the rows (CHD-445)", () => {
+  const [row] = sessionChoices(
+    [
+      {
+        resume: { sessionId: 's1', cwd: '/work' },
+        lastUsedAt: '2026-10-05T11:58:00.000Z',
+        prompt: 'Fix the tokenizer handling of a quoted string at the end',
+      },
+    ],
+    NOW,
+  );
+
+  // 80 columns: 80 - 4 - 2 - 3 = 71 cells, which the 71 of the row fit.
+  expect(pickerLayout([row!], 5, 80)).toStrictEqual([[row!.label]]);
+  // No room for its line: the scroll's gutter takes two cells more, 69,
+  // and the label wraps.
+  expect(pickerLayout([row!], 0, 80)).toStrictEqual([choiceLines(row!, 69)]);
+  expect(pickerLayout([row!], 0, 80)![0]!.length).toBeGreaterThan(1);
+  expect(
+    pickerLayout([{ key: 'm', label: 'a model', value: 'm' }], 5, 80),
+  ).toStrictEqual(undefined);
+});
+
+test('a row as tall as the picker is drawn whole while highlighted, the +N more line giving way, and the next press moves on; on the last row, with none after, the room is the whole budget again (CHD-445)', () => {
+  const lines = [['a', 'b', 'c', 'd', 'e', 'f'], ['next']];
+  const heights = lines.map((each) => each.length);
+  const choices = lines.map((_, index) => ({
+    key: String(index),
+    label: String(index),
+    value: String(index),
+  }));
+  const texts = (view: PickerView) => {
+    const shown = linedRows(choices, lines, view, 6);
+
+    return [
+      ...shown.rows.flatMap((row) =>
+        row.lines.map((line) => `${line.edge ?? ''}${line.text}`),
+      ),
+      ...(shown.hidden > 0 ? [`+${shown.hidden}`] : []),
+    ];
+  };
+
+  const view = openLineView(choices, heights, 6);
+
+  // Highlighted, its six lines whole; the edge says a row follows.
+  expect(view).toStrictEqual({ highlighted: 0, top: 0 });
+  expect(texts(view)).toStrictEqual([' a', ' b', ' c', ' d', ' e', '↓f']);
+
+  const moved = lineKey(view, heights, 6, 'j', {
+    upArrow: false,
+    downArrow: false,
+    return: false,
+    shift: false,
+  });
+
+  // Not taller than that, so ↓ goes straight on, to the last row: nothing
+  // after it, no notice, and the whole budget is lines of rows again.
+  expect(moved).toStrictEqual({
+    type: 'move',
+    view: { highlighted: 1, top: 1 },
+  });
+  assert(moved?.type === 'move');
+  expect(texts(moved.view)).toStrictEqual([
+    '↑b',
+    ' c',
+    ' d',
+    ' e',
+    ' f',
+    ' next',
+  ]);
 });

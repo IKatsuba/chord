@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › titledlong
+
+ ⏺ Named at length.
+
+ › agentstitled
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  titled
+
+ ⏺ Open(docs) · fake
+   ⎿  retitled
+
+ ⏺ Waiting on parser and docs.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main    Find out why the           fake  ◦ idle 7s
+            tokenizer drops the
+  ↓         closing quote of a string
+    … +2 more

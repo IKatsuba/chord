@@ -174,6 +174,9 @@ export interface Session {
         readonly lastUsedAt?: number | undefined;
         readonly prompt?: string | undefined;
         readonly name?: string | undefined;
+        readonly title?: string | undefined;
+        /** A task's session, whose agent's title is shown nowhere (Q200). */
+        readonly task?: boolean | undefined;
       }
     | undefined;
   /** Permission requests waiting on the person. */
@@ -571,6 +574,8 @@ export async function openSession(
             lastUsedAt: resume.lastUsedAt,
             prompt: resume.prompt,
             name: resume.name,
+            title: resume.title,
+            task: resume.task,
           },
         }),
     permissions,

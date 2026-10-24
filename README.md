@@ -69,7 +69,8 @@ ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
 ### Agents beside the main one
 
 `/new [agent]` opens an idle agent beside main and goes to it. The list
-under the prompt shows agents and teams, their state and unseen news.
+under the prompt shows agents and teams, their session titles, state and
+unseen news.
 `ctrl+x a` takes you to what waits.
 
 <img src="docs/images/agents.png" alt="The agents list, with docs waiting on a permission" width="900">
@@ -95,8 +96,9 @@ job with `/team run bugfix <job>`.
 
 ### Pick up where you left off
 
-`/resume` lists this directory's earlier sessions. When you quit, chord
-prints the command that brings your main session back.
+`/resume` lists this directory's earlier sessions by the agent's title, or
+the first prompt if untitled. When you quit, chord prints the command that
+brings your main session back.
 
 <img src="docs/images/resume.png" alt="The resume picker listing earlier sessions" width="900">
 

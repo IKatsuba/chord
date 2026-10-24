@@ -64,6 +64,7 @@ import {
   type Resumable,
   type Resume,
   type SessionRecord,
+  titleLine,
 } from '../../session/sessions.ts';
 import { chordStateDir } from '../../session/state_dir.ts';
 import {
@@ -1772,7 +1773,7 @@ export function useSessions(
                   picked: row.key === target.key,
                 })),
                 top,
-                frame,
+                { ...frame, reading: view !== undefined },
               )
             : undefined,
       });
@@ -2359,11 +2360,15 @@ export function useSessions(
     const describe = (key: number) => {
       const session = all.sessions[key];
 
+      const title = conversationAt(key)?.title;
+
       return {
         model:
           session?.models === undefined ? undefined : modelName(session.models),
         effort: conversationAt(key)?.session?.efforts()?.current,
         failed: session?.connection.status === 'failed',
+        // The agent's own name for its session, beside the agent's (CHD-445).
+        ...(title === undefined ? {} : { title: titleLine(title) }),
       };
     };
 

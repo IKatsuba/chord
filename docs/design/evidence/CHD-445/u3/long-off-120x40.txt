@@ -1,0 +1,40 @@
+ docs · fake · Fake Large with a 1M context window · opened by main 57s ago
+
+ ← from @main
+   ⎿  retitled
+
+ ⏺ Looking.Renamed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ docs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back       Fake Large with a 1M context window · 1% used
+    parser  Fix the tokenizer                       fake · Fake Small · medium                           ◦ idle 56s
+  ❯ docs    Fix the parser                          fake · Fake Large with a 1M context window · medium  ◦ idle 56s
+    … +1 more
+
+
+

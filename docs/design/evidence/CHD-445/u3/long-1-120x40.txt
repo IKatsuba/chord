@@ -1,0 +1,40 @@
+ ▀▄     chord v0.57.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des445u3
+ ▀▀     ? for shortcuts · /help
+
+ › titledlong
+
+ ⏺ Named at length.
+
+ › agentstitled
+
+ ⏺ Open(parser) · fake · fake-small
+   ⎿  titled
+
+ ⏺ Open(docs) · fake
+   ⎿  retitled
+
+ ⏺ Waiting on parser and docs.
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back       Fake Large with a 1M context window · 1% used
+  ❯ main    Find out why the tokenizer drops the    fake · Fake Large with a 1M context window · medium  ◦ idle 47s
+            closing quote of a string at the end
+            of a line, write a test in
+            tests/parse/tokenize_test.ts that
+            fails for that reason, fix
+  ↓         src/parse/tokenize.ts and have the

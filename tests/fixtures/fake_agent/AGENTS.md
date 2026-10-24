@@ -8,7 +8,7 @@
   `scenarios/`: `text.ts`
   (`text`, `texttillsteered`, `thought`, `todos`, `mcp`, `opened`, `markdown`,
   `markdownwrap`, `markdowncode`, `titled`, `retitled`, `titledlook`,
-  `titledfix`, `slow`, `long`, `longheld`,
+  `titledfix`, `titledlong`, `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`),
   `tools.ts` (`tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
   `longresults`,
@@ -35,7 +35,8 @@
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
   (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
-  `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktillsteered`,
+  `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktitled`,
+  `tasktillsteered`,
   `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`),
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
@@ -50,7 +51,7 @@
   `scenarios/agents.ts`'s `gateOpened` waits up to 10 s for a gate file.
   The gated scenarios below use `<cwd>/.fake-gate/release`.
   A prompt that is exactly a scenario name (`text`, `texttillsteered`,
-  `titled`, `retitled`, `titledlook`, `titledfix`,
+  `titled`, `retitled`, `titledlook`, `titledfix`, `titledlong`,
   `thought`, `tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlaptwo`, `overlapfail`, `overlapask`,
@@ -61,11 +62,13 @@
   `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
   `permission`,
   `permissionsteer`,
-  `callchildtwo`, `agenttitled`, `agentother`, `agentsquiet`, `agentsheldgated`, `plan`,
+  `callchildtwo`, `agenttitled`, `agentother`, `agentstitled`, `agentsquiet`,
+  `agentsheldgated`, `plan`,
   `planshrinkgated`,
   `proposal`, `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`,
-  `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`, `taskbetween`, `taskstays`, `tasktillsteered`,
+  `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`,
+  `taskbetween`, `taskstays`, `tasktitled`, `tasktillsteered`,
   `teamtask`,
   `shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`, `bashask`,
   `compact`,
@@ -145,7 +148,9 @@
   `titled` names its session `Fix the tokenizer` through
   `session_info_update`; `retitled` names it `Look at the parser`, then
   renames it `Fix the parser`; `titledlook` and `titledfix` give those last
-  two titles in separate prompts, so a test can observe each;
+  two titles in separate prompts, so a test can observe each; `titledlong`
+  sends a title long enough to wrap. `--title <text>` or `CHORD_FAKE_TITLE`
+  names every session at new, load or resume, before any prompt;
   `chordtools` connects to chord's own, through the MCP SDK's client, calls
   `list_agents` and `list_sessions` and answers with what came back, as
   JSON; `chordcalls` makes the same calls as tool calls, titled as Claude's
@@ -177,6 +182,9 @@
   `taskstays` keeps its turn running until it is cancelled, so the task
   asks within it however slow it is, and `tasktillsteered` until a
   message is steered into it, as the task's is, with `--steering`;
+  `tasktitled` starts a task on `titledlong`, named `Name the session`, to
+  check its agent's title stays hidden, even resumed as main;
+  `agentstitled` opens `parser` on `titled` and `docs` on `retitled`;
   `agentother` opens `other` on `text`, long-lived on the runtime
   `--child-runtime <name>` (`CHORD_FAKE_CHILD_RUNTIME`) names, `codex`
   by default, which the harness starts as the fake under that name;

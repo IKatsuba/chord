@@ -1,0 +1,24 @@
+ chord                                           fake · /tmp/chord-qa.des445u2c
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ Pick one of fake's earlier sessions to open.                                 │
+│                                                                              │
+│   ↑              word82 word83 word84 word85 word86 word87 word88 word89     │
+│                  word90 word91 word92 word93 word94 word95 word96 word97     │
+│                  word98 word99 word100 word101 word102 word103 word104       │
+│                  word105 word106 word107 word108 word109 word110 word111     │
+│                  word112 word113 word114 word115 word116 word117 word118     │
+│                  word119                                                     │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to quit                   │
+╰──────────────────────────────────────────────────────────────────────────────╯

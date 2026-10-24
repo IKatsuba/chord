@@ -578,3 +578,52 @@ test("a picker's layout leaves its labels the frame, the highlight's gutter, the
     pickerLayout([{ key: 'm', label: 'a model', value: 'm' }], 5, 80),
   ).toStrictEqual(undefined);
 });
+
+test('a row as tall as the picker is drawn whole while highlighted, the +N more line giving way, and the next press moves on; on the last row, with none after, the room is the whole budget again (CHD-445)', () => {
+  const lines = [['a', 'b', 'c', 'd', 'e', 'f'], ['next']];
+  const heights = lines.map((each) => each.length);
+  const choices = lines.map((_, index) => ({
+    key: String(index),
+    label: String(index),
+    value: String(index),
+  }));
+  const texts = (view: PickerView) => {
+    const shown = linedRows(choices, lines, view, 6);
+
+    return [
+      ...shown.rows.flatMap((row) =>
+        row.lines.map((line) => `${line.edge ?? ''}${line.text}`),
+      ),
+      ...(shown.hidden > 0 ? [`+${shown.hidden}`] : []),
+    ];
+  };
+
+  const view = openLineView(choices, heights, 6);
+
+  // Highlighted, its six lines whole; the edge says a row follows.
+  expect(view).toStrictEqual({ highlighted: 0, top: 0 });
+  expect(texts(view)).toStrictEqual([' a', ' b', ' c', ' d', ' e', '↓f']);
+
+  const moved = lineKey(view, heights, 6, 'j', {
+    upArrow: false,
+    downArrow: false,
+    return: false,
+    shift: false,
+  });
+
+  // Not taller than that, so ↓ goes straight on, to the last row: nothing
+  // after it, no notice, and the whole budget is lines of rows again.
+  expect(moved).toStrictEqual({
+    type: 'move',
+    view: { highlighted: 1, top: 1 },
+  });
+  assert(moved?.type === 'move');
+  expect(texts(moved.view)).toStrictEqual([
+    '↑b',
+    ' c',
+    ' d',
+    ' e',
+    ' f',
+    ' next',
+  ]);
+});

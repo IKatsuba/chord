@@ -428,7 +428,7 @@ function lineTop(
 /**
  * The lines a picker's rows may take from `top`: its `budget`, less the
  * `… +N more` line where rows come after them, as that line is within the
- * budget too; the whole budget while the highlighted row is taller than it,
+ * budget too; the whole budget while the highlighted row takes it all or more,
  * which draws no such line (docs/design/CHD-445.md).
  */
 function room(
@@ -439,7 +439,7 @@ function room(
 ): number {
   const { starts, total } = lineStarts(heights);
 
-  if (total <= budget || (heights[highlighted] ?? 1) > budget) {
+  if (total <= budget || (heights[highlighted] ?? 1) >= budget) {
     return budget;
   }
 
@@ -580,7 +580,7 @@ export interface LinedRow<C extends PickerChoice = PickerChoice> {
 /**
  * The lines in sight of a picker whose rows are `lines`, `budget` at
  * most, from `view.top`, and how many rows come after the last in sight:
- * none counted while the highlighted row is taller than the budget, as its
+ * none counted while the highlighted row takes the whole budget or more, as its
  * own edges say where it goes on (docs/design/CHD-445.md).
  */
 export function linedRows<C extends PickerChoice>(
@@ -636,7 +636,7 @@ export function linedRows<C extends PickerChoice>(
 
   return {
     rows,
-    hidden: (heights[view.highlighted] ?? 1) > budget ? 0 : hidden,
+    hidden: (heights[view.highlighted] ?? 1) >= budget ? 0 : hidden,
   };
 }
 

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.59.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des378
+ ▀▀     ? for shortcuts · /help
+
+ › bashcut
+
+ ⏺ Bash(bun test)
+   ⎿  12 pass, 0 fail
+
+ ⏺ Read(package.json)
+   ⎿  Read 40 lines
+
+ › Skip the slow tests
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (2s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

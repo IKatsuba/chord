@@ -273,6 +273,8 @@ test("a task's session is known by its spawn_task description and first prompt, 
   expect(task.title).toStrictEqual(undefined);
   expect(row?.prompt).toStrictEqual('Run the parser tests · run the tests');
   expect(row?.resume.title).toStrictEqual(undefined);
+  // It stays a task's when opened again as main.
+  expect(row?.resume.task).toStrictEqual(true);
 });
 
 test("--continue does not take another agent's session", () => {

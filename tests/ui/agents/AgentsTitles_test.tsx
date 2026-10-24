@@ -6,7 +6,15 @@
 import { describe, expect, test } from 'bun:test';
 import stripAnsi from 'strip-ansi';
 import { LONG_SESSION_TITLE } from '../../fixtures/fake_agent/scenarios/text.ts';
-import { ready, send, until, type Window } from '../app/render.tsx';
+import { serveChord } from '../../../src/server/server.ts';
+import {
+  ready,
+  send,
+  statusReports,
+  until,
+  type Window,
+  withWindow,
+} from '../app/render.tsx';
 import { withAgents } from './agents_window.tsx';
 
 /** The list's row for `name`, as the screen shows it. */
@@ -80,4 +88,52 @@ describe("an agent's own title in the agents list (CHD-445)", () => {
       );
       expect(window.frame()).not.toContain(head);
     }));
+
+  test("a task's session resumed as main stays untitled: the main row and the terminal's title say its first prompt, before and after its agent names it again (Q200)", async () => {
+    const head = LONG_SESSION_TITLE.slice(0, 30);
+    const log: string[] = [];
+    const server = serveChord();
+    const status = () => statusReports(log).at(-1)?.title;
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'tasktitled');
+          await window.shows('Named at length.');
+          await send(window, '/clear');
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows('Name the session · titledlong');
+
+          const number = stripAnsi(window.frame())
+            .split('\n')
+            .find((line) => line.includes('Name the session · titledlong'))
+            ?.match(/(\d+)\./)?.[1];
+
+          await window.press(number!);
+          await window.shows('resumed · ');
+          await ready(window);
+          // Its record's title is not restored: the first prompt names it.
+          await until('the title', () => status() === 'titledlong');
+          // The agent names it again, live: still untitled.
+          await send(window, 'titled');
+          await window.shows('Named.');
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          expect(status()).toStrictEqual('titledlong');
+          // A child, so the list is drawn: main's title column is blank.
+          await send(window, '/new');
+          await until('the list', () => rowOf(window, 'main') !== undefined);
+
+          const main = rowOf(window, 'main')!;
+
+          expect(main).not.toContain(head);
+          expect(main).not.toContain('Fix the tokenizer');
+        },
+        { server, runtimes: ['fake'], rows: 80, columns: 120, log },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });

@@ -31,6 +31,11 @@ export interface Resume {
   readonly name?: string | undefined;
   /** The agent's own title for it, where its record says (CHD-445). */
   readonly title?: string | undefined;
+  /**
+   * Whether it is a task's, which keeps its spawn_task name and shows its
+   * agent's title nowhere, opened again as main too (CHD-445, Q200).
+   */
+  readonly task?: boolean | undefined;
 }
 
 /** Why there is nothing to resume: a sentence to show the person. */
@@ -58,6 +63,8 @@ export interface SessionRecord {
    * `session_info_update` gave it (CHD-445).
    */
   readonly title?: string;
+  /** A task agent's, whose agent's title is shown nowhere (Q200). */
+  readonly task?: boolean;
 }
 
 /**
@@ -130,6 +137,7 @@ export function summaryOf(
     ...(header.parent === undefined ? {} : { parent: header.parent }),
     ...(header.name === undefined ? {} : { name: header.name }),
     ...(title === undefined ? {} : { title }),
+    ...(header.task === undefined ? {} : { task: true }),
   };
 }
 
@@ -391,6 +399,7 @@ function resumeOf(record: SessionRecord): Resume {
     prompt: record.prompt,
     ...(record.name === undefined ? {} : { name: record.name }),
     ...(record.title === undefined ? {} : { title: record.title }),
+    ...(record.task === true ? { task: true } : {}),
   };
 }
 

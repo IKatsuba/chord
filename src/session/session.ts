@@ -175,6 +175,8 @@ export interface Session {
         readonly prompt?: string | undefined;
         readonly name?: string | undefined;
         readonly title?: string | undefined;
+        /** A task's session, whose agent's title is shown nowhere (Q200). */
+        readonly task?: boolean | undefined;
       }
     | undefined;
   /** Permission requests waiting on the person. */
@@ -573,6 +575,7 @@ export async function openSession(
             prompt: resume.prompt,
             name: resume.name,
             title: resume.title,
+            task: resume.task,
           },
         }),
     permissions,

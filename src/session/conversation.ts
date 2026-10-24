@@ -645,9 +645,16 @@ export class Conversation {
     return this.#title;
   }
 
-  /** `update`'s title, if it is the session's `session_info_update`. */
+  /**
+   * `update`'s title, if it is the session's `session_info_update`; never
+   * for a task's session, opened again as main too, which keeps its
+   * spawn_task name (CHD-445, Q200).
+   */
   #titled(update: SessionUpdate): void {
-    if (update.sessionUpdate !== 'session_info_update') {
+    if (
+      update.sessionUpdate !== 'session_info_update' ||
+      this.#session?.resumed?.task === true
+    ) {
       return;
     }
 

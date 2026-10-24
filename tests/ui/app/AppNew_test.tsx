@@ -441,6 +441,10 @@ describe('CHD-493 U6 tester: person-opened agents keep main and its menu', () =>
       await window.shows('All 214 parser tests pass now.');
       expect(main.window.close(main, 'fake')).not.toHaveProperty('error');
       await until('the child exited', () => sessions[1]?.agentPids.size === 0);
+      await until(
+        'the closed child row to leave the list',
+        () => !/^ {4}fake\s/m.test(window.frame()),
+      );
       expect(window.frame()).not.toMatch(/^ {4}fake\s/m);
     }));
 

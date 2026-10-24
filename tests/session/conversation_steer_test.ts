@@ -1797,3 +1797,137 @@ test("Esc takes the person's steer held behind Claude's open calls back with the
       ['Then the docs.', undefined],
     ]);
   }));
+
+describe('CHD-378 U1 tester: personal steer boundaries', () => {
+  test('two running fake sessions keep personal steers and interrupted queues separate', () =>
+    onFake(['--steering', 'claude'], (first, firstEvents) =>
+      onFake(['--steering', 'codex'], async (second, secondEvents) => {
+        first.send('slow');
+        second.send('slow');
+        await until(() =>
+          [firstEvents, secondEvents].every((events) =>
+            saidIn(events).startsWith('Working'),
+          ),
+        );
+        first.send('Only first queued.');
+        first.steerIn('Only first steered.');
+        second.steerIn('Only second steered.');
+        await until(() =>
+          [firstEvents, secondEvents].every(
+            (events) => promptsIn(events).length === 2,
+          ),
+        );
+        first.interrupt();
+        await ended(firstEvents, 1);
+
+        expect(promptsIn(firstEvents)).toStrictEqual([
+          ['slow', undefined],
+          ['Only first steered.', firstTurn(firstEvents)],
+        ]);
+        expect(promptsIn(secondEvents)).toStrictEqual([
+          ['slow', undefined],
+          ['Only second steered.', firstTurn(secondEvents)],
+        ]);
+        expect(secondEvents.some((event) => event.type === 'result')).toBe(
+          false,
+        );
+        expect(
+          secondEvents.some((event) => event.type === 'queue_withdrawn'),
+        ).toBe(false);
+        second.interrupt();
+        await ended(secondEvents, 1);
+      }),
+    ));
+
+  test('Esc withdraws several held personal steers and Enter prompts while preserving an agent message between them', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('bashcut');
+      await callOpen(events);
+      conversation.send('Queued with Enter.');
+      conversation.steerIn('First held steer.');
+      conversation.tell(MAIN, 'Agent message.');
+      conversation.steerIn('Second held steer.');
+      await until(
+        () => events.filter((event) => event.type === 'queued').length === 4,
+      );
+      conversation.interrupt();
+      await ended(events, 2);
+
+      expect(promptsIn(events)).toStrictEqual([
+        ['bashcut', undefined],
+        ['Agent message.', undefined],
+      ]);
+      expect(
+        events.filter((event) => event.type === 'queue_withdrawn'),
+      ).toHaveLength(1);
+    }));
+
+  test('a held personal steer refused after the calls keeps its row identity behind an earlier Enter prompt', () =>
+    onFake(
+      ['--steering', 'claude', '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('bash');
+        await callOpen(events);
+        conversation.send('Earlier Enter prompt.');
+        conversation.steerIn('Later held steer.');
+        await ended(events, 3);
+
+        const rows = events.flatMap((event) =>
+          event.type === 'queued' && event.text === 'Later held steer.'
+            ? [event]
+            : [],
+        );
+        const sent = events.find(
+          (event) =>
+            event.type === 'prompt' && event.text === 'Later held steer.',
+        );
+
+        assert(sent?.type === 'prompt');
+        expect(rows[0]?.afterCalls).toBe(true);
+        expect(rows.at(-1)?.afterCalls).toBeUndefined();
+        expect(new Set(rows.map((row) => row.turnId))).toEqual(
+          new Set([sent.turnId]),
+        );
+        expect(sent.from).toBeUndefined();
+        expect(promptsIn(events)).toStrictEqual([
+          ['bash', undefined],
+          ['Earlier Enter prompt.', undefined],
+          ['Later held steer.', undefined],
+        ]);
+      },
+    ));
+
+  test('a wedged fake turn with a refused personal steer still closes and leaves no agent process', async () => {
+    const pids: number[] = [];
+
+    await onFake(
+      ['--steering', 'claude', '--hang', 'turn'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await until(() => promptsIn(events).length === 1);
+        await went();
+        conversation.steerIn('After the wedged turn.');
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'queued' &&
+              event.text === 'After the wedged turn.',
+          ),
+        );
+        conversation.interrupt();
+        expect(events).toContainEqual({ type: 'queue_withdrawn' });
+      },
+      (session) => {
+        pids.push(...session.agentPids);
+
+        return session;
+      },
+    );
+
+    expect(pids.length).toBeGreaterThan(0);
+
+    for (const pid of pids) {
+      expect(await isAlive(pid)).toBe(false);
+    }
+  });
+});

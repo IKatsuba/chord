@@ -537,7 +537,7 @@ read from the user's file only, leaves the mouse to the terminal.
 
 `~/.config/chord/keybindings.json`, beside the settings file, rebinds
 chord's keys. It has the shape of Claude Code's `~/.claude/keybindings.json`
-and the same action names, so a block copied from there means the same
+and shares its action names, so a block copied from there means the same
 here; chord never reads Claude Code's file itself.
 
 ```json
@@ -558,8 +558,8 @@ here; chord never reads Claude Code's file itself.
 
 A key bound in a context replaces what it did there, `null` takes it away,
 and a chord is keys separated by spaces, each within 3 seconds of the one
-before. The actions are `chat:submit`, `chat:newline`, `chat:cancel`,
-`chat:cycleMode`, `chat:externalEditor`, `chat:imagePaste`,
+before. The actions are `chat:submit`, `chat:newline`, `chat:steer` (Tab),
+`chat:cancel`, `chat:cycleMode`, `chat:externalEditor`, `chat:imagePaste`,
 `history:previous`, `history:next` and `help:toggle` in `Chat`;
 `app:toggleTranscript`, `history:search` and chord's own `session:attention`
 in `Global`;
@@ -724,15 +724,34 @@ goes into the turn and leaves the queue. The agents list marks a recipient
 in the background with `← message from @main`, as for any queued message.
 Codex takes it at once, since its steering does not cut calls. While the
 turn waits on your answer to a permission, form or link, it waits under the
-working line as `← from @main · after your answer: …` and goes in once you
-answer. A runtime without steering takes it as the next turn, as the queue
+working line as `← from @main · after your answer: …`. After your answer,
+it goes in or returns to `after the running calls` if those still run.
+A runtime without steering takes it as the next turn, as the queue
 under the working line shows. Should the message reach the agent just as
 its turn ended, and the agent start a turn of its own with it, as Codex's
 adapter does, chord cancels that turn at once, closes it with a dim
 `Interrupted · the agent started this on its own` line, and sends the
-message as the next turn. A monitor's events and your own prompts
-always wait for the turn's end. A
-child that waits on you is named on the status line, ctrl+x a picks it, and
+message as the next turn. A monitor's events wait for the turn's end.
+
+Enter during a turn queues your prompt until the turn ends. Tab sends only
+the text in the box into the running turn where the agent supports it,
+without stopping the agent; earlier Enter-queued prompts stay queued.
+The box clears, and your message appears as a plain `›` row among the
+turn's steps. A held message waits as `› after the running calls: …` or
+`› after your answer: …`, with an open question taking priority over calls.
+Once sent to the agent, it shows `› into the running turn: …` if unanswered
+for 500 ms, or at once if its held row was already showing. Esc takes held
+messages back into the draft; one already sent to the agent stays. A
+refused or late message becomes an ordinary queued prompt. If it started
+its own turn, chord cancels that turn with
+`Interrupted · the agent started this on its own; your message goes as the next turn`.
+On an agent without steering, Tab leaves the draft and sends nothing; the
+status line says so for 3 seconds and names the key that queues it. Tab
+does nothing with an empty box, no running turn or in bash mode; an open
+`/` or `@` list keeps Tab for completion. Rebind it with `chat:steer` in
+`Chat`.
+
+A child that waits on you is named on the status line, ctrl+x a picks it, and
 its permission box opens there. `x` in the list closes the picked child, a
 second time while it works or waits, and chord tells the parent so;
 `close_agent` closes one from the parent, and a message to a closed one is

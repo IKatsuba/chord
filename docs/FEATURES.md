@@ -58,6 +58,7 @@ Done when chord is the interface its authors open by default.
 | Bash mode                                 | `!` prefix runs a command           | client, output sent as context               |
 | Resume a session                          | `--continue`, `--resume`, `/resume` | chord's own session records, ACP `session/load` / `session/resume` |
 | Queue a prompt while a turn runs          | type and Enter during a turn; Esc puts it back | client, sent once the turn ahead ends |
+| Send a message into the running turn      | Tab (`chat:steer`), one draft at a time | client, `_session/steering` where the agent advertises `_meta.steering.supported`; earlier queued prompts stay queued; refused or late messages queue |
 | Transcript / verbose view                 | ctrl+o                              | client                                       |
 | Reverse history search                    | ctrl+r                              | client                                       |
 | Headless one-shot                         | `-p "prompt"`, `--output-format json`, `--effort`, `--permission-mode`, `--dangerously-skip-permissions` | ACP, one session, `session/set_config_option` |

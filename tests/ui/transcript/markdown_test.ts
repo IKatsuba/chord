@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { execFile } from 'node:child_process';
 import process from 'node:process';
 import { promisify } from 'node:util';
@@ -733,4 +733,96 @@ test('a reply with no code has no blocks, and an indented block has no label, it
       quoted: false,
     },
   ]);
+});
+
+describe('CHD-394 U1 tester: block source boundaries', () => {
+  test('nested lists and quotes retain their original fence lines and quoted identity', () => {
+    const reply = [
+      'Intro',
+      '',
+      '> - quoted item',
+      '>',
+      '>   ~~~console',
+      '>   $ echo "hi"',
+      '>   hi',
+      '>   ~~~',
+      '',
+      '- outer',
+      '',
+      '  1. inner',
+      '',
+      '     ```bash extra',
+      '     printf "nested"',
+      '     ```',
+    ].join('\n');
+
+    expect(codeBlocks(reply)).toStrictEqual([
+      {
+        index: 0,
+        line: 4,
+        label: 'console',
+        text: '$ echo "hi"\nhi',
+        runnable: true,
+        quoted: true,
+      },
+      {
+        index: 1,
+        line: 13,
+        label: 'bash',
+        text: 'printf "nested"',
+        runnable: true,
+        quoted: false,
+      },
+    ]);
+  });
+
+  test('a longer open fence preserves literal shorter fences, Unicode and command prompts without rewriting', () => {
+    const before =
+      'A reply\r\n\r\n````sh title\r\n$ printf "café 👍🏽"\r\n```\r\noutput';
+    const expected = '$ printf "café 👍🏽"\n```\noutput';
+
+    expect(codeBlocks(before)).toStrictEqual([
+      {
+        index: 0,
+        line: 2,
+        label: 'sh',
+        text: expected,
+        runnable: true,
+        quoted: false,
+      },
+    ]);
+    expect(
+      codeBlocks(before + '\r\n````').map(({ index, line, text }) => ({
+        index,
+        line,
+        text,
+      })),
+    ).toStrictEqual([{ index: 0, line: 2, text: expected }]);
+  });
+
+  test('inline fence-like text and tables add no blocks, while empty and indented code remain listed', () => {
+    expect(
+      codeBlocks(
+        'Inline `echo hi` and `` ```sh ``.\n\n| a | b |\n| - | - |\n| c | d |',
+      ),
+    ).toStrictEqual([]);
+    expect(codeBlocks('```bash\n```\n\n    indented\n')).toStrictEqual([
+      {
+        index: 0,
+        line: 0,
+        label: 'bash',
+        text: '',
+        runnable: true,
+        quoted: false,
+      },
+      {
+        index: 1,
+        line: 3,
+        label: '',
+        text: 'indented\n',
+        runnable: false,
+        quoted: false,
+      },
+    ]);
+  });
 });

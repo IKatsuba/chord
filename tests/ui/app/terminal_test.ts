@@ -579,3 +579,100 @@ describe("a code block's copy goes the selection's way (CHD-394)", () => {
     }
   });
 });
+
+describe('CHD-394 U1 tester: block copy outcomes', () => {
+  test('whitespace and Unicode are preserved, terminal-only writes and rejected writes return the shared feedback without dispatch', async () => {
+    const writes: string[] = [];
+    const actions: WindowedAction[] = [];
+    let handle: SelectionHandle | undefined;
+    let outcome: 'terminal' | 'throw' = 'terminal';
+    const copy: Copy = (text) => {
+      writes.push(text);
+
+      if (outcome === 'throw') {
+        throw new Error('clipboard\nnot available');
+      }
+
+      return Promise.resolve({
+        host: { status: 'failed', error: 'no host clipboard' },
+        terminal: { status: 'attempted' },
+      } as unknown as ClipboardWriteResult);
+    };
+
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: (action) => actions.push(action),
+        copy,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'copy');
+    };
+
+    const screen = await draw(createElement(Probe));
+
+    try {
+      assert(handle !== undefined);
+
+      actions.length = 0;
+
+      expect(await handle.copyText('é👍🏽\n')).toStrictEqual({
+        kind: 'sent',
+        chars: 3,
+      });
+      expect(await handle.copyText(' \n')).toStrictEqual({
+        kind: 'sent',
+        chars: 2,
+      });
+
+      outcome = 'throw';
+
+      expect(await handle.copyText('echo hi')).toStrictEqual({
+        kind: 'failed',
+        reason: 'clipboard not available',
+      });
+      expect(writes).toStrictEqual(['é👍🏽\n', ' \n', 'echo hi']);
+      expect(actions).toStrictEqual([]);
+    } finally {
+      await screen.unmount();
+    }
+  });
+
+  test('unmount aborts an outstanding block copy and its late completion is silent', async () => {
+    const response = Promise.withResolvers<ClipboardWriteResult>();
+    let signal: AbortSignal | undefined;
+    let handle: SelectionHandle | undefined;
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: () => {},
+        copy: (_text, abort) => {
+          signal = abort;
+
+          return response.promise;
+        },
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'copy');
+    };
+
+    const screen = await draw(createElement(Probe));
+
+    assert(handle !== undefined);
+
+    const pending = handle.copyText('echo late');
+
+    await screen.unmount();
+    expect(signal?.aborted).toBe(true);
+    response.resolve({
+      host: { status: 'written' },
+      terminal: { status: 'skipped' },
+    } as unknown as ClipboardWriteResult);
+    expect(await pending).toBeUndefined();
+    expect(await handle.copyText('after close')).toBeUndefined();
+  });
+});

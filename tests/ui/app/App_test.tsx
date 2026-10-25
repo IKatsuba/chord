@@ -1497,7 +1497,11 @@ describe('CHD-394 U4 tester: rebound keys and tall picks', () => {
           await window.type('kept draft');
           await window.shows('› kept draft');
           await leader(window, 'k');
-          await window.shows('y copy · p put in the prompt · ctrl + q done');
+          await window.shows(
+            columns === 80
+              ? 'y copy · p prompt · ctrl + q done'
+              : 'y copy · p put in the prompt · ctrl + q done',
+          );
           await window.press('\x10');
           await window.press('\x0e');
           await window.press('y');
@@ -1577,5 +1581,43 @@ describe('CHD-394 U4 tester: rebound keys and tall picks', () => {
         { columns, rows, copy },
       );
     });
+  }
+});
+
+describe('CHD-394 U4 tester: unbound pick fallback', () => {
+  for (const columns of [80, 120]) {
+    test(`with every pick action unbound the neutral line overrides bash and a letter ends picking at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+          await window.type('!echo kept');
+          await window.shows('│ ! echo kept');
+          await leader(window, 'b');
+          await window.shows('picking a code block');
+          expect(statusRow(window)).not.toContain('bash mode');
+          await window.type('z');
+          await window.shows('│ ! echo keptz');
+          expect(statusRow(window)).not.toContain('picking a code block');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'CodeBlock',
+                bindings: {
+                  up: null,
+                  down: null,
+                  c: null,
+                  r: null,
+                  escape: null,
+                },
+              },
+            ],
+          }),
+        },
+      ));
   }
 });

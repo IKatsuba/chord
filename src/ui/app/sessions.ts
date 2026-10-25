@@ -81,6 +81,7 @@ import {
   isLead,
   MAX_CHILDREN,
   membersOf,
+  messageRecipients,
   namedChild,
   notifiedName,
   ownChildren,
@@ -1218,7 +1219,14 @@ export function useSessions(
       return teamTell(caller, to, text, queued);
     }
 
-    const child = ownChild(caller.key, to);
+    const agents = ownedBy(sessions.agents, caller.key);
+    const target =
+      agents &&
+      messageRecipients(agents, caller.key).find(
+        (each) => each.id === to || each.name === to,
+      );
+    const child =
+      target && agents?.children.find((each) => each.key === target.key);
 
     if (child === undefined) {
       return { error: noChild(caller.key, to) };
@@ -1266,13 +1274,10 @@ export function useSessions(
       return { error: 'Your lead has closed; nothing more reaches it' };
     }
 
-    const members = membersOf(agents, lead.id).filter((each) => each !== self);
-    const leads =
-      self === lead
-        ? ownChildren(agents).filter((each) => isLead(each) && each !== self)
-        : [];
+    const targets = messageRecipients(agents, self.key);
+    const target = targets.find((each) => each.id === to || each.name === to);
 
-    if (self === lead && to === 'main') {
+    if (target?.key === agents.main.key) {
       const delivered = conversationAt(agents.main.key)?.tell(
         from,
         text,
@@ -1284,7 +1289,11 @@ export function useSessions(
         : { delivered, to: 'main' };
     }
 
-    const member = members.find(named);
+    const member =
+      target &&
+      agents.children.find(
+        (each) => each.key === target.key && each.lead === lead.id,
+      );
 
     if (member !== undefined) {
       return {
@@ -1299,7 +1308,7 @@ export function useSessions(
     }
 
     const other =
-      self === lead ? leads.find(named) : named(lead) ? lead : undefined;
+      target && agents.children.find((each) => each.key === target.key);
 
     if (other !== undefined) {
       return {
@@ -1326,11 +1335,7 @@ export function useSessions(
     }
 
     return {
-      error: `No agent ${to} is open for you; you reach ${andList([
-        ...(self === lead ? ['main'] : [lead.name]),
-        ...members.map((each) => each.name),
-        ...leads.map((each) => each.name),
-      ])}`,
+      error: `No agent ${to} is open for you; you reach ${andList(targets.map((each) => each.name))}`,
     };
   };
 
@@ -1504,12 +1509,18 @@ export function useSessions(
     text: string,
     queued?: () => void,
   ): MessageAnswer => {
-    const parent = conversationAt(caller.key);
-
     if (caller.agent !== undefined) {
       const child = childOf(caller.key, caller.agent);
+      const agents = ownedBy(sessions.agents, caller.key);
+      const target =
+        agents &&
+        child &&
+        messageRecipients(agents, child.key).find(
+          (each) => each.key === agents.main.key,
+        );
+      const parent = target && conversationAt(target.key);
 
-      if (parent === undefined) {
+      if (conversationAt(caller.key) === undefined) {
         return { error: 'The session that opened you has closed' };
       }
 
@@ -1517,7 +1528,7 @@ export function useSessions(
         return { error: 'You are closed; nothing more reaches your parent' };
       }
 
-      const delivered = parent.tell(
+      const delivered = parent?.tell(
         { name: child.name, runtime: child.runtime, reachable: true },
         text,
         queued,
@@ -2938,6 +2949,13 @@ export function useSessions(
     sendToMain,
     clearFront,
     agentRows,
+    messageNames: () => {
+      const agents = front();
+
+      return agents === undefined
+        ? []
+        : messageRecipients(agents, agents.picked).map((each) => each.name);
+    },
     listed,
     background,
     picked,

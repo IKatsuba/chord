@@ -15,6 +15,7 @@ import {
   isLead,
   MAX_CHILDREN,
   movePick,
+  messageRecipients,
   namedChild,
   notifiedName,
   openChild,
@@ -753,5 +754,109 @@ describe('CHD-493 U3 tester: closed child keys never become a new child', () => 
     expect(attentionOrder(late)).toStrictEqual([]);
     expect(late.children[0]?.wait).toStrictEqual(replacement.children[0]?.wait);
     expect(late.closed.map(({ name }) => name)).toStrictEqual(['other']);
+  });
+});
+
+describe('send_message recipients shared with agent completion (CHD-519)', () => {
+  function family() {
+    let agents = opened('main', 'parser');
+    const add = (id: string, name: string, team: string, lead?: string) => {
+      const child = openChild(
+        agents,
+        {
+          id,
+          name,
+          runtime: 'fake',
+          openedAt: 0,
+          team,
+          ...(lead === undefined ? {} : { lead }),
+        },
+        'conversation',
+      )!;
+
+      agents = child.agents;
+
+      return child.key;
+    };
+
+    const lead = add('lead', 'bugfix', 'bugfix');
+    const tester = add('tester', 'tester', 'bugfix', 'lead');
+    const coder = add('coder', 'coder', 'bugfix', 'lead');
+    const otherLead = add('other-lead', 'bugfix 2', 'bugfix');
+    const otherMember = add('other-tester', 'tester', 'bugfix', 'other-lead');
+    const names = (key: number) =>
+      messageRecipients(agents, key).map((each) => each.name);
+
+    return { agents, lead, tester, coder, otherLead, otherMember, names };
+  }
+
+  test('main reaches its own long-lived children and team leads, not their members', () => {
+    const { names } = family();
+
+    expect(names(1)).toStrictEqual(['parser', 'bugfix', 'bugfix 2']);
+  });
+
+  test('an ordinary child reaches only its parent, main', () => {
+    const { names } = family();
+
+    expect(names(2)).toStrictEqual(['main']);
+  });
+
+  test('a lead reaches main, its open members and another run’s lead', () => {
+    const { lead, names } = family();
+
+    expect(names(lead)).toStrictEqual(['main', 'tester', 'coder', 'bugfix 2']);
+  });
+
+  test('a member reaches its lead and peers, not main, another run’s lead or another run’s members', () => {
+    const { tester, names } = family();
+
+    expect(names(tester)).toStrictEqual(['bugfix', 'coder']);
+  });
+
+  test('another run’s lead reaches its own member and the first run’s lead', () => {
+    const { otherLead, names } = family();
+
+    expect(names(otherLead)).toStrictEqual(['main', 'tester', 'bugfix']);
+  });
+
+  test('task agents and unopened runtimes are excluded; a non-long-lived source has no recipients', () => {
+    const { agents, names } = family();
+    const withTask = {
+      ...agents,
+      tasks: [{ key: 999, name: 'Fix the tokenizer', runtime: 'codex' }],
+    };
+
+    expect(
+      messageRecipients(withTask, 1).map((each) => each.name),
+    ).toStrictEqual(names(1));
+    expect(messageRecipients(withTask, 999)).toStrictEqual([]);
+    expect(names(1)).not.toContain('codex');
+    expect(names(1)).not.toContain('Fix the tokenizer');
+  });
+
+  test('a closed child or member is no longer offered or resolved, and a closed source reaches nobody', () => {
+    const { agents, tester, lead } = family();
+    const closed = closeChild(closeChild(agents, 2), tester);
+
+    expect(messageRecipients(closed, 1).map((each) => each.name)).toStrictEqual(
+      ['bugfix', 'bugfix 2'],
+    );
+    expect(
+      messageRecipients(closed, lead).map((each) => each.name),
+    ).toStrictEqual(['main', 'coder', 'bugfix 2']);
+    expect(messageRecipients(closed, tester)).toStrictEqual([]);
+  });
+
+  test('recipients retain their exact session key and opaque id for routing aliases', () => {
+    const { agents, lead } = family();
+
+    expect(
+      messageRecipients(agents, 1).find((each) => each.key === lead),
+    ).toStrictEqual({ key: lead, name: 'bugfix', id: 'lead' });
+    expect(messageRecipients(agents, lead)[0]).toStrictEqual({
+      key: 1,
+      name: 'main',
+    });
   });
 });

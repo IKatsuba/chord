@@ -759,6 +759,8 @@ describe('shortcuts scroll rules occupy their own rows (CHD-528)', () => {
 test('shortcuts keep their last row or a below rule when a message starts a turn (CHD-530)', async () => {
   const server = serveChord();
   const callers: Caller[] = [];
+  const lines = shortcuts().map(shortcutLine);
+  const rows = panelRows(lines, columnCount(lines, 80));
 
   try {
     await withWindow(
@@ -801,7 +803,7 @@ test('shortcuts keep their last row or a below rule when a message starts a turn
           'the shortened panel to show its last row or count it below',
           () =>
             window.frame().includes('tab enter to add a file or agent') ||
-            /↓ \d+ lines? below/.test(window.frame()),
+            /↓ [1-9]\d* lines? below/.test(window.frame()),
         ).catch((error: Error) => {
           throw new Error(`${error.message}; the screen:\n${window.frame()}`);
         });
@@ -823,9 +825,32 @@ test('shortcuts keep their last row or a below rule when a message starts a turn
         for (const frame of frames) {
           expect(
             frame.includes('tab enter to add a file or agent') ||
-              /↓ \d+ lines? below/.test(frame),
+              /↓ [1-9]\d* lines? below/.test(frame),
             frame,
           ).toBe(true);
+
+          const captured = frame.split('\n').map((line) => line.trimEnd());
+          const start = captured.findIndex((line) => line.startsWith('╰─')) + 1;
+          const end = captured.findIndex(
+            (line, at) => at >= start && /^ +main +fake/.test(line),
+          );
+          const actual = captured.slice(start, end);
+          const above = actual[0]?.match(/↑ (\d+) lines? above/);
+          const below = actual.at(-1)?.match(/↓ (\d+) lines? below/);
+          const offset = Number(above?.[1] ?? 0);
+          const count = actual.length - Number(!!above) - Number(!!below);
+
+          expect(actual, frame).toStrictEqual([
+            ...(above ? [`  ${requestRule('↑', offset, 'pageup', 78)}`] : []),
+            ...rows
+              .slice(offset, offset + count)
+              .map((row) => `  ${row}`.trimEnd()),
+            ...(below
+              ? [
+                  `  ${requestRule('↓', rows.length - offset - count, 'pagedown', 78)}`,
+                ]
+              : []),
+          ]);
         }
       },
       {

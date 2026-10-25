@@ -166,10 +166,15 @@ export function Shortcuts({
 }
 
 function Rule({ text, visible }: { text: string; visible: boolean }) {
+  // Content updates inside the size hook's flushSync; children compose later.
   return (
-    <text {...CUT} attributes={DIM} flexShrink={0} visible={visible}>
-      {text}
-    </text>
+    <text
+      {...CUT}
+      attributes={DIM}
+      flexShrink={0}
+      visible={visible}
+      content={text}
+    />
   );
 }
 

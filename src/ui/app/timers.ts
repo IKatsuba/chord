@@ -35,9 +35,12 @@ export function useTimers(
 
   const copied = state.copied;
 
-  // A failure stays until a key clears the selection it would copy again.
+  // A failure stays until a key clears the selection it would copy again;
+  // a code block's has none, and goes in time (CHD-394).
   useLapse(
-    copied?.result.kind === 'failed' ? undefined : copied?.id,
+    copied?.result.kind === 'failed' && copied.block !== true
+      ? undefined
+      : copied?.id,
     COPIED_NOTE_MS,
     () =>
       copied !== undefined && dispatch({ type: 'copied_gone', id: copied.id }),
@@ -52,6 +55,16 @@ export function useTimers(
     () =>
       steerRefused !== undefined &&
       dispatch({ type: 'steer_note_gone', id: steerRefused }),
+  );
+
+  const draftHeld = state.draftHeld;
+
+  useLapse(
+    draftHeld,
+    COPIED_NOTE_MS,
+    () =>
+      draftHeld !== undefined &&
+      dispatch({ type: 'draft_held_gone', id: draftHeld }),
   );
   useLapse(state.agentCloseArmed, QUIT_WINDOW_MS, () =>
     dispatch({ type: 'agent_close_disarmed' }),

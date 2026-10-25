@@ -7,6 +7,7 @@ import {
   keySteps,
   newerSteps,
   olderSteps,
+  promptSteps,
   type Step,
   submitSteps,
 } from '../../../src/ui/app/keys.ts';
@@ -724,5 +725,33 @@ describe('CHD-493 U10 tester: independent draft payloads', () => {
     expect(
       state.kept?.every((draft) => draft.images.length === 0 && !draft.bash),
     ).toBe(true);
+  });
+});
+
+describe("a code block's command put into the prompt (CHD-394)", () => {
+  test('an empty box takes it in bash mode with the cursor at its end, and nothing runs', () => {
+    const command = 'bun install\nbun test tests/parse';
+
+    expect(promptSteps(command, context(busy))).toStrictEqual([
+      dispatched({ type: 'bash_mode', on: true }),
+      { type: 'show_draft', text: command, cursor: endOf(command) },
+    ]);
+  });
+
+  test('a draft in the box stays, and the status line says why', () => {
+    const drafted = typing('half a thought');
+
+    expect(promptSteps('ls', context(drafted))).toStrictEqual([
+      dispatched({ type: 'draft_held' }),
+    ]);
+    // A bash command typed counts as a draft too.
+    expect(
+      promptSteps(
+        'ls',
+        context(
+          typing('pwd', reduceApp(ready, { type: 'bash_mode', on: true })),
+        ),
+      ),
+    ).toStrictEqual([dispatched({ type: 'draft_held' })]);
   });
 });

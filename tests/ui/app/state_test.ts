@@ -931,3 +931,48 @@ test("Tab's note on an agent without steering is said afresh on each press, and 
       .steerRefused,
   ).toBeUndefined();
 });
+
+describe("a code block's copy and the draft note (CHD-394)", () => {
+  test('a block copy takes over a selection being copied, which stays shown to copy again, and its note goes in time even failed', () => {
+    const copying = reduceApp(
+      reduceApp(reduceApp(ready, { type: 'selection_started' }), {
+        type: 'selection_released',
+        text: 'ab',
+      }),
+      { type: 'copy_started' },
+    );
+
+    expect(copying.selection).toStrictEqual({ kind: 'copying' });
+
+    const started = reduceApp(copying, { type: 'block_copy_started' });
+
+    expect(started.selection).toStrictEqual({ kind: 'shown' });
+    // No selection being copied: nothing to settle.
+    expect(reduceApp(ready, { type: 'block_copy_started' })).toBe(ready);
+
+    const failed = reduceApp(started, {
+      type: 'block_copy_noted',
+      result: { kind: 'failed', reason: 'no clipboard to write to' },
+    });
+
+    expect(failed.copied).toMatchObject({ block: true, auto: false });
+    expect(
+      reduceApp(failed, { type: 'copied_gone', id: failed.copied!.id }).copied,
+    ).toBeUndefined();
+  });
+
+  test('the draft note is said afresh on each press, and only the last one ends it', () => {
+    const first = reduceApp(ready, { type: 'draft_held' });
+    const again = reduceApp(first, { type: 'draft_held' });
+
+    expect(again.draftHeld).not.toStrictEqual(first.draftHeld);
+    expect(
+      reduceApp(again, { type: 'draft_held_gone', id: first.draftHeld! })
+        .draftHeld,
+    ).toStrictEqual(again.draftHeld);
+    expect(
+      reduceApp(again, { type: 'draft_held_gone', id: again.draftHeld! })
+        .draftHeld,
+    ).toBeUndefined();
+  });
+});

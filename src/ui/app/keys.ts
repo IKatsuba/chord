@@ -929,6 +929,23 @@ export function emptyPasteSteps(text: string, context: KeyContext): Step[] {
 }
 
 /**
+ * A code block's command put into the prompt, by its `[run]` or its `r`
+ * (docs/design/CHD-394.md §4): bash mode with the command in the box, as if
+ * `!` and the command were typed, and nothing run. A draft in the box is
+ * never replaced: it stays, and the status line says so.
+ */
+export function promptSteps(command: string, context: KeyContext): Step[] {
+  if (context.typed.draft !== '') {
+    return [dispatch({ type: 'draft_held' })];
+  }
+
+  return [
+    dispatch({ type: 'bash_mode', on: true }),
+    show(command, endOf(command)),
+  ];
+}
+
+/**
  * The box changed under the person's typing: the `!` that enters bash mode,
  * half a placeholder taken whole, a pasted image path read, and the panel
  * put away.

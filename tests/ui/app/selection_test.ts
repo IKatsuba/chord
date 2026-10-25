@@ -7,6 +7,7 @@ import {
   type TerminalClipboardAdapter,
 } from '@opentui/core';
 import {
+  blockCopyNote,
   COPY_BOUND_MS,
   COPY_TIMEOUT_MS,
   type Copy,
@@ -388,4 +389,16 @@ describe('tester: selection copy races and failures', () => {
       chars: 4,
     });
   });
+});
+
+test("a code block's failed copy names no copy key, as no selection is left to copy again (CHD-394)", () => {
+  expect(
+    blockCopyNote({ kind: 'failed', reason: 'too large to copy' }),
+  ).toStrictEqual('could not copy: too large to copy');
+  expect(blockCopyNote({ kind: 'copied', chars: 75 })).toStrictEqual(
+    'copied 75 chars to clipboard',
+  );
+  expect(blockCopyNote({ kind: 'sent', chars: 3 })).toStrictEqual(
+    "sent 3 chars to the terminal's clipboard",
+  );
 });

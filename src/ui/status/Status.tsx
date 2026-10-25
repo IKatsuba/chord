@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { modelName } from '../../session/models.ts';
 import { runningSubagents } from '../../session/subagents.ts';
 import type { TurnState } from '../../session/transcript/types.ts';
-import { copyNote } from '../app/selection.ts';
+import { blockCopyNote, copyNote } from '../app/selection.ts';
 import type { AppState } from '../app/state.ts';
 import { SPINNER_STEPS, spinnerMarks, workingLine } from './status.ts';
 import { useColours, useHintKey } from '../app/context.ts';
@@ -108,6 +108,12 @@ export function unsteeredNote(submit: string | undefined): string {
   return submit === undefined ? note : `${note} · ${submit} queues it`;
 }
 
+/**
+ * What a code block put into the prompt says where a draft is in the box,
+ * which it never replaces (docs/design/CHD-394.md §4).
+ */
+export const DRAFT_HELD = 'The prompt holds a draft · ctrl+c clears it';
+
 /** Claude Code's mode colours, in the theme's tones; the rest is dim. */
 function statusColour(tone: StatusTone, colours: Palette): string | undefined {
   switch (tone) {
@@ -158,7 +164,12 @@ export function StatusLine({
   const failure = state.editorFailed ?? state.pasteFailed ?? state.keysFailed;
   const helpKey = hintKey(state.keys, 'help:toggle');
   const cycleKey = hintKey(state.keys, 'chat:cycleMode');
-  const copied = state.copied && copyNote(state.copied.result);
+  const copied =
+    state.copied &&
+    (state.copied.block
+      ? blockCopyNote(state.copied.result)
+      : copyNote(state.copied.result));
+  const held = state.draftHeld === undefined ? undefined : DRAFT_HELD;
   const unsteered =
     state.steerRefused === undefined
       ? undefined
@@ -169,6 +180,7 @@ export function StatusLine({
       ? `Stopping ${agent}…`
       : (failure ??
         unsteered ??
+        held ??
         copied ??
         state.sessionsNote ??
         (connection.status === 'starting' ? `Starting ${agent}…` : undefined)));
@@ -182,7 +194,8 @@ export function StatusLine({
       model: alone ? undefined : modelName(state.models),
       effort: alone ? undefined : effort,
       failed:
-        notice !== undefined && (notice === failure || notice === unsteered),
+        notice !== undefined &&
+        (notice === failure || notice === unsteered || notice === held),
       error:
         copied !== undefined &&
         notice === copied &&

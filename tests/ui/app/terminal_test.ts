@@ -676,3 +676,55 @@ describe('CHD-394 U1 tester: block copy outcomes', () => {
     expect(await handle.copyText('after close')).toBeUndefined();
   });
 });
+
+describe("a code block's copy says what came of it (CHD-394)", () => {
+  test('it starts by taking over a selection copy, then notes its own result; one taken over by a later says nothing', async () => {
+    const answers: ((result: ClipboardWriteResult) => void)[] = [];
+    const copy: Copy = () => new Promise((resolve) => answers.push(resolve));
+    const seen: WindowedAction[] = [];
+    let handle: SelectionHandle | undefined;
+
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: (action) => seen.push(action),
+        copy,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'x');
+    };
+
+    const drawn = await draw(createElement(Probe));
+    const written = {
+      host: { status: 'written' },
+      terminal: { status: 'skipped' },
+    } as unknown as ClipboardWriteResult;
+
+    try {
+      assert(handle !== undefined);
+      handle.copyBlock('bun test');
+      handle.copyBlock('echo hi');
+      answers[0]!(written);
+      answers[1]!(written);
+      await until(
+        'the second note',
+        () => seen.filter((a) => a.type === 'block_copy_noted').length > 0,
+      );
+
+      expect(seen).toStrictEqual([
+        { type: 'block_copy_started' },
+        { type: 'block_copy_started' },
+        {
+          type: 'block_copy_noted',
+          result: { kind: 'copied', chars: 7 },
+        },
+      ]);
+      handle.copyBlock('');
+      expect(seen).toHaveLength(3);
+    } finally {
+      drawn.unmount();
+    }
+  });
+});

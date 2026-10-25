@@ -252,6 +252,11 @@ export interface WindowState
    * number among the notes, said for a while (CHD-378).
    */
   readonly steerRefused?: number;
+  /**
+   * The note of the last code block put into the prompt over a draft, which
+   * stayed, by its number among the notes, said for a while (CHD-394).
+   */
+  readonly draftHeld?: number;
   /** The notes said so far, so each note's time is its own. */
   readonly notes?: number;
 }
@@ -263,6 +268,11 @@ export interface Copied {
   readonly result: CopyResult;
   /** Release copied it, rather than the copy key. */
   readonly auto: boolean;
+  /**
+   * A code block's copy (CHD-394): its note goes in time whatever it says,
+   * as no selection is left to try it again on.
+   */
+  readonly block?: true;
 }
 
 /** The window as the session in front fills it: what is drawn, and keys read. */
@@ -334,6 +344,17 @@ export type AppAction =
     }
   /** The note `id` has been said long enough. */
   | { readonly type: 'copied_gone'; readonly id: number }
+  /**
+   * A code block's copy started: a selection's copy it takes over says
+   * nothing now, and the selection stays to copy again (CHD-394).
+   */
+  | { readonly type: 'block_copy_started' }
+  /** The latest code block's copy came back. */
+  | { readonly type: 'block_copy_noted'; readonly result: CopyResult }
+  /** A code block put into the prompt found a draft there, which stays. */
+  | { readonly type: 'draft_held' }
+  /** The draft note `id` has been said long enough. */
+  | { readonly type: 'draft_held_gone'; readonly id: number }
   /** Tab on an agent that takes no steering: nothing went (CHD-378). */
   | { readonly type: 'steer_refused' }
   /** The steering note `id` has been said long enough. */
@@ -908,6 +929,33 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       }
 
       const { copied: _, ...rest } = state;
+
+      return rest;
+    }
+    case 'block_copy_started':
+      return state.selection?.kind === 'copying'
+        ? { ...state, selection: { kind: 'shown' } }
+        : state;
+    case 'block_copy_noted': {
+      const id = (state.notes ?? 0) + 1;
+
+      return {
+        ...state,
+        copied: { id, result: action.result, auto: false, block: true },
+        notes: id,
+      };
+    }
+    case 'draft_held': {
+      const id = (state.notes ?? 0) + 1;
+
+      return { ...state, draftHeld: id, notes: id };
+    }
+    case 'draft_held_gone': {
+      if (state.draftHeld !== action.id) {
+        return state;
+      }
+
+      const { draftHeld: _, ...rest } = state;
 
       return rest;
     }

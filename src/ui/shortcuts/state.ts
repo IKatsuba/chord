@@ -114,6 +114,8 @@ export type KeyCommand =
   | 'toggle_help'
   /** Esc while the shortcuts panel is open closes it before anything else. */
   | 'close_help'
+  /** Tab during a turn: the draft into that turn, not the queue. */
+  | 'steer'
   /** shift+tab: ask the agent for its next mode. */
   | 'cycle_mode'
   /** Tab in the slash command list: the highlighted name into the prompt. */

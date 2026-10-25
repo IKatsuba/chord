@@ -641,6 +641,27 @@ test('shift + tab asks for a mode only once the agent offers two', () => {
   ).toStrictEqual(undefined);
 });
 
+test('tab sends the draft into a running turn, and only there (CHD-378)', () => {
+  const tab = { ctrl: false, escape: false, tab: true };
+  const { ready, busy, asked } = STATES;
+
+  expect(keyCommand('', tab, busy!, 'Then the docs')).toStrictEqual('steer');
+  // No turn, an empty box or a shell command: nothing, as before.
+  expect(keyCommand('', tab, ready!, 'Then the docs')).toStrictEqual(undefined);
+  expect(keyCommand('', tab, busy!, '  ')).toStrictEqual(undefined);
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(busy!, { type: 'bash_mode', on: true }),
+      'ls',
+    ),
+  ).toStrictEqual(undefined);
+  // The lists keep their Tab, and a permission has the keys.
+  expect(keyCommand('', tab, busy!, '/')).toStrictEqual('complete_command');
+  expect(keyCommand('', tab, asked!, 'Then the docs')).toStrictEqual(undefined);
+});
+
 test('? on an empty prompt opens the panel, and text anywhere else', () => {
   const plain = { ctrl: false, escape: false };
   const escape = { ctrl: false, escape: true };
@@ -1357,11 +1378,12 @@ test("the panel says ctrl + c to copy, and a rebound key's first, or ctrl + c (C
 
   expect(line(keymap)).toStrictEqual('ctrl + x y or ctrl + c');
 
-  // The panel is still two columns of twenty at 80 and three of fourteen at 120.
+  // The panel is two columns of twenty-one at 80 since Tab steers (CHD-378),
+  // and three of fourteen at 120.
   const lines = shortcuts(keymap).map(shortcutLine);
 
   expect(columnCount(lines, 80)).toStrictEqual(2);
-  expect(Math.ceil(lines.length / 2)).toStrictEqual(20);
+  expect(Math.ceil(lines.length / 2)).toStrictEqual(21);
   expect(columnCount(lines, 120)).toStrictEqual(3);
   expect(Math.ceil(lines.length / 3)).toStrictEqual(14);
 });

@@ -1870,6 +1870,18 @@ function boundCommand(
     return 'newline';
   }
 
+  // A shell command is no message, and with no turn running Tab does nothing,
+  // as before (CHD-378); the lists above keep it while open.
+  if (
+    typing &&
+    on('chat:steer') &&
+    isBusy(state) &&
+    !state.bash &&
+    canSend(state, draft)
+  ) {
+    return 'steer';
+  }
+
   if (
     !listHasKeys(state) &&
     on('history:previous') &&

@@ -89,6 +89,12 @@ export const SHORTCUTS: readonly Shortcut[] = [
     prompt: ['enter'],
     actions: ['chat:submit'],
   },
+  {
+    key: 'tab',
+    does: 'to send into the running turn',
+    commands: ['steer'],
+    actions: ['chat:steer'],
+  },
   // Both newlines on one line, so the panel keeps its 40 lines at 80x24
   // (the owner's Q80): shift+enter, and the terminal-proof \ + enter for the
   // terminals that do not report it. That one is two presses, so the key

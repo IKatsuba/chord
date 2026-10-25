@@ -1998,3 +1998,64 @@ describe("the person's steer the agent has not answered yet (CHD-378)", () => {
       conversation.interrupt();
     }));
 });
+
+test("the person's unanswered steer of a session /clear let go never shows in the new session's queue (CHD-378)", async () => {
+  const opened: { went: () => void }[] = [];
+  let steered = 0;
+  const open = () => {
+    const { session } = heldSession();
+    const { promise: sent, resolve: go } =
+      Promise.withResolvers<readonly never[]>();
+
+    opened.push({ went: () => go([]) });
+
+    return Promise.resolve(
+      Object.assign(session, {
+        steers: () => true,
+        // Never answered: the agent sits on it.
+        steer: () => {
+          steered += 1;
+
+          return new Promise<never>(() => {});
+        },
+        prompt: (text: string) => ({
+          id: text,
+          sent,
+          result: new Promise<never>(() => {}),
+          cancel: () => Promise.resolve(),
+        }),
+      }),
+    );
+  };
+
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(open, (event) => events.push(event));
+  const connected = (count: number) =>
+    until(
+      () =>
+        events.filter((event) => event.type === 'connected').length === count,
+    );
+
+  conversation.start();
+  await connected(1);
+  conversation.send('go');
+  opened[0]!.went();
+  await went();
+
+  expect(conversation.steerIn('Use the parser')).toStrictEqual('sent');
+  await until(() => steered === 1);
+  void conversation.clear();
+  await connected(2);
+
+  const reopened = events.length;
+
+  // Past the wait after which an unanswered steer shows.
+  await new Promise((resolve) => setTimeout(resolve, 700));
+
+  expect(
+    events
+      .slice(reopened)
+      .some((event) => event.type === 'queued' && event.steering),
+  ).toBeFalsy();
+  await conversation.close();
+});

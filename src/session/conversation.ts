@@ -1329,7 +1329,9 @@ export class Conversation {
 
       if (this.#steerable(session) === into) {
         const out = session.steer(next.prompt);
+        // Never into a session /clear opened since, or once closing.
         const outgoing = () =>
+          this.#current(session) &&
           this.#emit({
             type: 'queued',
             turnId: next.turnId,

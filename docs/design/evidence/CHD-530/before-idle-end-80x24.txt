@@ -1,0 +1,24 @@
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ── ↑ 6 lines above · pageup to scroll ────────────────────────────────────────
+  cmd + ← → to line start or end          ctrl + d or ctrl + c twice to quit
+  ↑ ↓ for prompts, agents, background     ctrl + x a for what waits on you
+  x to close an agent, stop background    ctrl + x b to pick a code block
+  enter for background, details, a call   c r to copy or put in the prompt
+  ctrl + r to search prompts              1–9 to pick a choice
+  tab enter to take a match               ↑ ↓ or j k to move between choices
+  esc to cancel a search                  enter to pick the highlighted choice
+  pgup pgdn or wheel to scroll            esc to reject a permission
+  shift + ↑ ↓ to scroll a line            esc ← to leave a picker or shortcuts
+  home end for the top and the bottom     ctrl + a to show all directories
+  ctrl + c to copy                        tab ← → ↑ ↓ space to answer forms
+  / @ @@ for commands, files or agents    ctrl + c to stop the turn and its form
+  ↑ ↓ to pick a completion                /vim for vim mode
+  tab to complete a command               ? for shortcuts
+  tab enter to add a file or agent        any key to quit the crash screen
+  esc to close completions
+    main       fake                    ✻ working 0s  ✓ new reply
+    parser     fake                    ◦ idle 0s
+    … +5 more

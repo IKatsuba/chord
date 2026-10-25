@@ -40,9 +40,9 @@ This is the full check, and CI runs it. Locally, choose checks that match
 what changed, following [AGENTS.md](AGENTS.md#choosing-checks-for-a-change).
 For prose-only changes, review the diff and check formatting of the changed
 files; application tests are not needed. For code, run relevant tests and
-static checks, using the full suite when the impact is broad. State which
-checks you ran in the pull request. `bun dev lint --fix` then `bun dev fmt`
-fixes most lint and formatting issues.
+static checks, with the full suite locally or in CI for broad changes. State
+which checks you ran in the pull request. `bun dev lint --fix` then
+`bun dev fmt` fixes most lint and formatting issues.
 
 - Keep a pull request to one change. For behavior changes, add a test that
   would have failed without it when appropriate. Tests never reach a real

@@ -700,11 +700,8 @@ be up.
 `open_agent` opens a long-lived agent the same way, with the prompt as its
 first turn, a message from `main`. While a session has children,
 a list of its agents sits under the status line, `main` and each child in
-the order it opened, each child in a colour of its own. Session titles
-stand between names and runtimes in a column at most a third of the width,
-wrapped without cutting; with no titles, the column is absent. Whitespace
-is folded to spaces and escapes are not acted on. A rename updates in
-place with no notice; team members and folded leads show their own titles.
+the order it opened, each child in a colour of its own. Each agent has one
+row, with no session title, including team leads and unfolded members.
 Each row has its runtime, model, effort (`open_agent` takes one as
 `spawn_task` does) and state: `● permission 17s`, `✻ working 41s`, `◦ idle 3m`,
 `✗ exited` or `✗ failed to start`. Asking counts from the request, working
@@ -718,7 +715,7 @@ it uses dimmed green, keeping it apart from the permission warning's
 yellow. `idle`, `✓ new reply` and `← new message` are dim; a permission
 keeps its warning colour. `/team show` uses the same colours.
 As room narrows, effort, model and the mark's words give way in that order;
-its glyph stays. Names, titles and state words wrap without cutting, their
+its glyph stays. Names and state words wrap without cutting, their
 lines counted toward the list's limit. In a short window, the list folds
 down to one agent row and `… +N more`, staying there until the transcript has rows
 again. The background summary stays whole. ↑ ↓ scroll a row taller than

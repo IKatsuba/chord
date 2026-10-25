@@ -1,8 +1,4 @@
-/**
- * An agent's own title for its session in the agents list, on the fake
- * agent and chord's own server: each child's beside its name, renamed in
- * place, and a task's never shown (CHD-445, the owner's Q200).
- */
+/** Session titles stay outside the agents list (CHD-523, Q200). */
 import { describe, expect, test } from 'bun:test';
 import stripAnsi from 'strip-ansi';
 import assert from 'node:assert/strict';
@@ -13,7 +9,6 @@ import { LONG_SESSION_TITLE } from '../../fixtures/fake_agent/scenarios/text.ts'
 import { serveChord } from '../../../src/server/server.ts';
 import {
   DOWN,
-  ESC,
   UP,
   ready,
   send,
@@ -23,6 +18,7 @@ import {
   withWindow,
 } from '../app/render.tsx';
 import { withAgents } from './agents_window.tsx';
+import { BUGFIX, started } from './teams_window.tsx';
 
 /** The list's row for `name`, as the screen shows it. */
 function rowOf(window: Window, name: string): string | undefined {
@@ -31,35 +27,97 @@ function rowOf(window: Window, name: string): string | undefined {
     .find((line) => new RegExp(`^ {4}${name}  `).test(line));
 }
 
-/** Both of `agentstitled`'s children up, each under its own title. */
+/** Both of `agentstitled`'s children have answered their naming prompts. */
 async function titled(window: Window): Promise<void> {
   await ready(window);
   await send(window, 'agentstitled');
   await until(
     'both children titled',
     () =>
-      /Fix the tokenizer/.test(rowOf(window, 'parser') ?? '') &&
-      /Fix the parser/.test(rowOf(window, 'docs') ?? ''),
+      rowOf(window, 'parser') !== undefined &&
+      rowOf(window, 'docs') !== undefined &&
+      !window.frame().includes('esc to interrupt'),
   );
 }
 
+describe('session titles stay outside every agents-list row (CHD-523)', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    for (const team of [false, true]) {
+      test(`long-titled ${team ? 'lead and nested members' : 'main and children'} take one line each at ${columns}×${rows}`, async () => {
+        const server = serveChord();
+
+        try {
+          await withWindow(
+            async (window) => {
+              if (team) {
+                await started(window);
+              } else {
+                await ready(window);
+                await send(window, 'agentsquiet');
+                await window.shows('● docs needs your permission');
+                await until(
+                  'both children in the list',
+                  () =>
+                    rowOf(window, 'parser') !== undefined &&
+                    rowOf(window, 'docs') !== undefined,
+                );
+              }
+
+              const lines = stripAnsi(window.frame()).split('\n');
+              const bottom = lines.findLastIndex((line) =>
+                line.startsWith('╰'),
+              );
+              const list = lines
+                .slice(bottom + 2)
+                .filter((line) => line.trim());
+              const names = team
+                ? ['main', 'bugfix', '├─ tester', '└─ coder']
+                : ['main', 'parser', 'docs'];
+
+              expect(list).toHaveLength(names.length);
+
+              for (const [at, name] of names.entries()) {
+                expect(list[at]).toContain(name);
+                expect(list[at]).not.toContain(LONG_SESSION_TITLE.slice(0, 12));
+                expect(list[at]).not.toMatch(
+                  /Fix the tokenizer|Fix the parser/,
+                );
+              }
+
+              if (!team) {
+                await window.press(DOWN);
+                await window.shows('❯ main');
+                await window.press(DOWN);
+                await window.shows('❯ parser');
+                await window.press(UP);
+                await window.shows('❯ main');
+              }
+            },
+            {
+              server,
+              runtimes: ['fake'],
+              columns,
+              rows,
+              teams: { bugfix: BUGFIX },
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--title',
+                LONG_SESSION_TITLE,
+              ),
+            },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
+  }
+});
+
 describe("an agent's own title in the agents list (CHD-445)", () => {
-  test('each child names its own session beside its name, the newest name in place, main blank while it has given none', () =>
-    withAgents(async (window) => {
-      await titled(window);
-
-      // docs renamed itself: only its newest title stands, with no line of
-      // its own about it.
-      expect(window.frame()).not.toContain('Look at the parser');
-
-      const main = rowOf(window, 'main')!;
-      const parser = rowOf(window, 'parser')!;
-
-      // main's title column is blank, its runtime where parser's is.
-      expect(main.indexOf('fake ·')).toStrictEqual(parser.indexOf('fake ·'));
-      expect(main.slice(8, main.indexOf('fake ·')).trim()).toStrictEqual('');
-    }));
-
   test("a task's agent titles its session, which is shown nowhere: not in the list, nor on /resume, nor in the header when resumed (Q200)", () =>
     withAgents(async (window) => {
       const head = LONG_SESSION_TITLE.slice(0, 30);
@@ -96,7 +154,7 @@ describe("an agent's own title in the agents list (CHD-445)", () => {
       expect(window.frame()).not.toContain(head);
     }));
 
-  test("a task's session resumed as main stays untitled: the main row and the terminal's title say its first prompt, before and after its agent names it again (Q200)", async () => {
+  test("a task's session resumed as main stays untitled: the terminal's title says its first prompt, before and after its agent names it again (Q200)", async () => {
     const head = LONG_SESSION_TITLE.slice(0, 30);
     const log: string[] = [];
     const server = serveChord();
@@ -141,7 +199,7 @@ describe("an agent's own title in the agents list (CHD-445)", () => {
               .map((report) => report.title),
           ).not.toContain('Fix the tokenizer');
           expect(status()).toStrictEqual('titledlong');
-          // A child, so the list is drawn: main's title column is blank.
+          // A child makes the list visible too.
           await send(window, '/new');
           await until('the list', () => rowOf(window, 'main') !== undefined);
 
@@ -159,89 +217,10 @@ describe("an agent's own title in the agents list (CHD-445)", () => {
 });
 
 describe('CHD-445 U3 tester: title lifetime and constrained list navigation', () => {
-  for (const [columns, rows, limit] of [
-    [80, 24, 4],
-    [120, 40, 6],
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
   ] as const) {
-    test(`a long title remains readable by line and the next agent remains reachable at ${columns}×${rows}`, () =>
-      withAgents(async (window) => {
-        await window.resize({ columns, rows });
-        await titled(window);
-        await send(window, 'titledlong');
-        await window.shows('Named at length.');
-        await window.press(DOWN);
-        await window.shows('❯ main');
-        await window.shows('Find out why');
-
-        for (let presses = 0; !window.frame().includes('changes'); presses++) {
-          expect(presses).toBeLessThan(30);
-          await window.press(DOWN);
-
-          const lines = stripAnsi(window.frame()).split('\n');
-          const bottom = lines.findLastIndex((line) => line.startsWith('╰'));
-          const list = lines
-            .slice(bottom + 2)
-            .filter((line) => line.trim() !== '');
-
-          expect(list.length).toBeLessThanOrEqual(limit);
-        }
-
-        expect(window.frame()).not.toContain('Find out why');
-        await window.press(DOWN);
-        await window.shows('❯ parser');
-        await window.shows('Fix the tokenizer');
-        await window.press(UP);
-        await window.shows('❯ main');
-        await window.shows('Find out why');
-      }));
-
-    test(`/clear leaves main blank when new titled children reopen at ${columns}×${rows}`, () =>
-      withAgents(async (window) => {
-        await window.resize({ columns, rows });
-        await titled(window);
-        await send(window, 'titledlook');
-        await window.shows('Looking.');
-        expect(rowOf(window, 'main')).toContain('Look at the parser');
-        await send(window, '/clear');
-        await titled(window);
-
-        const main = rowOf(window, 'main')!;
-
-        expect(
-          main.slice(main.indexOf('main') + 4, main.indexOf('fake')).trim(),
-        ).toBe('');
-        expect(rowOf(window, 'parser')).toContain('Fix the tokenizer');
-        expect(rowOf(window, 'docs')).toContain('Fix the parser');
-      }));
-
-    for (const scenario of ['crash', 'error', 'longheld']) {
-      test(`a child's title survives ${scenario === 'longheld' ? 'a cancelled turn' : scenario} at ${columns}×${rows}`, () =>
-        withAgents(async (window) => {
-          await window.resize({ columns, rows });
-          await titled(window);
-          await window.press(DOWN);
-          await window.press(DOWN);
-          await window.press('\r');
-          await window.shows('╭─ parser');
-          await send(window, scenario);
-
-          if (scenario === 'longheld') {
-            await window.shows('20. Line 20');
-            await window.press(ESC);
-            await window.shows('Interrupted');
-          } else if (scenario === 'error') {
-            await window.shows('The fake agent failed on purpose.');
-          } else {
-            await until(
-              'the titled child to exit',
-              () => rowOf(window, 'parser')?.includes('exited') === true,
-            );
-          }
-
-          expect(rowOf(window, 'parser')).toContain('Fix the tokenizer');
-        }));
-    }
-
     test(`a hung start has no title and closes from the list at ${columns}×${rows}`, async () => {
       const server = serveChord();
       const admit = server.admit.bind(server);

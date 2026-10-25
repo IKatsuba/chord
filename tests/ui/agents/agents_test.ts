@@ -67,20 +67,14 @@ function drawn(
     ...layout.rows.flatMap((laid) =>
       laid.lines.map(({ at, gutter }) => {
         if (at === 0) {
-          return `${gutter}${laid.branch ?? ''}${laid.name}${
-            laid.title === undefined ? '' : `  ${laid.title}`
-          }  ${laid.detail}${
+          return `${gutter}${laid.branch ?? ''}${laid.name}  ${laid.detail}${
             laid.state === undefined ? '' : `  ${laid.state.text}`
           }${laid.unseen === undefined ? '' : `  ${laid.unseen.text}`}`.trimEnd();
         }
 
-        // A wrapped row's further lines: the name's, the title's, what went
-        // under the detail.
+        // A wrapped row's further lines: the name's, then what went under
+        // the detail.
         const name = laid.names[at - 1];
-        const title =
-          laid.titleWidth === 0
-            ? ''
-            : `  ${laid.titles[at - 1] ?? ' '.repeat(laid.titleWidth)}`;
         const below = (laid.below[at - 1] ?? [])
           .map(({ text }) => text)
           .join('');
@@ -89,7 +83,7 @@ function drawn(
           name === undefined
             ? ' '.repeat(laid.nameWidth)
             : name.tree + name.text
-        }${title}${below === '' ? '' : `  ${below}`}`.trimEnd();
+        }${below === '' ? '' : `  ${below}`}`.trimEnd();
       }),
     ),
     ...(layout.more > 0 ? [`  … +${layout.more} more`] : []),
@@ -1181,73 +1175,12 @@ describe('CHD-464 tester: list space at its floor', () => {
   });
 });
 
-describe("an agent's own title in the list (CHD-445)", () => {
-  test('stands in a column of its own between the name and the runtime, blank for a row without one', () => {
-    expect(
-      drawn([
-        row('main', { title: 'Fix the tokenizer', model: 'Opus' }),
-        row('parser', { title: 'Run the parser tests' }),
-        row('docs'),
-      ]),
-    ).toStrictEqual([
-      '  main    Fix the tokenizer     codex · Opus           ◦ idle 0s',
-      '  parser  Run the parser tests  codex · gpt-5.3-codex  ◦ idle 0s',
-      '  docs                          codex · gpt-5.3-codex  ◦ idle 0s',
-    ]);
-  });
-
-  test('wraps inside a column no wider than a third of the list, at whole words, never cut', () => {
-    const title =
-      "Fix the tokenizer's handling of a quoted string at the end of a line";
-    const lines = drawn([row('main', { title }), row('parser')], {
-      width: 80,
-      limit: 10,
-    });
-
-    expect(lines).toStrictEqual([
-      "  main    Fix the tokenizer's         codex · gpt-5.3-codex  ◦ idle 0s",
-      '          handling of a quoted',
-      '          string at the end of a',
-      '          line',
-      '  parser                              codex · gpt-5.3-codex  ◦ idle 0s',
-    ]);
-    expect(
-      lines
-        .slice(0, 4)
-        .map((line) => line.slice(10, 36).trim())
-        .join(' '),
-    ).toStrictEqual(title);
-  });
-
-  test("a member's own title stands under the tree, and a folded lead's row keeps the lead's", () => {
-    const lead = row('bugfix', { title: 'Review the fix', team: 1, key: 1 });
-    const tester = row('tester', {
-      title: 'Test quoted strings',
-      team: 1,
-      branch: '└─',
-      key: 2,
-    });
-
-    expect(drawn([row('main'), lead, tester])).toStrictEqual([
-      '  main                            codex · gpt-5.3-codex  ◦ idle 0s',
-      '  bugfix     Review the fix       codex · gpt-5.3-codex  ◦ idle 0s',
-      '  └─ tester  Test quoted strings  codex · gpt-5.3-codex  ◦ idle 0s',
-    ]);
-    expect(drawn([row('main'), { ...lead, folded: [tester] }])[1]).toContain(
-      'bugfix     Review the fix',
-    );
-  });
-
+describe('a wrapped agent name in the list (CHD-523)', () => {
   test("a picked row as tall as the list, rows after it, is read by line and shows whole, and the next press moves on (the picker's exact fit)", () => {
-    const tallTitle = Array.from(
-      { length: 6 },
-      (_, at) => `line${at}word`,
-    ).join(' ');
-    const rows = [
-      row('main', { title: tallTitle, picked: true }),
-      row('parser'),
-      row('docs'),
-    ];
+    const tallName = Array.from({ length: 6 }, (_, at) => `line${at}word`).join(
+      ' ',
+    );
+    const rows = [row(tallName, { picked: true }), row('parser'), row('docs')];
     const frame = { limit: 6, width: 30, now: NOW };
     const lines = drawn(rows, { ...frame, focused: true });
 
@@ -1266,12 +1199,12 @@ describe("an agent's own title in the list (CHD-445)", () => {
 
 describe('leaving a tall row read by line (CHD-445)', () => {
   test('the next row comes whole into sight with the least move, the rows above kept as far as they fit, and ↑ picks the tall row again from its first line', () => {
-    // main's title wraps to five lines in a list of four, as at 80×24.
-    const title = Array.from({ length: 5 }, (_, at) => `line${at}word`).join(
+    // The agent's name wraps to five lines in a list of four.
+    const name = Array.from({ length: 5 }, (_, at) => `line${at}word`).join(
       ' ',
     );
     const pick = (key: number) => [
-      row('main', { title, key: 0, picked: key === 0 }),
+      row(name, { key: 0, picked: key === 0 }),
       row('parser', { key: 1, picked: key === 1 }),
       row('docs', { key: 2, picked: key === 2 }),
     ];
@@ -1303,39 +1236,9 @@ describe('leaving a tall row read by line (CHD-445)', () => {
     )!;
 
     expect(drawn(pick(0), { ...frame, focused: true, view: back })[0]).toMatch(
-      /^❯ main\s+line0word/,
+      /^❯ line0word/,
     );
     // Not read by line before: a row that fits gets no window, as today.
     expect(enteredView(pick(1), 0, frame)).toStrictEqual(undefined);
   });
-});
-
-describe('CHD-445 U3 tester: title columns preserve Unicode cells', () => {
-  for (const width of [76, 116]) {
-    test(`a hard-wrapped title keeps its complete graphemes within the column at ${width} cells`, () => {
-      const title = '界'.repeat(30) + ' ' + '👩‍💻'.repeat(18) + ' ending';
-      const layout = agentsLayout([row('main', { title }), row('parser')], {
-        limit: 100,
-        width,
-        focused: false,
-        now: NOW,
-      });
-      const main = layout.rows[0]!;
-      const lines = [main.title!, ...main.titles];
-
-      expect(main.titleWidth).toBeGreaterThan(0);
-      expect(main.titleWidth).toBeLessThanOrEqual(Math.floor(width / 3));
-      expect(lines.every((line) => stringWidth(line) <= main.titleWidth)).toBe(
-        true,
-      );
-      expect(lines.join('').replace(/\s/g, '')).toBe(title.replace(/\s/g, ''));
-      expect(layout.more).toBe(0);
-      expect(
-        drawn([row('main', { title }), row('parser')], {
-          width,
-          limit: 100,
-        }).every((line) => stringWidth(line) <= width),
-      ).toBe(true);
-    });
-  }
 });

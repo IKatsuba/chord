@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import {
   type BlockRef,
   reduceCodePick,
@@ -37,4 +37,85 @@ test('↑ and ↓ move across replies in the order drawn and stay at either end,
   expect(
     reduceCodePick(BLOCKS[1], { type: 'code_pick_ended' }),
   ).toBeUndefined();
+});
+
+describe('CHD-394 tester: pick identity and changing blocks', () => {
+  test('visible references match by entry and block, with drawn order winning over shown order', () => {
+    expect(
+      reduceCodePick(BLOCKS[2], {
+        type: 'code_pick_started',
+        blocks: BLOCKS,
+        shown: [
+          { entry: 1, block: 1 },
+          { entry: 1, block: 0 },
+          { entry: 99, block: 0 },
+        ],
+      }),
+    ).toStrictEqual({ entry: 1, block: 1 });
+    expect(
+      reduceCodePick(undefined, {
+        type: 'code_pick_started',
+        blocks: BLOCKS,
+        shown: [{ entry: 4, block: 1 }],
+      }),
+    ).toStrictEqual({ entry: 4, block: 0 });
+  });
+
+  test('recreated references move across entries and a newly appended block is reachable', () => {
+    const blocks = [...BLOCKS, { entry: 4, block: 1 }];
+
+    expect(
+      reduceCodePick(
+        { entry: 1, block: 1 },
+        {
+          type: 'code_pick_moved',
+          by: 1,
+          blocks,
+        },
+      ),
+    ).toStrictEqual({ entry: 4, block: 0 });
+    expect(
+      reduceCodePick(
+        { entry: 4, block: 0 },
+        {
+          type: 'code_pick_moved',
+          by: 1,
+          blocks,
+        },
+      ),
+    ).toStrictEqual({ entry: 4, block: 1 });
+  });
+
+  test('a removed pick falls back in either direction, while clearing all blocks leaves no pick', () => {
+    for (const by of [-1, 1] as const) {
+      expect(
+        reduceCodePick(
+          { entry: 1, block: 1 },
+          {
+            type: 'code_pick_moved',
+            by,
+            blocks: [{ entry: 4, block: 0 }],
+          },
+        ),
+      ).toStrictEqual({ entry: 4, block: 0 });
+      expect(
+        reduceCodePick(BLOCKS[1], {
+          type: 'code_pick_moved',
+          by,
+          blocks: [],
+        }),
+      ).toBeUndefined();
+    }
+
+    expect(
+      reduceCodePick(BLOCKS[1], {
+        type: 'code_pick_started',
+        blocks: [],
+        shown: BLOCKS,
+      }),
+    ).toBeUndefined();
+    expect(
+      reduceCodePick(undefined, { type: 'code_pick_ended' }),
+    ).toBeUndefined();
+  });
 });

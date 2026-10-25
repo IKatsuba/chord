@@ -7265,3 +7265,24 @@ the only replacements.
   checked by `WindowView`, a stale caller refused with `The session that
   called this has been replaced.`; or the token revoked at `clear()`.
   Tested on the fake agent.
+
+## 2026-10-25 — CHD-394: a code box's buttons are texts of their own on its top border (owner)
+
+The design (`docs/design/CHD-394.md` §1) puts `[copy]` and, on `sh` and
+`bash` blocks, `[run]` on the right end of a code box's top border, in the
+text's colour, the language label staying dim on the left; each button is
+a press-and-release target. OpenTUI 0.6.6's `<box>` draws one top `title`
+with one `titleAlignment` and one `titleColor`, and a `bottomTitle`: it
+cannot hold a label on the left and buttons on the right in another colour,
+nor tell which word a press landed on.
+
+- **Options considered.** Each button its own `<text>`, placed absolutely
+  on the box's top row and right-aligned, with its own colour and mouse
+  handlers, the label staying the box's title, as `Reply.tsx` already
+  places a list item's marker; chord drawing the top row itself, the box
+  bordered on three sides; changing the design to fit the box (the buttons
+  in `bottomTitle`, in one colour, or in the title in place of the label);
+  asking OpenTUI for titles in several parts, and waiting.
+- **Choice (the owner): texts of their own.** OpenTUI still draws the
+  border and the label; each button is an OpenTUI text with its own
+  handlers, so a click is OpenTUI's own mouse event on it.

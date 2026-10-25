@@ -1,0 +1,40 @@
+ bugfix · team · fake · Fake Large with a 1M context window · opened by @main 10s ago
+
+ ⏺ bugfix's instructions for the lead · 30 lines (ctrl+o to expand)
+
+ ← from @main
+   ⎿  Issue 214: a string at the end of a line loses its closing quote. readString in src/parse/tokenize.ts stops at
+      the newline before it consumes the quote. Add a test that fails for that reason, fix it, and have the diff
+      reviewed. Report to me when it is done.
+
+ ⏺ Open(tester) · fake · fake-small · acceptEdits
+   ⎿  costwait
+
+ ⏺ Open(coder) · fake · fake-large · plan
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.
+
+ → to @main
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/
+      parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+
+
+
+
+
+
+
+
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ to pick · enter to write to it · x to close · esc to go back       Fake Large with a 1M context window · 1% used
+    parser     Fix the tokenizer                       fake         ◦ idle 16s
+    docs       Fix the parser                          fake         ◦ idle 16s
+  ❯ bugfix     Запуск разработки майлстоуна 0.60 —     team · fake  ◦ idle 10s
+               проверка длинного названия с дочерними
+               агентами и командой
+    … +3 more

@@ -1,0 +1,40 @@
+ coder · fake · Fake Large with a 1M context window · bugfix's member · opened by @bugfix 11s ago
+
+ ⏺ bugfix's instructions for coder · 29 lines (ctrl+o to expand)
+
+ ← from @bugfix
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.
+
+ → to @tester · queued
+   ⎿  Reading src/parse/tokenize.ts now. Tell me when your test fails.
+
+ ⏺ Waiting for tester's test.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ coder · bugfix ─────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)            Fake Large with a 1M context window · medium effort · 1% context used
+  ❯ └─ coder   Запуск разработки майлстоуна 0.60 —     fake         ◦ idle 10s
+               проверка длинного названия с дочерними
+               агентами и командой
+    … +5 more
+
+

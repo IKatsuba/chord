@@ -1,0 +1,24 @@
+ coder · fake · Fake Large with a 1M c...x's member · opened by @bugfix 25s ago
+
+ ⏺ bugfix's instructions for coder · 29 lines (ctrl+o to expand)
+
+ ← from @bugfix
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test
+      fails. Read it now; change nothing yet.
+
+ → to @tester · queued
+   ⎿  Reading src/parse/tokenize.ts now. Tell me when your test fails.
+
+ ⏺ Waiting for tester's test.
+
+
+
+
+╭─ coder · bugfix ─────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on        Fake Large with a 1M context window · medium · 1% used
+    bugfix     team · fake  ◦ idle 25s
+    ├─ tester  fake         ✻ working 25s
+  ❯ └─ coder   fake         ◦ idle 24s
+    … +3 more

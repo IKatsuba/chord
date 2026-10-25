@@ -1,0 +1,24 @@
+      have the diff reviewed. Report to me when it is done.
+
+ ⏺ Open(tester) · fake · fake-small · acceptEdits
+   ⎿  costwait
+
+ ⏺ Open(coder) · fake · fake-large · plan
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test
+      fails. Read it now; change nothing yet.
+
+ → to @main
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts;
+      coder waits for it and will edit src/parse/tokenize.ts only. I will
+      report when the test fails for the bug's own reason.
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ❯ bugfix     Запуск разработки          team · fake  ◦ idle 20s
+               майлстоуна 0.60 —
+               проверка длинного
+  ↓            названия с дочерними

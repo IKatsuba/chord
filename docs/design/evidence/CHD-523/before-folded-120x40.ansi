@@ -1,0 +1,40 @@
+[38;2;255;255;255m [38;2;60;224;164m[48;2;49;217;164m▀[38;2;54;220;164m[49m▀[39m  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39magentstitled[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mOpen[0m(parser)[2m · fake · fake-small[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mtitled[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mOpen[0m(docs)[2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mretitled[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mWaiting on parser and docs.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mteam[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mList teams[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39m4 teams · bugfix, chord-ship-codex, chorded-ship-codex, ship-codex[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mTeam[0m(bugfix)[2m · fake · fake-large[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIssue 214: a string at the end of a line loses its closing quote. readString in src/parse/tokenize.ts stops at[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mthe newline before it consumes the quote. Add a test that fails for that reason, fix it, and have the diff[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mreviewed. Report to me when it is done.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mbugfix has the job. Its lead will report here; you can look in with ↓.[38;2;255;255;255m
+
+ [38;2;86;212;221m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;86;212;221m@bugfix[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/[0m[38;2;255;255;255m
+      [2m[39mparse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix · fake.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [1m[39mmain     [0m  Запуск разработки майлстоуна 0.60 —   [2m  fake                    ◦ idle 9s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39m           проверка длинного названия с дочерними[38;2;255;255;255m
+  [38;2;177;185;249m  [39m           агентами и командой                   [38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mparser   [39m  Fix the tokenizer                     [2m  fake                    ◦ idle 15s            ✓ new reply[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;196;156;255mdocs     [39m  Fix the parser                        [2m  fake                    ◦ idle 15s            ✓ new reply[0m[38;2;255;255;255m
+  [2m[39m  … +1 more[0m[38;2;255;255;255m

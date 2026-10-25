@@ -1,4 +1,4 @@
-import type { BoxRenderable } from '@opentui/core';
+import type { BoxRenderable, Renderable } from '@opentui/core';
 import { useTerminalDimensions } from '@opentui/react';
 import process from 'node:process';
 import manifest from '../../../package.json' with { type: 'json' };
@@ -48,9 +48,7 @@ import { agentGroup } from '../transcript/agents/subagents.ts';
 import {
   type CodePickAction,
   type BlockRef,
-  type Drawn,
-  inOrder,
-  inView,
+  pickableBlocks,
   listedBlocks,
   listedText,
   pickHint,
@@ -1223,8 +1221,12 @@ export function App({
    * drawn, by where they are.
    */
   const pickable = () => {
+    const place = (node: Renderable) => ({
+      top: node.screenY,
+      height: node.height,
+    });
     const drawn = [...drawnBlocks.current.values()].flatMap(
-      ({ ref, node: at }): Drawn[] => {
+      ({ ref, node: at }) => {
         const node = ref.entry < 0 ? at() : undefined;
 
         return node === undefined
@@ -1233,29 +1235,23 @@ export function App({
               {
                 ref,
                 at: entryOf(node),
-                top: node.screenY,
                 left: node.screenX,
+                ...place(node),
               },
             ];
       },
     );
-    const blocks = inOrder(
-      codes.map(({ ref }) => ref),
-      drawn,
-    );
-    const now = view();
 
-    return {
-      blocks,
-      shown: blocks.filter((ref) => {
+    return pickableBlocks(
+      codes.map(({ ref }) => {
         const node = nodeOf(ref);
 
-        return (
-          node !== undefined &&
-          inView({ top: node.screenY, height: node.height }, now)
-        );
+        return node === undefined ? { ref } : { ref, at: place(node) };
       }),
-    };
+      drawn,
+      view(),
+      { top: 0, height: rows },
+    );
   };
 
   /**

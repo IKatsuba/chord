@@ -8,6 +8,7 @@ import {
   drawnIds,
   inOrder,
   inView,
+  pickableBlocks,
   pickHint,
   reduceCodePick,
   wholeInView,
@@ -229,4 +230,31 @@ test('a block is whole in view only with every row of it in the view (CHD-394)',
   expect(wholeInView({ top: 9, height: 3 }, view)).toBe(false);
   expect(wholeInView({ top: 18, height: 3 }, view)).toBe(false);
   expect(wholeInView({ top: 30, height: 1 }, view)).toBe(false);
+});
+
+test('a listed block is reached mounted or not, a drawn-only one only while seen, in the view or on the window (CHD-394 §3)', () => {
+  const view = { top: 2, height: 10 };
+  const screen = { top: 0, height: 24 };
+  const ref = (entry: number, block = 0) => ({ entry, block });
+  const { blocks, shown } = pickableBlocks(
+    [
+      // Not mounted, scrolled off and in view.
+      { ref: ref(1) },
+      { ref: ref(2), at: { top: -30, height: 4 } },
+      { ref: ref(3), at: { top: 4, height: 4 } },
+    ],
+    [
+      // Tool output in entry 2 scrolled off, and in entry 3 in view.
+      { ref: ref(-5), at: 2, top: -20, left: 0, height: 3 },
+      { ref: ref(-6), at: 3, top: 9, left: 0, height: 2 },
+      // The plan box below the transcript, on the window; and one past it.
+      { ref: ref(-7), at: undefined, top: 15, left: 0, height: 4 },
+      { ref: ref(-8), at: undefined, top: 30, left: 0, height: 4 },
+    ],
+    view,
+    screen,
+  );
+
+  expect(blocks).toStrictEqual([ref(1), ref(2), ref(3), ref(-6), ref(-7)]);
+  expect(shown).toStrictEqual([ref(3), ref(-6), ref(-7)]);
 });

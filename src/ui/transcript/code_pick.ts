@@ -304,3 +304,39 @@ export function listedBlocks(entries: readonly Entry[]): ListedBlock[] {
     });
   });
 }
+
+/**
+ * The blocks the pick reaches now, in `inOrder`'s order, and those shown:
+ * every listed block, mounted or not, shown while a row of it is in the
+ * transcript's `view`; a drawn-only one only while it is seen, in `view`
+ * where it is drawn in the transcript, on the window's `screen` where it is
+ * drawn outside it, as the plan box (CHD-394 §3, "What can be picked").
+ */
+export function pickableBlocks(
+  listed: readonly {
+    readonly ref: BlockRef;
+    readonly at?: { readonly top: number; readonly height: number };
+  }[],
+  drawn: readonly (Drawn & { readonly height: number })[],
+  view: { readonly top: number; readonly height: number },
+  screen: { readonly top: number; readonly height: number },
+): { readonly blocks: BlockRef[]; readonly shown: BlockRef[] } {
+  const seen = drawn.filter((block) =>
+    inView(block, block.at === undefined ? screen : view),
+  );
+  const blocks = inOrder(
+    listed.map(({ ref }) => ref),
+    seen,
+  );
+  const visible = [
+    ...listed.flatMap(({ ref, at }) =>
+      at !== undefined && inView(at, view) ? [ref] : [],
+    ),
+    ...seen.map(({ ref }) => ref),
+  ];
+
+  return {
+    blocks,
+    shown: blocks.filter((ref) => visible.some((other) => same(ref, other))),
+  };
+}

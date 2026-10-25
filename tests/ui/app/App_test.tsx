@@ -1045,8 +1045,9 @@ describe('CHD-378 U3 tester: steering through the window', () => {
       test(`a rebound steer leaves an Enter prompt queued and enters history on ${adapter} at ${columns} columns`, () =>
         withWindow(
           async (window) => {
-            await send(window, 'slow');
-            await window.shows('esc to interrupt');
+            // Keep the turn alive through the history and Esc assertions (CHD-526).
+            await send(window, 'texttillsteeredheld');
+            await window.shows('This reply came in chunks.');
             await put(window, 'Next turn only.');
             await window.press('\r');
             await window.shows('› Next turn only.');

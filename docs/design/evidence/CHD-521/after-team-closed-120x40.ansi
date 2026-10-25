@@ -1,0 +1,40 @@
+[38;2;255;255;255m
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mTeam[0m(bugfix)[2m · fake · fake-large[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIssue 214: a string at the end of a line loses its closing quote. readString in src/parse/tokenize.ts stops at[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mthe newline before it consumes the quote. Add a test that fails for that reason, fix it, and have the diff[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mreviewed. Report to me when it is done.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mbugfix has the job. Its lead will report here; you can look in with ↓.[38;2;255;255;255m
+
+ [38;2;108;182;255m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;108;182;255m@bugfix[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/[0m[38;2;255;255;255m
+      [2m[39mparse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix · fake.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team show bugfix[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mbugfix · .chord/teams/bugfix.md · working 4s on "Issue 214: a string at the end of a line loses its closing[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mquote. readString in src/parse/tokenize.ts stops at the newline before it consumes the quote. Add a test that[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mfails for that reason, fix it, and have the diff reviewed. Report to me when it is done."[38;2;255;255;255m
+
+   [2m[39m [0m[38;2;255;255;255m  [39mlead    fake · fake-large  default      [2m◦ idle 3s[0m     [2m✓ new reply[0m    → to @main[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mtester  fake · fake-small  acceptEdits  [2m[38;2;71;231;165m✻ working 3s[0m  [2m← new message[0m  Guardian(Review)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mcoder   fake · fake-large  plan         [2m◦ idle 3s[0m     [2m✓ new reply[0m    → to @tester[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team show bugfix[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mbugfix · .chord/teams/bugfix.md · working 21s on "Issue 214: a string at the end of a line loses its closing[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mquote. readString in src/parse/tokenize.ts stops at the newline before it consumes the quote. Add a test that[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mfails for that reason, fix it, and have the diff reviewed. Report to me when it is done."[38;2;255;255;255m
+
+   [2m[39m [0m[38;2;255;255;255m  [39mlead    fake · fake-large  default      [2m◦ idle 21s[0m  [2m✓ new reply[0m  → to @main[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mtester  fake · fake-small  acceptEdits  [2m◦ idle 12s[0m  [2m✓ new reply[0m  ← from @coder · fake[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mcoder   fake · fake-large  plan         [2m◦ idle 20s[0m  [2m✓ new reply[0m  → to @tester[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [1m[39mmain     [0;2m  fake · Fake Large with a 1M context window · medium         ◦ idle 24s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mbugfix   [2m[39m  team · fake · Fake Large with a 1M context window · medium  ◦ idle 24s  ✓ new reply[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39m├─ [0m[38;2;196;156;255mtester[2m[39m  fake · Fake Small · medium                                  ◦ idle 15s  ✓ new reply[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39m└─ [0m[38;2;86;212;221mcoder [2m[39m  fake · Fake Large with a 1M context window · medium         ◦ idle 24s  ✓ new reply[0m[38;2;255;255;255m

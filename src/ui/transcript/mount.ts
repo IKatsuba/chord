@@ -10,6 +10,7 @@
 import type { Entry } from '../../session/transcript/types.ts';
 import { agentGroup, workOf } from './agents/subagents.ts';
 import type { Scroll } from './scroll.ts';
+import { guardianView } from './tools/tools.ts';
 
 /** What the tail mounts while the view follows the bottom, in weight. */
 export const TAIL_ENTRIES = 40;
@@ -52,6 +53,12 @@ export function entryWeight(
   index: number,
   expanded: boolean,
 ): number {
+  const entry = entries[index];
+
+  if (entry?.kind === 'tool' && guardianView(entry.call) === 'hidden') {
+    return 0;
+  }
+
   const group = agentGroup(entries, index);
 
   if (group === undefined) {

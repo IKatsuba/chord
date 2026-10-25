@@ -1,0 +1,24 @@
+ ▀▄     chord v0.59.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd521-after
+ ▀▀     ? for shortcuts · /help
+        resumed · 1 minute ago · guardiangated
+
+ › guardiangated
+
+ ⏺ Guardian(Review)
+   ⎿  Error: Status: Denied
+      Action: exec printf ready
+      Risk: low
+      Authorization: high
+      Rationale: A scripted Guardian review.
+
+ ⏺ Guardian(Review)
+   ⎿  Error: Status: Timed out
+      Action: exec printf ready
+ ── ↓ 23 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

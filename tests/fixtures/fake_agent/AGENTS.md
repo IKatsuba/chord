@@ -17,12 +17,13 @@
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
-  `bigask`, `bigasktwice`, `overlapask`, `mainbetween`, `leftask`,
-  `mainbetweentwice`, `bigaskleft`),
+  `bigask`, `bigasktwice`, `overlapask`, `overlapasksteer`, `mainbetween`,
+  `leftask`, `mainbetweentwice`, `bigaskleft`),
   `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`,
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`),
   `forms.ts` (`form`, `link`, `leftform`, `leftformgated`),
+  `guardian.ts` (`guardian`, `guardiangated`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
@@ -53,10 +54,12 @@
   The gated scenarios below use `<cwd>/.fake-gate/release`.
   A prompt that is exactly a scenario name (`text`, `texttillsteered`,
   `texttillsteeredheld`,
+  `guardian`, `guardiangated`,
   `titled`, `retitled`, `titledlook`, `titledfix`, `titledlong`,
   `thought`, `tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlaptwo`, `overlapfail`, `overlapask`,
+  `overlapasksteer`,
   `subagentcall`,
   `cutcalls`, `cutcallsback`, `tasklong`, `taskcost`, `agentcost`,
   `tasktallname`, `tasktwo`,
@@ -102,7 +105,8 @@
   still runs; `overlaptwo` holds the last step for two steered messages,
   up to 10 s, so both reach the running turn; `overlapfail` fails the first
   instead; `overlapask` asks for a write's permission while another call
-  stays open; `subagentcall` runs
+  stays open; `overlapasksteer` then waits at most 10 s for a steered message
+  after that call ends, keeping the turn open for delivery; `subagentcall` runs
   one subagent's call with no call of the parent's open;
   `headlines` plays a heredoc, a long one-line command, an MCP call and a
   300-line heredoc; `heredoc` and `longcommand` play the Bash calls from
@@ -147,6 +151,11 @@
   `mcp` answers with the MCP servers its session was opened with, as JSON;
   `opened` with the request that last opened its session and that
   request's `_meta`, as JSON, to show what chord adds there (CHD-439);
+  `guardian` opens Codex Guardian reviews, then closes one each approved,
+  denied, timedOut and aborted, leaves one inProgress, and closes one with
+  no structured status, plus one arriving already approved as a tool_call;
+  `guardiangated` waits after `Guardian reviews opened.`
+  for `<cwd>/.fake-gate/release` (at most 10 s) before closing them.
   `titled` names its session `Fix the tokenizer` through
   `session_info_update`; `retitled` names it `Look at the parser`, then
   renames it `Fix the parser`; `titledlook` and `titledfix` give those last

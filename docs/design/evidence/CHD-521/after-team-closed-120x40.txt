@@ -1,0 +1,40 @@
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  Issue 214: a string at the end of a line loses its closing quote. readString in src/parse/tokenize.ts stops at
+      the newline before it consumes the quote. Add a test that fails for that reason, fix it, and have the diff
+      reviewed. Report to me when it is done.
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+ ← from @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/
+      parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 4s on "Issue 214: a string at the end of a line loses its closing
+      quote. readString in src/parse/tokenize.ts stops at the newline before it consumes the quote. Add a test that
+      fails for that reason, fix it, and have the diff reviewed. Report to me when it is done."
+
+      lead    fake · fake-large  default      ◦ idle 3s     ✓ new reply    → to @main
+      tester  fake · fake-small  acceptEdits  ✻ working 3s  ← new message  Guardian(Review)
+      coder   fake · fake-large  plan         ◦ idle 3s     ✓ new reply    → to @tester
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 21s on "Issue 214: a string at the end of a line loses its closing
+      quote. readString in src/parse/tokenize.ts stops at the newline before it consumes the quote. Add a test that
+      fails for that reason, fix it, and have the diff reviewed. Report to me when it is done."
+
+      lead    fake · fake-large  default      ◦ idle 21s  ✓ new reply  → to @main
+      tester  fake · fake-small  acceptEdits  ◦ idle 12s  ✓ new reply  ← from @coder · fake
+      coder   fake · fake-large  plan         ◦ idle 20s  ✓ new reply  → to @tester
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main       fake · Fake Large with a 1M context window · medium         ◦ idle 24s
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ◦ idle 24s  ✓ new reply
+    ├─ tester  fake · Fake Small · medium                                  ◦ idle 15s  ✓ new reply
+    └─ coder   fake · Fake Large with a 1M context window · medium         ◦ idle 24s  ✓ new reply

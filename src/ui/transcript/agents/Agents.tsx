@@ -18,7 +18,7 @@ import { PlanRecord } from '../../plan/Plan.tsx';
 import { Ansi } from '../../theme/Ansi.tsx';
 import { CUT, DIM, DIM_BORDER, fg, FILL, TEXT } from '../../theme/text.ts';
 import { TranscriptEntry } from '../Transcript.tsx';
-import { asksFor, type Headline } from '../tools/tools.ts';
+import { asksFor, GUARDIAN_REVIEWING, type Headline } from '../tools/tools.ts';
 import {
   Gutter,
   HeadlineText,
@@ -166,8 +166,17 @@ function WorkLineText({ line }: { line: WorkLine }) {
   const colours = useHeadlineColours();
 
   return (
-    <text {...FILL} {...(line.failed ? fg(colours.error) : {})}>
-      {headlineText(line.headline, colours, line.arrow || undefined)}
+    <text
+      {...FILL}
+      {...(line.reviewing
+        ? { attributes: DIM }
+        : line.failed
+          ? fg(colours.error)
+          : {})}
+    >
+      {line.reviewing
+        ? GUARDIAN_REVIEWING
+        : headlineText(line.headline, colours, line.arrow || undefined)}
       {line.waiting && <span attributes={DIM}>{WAITING_NOTE}</span>}
     </text>
   );

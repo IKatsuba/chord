@@ -28,6 +28,7 @@ import {
   withUpdate,
 } from './enrich.ts';
 import { modeConfigId } from './modes.ts';
+import { guardianReview } from './guardian_review.ts';
 import {
   choices,
   formFields,
@@ -781,6 +782,19 @@ export const codexMcpCall: Enricher = (message) => {
   ];
 };
 
+/** Files Guardian's structured verdict before state and recordings read it. */
+export const codexGuardianReview: Enricher = (message) => {
+  const update = notificationOf(message)?.update;
+
+  if (update === undefined) {
+    return [message];
+  }
+
+  const read = guardianReview(update);
+
+  return read === update ? [message] : [withUpdate(message, read)];
+};
+
 /** The keys of a `rawOutput` object read as its text, in this order. */
 const OUTPUT_KEYS = ['stdout', 'stderr', 'output', 'result'] as const;
 
@@ -857,6 +871,7 @@ export const ENRICHERS: readonly Enricher[] = [
   subagentShape,
   toolCallFacts,
   codexMcpCall,
+  codexGuardianReview,
   rawOutputContent,
   modeReadBack,
   costFromTokens,

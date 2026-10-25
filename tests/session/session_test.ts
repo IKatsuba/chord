@@ -13,7 +13,11 @@ import { pathToFileURL } from 'node:url';
 import { findAgent } from '../../src/agents.ts';
 import { startFailureOf } from '../../src/session/start_failure.ts';
 import { signInOf, SignInNeeded } from '../../src/session/sign_in.ts';
-import { FILLED } from '../../src/session/enrich.ts';
+import { FILLED, GUARDIAN_REVIEW } from '../../src/session/enrich.ts';
+import { recordActions, type RecordEntry } from '../../src/session/record.ts';
+import { pastActions } from '../../src/session/replay.ts';
+import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
+import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import type { PendingPermission } from '../../src/session/permissions.ts';
 import {
   openSession,
@@ -1476,4 +1480,153 @@ describe('CHD-454 tester: structured failures through actual starts', () => {
       await rm(cwd, { recursive: true });
     }
   });
+});
+
+test('Guardian statuses survive the fake transport, transcript and recorded replay, including an already-approved opening (CHD-521)', () =>
+  withSession(async (session) => {
+    const { updates, result } = await run(session, 'guardian');
+    const actions = updates.map((update) => ({
+      type: 'update' as const,
+      turnId: 't1',
+      update,
+    }));
+    const recorded = recordActions([
+      { type: 'prompt', turnId: 't1', at: 0, prompt: 'guardian', images: 0 },
+      ...actions,
+      { type: 'result', turnId: 't1', result },
+    ]);
+    const replayed = pastActions(
+      updates.map((update) => ({ update })),
+      0,
+    );
+
+    expect(result.status).toBe('completed');
+
+    for (const past of [actions, recorded, replayed]) {
+      let transcript = emptyTranscript;
+
+      for (const action of past) {
+        if (action.type !== 'usage') {
+          transcript = reduceTranscript(transcript, action);
+        }
+      }
+
+      const reviews = transcript.entries.flatMap((entry) =>
+        entry.kind === 'tool' ? [entry.call] : [],
+      );
+
+      expect(reviews.map((call) => call.guardian)).toStrictEqual([
+        'approved',
+        'denied',
+        'timedOut',
+        'aborted',
+        'inProgress',
+        undefined,
+        'approved',
+      ]);
+      expect(reviews[0]?.rawOutput).toMatchObject({
+        review: { status: 'approved' },
+      });
+      expect(reviews[4]?.status).toBe('in_progress');
+      expect(reviews[5]?.content).toContainEqual({
+        type: 'content',
+        content: {
+          type: 'text',
+          text: 'Status: Approved\nAction: exec printf ready\nRisk: low\nAuthorization: high\nRationale: A scripted Guardian review.',
+        },
+      });
+    }
+  }));
+
+describe('CHD-521 U1 tester: cancellation before Guardian verdicts', () => {
+  test('cancelling the specifically opened reviews leaves their statuses pending and the next turn independent', () =>
+    withSession(async (session) => {
+      const pending = new Set<string>();
+      let cancelled = false;
+      const first = await run(session, 'guardiangated', {
+        onUpdate: (updates, turn) => {
+          for (const update of updates) {
+            if (
+              update.sessionUpdate === 'tool_call' &&
+              update._meta?.[GUARDIAN_REVIEW] === 'inProgress'
+            ) {
+              pending.add(update.toolCallId);
+            }
+          }
+
+          if (
+            !cancelled &&
+            pending.size === 5 &&
+            said(updates).join('').includes('Guardian reviews opened.')
+          ) {
+            cancelled = true;
+
+            void turn.cancel();
+          }
+        },
+      });
+
+      expect(cancelled).toBe(true);
+      expect(first.result.status).toBe('cancelled');
+      expect(
+        calls(first.updates).filter(
+          (update) => update.sessionUpdate === 'tool_call_update',
+        ),
+      ).toHaveLength(0);
+
+      const second = await run(session, 'guardian');
+      const secondIds = calls(second.updates).map(
+        (update) => update.toolCallId,
+      );
+
+      expect(second.result.status).toBe('completed');
+      expect(secondIds.every((id) => !pending.has(id))).toBe(true);
+
+      let transcript = emptyTranscript;
+      const entries: RecordEntry[] = [];
+
+      for (const [at, ran] of [first, second].entries()) {
+        const turnId = `review-turn-${at}`;
+
+        entries.push(
+          { type: 'prompt', turnId, at, prompt: 'guardian', images: 0 },
+          ...ran.updates.map((update) => ({
+            type: 'update' as const,
+            turnId,
+            update,
+          })),
+          { type: 'result', turnId, result: ran.result },
+        );
+      }
+
+      for (const action of recordActions(entries)) {
+        if (action.type !== 'usage') {
+          transcript = reduceTranscript(transcript, action);
+        }
+      }
+
+      const reviews = transcript.entries.flatMap((entry) =>
+        entry.kind === 'tool' ? [entry.call] : [],
+      );
+
+      expect(reviews.filter((call) => pending.has(call.id))).toHaveLength(5);
+      expect(
+        reviews
+          .filter((call) => pending.has(call.id))
+          .every((call) => call.guardian === 'inProgress'),
+      ).toBe(true);
+      expect(
+        reviews
+          .filter((call) => secondIds.includes(call.id))
+          .map((call) => call.guardian),
+      ).toEqual([
+        'approved',
+        'denied',
+        'timedOut',
+        'aborted',
+        'inProgress',
+        undefined,
+        'approved',
+      ]);
+    }));
 });

@@ -34,6 +34,11 @@ export interface ToolCall {
   readonly rawInput?: unknown;
   readonly rawOutput?: unknown;
   /**
+   * The last structured Codex Guardian review status chord read: inProgress,
+   * approved, denied, timedOut or aborted; an unknown string stays ordinary.
+   */
+  readonly guardian?: string;
+  /**
    * The plan its agent put to the person out of it, and their answer once
    * given (CHD-437, CHD-457): drawn under it in place of its content.
    */

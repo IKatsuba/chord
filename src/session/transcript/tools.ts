@@ -5,7 +5,7 @@
 import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
 import { z } from '@zod/zod';
 import { OUTPUT_LIMIT } from '../context.ts';
-import { MCP_CALL } from '../enrich.ts';
+import { GUARDIAN_REVIEW, MCP_CALL } from '../enrich.ts';
 import {
   EMPTY_TEXT,
   plainText,
@@ -66,6 +66,7 @@ export function mergeToolCall(
   const terminals = foldTerminals(before.terminals, update);
   const mcp = mcpOf(update);
   const cut = cutOf(update);
+  const guardian = record(update._meta)[GUARDIAN_REVIEW];
   const call: ToolCall = {
     ...before,
     ...(title ? { title } : {}),
@@ -78,6 +79,7 @@ export function mergeToolCall(
     ...(terminals === undefined ? {} : { terminals }),
     ...(mcp === undefined ? {} : { mcp }),
     ...(cut ? { cut } : {}),
+    ...(typeof guardian === 'string' ? { guardian } : {}),
   };
 
   if (found?.kind !== 'tool') {

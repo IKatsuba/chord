@@ -1,0 +1,40 @@
+      Risk: low
+      Authorization: high
+      Rationale: A scripted Guardian review.
+
+ ⏺ Guardian(Review)
+   ⎿  Status: In progress
+      Action: exec printf ready
+      Risk: low
+      Authorization: high
+      Rationale: A scripted Guardian review.
+
+ ⏺ Guardian(Review)
+   ⎿  Status: In progress
+      Action: exec printf ready
+      Risk: low
+      Authorization: high
+      Rationale: A scripted Guardian review.
+
+ ⏺ Guardian(Review)
+   ⎿  Status: In progress
+      Action: exec printf ready
+      Risk: low
+      Authorization: high
+      Rationale: A scripted Guardian review.
+
+ ⏺ Guardian(Review)
+   ⎿  Status: In progress
+      Action: exec printf ready
+      Risk: low
+      Authorization: high
+      Rationale: A scripted Guardian review.
+
+ ⏺ Guardian reviews opened.
+
+ ››› Working… (2s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

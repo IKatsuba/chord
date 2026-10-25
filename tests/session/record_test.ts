@@ -2521,3 +2521,65 @@ describe('CHD-487 Q144 tester: nested and partial legacy replay boundaries', () 
     });
   }
 });
+
+test('pre-CHD-521 records read metadata-free Guardian approved and denied verdicts, keeping a missing closing status', () => {
+  const entries: RecordEntry[] = [
+    { type: 'prompt', turnId: 't1', at: 0, prompt: 'guardian', images: 0 },
+    ...['approved', 'denied'].flatMap((status): RecordEntry[] => [
+      {
+        type: 'update',
+        turnId: 't1',
+        update: {
+          sessionUpdate: 'tool_call',
+          toolCallId: `guardian_assessment:${status}`,
+          title: 'Guardian Review',
+          kind: 'think',
+          rawInput: { review: { status: 'inProgress' } },
+        },
+      },
+      {
+        type: 'update',
+        turnId: 't1',
+        update: {
+          sessionUpdate: 'tool_call_update',
+          toolCallId: `guardian_assessment:${status}`,
+          rawOutput: { review: { status } },
+        },
+      },
+      {
+        type: 'update',
+        turnId: 't1',
+        update: {
+          sessionUpdate: 'tool_call_update',
+          toolCallId: `guardian_assessment:${status}`,
+          status: status === 'approved' ? 'completed' : 'failed',
+        },
+      },
+    ]),
+  ];
+  let transcript = emptyTranscript;
+
+  for (const action of recordActions(entries)) {
+    if (action.type !== 'usage') {
+      transcript = reduceTranscript(transcript, action);
+    }
+  }
+
+  const calls = transcript.entries.flatMap((entry) =>
+    entry.kind === 'tool' ? [entry.call] : [],
+  );
+
+  expect(calls.map((call) => call.guardian)).toStrictEqual([
+    'approved',
+    'denied',
+  ]);
+  expect(calls.map((call) => call.rawOutput)).toStrictEqual([
+    { review: { status: 'approved' } },
+    { review: { status: 'denied' } },
+  ]);
+  expect(
+    entries
+      .filter((entry) => entry.type === 'update')
+      .every((entry) => entry.update._meta === undefined),
+  ).toBe(true);
+});

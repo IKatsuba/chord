@@ -1355,14 +1355,16 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
       'deno task compile --all\nfor bin in dist/*/chord; do echo "built $bin"; done';
     // Enough turns of plain text that the code reply leaves the tail of
     // entries mounted while following (TAIL_ENTRIES).
+    // Each turn ends on a reply of its own, which `verbatim` gives back as
+    // sent, so the next goes only once that one is drawn: 22 turns are 44
+    // entries after the code reply's two, past the 40 of the tail.
     const plain = async (window: Window) => {
       for (let turn = 0; turn < 22; turn++) {
-        await send(window, 'text');
+        await send(window, `verbatim turn ${turn}`);
+        await window.shows(`"turn ${turn}"`);
         await until(
-          'the reply',
-          () =>
-            !statusRow(window).includes('esc to interrupt') &&
-            window.frame().includes('came in chunks.'),
+          `turn ${turn} to end`,
+          () => !window.frame().includes('esc to interrupt'),
         );
       }
     };

@@ -56,11 +56,14 @@ export function useSelectable(): {
 export interface CodeActions {
   copy(text: string): void;
   prompt(command: string): void;
+  /** The left button went down on the button `target`. */
+  pressed(target: unknown): void;
   /**
-   * Whether the window's last left press, wherever it came, was on
-   * `target`: a release is a click only on the button pressed.
+   * The first release since that press, which it takes: whether it was on
+   * `target`. Any later release, a second delivery of the same one too,
+   * finds no press (CHD-394 §1).
    */
-  pressedOn(target: unknown): boolean;
+  released(target: unknown): boolean;
 }
 
 /** The window's code box actions; none where nothing answers a button. */

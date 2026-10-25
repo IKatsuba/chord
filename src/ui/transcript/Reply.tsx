@@ -176,16 +176,23 @@ function Buttons({ code }: { code: Code }) {
         <text
           key={button}
           {...TEXT}
+          onMouseDown={(event: MouseEvent) => {
+            if (event.button === 0) {
+              actions?.pressed(event.currentTarget);
+            }
+          }}
           onMouseUp={(event: MouseEvent) => {
-            // A click is the window's last press on this very button and
-            // its release here: a drag's end is a selection's, though it
+            // A click is the first release after a press on this very
+            // button, and on it: a drag's end is a selection's, though it
             // ends on a button, and a release OpenTUI hands the pressed
             // button away from it is none of its (CHD-394 §1).
+            const took = actions?.released(event.currentTarget) === true;
+
             if (
+              took &&
               event.button === 0 &&
               event.isDragging !== true &&
               event.currentTarget !== null &&
-              actions?.pressedOn(event.currentTarget) === true &&
               over(event, event.currentTarget)
             ) {
               act(button);

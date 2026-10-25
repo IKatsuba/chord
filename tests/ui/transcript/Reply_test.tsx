@@ -911,82 +911,128 @@ describe("a code box's buttons (CHD-394)", () => {
       { columns: 80, rows: 40 },
     ));
 
-  test('a press on [copy] let go over the code, then a drag from the code ending on [copy], is a selection and no copy', () => {
-    const { copies, copy } = clipboard();
+  /**
+   * The press table (CHD-394 §1, the lead's rows): what each mouse
+   * sequence does, read after it by a click on the typescript box's
+   * [copy], which copies `x`, so a sequence that does nothing is seen.
+   */
+  const ROWS: readonly {
+    readonly row: string;
+    readonly play: (at: (word: string) => { x: number; y: number }) => string[];
+    readonly copies: readonly string[];
+  }[] = [
+    {
+      row: 'a plain click',
+      play: (at) => [
+        left(at('[copy]').x, at('[copy]').y, 'down'),
+        left(at('[copy]').x, at('[copy]').y, 'up'),
+      ],
+      copies: ['bun dev check'],
+    },
+    {
+      row: 'a small drag inside the button',
+      play: (at) => {
+        const { x, y } = at('[copy]');
 
-    return withWindow(
-      async (window) => {
-        await send(window, 'markdowncode');
-        await window.shows('A paragraph after.');
-
-        const button = cell(window, LISTED, '[copy]');
-        const code = cell(window, '│ bun dev check', 'bun');
-
-        // Pressed, then let go away from it: no click, and nothing left over.
-        await window.press(left(button.x, button.y, 'down'));
-        await window.press(left(code.x, code.y, 'up'));
-        // A drag that starts in the code and ends on the button.
-        await window.press(left(code.x, code.y, 'down'));
-        await window.press(left(code.x + 4, code.y, 'drag'));
-        await window.press(left(button.x + 2, button.y, 'drag'));
-        await window.press(left(button.x + 2, button.y, 'up'));
-        // A click after them copies once; had either been a click, this
-        // would be the second.
-        await click(window, cell(window, LISTED, '[copy]'));
-        await window.shows('copied 13 chars to clipboard');
-        expect(copies.map(({ text }) => text)).toStrictEqual(['bun dev check']);
+        return [
+          left(x, y, 'down'),
+          left(x + 2, y, 'drag'),
+          left(x + 2, y, 'up'),
+        ];
       },
-      { columns: 80, rows: 40, copy },
-    );
-  });
+      copies: ['bun dev check'],
+    },
+    {
+      row: 'a release outside it',
+      play: (at) => [
+        left(at('[copy]').x, at('[copy]').y, 'down'),
+        left(at('paragraph').x, at('paragraph').y, 'up'),
+      ],
+      copies: [],
+    },
+    {
+      row: 'a press on [copy] released on [run]',
+      play: (at) => [
+        left(at('[copy]').x, at('[copy]').y, 'down'),
+        left(at('[run]').x, at('[run]').y, 'up'),
+      ],
+      copies: [],
+    },
+    {
+      row: 'a press on [run] released on [copy], after a press on [copy] let go elsewhere',
+      play: (at) => [
+        left(at('[copy]').x, at('[copy]').y, 'down'),
+        left(at('paragraph').x, at('paragraph').y, 'up'),
+        left(at('[run]').x, at('[run]').y, 'down'),
+        left(at('[copy]').x, at('[copy]').y, 'up'),
+      ],
+      copies: [],
+    },
+    {
+      row: 'a release delivered twice',
+      play: (at) => {
+        const { x, y } = at('[copy]');
 
-  test("a press on one box's [copy] released on another box's, after a press there was let go elsewhere, is no click", () => {
-    const { copies, copy } = clipboard();
-
-    return withWindow(
-      async (window) => {
-        await send(window, 'markdowncode');
-        await window.shows('A paragraph after.');
-
-        const first = cell(window, '┌─ typescript', '[copy]');
-        const second = cell(window, LISTED, '[copy]');
-        const prose = cell(window, 'A paragraph after.', 'A paragraph');
-
-        // The first box's button pressed, then let go over the prose.
-        await click(window, first, prose);
-        // The second's pressed, and let go on the first's with no drag.
-        await click(window, second, first);
-        // A click after them copies once; had either been one, it would be
-        // the second.
-        await click(window, first);
-        await window.shows('copied 1 chars to clipboard');
-        expect(copies.map(({ text }) => text)).toStrictEqual(['x']);
+        return [left(x, y, 'down'), left(x, y, 'up'), left(x, y, 'up')];
       },
-      { columns: 80, rows: 40, copy },
-    );
-  });
+      copies: ['bun dev check'],
+    },
+    {
+      row: 'a selection drag from the code ending on the button',
+      play: (at) => {
+        const code = at('bun dev check │');
+        const button = at('[copy]');
 
-  test('a press on one button and a release on another, or a wheel over one, is no click', () => {
+        return [
+          left(code.x, code.y, 'down'),
+          left(code.x + 4, code.y, 'drag'),
+          left(button.x + 2, button.y, 'drag'),
+          left(button.x + 2, button.y, 'up'),
+        ];
+      },
+      copies: [],
+    },
+    {
+      row: 'a wheel over the button',
+      play: (at) => [`\x1b[<65;${at('[copy]').x + 1};${at('[copy]').y + 1}M`],
+      copies: [],
+    },
+  ];
+
+  test('a click is a press and the first release after it on the same button: the press table', () => {
     const { copies, copy } = clipboard();
 
     return withWindow(
       async (window) => {
         await send(window, 'markdowncode');
         await window.shows('A paragraph after.');
-        await click(
-          window,
-          cell(window, LISTED, '[copy]'),
-          cell(window, LISTED, '[run]'),
-        );
 
-        const over = cell(window, LISTED, '[copy]');
+        // The listed sh box's words, and the prose and code beside it.
+        const at = (word: string) =>
+          word === 'paragraph'
+            ? cell(window, 'A paragraph after.', 'A paragraph')
+            : word === 'bun dev check │'
+              ? cell(window, '│ bun dev check', 'bun')
+              : cell(window, LISTED, word);
+        const sentinel = () => cell(window, '┌─ typescript', '[copy]');
 
-        await window.press(`\x1b[<65;${over.x + 1};${over.y + 1}M`);
-        // A click after them answers, so neither went unseen.
-        await click(window, cell(window, LISTED, '[copy]'));
-        await until('the copy', () => copies.length === 1);
+        for (const { row, play, copies: wanted } of ROWS) {
+          const before = copies.length;
 
-        expect(copies.map(({ text }) => text)).toStrictEqual(['bun dev check']);
+          for (const report of play(at)) {
+            await window.press(report);
+          }
+
+          await click(window, sentinel());
+          await until(`${row}: the sentinel's copy`, () =>
+            copies.slice(before).some(({ text }) => text === 'x'),
+          );
+          expect(
+            copies.slice(before).map(({ text }) => text),
+            row,
+          ).toStrictEqual([...wanted, 'x']);
+        }
+
         expect(window.frame()).not.toContain('│ ! bun dev check');
       },
       { columns: 80, rows: 40, copy },

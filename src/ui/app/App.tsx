@@ -455,9 +455,9 @@ export function App({
   const cutting = useRef(false);
   // How the permission box on screen scrolls its request, while one is up.
   const requestScroller = useRef<RequestScroller | undefined>(undefined);
-  // What the window's last left press landed on, for a code box's button
-  // to tell a click on it from a release after a press elsewhere (CHD-394).
-  const lastPress = useRef<unknown>(undefined);
+  // The code box button the left button went down on, until the first
+  // release anywhere takes it (CHD-394 §1).
+  const pressedButton = useRef<unknown>(undefined);
   // The shortcuts panel's, while it overflows (CHD-378).
   const panelScroller = useRef<RequestScroller | undefined>(undefined);
   // How the background frame scrolls an error taller than its room.
@@ -1005,10 +1005,11 @@ export function App({
         type: 'wheeled',
         step: step === 'up' ? 'line_up' : 'line_down',
       }),
-    onPress: (event) => {
-      lastPress.current = event.target;
-
-      selection.pressed();
+    onPress: () => selection.pressed(),
+    // The first release takes the press a code box's button holds, there
+    // or anywhere else, so no later one finds it (CHD-394).
+    onRelease: () => {
+      pressedButton.current = undefined;
     },
   });
 
@@ -1127,7 +1128,16 @@ export function App({
   const codeActions: CodeActions = {
     copy: (text) => selection.copyBlock(text),
     prompt: (command) => play(promptSteps(command, context())),
-    pressedOn: (target) => lastPress.current === target,
+    pressed: (target) => {
+      pressedButton.current = target;
+    },
+    released: (target) => {
+      const took = pressedButton.current === target;
+
+      pressedButton.current = undefined;
+
+      return took;
+    },
   };
 
   return (

@@ -452,6 +452,8 @@ export function App({
   const cutting = useRef(false);
   // How the permission box on screen scrolls its request, while one is up.
   const requestScroller = useRef<RequestScroller | undefined>(undefined);
+  // The shortcuts panel's, while it overflows (CHD-378).
+  const panelScroller = useRef<RequestScroller | undefined>(undefined);
   // How the background frame scrolls an error taller than its room.
   const backgroundScroller = useRef<RequestScroller | undefined>(undefined);
 
@@ -855,6 +857,8 @@ export function App({
         return conversation()?.reject(step.id);
       case 'scroll_request':
         return requestScroller.current?.(step.step);
+      case 'scroll_panel':
+        return panelScroller.current?.(step.step);
       case 'scroll_background_hint':
         return backgroundScroller.current?.(step.step);
       case 'set_mode':
@@ -1569,7 +1573,13 @@ export function App({
               ) : menu ? (
                 <CommandList menu={menu} rows={menuRows} width={columns} />
               ) : state.help ? (
-                <Shortcuts width={columns} />
+                <Shortcuts
+                  width={columns}
+                  scroller={panelScroller}
+                  onOverflow={(overflows) =>
+                    dispatch({ type: 'panel_overflowed', overflows })
+                  }
+                />
               ) : (
                 // Reserved even when blank, so a message never moves the transcript.
                 // Column 2, where Claude Code's status lines and the panel start.

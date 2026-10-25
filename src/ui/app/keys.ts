@@ -103,6 +103,8 @@ export type Step =
   | { readonly type: 'reject_permission'; readonly id: string }
   /** A scroll key moves the permission request in its box (CHD-246). */
   | { readonly type: 'scroll_request'; readonly step: ScrollStep }
+  /** A scroll key moves the shortcuts panel that overflows (CHD-378). */
+  | { readonly type: 'scroll_panel'; readonly step: ScrollStep }
   /** An error in the background view, taller than its room, a page on. */
   | { readonly type: 'scroll_background_hint'; readonly step: ScrollStep }
   | { readonly type: 'set_mode'; readonly mode: string }
@@ -881,6 +883,18 @@ function commandSteps(
       return [{ type: 'scroll_request', step: 'top' }];
     case 'request_bottom':
       return [{ type: 'scroll_request', step: 'bottom' }];
+    case 'panel_page_up':
+      return [{ type: 'scroll_panel', step: 'page_up' }];
+    case 'panel_page_down':
+      return [{ type: 'scroll_panel', step: 'page_down' }];
+    case 'panel_line_up':
+      return [{ type: 'scroll_panel', step: 'line_up' }];
+    case 'panel_line_down':
+      return [{ type: 'scroll_panel', step: 'line_down' }];
+    case 'panel_top':
+      return [{ type: 'scroll_panel', step: 'top' }];
+    case 'panel_bottom':
+      return [{ type: 'scroll_panel', step: 'bottom' }];
     case undefined: {
       const query = state.search && editedQuery(state.search.query, input, key);
 

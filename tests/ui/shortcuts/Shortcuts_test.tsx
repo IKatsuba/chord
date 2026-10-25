@@ -13,35 +13,125 @@ import {
 } from '../app/render.tsx';
 
 test('? on an empty prompt opens the shortcuts, esc and ? close them', () =>
-  withWindow(async (window) => {
-    await ready(window);
-    await window.type('?');
-    await window.shows('ctrl + o for verbose output');
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('?');
+      await window.shows('ctrl + o for verbose output');
 
-    const frame = window.frame();
+      const frame = window.frame();
 
-    for (const { key, does } of SHORTCUTS) {
-      expect(frame).toContain(`${key} ${does}`);
-    }
+      for (const { key, does } of SHORTCUTS) {
+        expect(frame).toContain(`${key} ${does}`);
+      }
 
-    expect(!frame.includes('› ?'), 'the ? went into the draft').toBeTruthy();
-    await window.press(ESC);
-    await until(
-      'the panel to close',
-      () => !window.frame().includes('ctrl + o'),
-    );
-    await window.type('?');
-    await window.shows('ctrl + o');
-    await window.type('?');
-    await until(
-      'the panel to close',
-      () => !window.frame().includes('ctrl + o'),
-    );
-    expect(
-      !window.frame().includes('› ?'),
-      'the ? went into the draft',
-    ).toBeTruthy();
-  }));
+      expect(!frame.includes('› ?'), 'the ? went into the draft').toBeTruthy();
+      await window.press(ESC);
+      await until(
+        'the panel to close',
+        () => !window.frame().includes('ctrl + o'),
+      );
+      await window.type('?');
+      await window.shows('ctrl + o');
+      await window.type('?');
+      await until(
+        'the panel to close',
+        () => !window.frame().includes('ctrl + o'),
+      );
+      expect(
+        !window.frame().includes('› ?'),
+        'the ? went into the draft',
+      ).toBeTruthy();
+    },
+    // Tall enough for the whole panel; a short window scrolls it, below.
+    { rows: 40 },
+  ));
+
+const PAGE_UP = '\x1b[5~';
+const PAGE_DOWN = '\x1b[6~';
+const HOME = '\x1b[H';
+const END = '\x1b[F';
+const SHIFT_DOWN = '\x1b[1;2B';
+/** An SGR wheel report, `up` or down, at the 0-based cell `x`, `y`. */
+const wheel = (x: number, y: number, up: boolean) =>
+  `\x1b[<${up ? 64 : 65};${x + 1};${y + 1}M`;
+const BELOW = '── ↓ 2 lines below · pagedown to scroll ──';
+const ABOVE = '── ↑ 2 lines above · pageup to scroll ──';
+const LAST = 'tab enter to add a file';
+
+test("at 80x24 the panel shows what fits, a rule saying what is below, and every scroll key reaches the rest (CHD-378, the owner's Q217)", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('?');
+      await window.shows(BELOW);
+
+      // The rule takes the last row; the panel's last entry is past it.
+      expect(window.frame().split('\n').at(-1)).toContain(BELOW);
+      expect(window.frame()).not.toContain(LAST);
+
+      const seen = new Set(
+        SHORTCUTS.filter(({ key, does }) =>
+          window.frame().includes(`${key} ${does}`),
+        ),
+      );
+
+      await window.press(PAGE_DOWN);
+      await window.shows(ABOVE);
+      expect(window.frame()).toContain(LAST);
+      expect(window.frame()).not.toContain(BELOW);
+
+      for (const shortcut of SHORTCUTS) {
+        if (window.frame().includes(`${shortcut.key} ${shortcut.does}`)) {
+          seen.add(shortcut);
+        }
+      }
+
+      // Between the two ends, both rules, each with its own count.
+      expect(seen.size).toStrictEqual(SHORTCUTS.length);
+      await window.press(HOME);
+      await window.shows(BELOW);
+      await window.press(SHIFT_DOWN);
+      await window.shows('── ↑ 1 line above · pageup to scroll ──');
+      // The rule above takes a row of the room too.
+      expect(window.frame()).toContain(BELOW);
+      await window.press(END);
+      await window.shows(ABOVE);
+      await window.press(PAGE_UP);
+      await window.shows(BELOW);
+      expect(window.frame()).not.toContain('lines above');
+    },
+    { columns: 80, rows: 24 },
+  ));
+
+test('the wheel over the panel scrolls it, and it opens again at the top', () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('?');
+      await window.shows(BELOW);
+      await window.press(wheel(10, 10, false));
+      await window.press(wheel(10, 10, false));
+      await window.shows(ABOVE);
+      await window.press(ESC);
+      await until('the panel to close', () => !window.frame().includes(ABOVE));
+      await window.type('?');
+      await window.shows(BELOW);
+      expect(window.frame()).not.toContain('lines above');
+    },
+    { columns: 80, rows: 24 },
+  ));
+
+test('a panel that fits has no rule', () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('?');
+      await window.shows(LAST);
+      expect(window.frame()).not.toContain('to scroll ──');
+    },
+    { columns: 120, rows: 40 },
+  ));
 
 test('? anywhere but an empty prompt is text', () =>
   withWindow(async (window) => {

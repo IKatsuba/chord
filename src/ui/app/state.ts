@@ -508,6 +508,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'help_closed':
     case 'help_opened':
     case 'keys_pending':
+    case 'panel_overflowed':
       return reduceShortcuts(state, action) as AppState;
     case 'background_opened':
     case 'background_closed':
@@ -1764,6 +1765,12 @@ function boundCommand(
   }
 
   const step = scrollStep(on);
+
+  // The open panel taller than its room takes them first: having taken
+  // every row, it leaves no transcript in view (CHD-378, the owner's Q217).
+  if (step && state.help && state.panelOverflows) {
+    return `panel_${step}`;
+  }
 
   // A permission request taller than its box takes the view's keys, as the
   // person reads it before answering (CHD-246).

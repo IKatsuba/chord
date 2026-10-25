@@ -9,6 +9,11 @@ import type { ScrollStep } from '../transcript/scroll.ts';
 export interface ShortcutsState {
   /** `?` on an empty prompt: the shortcuts panel is open. */
   readonly help: boolean;
+  /**
+   * The open panel has more rows than its room: the scroll keys move it,
+   * not the transcript (CHD-378, the owner's Q217).
+   */
+  readonly panelOverflows?: true;
   /** Which key does what: the defaults, or as the keybindings file has it. */
   readonly keys: Keymap;
   /** The first keys of a chord, while the next is waited for. */
@@ -26,12 +31,21 @@ export type ShortcutsAction =
   /** `/help`: the panel opens, whatever it was. */
   | { readonly type: 'help_opened' }
   /** The first keys of a chord were pressed; none once it ended or lapsed. */
-  | { readonly type: 'keys_pending'; readonly keys?: Sequence };
+  | { readonly type: 'keys_pending'; readonly keys?: Sequence }
+  /** The panel was laid out, and `overflows` its room or fits. */
+  | { readonly type: 'panel_overflowed'; readonly overflows: boolean };
 
 export const initialShortcuts: ShortcutsState = {
   help: false,
   keys: DEFAULT_KEYMAP,
 };
+
+/** The panel shut, and with it what its scrolling held. */
+function closed(state: ShortcutsState): ShortcutsState {
+  const { panelOverflows: _, ...rest } = state;
+
+  return { ...rest, help: false };
+}
 
 export function reduceShortcuts(
   state: ShortcutsState,
@@ -52,11 +66,26 @@ export function reduceShortcuts(
       return rest;
     }
     case 'help_toggled':
-      return { ...state, help: !state.help };
+      return state.help ? closed(state) : { ...state, help: true };
     case 'help_closed':
-      return state.help ? { ...state, help: false } : state;
+      return state.help ? closed(state) : state;
     case 'help_opened':
       return state.help ? state : { ...state, help: true };
+    case 'panel_overflowed': {
+      if (action.overflows) {
+        return state.help && !state.panelOverflows
+          ? { ...state, panelOverflows: true }
+          : state;
+      }
+
+      if (!state.panelOverflows) {
+        return state;
+      }
+
+      const { panelOverflows: _, ...rest } = state;
+
+      return rest;
+    }
   }
 }
 
@@ -223,7 +252,9 @@ export type KeyCommand =
   /** pgup, pgdn, shift+↑/↓, home and end move the transcript's view. */
   | `scroll_${ScrollStep}`
   /** The same keys while a permission request overflows its box: they move it. */
-  | `request_${ScrollStep}`;
+  | `request_${ScrollStep}`
+  /** The same keys while the shortcuts panel overflows its room (CHD-378). */
+  | `panel_${ScrollStep}`;
 
 /** A key named at the start of a sentence: `Esc`, `Ctrl+x`. */
 export function capital(key: string): string {

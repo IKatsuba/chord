@@ -21,6 +21,7 @@ import {
 import {
   columnCount,
   inColumns,
+  panelRows,
   shortcutLine,
   shortcuts,
   SHORTCUTS,
@@ -127,6 +128,12 @@ const STATES: Record<string, AppState> = {
     {
       type: 'help_toggled',
     },
+  ),
+  // Taller than its room, it takes the scroll keys (CHD-378).
+  'help, overflowing': after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'help_toggled' },
+    { type: 'panel_overflowed', overflows: true },
   ),
   expanded: after(
     { type: 'connected', sessionId: 'session-1' },
@@ -639,6 +646,35 @@ test('shift + tab asks for a mode only once the agent offers two', () => {
   expect(
     keyCommand('', shiftTab, STATES['modes, starting']!, ''),
   ).toStrictEqual(undefined);
+});
+
+test('the panel lays its columns out as rows, each column as wide as its widest line (CHD-378)', () => {
+  expect(panelRows(['a', 'bbb', 'cc', 'd', 'e'], 2)).toStrictEqual([
+    'a     d',
+    'bbb   e',
+    'cc',
+  ]);
+  expect(panelRows([], 3)).toStrictEqual([]);
+});
+
+test('the scroll keys move the open panel while it overflows, and the transcript otherwise (CHD-378)', () => {
+  const pageDown = { ctrl: false, escape: false, pageDown: true };
+
+  expect(
+    keyCommand('', pageDown, STATES['help, overflowing']!, ''),
+  ).toStrictEqual('panel_page_down');
+  expect(keyCommand('', pageDown, STATES.help!, '')).toStrictEqual(
+    'scroll_page_down',
+  );
+  // Shut, it no longer holds them.
+  expect(
+    keyCommand(
+      '',
+      pageDown,
+      reduceApp(STATES['help, overflowing']!, { type: 'help_closed' }),
+      '',
+    ),
+  ).toStrictEqual('scroll_page_down');
 });
 
 test('tab sends the draft into a running turn, and only there (CHD-378)', () => {

@@ -203,12 +203,15 @@ export const SHORTCUTS: readonly Shortcut[] = [
     key: 'pgup pgdn or wheel',
     does: 'to scroll',
     also: 'wheel',
-    // A permission request taller than its box scrolls by them (CHD-246).
+    // A permission request taller than its box scrolls by them (CHD-246),
+    // and so does the panel itself where it overflows (CHD-378).
     commands: [
       'scroll_page_up',
       'scroll_page_down',
       'request_page_up',
       'request_page_down',
+      'panel_page_up',
+      'panel_page_down',
       // An error taller than the background frame's room (CHD-473).
       'background_page_up',
       'background_page_down',
@@ -225,6 +228,8 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'scroll_line_down',
       'request_line_up',
       'request_line_down',
+      'panel_line_up',
+      'panel_line_down',
     ],
     presses: ['shift + ↑', 'shift + ↓'],
     actions: ['scroll:lineUp', 'scroll:lineDown'],
@@ -237,6 +242,8 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'scroll_bottom',
       'request_top',
       'request_bottom',
+      'panel_top',
+      'panel_bottom',
       // A detail and an error in the background frame (CHD-481).
       'background_top',
       'background_bottom',
@@ -530,6 +537,32 @@ export function inColumns<T>(list: readonly T[], count: number): T[][] {
 /** How the panel is laid out: its indent and the gap between columns. */
 export const PANEL_PADDING = 2;
 export const PANEL_GAP = 3;
+
+/**
+ * The panel's lines laid out in `count` columns, a row of the panel each:
+ * every column as wide as its widest line, `PANEL_GAP` apart, as rows the
+ * panel scrolls by where they do not all fit (CHD-378).
+ */
+export function panelRows(lines: readonly string[], count: number): string[] {
+  const columns = inColumns(lines, count);
+  const widths = columns.map((column) =>
+    Math.max(...column.map((line) => stringWidth(line))),
+  );
+  const height = columns[0]?.length ?? 0;
+
+  return Array.from({ length: height }, (_, row) =>
+    columns
+      .flatMap((column, at) => {
+        const line = column[row];
+
+        return line === undefined
+          ? []
+          : [line + ' '.repeat(widths[at]! - stringWidth(line))];
+      })
+      .join(' '.repeat(PANEL_GAP))
+      .trimEnd(),
+  );
+}
 
 /**
  * The most columns, up to Claude Code's three, whose lines fit `width` without

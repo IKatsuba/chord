@@ -1232,6 +1232,73 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
       { columns: 80, rows: 40 },
     ));
 
+  test("the pick's line stands alone, before bash mode and a mode other than the default", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('r');
+        await window.shows('│ ! bun dev check');
+        await until('bash mode', () =>
+          statusRow(window).includes('! for bash mode'),
+        );
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+
+        expect(statusRow(window)).not.toContain('bash mode');
+        await window.press(ESC);
+        await window.press('\x15');
+        await window.press('\x7f');
+        await window.press('\x1b[Z');
+        await until('accept edits', () =>
+          statusRow(window).includes('⏵⏵ accept edits on'),
+        );
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+
+        expect(statusRow(window)).not.toContain('accept edits');
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test('in a window too narrow for its first item, the pick keeps the whole items after it that fit', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('   after.');
+        await leader(window, 'b');
+        // 16 cells: `ctrl + p ctrl + n block` is too wide, `y copy` fits.
+        await until('the pick', () => statusRow(window).includes('y copy'));
+
+        expect(statusRow(window)).not.toContain('ctrl + p');
+      },
+      {
+        columns: 20,
+        rows: 40,
+        keybindings: JSON.stringify({
+          bindings: [
+            {
+              context: 'CodeBlock',
+              bindings: {
+                up: null,
+                'ctrl+p': 'codeBlock:previous',
+                down: null,
+                'ctrl+n': 'codeBlock:next',
+                c: null,
+                y: 'codeBlock:copy',
+                r: null,
+                p: 'codeBlock:prompt',
+                escape: null,
+                'ctrl+q': 'codeBlock:cancel',
+              },
+            },
+          ],
+        }),
+      },
+    ));
+
   test('esc ends the pick with nothing done, and any other key ends it and does its own', () =>
     withWindow(
       async (window) => {

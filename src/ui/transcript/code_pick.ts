@@ -223,12 +223,13 @@ export function pickHint(
   const up = key('codeBlock:previous');
   const down = key('codeBlock:next');
   const moves = [up, down].filter((name) => name !== undefined).join(' ');
+  const cancel = key('codeBlock:cancel');
   // Each item's keys, its words, and its short words for a narrow line.
   const parts: [string | undefined, string, string][] = [
     [moves === '' ? undefined : moves, 'another block', 'block'],
     [key('codeBlock:copy'), 'copy', 'copy'],
     [run ? key('codeBlock:prompt') : undefined, 'put in the prompt', 'prompt'],
-    [key('codeBlock:cancel'), 'done', 'done'],
+    [cancel, 'done', 'done'],
   ];
   const items = (short: boolean) =>
     parts.flatMap(([keys, words, brief]) =>
@@ -241,15 +242,42 @@ export function pickHint(
     return full;
   }
 
-  // Short words, then whole items dropped from the end, never one cut
-  // through, and never none (docs/design/CHD-394.md §3).
-  const short = items(true);
+  // Short words, then the whole items that fit, in order, any too wide
+  // skipped, never one cut through (docs/design/CHD-394.md §3).
+  const kept: string[] = [];
 
-  while (short.length > 1 && stringWidth(line(short)) > width) {
-    short.pop();
+  for (const item of items(true)) {
+    if (stringWidth(line([...kept, item])) <= width) {
+      kept.push(item);
+    }
   }
 
-  return line(short);
+  if (kept.length > 0) {
+    return line(kept);
+  }
+
+  // None fits: the bare cancel key, so the line is never blank, cut at the
+  // edge only when even it is too wide.
+  return cut(cancel ?? '', width);
+}
+
+/** `text` in `width` cells, its end cut with `…` when it is wider. */
+function cut(text: string, width: number): string {
+  if (stringWidth(text) <= width) {
+    return text;
+  }
+
+  let kept = '';
+
+  for (const char of text) {
+    if (stringWidth(kept + char) > width - 1) {
+      break;
+    }
+
+    kept += char;
+  }
+
+  return `${kept}…`;
 }
 
 /**

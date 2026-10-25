@@ -300,7 +300,7 @@ describe('CHD-394 U4 tester: eligible block boundaries', () => {
   });
 });
 
-test("a picked block's line of keys takes short words where the full one does not fit, then drops whole items from its end, never all (CHD-394 §3)", () => {
+test("a picked block's line of keys takes short words where the full one does not fit, then keeps the whole items that fit, never blank (CHD-394 §3)", () => {
   const { keymap } = readKeybindings(
     JSON.stringify({
       bindings: [
@@ -337,7 +337,13 @@ test("a picked block's line of keys takes short words where the full one does no
   expect(pickHint(keymap, true, 50)).toStrictEqual(
     'ctrl + p ctrl + n block · y copy · p prompt',
   );
-  expect(pickHint(keymap, true, 10)).toStrictEqual('ctrl + p ctrl + n block');
+  expect(pickHint(keymap, true, 30)).toStrictEqual('ctrl + p ctrl + n block');
+  // An item too wide is skipped, those after it that fit kept, in order.
+  expect(pickHint(keymap, true, 20)).toStrictEqual('y copy · p prompt');
+  // No whole item fits: the bare cancel key, cut at the edge only when even
+  // it is too wide.
+  expect(pickHint(keymap, true, 5)).toStrictEqual('ctrl…');
+  expect(pickHint(DEFAULT_KEYMAP, true, 5)).toStrictEqual('esc');
   // The default keys fit 80 whole.
   expect(pickHint(DEFAULT_KEYMAP, true, 76)).toStrictEqual(
     '↑ ↓ another block · c copy · r put in the prompt · esc done',

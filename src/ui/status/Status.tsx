@@ -204,6 +204,9 @@ export function StatusLine({
     armed !== undefined ||
     (copied !== undefined && notice === copied) ||
     (state.codePick !== undefined && notice === undefined);
+  // A picked block's line of keys stands alone, before bash mode, a mode,
+  // vim's mark and the waits, as the design draws it (CHD-394 §3).
+  const picking = state.codePick !== undefined && notice === undefined;
   const { left, right } = statusLine(
     {
       model: alone ? undefined : modelName(state.models),
@@ -215,11 +218,13 @@ export function StatusLine({
         copied !== undefined &&
         notice === copied &&
         state.copied?.result.kind === 'failed',
-      mode: transcript.mode,
-      modeName: state.modes.find((mode) => mode.id === transcript.mode)?.name,
+      mode: picking ? undefined : transcript.mode,
+      modeName: picking
+        ? undefined
+        : state.modes.find((mode) => mode.id === transcript.mode)?.name,
       usage: alone ? undefined : transcript.usage,
       notice,
-      bash: state.bash,
+      bash: picking ? false : state.bash,
       // Subagents a finished turn left at work may be out of sight, so the
       // line says so, in place of Claude Code's pointer to its panel.
       hint:
@@ -234,8 +239,8 @@ export function StatusLine({
           ? `${helpKey} for shortcuts`
           : undefined),
       cycleKey: cycleKey ?? null,
-      vim: state.vim?.mode,
-      waits,
+      vim: picking ? undefined : state.vim?.mode,
+      waits: picking ? undefined : waits,
     },
     width,
   );

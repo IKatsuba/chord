@@ -1,0 +1,24 @@
+   │ fake --qa captur │
+   │ e && tmux captur │
+   │ e-pane -t chord- │
+   │ qa -p > /tmp/scr │
+   │ een.txt          │
+   │                  │
+   │ echo done        │
+   └──────────────────┘
+
+   - a loose item
+
+   - a loose item with
+     a box:
+
+     ┌─ sh ───[copy]─┐
+     │ bun dev check │
+     └───────────────┘
+
+   A paragraph after.
+
+╭──────────────────────╮
+│ ›                    │
+╰──────────────────────╯
+  ↑ ↓ block · c copy

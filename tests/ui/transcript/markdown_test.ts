@@ -550,6 +550,8 @@ test('soft, a code block is its code for a box as wide as it, its label or its b
       code: 'deno task check',
       width: 21,
       buttons: ['copy', 'run'],
+      copy: 'deno task check',
+      run: 'deno task check',
     },
   ]);
   // A label wider than its code widens the box so OpenTUI draws it, and
@@ -561,6 +563,7 @@ test('soft, a code block is its code for a box as wide as it, its label or its b
       code: 'x',
       width: 23,
       buttons: ['copy'],
+      copy: 'x',
     },
   ]);
   // A long line stays whole for OpenTUI to cut; the box keeps to the width.
@@ -572,6 +575,7 @@ test('soft, a code block is its code for a box as wide as it, its label or its b
       code: `\n${'y'.repeat(40)}\n\nz`,
       width: 30,
       buttons: ['copy'],
+      copy: `\n${'y'.repeat(40)}\n\nz`,
     },
   ]);
   // The rows path keeps its drawn box.
@@ -658,6 +662,8 @@ test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
                     code: 'abcdefghijklmnopqrstu',
                     width: 15,
                     buttons: ['copy'],
+                    copy: 'abcdefghijklmnopqrstu',
+                    run: 'abcdefghijklmnopqrstu',
                   },
                 ],
               },

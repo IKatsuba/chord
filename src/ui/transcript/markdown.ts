@@ -104,6 +104,10 @@ export interface Code {
    * (docs/design/CHD-394.md §1).
    */
   readonly buttons: readonly Button[];
+  /** What its `[copy]` takes: its `CodeBlock`'s `text`. */
+  readonly copy: string;
+  /** What its `[run]` puts into the prompt, on an `sh` or `bash` block. */
+  readonly run?: string;
 }
 
 /** A code box's button, drawn as its bracketed word. */
@@ -157,7 +161,7 @@ export function codeBlocks(text: string): CodeBlock[] {
       index,
       line,
       label,
-      text: token.text.replace(/\n+$/, ''),
+      text: copyOf(token),
       runnable: RUNNABLE.has(label),
       quoted,
     };
@@ -379,7 +383,14 @@ function codeOf(token: Tokens.Code, width: number, color: Paint): Code {
       ),
     ),
     buttons,
+    copy: copyOf(token),
+    ...(RUNNABLE.has(label) ? { run: runCommand(copyOf(token)) } : {}),
   };
+}
+
+/** A code block's text as a copy takes it: no line break after its last. */
+function copyOf(token: Tokens.Code): string {
+  return token.text.replace(/\n+$/, '');
 }
 
 /**

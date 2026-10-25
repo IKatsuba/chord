@@ -50,6 +50,20 @@ export function useSelectable(): {
 }
 
 /**
+ * What a code box's buttons do, handed down to every reply (CHD-394): its
+ * text copied, or its command put into the prompt in bash mode.
+ */
+export interface CodeActions {
+  copy(text: string): void;
+  prompt(command: string): void;
+}
+
+/** The window's code box actions; none where nothing answers a button. */
+export const CodeBlockActions = createContext<CodeActions | undefined>(
+  undefined,
+);
+
+/**
  * Which key does what, handed down as the palette is, so every hint that
  * names a key names the one bound to it.
  */

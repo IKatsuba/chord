@@ -1,12 +1,13 @@
-import { Fragment, type ReactNode, useMemo } from 'react';
-import type { RGBA } from '@opentui/core';
+import { Fragment, type ReactNode, useContext, useMemo, useRef } from 'react';
+import type { MouseEvent, RGBA } from '@opentui/core';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
-import { useColours, useSelectable } from '../app/context.ts';
+import { CodeBlockActions, useColours, useSelectable } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
 import { DIM_BORDER, FILL, TEXT } from '../theme/text.ts';
 import {
   type Button,
+  type Code,
   QUOTE_INSET,
   type Soft,
   softMarkdown,
@@ -129,7 +130,7 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
             <Ansi text={block.code} />
           </text>
         </box>
-        {block.buttons.length > 0 && <Buttons buttons={block.buttons} />}
+        {block.buttons.length > 0 && <Buttons code={block} />}
       </box>
     );
   }
@@ -159,13 +160,37 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
  * (docs/decisions.md, CHD-394): the border's `─` between them and after
  * the last, then its corner, as OpenTUI draws a blank over a border with
  * the border through it. They are in the text's own colour, which reads as
- * something to press on the dim border, and no drag starts on them.
+ * something to press on the dim border, and no drag starts on them. A press
+ * and a release on the same one is a click on it; the wheel is never one.
  */
-function Buttons({ buttons }: { buttons: readonly Button[] }) {
+function Buttons({ code }: { code: Code }) {
+  const actions = useContext(CodeBlockActions);
+  // The button the left button went down on, until it comes up.
+  const pressed = useRef<Button | undefined>(undefined);
+  const act = (button: Button) =>
+    button === 'copy'
+      ? actions?.copy(code.copy)
+      : code.run !== undefined && actions?.prompt(code.run);
+
   return (
     <box position='absolute' top={0} right={2} flexDirection='row' gap={1}>
-      {buttons.map((button) => (
-        <text key={button} {...TEXT}>
+      {code.buttons.map((button) => (
+        <text
+          key={button}
+          {...TEXT}
+          onMouseDown={(event: MouseEvent) => {
+            pressed.current = event.button === 0 ? button : undefined;
+          }}
+          onMouseUp={(event: MouseEvent) => {
+            const clicked = pressed.current === button && event.button === 0;
+
+            pressed.current = undefined;
+
+            if (clicked) {
+              act(button);
+            }
+          }}
+        >
           {`[${button}]`}
         </text>
       ))}

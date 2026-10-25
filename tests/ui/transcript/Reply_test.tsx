@@ -845,6 +845,100 @@ describe('CHD-396 U4 tester: selectable gap boundaries', () => {
   });
 });
 
+describe("a code box's buttons (CHD-394)", () => {
+  /** The 0-based cell of `word`'s first character on the row of `marker`. */
+  const cell = (window: Window, marker: string, word: string) => {
+    const rows = stripAnsi(window.frame()).split('\n');
+    const y = rows.findIndex((row) => row.includes(marker));
+    const x = rows[y]!.indexOf(word);
+
+    expect(x).toBeGreaterThan(-1);
+
+    return { x: stringWidth(rows[y]!.slice(0, x)), y };
+  };
+
+  const click = async (
+    window: Window,
+    down: { x: number; y: number },
+    up = down,
+  ) => {
+    await window.press(left(down.x, down.y, 'down'));
+    await window.press(left(up.x, up.y, 'up'));
+  };
+
+  const LISTED = '┌─ sh ─[copy]─[run]─┐';
+
+  test('a click on [copy] copies the block as written and says so, as a selection copy does', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await click(window, cell(window, '┌─ typescript', '[copy]'));
+        await until('the copy', () => copies.length === 1);
+
+        expect(copies[0]!.text).toStrictEqual('x');
+        await window.shows('copied 1 chars to clipboard');
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+
+  test('a click on [run] puts the command into the prompt in bash mode, and runs nothing', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await click(window, cell(window, LISTED, '[run]'));
+        await window.shows('│ ! bun dev check');
+        expect(window.frame()).not.toContain('Received `bun dev check`');
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test('a draft in the box stays, and the status line says why', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await window.type('half a thought');
+        await window.shows('› half a thought');
+        await click(window, cell(window, LISTED, '[run]'));
+        await window.shows('The prompt holds a draft · ctrl+c clears it');
+        expect(window.frame()).toContain('› half a thought');
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test('a press on one button and a release on another, or a wheel over one, is no click', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await click(
+          window,
+          cell(window, LISTED, '[copy]'),
+          cell(window, LISTED, '[run]'),
+        );
+
+        const over = cell(window, LISTED, '[copy]');
+
+        await window.press(`\x1b[<65;${over.x + 1};${over.y + 1}M`);
+        // A click after them answers, so neither went unseen.
+        await click(window, cell(window, LISTED, '[copy]'));
+        await until('the copy', () => copies.length === 1);
+
+        expect(copies.map(({ text }) => text)).toStrictEqual(['bun dev check']);
+        expect(window.frame()).not.toContain('│ ! bun dev check');
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+});
+
 describe('CHD-394 U2 tester: button boundaries', () => {
   for (const columns of [80, 120]) {
     test(`quoted and streaming fences add no buttons beside closed nested boxes at ${columns} columns`, async () => {

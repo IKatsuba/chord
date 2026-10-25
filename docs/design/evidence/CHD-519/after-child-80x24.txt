@@ -1,0 +1,24 @@
+ parser · fake · Fake Large with a 1M context window · opened by main 1m ago
+
+ ← from @main
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ › @@                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  main
+    main       fake                    ◦ idle 1m
+    parser     fake                    ◦ idle 1m
+    docs       fake                    ◦ idle 1m  ✓ new reply
+    … +2 more

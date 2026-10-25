@@ -1,0 +1,24 @@
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ← from @coder · fake
+   ⎿  Reading src/parse/tokenize.ts now. Tell me when your test fails.
+
+ ⏺ Received the message from coder · fake.
+
+ › @@bugfix
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────╮
+│ › @                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  @notes.md
+  @parser.md
+  README.md
+  .chord/teams/bugfix.md
+    main       fake                    ◦ idle 3m
+    parser     fake                    ◦ idle 3m
+    docs       fake                    ◦ idle 3m
+    … +4 more

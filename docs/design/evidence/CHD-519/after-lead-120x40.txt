@@ -1,0 +1,40 @@
+ bugfix · team · fake · Fake Large with a 1M context window · opened by @main 1m ago
+
+ ⏺ bugfix's instructions for the lead · 30 lines (ctrl+o to expand)
+
+ ← from @main
+   ⎿  First completion team.
+
+ ⏺ Open(tester) · fake · fake-small · acceptEdits
+   ⎿  text
+
+ ⏺ Open(coder) · fake · fake-large · plan
+   ⎿  You will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.
+
+ → to @main
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/
+      parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+ ← from @bugfix 2 · fake
+   ⎿  This run keeps to src/parse/date.ts and tests/parse/date_test.ts. Which files do you hold?
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+
+
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › @@                                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  main
+  tester
+  coder
+  bugfix 2
+    main       fake · Fake Large with a 1M context window · medium         ◦ idle 1m
+    parser     fake · Fake Large with a 1M context window · medium         ◦ idle 1m
+    docs       fake · Fake Large with a 1M context window · medium         ◦ idle 1m
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ◦ idle 1m
+    ├─ tester  fake · Fake Small · medium                                  ◦ idle 1m  ✓ new reply
+    … +2 more

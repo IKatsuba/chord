@@ -1,0 +1,40 @@
+[38;2;255;255;255m [1m[38;2;86;212;221mbugfix[0;2m · team · fake · Fake Large with a 1M context window · opened by @main 1m ago[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39mbugfix's instructions for the lead · 30 lines (ctrl+o to expand)[0m[38;2;255;255;255m
+
+ [39m←[38;2;255;255;255m [2m[39mfrom [0;1m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mFirst completion team.[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mOpen[0m(tester)[2m · fake · fake-small · acceptEdits[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mtext[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mOpen[0m(coder)[2m · fake · fake-large · plan[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mYou will edit src/parse/tokenize.ts, and only it, once tester's test fails. Read it now; change nothing yet.[0m[38;2;255;255;255m
+
+ [39m→[38;2;255;255;255m [2m[39mto [0;1m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/[0m[38;2;255;255;255m
+      [2m[39mparse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mtester and coder are open; I wait for tester's test.[38;2;255;255;255m
+
+ [38;2;124;207;127m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;124;207;127m@bugfix 2[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mThis run keeps to src/parse/date.ts and tests/parse/date_test.ts. Which files do you hold?[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix 2 · fake.[38;2;255;255;255m
+
+
+
+
+[38;2;86;212;221m╭─[1m bugfix[0m[38;2;86;212;221m ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m [39m@@[38;2;255;255;255m                                                                                                                 [38;2;86;212;221m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;177;185;249mmain[38;2;255;255;255m
+  [38;2;232;201;90mtester[38;2;255;255;255m
+  [38;2;245;154;198mcoder[38;2;255;255;255m
+  [38;2;124;207;127mbugfix 2[38;2;255;255;255m
+  [38;2;177;185;249m  [39mmain     [2m  fake · Fake Large with a 1M context window · medium         ◦ idle 1m[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mparser   [2m[39m  fake · Fake Large with a 1M context window · medium         ◦ idle 1m[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;196;156;255mdocs     [2m[39m  fake · Fake Large with a 1M context window · medium         ◦ idle 1m[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [1m[38;2;86;212;221mbugfix   [0;2m  team · fake · Fake Large with a 1M context window · medium  ◦ idle 1m[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39m├─ [0m[38;2;232;201;90mtester[2m[39m  fake · Fake Small · medium                                  ◦ idle 1m  ✓ new reply[0m[38;2;255;255;255m
+  [2m[39m  … +2 more[0m[38;2;255;255;255m

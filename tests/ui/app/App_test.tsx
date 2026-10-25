@@ -1316,6 +1316,28 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
     );
   });
 
+  test('↑ to a block out of view scrolls the transcript to show it', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdown');
+        await window.shows('built $bin');
+        await leader(window, 'b');
+        await until('the pick', () =>
+          statusRow(window).includes('another block'),
+        );
+        // The quoted ts block, the reply's first, is scrolled off at 24 rows.
+        expect(window.frame()).not.toContain('┌ ts');
+
+        for (let up = 0; up < 3; up++) {
+          await window.press(UP);
+        }
+
+        await window.shows('┌ ts');
+        expect(window.frame()).toContain('await session.close();');
+      },
+      { columns: 80, rows: 24 },
+    ));
+
   test('with no code block in the transcript, ctrl+x b says so', () =>
     withWindow(async (window) => {
       await send(window, 'text');

@@ -45,7 +45,14 @@ import { type EditorMode, homePath } from '../../settings.ts';
 import { runShell, type ShellOptions, type ShellProcess } from '../../shell.ts';
 import { subagentPath } from '../../session/subagents.ts';
 import { agentGroup } from '../transcript/agents/subagents.ts';
-import { onScreen, pickHint, type Placed } from '../transcript/code_pick.ts';
+import {
+  type CodePickAction,
+  onScreen,
+  pickHint,
+  type Placed,
+  reduceCodePick,
+  wholeInView,
+} from '../transcript/code_pick.ts';
 import { bashCommand, typedText } from '../prompt/bash.ts';
 import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { pickedDraft } from '../teams/teams.ts';
@@ -896,14 +903,14 @@ export function App({
       case 'pick_code_block': {
         const { blocks, shown } = blocksOnScreen();
 
-        return dispatch(
-          blocks.length === 0
-            ? { type: 'no_code_block' }
-            : { type: 'code_pick_started', blocks, shown },
-        );
+        if (blocks.length === 0) {
+          return dispatch({ type: 'no_code_block' });
+        }
+
+        return pickTo({ type: 'code_pick_started', blocks, shown });
       }
       case 'move_code_pick':
-        return dispatch({
+        return pickTo({
           type: 'code_pick_moved',
           by: step.by,
           blocks: blocksOnScreen().blocks,
@@ -1054,7 +1061,7 @@ export function App({
   // Only the tail's entries are mounted, from the tail's first or the one
   // held while scrolled back; it costs only the tail to find.
   const first = firstMounted(state);
-  const { viewport, content, place, measure } = useMeasured(
+  const { viewport, content, place, measure, entryOf } = useMeasured(
     state,
     all.front,
     first,
@@ -1208,6 +1215,37 @@ export function App({
         ? { top: 0, height: 0 }
         : { top: area.screenY, height: area.height },
     );
+  };
+
+  /**
+   * The pick moved, and the view with it where the block picked is not
+   * whole in view: scrolled so its first row is the view's (CHD-394 §3).
+   */
+  const pickTo = (action: CodePickAction) => {
+    const next = reduceCodePick(state.codePick, action);
+    const node =
+      next === undefined
+        ? undefined
+        : drawnBlocks.current.get(`${next.entry}:${next.block}`)?.node();
+    const area = viewport.current;
+
+    dispatch(action);
+
+    if (node === undefined || area === null) {
+      return;
+    }
+
+    const entry = entryOf(node);
+
+    if (
+      entry !== undefined &&
+      !wholeInView(
+        { top: node.screenY, height: node.height },
+        { top: area.screenY, height: area.height },
+      )
+    ) {
+      dispatch({ type: 'jumped_to', entry, target: node.id });
+    }
   };
 
   /** The block picked, while it is drawn. */

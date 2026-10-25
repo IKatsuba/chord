@@ -202,3 +202,14 @@ export function pickHint(keymap: Keymap, run: boolean): string {
     )
     .join(' · ');
 }
+
+/**
+ * Whether a block placed so is whole in `view`, every row of it, so the
+ * view need not move to show it once picked (CHD-394 §3).
+ */
+export function wholeInView(
+  at: { readonly top: number; readonly height: number },
+  view: { readonly top: number; readonly height: number },
+): boolean {
+  return at.top >= view.top && at.top + at.height <= view.top + view.height;
+}

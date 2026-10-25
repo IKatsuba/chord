@@ -9,6 +9,7 @@ import {
   onScreen,
   pickHint,
   reduceCodePick,
+  wholeInView,
 } from '../../../src/ui/transcript/code_pick.ts';
 import {
   codePlaces,
@@ -202,4 +203,14 @@ test("a picked block's line of keys names the bound ones, r only with [run] (CHD
   expect(pickHint(keymap, false)).toStrictEqual(
     '↑ ↓ another block · y copy · esc done',
   );
+});
+
+test('a block is whole in view only with every row of it in the view (CHD-394)', () => {
+  const view = { top: 10, height: 10 };
+
+  expect(wholeInView({ top: 10, height: 10 }, view)).toBe(true);
+  expect(wholeInView({ top: 12, height: 3 }, view)).toBe(true);
+  expect(wholeInView({ top: 9, height: 3 }, view)).toBe(false);
+  expect(wholeInView({ top: 18, height: 3 }, view)).toBe(false);
+  expect(wholeInView({ top: 30, height: 1 }, view)).toBe(false);
 });

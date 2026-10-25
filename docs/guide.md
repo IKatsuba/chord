@@ -153,6 +153,16 @@ dropped if the mention changes or you switch sessions; keys typed while
 waiting go into the draft as usual. If nothing matches, Enter sends the
 draft as typed and Tab does nothing.
 
+`@@` completes agent names, offering the open recipients `send_message`
+reaches from the picked session (see below). Task agents and unopened
+sessions are absent; equal names appear once. Fuzzy matching starts at the
+first character. ↑/↓ picks; Tab or Enter inserts `@@name ` without sending,
+quoting names with spaces as `@@"bugfix 2" `. Esc closes the list. With no
+recipients it says `No agents to mention`; an unmatched query says
+`No matching agents`. In either case, Enter sends the draft as typed and
+Tab does nothing. A sent mention is plain text to the picked session: it routes
+nothing and attaches no file link. Single `@` still finds files.
+
 In the prompt, option+←/→ (alt+←/→) moves by word; cmd+←/→ moves to the
 current displayed line's start or end, including when text wraps. alt+b/f
 also moves by word, and ctrl+a/e goes to the line's start or end. `?` on
@@ -707,10 +717,12 @@ in the parent's transcript and in the answer, which waits for the task to
 be up.
 
 `open_agent` opens a long-lived agent the same way, with the prompt as its
-first turn, a message from `main`. While a session has children,
-a list of its agents sits under the status line, `main` and each child in
-the order it opened, each child in a colour of its own. Each agent has one
-row, with no session title, including team leads and unfolded members.
+first turn, a message from `main`. Its name cannot contain `"` or a control
+character; a refusal names the character. Task names are unaffected.
+While a session has children, a list of its agents sits under the status
+line, `main` and each child in the order it opened, each child in a colour
+of its own. Each agent has one row, with no session title, including team
+leads and unfolded members.
 Each row has its runtime, model, effort (`open_agent` takes one as
 `spawn_task` does) and state: `● permission 17s`, `✻ working 41s`, `◦ idle 3m`,
 `✗ exited` or `✗ failed to start`. Asking counts from the request, working
@@ -745,9 +757,11 @@ the same as ↓ and ↑ at the last and first lines.
 The chat, status line, model and config pickers, image-paste refusals and
 command reports name the picked agent's runtime, including while it starts,
 stops or fails to start.
-`send_message` from the parent reaches a
-child, and from a child its parent alone, each a turn of the recipient's,
-as many as they trade; `list_sessions` gives the main session's children. A
+`send_message` from main reaches its open long-lived children and team
+leads; from an ordinary child, its parent alone. Teams' recipients are
+described below. Each message is a turn of the recipient's, as many as they
+trade; `list_sessions` gives the main session's children. `@@` completes
+these recipients' names in the prompt without sending them a message. A
 message to a working Claude or Codex session goes into its running turn
 through ACP's `_session/steering`, drawn among its calls. Claude waits for
 the tool calls open when the message arrived to end, so steering does not
@@ -784,7 +798,7 @@ turn, chord cancels that turn with
 On an agent without steering, Tab leaves the draft and sends nothing; the
 status line says so for 3 seconds and names the key that queues it. Tab
 does nothing with an empty box, no running turn or in bash mode; an open
-`/` or `@` list keeps Tab for completion. Rebind it with `chat:steer` in
+`/`, `@` or `@@` list keeps Tab for completion. Rebind it with `chat:steer` in
 `Chat`.
 
 A child that waits on you is named on the status line, ctrl+x a picks it, and
@@ -807,7 +821,9 @@ A team saved in `.chord/teams/<name>.md`, or in `teams/` beside your
 settings file for every project, takes a job from the session you talk to:
 say "hand it to bugfix" and the agent calls `run_team`, which chord draws
 as `Team(bugfix) · claude · opus` with the job under it. `list_teams` names
-the saved teams and their runs open. The team's lead is a long-lived child
+the saved teams and their runs open. Team and member names cannot contain
+`"` or control characters; a saved file with one appears with a problem
+line in `list_teams`. The team's lead is a long-lived child
 named after the team, on the lead's runtime, model, effort and mode; a second run
 is `bugfix 2`, even if the first was closed. Its first prompt is the team's
 instructions, drawn as one line (`bugfix's instructions for the lead · 58

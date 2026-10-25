@@ -728,3 +728,57 @@ describe("a code block's copy says what came of it (CHD-394)", () => {
     }
   });
 });
+
+describe('CHD-394 U3 tester: delayed copy replacement', () => {
+  test('a block aborts an older clipboard write and its late failure cannot overwrite the block note', async () => {
+    const first = Promise.withResolvers<ClipboardWriteResult>();
+    const second = Promise.withResolvers<ClipboardWriteResult>();
+    const signals: AbortSignal[] = [];
+    const events: WindowedAction[] = [];
+    let handle: SelectionHandle | undefined;
+    const copy: Copy = (_text, signal) => {
+      signals.push(signal);
+
+      return signals.length === 1 ? first.promise : second.promise;
+    };
+
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: (action) => events.push(action),
+        copy,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'copy');
+    };
+
+    const screen = await draw(createElement(Probe));
+
+    try {
+      assert(handle !== undefined);
+
+      const old = handle.copyText('old selection');
+
+      handle.copyBlock('echo new');
+      expect(signals[0]?.aborted).toBe(true);
+      expect(signals[1]?.aborted).toBe(false);
+      second.resolve({
+        host: { status: 'written' },
+        terminal: { status: 'skipped' },
+      } as unknown as ClipboardWriteResult);
+      await until('the block copy completes', () =>
+        events.some((event) => event.type === 'block_copy_noted'),
+      );
+      first.reject(new Error('late old failure'));
+      expect(await old).toBeUndefined();
+      expect(events).toStrictEqual([
+        { type: 'block_copy_started' },
+        { type: 'block_copy_noted', result: { kind: 'copied', chars: 8 } },
+      ]);
+    } finally {
+      await screen.unmount();
+    }
+  });
+});

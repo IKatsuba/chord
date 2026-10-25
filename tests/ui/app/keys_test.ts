@@ -755,3 +755,32 @@ describe("a code block's command put into the prompt (CHD-394)", () => {
     ).toStrictEqual([dispatched({ type: 'draft_held' })]);
   });
 });
+
+describe('CHD-394 U3 tester: live draft protection', () => {
+  test('the live widget draft takes precedence over stale reducer text, including whitespace', () => {
+    for (const draft of [' ', '\n', 'é👍🏽']) {
+      expect(
+        promptSteps(
+          'echo replace',
+          context(ready, {
+            typed: { vim: ready.vim, draft, cursor: endOf(draft) },
+          }),
+        ),
+      ).toStrictEqual([dispatched({ type: 'draft_held' })]);
+    }
+
+    const command = 'printf "👍🏽"\n\nprintf "done"';
+
+    expect(
+      promptSteps(
+        command,
+        context(typing('stale'), {
+          typed: { vim: ready.vim, draft: '', cursor: START },
+        }),
+      ),
+    ).toStrictEqual([
+      dispatched({ type: 'bash_mode', on: true }),
+      { type: 'show_draft', text: command, cursor: endOf(command) },
+    ]);
+  });
+});

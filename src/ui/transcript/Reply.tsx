@@ -5,7 +5,12 @@ import stripAnsi from 'strip-ansi';
 import { useColours, useSelectable } from '../app/context.ts';
 import { Ansi } from '../theme/Ansi.tsx';
 import { DIM_BORDER, FILL, TEXT } from '../theme/text.ts';
-import { QUOTE_INSET, type Soft, softMarkdown } from './markdown.ts';
+import {
+  type Button,
+  QUOTE_INSET,
+  type Soft,
+  softMarkdown,
+} from './markdown.ts';
 
 /**
  * A reply as markdown, rendered by markdansi for the width it is drawn in,
@@ -106,23 +111,25 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
 
   if (block.kind === 'code') {
     return (
-      <box
-        border
-        borderStyle='single'
-        borderColor={DIM_BORDER}
-        // OpenTUI sets a title one cell past the corner; chord takes it there.
-        {...(block.label !== '' && {
-          title: ` ${block.label} `,
-          titleAlignment: 'left',
-          titleColor: DIM_BORDER,
-        })}
-        paddingLeft={1}
-        paddingRight={1}
-        width={block.width}
-      >
-        <text {...TEXT} {...selectable} {...look} wrapMode='char'>
-          <Ansi text={block.code} />
-        </text>
+      <box width={block.width}>
+        <box
+          border
+          borderStyle='single'
+          borderColor={DIM_BORDER}
+          // OpenTUI sets a title one cell past the corner; chord takes it there.
+          {...(block.label !== '' && {
+            title: ` ${block.label} `,
+            titleAlignment: 'left',
+            titleColor: DIM_BORDER,
+          })}
+          paddingLeft={1}
+          paddingRight={1}
+        >
+          <text {...TEXT} {...selectable} {...look} wrapMode='char'>
+            <Ansi text={block.code} />
+          </text>
+        </box>
+        {block.buttons.length > 0 && <Buttons buttons={block.buttons} />}
       </box>
     );
   }
@@ -143,5 +150,25 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
     <text {...TEXT} {...selectable} {...look}>
       <Ansi text={block.text} />
     </text>
+  );
+}
+
+/**
+ * A code box's buttons over the right end of its top border, each a text of
+ * its own, the owner's choice where OpenTUI's box has one title
+ * (docs/decisions.md, CHD-394): the border's `─` between them and after
+ * the last, then its corner, as OpenTUI draws a blank over a border with
+ * the border through it. They are in the text's own colour, which reads as
+ * something to press on the dim border, and no drag starts on them.
+ */
+function Buttons({ buttons }: { buttons: readonly Button[] }) {
+  return (
+    <box position='absolute' top={0} right={2} flexDirection='row' gap={1}>
+      {buttons.map((button) => (
+        <text key={button} {...TEXT}>
+          {`[${button}]`}
+        </text>
+      ))}
+    </box>
   );
 }

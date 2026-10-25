@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import process from 'node:process';
 import { promisify } from 'node:util';
@@ -7,6 +8,7 @@ import stripAnsi from 'strip-ansi';
 import {
   type Code,
   codeBlocks,
+  leastWidth,
   markdown,
   QUOTE_INSET,
   runCommand,
@@ -537,25 +539,80 @@ test('soft, a paragraph, a heading and a quote are a line each (CHD-396)', () =>
   ]);
 });
 
-test('soft, a code block is its code for a box as wide as it or its label, within the width (CHD-396)', () => {
+test('soft, a code block is its code for a box as wide as it, its label or its buttons, within the width (CHD-396, CHD-394)', () => {
   const code = (text: string) => softMarkdown(text, 30, false);
 
+  // Its code takes 19 cells; `┌─ sh ─[copy]─[run]─┐` takes 21.
   expect(code('```sh\ndeno task check\n```')).toStrictEqual([
-    { kind: 'code', label: 'sh', code: 'deno task check', width: 19 },
+    {
+      kind: 'code',
+      label: 'sh',
+      code: 'deno task check',
+      width: 21,
+      buttons: ['copy', 'run'],
+    },
   ]);
-  // A label wider than its code widens the box so OpenTUI draws it.
+  // A label wider than its code widens the box so OpenTUI draws it, and
+  // its button beside it.
   expect(code('```typescript\nx\n```')).toStrictEqual([
-    { kind: 'code', label: 'typescript', code: 'x', width: 16 },
+    {
+      kind: 'code',
+      label: 'typescript',
+      code: 'x',
+      width: 23,
+      buttons: ['copy'],
+    },
   ]);
   // A long line stays whole for OpenTUI to cut; the box keeps to the width.
   // Blank lines in the code are the agent's.
   expect(code('```\n\n' + 'y'.repeat(40) + '\n\nz\n```')).toStrictEqual([
-    { kind: 'code', label: '', code: `\n${'y'.repeat(40)}\n\nz`, width: 30 },
+    {
+      kind: 'code',
+      label: '',
+      code: `\n${'y'.repeat(40)}\n\nz`,
+      width: 30,
+      buttons: ['copy'],
+    },
   ]);
   // The rows path keeps its drawn box.
   expect(markdown('```sh\nls\n```', 30, false)[0]?.text).toStrictEqual(
     '┌ sh ──┐\n│ ls   │\n└──────┘',
   );
+});
+
+test('a code box carries [copy], and [run] on sh and bash, never while its fence is open, at its least width, giving way run first only where the transcript is narrower (CHD-394)', () => {
+  const box = (text: string, width = 80) => {
+    const [block] = softMarkdown(text, width, false);
+
+    assert(block?.kind === 'code');
+
+    return [block.width, block.buttons];
+  };
+
+  // §1's table of least widths.
+  expect(leastWidth('sh', ['copy', 'run'])).toStrictEqual(21);
+  expect(leastWidth('bash', ['copy', 'run'])).toStrictEqual(23);
+  expect(leastWidth('ts', ['copy'])).toStrictEqual(15);
+  expect(leastWidth('console', ['copy'])).toStrictEqual(20);
+  expect(leastWidth('', ['copy'])).toStrictEqual(10);
+  expect(box('```bash\nls\n```')).toStrictEqual([23, ['copy', 'run']]);
+  expect(box('```console\n$ ls\n```')).toStrictEqual([20, ['copy']]);
+  expect(box('```\nls\n```')).toStrictEqual([10, ['copy']]);
+  // Streaming: an open fence has none, and its box keeps to its code.
+  expect(box('```sh\nls')).toStrictEqual([8, []]);
+  // Narrower than 21, run gives way; narrower than 15, copy too.
+  expect(box('```sh\nls\n```', 20)).toStrictEqual([15, ['copy']]);
+  expect(box('```sh\nls\n```', 14)).toStrictEqual([8, []]);
+
+  // In a list too.
+  const [list] = softMarkdown('1. Run:\n   ```sh\n   ls\n   ```\n', 80, false);
+
+  assert(list?.kind === 'list');
+  expect(list.items[0]?.blocks.at(-1)).toMatchObject({
+    kind: 'code',
+    width: 21,
+    buttons: ['copy', 'run'],
+  });
 });
 
 test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
@@ -591,7 +648,8 @@ test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
             items: [
               {
                 marker: '1. ',
-                // The box takes the 15 cells beside both markers.
+                // The box takes the 15 cells beside both markers, which
+                // hold [copy] but not [run], which gives way.
                 blocks: [
                   { kind: 'text', text: 'nested, and long enough too' },
                   {
@@ -599,6 +657,7 @@ test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
                     label: 'sh',
                     code: 'abcdefghijklmnopqrstu',
                     width: 15,
+                    buttons: ['copy'],
                   },
                 ],
               },

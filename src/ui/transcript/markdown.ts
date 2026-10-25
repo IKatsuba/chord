@@ -93,10 +93,21 @@ export interface Code {
   readonly code: string;
   /**
    * Cells the box takes: its widest line beside the borders and padding, as
-   * wide as the label needs for OpenTUI to draw it, and no wider than `width`.
+   * wide as the label needs for OpenTUI to draw it, and as its buttons need
+   * beside the label, and no wider than `width`.
    */
   readonly width: number;
+  /**
+   * The buttons on its top border, right of the label: `copy` on every
+   * closed block, `run` too on an `sh` or `bash` one; none while its fence
+   * is open, its text not final, and only those its `width` holds
+   * (docs/design/CHD-394.md §1).
+   */
+  readonly buttons: readonly Button[];
 }
+
+/** A code box's button, drawn as its bracketed word. */
+export type Button = 'copy' | 'run';
 
 /** Cells a quote's bar takes: the bar and a space. */
 export const QUOTE_INSET = 2;
@@ -344,6 +355,13 @@ function codeOf(token: Tokens.Code, width: number, color: Paint): Code {
   const { label, lines } = highlighted(token, color);
   const widest = Math.max(...lines.map((line) => stringWidth(line)));
   const labelled = label === '' ? 0 : stringWidth(label) + 2 + CODE_INSET;
+  // Never narrower than its buttons need: they give way, run first, only
+  // where the transcript itself is narrower than that.
+  const buttons = fitting(
+    label,
+    !closed(token) ? [] : RUNNABLE.has(label) ? ['copy', 'run'] : ['copy'],
+    width,
+  );
 
   return {
     kind: 'code',
@@ -351,9 +369,73 @@ function codeOf(token: Tokens.Code, width: number, color: Paint): Code {
     code: lines.join('\n'),
     width: Math.max(
       1,
-      Math.min(width, Math.max(widest + CODE_INSET, labelled)),
+      Math.min(
+        width,
+        Math.max(
+          widest + CODE_INSET,
+          labelled,
+          buttons.length === 0 ? 0 : leastWidth(label, buttons),
+        ),
+      ),
     ),
+    buttons,
   };
+}
+
+/**
+ * The buttons of `wanted` a box in `width` cells holds: all of them where
+ * their least width fits, else with `run` given way first, then `copy`.
+ */
+function fitting(
+  label: string,
+  wanted: readonly Button[],
+  width: number,
+): Button[] {
+  for (let count = wanted.length; count > 0; count--) {
+    const kept = wanted.slice(0, count);
+
+    if (leastWidth(label, kept) <= width) {
+      return kept;
+    }
+  }
+
+  return [];
+}
+
+/**
+ * The least cells a box holding `buttons` takes, corners included:
+ * `┌─ sh ─[copy]─[run]─┐`, the label between rules, a `─` between the
+ * bracketed words and `─┐` after the last; no blank cell beside a button,
+ * which OpenTUI would draw with the border's `─` through it (the owner,
+ * CHD-394 §1's table).
+ */
+export function leastWidth(label: string, buttons: readonly Button[]): number {
+  const labelled = label === '' ? 1 : stringWidth(label) + 4;
+
+  return (
+    1 +
+    labelled +
+    buttons.reduce((sum, button) => sum + button.length + 2, 0) +
+    Math.max(buttons.length - 1, 0) +
+    2
+  );
+}
+
+/**
+ * Whether a code block is whole: an indented one always, a fenced one once
+ * its closing fence has come, as one still open mid-stream is not.
+ */
+function closed(token: Tokens.Code): boolean {
+  const marks = fence(token.raw);
+
+  if (marks === undefined) {
+    return true;
+  }
+
+  const own = token.raw.replace(/\n+$/, '').split('\n');
+  const closer = new RegExp(`^\\s*${marks[0]}{${marks.length},}\\s*$`);
+
+  return own.length > 1 && closer.test(own.at(-1)!);
 }
 
 /**

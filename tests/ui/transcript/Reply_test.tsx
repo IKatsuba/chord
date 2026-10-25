@@ -98,9 +98,12 @@ for (const columns of [80, 120]) {
         const frame = stripAnsi(window.frame());
 
         // The label sits one cell past the corner, as OpenTUI draws a title,
-        // and widens a box whose code is narrower than it.
-        expect(frame).toContain('┌─ typescript ─┐\n   │ x            │');
-        expect(frame).toContain('┌─ sh ──────────┐');
+        // and widens a box whose code is narrower than it, as its buttons
+        // do (CHD-394).
+        expect(frame).toContain(
+          '┌─ typescript ─[copy]─┐\n   │ x                   │',
+        );
+        expect(frame).toContain('┌─ sh ─[copy]─[run]─┐');
         expect(
           frame.split('\n').every((row) => stringWidth(row) <= columns),
         ).toBe(true);

@@ -9,6 +9,7 @@ import { LONG_SESSION_TITLE } from '../../fixtures/fake_agent/scenarios/text.ts'
 import { serveChord } from '../../../src/server/server.ts';
 import {
   DOWN,
+  ESC,
   UP,
   ready,
   send,
@@ -290,6 +291,100 @@ describe('CHD-445 U3 tester: title lifetime and constrained list navigation', ()
                         'Never published',
                       ),
               }),
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+});
+
+describe('CHD-523 tester: multiline titles and later session changes', () => {
+  const title =
+    '主題🚀 café first line ' +
+    'длинное название '.repeat(12) +
+    '\n第二行 title continuation\nآخر سطر final segment';
+
+  for (const team of [false, true]) {
+    test(`multiline non-ASCII titles add no narrow ${team ? 'team' : 'child'} rows`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+
+            if (team) {
+              await started(window);
+            } else {
+              await send(window, 'agentsquiet');
+              await window.shows('● docs needs your permission');
+            }
+
+            const names = team
+              ? ['main', 'bugfix', '├─ tester', '└─ coder']
+              : ['main', 'parser', 'docs'];
+            const check = () => {
+              const lines = stripAnsi(window.frame()).split('\n');
+              const bottom = lines.findLastIndex((line) =>
+                line.startsWith('╰'),
+              );
+              const list = lines
+                .slice(bottom + 2)
+                .filter((line) => line.trim());
+
+              expect(list).toHaveLength(names.length);
+
+              for (const [at, name] of names.entries()) {
+                expect(list[at]).toContain(name);
+              }
+
+              expect(list.join('\n')).not.toMatch(
+                /主題|café|длинное|第二行|آخر|title continuation|final segment|Fix the parser/,
+              );
+            };
+
+            await until('all title-free rows', () =>
+              names.every((name) => window.frame().includes(name)),
+            );
+            check();
+
+            if (team) {
+              await window.press(DOWN);
+              await window.press(DOWN);
+              await window.press(DOWN);
+              await window.press(DOWN);
+              await window.shows('❯ └─ coder');
+              check();
+              await window.press(UP);
+              await window.shows('❯ ├─ tester');
+              check();
+            } else {
+              await send(window, 'titledfix');
+              await window.shows('Renamed.');
+              check();
+              await send(window, 'costwait');
+              await window.shows('esc to interrupt');
+              check();
+              await window.press(ESC);
+              await window.shows('Interrupted by user');
+              check();
+              await send(window, '/clear');
+              await ready(window);
+              await send(window, '/resume');
+              await window.shows('Resume a session');
+              await window.shows('Fix the parser');
+              await window.shows('主題🚀 café first line');
+            }
+          },
+          {
+            server,
+            runtimes: ['fake'],
+            columns: 80,
+            rows: 24,
+            teams: { bugfix: BUGFIX },
+            agentCommand: fakeAgentCommand(undefined, '--title', title),
           },
         );
       } finally {

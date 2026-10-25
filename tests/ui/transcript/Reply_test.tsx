@@ -19,7 +19,14 @@ import { clipboard, dragOver } from '../app/selecting.ts';
 import { type AppState, frontState } from '../../../src/ui/app/state.ts';
 import { draw, type Drawn } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
-import { left, send, until, withWindow, type Window } from '../app/render.tsx';
+import {
+  left,
+  send,
+  statusRow,
+  until,
+  withWindow,
+  type Window,
+} from '../app/render.tsx';
 
 const HEADING =
   'A heading long enough that at eighty columns it has to wrap onto a second row of its own';
@@ -1146,6 +1153,21 @@ describe('CHD-394 U3 tester: clicks across boxes and drafts', () => {
     return { x, y };
   };
 
+  const finished = async (
+    window: Window,
+    state: () => AppState | undefined,
+  ) => {
+    await send(window, 'markdowncode');
+    await window.shows('A paragraph after.');
+    // The final result shrinks the followed reply and moves its buttons.
+    await until(
+      'the code reply final result is drawn',
+      () =>
+        state()?.transcript.turn.status === 'idle' &&
+        statusRow(window).includes('? for shortcuts'),
+    );
+  };
+
   const large = '┌─ sh ───';
   const nested = '┌─ sh ─[copy]';
   const click = async (window: Window, at: { x: number; y: number }) => {
@@ -1159,11 +1181,11 @@ describe('CHD-394 U3 tester: clicks across boxes and drafts', () => {
   ] as const) {
     test(`a release in another box consumes the press, and bracket cells copy exact text at ${columns} columns`, () => {
       const { copies, copy } = clipboard();
+      let state: AppState | undefined;
 
       return withWindow(
         async (window) => {
-          await send(window, 'markdowncode');
-          await window.shows('A paragraph after.');
+          await finished(window, () => state);
 
           const a = button(window, large, '[copy]');
           const b = button(window, nested, '[copy]');
@@ -1184,7 +1206,14 @@ describe('CHD-394 U3 tester: clicks across boxes and drafts', () => {
           ]);
           expect(window.frame()).not.toContain('│ !');
         },
-        { columns, rows, copy },
+        {
+          columns,
+          rows,
+          copy,
+          onState: (all) => {
+            state = frontState(all);
+          },
+        },
       );
     });
 
@@ -1194,8 +1223,7 @@ describe('CHD-394 U3 tester: clicks across boxes and drafts', () => {
 
       return withWindow(
         async (window) => {
-          await send(window, 'markdowncode');
-          await window.shows('A paragraph after.');
+          await finished(window, () => state);
           await dragOver(window, 'echo done');
           expect(window.selected()).toBe('echo done');
           await click(window, button(window, nested, '[copy]'));
@@ -1230,8 +1258,7 @@ describe('CHD-394 U3 tester: clicks across boxes and drafts', () => {
 
       return withWindow(
         async (window) => {
-          await send(window, 'markdowncode');
-          await window.shows('A paragraph after.');
+          await finished(window, () => state);
           await click(window, button(window, large, '[run]'));
           await until(
             'the multiline command fills bash',

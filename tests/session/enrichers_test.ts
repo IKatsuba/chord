@@ -5,11 +5,17 @@ import type {
   SessionConfigOption,
   SessionUpdate,
 } from '@agentclientprotocol/sdk';
-import { enricherRelay, FILLED, MCP_CALL } from '../../src/session/enrich.ts';
+import {
+  enricherRelay,
+  FILLED,
+  GUARDIAN_REVIEW,
+  MCP_CALL,
+} from '../../src/session/enrich.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import {
   codexMcpCall,
+  codexGuardianReview,
   costFromTokens,
   ENRICHERS,
   modeReadBack,
@@ -1863,5 +1869,138 @@ describe('CHD-440 tester: fallback provenance across sessions and replay', () =>
         }),
       ).status,
     ).toBe('completed');
+  });
+});
+
+describe('structured Codex Guardian review status (CHD-521)', () => {
+  for (const status of [
+    'inProgress',
+    'approved',
+    'denied',
+    'timedOut',
+    'aborted',
+    'futureStatus',
+  ]) {
+    for (const opening of [true, false]) {
+      test(`${status} from ${opening ? 'rawInput on an opening' : 'rawOutput on an update'} is filed without changing the agent fields`, () => {
+        const { update } = relayOn([codexGuardianReview]);
+        const sent: SessionUpdate = {
+          sessionUpdate: opening ? 'tool_call' : 'tool_call_update',
+          toolCallId: 'guardian_assessment:review-1',
+          title: 'Guardian Review',
+          kind: 'think',
+          ...(opening
+            ? { rawInput: { review: { status } } }
+            : { rawOutput: { review: { status } } }),
+          _meta: { own: true },
+        };
+
+        expect(updates(update(sent))).toStrictEqual([
+          {
+            ...sent,
+            _meta: {
+              own: true,
+              [FILLED]: [GUARDIAN_REVIEW],
+              [GUARDIAN_REVIEW]: status,
+            },
+          },
+        ]);
+        expect(sent._meta).toStrictEqual({ own: true });
+      });
+    }
+  }
+
+  test('a title or Approved text never identifies a review, and an id without structured status stays untouched', () => {
+    const { update } = relayOn([codexGuardianReview]);
+
+    for (const fields of [
+      { toolCallId: 'ordinary', rawInput: { review: { status: 'approved' } } },
+      { toolCallId: 'guardian_assessment:missing' },
+      {
+        toolCallId: 'guardian_assessment:malformed',
+        rawInput: { review: { status: null } },
+      },
+      {
+        toolCallId: 'guardian_assessment:wrong-field',
+        rawOutput: { review: { status: 'approved' } },
+      },
+    ]) {
+      const sent: SessionUpdate = {
+        sessionUpdate: 'tool_call',
+        title: 'Guardian Review',
+        kind: 'think',
+        content: [
+          {
+            type: 'content',
+            content: { type: 'text', text: 'Status: Approved' },
+          },
+        ],
+        ...fields,
+      };
+
+      expect(updates(update(sent))).toStrictEqual([sent]);
+    }
+  });
+
+  test('the transcript keeps the last structured status when absent, replaces it even with an unknown string, and ignores rendered text', () => {
+    const chain = relayOn(ENRICHERS);
+    let transcript = emptyTranscript;
+    const sent: SessionUpdate[] = [
+      {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'guardian_assessment:review',
+        title: 'Guardian Review',
+        kind: 'think',
+        rawInput: { review: { status: 'inProgress' } },
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guardian_assessment:review',
+        content: [
+          {
+            type: 'content',
+            content: { type: 'text', text: 'Status: Approved' },
+          },
+        ],
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guardian_assessment:review',
+        rawOutput: { review: { status: 'approved' } },
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guardian_assessment:review',
+        rawOutput: { review: { status: 'futureStatus' } },
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'guardian_assessment:review',
+        status: 'completed',
+      },
+    ];
+
+    for (const [at, each] of sent.entries()) {
+      for (const update of updates(chain.update(each))) {
+        transcript = reduceTranscript(transcript, {
+          type: 'update',
+          turnId: 't1',
+          update,
+        });
+      }
+
+      const entry = transcript.entries.find((entry) => entry.kind === 'tool');
+
+      assert(entry?.kind === 'tool');
+      expect(entry.call.guardian).toBe(
+        [
+          'inProgress',
+          'inProgress',
+          'approved',
+          'futureStatus',
+          'futureStatus',
+        ][at],
+      );
+    }
   });
 });

@@ -23,6 +23,7 @@
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`),
   `forms.ts` (`form`, `link`, `leftform`, `leftformgated`),
+  `guardian.ts` (`guardian`, `guardiangated`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
@@ -53,6 +54,7 @@
   The gated scenarios below use `<cwd>/.fake-gate/release`.
   A prompt that is exactly a scenario name (`text`, `texttillsteered`,
   `texttillsteeredheld`,
+  `guardian`, `guardiangated`,
   `titled`, `retitled`, `titledlook`, `titledfix`, `titledlong`,
   `thought`, `tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
@@ -147,6 +149,11 @@
   `mcp` answers with the MCP servers its session was opened with, as JSON;
   `opened` with the request that last opened its session and that
   request's `_meta`, as JSON, to show what chord adds there (CHD-439);
+  `guardian` opens Codex Guardian reviews, then closes one each approved,
+  denied, timedOut and aborted, leaves one inProgress, and closes one with
+  no structured status, plus one arriving already approved as a tool_call;
+  `guardiangated` waits after `Guardian reviews opened.`
+  for `<cwd>/.fake-gate/release` (at most 10 s) before closing them.
   `titled` names its session `Fix the tokenizer` through
   `session_info_update`; `retitled` names it `Look at the parser`, then
   renames it `Fix the parser`; `titledlook` and `titledfix` give those last

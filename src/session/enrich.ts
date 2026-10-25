@@ -40,6 +40,9 @@ export const FILLED = 'chord/filled';
  */
 export const MCP_CALL = 'chord/mcp';
 
+/** The structured status of a Codex Guardian review, filed by chord. */
+export const GUARDIAN_REVIEW = 'chord/guardian';
+
 /** What the chain knows of one session. */
 export interface SessionWire {
   /** What the agent has said of the session: its options, models, modes. */

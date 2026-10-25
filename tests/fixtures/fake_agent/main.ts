@@ -293,6 +293,7 @@ import {
 import { COMPACTION } from './scenarios/compaction.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORMS } from './scenarios/forms.ts';
+import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
 import { MODES } from './scenarios/modes.ts';
 import { PERMISSIONS } from './scenarios/permissions.ts';
@@ -338,6 +339,8 @@ import {
 } from './turn.ts';
 
 const SCENARIOS = [
+  'guardian',
+  'guardiangated',
   'text',
   'texttillsteered',
   'texttillsteeredheld',
@@ -600,6 +603,7 @@ function promptText(prompt: acp.ContentBlock[]): string {
 const PLAY: Record<Scenario, Play> = {
   ...TEXT,
   ...TOOLS,
+  ...GUARDIAN,
   ...PERMISSIONS,
   ...PLANS,
   ...FORMS,

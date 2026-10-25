@@ -14,6 +14,10 @@ import { findAgent } from '../../src/agents.ts';
 import { startFailureOf } from '../../src/session/start_failure.ts';
 import { signInOf, SignInNeeded } from '../../src/session/sign_in.ts';
 import { FILLED } from '../../src/session/enrich.ts';
+import { recordActions } from '../../src/session/record.ts';
+import { pastActions } from '../../src/session/replay.ts';
+import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
+import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import type { PendingPermission } from '../../src/session/permissions.ts';
 import {
   openSession,
@@ -1477,3 +1481,59 @@ describe('CHD-454 tester: structured failures through actual starts', () => {
     }
   });
 });
+
+test('Guardian statuses survive the fake transport, transcript and recorded replay, including an already-approved opening (CHD-521)', () =>
+  withSession(async (session) => {
+    const { updates, result } = await run(session, 'guardian');
+    const actions = updates.map((update) => ({
+      type: 'update' as const,
+      turnId: 't1',
+      update,
+    }));
+    const recorded = recordActions([
+      { type: 'prompt', turnId: 't1', at: 0, prompt: 'guardian', images: 0 },
+      ...actions,
+      { type: 'result', turnId: 't1', result },
+    ]);
+    const replayed = pastActions(
+      updates.map((update) => ({ update })),
+      0,
+    );
+
+    expect(result.status).toBe('completed');
+
+    for (const past of [actions, recorded, replayed]) {
+      let transcript = emptyTranscript;
+
+      for (const action of past) {
+        if (action.type !== 'usage') {
+          transcript = reduceTranscript(transcript, action);
+        }
+      }
+
+      const reviews = transcript.entries.flatMap((entry) =>
+        entry.kind === 'tool' ? [entry.call] : [],
+      );
+
+      expect(reviews.map((call) => call.guardian)).toStrictEqual([
+        'approved',
+        'denied',
+        'timedOut',
+        'aborted',
+        'inProgress',
+        undefined,
+        'approved',
+      ]);
+      expect(reviews[0]?.rawOutput).toMatchObject({
+        review: { status: 'approved' },
+      });
+      expect(reviews[4]?.status).toBe('in_progress');
+      expect(reviews[5]?.content).toContainEqual({
+        type: 'content',
+        content: {
+          type: 'text',
+          text: 'Status: Approved\nAction: exec printf ready\nRisk: low\nAuthorization: high\nRationale: A scripted Guardian review.',
+        },
+      });
+    }
+  }));

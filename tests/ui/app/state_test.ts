@@ -915,3 +915,19 @@ test('the notice holds the keys, Esc closes it, and it waits behind a picker or 
   expect(asked.notice).toBe('dimcode-agents');
   expect(noticeShown(reduceApp(ready, { type: 'notice_closed' }))).toBe(false);
 });
+
+test("Tab's note on an agent without steering is said afresh on each press, and only the last one's time ends it (CHD-378)", () => {
+  const first = reduceApp(ready, { type: 'steer_refused' });
+  const again = reduceApp(first, { type: 'steer_refused' });
+
+  expect(first.steerRefused).toBeDefined();
+  expect(again.steerRefused).not.toStrictEqual(first.steerRefused);
+  expect(
+    reduceApp(again, { type: 'steer_note_gone', id: first.steerRefused! })
+      .steerRefused,
+  ).toStrictEqual(again.steerRefused);
+  expect(
+    reduceApp(again, { type: 'steer_note_gone', id: again.steerRefused! })
+      .steerRefused,
+  ).toBeUndefined();
+});

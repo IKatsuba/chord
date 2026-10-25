@@ -863,6 +863,12 @@ export function App({
         return conversation()?.readCommands();
       case 'send':
         return sessions.send(step.text);
+      case 'steer':
+        if (sessions.steer(step.text)) {
+          play(step.kept);
+        }
+
+        return;
       case 'send_with_paths':
         return void images.sendWithPaths(step.text);
       case 'take_pasted_paths':

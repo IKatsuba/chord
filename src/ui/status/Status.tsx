@@ -97,6 +97,13 @@ export function Working({
   );
 }
 
+/**
+ * What Tab says on an agent that takes no steering, and the way out
+ * (CHD-378); 72 cells, whole at 80 columns.
+ */
+export const UNSTEERED =
+  'This agent does not take messages into a running turn · enter queues it';
+
 /** Claude Code's mode colours, in the theme's tones; the rest is dim. */
 function statusColour(tone: StatusTone, colours: Palette): string | undefined {
   switch (tone) {
@@ -148,11 +155,13 @@ export function StatusLine({
   const helpKey = hintKey(state.keys, 'help:toggle');
   const cycleKey = hintKey(state.keys, 'chat:cycleMode');
   const copied = state.copied && copyNote(state.copied.result);
+  const unsteered = state.steerRefused === undefined ? undefined : UNSTEERED;
   const notice =
     armed ??
     (connection.status === 'closing'
       ? `Stopping ${agent}…`
       : (failure ??
+        unsteered ??
         copied ??
         state.sessionsNote ??
         (connection.status === 'starting' ? `Starting ${agent}…` : undefined)));
@@ -165,7 +174,8 @@ export function StatusLine({
     {
       model: alone ? undefined : modelName(state.models),
       effort: alone ? undefined : effort,
-      failed: notice !== undefined && notice === failure,
+      failed:
+        notice !== undefined && (notice === failure || notice === unsteered),
       error:
         copied !== undefined &&
         notice === copied &&

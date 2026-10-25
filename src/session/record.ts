@@ -162,12 +162,13 @@ export type RecordEntry =
     }
   /**
    * chord cancelled a turn the agent started on its own with a message
-   * steered after chord's turn had ended; the message went as the next turn.
+   * steered after chord's turn had ended, the person's with no `from`; the
+   * message went as the next turn.
    */
   | {
       readonly type: 'self_started';
       readonly turnId: string;
-      readonly from: MessageFrom;
+      readonly from?: MessageFrom;
     }
   /** The agent's process went, and the subagents still running with it. */
   | { readonly type: 'disconnected'; readonly at: number }
@@ -717,7 +718,7 @@ export function recordActions(
         actions.push({
           type: 'self_started',
           turnId: id(entry.turnId),
-          from: entry.from,
+          ...(entry.from === undefined ? {} : { from: entry.from }),
         });
 
         break;
@@ -977,7 +978,11 @@ export function entryOf(
         stopping: event.stopping,
       };
     case 'self_started':
-      return { type: 'self_started', turnId: event.turnId, from: event.from };
+      return {
+        type: 'self_started',
+        turnId: event.turnId,
+        ...(event.from === undefined ? {} : { from: event.from }),
+      };
     case 'served':
       return {
         type: 'served',

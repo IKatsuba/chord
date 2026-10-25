@@ -342,7 +342,7 @@ export function reducePrompt(
         };
       }
 
-      // Told again once the answer it waited for came: only that changes.
+      // Told again once what it waited for changed: only that changes.
       if (state.queue.some((item) => item.turnId === action.turnId)) {
         return {
           ...state,
@@ -351,9 +351,13 @@ export function reducePrompt(
               return item;
             }
 
-            const { afterAnswer: _, ...rest } = item;
+            const { afterAnswer: _, afterCalls: __, ...rest } = item;
 
-            return action.afterAnswer ? { ...rest, afterAnswer: true } : rest;
+            return {
+              ...rest,
+              ...(action.afterAnswer ? { afterAnswer: true as const } : {}),
+              ...(action.afterCalls ? { afterCalls: true as const } : {}),
+            };
           }),
         };
       }
@@ -372,6 +376,7 @@ export function reducePrompt(
             ...(state.held.length > 0 ? { held: state.held } : {}),
             ...(images.length > 0 ? { images } : {}),
             ...(action.afterAnswer ? { afterAnswer: action.afterAnswer } : {}),
+            ...(action.afterCalls ? { afterCalls: action.afterCalls } : {}),
           },
         ],
       };

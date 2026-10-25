@@ -894,3 +894,30 @@ test("the person's prompt held for an answer is marked so, and only that changes
     ).queue,
   ).toStrictEqual([{ turnId: 't2', text: 'second' }]);
 });
+
+test("the person's steer held for the running calls is marked so, changes its reason when told again, and a refusal drops it (CHD-378)", () => {
+  const connected = { type: 'connected', sessionId: 'session-1' } as const;
+
+  expect(
+    after(connected, {
+      type: 'queued',
+      turnId: 't2',
+      text: 'second',
+      afterCalls: true,
+    }).queue,
+  ).toStrictEqual([{ turnId: 't2', text: 'second', afterCalls: true }]);
+  expect(
+    after(
+      connected,
+      { type: 'queued', turnId: 't2', text: 'second', afterCalls: true },
+      { type: 'queued', turnId: 't2', text: 'second', afterAnswer: true },
+    ).queue,
+  ).toStrictEqual([{ turnId: 't2', text: 'second', afterAnswer: true }]);
+  expect(
+    after(
+      connected,
+      { type: 'queued', turnId: 't2', text: 'second', afterCalls: true },
+      { type: 'queued', turnId: 't2', text: 'second' },
+    ).queue,
+  ).toStrictEqual([{ turnId: 't2', text: 'second' }]);
+});

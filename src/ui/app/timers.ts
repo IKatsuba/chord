@@ -42,6 +42,17 @@ export function useTimers(
     () =>
       copied !== undefined && dispatch({ type: 'copied_gone', id: copied.id }),
   );
+
+  // As long as a copy's note, from the last Tab (CHD-378).
+  const steerRefused = state.steerRefused;
+
+  useLapse(
+    steerRefused,
+    COPIED_NOTE_MS,
+    () =>
+      steerRefused !== undefined &&
+      dispatch({ type: 'steer_note_gone', id: steerRefused }),
+  );
   useLapse(state.agentCloseArmed, QUIT_WINDOW_MS, () =>
     dispatch({ type: 'agent_close_disarmed' }),
   );

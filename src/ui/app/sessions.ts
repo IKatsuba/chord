@@ -2555,6 +2555,45 @@ export function useSessions(
     }
   };
 
+  /**
+   * Steers `text` into the running turn of the session `key`, with the
+   * shell output held there for it (CHD-378). Whether it went, into the turn
+   * or the queue; on an agent that takes no steering the box keeps it and
+   * the status line says why.
+   */
+  const steer = (text: string, key = all.front): boolean => {
+    const now = stateOf(key);
+    const inSession = (action: AppAction) =>
+      dispatch({ type: 'in_session', key, action });
+
+    if (now === undefined || !canSend(now, text)) {
+      return false;
+    }
+
+    const steered = conversationAt(key)?.steerIn(
+      text,
+      withContext(heldContext(now), text),
+    );
+
+    if (steered === 'unsteerable') {
+      inSession({ type: 'steer_refused' });
+    }
+
+    if (steered !== 'sent' && steered !== 'queued') {
+      return false;
+    }
+
+    inSession({ type: 'context_sent', held: now.held });
+    host.remember(text, []);
+    showDraftIn(key, '', START);
+
+    if (key === sessions.agents.main?.key && now.vim) {
+      dispatch({ type: 'vim_changed', vim: vimReset(now.vim) });
+    }
+
+    return true;
+  };
+
   const quit = () => {
     const { main } = sessions.agents;
     const session = main && all.sessions[main.key];
@@ -2858,6 +2897,7 @@ export function useSessions(
     stateOf,
     showDraftIn,
     send,
+    steer,
     quit,
     takeBackQueue,
     spend,

@@ -1362,10 +1362,13 @@ export class Conversation {
       });
 
       // A line of its own closes it, so what it drew never reads as the
-      // reply of chord's turn before it (CHD-365's design).
-      if (next.from !== undefined) {
-        this.#emit({ type: 'self_started', turnId: own, from: next.from });
-      }
+      // reply of chord's turn before it (CHD-365's design), the person's
+      // steered prompt's too (CHD-378).
+      this.#emit({
+        type: 'self_started',
+        turnId: own,
+        ...(next.from === undefined ? {} : { from: next.from }),
+      });
 
       const quiet = this.#quieten(session);
 

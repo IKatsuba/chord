@@ -255,7 +255,8 @@ function SelfStarted({
   alone,
   width,
 }: {
-  from: MessageFrom;
+  /** None for the person's own steered prompt. */
+  from: MessageFrom | undefined;
   alone: boolean;
   /** Cells beside the gutter. */
   width: number;

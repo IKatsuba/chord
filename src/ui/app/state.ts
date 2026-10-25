@@ -247,6 +247,11 @@ export interface WindowState
   readonly selection?: Selection;
   /** What the status line says of the last copy, for a while. */
   readonly copied?: Copied;
+  /**
+   * The note of the last Tab on an agent that takes no steering, by its
+   * number among the notes, said for a while (CHD-378).
+   */
+  readonly steerRefused?: number;
   /** The notes said so far, so each note's time is its own. */
   readonly notes?: number;
 }
@@ -328,7 +333,11 @@ export type AppAction =
       readonly auto: boolean;
     }
   /** The note `id` has been said long enough. */
-  | { readonly type: 'copied_gone'; readonly id: number };
+  | { readonly type: 'copied_gone'; readonly id: number }
+  /** Tab on an agent that takes no steering: nothing went (CHD-378). */
+  | { readonly type: 'steer_refused' }
+  /** The steering note `id` has been said long enough. */
+  | { readonly type: 'steer_note_gone'; readonly id: number };
 
 export const initialAppState: AppState = {
   connection: { status: 'starting' },
@@ -898,6 +907,21 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       }
 
       const { copied: _, ...rest } = state;
+
+      return rest;
+    }
+    case 'steer_refused': {
+      // A press again says it afresh, its time from this one.
+      const id = (state.notes ?? 0) + 1;
+
+      return { ...state, steerRefused: id, notes: id };
+    }
+    case 'steer_note_gone': {
+      if (state.steerRefused !== action.id) {
+        return state;
+      }
+
+      const { steerRefused: _, ...rest } = state;
 
       return rest;
     }

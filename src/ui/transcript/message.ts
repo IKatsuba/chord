@@ -236,9 +236,14 @@ export function teamPartLine(
  * which chord cancelled: whose turn it was, and where the message went, cut
  * at its end to `cells`, as what matters comes first.
  */
-export function selfStartedLine(from: MessageFrom, cells: number): string {
+export function selfStartedLine(
+  from: MessageFrom | undefined,
+  cells: number,
+): string {
+  const whose = from === undefined ? 'your' : `${senderName(from)}'s`;
+
   return cliTruncate(
-    `Interrupted · the agent started this on its own; ${senderName(from)}'s message goes as the next turn`,
+    `Interrupted · the agent started this on its own; ${whose} message goes as the next turn`,
     cells,
   );
 }

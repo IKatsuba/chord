@@ -1671,6 +1671,13 @@ describe("the person's prompt steered into the running turn (CHD-378)", () => {
           ['text', undefined],
           ['slow', undefined],
         ]);
+        // Closed by chord's line, which names no sender for the person.
+        expect(
+          events.find((event) => event.type === 'self_started'),
+        ).not.toHaveProperty('from');
+        expect(
+          events.some((event) => event.type === 'self_started'),
+        ).toBeTruthy();
         expect(saidIn(events)).not.toContain('Started alongside');
         conversation.interrupt();
       },

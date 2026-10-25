@@ -92,6 +92,8 @@ export function queueRowLimit(rows: number): number {
  */
 /** Ahead of a prompt held for the person's answer to a request. */
 const AFTER_ANSWER = 'after your answer: ';
+/** Ahead of a steered prompt held for the turn's open calls (CHD-378). */
+const AFTER_CALLS = 'after the running calls: ';
 
 export function queueRows(queue: readonly Queued[], limit: number): QueueRow[] {
   const rows = queue.map(
@@ -112,7 +114,11 @@ export function queueRows(queue: readonly Queued[], limit: number): QueueRow[] {
       return {
         kind: 'prompt',
         text: rest.length > 0 ? `${first} …` : first,
-        ...(afterAnswer ? { header: AFTER_ANSWER } : {}),
+        ...(afterAnswer
+          ? { header: AFTER_ANSWER }
+          : afterCalls
+            ? { header: AFTER_CALLS }
+            : {}),
       };
     },
   );

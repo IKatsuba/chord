@@ -16,6 +16,7 @@ import {
   inArrow,
   monitorMessage,
   queuedMessage,
+  selfStartedLine,
   wrapLine,
 } from '../../../src/ui/transcript/message.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
@@ -773,4 +774,10 @@ describe('CHD-396 U4 tester: message gaps preserve their source blocks', () => {
       }
     });
   }
+});
+
+test("the line closing a turn the agent started on its own with the person's steered prompt says it is theirs (CHD-378)", () => {
+  expect(selfStartedLine(undefined, 120)).toStrictEqual(
+    'Interrupted · the agent started this on its own; your message goes as the next turn',
+  );
 });

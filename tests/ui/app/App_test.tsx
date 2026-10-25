@@ -18,14 +18,20 @@ import {
   CTRL_G,
   DOWN,
   ESC,
+  promptRow,
   quitAll,
   ready,
   send,
   statusReports,
+  statusRow,
+  TAB,
   until,
   UP,
+  type Window,
   withWindow,
 } from './render.tsx';
+import { UNSTEERED } from '../../../src/ui/status/Status.tsx';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import manifest from '../../../package.json' with { type: 'json' };
 
 import { OSC9, writes } from './app_window.tsx';
@@ -562,3 +568,71 @@ test('ctrl+c quits mid-turn and stops the agent', () =>
       () => window.session()?.agentPids.size === 0,
     );
   }));
+
+describe('Tab sends the draft into the running turn (CHD-378)', () => {
+  /** `text` typed into the box, there before the next key. */
+  const draft = async (window: Window, text: string) => {
+    await window.type(text);
+    await until(
+      `"${text}" in the box`,
+      () => promptRow(window)?.includes(text) ?? false,
+    );
+  };
+
+  test("on an agent that steers, the box empties and the person's row is drawn in the turn, which goes on", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'texttillsteered');
+        await window.shows('esc to interrupt');
+        await draft(window, 'Use the second parser instead');
+        await window.press(TAB);
+        await window.shows('Read the message from nobody.');
+
+        expect(promptRow(window)).not.toContain('Use the second parser');
+        expect(window.frame()).toContain('› Use the second parser instead');
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+      },
+    ));
+
+  test('on an agent that does not, nothing goes, the draft stays, and the status line says why', () =>
+    withWindow(async (window) => {
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await draft(window, 'Use the second parser instead');
+      await window.press(TAB);
+      await until('the note', () => statusRow(window).includes(UNSTEERED));
+
+      expect(promptRow(window)).toContain('Use the second parser instead');
+      await until(
+        'the note to go',
+        () => !statusRow(window).includes(UNSTEERED),
+      );
+      expect(promptRow(window)).toContain('Use the second parser instead');
+      await window.press(ESC);
+    }));
+
+  test("one held behind Claude's open calls waits in the queue saying so, and Esc takes it back to the box", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'bashcut');
+        await window.shows('Running…');
+        await draft(window, 'Skip the slow tests');
+        await window.press(TAB);
+        await window.shows('› after the running calls: Skip the slow tests');
+
+        expect(promptRow(window)).not.toContain('Skip the slow tests');
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+        await until(
+          'the prompt back in the box',
+          () => promptRow(window)?.includes('Skip the slow tests') ?? false,
+        );
+        expect(window.frame()).not.toContain('after the running calls');
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+      },
+    ));
+});

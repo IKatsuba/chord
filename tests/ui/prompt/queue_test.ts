@@ -190,3 +190,28 @@ test("a prompt held for the person's answer says so ahead of its text (CHD-158)"
     },
   ]);
 });
+
+test("the person's steered prompt held for the running calls or an answer says so first; one held for nothing is a plain row (CHD-378)", () => {
+  expect(
+    queueRows(
+      [
+        { turnId: 't2', text: 'Then update the changelog' },
+        { turnId: 't3', text: 'Skip the slow tests', afterCalls: true },
+        { turnId: 't4', text: 'Also write the docs', afterAnswer: true },
+      ],
+      5,
+    ),
+  ).toStrictEqual([
+    { kind: 'prompt', text: 'Then update the changelog' },
+    {
+      kind: 'prompt',
+      text: 'Skip the slow tests',
+      header: 'after the running calls: ',
+    },
+    {
+      kind: 'prompt',
+      text: 'Also write the docs',
+      header: 'after your answer: ',
+    },
+  ]);
+});

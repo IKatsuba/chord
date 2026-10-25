@@ -108,6 +108,15 @@ export type Step =
   | { readonly type: 'set_mode'; readonly mode: string }
   | { readonly type: 'read_commands' }
   | { readonly type: 'send'; readonly text: string }
+  /**
+   * Tab during a turn: `text` into it; `kept` plays once it went, as a
+   * kept draft leaves the stack only then.
+   */
+  | {
+      readonly type: 'steer';
+      readonly text: string;
+      readonly kept: readonly Step[];
+    }
   /** Enter on a draft naming image files: they are read before it goes. */
   | { readonly type: 'send_with_paths'; readonly text: string }
   | {
@@ -822,6 +831,8 @@ function commandSteps(
     case 'vim_send':
     case 'submit':
       return submitSteps(draft, context);
+    case 'steer':
+      return [{ type: 'steer', text: draft, kept: keptLeft(context) }];
     case 'newline': {
       const next = broken(draft, cursor);
 

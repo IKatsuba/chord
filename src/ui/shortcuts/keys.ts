@@ -95,7 +95,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: ['steer'],
     actions: ['chat:steer'],
   },
-  // Both newlines on one line, so the panel keeps its 40 lines at 80x24
+  // Both newlines on one line, so the panel takes a line less at 80x24
   // (the owner's Q80): shift+enter, and the terminal-proof \ + enter for the
   // terminals that do not report it. That one is two presses, so the key
   // test cannot press it alone; the second is whatever sends, as the
